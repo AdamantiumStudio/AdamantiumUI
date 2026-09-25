@@ -1,15 +1,15 @@
 using Adamantium.Core;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.ECS;
-using Adamantium.Game;
+using Adamantium.Multiverse;
 
 namespace Adamantium.UI.Universes;
 
-public abstract class GameApplication : UIApplication
+public abstract class MultiverseApplication : UIApplication
 {
     public IUniverseService UniverseService { get; private set; }
 
-    public GameApplication()
+    public MultiverseApplication()
     {
     }
 
@@ -33,8 +33,8 @@ public abstract class GameApplication : UIApplication
 
     private void ServiceManagerOnOnDrawFinished(IRenderService arg1, AppTime arg2)
     {
-        // Shared-surface publish happens in each game's own render cycle (RenderingProcessor.EndDraw records the
-        // copy into that game's command buffer and its Submit signals Produce). Driving it from the UI service's
+        // Shared-surface publish happens in each universe's own render cycle (RenderingProcessor.EndDraw records the
+        // copy into that universe's command buffer and its Submit signals Produce). Driving it from the UI service's
         // OnDrawFinished would record onto the wrong device/queue.
     }
 

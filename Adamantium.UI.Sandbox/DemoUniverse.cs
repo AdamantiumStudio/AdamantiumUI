@@ -8,8 +8,8 @@ using Adamantium.Engine.Templates.Lights;
 using Adamantium.Engine.Tools;
 using Adamantium.ECS.Components;
 using Adamantium.ECS;
-using Adamantium.Game;
-using Adamantium.Game.Events;
+using Adamantium.Multiverse;
+using Adamantium.Multiverse.Events;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Content;
 using Adamantium.Graphics.Core.Models;
@@ -17,7 +17,7 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Sandbox
 {
-    public class AdamantiumGame : Universe
+    public class DemoUniverse : Universe
     {
         private readonly SelectTool _selectTool = new();
         private readonly MoveTool _moveTool = new();
@@ -28,7 +28,7 @@ namespace Adamantium.UI.Sandbox
         private InputService _inputService;
         private ToolsService _tools;
 
-        public AdamantiumGame(
+        public DemoUniverse(
             IGraphicsDeviceService graphicsDeviceService,
             bool enableDebug,
             IDependencyContainer container) :
@@ -49,7 +49,7 @@ namespace Adamantium.UI.Sandbox
             base.Initialize();
             Satellites.Add(new Selection());
             Satellites.Add(new Observatory(this, EntityWorld));
-            InitializeGameResources();
+            InitializeScene();
         }
 
         /// <summary>The tool the mouse works with from the next frame on.</summary>
@@ -73,7 +73,7 @@ namespace Adamantium.UI.Sandbox
             _startupLoad ??= LoadModels();
         }
 
-        private void InitializeGameResources()
+        private void InitializeScene()
         {
             try
             {

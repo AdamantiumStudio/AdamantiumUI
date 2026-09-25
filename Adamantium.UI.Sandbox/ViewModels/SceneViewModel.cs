@@ -7,27 +7,27 @@ using Adamantium.UI.Core.Dispatcher;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Game tab: the 3D game behind an overlay menu. The load commands reach the game through
-/// <see cref="AttachGame"/>, which GameHostBehavior calls once it is live.</summary>
+/// <summary>Scene tab: the 3D universe behind an overlay menu. The load commands reach the universe through
+/// <see cref="AttachUniverse"/>, which DemoUniverseBehavior calls once it is live.</summary>
 [ViewModel]
-public partial class GameViewModel : TabPageViewModel
+public partial class SceneViewModel : TabPageViewModel
 {
-    public GameViewModel() : base("Game") { }
+    public SceneViewModel() : base("Scene") { }
 
-    private AdamantiumGame _game;
+    private DemoUniverse _universe;
 
-    /// <summary>Called by GameHostBehavior once the hosted game exists, so the menu's load commands can reach it.</summary>
-    internal void AttachGame(AdamantiumGame game)
+    /// <summary>Called by DemoUniverseBehavior once the hosted universe exists, so the menu's load commands can reach it.</summary>
+    internal void AttachUniverse(DemoUniverse universe)
     {
-        _game = game;
-        _game.UseTool(Tool);
-        Status = "Game ready";
+        _universe = universe;
+        _universe.UseTool(Tool);
+        Status = "Universe ready";
 
-        // A rebuilt view brings a new game with a new camera: its home and speed are taken afresh on the next pulse.
+        // A rebuilt view brings a new universe with a new camera: its home and speed are taken afresh on the next pulse.
         _home = null;
 
-        // Once the game is there, the readout has something to read. On the UI thread, so nothing touched here ever
-        // crosses over from the game loop.
+        // Once the universe is there, the readout has something to read. On the UI thread, so nothing touched here ever
+        // crosses over from the universe loop.
         _pulse ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.25) };
         _pulse.Tick -= OnPulse;
         _pulse.Tick += OnPulse;
@@ -36,7 +36,7 @@ public partial class GameViewModel : TabPageViewModel
 
     private DispatcherTimer _pulse;
 
-    /// <summary>What the GAME's own rendering could sustain, and what one of its frames costs. Not the rate the panel
+    /// <summary>What the UNIVERSE's own rendering could sustain, and what one of its frames costs. Not the rate the panel
     /// ticks it at - hosted, that would only ever report the interface.</summary>
     [Bindable] private float _fps;
 
@@ -45,7 +45,7 @@ public partial class GameViewModel : TabPageViewModel
     /// <summary>How fast the camera travels through the world, in meters per second.</summary>
     [Bindable] private double _cameraSpeed = 0.5;
 
-    // What we last handed the camera. The game doubles and halves the velocity on its own keys (numpad + / -), so
+    // What we last handed the camera. The universe doubles and halves the velocity on its own keys (numpad + / -), so
     // anything else found there came from the keyboard and the box should follow it rather than fight it.
     private double _handed = 0.5;
 
@@ -56,12 +56,12 @@ public partial class GameViewModel : TabPageViewModel
 
     private void OnPulse(object sender, EventArgs e)
     {
-        if (_game == null) return;
+        if (_universe == null) return;
 
-        Fps = _game.RenderFps;
-        FrameCostMs = _game.DrawTimeMs;
+        Fps = _universe.RenderFps;
+        FrameCostMs = _universe.DrawTimeMs;
 
-        if (_game.MainOutput?.Camera is not { } camera) return;
+        if (_universe.MainOutput?.Camera is not { } camera) return;
 
         if (_home == null)
         {
@@ -83,7 +83,7 @@ public partial class GameViewModel : TabPageViewModel
     /// <summary>Puts the camera back where it started - the way out of being lost in a world with no landmarks.</summary>
     [Command] private void ResetCamera()
     {
-        if (_home is not { } home || _game?.MainOutput?.Camera is not { } camera) return;
+        if (_home is not { } home || _universe?.MainOutput?.Camera is not { } camera) return;
 
         // Flown, not teleported - and the rotation first, because both share the field that records where the travel
         // started. The orientation gizmo mirrors the camera, so it swings back along with it.
@@ -97,10 +97,10 @@ public partial class GameViewModel : TabPageViewModel
     {
         _handed = value;
 
-        if (_game?.MainOutput?.Camera is { } camera) camera.Velocity = value;
+        if (_universe?.MainOutput?.Camera is { } camera) camera.Velocity = value;
     }
 
-    /// <summary>The tool the mouse works with in the game.</summary>
+    /// <summary>The tool the mouse works with in the universe.</summary>
     [Bindable, Affects(nameof(IsSelecting), nameof(IsMoving), nameof(IsRotating), nameof(IsScaling), nameof(IsMovingPivot))]
     private EditTool _tool = EditTool.Select;
 
@@ -144,7 +144,7 @@ public partial class GameViewModel : TabPageViewModel
 
     partial void OnToolChanged(EditTool value)
     {
-        _game?.UseTool(value);
+        _universe?.UseTool(value);
     }
 
     [Bindable, Affects(nameof(MenuButtonText), nameof(MouseLookEnabled))] private bool _isMenuVisible = true;
@@ -164,16 +164,16 @@ public partial class GameViewModel : TabPageViewModel
 
     private async Task Load(string path, string name)
     {
-        if (_game == null)
+        if (_universe == null)
         {
-            Status = "Game not ready yet";
+            Status = "Universe not ready yet";
             return;
         }
 
         Status = $"Loading {name}…";
         try
         {
-            await _game.LoadAndAddModel(path);
+            await _universe.LoadAndAddModel(path);
             Status = name;
         }
         catch (Exception exception)
