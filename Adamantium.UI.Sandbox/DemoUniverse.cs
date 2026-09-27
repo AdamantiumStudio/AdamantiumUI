@@ -107,6 +107,11 @@ namespace Adamantium.UI.Sandbox
             spotLight.OuterSpotAngle = MathHelper.DegreesToRadians(30);
             EntityWorld.EntityManager.AddEntity(spot);
 
+            var directional = new LightTemplate().BuildEntity(null, "Directional light", LightType.Directional);
+            directional.Transform.Position = new Vector3(0, -7, 8);
+            directional.Transform.Rotation = QuaternionF.RotationAxis(Vector3F.UnitX, MathHelper.DegreesToRadians(150));
+            EntityWorld.EntityManager.AddEntity(directional);
+
             var camera = new CameraTemplate().BuildEntity(null, "Scene camera", new Vector3(8, -3, -4), Vector3.ForwardLH, -Vector3.Up, 800, 600, 0.1f, 1000f);
             EntityWorld.EntityManager.AddEntity(camera);
         }
