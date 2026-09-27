@@ -22,9 +22,12 @@
     <Copyright>Copyright © 2019-2026 Adamantium Studio</Copyright>
   </PropertyGroup>
 
-  <!-- The engine repository checked out beside this one: its projects are referenced from source. -->
+  <!-- The engine repository checked out beside this one: its projects are referenced from source.
+       They are not in our solutions, so a solution build would hand them no configuration and they would land in
+       artifacts\bin\<tfm> of the engine instead of its Debug or Release folder. -->
   <PropertyGroup>
     <AdamantiumEngineDir>$(MSBuildThisFileDirectory)..\Adamantium\Adamantium\</AdamantiumEngineDir>
+    <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
 
 </Project>
