@@ -253,6 +253,11 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 _applied[setter] = (component, () => element.RemoveBinding(setter.Property));
                 break;
 
+            case PerTargetValue perTarget:
+                component.SetTriggerValue(prop, perTarget.Create(), setter);
+                _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));
+                break;
+
             default:
                 component.SetTriggerValue(prop, TypeCastFactory.CastFromString(setter.Value, prop.PropertyType), setter);
                 _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));

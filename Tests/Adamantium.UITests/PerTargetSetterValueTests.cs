@@ -1,6 +1,7 @@
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Core.Resources.Triggers;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -51,5 +52,25 @@ public class PerTargetSetterValueTests
         Assert.That(second.ContextMenu, Is.Not.Null);
         Assert.That(first.ContextMenu, Is.Not.SameAs(second.ContextMenu),
             "a menu belongs to the element it sits on - sharing one is the bug this fixes");
+    }
+
+    [Test]
+    public void APerTargetTriggerValueGivesEachTargetItsOwn()
+    {
+        var trigger = new PropertyTrigger { Property = "IsEnabled", Value = false };
+        trigger.Add(new Setter("ContextMenu", new PerTargetValue(() => new ContextMenu())));
+        var style = new Style();
+        style.Selector.Types.Add(typeof(Button));
+        style.Triggers.Add(trigger);
+
+        var first = new Button();
+        var second = new Button();
+        style.Attach(first);
+        style.Attach(second);
+        first.IsEnabled = false;
+        second.IsEnabled = false;
+
+        Assert.That(first.ContextMenu, Is.Not.Null, "the factory has to be called, not written as the value");
+        Assert.That(first.ContextMenu, Is.Not.SameAs(second.ContextMenu));
     }
 }

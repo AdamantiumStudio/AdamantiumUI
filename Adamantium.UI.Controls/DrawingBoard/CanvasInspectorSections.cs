@@ -1,7 +1,6 @@
-using System;
-using System.Collections.Generic;
 using Adamantium.Core.Collections;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
@@ -17,6 +16,7 @@ public class CanvasSectionSets : TrackingCollection<CanvasSectionSet>
 /// costs the lines it is set by, and nothing else: no flag on the panel, no edit to three themes.</para>
 /// <para>ORDER is part of what is being said: the sections come out in the order they were written, general before
 /// particular, so a rectangle shows what every shape has and then its own corners.</para></summary>
+[PerTarget]
 public class CanvasInspectorSections : AdamantiumComponent
 {
     /// <summary>The sets. [Content], so one of these is written as the sets it is.</summary>

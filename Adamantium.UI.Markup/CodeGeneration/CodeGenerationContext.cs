@@ -177,7 +177,7 @@ public class CodeGenerationContext
 
         // x:Shared="False" on a KEYED entry: the dictionary stores a FACTORY, not the object, so each ask builds its own.
         // Emitted here, before the element is constructed - once its statements are out there is nothing to wrap.
-        if (isResource && !string.IsNullOrEmpty(key) && IsPerTarget(element))
+        if (isResource && !string.IsNullOrEmpty(key) && (IsPerTarget(element) || IsPerTargetType(element)))
         {
             var factoryName = GenerateNextElementName("shared");
             TextGenerator.WriteLine($"var {factoryName} = {EmitPerTargetValue(element, false, diagnostics)};");
@@ -287,7 +287,7 @@ public class CodeGenerationContext
                         // x:Shared="False" works here exactly as it does in a resource FILE: store a factory so every ask
                         // builds its own object. An inline dictionary is where an icon (one visual, many templates) lives,
                         // and a visual has ONE parent - without this the second user of the key would steal it.
-                        var entryName = IsPerTarget(entry)
+                        var entryName = IsPerTarget(entry) || IsPerTargetType(entry)
                             ? EmitPerTargetValue(entry, false, diagnostics)
                             : ProcessControlElements(entry, diagnostics, isResource: false);
                         if (!string.IsNullOrEmpty(entryKey))
@@ -754,7 +754,8 @@ public class CodeGenerationContext
                         }
                         // x:Shared="False" on the value: hand the setter a FACTORY instead of an instance, so every target
                         // gets its own. Emitted before the generic path, which would build the one shared object.
-                        if (IsPerTarget(propertyValue))
+                        if (IsPerTarget(propertyValue)
+                            || (propRef.Name == "Value" && typeInfo.ImplementsInterface("ISetter") && IsPerTargetType(propertyValue)))
                         {
                             TextGenerator.WriteLine($"{symbolName} = {EmitPerTargetValue(propertyValue, isResource, diagnostics)};");
                             continue;
@@ -959,6 +960,18 @@ public class CodeGenerationContext
         }
 
         return false;
+    }
+
+    private bool IsPerTargetType(IAumlAstValueNode value)
+    {
+        if (value is not AumlAstObjectNode obj)
+        {
+            return false;
+        }
+
+        var container = Metadata.TypeResolver.GetResolvedAssembly(obj.TypeReference.Assembly);
+        var type = container?.Types.FirstOrDefault(x => x.Name == obj.TypeReference.Name);
+        return type != null && type.HasAttribute("Adamantium.UI.Core.Resources.PerTargetAttribute");
     }
 
     /// <summary>Emits a builder for a per-target value and returns the expression that wraps it. Same shape as a

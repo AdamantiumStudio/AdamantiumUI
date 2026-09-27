@@ -84,6 +84,58 @@ public class AumlSharedValueTests
         Assert.That(errors, Is.Empty, "generated code did not compile: " + string.Join(" | ", errors.Select(d => d.ToString())));
     }
 
+    // ---- the TYPE says it: [PerTarget] ----
+
+    private const string KeyedSets = DictionaryHeader + "<CanvasInspectorSections x:Key=\"Sets\"/></ResourceDictionary>";
+
+    private const string StyledSets =
+        StyleSetHeader +
+        "<Style Selector=\"InfiniteCanvas\"><Setter Property=\"InspectorSections\"><Setter.Value><CanvasInspectorSections/>" +
+        "</Setter.Value></Setter></Style></StyleSet>";
+
+    private const string DirectSets =
+        DictionaryHeader +
+        "<InfiniteCanvas x:Key=\"Canvas\"><InfiniteCanvas.InspectorSections><CanvasInspectorSections/>" +
+        "</InfiniteCanvas.InspectorSections></InfiniteCanvas></ResourceDictionary>";
+
+    [Test]
+    public void AKeyedEntryOfAPerTargetTypeIsStoredAsAFactory()
+    {
+        var code = AumlCodegenHarness.Generate(KeyedSets, out var errors);
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+        Assert.That(code, Does.Contain("PerTargetValue"), "no directive written, the type asks for it");
+        Assert.That(code, Does.Contain("Add(\"Sets\""));
+    }
+
+    [Test]
+    public void ASetterValueOfAPerTargetTypeGetsAFactory()
+    {
+        var code = AumlCodegenHarness.Generate(StyledSets, out var errors);
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+        Assert.That(code, Does.Contain("PerTargetValue"), "every canvas under the style needs its own sets");
+    }
+
+    [Test]
+    public void APerTargetTypeSetDirectlyStaysAnInstance()
+    {
+        var code = AumlCodegenHarness.Generate(DirectSets, out var errors);
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+        Assert.That(code, Does.Not.Contain("PerTargetValue"), "a property typed for the sets cannot take a factory");
+    }
+
+    [TestCase(KeyedSets)]
+    [TestCase(StyledSets)]
+    [TestCase(DirectSets)]
+    public void TheCodeForAPerTargetTypeCompiles(string markup)
+    {
+        var errors = AumlCodegenHarness.Compile(markup);
+
+        Assert.That(errors, Is.Empty, "generated code did not compile: " + string.Join(" | ", errors.Select(d => d.ToString())));
+    }
+
     // The point of the whole thing: two calls, two objects. A shared value would hand back the same reference.
     [Test]
     public void TheFactoryBuildsAFreshValueEachTime()
