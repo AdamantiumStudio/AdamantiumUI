@@ -26,7 +26,7 @@
        They are not in our solutions, so a solution build would hand them no configuration and they would land in
        artifacts\bin\<tfm> of the engine instead of its Debug or Release folder. -->
   <PropertyGroup>
-    <AdamantiumEngineDir>$(MSBuildThisFileDirectory)..\Adamantium\Adamantium\</AdamantiumEngineDir>
+    <AdamantiumEngineDir>$(MSBuildThisFileDirectory)..\AdamantiumEngine\</AdamantiumEngineDir>
     <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
 
