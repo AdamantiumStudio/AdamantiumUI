@@ -649,6 +649,238 @@ float VoronoiEdge(float2 v, float phase)
     return md;   // 0 at borders, growing inside cells
 }
 
+// ---- Circuit board. The plane is cut into tiles, and a tile edge either carries a bus of four parallel tracks, at the same
+// places on both sides (0.1 of a tile apart, round the edge's middle), or nothing - so tracks run on from tile to tile
+// instead of closing into rings, and end in chips rather than in thin air. Current runs one way along each column and each
+// row of tracks, chosen by the column or row itself.
+
+// Which way current runs along a column (vertical tracks) or a row (horizontal tracks) of the board.
+float BoardFlow(float k, float salt)
+{
+    return (Hash21(float2(k, salt)) < 0.5) ? -1.0 : 1.0;
+}
+
+// The period of the waves running along the tracks, in tiles. A turn can only hand a wave on without a jump if it can
+// stretch or squeeze by half of this, so it has to stay shorter than the shortest turn.
+static const float BoardWave = 0.72;
+
+// How far along its track a point lies, in tiles, measured the way the current runs. Every column and row of tracks is
+// shifted by its own share of a wave, so the board does not pulse in step, and each track of a bus by a little more, so
+// a wave crosses the bus with a slightly ragged front. `alongLocal` is the tile-local coordinate along the track, `o` the
+// track's offset across it; vertical tracks are handled with x and y swapped.
+float BoardAlong(float2 tile, float alongLocal, float o, bool vertical, float flow)
+{
+    float2 base = vertical ? tile.yx : tile;
+    float lane = base.y + 0.5 + o;
+    float2 busKey = vertical ? float2(base.y * 3.1, 1.0) : float2(2.0, base.y * 3.1);
+    float2 laneKey = vertical ? float2(lane * 7.13, 5.1) : float2(3.7, lane * 7.13);
+    return flow * (base.x + 0.5 + alongLocal) + BoardWave * Hash21(busKey) + 0.08 * Hash21(laneKey);
+}
+
+// A bus straight across the tile.
+void BoardStraight(float2 p, float2 tile, bool vertical, float flow, inout float best, inout float along)
+{
+    float2 q = vertical ? p.yx : p;          // q.x along the tracks, q.y across them
+    float o = -0.15 + 0.1 * clamp(round((q.y + 0.15) / 0.1), 0.0, 3.0);
+    float d = abs(q.y - o);
+    if (d < best)
+    {
+        best = d;
+        along = BoardAlong(tile, q.x, o, vertical, flow);
+    }
+}
+
+// Whether a tile edge carries a bus. Keyed by the edge itself, so both tiles that share it agree.
+bool BoardEdge(float2 id)
+{
+    return Hash21(id * 1.7 + 0.23) < 0.65;
+}
+
+float BoardBox(float2 p, float2 center, float2 halfSize)
+{
+    float2 d = abs(p - center) - halfSize;
+    return length(max(d, float2(0.0, 0.0))) + min(max(d.x, d.y), 0.0);
+}
+
+// A bus coming in over one edge (`side` +1 = the edge at +0.5) and running to the pins of a chip whose near side lies
+// `stop` from the tile's middle.
+void BoardToChip(float2 p, float2 tile, bool vertical, float side, float flow, float stop, inout float best, inout float along)
+{
+    float2 q = vertical ? p.yx : p;
+    float o = -0.15 + 0.1 * clamp(round((q.y + 0.15) / 0.1), 0.0, 3.0);
+    float onTrack = (side * q.x >= stop) ? abs(q.y - o) : 8.0;
+    float pin = BoardBox(q, float2(side * (stop + 0.015), o), float2(0.045, 0.022));
+    float d = min(onTrack, pin);
+    if (d < best)
+    {
+        best = d;
+        along = BoardAlong(tile, q.x, o, vertical, flow);
+    }
+}
+
+// A bus turned round the tile corner `c` (components +-0.5): straight, a 45-degree chamfer, straight - the level sets of
+// an octagon. The current's position is blended between the values at the two ports, rounded to the bunch pattern's
+// period at the far one, so what comes in on one side leaves on the other without a jump.
+void BoardCorner(float2 p, float2 tile, float2 c, float dv, float dh, inout float best, inout float along)
+{
+    float2 v = abs(p - c);
+    float n = max(max(v.x, v.y), (v.x + v.y) * 0.70710678);
+    float i = clamp(round((n - 0.35) / 0.1), 0.0, 3.0);
+    float r = 0.35 + 0.1 * i;
+    float d = abs(n - r);
+    if (d < best)
+    {
+        best = d;
+        float ov = -0.15 + 0.1 * ((c.x > 0.0) ? 3.0 - i : i);   // the track's offset where it crosses the x edge...
+        float oh = -0.15 + 0.1 * ((c.y > 0.0) ? 3.0 - i : i);   // ...and where it crosses the y edge
+        float atV = BoardAlong(tile, c.y, ov, true, dv);
+        float atH = BoardAlong(tile, c.x, oh, false, dh);
+        bool verticalIn = dv * c.y < 0.0;                        // the current arrives up or down the vertical port
+        float from = verticalIn ? atV : atH;
+        float to = verticalIn ? atH : atV;
+        float len = 1.6568542 * r;                               // the octagon's arc between the two ports
+        float miss = (to - from - len) / BoardWave;
+        float span = len + (miss - round(miss)) * BoardWave;
+        float a = v.y / max(v.x + v.y, 1e-5);                    // 0 at the vertical port .. 1 at the horizontal one
+        along = from + (verticalIn ? a : 1.0 - a) * span;
+    }
+}
+
+// One tile, laid out from which of its edges carry a bus. Two opposite ones run straight across; two neighbouring ones turn
+// the corner, if that is the corner both the column's and the row's current agree with; all four turn two corners or run
+// straight. Whatever that leaves goes into a chip: in the middle of the tile, or beside a bus that runs straight through.
+// Returns .x the distance to the nearest track or pin, .y how far along it, .z the distance to a chip's body and .w to its
+// pin-one mark, all in tiles.
+float4 BoardTile(float2 g)
+{
+    float2 tile = floor(g);
+    float2 p = frac(g) - 0.5;
+    float dv = BoardFlow(tile.x, 17.3);
+    float dh = BoardFlow(tile.y, 43.1);
+    bool n = BoardEdge(float2(tile.x, tile.y + 0.5));
+    bool s = BoardEdge(float2(tile.x, tile.y - 0.5));
+    bool e = BoardEdge(float2(tile.x + 0.5, tile.y));
+    bool w = BoardEdge(float2(tile.x - 0.5, tile.y));
+    int count = (n ? 1 : 0) + (s ? 1 : 0) + (e ? 1 : 0) + (w ? 1 : 0);
+    float pick = Hash21(tile + 0.37);
+
+    float2 c = (dv * dh > 0.0) ? float2(0.5, -0.5) : float2(-0.5, -0.5);   // current may turn at c and at -c
+    bool turnC = ((c.y > 0.0) ? n : s) && ((c.x > 0.0) ? e : w);
+    bool turnK = ((c.y > 0.0) ? s : n) && ((c.x > 0.0) ? w : e);
+
+    float best = 8.0;
+    float along = 0.0;
+    float body = 8.0;
+    float mark = 8.0;
+    if (count == 4 && pick < 0.45)
+    {
+        BoardCorner(p, tile, c, dv, dh, best, along);
+        BoardCorner(p, tile, -c, dv, dh, best, along);
+    }
+    else if (count == 2 && turnC)
+    {
+        BoardCorner(p, tile, c, dv, dh, best, along);
+    }
+    else if (count == 2 && turnK)
+    {
+        BoardCorner(p, tile, -c, dv, dh, best, along);
+    }
+    else if (n && s && (count < 4 || pick < 0.75))
+    {
+        BoardStraight(p, tile, true, dv, best, along);
+        if (e)
+        {
+            BoardToChip(p, tile, false, 1.0, dh, 0.4, best, along);
+            body = min(body, BoardBox(p, float2(0.32, 0.0), float2(0.08, 0.2)));
+        }
+        if (w)
+        {
+            BoardToChip(p, tile, false, -1.0, dh, 0.4, best, along);
+            body = min(body, BoardBox(p, float2(-0.32, 0.0), float2(0.08, 0.2)));
+        }
+    }
+    else if (e && w)
+    {
+        BoardStraight(p, tile, false, dh, best, along);
+        if (n)
+        {
+            BoardToChip(p, tile, true, 1.0, dv, 0.4, best, along);
+            body = min(body, BoardBox(p, float2(0.0, 0.32), float2(0.2, 0.08)));
+        }
+        if (s)
+        {
+            BoardToChip(p, tile, true, -1.0, dv, 0.4, best, along);
+            body = min(body, BoardBox(p, float2(0.0, -0.32), float2(0.2, 0.08)));
+        }
+    }
+    else if (count > 0)
+    {
+        if (n)
+        {
+            BoardToChip(p, tile, true, 1.0, dv, 0.2, best, along);
+        }
+        if (s)
+        {
+            BoardToChip(p, tile, true, -1.0, dv, 0.2, best, along);
+        }
+        if (e)
+        {
+            BoardToChip(p, tile, false, 1.0, dh, 0.2, best, along);
+        }
+        if (w)
+        {
+            BoardToChip(p, tile, false, -1.0, dh, 0.2, best, along);
+        }
+        body = BoardBox(p, float2(0.0, 0.0), float2(0.2, 0.2));
+        mark = length(p - float2(-0.13, 0.13)) - 0.025;
+    }
+    return float4(best, along, body, mark);
+}
+
+// The board, one layer per octave, with waves of current running along its tracks. A layer past the first whose tracks
+// would crowd closer than a few pixels fades out.
+float CircuitField(float2 g, int oct, float lacunarity, float gain, float phase)
+{
+    float foot = max(max(fwidth(g.x), fwidth(g.y)), 1e-5);   // one pixel, in tiles of the first layer
+    float amp = 1.0;
+    float freq = 1.0;
+    float sum = 0.0;
+    float norm = 0.0;
+    for (int o = 0; o < 8; o++)
+    {
+        if (o >= oct)
+        {
+            break;
+        }
+        float4 b = BoardTile(g * freq + float2(3.7, 1.9) * float(o));
+        float tilePx = 1.0 / (foot * freq);
+        float wire = 1.0 - smoothstep(0.7, 1.7, b.x * tilePx);            // ~1.4 px core, a pixel of smoothing
+        float resolved = (o == 0) ? 1.0 : smoothstep(3.0, 5.0, 0.1 * tilePx);
+
+        // A wave: a long tail rising to the crest, a steep front, then quiet until the next. Each keeps its own strength
+        // as it travels - some bright, some faint, some missing - and lights a few pixels round the track as it passes.
+        float u = (b.y - phase * 0.9) / BoardWave;
+        float x = frac(u);
+        float wave = x * x * x * (1.0 - smoothstep(0.92, 1.0, x));
+        float strength = smoothstep(0.3, 0.8, Hash21(float2(floor(u), 7.7)));
+        float surge = wave * strength;
+        float halo = (1.0 - smoothstep(1.0, 6.0, b.x * tilePx)) * surge * 0.5;
+        float copper = wire * (0.45 + 1.4 * surge) + halo;
+
+        float bodyPx = b.z * tilePx;
+        float chip = max((1.0 - smoothstep(-0.5, 0.5, bodyPx)) * 0.16,          // the body, a shade off the board
+                         (1.0 - smoothstep(0.4, 1.4, abs(bodyPx))) * 0.45);     // and its outline
+        float mark = (1.0 - smoothstep(-0.5, 0.5, b.w * tilePx)) * 0.55;
+        float v = resolved * max(copper, max(chip, mark));
+        sum += amp * v;
+        norm += amp;
+        freq *= lacunarity;
+        amp *= gain;
+    }
+    float flicker = 0.9 + 0.1 * ValueNoise(float2(phase * 3.0, 0.0));
+    return (norm > 1e-5) ? saturate(sum / norm * 1.6 * flicker) : 0.0;
+}
+
 // Pick the base noise by basis index (0 simplex / 1 perlin / 2 value / 3 WorleyNoise). `phase` drives the Worley flow (others
 // ignore it). Scalar branches only - no vector ternary.
 float BaseNoise(float2 p, int basis, float phase)
@@ -755,7 +987,7 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
     }
 
     // NOISE lives in its own hundred (PatternBrushRecord.NoiseBase): 100 simplex, 101 perlin, 102 value, 103 worley,
-    // 104 ridged, 105 turbulence, 106 voronoi borders, 107 combustible. Patterns keep 0..N. The two families share this
+    // 104 ridged, 105 turbulence, 106 voronoi borders, 107 combustible, 108 circuit. Patterns keep 0..N. The two families share this
     // one field because they share one record and one collector, and separating them by RANGE is what keeps either
     // enum free to grow without renumbering the other.
     if (type >= 100 && type <= 103)   // FBM noise: simplex / perlin / value / worley
@@ -784,6 +1016,12 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
         float dd = VoronoiEdge(g + noise.y, ph);
         float aa = fwidth(dd) + 1e-4;
         return 1.0 - smoothstep(0.0, 0.06 + aa, dd);   // Color2 on the borders, Color1 inside the cells
+    }
+    if (type == 108)   // circuit board: buses of tracks with 45-degree turns and pads, current running along them
+    {
+        int oct = max(int(abs(noise.x)), 1);
+        float phase = NoisePhase(noise.x, anim);
+        return CircuitField(g + noise.y, oct, max(noise.z, 1.0), noise.w, phase);
     }
     if (type == 4)   // hexagonal grid (honeycomb) lines
     {
@@ -1099,6 +1337,7 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 [shader("fragment")] float4 NoiseTurbulenceSdfPS(PatternPSInput i)  : SV_Target { return PatternSdfShade(i, 105); }
 [shader("fragment")] float4 NoiseVoronoiSdfPS(PatternPSInput i)     : SV_Target { return PatternSdfShade(i, 106); }
 [shader("fragment")] float4 NoiseCombustibleSdfPS(PatternPSInput i) : SV_Target { return PatternSdfShade(i, 107); }
+[shader("fragment")] float4 NoiseCircuitSdfPS(PatternPSInput i)     : SV_Target { return PatternSdfShade(i, 108); }
 
 [shader("fragment")] float4 NoiseSimplexMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 100); }
 [shader("fragment")] float4 NoisePerlinMeshPS(PatFillPSInput i)      : SV_Target { return PatternMeshShade(i, 101); }
@@ -1108,6 +1347,7 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 [shader("fragment")] float4 NoiseTurbulenceMeshPS(PatFillPSInput i)  : SV_Target { return PatternMeshShade(i, 105); }
 [shader("fragment")] float4 NoiseVoronoiMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 106); }
 [shader("fragment")] float4 NoiseCombustibleMeshPS(PatFillPSInput i) : SV_Target { return PatternMeshShade(i, 107); }
+[shader("fragment")] float4 NoiseCircuitMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 108); }
 
 
 // ---- TEXTURED rounded rect: the first fill of this batch whose colour is SAMPLED rather than computed. Deliberately the
@@ -1896,6 +2136,12 @@ technique Noise
         PixelShader = NoiseCombustibleSdfPS;
     }
 
+    pass CircuitSdf
+    {
+        VertexShader = PatternRectInstancedVS;
+        PixelShader = NoiseCircuitSdfPS;
+    }
+
     pass SimplexMesh
     {
         VertexShader = PatternFillVS;
@@ -1942,6 +2188,12 @@ technique Noise
     {
         VertexShader = PatternFillVS;
         PixelShader = NoiseCombustibleMeshPS;
+    }
+
+    pass CircuitMesh
+    {
+        VertexShader = PatternFillVS;
+        PixelShader = NoiseCircuitMeshPS;
     }
 }
 

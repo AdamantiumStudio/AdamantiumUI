@@ -1394,6 +1394,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         105 => brush.NoiseTurbulenceMeshPass,
         106 => brush.NoiseVoronoiMeshPass,
         107 => brush.NoiseCombustibleMeshPass,
+        108 => brush.NoiseCircuitMeshPass,
         _ => brush.PatternCheckerboardMeshPass
     };
 

@@ -79,6 +79,7 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
         105 => Effect.NoiseTurbulenceSdfPass,
         106 => Effect.NoiseVoronoiSdfPass,
         107 => Effect.NoiseCombustibleSdfPass,
+        108 => Effect.NoiseCircuitSdfPass,
         _ => Effect.PatternCheckerboardSdfPass
     };
 

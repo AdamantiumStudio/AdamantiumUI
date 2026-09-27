@@ -8,7 +8,9 @@ namespace Adamantium.UI.Core.Media;
 /// VoronoiBorders (iq's Xd23Dh) draws the cellular BORDER network - thin glowing cell walls / cracks, not filled cells -
 /// and morphs as its feature points orbit under Animate. CombustibleVoronoi (Shane's 4tlSzl) is a 3D-Voronoi fBm through a
 /// blackbody FIRE palette - a molten plasma / fireball look; it has its own colour path, so Color1/Color2 don't tint it
-/// (only Color1's alpha carries opacity). Best with Animate on.</summary>
+/// (only Color1's alpha carries opacity). Best with Animate on. Circuit is a printed circuit board: buses of thin parallel
+/// tracks turning at 45 degrees and running into chips, with bunches of current running along them under Animate; Octaves
+/// adds fainter board layers underneath.</summary>
 public enum NoiseType
 {
     Simplex,
@@ -18,5 +20,6 @@ public enum NoiseType
     Ridged,
     Turbulence,
     VoronoiBorders,
-    CombustibleVoronoi
+    CombustibleVoronoi,
+    Circuit
 }

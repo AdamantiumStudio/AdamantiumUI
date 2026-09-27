@@ -196,6 +196,27 @@
                 </Rectangle>
                 <TextBlock Text="Voronoi borders" HorizontalAlignment="Center" MarginTop="6" Foreground="{ResourceReference TextFillColorSecondary}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="10">
+                <Rectangle Width="150"
+                           Height="110"
+                           CornerRadius="12">
+                    <Rectangle.Fill>
+                        <NoiseBrush NoiseType="Circuit"
+                                    Scale="90"
+                                    Octaves="2"
+                                    Animate="true"
+                                    FlowSpeed="1.0"
+                                    Color1="#030712"
+                                    MidColor="#2563EB"
+                                    Color2="#E0F2FE"/>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <TextBlock Text="Circuit"
+                           HorizontalAlignment="Center"
+                           MarginTop="6"
+                           Foreground="{ResourceReference TextFillColorSecondary}"/>
+            </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10">
                 <Rectangle Width="150" Height="110" CornerRadius="12">
                     <Rectangle.Fill>
