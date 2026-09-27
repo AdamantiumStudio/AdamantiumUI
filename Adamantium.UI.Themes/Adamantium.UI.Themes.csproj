@@ -14,7 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Adamantium.UI.Controls\Adamantium.UI.Controls.csproj" />
         <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-        <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+        <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
 
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />

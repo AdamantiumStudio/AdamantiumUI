@@ -258,10 +258,10 @@
 	<ItemGroup>
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine.Generators\Adamantium.Engine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine.Generators\Adamantium.Engine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" SetTargetFramework="TargetFramework=netstandard2.0"/>
