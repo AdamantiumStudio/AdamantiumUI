@@ -31,6 +31,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private static readonly bool Dumps =
         Environment.GetEnvironmentVariable("ADAM_PLATE_DUMPS") == "1" || Environment.GetEnvironmentVariable("ADAM_PROBE_LOG") != null;
 
+    private static readonly string LogDirectory = System.IO.Path.Combine(AppContext.BaseDirectory, "logs");
+
     private const double RefreshSeconds = 0.25;   // rewrite the text ~4x/sec - readable, and cheap (no per-frame raster)
 
     private long _lastMeasure, _lastArrange, _lastBindings, _lastPresented;
@@ -97,7 +99,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
         try
         {
-            System.IO.File.AppendAllText(@"C:\AdamantiumEngine\flips.log", $"{DateTime.Now:HH:mm:ss.fff}  {key}\n");
+            System.IO.File.AppendAllText(System.IO.Path.Combine(LogDirectory, "flips.log"), $"{DateTime.Now:HH:mm:ss.fff}  {key}\n");
         }
         catch
         {
@@ -237,7 +239,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             // second, on a scene otherwise doing nothing - a large-object allocation and 700 KB of I/O per second, which
             // is the instrument becoming the thing it measures. It showed as a static tab whose frame time wandered
             // between 0.9 and 2.2 ms. Only the LONG frames are kept, which is all anybody has ever read.
-            System.IO.File.WriteAllText(@"C:\AdamantiumEngine\incidents.log", FrameTrace.DumpIncidents());
+            System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "incidents.log"), FrameTrace.DumpIncidents());
 
             // WHO marked layout dirty over the last second, biggest first. Reset per dump, so a drag reads as "this is
             // what one second of dragging costs" rather than as a total that only ever grows - and the BUSIEST second so
@@ -245,21 +247,21 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             // somebody looks.
             var layout = LayoutTrace.DumpCounts();
             var total = LayoutTrace.TotalCount();
-            System.IO.File.WriteAllText(@"C:\AdamantiumEngine\layout.log", layout);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "layout.log"), layout);
             if (total > _peakLayout)
             {
                 _peakLayout = total;
-                System.IO.File.WriteAllText(@"C:\AdamantiumEngine\layout-peak.log", layout);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "layout-peak.log"), layout);
             }
 
             LayoutTrace.ResetCounts();
 
             var churn = DumpChurn(out var churnTotal);
-            System.IO.File.WriteAllText(@"C:\AdamantiumEngine\churn.log", churn);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "churn.log"), churn);
             if (churnTotal > _peakChurn)
             {
                 _peakChurn = churnTotal;
-                System.IO.File.WriteAllText(@"C:\AdamantiumEngine\churn-peak.log", churn);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "churn-peak.log"), churn);
             }
 
             lock (_churn) _churn.Clear();
@@ -300,11 +302,11 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
                         // go looking for. What is worth naming is the work that fits nowhere: only if this grows past
                         // the budget is the loop actually behind.
                         $"work {work:F2} ms of budget   over budget {Math.Max(0, work - 1000.0 / Math.Max(1, Adamantium.UI.UIApplication.UpdateRateHz)):F2} ms\n";
-            System.IO.File.WriteAllText(@"C:\AdamantiumEngine\build.log", build);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "build.log"), build);
             if (created + updated > _peakUnits)
             {
                 _peakUnits = created + updated;
-                System.IO.File.WriteAllText(@"C:\AdamantiumEngine\build-peak.log", build);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "build-peak.log"), build);
             }
 
             // EVERY second, appended. A "peak" file picks one second by one criterion and throws the rest away - and the
@@ -324,7 +326,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             if (_second > 10 && Math.Min(framesThisSecond, loopThisSecond) < _worstSecondFrames)
             {
                 _worstSecondFrames = Math.Min(framesThisSecond, loopThisSecond);
-                System.IO.File.WriteAllText(@"C:\AdamantiumEngine\worst-second.log",
+                System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "worst-second.log"),
                     $"WORST SECOND SO FAR: loop {loopThisSecond} fps, presented {framesThisSecond} fps (second {_second})\n\n"
                     + build + "\n" + layout + "\n" + churn + "\n"
                     + "long frames in it:\n" + FrameTrace.DumpIncidentsSince(_worstSecondMark));
@@ -335,11 +337,11 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             // EVERY second gets a line about what entered or left the drawn set, busy or not. The question a churn number
             // answers is "is this still going on?", and a file that keeps only the busy seconds cannot tell a fill that
             // ends from one that never does.
-            System.IO.File.AppendAllText(@"C:\AdamantiumEngine\churn-history.log",
+            System.IO.File.AppendAllText(System.IO.Path.Combine(LogDirectory, "churn-history.log"),
                 $"second {_second}: churn {churnTotal}, created {created}, updated {updated}, arrange {arrange - _lastArrange}\n");
             if (measure - _lastMeasure > 50 || created + updated > 500)
             {
-                System.IO.File.AppendAllText(@"C:\AdamantiumEngine\layout-history.log",
+                System.IO.File.AppendAllText(System.IO.Path.Combine(LogDirectory, "layout-history.log"),
                     $"---- second {_second} ----\n{build}{layout}\n");
             }
         }
