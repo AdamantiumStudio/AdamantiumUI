@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Adamantium.Core\Adamantium.Core.csproj" />
+      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>

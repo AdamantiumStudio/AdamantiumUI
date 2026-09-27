@@ -54,8 +54,15 @@ static void RunDemo(CompletionEngine engine)
 
 static string? FindDefaultBinDir()
 {
-    var root = @"c:\AdamantiumEngine\Adamantium\Adamantium\artifacts\bin";
-    if (!Directory.Exists(root)) return null;
+    // The artifacts\bin this server was built into.
+    var artifacts = new DirectoryInfo(AppContext.BaseDirectory);
+    while (artifacts != null && !artifacts.Name.Equals("artifacts", StringComparison.OrdinalIgnoreCase))
+    {
+        artifacts = artifacts.Parent;
+    }
+
+    var root = artifacts == null ? null : Path.Combine(artifacts.FullName, "bin");
+    if (root == null || !Directory.Exists(root)) return null;
     return Directory.EnumerateDirectories(root, "net*", SearchOption.AllDirectories)
         .Where(d => File.Exists(Path.Combine(d, "Adamantium.UI.dll")))
         .OrderByDescending(Directory.GetLastWriteTimeUtc)

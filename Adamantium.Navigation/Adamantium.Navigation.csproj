@@ -11,7 +11,7 @@
 
     <ItemGroup>
         <!-- UI-free: the whole navigation engine + contracts a ViewModel sees. Only PropertyChangedBase + the DI resolver. -->
-        <ProjectReference Include="..\Adamantium.Core\Adamantium.Core.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
     </ItemGroup>
 
 </Project>
