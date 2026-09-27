@@ -88,10 +88,18 @@ public class PropertyGrid : Control
 
     /// <summary>Sections from somewhere ELSE - what <see cref="PropertyDefinitionBuilder"/> made from a type, what an
     /// editor assembled per component. Set, it replaces <see cref="Sections"/> entirely: an inspector is either written
-    /// out or generated, and mixing the two silently would be a puzzle for whoever reads the markup.</summary>
+    /// out or generated, and mixing the two silently would be a puzzle for whoever reads the markup.
+    /// <para>Any other item is an object to inspect: the grid builds its own section for it, so a view-model hands over
+    /// data and two grids never share a section.</para></summary>
     public static readonly AdamantiumProperty SectionsSourceProperty = AdamantiumProperty.Register(
         nameof(SectionsSource), typeof(IEnumerable), typeof(PropertyGrid),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSectionsSourceChanged));
+
+    /// <summary>Builds the sections from the type of the selected objects instead of <see cref="Sections"/>. Each grid
+    /// builds its own, so two views of one view-model never fight over the same sections.</summary>
+    public static readonly AdamantiumProperty AutoGenerateSectionsProperty = AdamantiumProperty.Register(
+        nameof(AutoGenerateSections), typeof(Boolean), typeof(PropertyGrid),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
 
     /// <summary>Narrows the inspector to the properties whose name carries this, ignoring case. A section whose own
     /// name carries it keeps all of its properties - asking for "Transform" means the whole of it.
@@ -118,6 +126,7 @@ public class PropertyGrid : Control
     private readonly List<PropertySection> _openedBySearch = new();
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
+    private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>How many times the whole panel has been torn down and put back, and how many times it has only re-read
     /// what it shows. The difference between the two is most of what an inspector costs, and nothing said which was
@@ -131,6 +140,10 @@ public class PropertyGrid : Control
     private TextBox _search;
     private ButtonBase _clearSearch;
     private PropertyRow _selected;
+    private PropertyDefinitionBuilder _builder;
+    private IReadOnlyList<PropertySection> _generated = [];
+    private Type _generatedFor;
+    private INotifyCollectionChanged _followedSource;
 
     static PropertyGrid()
     {
@@ -150,6 +163,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<IEnumerable>(SectionsSourceProperty);
         set => SetValue(SectionsSourceProperty, value);
+    }
+
+    public Boolean AutoGenerateSections
+    {
+        get => GetValue<Boolean>(AutoGenerateSectionsProperty);
+        set => SetValue(AutoGenerateSectionsProperty, value);
     }
 
     /// <summary>The object being inspected. A section may name its own <see cref="PropertySection.Target"/>; the rest
@@ -649,15 +668,80 @@ public class PropertyGrid : Control
 
     private IEnumerable<PropertySection> DisplayedSections()
     {
-        if (SectionsSource == null) return Sections;
+        if (SectionsSource == null) return AutoGenerateSections ? GeneratedSections() : Sections;
 
         var many = new List<PropertySection>();
+        var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
         foreach (var item in SectionsSource)
         {
-            if (item is PropertySection section) many.Add(section);
+            if (item is PropertySection section)
+            {
+                many.Add(section);
+            }
+            else if (item != null)
+            {
+                many.Add(SectionFor(item));
+                seen.Add(item);
+            }
+        }
+
+        foreach (var gone in _built.Keys.Where(item => !seen.Contains(item)).ToList())
+        {
+            _built.Remove(gone);
         }
 
         return many;
+    }
+
+    private PropertySection SectionFor(object item)
+    {
+        if (!_built.TryGetValue(item, out var section))
+        {
+            _builder ??= new PropertyDefinitionBuilder();
+            section = _builder.BuildSections([item])[0];
+            _built.Add(item, section);
+        }
+
+        return section;
+    }
+
+    private IReadOnlyList<PropertySection> GeneratedSections()
+    {
+        var type = SharedType(Targets);
+        if (type != _generatedFor)
+        {
+            _generatedFor = type;
+            _builder ??= new PropertyDefinitionBuilder();
+            _generated = type == null ? [] : _builder.BuildSections(type);
+        }
+
+        return _generated;
+    }
+
+    private static Type SharedType(IReadOnlyList<object> targets)
+    {
+        Type shared = null;
+        foreach (var target in targets)
+        {
+            if (target == null)
+            {
+                continue;
+            }
+
+            var type = target.GetType();
+            if (shared == null)
+            {
+                shared = type;
+                continue;
+            }
+
+            while (!shared.IsAssignableFrom(type))
+            {
+                shared = shared.BaseType;
+            }
+        }
+
+        return shared;
     }
 
     private void AddRow(Panel host, PropertyDefinition definition, IReadOnlyList<object> targets, int depth,
@@ -813,6 +897,27 @@ public class PropertyGrid : Control
 
     private static void OnSelectedObjectChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) =>
         (d as PropertyGrid)?.Rebuild();
+
+    private static void OnSectionsSourceChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not PropertyGrid grid)
+        {
+            return;
+        }
+
+        if (grid._followedSource != null)
+        {
+            grid._followedSource.CollectionChanged -= grid.OnSectionsChanged;
+        }
+
+        grid._followedSource = grid.SectionsSource as INotifyCollectionChanged;
+        if (grid._followedSource != null)
+        {
+            grid._followedSource.CollectionChanged += grid.OnSectionsChanged;
+        }
+
+        grid.Rebuild();
+    }
 
     // Told to the rows that are already standing, rather than rebuilding them: a panel's manner can be changed while
     // somebody is looking at it, and every line answers the same way.

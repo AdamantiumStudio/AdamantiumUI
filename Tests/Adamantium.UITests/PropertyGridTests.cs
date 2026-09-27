@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using Adamantium.Core.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -1850,6 +1851,172 @@ public class PropertyGridTests
         {
             Assert.That(name.HasDefault, Is.True);
             Assert.That(name.DefaultValue, Is.EqualTo("entity"), "what a new Target is called");
+        });
+    }
+
+    private static PropertyGrid Generated(params Target[] targets)
+    {
+        var grid = Built();
+        grid.AutoGenerateSections = true;
+        grid.SelectedObjects = targets;
+        grid.Measure(new Size(400, 400), force: true);
+        grid.Arrange(new Rect(0, 0, 400, 400));
+        return grid;
+    }
+
+    private static List<string> DisplayedHeaders(PropertyGrid grid)
+    {
+        var headers = new List<string>();
+        foreach (var section in grid.Displayed)
+        {
+            if (section.Content is not IUIComponent host)
+            {
+                continue;
+            }
+
+            foreach (var child in host.VisualChildren)
+            {
+                if (child is PropertyRow row)
+                {
+                    headers.Add(row.Definition.Header as string);
+                }
+            }
+        }
+
+        return headers;
+    }
+
+    [Test]
+    public void AGeneratedInspectorShowsTheTypesProperties()
+    {
+        var grid = Generated(new Target());
+
+        Assert.That(DisplayedHeaders(grid), Does.Contain("Name").And.Contain("Scale"));
+    }
+
+    // A view is built again whenever its tab comes back, and the old one keeps its grid until it is collected. Sections
+    // held by the view-model were stolen between the two, and the old grid letting go of its selection emptied the new.
+    [Test]
+    public void AnOldInspectorLettingGoDoesNotEmptyTheNewOne()
+    {
+        var target = new Target();
+        var old = Generated(target);
+        var fresh = Generated(target);
+        var oldSections = new List<PropertySection>(old.Displayed);
+
+        old.SelectedObjects = null;
+        old.Measure(new Size(400, 400), force: true);
+        old.Arrange(new Rect(0, 0, 400, 400));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(DisplayedHeaders(fresh), Does.Contain("Name"));
+            Assert.That(fresh.Displayed, Has.None.Matches<PropertySection>(oldSections.Contains),
+                "each grid builds its own sections");
+        });
+    }
+
+    [Test]
+    public void ASectionAddedToTheSourceIsShown()
+    {
+        var target = new Target();
+        var source = new TrackingCollection<PropertySection>
+        {
+            Section(target, new StringProperty { Header = "Name", Binding = new Binding("Name") })
+        };
+        var grid = Built();
+        grid.SectionsSource = source;
+
+        source.Add(Section(target, new NumericProperty { Header = "Scale", Binding = new Binding("Scale") }));
+
+        Assert.That(DisplayedHeaders(grid), Does.Contain("Name").And.Contain("Scale"));
+    }
+
+    [Test]
+    public void AReplacedSourceIsNoLongerFollowed()
+    {
+        var old = new TrackingCollection<PropertySection>();
+        var grid = Built();
+        grid.SectionsSource = old;
+        grid.SectionsSource = new TrackingCollection<PropertySection>();
+        var rebuilds = PropertyGrid.Rebuilds;
+
+        old.Add(Section(new Target(), new StringProperty { Header = "Name", Binding = new Binding("Name") }));
+
+        Assert.That(PropertyGrid.Rebuilds, Is.EqualTo(rebuilds));
+    }
+
+    [Test]
+    public void AnObjectInTheSourceGetsASectionOfItsOwn()
+    {
+        var target = new Target();
+        var grid = Built();
+        grid.SectionsSource = new TrackingCollection<object> { target };
+
+        var sections = new List<PropertySection>(grid.Displayed);
+        Assert.Multiple(() =>
+        {
+            Assert.That(sections, Has.Count.EqualTo(1));
+            Assert.That(sections[0].Target, Is.SameAs(target));
+            Assert.That(DisplayedHeaders(grid), Does.Contain("Name"));
+        });
+    }
+
+    // Two views of one view-model: the old one rebuilding must not take anything from the new one.
+    [Test]
+    public void TwoGridsOverOneSourceKeepTheirOwnSections()
+    {
+        var source = new TrackingCollection<object> { new Target() };
+        var old = Built();
+        old.SectionsSource = source;
+        var fresh = Built();
+        fresh.SectionsSource = source;
+
+        old.Rebuild();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(DisplayedHeaders(fresh), Does.Contain("Name"));
+            Assert.That(fresh.Displayed, Has.None.Matches<PropertySection>(new List<PropertySection>(old.Displayed).Contains));
+        });
+    }
+
+    [Test]
+    public void AddingAnObjectLeavesTheOtherSectionsAsTheyWere()
+    {
+        var source = new TrackingCollection<object> { new Target() };
+        var grid = Built();
+        grid.SectionsSource = source;
+        var folded = new List<PropertySection>(grid.Displayed)[0];
+        folded.IsExpanded = false;
+
+        source.Add(new Target());
+
+        var sections = new List<PropertySection>(grid.Displayed);
+        Assert.Multiple(() =>
+        {
+            Assert.That(sections, Has.Count.EqualTo(2));
+            Assert.That(sections[0], Is.SameAs(folded));
+            Assert.That(folded.IsExpanded, Is.False);
+        });
+    }
+
+    [Test]
+    public void ARemovedObjectTakesItsSectionWithIt()
+    {
+        var first = new Target();
+        var second = new Target();
+        var source = new TrackingCollection<object> { first, second };
+        var grid = Built();
+        grid.SectionsSource = source;
+
+        source.Remove(first);
+
+        var sections = new List<PropertySection>(grid.Displayed);
+        Assert.Multiple(() =>
+        {
+            Assert.That(sections, Has.Count.EqualTo(1));
+            Assert.That(sections[0].Target, Is.SameAs(second));
         });
     }
 

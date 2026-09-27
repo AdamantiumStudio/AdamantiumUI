@@ -68,7 +68,7 @@
              would take is worth more to the rows. The left one keeps it, so the page shows both. -->
         <PropertyGrid Grid.Row="3" Grid.Column="1" Margin="8,0,0,0"
                       SelectedObjects="{Binding RightSelection}"
-                      SectionsSource="{Binding Generated}"
+                      AutoGenerateSections="True"
                       ShowSearch="{Binding Searchable}"
                       NameColumnWidth="170"/>
 

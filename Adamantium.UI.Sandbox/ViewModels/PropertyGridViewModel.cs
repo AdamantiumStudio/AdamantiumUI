@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
-using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 
@@ -119,9 +118,4 @@ public partial class PropertyGridViewModel : TabPageViewModel
         RaisePropertyChanged(nameof(RightCaption));
         RaisePropertyChanged(nameof(Difference));
     }
-
-    /// <summary>The sections the BUILDER makes from the type - no markup at all, which is how an entity's components
-    /// will be inspected: it is handed a type and gives back sections carrying ordinary bindings.</summary>
-    public IReadOnlyList<PropertySection> Generated { get; } =
-        new PropertyDefinitionBuilder().BuildSections(typeof(InspectedEntity));
 }
