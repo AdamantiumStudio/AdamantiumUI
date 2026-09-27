@@ -12,26 +12,27 @@ internal static class LspSelfTest
 {
     public static int Run()
     {
-        const string dir = "file:///c:/AdamantiumEngine/Adamantium/Adamantium/Adamantium.UI.Sandbox";
+        var sandbox = SandboxDir();
+        var dir = "file:///" + sandbox.Replace('\\', '/');
         // VS Code percent-encodes the drive colon (file:///c%3A/...) — UriToLocalPath must still resolve the project.
-        const string dirEncoded = "file:///c%3A/AdamantiumEngine/Adamantium/Adamantium/Adamantium.UI.Sandbox";
-        const string encodedUri = dirEncoded + "/Encoded.auml";
-        const string completionUri = dir + "/Completion.auml";
-        const string diagUri = dir + "/Diag.auml";
-        const string directiveUri = dir + "/Directive.auml";
-        const string hoverUri = dir + "/Hover.auml";
-        const string brushUri = dir + "/Brush.auml";
-        const string missingUri = dir + "/Missing.auml";
-        const string qualifyUri = dir + "/Qualify.auml";
-        const string importUri = dir + "/Import.auml";
-        const string clrUri = dir + "/Clr.auml";
-        const string clrGoodUri = dir + "/ClrGood.auml";
-        const string clrBadUri = dir + "/ClrBad.auml";
-        const string propElementUri = dir + "/PropElement.auml";
-        const string themePropUri = dir + "/ThemeProp.auml";
-        const string attachedUri = dir + "/Attached.auml";
-        const string xPrefixUri = dir + "/XPrefix.auml";
-        const string semanticUri = dir + "/Semantic.auml";
+        var dirEncoded = "file:///" + sandbox.Replace('\\', '/').Replace(":", "%3A");
+        var encodedUri = dirEncoded + "/Encoded.auml";
+        var completionUri = dir + "/Completion.auml";
+        var diagUri = dir + "/Diag.auml";
+        var directiveUri = dir + "/Directive.auml";
+        var hoverUri = dir + "/Hover.auml";
+        var brushUri = dir + "/Brush.auml";
+        var missingUri = dir + "/Missing.auml";
+        var qualifyUri = dir + "/Qualify.auml";
+        var importUri = dir + "/Import.auml";
+        var clrUri = dir + "/Clr.auml";
+        var clrGoodUri = dir + "/ClrGood.auml";
+        var clrBadUri = dir + "/ClrBad.auml";
+        var propElementUri = dir + "/PropElement.auml";
+        var themePropUri = dir + "/ThemeProp.auml";
+        var attachedUri = dir + "/Attached.auml";
+        var xPrefixUri = dir + "/XPrefix.auml";
+        var semanticUri = dir + "/Semantic.auml";
 
         const string resourcesRoot = """<StyleSet xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions" xmlns:controls="http://adamantium/ui">""";
 
@@ -271,8 +272,7 @@ internal static class LspSelfTest
         // Phase 2 smoke: go-to into an external (metadata-only) type decompiles it to a temp .cs.
         try
         {
-            var model = new AumlWorkspace().GetModelForFile(
-                @"c:\AdamantiumEngine\Adamantium\Adamantium\Adamantium.UI.Sandbox\Completion.auml");
+            var model = new AumlWorkspace().GetModelForFile(Path.Combine(sandbox, "Completion.auml"));
             var objectSymbol = model?.Compilation.GetTypeByMetadataName("System.Object");
             if (objectSymbol is not null)
             {
@@ -378,5 +378,19 @@ internal static class LspSelfTest
                 ["position"] = new JsonObject { ["line"] = line, ["character"] = character }
             }
         };
+    }
+
+    private static string SandboxDir()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox");
+            if (File.Exists(Path.Combine(candidate, "Adamantium.UI.Sandbox.csproj")))
+            {
+                return candidate;
+            }
+        }
+
+        throw new DirectoryNotFoundException("could not find Adamantium.UI.Sandbox above " + AppContext.BaseDirectory);
     }
 }

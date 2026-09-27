@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Adamantium.Imaging;
 using Adamantium.UI.Core.Media.Imaging;
 using NUnit.Framework;
@@ -11,7 +13,24 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class AnimatedImageDecodeTests
 {
-    private const string TexturesDir = @"C:\AdamantiumEngine\Adamantium\Adamantium\Adamantium.UI.Sandbox\Textures\";
+    private static readonly string TexturesDir = SandboxTextures();
+
+    private static string SandboxTextures()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures");
+            if (Directory.Exists(candidate))
+            {
+                return candidate + Path.DirectorySeparatorChar;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("could not find Adamantium.UI.Sandbox/Textures above " + AppContext.BaseDirectory);
+    }
 
     [Test]
     public void Apng_DecodesMultipleFrames()

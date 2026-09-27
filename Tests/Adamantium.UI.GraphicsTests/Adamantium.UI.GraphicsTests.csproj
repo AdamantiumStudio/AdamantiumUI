@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <Platforms>AnyCPU</Platforms>
+        <Configurations>Debug;Release</Configurations>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- THE REAL UI SHADERS, linked rather than copied: whether this driver will create a pass at all is a question
+             only a device can answer, and it has to be asked of the file the application actually ships. -->
+        <Content Include="..\..\Adamantium.UI.FX\*.fx" LinkBase="EffectsData\UIFX">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <!-- FLAT, beside the .fx files: handed no list of includes the compiler scans the shader's OWN directory and no
+             deeper, while the resolver matches a request by file name alone. -->
+        <Content Include="..\..\Adamantium.UI.FX\Includes\*.fxh" LinkBase="EffectsData\UIFX">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <!-- The production stroke shader, so the dash/trim tests dispatch the real StrokeDashCutCS + EmitJoin. -->
+        <Content Include="..\..\Adamantium.UI.FX\StrokeEffect.fx">
+            <Link>EffectsData\StrokeEffect.fx</Link>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NUnit" Version="3.13.2" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics.Core\Adamantium.Graphics.Core.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics\Adamantium.Graphics.csproj" />
+    </ItemGroup>
+
+</Project>
