@@ -36,9 +36,9 @@ namespace Adamantium.UITests.Rendering
             var written = 0;
             foreach (var shader in data.Shaders)
             {
-                var file = Path.Combine(outDir, $"{name}.{shader.Name}.{written:D3}.spv");
+                var file = Path.Combine(outDir, $"{name}.{shader.EntryPoint}.{written:D3}.spv");
                 File.WriteAllBytes(file, shader.Bytecode);
-                TestContext.WriteLine($"{shader.Name} -> {file} ({shader.Bytecode.Length} bytes)");
+                TestContext.WriteLine($"{shader.EntryPoint} -> {file} ({shader.Bytecode.Length} bytes)");
                 written++;
             }
 

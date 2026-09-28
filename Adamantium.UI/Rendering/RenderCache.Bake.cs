@@ -190,6 +190,9 @@ public partial class RenderCache
         _haloOver?.DisposeGpuResources(device);
         _haloLivingUnder?.DisposeGpuResources(device);
         _haloLivingOver?.DisposeGpuResources(device);
+        _canvasGridBatch?.DisposeGpuResources(device);
+        _inkBatch?.DisposeGpuResources(device);
+        _arrowBatch?.DisposeGpuResources(device);
         _instancedFill?.Dispose();
         _transformTable?.Dispose();
 
@@ -207,10 +210,15 @@ public partial class RenderCache
         _haloOver = null;
         _haloLivingUnder = null;
         _haloLivingOver = null;
+        _canvasGridBatch = null;
+        _inkBatch = null;
+        _arrowBatch = null;
         _instancedFill = null;
         _transformTable = null;
     }
 
+    /// <summary>Disposes every cached unit (GPU idle first); the off-screen designer resets with it between renders, since
+    /// its controls never detach.</summary>
     public void DisposeUnits()
     {
         foreach (var group in _groupById.Values)

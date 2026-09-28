@@ -101,6 +101,13 @@ public class WindowRenderService : UiRenderService
             Window.DefaultRenderer = null;
         }
         windowRenderer?.Dispose();
+        // The stages go with the window: each frees its GPU resources, and a detached stage forgets its marks.
+        base.UnloadContent();
+        for (var i = Processors.Count - 1; i >= 0; i--)
+        {
+            DetachProcessor(Processors[i]);
+        }
+
         // The designer's injected device belongs to its session.
         if (_injectedDevice == null && GraphicsDevice != null)
             GraphicsDeviceService.MainGraphicsDevice.RemoveDevice(GraphicsDevice);

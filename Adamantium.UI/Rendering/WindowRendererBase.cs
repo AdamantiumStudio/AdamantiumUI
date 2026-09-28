@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
@@ -226,5 +227,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;
+        // Last: the units built from it are gone by now.
+        (RenderUnitFactory as IDisposable)?.Dispose();
     }
 }

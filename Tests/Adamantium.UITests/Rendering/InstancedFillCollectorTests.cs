@@ -19,12 +19,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// The LIVE general-geometry instancer: N identical Path/Polygon fills must collapse into ONE shared mesh drawn as ONE
-// instanced call, in their natural z-layer. (It replaced the InstanceBuffer/GeometryInstanceRegistry design, whose tests
-// were deleted with it - this fixture is the coverage for what actually ships.)
-//
-// Needs a real device: a segment allocates its mesh + instance buffers on the GPU. Only the COLLECTION side is asserted -
-// Flush issues real draws and so needs a live command buffer/render pass.
+// N identical Path/Polygon fills collapse into one shared mesh and one instanced call. Needs a device; only collection is
+// asserted, since Flush needs a live render pass.
 [TestFixture]
 [Category("Gpu")]
 public class InstancedFillCollectorTests
@@ -32,6 +28,7 @@ public class InstancedFillCollectorTests
     private IGraphicsDevice _device;
     private UIBasicEffect _effect;
     private readonly StubResourceFactory _resourceFactory = new();
+    private readonly List<RenderUnitContext> _contexts = [];
 
     private static readonly Rect2D NoScissor = new() { Offset = new Offset2D(), Extent = new Extent2D { Width = 1000, Height = 1000 } };
 
@@ -42,14 +39,30 @@ public class InstancedFillCollectorTests
         _effect = new UIBasicEffect(_device);
     }
 
+    // Each unit's context holds its own copy of the effect; left alone, every one stays on the device until the run ends.
+    [TearDown]
+    public void FreeContexts()
+    {
+        foreach (var context in _contexts)
+        {
+            context.Dispose();
+        }
+
+        _contexts.Clear();
+    }
+
+    [OneTimeTearDown]
+    public void FreeEffect() => _effect?.Dispose();
+
     private GeometryRenderUnit Unit(Brush brush, double size)
     {
         var geometry = new RectangleGeometry(new Rect(0, 0, size, size), new CornerRadius(0));
         var component = new TestControl();
         var command = new DrawCommand(component, component.RenderId, new GeometryPayload(brush, geometry),
             new RenderData(1f, Matrix4x4F.Identity, false, default));
-        return new GeometryRenderUnit(command,
-            new RenderUnitContext(_device, _resourceFactory, (UIBasicEffect)_effect.Clone(), null, null, new GpuBufferManager(_device)));
+        var context = new RenderUnitContext(_device, _resourceFactory, (UIBasicEffect)_effect.Clone(), null, null, new GpuBufferManager(_device));
+        _contexts.Add(context);
+        return new GeometryRenderUnit(command, context);
     }
 
     private static GeometryKey KeyOf(GeometryRenderUnit unit)

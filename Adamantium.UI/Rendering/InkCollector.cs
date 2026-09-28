@@ -11,15 +11,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// INK: a stroke drawn as ONE shape, whose fragment asks how far it is from the whole polyline. An InkBrush fill routes
-// here.
-//
-// The one collector in this family whose payload is not one instance: a stroke writes a HEADER record plus one record
-// per point, and only the header draws - the points are data its fragment shader reads. So a rectangle turns into as
-// many instances as the stroke has points, all in the one draw call the clip group already had.
-//
-// Its OWN effect, like the materials and the grid - see the note at the top of InkEffect.fx for what this replaced and
-// why one capsule per segment could not be it.
+// Ink strokes for InkBrush fills: one record per polyline point, each drawing its own segment's box, within the clip
+// group's single draw. See InkEffect.fx.
 internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
 {
     public static bool Enabled = true;
@@ -38,7 +31,7 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
     {
         if (Effect != null) return;
 
-        Effect = new InkEffect(device);
+        Effect = Own(new InkEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         InstancesAddressParam = Effect.InstancesAddress;
@@ -68,19 +61,8 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
 
         var points = Math.Max(1, Math.Min(ink.Count, ink.Points.Length));
 
-        // ONE RECORD PER POINT, and each one DRAWS - its own segment, from itself to the point after it. There is no
-        // separate header: everything a fragment needs is on every record, so a stroke costs one record a point, which
-        // is FEWER than the header-plus-points this used to write.
-        //
-        // What that buys is the whole change. A record's quad is its own segment's box, so what the GPU is asked to
-        // shade is a chain of little boxes hugging the line - the ribbon - instead of one box the size of the stroke.
-        // A stroke across the window fills about a twentieth of its own bounds, and the other nineteen twentieths were
-        // fragments walking the whole polyline only to learn they were nowhere near it.
-        //
-        // What must NOT follow is drawing a pixel twice: overlapping capsules compositing twice is exactly what made a
-        // highlighter impossible and why this pass drew a stroke in one instance before. So a fragment works out the
-        // nearest segment of the WHOLE polyline and keeps the pixel only if that segment is its own - one owner, one
-        // blend. See InkEffect.fx.
+        // One record per point, each drawing its segment's box, so only the ribbon is shaded. A fragment keeps a pixel
+        // only if its segment is the nearest of the whole polyline, so overlaps blend once.
         EnsureCpuCapacity(Count + points);
         if (Count + points > GpuCapacity) return false;
 
@@ -129,16 +111,8 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
         return true;
     }
 
-    /// <summary>HOW FAR THE STROKE STRAYS from every <see cref="Stride"/>-th point of itself - what lets a fragment far
-    /// from the ink say so without asking about every point.
-    /// <para>The fragment's cost is the whole polyline, and it is paid by every pixel of the stroke's BOX. A stroke is a
-    /// thin ribbon in a box it fills a twentieth of, so almost every one of those pixels walks two hundred points to
-    /// find out it is nowhere near any of them. Given this number it can walk a sixteenth of them first: the real
-    /// polyline never leaves this distance from the coarse one, so anything farther than it from the coarse line is
-    /// farther than the ink from the real one, and can stop.</para>
-    /// <para>Measured on the coarse SEGMENTS rather than on their end points - the sagitta of a hand-drawn arc is a
-    /// fraction of the chord it bulges from, and the tighter this number is, the more pixels get to stop early.</para>
-    /// </summary>
+    // The max distance of the stroke from its every-Stride-th-point polyline (measured to segments), so fragments can
+    // reject early against the coarse line.
     private float Spread(int first, int points)
     {
         if (points < Stride * 2) return -1;   // fewer points than a coarse walk saves: none is taken

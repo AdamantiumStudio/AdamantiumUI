@@ -8,34 +8,12 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// What the backdrop materials read: a copy of the region of the frame ALREADY DRAWN behind an element.
-///
-/// <para>Not a re-render. <c>VisualRenderer</c> exists for the other question - draw this subtree somewhere else - and it
-/// answers it by RUNNING the subtree again. A material needs the opposite: whatever happens to be behind the element,
-/// including things it knows nothing about, exactly as composited. That is a transfer out of the colour target, not a
-/// draw, which is why it needs the pass broken open (SuspendRendering/ResumeRendering).</para>
-///
-/// <para>DOWNSCALING IS THE FIRST BLUR PASS, not an optimisation bolted on. The blit is filtered, so copying the region
-/// into a quarter-size image already averages 4x4 neighbourhoods for free; the shader then samples that with a linear
-/// sampler and gets a wide, cheap blur out of very few taps. Doing it at full size would cost the copy AND a real
-/// convolution.</para>
-///
-/// <para>The region is the element's box GROWN by a margin, because a blur reaches outside what it covers: sample right
-/// up to the edge and the border of the material darkens towards whatever the clamp returns.</para>
-/// </summary>
+// Copies the already-drawn frame region behind an element for backdrop materials: a transfer out of the color target
+// (the pass is suspended), not a re-render. The region is grown by a margin so blurs do not darken at the edge.
 internal sealed class BackdropCapture : IDisposable
 {
-    // How much smaller the copy is than the region it came from, for a material that BLURS it. A quarter in each axis
-    // is a 16th of the pixels and is already a visible blur, so the frosted pass gets a wide, cheap blur out of very few
-    // taps - the shrink is doing most of the work for it.
-    //
-    // NOT FOR GLASS, and this used to say it was. The refracting pass samples the copy SHARPLY and displaces it, so
-    // whatever detail the shrink threw away is detail the lens has nothing left to bend: the copy's resolution is the
-    // material's whole detail budget (see the notes on the capture region). Asked for at a quarter size, liquid glass
-    // came out looking like frosted plastic no matter how strong its refraction was - correctly, because it was bending
-    // an image that had no detail finer than four pixels in it to begin with. Which resolution a material wants is now
-    // the material's own answer; see Sharp.
+    // Downscale for blurring materials, where the filtered shrink is the first blur pass; refracting glass samples a
+    // sharp copy instead (see Sharp).
     public const int Downscale = 4;
 
     /// <summary>What a material that BENDS the copy asks for instead: no shrink at all. The copy is of the element's own
@@ -81,11 +59,8 @@ internal sealed class BackdropCapture : IDisposable
         var w = (uint)Math.Max(1, (right - x) / downscale);
         var h = (uint)Math.Max(1, (bottom - y) / downscale);
 
-        // ROUNDED DOWN to a multiple of 2^halvings, so every level of the pyramid is exactly half of the one above it.
-        // The REGION is left alone on purpose: the blit scales whatever rectangle it is given into whatever size the
-        // copy is, so the copy still covers exactly the region and the material's mapping stays true. Shrinking the
-        // region to match was tried and is wrong twice over - it cuts pixels off the area the element actually sits in,
-        // and what showed through the pane then no longer lined up with what was beside it.
+        // The copy size rounds down to a multiple of 2^halvings so pyramid levels halve exactly; the region stays as is,
+        // since the blit scales it to the copy.
         var align = 1u << Halvings(w, h);
         w -= w % align;
         h -= h % align;
@@ -102,12 +77,8 @@ internal sealed class BackdropCapture : IDisposable
         var commandBuffer = gd.CurrentCommandBuffer;
         gd.SuspendRendering();
 
-        // The barriers below move the images on the GPU; these two lines move what the texture OBJECTS believe about
-        // themselves, so the next thing to transition either of them starts from the state it is actually in.
-        //
-        // ASSIGNED, not transitioned: TransitionImageLayout opens a SINGLE-TIME command buffer of its own, and doing
-        // that in the middle of recording the frame's buffer crashes the process outright - which is exactly what it
-        // did here. The existing CopyImage path can call it because it runs on its own buffer to begin with.
+        // Syncs the texture objects' tracked layouts with the barriers below; assigned, because TransitionImageLayout
+        // opens its own command buffer, which crashes mid-recording.
         source.ImageLayout = ImageLayout.TransferSrcOptimal;
         _current.ImageLayout = ImageLayout.TransferDstOptimal;
 
@@ -164,12 +135,8 @@ internal sealed class BackdropCapture : IDisposable
     /// asks for.</summary>
     private const int MaxHalvings = 6;
 
-    /// <summary>How many times this size can be halved EXACTLY while every level stays usable - and therefore what the
-    /// copy's size has to be a multiple of.
-    /// <para>The height matters as much as the filter: a level that does not exist cannot be sampled, so a radius past
-    /// the top of the pyramid is CLAMPED to it. That clamp is in device pixels, so the same brush covered the same
-    /// number of pixels on a 100% and a 150% display - and since the pane is half again as big on the second, the blur
-    /// read as weaker there. A taller pyramid is what makes the radius mean the same thing on both.</para></summary>
+    // How many exact halvings the size allows, which the copy size must be a multiple of; a taller pyramid keeps large
+    // radii from clamping on high-DPI displays.
     private static int Halvings(uint width, uint height)
     {
         var smaller = Math.Min(width, height);
@@ -178,11 +145,8 @@ internal sealed class BackdropCapture : IDisposable
         return halvings;
     }
 
-    /// <summary>How many levels this copy carries, and only while the halving is EXACT.
-    /// <para>An odd dimension halves to something that is not half of it, so that level covers a slightly different
-    /// area than the one above - and the same 0..1 coordinate then means two different places on two levels. Sampled
-    /// across levels that shows as the backdrop SLIDING a pixel or two as the blur widens, with the error growing at
-    /// every step. Stopping where the halving stops being exact costs a level and removes the slide.</para></summary>
+    // Levels stop where halving stops being exact; an odd size would shift UVs between levels and make the backdrop
+    // slide as the blur widens.
     internal static uint CountLevels(uint width, uint height)
     {
         var levels = 1u;
@@ -196,12 +160,8 @@ internal sealed class BackdropCapture : IDisposable
         return levels;
     }
 
-    // Each level is DRAWN from the one above it by a thirteen-tap filter (see CaptureBlurEffect). A halving blit was
-    // what stood here, and its LINEAR filter is a box: it does not suppress what is above Nyquist before decimating, so
-    // a regular pattern behind a pane folded into moire at every level instead of blurring.
-    //
-    // The levels walk through layouts one at a time - the one just written becomes the SOURCE of the next - which is
-    // why every barrier here is per-level and the whole-image form cannot be used.
+    // Each level is drawn from the one above with a 13-tap filter (CaptureBlurEffect), since a linear blit aliases into
+    // moire. Barriers are per level: each written level becomes the next source.
     private void BuildPyramid(GraphicsDevice gd, CommandBuffer commandBuffer, Texture texture, int width, int height)
     {
         var levels = CountLevels((uint)width, (uint)height);
@@ -286,13 +246,7 @@ internal sealed class BackdropCapture : IDisposable
     private Adamantium.UI.FX.CaptureBlurEffect _blur;
 
 
-    // Kept between captures and re-made only when the size changes - the same rule the off-screen renderer's target
-    // follows, and for the same reason: a fresh image per capture exhausts device memory in seconds when something
-    // behind the material moves every frame.
-    //
-    // The old images go to the DEFERRED queue, never to Dispose: the element only has to change size by a pixel - a
-    // scroll, a resize - for this to run while earlier frames are still sampling what it is about to free, and freeing
-    // a texture out from under an in-flight frame kills the device with nothing in the validation log.
+    // Re-made only on size change; old images go to the deferred queue, since in-flight frames may still sample them.
     private void EnsureTexture(GraphicsDevice device, uint width, uint height)
     {
         _ring ??= new Texture[Math.Max(1, (int)device.MaxFramesInFlight)];
@@ -339,6 +293,8 @@ internal sealed class BackdropCapture : IDisposable
 
     public void Dispose()
     {
+        _blur?.Dispose();
+        _blur = null;
         if (_ring == null) return;
 
         for (var i = 0; i < _ring.Length; i++)

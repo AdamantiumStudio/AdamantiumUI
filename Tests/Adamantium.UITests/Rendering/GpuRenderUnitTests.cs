@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
@@ -19,12 +20,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// Variant B: integration tests against a REAL render device (the engine's normal CreateRenderDevice; there
-// is no dedicated headless device yet). No swapchain/surface/window and no presentation are involved - we
-// only CONSTRUCT render units (device-level work: buffers, effect) and assert their CPU-side state, so a
-// presenter is never needed. This exercises the actual RenderUnit update path that variant A can't reach
-// with a fake factory (e.g. that a pen change really builds a StrokeRenderer). Tagged [Category("Gpu")] so
-// it can be filtered out where no Vulkan device is available.
+// Render units built against a real device (no presenter), asserting CPU-side state; [Category("Gpu")] for filtering.
 [TestFixture]
 [Category("Gpu")]
 public class GpuRenderUnitTests
@@ -32,6 +28,7 @@ public class GpuRenderUnitTests
     private IGraphicsDevice _device;
     private UIBasicEffect _effect;
     private readonly StubResourceFactory _resourceFactory = new();
+    private readonly List<RenderUnitContext> _contexts = [];
 
     private static readonly Rect BoxA = new Rect(0, 0, 10, 10);
     private static readonly Rect BoxB = new Rect(0, 0, 40, 40);
@@ -48,22 +45,27 @@ public class GpuRenderUnitTests
     private static RectanglePayload Rect(Brush brush, Rect box, Pen pen) =>
         new RectanglePayload(brush, box, new CornerRadius(0), pen);
 
-    // A rect the SDF batch will NOT take, so the unit builds its own per-unit machinery (geometry + fringe + stroke).
-    //
-    // A batchable rect (solid fill, a pen the SDF draws) is drawn entirely - fill AND stroke - by the instanced SDF
-    // batch, so it deliberately builds ZERO renderers and no GPU buffers (RectangleRenderUnit's ctor). Every test below
-    // is about the per-unit renderers themselves (a pen builds a stroke, a resize follows the geometry, a uniform-only
-    // pen change repoints instead of reallocating, disposal frees the buffers, a per-draw blend equation is honoured) -
-    // so it must hand the unit a rect the batch rejects, or there is nothing to assert on.
-    //
-    // The knob is the batch's own A/B switch, held off for this fixture. It used to be NON-UNIFORM corners, which the
-    // batch declined; it no longer does - each corner rides in the instance now - and any other shape-shaped knob would
-    // be a hostage to the next thing the batch learns to draw. Switching the batch off says exactly what is meant here.
+    // The rect batch is switched off here so units build their per-unit renderers, which these tests are about.
     [SetUp]
     public void KeepTheBatchOutOfIt() => RectBatchCollector.Enabled = false;
 
     [TearDown]
     public void GiveTheBatchBack() => RectBatchCollector.Enabled = true;
+
+    // Each context holds its own copy of the effect; left alone, every one stays on the device until the run ends.
+    [TearDown]
+    public void FreeContexts()
+    {
+        foreach (var context in _contexts)
+        {
+            context.Dispose();
+        }
+
+        _contexts.Clear();
+    }
+
+    [OneTimeTearDown]
+    public void FreeEffect() => _effect?.Dispose();
 
     private static RectanglePayload Unbatched(Brush brush, Rect box, Pen pen) =>
         new RectanglePayload(brush, box, new CornerRadius(0), pen);
@@ -77,8 +79,12 @@ public class GpuRenderUnitTests
 
     // Bundles the per-test render services into the RenderUnitContext every unit now takes. A fresh GpuBufferManager
     // per unit is fine - it's a lightweight context and each component owns/disposes its own rented handles.
-    private RenderUnitContext Ctx(UIBasicEffect ui, StrokeEffect stroke = null) =>
-        new(_device, _resourceFactory, ui, stroke, null, new GpuBufferManager(_device));
+    private RenderUnitContext Ctx(UIBasicEffect ui, StrokeEffect stroke = null)
+    {
+        var context = new RenderUnitContext(_device, _resourceFactory, ui, stroke, null, new GpuBufferManager(_device));
+        _contexts.Add(context);
+        return context;
+    }
 
     // StrokeEffect is null on purpose: these tests exercise the CPU stroke path (StrokeRenderComponent). With a null
     // GPU stroke effect ProcessStrokeData falls back to CPU, so the unit's update/dispose behaviour is what's asserted.
@@ -450,11 +456,13 @@ public class GpuRenderUnitTests
         using var presenter = GraphicsPresenter.Create(_device, prms, "blend_test");
 
         // Unbatched: the blend equation lives on the unit's OWN GeometryRenderer, which a batched rect does not have.
+        // ONE effect for both, as a render unit factory shares it: the pass stays bound and only the blend changes.
+        var effect = (UIBasicEffect)_effect.Clone();
         var left = new RectangleRenderUnit(Command(Unbatched(Brushes.White, new Rect(4, 20, 24, 24), null), 0.5f),
-            Ctx(_effect));
+            Ctx(effect));
         left.GeometryRenderer.ColorBlendEquation = ColorBlendEquations.AlphaBlend;
         var right = new RectangleRenderUnit(Command(Unbatched(Brushes.White, new Rect(36, 20, 24, 24), null), 0.5f),
-            Ctx(_effect));
+            Ctx(effect));
         right.GeometryRenderer.ColorBlendEquation = ColorBlendEquations.Premultiplied;
 
         var proj = Matrix4x4F.OrthoOffCenter(0, 64, 0, 64, 0, 100000);
@@ -531,12 +539,13 @@ public class GpuRenderUnitTests
 
         var prms = new PresentationParameters(PresenterType.RenderTarget, 64, 64, IntPtr.Zero);
         using var presenter = GraphicsPresenter.Create(_device, prms, "dispose_test");
-        var before = device.RegisteredResourceCount;   // taken AFTER the presenter, so only the unit's resources count
+        var effect = (UIBasicEffect)_effect.Clone();
+        var before = device.RegisteredResourceCount;   // taken AFTER the presenter and the effect, so only the unit's resources count
 
         // Unbatched: only a unit that owns renderers has buffers to leak (a batched rect allocates none by design).
         var unit = new RectangleRenderUnit(
             Command(Unbatched(Brushes.Red, new Rect(0, 0, 32, 32), new Pen(Brushes.Black, 2))),
-            Ctx(_effect));
+            Ctx(effect));
 
         // The renderers allocate their GPU buffers LAZILY, on the first INDIVIDUAL draw (UIRenderComponent.Render rents
         // its ring slot there), so constructing the unit allocates nothing - it must actually be drawn once before there

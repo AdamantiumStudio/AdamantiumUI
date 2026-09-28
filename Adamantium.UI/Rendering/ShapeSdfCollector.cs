@@ -17,7 +17,7 @@ internal abstract class ShapeSdfCollector<TItem> : SdfBatchCollector<TItem> wher
     {
         if (Effect != null) return;
 
-        Effect = new BatchEffect(device);
+        Effect = Own(new BatchEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         InstancesAddressParam = Effect.InstancesAddress;

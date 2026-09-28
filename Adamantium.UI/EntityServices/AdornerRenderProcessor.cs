@@ -11,15 +11,12 @@ using Adamantium.Vulkan.Core;
 namespace Adamantium.UI.EntityServices;
 
 /// <summary>
-/// A second render stage, as a real processor in the render service's collection: it draws the window's AdornerLayer
-/// (tooling overlays - selection frames etc.) ON TOP of the content in the SAME frame. Built each frame from the
-/// window's <see cref="IWindow.Adorners"/> (a flat list, not the content tree); it runs after the content renderer -
-/// PreRender dispatches its stroke compute in the beforeRenderPass hook, Draw rasterizes in the render pass. The same
-/// code drives runtime and the headless designer because both go through the render service.
+/// Draws the window's <see cref="IWindow.Adorners"/> on top of the content in the same frame, after the content renderer.
 /// </summary>
 public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
 {
     private RenderCache _cache;
+    private RenderUnitFactory _factory;
 
     // Runs after the content renderer (which isn't itself a processor); high so any future overlays order around it.
     public override int Order => 1000;
@@ -28,10 +25,26 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
     {
         var device = AssociatedService.GraphicsDevice;
         var resourceFactory = AssociatedService.EntityWorld.DependencyResolver.Resolve<IResourceFactory>();
-        _cache = new RenderCache(new DrawingContext(), new RenderUnitFactory(device, resourceFactory))
+        _factory = new RenderUnitFactory(device, resourceFactory);
+        _cache = new RenderCache(new DrawingContext(), _factory)
         {
             Dirty = _scope   // this stage builds from ITS marks, not from the window content's
         };
+    }
+
+    /// <summary>Frees this stage's GPU resources. The window service calls it with the device already idle.</summary>
+    public override void UnloadContent()
+    {
+        if (_cache == null)
+        {
+            return;
+        }
+
+        _cache.DisposeUnits();
+        _cache.DisposeDeviceResources();
+        _factory.Dispose();
+        _cache = null;
+        _factory = null;
     }
 
     /// <summary>This stage is going: its marks go with it, or a window opened and closed all session would leave one
@@ -40,11 +53,7 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
 
     public override void Update(AppTime appTime) { }   // building moved to PreRender (after the fence wait) - see below
 
-    // Build the overlay HERE, inside the beforeRenderPass hook, AFTER BeginDraw's fence wait - the GPU is done with this
-    // frame slot, so (re)allocating this stage's GPU buffers can't race an in-flight submit. Building it in Update (BEFORE
-    // the fence) did GPU work in the update phase, which is a use-after-free hazard once the render thread runs concurrently
-    // with update. This mirrors PopupRenderProcessor, which moved its build here for the same reason. The overlay units come
-    // from the window's adorners, bound to the adorned elements' live WorldTransform (still valid - after this frame's layout).
+    // Built in beforeRenderPass, after the fence wait, so reallocating GPU buffers cannot race an in-flight submit.
     private readonly OverlayRebuildGate _gate = new();
 
     // This stage's own marks - see RenderDirtyRouter.
@@ -153,12 +162,8 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
             Flatten(child, list);
     }
 
-    /// <summary>Draws the overlay WITH the device and a full-window scissor - the same way the popup stage does.
-    /// <para>The parameterless <c>Render()</c> is the GPU-FREE overload (device null): it starts none of the batch
-    /// collectors, so everything that draws through a batch - which is every themed Border, i.e. the whole focus ring -
-    /// was silently dropped. Measured: the ring was built, themed, sized and positioned correctly every frame and put
-    /// not one pixel on the screen. The designer and the offscreen tests always passed a device, which is why the stage
-    /// looked healthy everywhere except in a running application.</para></summary>
+    /// <summary>Draws the overlay with the device and a full-window scissor; the device-less <c>Render()</c> skips
+    /// batched draws.</summary>
     public override void Draw(AppTime appTime)
     {
         if (_cache == null)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
@@ -54,5 +55,19 @@ internal sealed class HaloFieldCache
         var texture = factory.CreateTexture(description, pixels);
         _fields[mesh.Key] = (texture, pad);
         return texture;
+    }
+
+    /// <summary>Hands every baked field to <paramref name="device"/>, to be freed once no frame in flight reads it.</summary>
+    public void Release(IGraphicsDevice device)
+    {
+        foreach (var (texture, _) in _fields.Values)
+        {
+            if (texture is IDisposable disposable)
+            {
+                device.AddToDeferDisposeQueue(disposable);
+            }
+        }
+
+        _fields.Clear();
     }
 }

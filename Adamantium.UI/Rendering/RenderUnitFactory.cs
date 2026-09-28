@@ -8,7 +8,7 @@ using Adamantium.UI.Rendering.RenderUnits;
 
 namespace Adamantium.UI.Rendering;
 
-public class RenderUnitFactory : IRenderUnitFactory
+public class RenderUnitFactory : IRenderUnitFactory, IDisposable
 {
     private Dictionary<Type, Func<IDrawCommand, IRenderUnit>> _registeredFactories;
     private readonly RenderUnitContext _context;
@@ -51,4 +51,7 @@ public class RenderUnitFactory : IRenderUnitFactory
 
         return null;
     }
+
+    /// <summary>Frees the effects every unit of this factory shares. Call it once those units are gone.</summary>
+    public void Dispose() => _context.Dispose();
 }

@@ -17,7 +17,7 @@ internal abstract class BrushSdfCollector<TItem> : SdfBatchCollector<TItem> wher
     {
         if (Effect != null) return;
 
-        Effect = new BrushEffect(device);
+        Effect = Own(new BrushEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         InstancesAddressParam = Effect.InstancesAddress;

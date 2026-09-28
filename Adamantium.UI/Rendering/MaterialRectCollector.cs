@@ -10,12 +10,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Backdrop materials: shapes whose fill is made from what is ALREADY DRAWN behind them - acrylic, mica, liquid glass.
-//
-// The one thing that makes this collector unlike every other SDF batch: its source does not exist until the moment it
-// draws. A texture is an asset, bound and forgotten; a capture is a copy of the frame taken between two draws, and it is
-// only correct if everything meant to be BEHIND the material has already been drawn. So the capture happens here, in
-// DrawSegment, immediately before the instances that read it - not at bake time, when the frame is still being built.
+// Backdrop materials (acrylic, mica, liquid glass) filled from what is already drawn behind them; the capture happens
+// in DrawSegment, right before the instances that read it.
 internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem>
 {
     public static bool Enabled = true;
@@ -26,9 +22,6 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     // WINDOW, which is a file rather than a capture - see WallpaperBackdrop for why that makes it the cheap one.
     private readonly WallpaperBackdrop _wallpaper = new();
 
-    // Its OWN effect, not the brushes'. Putting these shaders in BrushEffect made vkCreateShadersEXT die with an access
-    // violation - on the gradient pass, which had worked for months: this driver's compiler has a ceiling per effect,
-    // and the brushes were already at it. See the note at the top of MaterialEffect.fx.
     private Adamantium.UI.FX.MaterialEffect Effect;
 
     // How a frame pixel maps into the bound image. A parameter rather than an instance field because it belongs to the
@@ -46,11 +39,18 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
     public MaterialRectCollector() : base(64) { }
 
+    protected override void OnDisposeGpuResources()
+    {
+        base.OnDisposeGpuResources();
+        _capture.Dispose();
+        _wallpaper.Dispose();
+    }
+
     protected override void EnsureEffect(IGraphicsDevice device)
     {
         if (Effect != null) return;
 
-        Effect = new Adamantium.UI.FX.MaterialEffect(device);
+        Effect = Own(new Adamantium.UI.FX.MaterialEffect(device));
         SourceUvParam = Effect.SourceUv;
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
@@ -74,23 +74,12 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     /// the caller when it flushes; the capture is taken from exactly this.</summary>
     public Rect2D CaptureRegion { get; set; }
 
-    // PER SEGMENT, exactly as the textured batch keeps its texture. The region is not a property of the collector but of
-    // the segment: a replayed frame re-draws a segment recorded earlier, while CaptureRegion still holds whatever the
-    // LAST flush put there. The two then disagree - the copy is taken from one rectangle and the shader maps fragments
-    // back through the CaptureRect baked into the instances, which is the other - and the material jumps between the two
-    // every time a frame switches between walking and replaying. That is the flicker seen while scrolling.
+    // Capture region per segment, since replayed segments must capture the region their instances were baked with.
     private readonly System.Collections.Generic.List<Rect2D> _segRegion = new();
     private readonly System.Collections.Generic.List<bool> _segWallpaper = new();
 
-    // TWO flags, not one, and the difference is the difference between recording and drawing.
-    //
-    // _pendingWallpaper describes the segment being FILLED - it decides whether the next material may join it. It is
-    // cleared when that segment is flushed, because the next one starts undecided.
-    //
-    // _boundWallpaper describes the segment being DRAWN - restored by BindSegment, since a replayed frame draws
-    // segments recorded long before. Sharing one field made the draw's value survive into the next frame's recording:
-    // after a mica pane the flag stayed set, so the acrylic pane that opened the next frame was taken for a wallpaper
-    // one, joined its segment, and vanished.
+    // _pendingWallpaper belongs to the segment being filled (cleared on flush), _boundWallpaper to the one being drawn
+    // (restored by BindSegment); one shared flag leaked between recording and drawing.
     private bool _pendingWallpaper;
     private bool _boundWallpaper;
 
@@ -209,11 +198,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     /// </summary>
     public static bool NeedsBackdrop(MaterialType material) => NeedsBackdrop(TreatmentOf(material));
 
-    /// <summary>The blur radius in TEXELS of the capture, per logical unit - divided by the copy's own shrink, which a
-    /// quarter-size copy has already done two levels' worth of.
-    /// <para>Not turned into a pyramid level here: that is a logarithm of the radius in DEVICE pixels, and how many of
-    /// those a logical unit is worth is known only per instance, in the shader (the same Scale the pen's width uses).
-    /// Taking the log here made the blur differ between two monitors at different DPI.</para></summary>
+    // Blur radius in capture texels per logical unit; the shader converts it to a pyramid level per instance, where the
+    // device scale is known.
     internal static float BlurTexels(MaterialBrush material)
     {
         var shrink = TreatmentOf(material.Material) == MaterialTreatment.Glass
@@ -279,12 +265,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         base.DrawSegment(device, buffer, count, firstInstance, projection);
     }
 
-    /// <summary>Point an effect at the backdrop a material is about to read; false when there is none, and then the
-    /// caller must draw NOTHING (an unbound sampler paints whatever descriptor was left there).
-    ///
-    /// <para>Parameterised because BOTH carriers use it - the analytic shapes here and the meshes in
-    /// <see cref="Retained.InstancedFillCollector"/>. A capture is a copy of the frame taken between two draws, so two
-    /// owners would mean two copies of one region taken at different moments.</para></summary>
+    /// <summary>Binds the backdrop a material reads, for these shapes and <see cref="Retained.InstancedFillCollector"/>;
+    /// false when there is none, and the caller must then draw nothing.</summary>
     public bool BindSource(IGraphicsDevice device, bool wallpaper, Rect2D region, ITexture own, MaterialAnchor anchor,
         EffectParameter texture, EffectParameter sampler, EffectParameter uv)
     {
@@ -318,12 +300,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
             return true;
         }
 
-        // Capture FIRST, then draw - see BackdropCapture: the copy is only correct once everything meant to be
-        // BEHIND the material is already in the frame.
-        //
-        // AT THE RESOLUTION THIS SEGMENT'S MATERIAL WANTS. A blurring material is happy with a quarter-size copy - the
-        // shrink is half its blur - but a REFRACTING one samples it sharply, so a shrunk copy hands the lens an image
-        // with nothing left in it to bend, and the glass comes out looking like frosting however hard it refracts.
+        // Capture first, then draw. Glass refracts a sharp copy; blurring materials use the downscaled one.
         var sharpness = _boundTreatment == MaterialTreatment.Glass ? BackdropCapture.Sharp : BackdropCapture.Downscale;
         if (!_capture.Capture(device, region, sharpness) || _capture.Image == null) return false;
 
@@ -538,14 +515,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         var placement = _wallpaper.Placement(PlatformSettings.VirtualScreen);
         if (placement.Width <= 0 || placement.Height <= 0) return Vector4F.Zero;
 
-        // ALREADY PHYSICAL, both of them: the desktop states where it put the picture in physical pixels, and the
-        // window's corner comes from the OS in the same units. Their difference is therefore physical too, which is what
-        // the shader wants - it works in the frame's device pixels. Scaling it again by the render scale was a mistake
-        // invisible at 100% and a picture off by half its width at 150%.
-        //
-        // Measured, when the drag wobble was being hunted: every number here comes out exact - the wallpaper's origin,
-        // its width, and a step of precisely 1.000000 per pixel of window movement. There is no rounding drift in this
-        // mapping, which is what rules it out as the cause.
+        // Both origins are already physical pixels, which the shader works in; do not scale by the render scale again.
         return new Vector4F(
             (float)(placement.X - window.X),
             (float)(placement.Y - window.Y),

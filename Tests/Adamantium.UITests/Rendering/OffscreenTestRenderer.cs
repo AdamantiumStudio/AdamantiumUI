@@ -12,14 +12,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Test-only harness that drives the PRODUCTION <see cref="RenderCache"/> to a read-back texture so pixel-level
-/// assertions can run without an OS window. It is NOT a second render path - production renders only through the
-/// services (<c>WindowRenderService</c> / its headless designer variant). This just wraps the same RenderCache the
-/// services use, plus a window-less presenter, so a unit/cache test can render a tree and read the pixels.
-/// The presenter is chosen automatically: a real window-less swapchain via VK_EXT_headless_surface where the
-/// loader provides it (Linux/Mesa), otherwise a plain offscreen RenderTarget (Windows). Both produce the same image.
-/// </summary>
+// Drives the production RenderCache into a read-back texture for pixel tests, via a headless swapchain where available,
+// else an offscreen render target.
 internal sealed class OffscreenTestRenderer : IDisposable
 {
     // An off-screen render is a ONE-SHOT: there is no next frame for asynchronously rasterized glyphs to appear in, so
@@ -27,6 +21,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
     static OffscreenTestRenderer() => Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill = true;
 
     private readonly IGraphicsDevice _device;
+    private readonly IRenderUnitFactory _renderUnitFactory;
     private readonly RenderCache _renderCache;
     private readonly RenderCache _adornerCache;
     private GraphicsPresenter _presenter;
@@ -38,6 +33,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
         MSAALevel msaa = MSAALevel.None)
     {
         _device = device;
+        _renderUnitFactory = renderUnitFactory;
         _renderCache = new RenderCache(new DrawingContext(), renderUnitFactory);
         _adornerCache = new RenderCache(new DrawingContext(), renderUnitFactory);
         CreatePresenter(width, height, msaa);
@@ -80,13 +76,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
         _scissor = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = width, Height = height } };
     }
 
-    /// <summary>
-    /// Renders one frame of <paramref name="root"/> into the offscreen target. Returns false if the frame
-    /// couldn't begin. On return the GPU is idle, so the target is safe to read back / save.
-    /// </summary>
-    /// <summary>Renders again WITHOUT rebuilding - the CLEAN frame an idle window draws, which replays the recorded op
-    /// stream instead of walking the tree. A test that only ever calls <see cref="RenderFrame"/> never sees that path,
-    /// and it is a different one: it is where a collector that misses its per-frame reset stops drawing.</summary>
+    /// <summary>Renders a clean frame without rebuilding, replaying the recorded op stream as an idle window does.</summary>
     public bool RenderAgain(IRootVisualComponent root)
     {
         var projection = root.GetProjectionMatrix();
@@ -94,6 +84,8 @@ internal sealed class OffscreenTestRenderer : IDisposable
         return Present();
     }
 
+    /// <summary>Renders one frame of <paramref name="root"/>; false if it could not begin. The GPU is idle on return, so
+    /// the target can be read back.</summary>
     public bool RenderFrame(IRootVisualComponent root)
     {
         var projection = root.GetProjectionMatrix();
@@ -163,6 +155,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
         _adornerCache.DisposeUnits();
         _renderCache.DisposeDeviceResources();
         _adornerCache.DisposeDeviceResources();
+        (_renderUnitFactory as IDisposable)?.Dispose();
         _presenter?.Dispose();
 
         // Everything above only RETIRES its GPU resources; they are freed when a wrapper begins another frame, and this

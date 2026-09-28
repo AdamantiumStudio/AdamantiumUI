@@ -7,16 +7,13 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Shared base for the SDF instancing family (rounded-rect + ellipse): both collect same-clip SOLID fills (each with an
-// optional analytic stroke) baked to WORLD space into ONE instanced draw whose pixel shader reconstructs the shape from a
-// signed-distance field (self-anti-aliasing, no tessellation, no AA fringe). They differ ONLY in the per-shape bake
-// (TryAdd/CanBatch) and which draw pass runs; the instancing machinery - segment buffers, the storage-vs-vertex draw
-// plumbing, blend/depth state - lives here once. Rects and ellipses stay SEPARATE instances/passes (different SDF pixel
-// shaders); this just unifies the code.
+// Base for SDF-instanced shape batches: same-clip fills in one draw whose pixel shader rebuilds the shape from its
+// distance field. Subclasses supply the bake and the pass.
 internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where TItem : struct
 {
     private bool _effectUnavailable;
     private int _verdictsWhenGaveUp = -1;
+    private Effect _ownedEffect;
 
     // WHICH effect feeds this collector is the subclass's business: the shapes draw through BatchEffect and the brushes
     // through BrushEffect (see BrushEffect.fx - two effects because one parameter block could not hold both). What the
@@ -28,6 +25,19 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
     /// of every frame, so it must be cheap once the effect exists.</summary>
     protected abstract void EnsureEffect(IGraphicsDevice device);
 
+    /// <summary>Hands the effect <see cref="EnsureEffect"/> built to this collector, which frees it with its buffers.</summary>
+    protected T Own<T>(T effect) where T : Effect
+    {
+        _ownedEffect = effect;
+        return effect;
+    }
+
+    protected override void OnDisposeGpuResources()
+    {
+        _ownedEffect?.Dispose();
+        _ownedEffect = null;
+    }
+
     /// <summary>Device address of the owning cache's <see cref="TransformTable"/> - the SDF vertex shaders fetch each
     /// instance's world matrix from it by the instance's slot index. Set by RenderCache every frame BEFORE any draw
     /// (the shader always reads it; slot 0 is identity, so legacy world-baked instances render unchanged).</summary>
@@ -38,12 +48,8 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
 
     protected SdfBatchCollector(int initialCapacity) : base(initialCapacity) { }
 
-    // NOT at BeginFrame: an effect is a device resource (its own shader objects, its own parameter block), and a frame
-    // touches every collector whether or not it has anything to draw. Building one for a collector that draws nothing
-    // costs a set of shader objects per device for nothing - which, once the brushes became a SECOND effect, was enough
-    // extra pressure to take the off-screen test host down natively partway through a run.
-    // Remembered rather than retried: the attempt is per DRAW, so a refused shader would throw thousands of times a
-    // minute. Held only until the verdicts change, since a background attempt may yet build the effect.
+    // The effect is built on first draw, not at BeginFrame, so idle collectors create no shader objects. A failure is
+    // remembered until the verdicts change, not retried per draw.
     protected bool EnsureEffectForDraw(IGraphicsDevice device)
     {
         if (_effectUnavailable)
@@ -89,11 +95,7 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         device.DepthTestEnabled = true;
         device.DepthWriteEnable = true;
         device.DepthCompareFunction = CompareOp.Always;
-        // WRITTEN EVERY DRAW, deliberately. Skipping the ones that "did not change since last time" is worth microseconds
-        // a draw and was tried - but what a parameter holds is a property of the EFFECT, and this collector is not the
-        // only thing that draws through one: an off-screen bake (a VisualBrush, a bitmap, a snapshot) renders with its
-        // own projection in between, and a cache of what THIS collector last sent then skips restoring ours. The result
-        // is content drawn through somebody else's projection - which is not a slow frame but a wrong picture.
+        // Written every draw: off-screen bakes share the effect and set their own projection in between.
         ProjectionParam.SetValue(projection);
 
         // The SDF shapes measure themselves in DEVICE pixels (SlotPixelScale), which needs the render target's pixel

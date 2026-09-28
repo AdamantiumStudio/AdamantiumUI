@@ -11,22 +11,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// An ARROW, and a plain LINE with it: ONE quad whose every pixel asks how far it is from the shaft and from either head
-// at once. A CanvasArrowBrush fill routes here.
-//
-// A line is the same record with nothing on its ends, deliberately: the two differ by a number in a field, and giving
-// them two paths would be two places for the same shaft to be drawn slightly differently.
-//
-// What this replaces, and why it is a pass and not a fix. An arrow was a stroked line plus a tessellated mesh per head:
-//   - a mesh handed to the renderer is read LATER, so one kept and rewritten can be read mid-write, which is a head
-//     drawn where the arrow used to be and a flicker at every move;
-//   - the barbs met at the tip in a MITRE, which on a sharp corner throws a spike far past the point it closes, and at
-//     a fat thickness stopped reading as an arrow at all;
-//   - three shapes over the same pixels BLEND three times, so a translucent arrow had dark seams at the head.
-// One distance, one coverage, one blend, and nothing kept between frames answers all three at once.
-//
-// Its OWN effect, not the shapes' or the brushes'. The driver's shader-object compiler has a ceiling per effect, and
-// adding shaders to one that works has killed vkCreateShadersEXT before - see the note at the top of InkEffect.fx.
+// Arrows and plain lines (a line is an arrow without heads) as one SDF quad each, for CanvasArrowBrush fills: one
+// coverage and one blend, so translucent heads have no seams and sharp tips no miter spikes.
 internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
 {
     public static bool Enabled = true;
@@ -43,7 +29,7 @@ internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
     {
         if (Effect != null) return;
 
-        Effect = new ArrowEffect(device);
+        Effect = Own(new ArrowEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         InstancesAddressParam = Effect.InstancesAddress;

@@ -20,23 +20,8 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.Retained;
 
-/// <summary>
-/// Walk-integrated collector for GENERAL instanced fills (arbitrary tessellated Path/Polygon fills that share one local
-/// mesh). Mirrors the SDF batch collectors (<see cref="BatchCollector{T}"/>): instances are COLLECTED during the render
-/// walk and FLUSHED in paint order - at a clip change, when an overlapping non-batched unit must paint on top, or at frame
-/// end - so an instanced fill lands in its NATURAL z-layer instead of all-at-once under (draw-first, hidden by opaque
-/// backgrounds) or over (draw-last, on top of everything) the scene. Collecting in the walk and flushing in paint order
-/// is precisely what gives it z-order (a "draw everything at one point" model cannot layer correctly).
-/// </summary>
-/// <remarks>
-/// Per <see cref="GeometryKey"/> it keeps immutable vtx/idx buffers (built once from the shared local mesh) plus a
-/// growable per-frame instance buffer (grown only at BeginFrame - the safe point after the frame fence - then filled
-/// append-only, so a mid-frame flush of one clip group never clobbers an earlier group's still-recorded draw; the draw
-/// uses a firstInstance byte offset). A flush draws each pending key as ONE instanced call, then draws the DEFERRED
-/// per-unit fringe/stroke of the collected units ON TOP - preserving fill-under-fringe order (the fill is batched, the
-/// analytic-AA fringe / stroke are per-unit and must sit over it). Clean-frame uploads are skipped (retention benefit).
-/// Single-threaded (render thread). While no instanceable fill is collected this is inert.
-/// </remarks>
+// Instanced fills of tessellated meshes shared per GeometryKey, collected during the walk and flushed in paint order.
+// Each flush draws one instanced call per key, then the deferred per-unit fringes and strokes on top. Render thread only.
 internal sealed class InstancedFillCollector : DeferredDisposableObject
 {
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
@@ -149,11 +134,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     private double _uL, _uT, _uR, _uB;
     private bool _hasUnion;
 
-    // One clip group's draw, retained for the clean-frame op replay (so retained-draw covers instanced fills too, not
-    // just the SDF/text batches - otherwise a single vector icon on screen disables replay for the whole window). Each
-    // Flush records its key-draws (buffer range per shared mesh) + the deferred fringe/stroke units + the clip; a Clean
-    // frame re-issues them via ReplayFlush with NO re-upload (the retained buffers still hold the bytes). Objects are
-    // pooled (reset, not reallocated) across frames.
+    // One clip group's recorded flush (key ranges, deferred units, clip), replayed by ReplayFlush on clean frames; pooled.
     private sealed class FlushRecord
     {
         public readonly List<(KeySegment Seg, uint First, uint Count)> Keys = new();
@@ -170,15 +151,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         public readonly List<IRenderUnit> Units = new();
         public Rect2D Scissor;
 
-        // This group's first COVERAGE mark; key N stamps StencilRef + N, in paint order. Fills stamp it; the fringes
-        // then draw only where the stencil is LOWER, i.e. over what belongs underneath them and never over their own
-        // fill or a LATER one. Replayed frames reuse the recorded value, so a replay marks the buffer exactly as the
-        // recording did.
-        // <para>One mark for the whole group is what this used to be, and it could not tell "a fill of my group that I
-        // am on top of" from "one that is on top of ME": every fill stamped the same number, so a fringe was cut
-        // wherever ANY fill of its group had landed, including the one underneath it. A drawing is exactly that case -
-        // a card with shapes on it - and its shapes came out with no anti-aliasing at all while the card kept its
-        // own.</para>
+        // First stencil mark of this group; key N stamps StencilRef + N in paint order, and fringes draw only where the
+        // stencil is lower. Replays reuse the recorded value.
         public uint StencilRef;
 
         /// <summary>The mark key <paramref name="index"/> stamps - its place in the group's paint order, clamped to the
@@ -207,7 +181,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         _device = (GraphicsDevice)device;
         _bufferManager = bufferManager;
-        _effect = new BatchEffect(device);
+        _effect = ToDispose(new BatchEffect(device));
     }
 
     // The brush effect is built on FIRST BRUSH DRAW, not in the constructor: a tree of solid fills never needs it, and an
@@ -218,7 +192,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         if (_brush != null) return _brush;
 
-        _brush = new BrushEffect(_device);
+        _brush = ToDispose(new BrushEffect(_device));
         _brush.Projection.SetValue(projection);
         _brush.TransformsAddress.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
@@ -227,15 +201,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         return _brush;
     }
 
-    // The material passes live in their OWN effect, not the brushes' - putting them in BrushEffect made this driver's
-    // shader compiler die on an unrelated pass. See the note at the top of MaterialEffect.fx.
     private Adamantium.UI.FX.MaterialEffect _material;
 
     private Adamantium.UI.FX.MaterialEffect Material(Matrix4x4F projection)
     {
         if (_material != null) return _material;
 
-        _material = new Adamantium.UI.FX.MaterialEffect(_device);
+        _material = ToDispose(new Adamantium.UI.FX.MaterialEffect(_device));
         _material.Projection.SetValue(projection);
         _material.TransformsAddress.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
@@ -428,15 +400,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// </summary>
     internal int CachedKeys => _keys.Count;
 
-    /// <summary>Forgets the keys nobody has drawn for a long time.
-    /// <para>The cache is keyed by the CONTENT of a mesh, which is exactly right for what it is for - a hundred
-    /// identical icons are one mesh and one draw - and exactly wrong without this: anything whose content CHANGES leaves
-    /// a new key behind every time it changes, with a ring of GPU buffers on it, and every following frame walks all of
-    /// them. A curve rebuilt per frame, a shape being dragged, an animated path - each of them turned the cache into a
-    /// list that only grew, and the frame cost grew with it.</para>
-    /// <para>A key referenced by a live flush record is never taken, however cold it looks. Records are what a CLEAN
-    /// frame replays, and on such a frame nothing is appended to any key at all - so "not used lately" alone would take
-    /// the meshes out from under a still scene the moment it stopped changing.</para></summary>
+    // Drops long-unused keys (changing meshes leave a new key each time), never one a live flush record still replays.
     private void Sweep()
     {
         _live.Clear();

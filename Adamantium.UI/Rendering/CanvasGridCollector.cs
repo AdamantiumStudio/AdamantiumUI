@@ -11,17 +11,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// The canvas grid: ONE rectangle whose every pixel decides for itself, from the world coordinate under it, whether it
-// is on a mark. A CanvasGridBrush fill routes here.
-//
-// Unlike every sibling in this family, this collector is not really a batch - a window holds one canvas, maybe two, so
-// what it saves is not the cost of many draws but the cost of MANY MARKS. The canvas used to emit a rectangle per mark:
-// about a thousand a frame at 1:1, growing as viewport area over pitch squared. Here that is one quad and nothing is
-// generated for the grid at all.
-//
-// Its OWN effect, not the brushes'. Putting these shaders in BrushEffect is what killed vkCreateShadersEXT on the
-// gradient pass once already - the driver's shader-object compiler has a ceiling per effect. See the note at the top of
-// MaterialEffect.fx, which is a third effect for exactly this reason.
+// The canvas grid for CanvasGridBrush fills: one quad whose pixels decide from their world coordinate whether they lie
+// on a mark, instead of a rectangle per mark.
 internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
 {
     public static bool Enabled = true;
@@ -37,7 +28,7 @@ internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
     {
         if (Effect != null) return;
 
-        Effect = new GridEffect(device);
+        Effect = Own(new GridEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         InstancesAddressParam = Effect.InstancesAddress;
@@ -93,23 +84,14 @@ internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
 
         item.Params = new Vector4F(transformSlot, (float)grid.Marks, fadeSlot, (float)Math.Max(grid.MarkSize, 0.5));
 
-        // THE CAMERA NEVER LEAVES THE ORIGIN, and what the grid is given is a PHASE - never how far anybody has
-        // travelled. Handing over "where the world's origin sits on screen" put a number that grows without bound into
-        // a float32: a million pixels out, the gap between one float and the next is a quarter of a pixel, sixteen
-        // million out it is two - so neighbouring fragments resolved to the SAME world point. Dots smeared into lines,
-        // and a pan stepped the lattice instead of sliding it. Nothing is wrong with the arithmetic that got us there:
-        // it is all double, and it stays exact. It is the handover that cannot carry the number.
-        //
-        // The grid is PERIODIC, so it does not want that number: everything it draws repeats every coarse cell, and
-        // reducing the offset by whole cells - IN DOUBLE, where it is still exact - leaves the picture identical and
-        // hands the shader a value that never exceeds one cell.
+        // The shader gets a phase within one coarse cell, reduced in double: a raw pan offset loses float32 precision far
+        // from the origin.
         var scale = Math.Max(grid.Scale, 1e-6);
         var period = Math.Max(grid.Spacing, 1e-6) * Math.Max(grid.Coarsening, 2) * scale;
 
         item.Camera = new Vector4F((float)Phase(grid.Offset.X, period), (float)Phase(grid.Offset.Y, period),
             (float)scale, 0);
-        // The pitch as a RECIPROCAL: the shader must not divide - adding a division to it is what stopped the driver
-        // creating the pass at all - so the one division happens here, once per bake.
+        // The pitch as a reciprocal, so the division happens here once per bake instead of per fragment.
         item.Step = new Vector4F((float)Math.Max(grid.Spacing, 1e-6), (float)Math.Max(grid.Coarsening, 2),
             (float)(1.0 / Math.Max(grid.MinPitch, 1)), 0);
 

@@ -19,6 +19,7 @@ namespace Adamantium.UI.EntityServices;
 public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
 {
     private RenderCache _cache;
+    private RenderUnitFactory _factory;
 
     // After the adorner stage (1000) so popups/tooltips sit on top of everything, including selection frames.
     public override int Order => 2000;
@@ -27,10 +28,26 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
     {
         var device = AssociatedService.GraphicsDevice;
         var resourceFactory = AssociatedService.EntityWorld.DependencyResolver.Resolve<IResourceFactory>();
-        _cache = new RenderCache(new DrawingContext(), new RenderUnitFactory(device, resourceFactory))
+        _factory = new RenderUnitFactory(device, resourceFactory);
+        _cache = new RenderCache(new DrawingContext(), _factory)
         {
             Dirty = _scope   // this stage builds from ITS marks, not from the window content's
         };
+    }
+
+    /// <summary>Frees this stage's GPU resources. The window service calls it with the device already idle.</summary>
+    public override void UnloadContent()
+    {
+        if (_cache == null)
+        {
+            return;
+        }
+
+        _cache.DisposeUnits();
+        _cache.DisposeDeviceResources();
+        _factory.Dispose();
+        _cache = null;
+        _factory = null;
     }
 
     /// <summary>This stage is going: its marks go with it, or a window opened and closed all session would leave one
@@ -39,11 +56,8 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
 
     public override void Update(AppTime appTime) { }   // building moved to PreRender (after the fence wait) - see below
 
-    // Build + prepare the overlay HERE, inside the beforeRenderPass hook, AFTER BeginDraw's fence wait - the GPU is done
-    // with this frame slot, so (re)allocating this stage's GPU buffers + text render targets can't race an in-flight
-    // submit. Building it in Update (BEFORE the fence) raced the GPU and lost the device the moment a popup's text RT was
-    // reallocated mid-flight (the value badge re-rasterizing as it changed). This mirrors the content renderer's
-    // PrepareData, which also builds in beforeRenderPass - so the popup stage is now synchronized with the main stage.
+    // Built in beforeRenderPass, after the fence wait, so reallocating GPU buffers and text targets cannot race an
+    // in-flight submit.
     public override void PreRender()
     {
         if (_cache == null) return;
@@ -85,11 +99,7 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
         if (root is Controls.Base.UIComponent component) component.ClaimRenderScope(_scope);
     }
 
-    // Render the overlay with the SAME device + full-window scissor the content pass uses, so the popup layer runs the
-    // FULL render path: the SDF item-background BATCH (a rounded-rect fill+stroke - e.g. a menu / SlidePanel card's border,
-    // now drawn as an SDF-batched pen instead of a separate ring), per-unit ClipToBounds scissor, and the off-clip cull.
-    // The old device-less Render() skipped ALL of that, so a batchable popup rect fell to the fill-only per-unit path and
-    // its border vanished (and flickered as it batched in some frames but not others).
+    // Same device and full-window scissor as the content pass, so popups get batching, per-unit clips and culling.
     public override void Draw(AppTime appTime)
     {
         if (_cache == null) return;
@@ -104,11 +114,7 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
         _cache.Render(AssociatedService.GraphicsDevice, scissor);
     }
 
-    // Pre-order flatten of each popup subtree: BuildFromComponents renders a flat list in order, so a parent must come
-    // before its children for correct layering. (The children are already measured/arranged by LayoutPopups.)
-    // Each popup root, then the ADORNERS of what it hosts - so a focus ring inside an overlay is drawn with that overlay:
-    // above its own card, and below any overlay stacked on top of it. The adorner stage skips exactly these (it draws
-    // before the popups, where they would be buried); everything decorating the window's CONTENT stays there.
+    // Pre-order flatten, each popup followed by the adorners of what it hosts, so an overlay's focus ring layers with it.
     private static IReadOnlyList<IUIComponent> Flatten(IReadOnlyList<IUIComponent> roots, IWindow window)
     {
         var list = new List<IUIComponent>();

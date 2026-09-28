@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.FX;
@@ -7,7 +8,7 @@ namespace Adamantium.UI.Rendering;
 // The shared services every render unit needs: the device, the effects, the resource factory and the GPU buffer
 // manager. Bundled into one object so a NEW shared dependency is added HERE, not threaded through every RenderUnit
 // constructor (and the factory call site). Created once per renderer by RenderUnitFactory and passed to each unit.
-public sealed class RenderUnitContext
+public sealed class RenderUnitContext : IDisposable
 {
     public RenderUnitContext(
         IGraphicsDevice graphicsDevice,
@@ -36,4 +37,14 @@ public sealed class RenderUnitContext
     public StrokeEffect StrokeEffect { get; }
     public FillFringeEffect FillFringeEffect { get; }
     public GpuBufferManager BufferManager { get; }
+
+    /// <summary>Frees the effects and the halo fields; the device, the resource factory and the buffer manager belong to
+    /// others. Call it once the units built on this context are gone.</summary>
+    public void Dispose()
+    {
+        UIBasicEffect?.Dispose();
+        StrokeEffect?.Dispose();
+        FillFringeEffect?.Dispose();
+        HaloFields.Release(GraphicsDevice);
+    }
 }

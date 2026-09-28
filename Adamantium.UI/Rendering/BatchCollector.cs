@@ -10,16 +10,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Shared machinery for the CPU-baked instanced UI batches (text glyphs, item-background rects; see
-// docs/TEXT_GLYPH_BATCH_PLAN.md §9). Holds a growable CPU array + one growable GPU buffer - a BDA STORAGE buffer read
-// in the vertex shader by SV_InstanceID (the quad comes from SV_VertexID) - the glyph batch included. Filled APPEND-ONLY
-// within a frame and drawn as SEGMENTS - a segment is a run of items sharing one clip (scissor), drawn with a
-// firstInstance offset so a mid-frame flush never overwrites an earlier segment's still-recorded draw. The GPU buffer
-// only grows at BeginFrame (a safe point: the render runs after the frame fence, so last frame's reads are done). The
-// paint-order union bounds let the caller flush before a non-batched unit that overlaps the pending segment.
-//
-// Derived types add: item baking (their own TryAdd, which writes into Items/Count then calls MarkPending) and the
-// per-segment draw (DrawSegment). Grouping (which items share a segment) is decided by the caller (RenderCache).
+// Base for CPU-baked instanced batches: an append-only CPU array mirrored into a BDA storage buffer, drawn as segments
+// (runs sharing one scissor). Derived types bake items (TryAdd + MarkPending) and draw segments; RenderCache groups them.
 internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 {
     // Size of ONE instance. Static readonly, so it is computed once per closed type - a Marshal.SizeOf per DRAW showed up
@@ -52,12 +44,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     private double _uL, _uT, _uR, _uB; // logical union of the pending segment (paint-order overlap test)
     private bool _hasUnion;
 
-    // ONE COPY PER FRAME IN FLIGHT. The pipeline is MaxFramesInFlight deep, so BeginDraw's fence proves only frame
-    // N-MaxFramesInFlight is done: the frames between it and this one are still reading. Writing a single shared buffer
-    // therefore rewrote instances under the frames drawing them - which is what made a fast scroll flicker across the
-    // WHOLE window, still parts included (slot indices come from draw order, so an item leaving the viewport shifts every
-    // later slot). The copy is chosen by the device's frame index, so the one written is the one whose last reader has
-    // already been waited for. Same scheme as ReusableBuffer, which is why per-unit geometry never had this problem.
+    // A ring of GPU copies, so a write never lands in a buffer that frames in flight are still reading.
     private Buffer<TItem>[] _ring;
     private int _current;              // ring slot this frame writes and draws from
     private uint _writeFrame = uint.MaxValue;   // device frame the slot was last chosen for
@@ -70,23 +57,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     private int[] _mirrorCount;
     private int _highWater;   // see UploadRange: the furthest slot the array has ever been written at
 
-    // Segments drawn THIS frame (each = a clip + a buffer range), retained for the clean-frame op replay. RenderCache
-    // records an ordered op stream during the walk; on a fully-unchanged (Clean) frame it skips the walk entirely and
-    // replays each segment via DrawRecordedSegment - no re-bake, no upload (the GPU buffer still holds these exact
-    // bytes). Cleared at BeginFrame; a segment's index is stable within the frame that recorded it.
-    // Capacity is the ROOM a range owns, Count what it currently draws - so a layer re-issued one item larger fits where
-    // it already is instead of moving, and blocks freed by one edit are the right size for the next.
-    // Id is how EVERYONE outside names a segment. The list stays ordered by draw order, so a split has to insert into the
-    // middle of it - and an index taken before that insert means a different segment after it. That shift used to be the
-    // caller's problem, fixed up in three places at once (the op stream, the pending patches, their resolved layers), and
-    // a missed one re-issued the wrong segment: the same picture as a slot-off-by-one, with nothing in the frame to explain
-    // it. An id survives the insert, so there is nothing to fix up; ids are never reused, so a reference held across a
-    // frame resolves to NOTHING instead of to whatever moved into that index.
-    // Bounds are the segment's PAINT-ORDER footprint - the union of what it draws, in logical coordinates, kept from the
-    // pending union it was flushed from. The walk needs it live (which is what the pending union is for); a RECORDED segment
-    // needs it too, because a newcomer placed into an existing frame can only be told "your order inside this layer does not
-    // matter" by asking whether it overlaps what the layer already draws (see §5a: that is the merge rule, and the only
-    // reason a cut is ever needed).
+    // A recorded segment (scissor + buffer range) replayed on clean frames. Capacity is its room, Count what it draws;
+    // Id survives splits and is never reused; Bounds is its paint footprint, used to decide overlap for new placements.
     protected struct Segment
     {
         public int Id; public Rect2D Scissor; public uint Count; public uint First; public uint Capacity;
@@ -151,6 +123,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     /// dozen collectors per cache - stayed alive for the process. A closed window leaked all of it.</summary>
     public void DisposeGpuResources(IGraphicsDevice device)
     {
+        OnDisposeGpuResources();
         if (_ring == null) return;
 
         foreach (var buffer in _ring)
@@ -186,13 +159,10 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         OnBeginFrame(device);
     }
 
-    // (Re)allocates the whole ring when the CPU array outgrew it (or the pipeline depth changed). The outgoing buffers
-    // are handed to the device's deferred queue, NEVER disposed here: frames still in flight are reading them, and
-    // freeing one under a live frame is the same bug in a louder form.
-    // TEMP (flicker hunt): ADAMANTIUM_NO_RING=1 collapses the ring back to ONE copy - the pre-fix behaviour. Used to
-    // verify the write probe actually fires on a known violation, so its silence means something.
+    // TEMP: ADAMANTIUM_NO_RING=1 collapses the ring to one copy, to check the write probe fires on a known violation.
     private static readonly bool RingDisabled = Environment.GetEnvironmentVariable("ADAMANTIUM_NO_RING") == "1";
 
+    // Old buffers go to the deferred queue: frames in flight still read them.
     private void EnsureRing(IGraphicsDevice device)
     {
         var copies = RingDisabled ? 1 : (int)Math.Max(1, device.MaxFramesInFlight);
@@ -220,11 +190,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         _gpuCapacity = Items.Length;
     }
 
-    // Advance on every WRITE, not by frame index. A copy written by one walk is read by every REPLAY frame that follows
-    // it - several, since the render thread draws far more often than the recorder records. Indexing by frame index put
-    // the next walk back on the same copy three frames later, overwriting it while those replays were still in flight
-    // (BeginDraw's fence only proves frame N-3 is done; the replays are N-1 and N-2). Round-robin per write gives each
-    // walk a copy no recent frame is reading, and by the time the ring wraps those frames are long retired.
+    // Round-robin per write, not per frame: one walk's copy is read by several replay frames that follow it.
     private int _writeCursor;
 
     private void SelectSlot(IGraphicsDevice device)
@@ -242,12 +208,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         if (_ring == null || device.CurrentFrame == _writeFrame) return;
         SelectSlot(device);
 
-        // The catch-up has to cover everything the retained frame can still ISSUE, not where this frame's cursor stopped.
-        // Count is reset by every BeginFrame while the array keeps its contents, so after the scene shrinks the slots past
-        // the cursor are last time's - live bytes on every copy that has not been told otherwise. Catching up only over
-        // [0, Count) leaves them there, and a copy a lap behind goes on drawing them: the control that stopped drawing,
-        // back on screen at the size it had, on the frames that happen to land on that copy. It also silently undid every
-        // withdrawal made past the cursor - blanked in the array, never sent to the copies that still hold the old bytes.
+        // Catch up to the high-water mark, not Count: slots past the cursor can still be issued and must match on every
+        // copy.
         UploadRange(0, Math.Max(Count, _highWater));
     }
 
@@ -279,6 +241,9 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
     /// <summary>Per-frame hook for derived state (e.g. lazily creating the effect). Base does nothing.</summary>
     protected virtual void OnBeginFrame(IGraphicsDevice device) { }
+
+    /// <summary>Frees what a derived collector built on the device - its effect - along with the buffers. Base does nothing.</summary>
+    protected virtual void OnDisposeGpuResources() { }
 
     /// <summary>Whether anything is waiting to be flushed. The recorder needs it to know WHERE the next segment's paint
     /// span begins: a segment glues every control that falls between two flushes, so its span starts with the first one
@@ -356,11 +321,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     }
 
     // --- Spliced-patch surgery (per-control render-cache patching) -------------------------------------------------
-    // A control whose batched unit COUNT changed can't patch its retained slots in place (later slots would shift).
-    // Instead the caller excises the control's OLD run from whatever segment holds it and APPENDS its re-baked items as
-    // a NEW segment at the retained frame's end - no other slot moves; the recorded op stream is spliced accordingly.
-    // Abandoned slots stay allocated but unreferenced; the next full walk compacts naturally (BeginFrame resets Count),
-    // and AppendPatchSegment's capacity precheck caps how much waste can accumulate between walks (a per-frame chart).
+    // A control whose unit count changed gets a new segment instead of shifting slots; abandoned slots wait for the next
+    // full walk to compact them.
 
     /// <summary>The recorded segment whose retained range contains <paramref name="slot"/>, or -1. Zero-count (fully
     /// excluded) segments never match.</summary>
@@ -381,13 +343,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     /// answers; a family with nothing to say answers "no" and simply never reclaims.</summary>
     protected virtual bool IsBlank(int first, int count) => false;
 
-    /// <summary>Gives a departed control's run back to the arena, when the run sits at an EDGE of the segment holding
-    /// it. A segment is drawn as one range, so a run in its middle cannot be handed to anybody - splitting the segment
-    /// to reclaim it would buy a slot at the price of a whole extra draw call, which is the wrong trade. At an edge the
-    /// range simply shrinks: nothing moves, every other slot keeps its address, and the instances stop being issued.
-    /// <para>At the HEAD the space is free for anyone (it leaves the segment entirely). At the TAIL it stays the
-    /// segment's own room - which is what lets the control come back into the same place without moving a neighbour.</para>
-    /// </summary>
+    /// <summary>Shrinks a segment's range past a departed control's run when the run is at its head or tail; a tail
+    /// stays the segment's spare room.</summary>
     /// <returns>Whether the run left the drawn range.</returns>
     public bool ReclaimRun(int first, int count)
     {
@@ -432,11 +389,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         return index < 0 ? null : _segments[index].Scissor;
     }
 
-    /// <summary>Give a recorded segment a freshly derived clip. A segment's scissor is a WORLD-space rect frozen when it
-    /// flushed, so a viewport that moves afterwards leaves it describing the frame before - the one thing about a move
-    /// that a slot write does not carry. Deriving it again is what lets the move be carried instead of re-recorded (see
-    /// RenderCache.RefreshMovedScissors). A flush cycle ends whenever the scissor changes, so one segment is always one
-    /// clip, which is what makes a single rect the right answer here.</summary>
+    /// <summary>Replaces a recorded segment's scissor after its viewport moved (RenderCache.RefreshMovedScissors).</summary>
     public override void SetSegmentScissor(int id, Rect2D scissor)
     {
         var index = IndexOf(id);
@@ -537,14 +490,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         return index < 0 ? (-1, 0) : ((int)_segments[index].First, (int)_segments[index].Count);
     }
 
-    /// <summary>Cut a recorded segment in two at <paramref name="firstOfSecond"/> and return the new segment's index; the
-    /// original keeps everything before the cut. Nothing moves - the arena is untouched and both halves keep drawing the
-    /// bytes they already held - so this costs one list insert.
-    /// <para>What it is for: a segment glues every control between two flushes, so the ONE op that draws it covers a whole
-    /// span of paint ranks. A control that starts drawing with a rank INSIDE that span has no correct place in a flat op
-    /// stream until the span is split at it (see RenderCache's PlaceNewSegment).</para>
-    /// <para>Capacity stays with the FIRST half: it is the tail of the original allocation, and a re-issue that grows must
-    /// grow into it, never into the second half's live items.</para></summary>
+    /// <summary>Splits a recorded segment at <paramref name="firstOfSecond"/> without moving bytes, so a new control can be
+    /// placed between them (RenderCache.PlaceNewSegment); returns the new segment's id.</summary>
     public override int SplitSegment(int id, int firstOfSecond)
     {
         var index = IndexOf(id);
@@ -554,12 +501,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         var offset = (uint)firstOfSecond - s.First;
         if (offset == 0 || offset >= s.Count) return -1;   // nothing on one side of the cut: not a split
 
-        // The spare room is the TAIL of the original allocation, so it goes to the SECOND half. The first half is boxed in
-        // by live items and may not grow at all: letting it keep the capacity would let a re-issue write over the
-        // neighbour it just created.
-        // Both halves inherit the whole footprint: which items went where is known, but their individual bounds are not
-        // kept, and claiming a smaller cover than a half actually draws would let a later placement decide "no overlap"
-        // about something it does overlap. Coarse is safe here; wrong is not.
+        // The spare tail room goes to the second half; both halves keep the whole footprint, since per-item bounds are
+        // not kept.
         var second = new Segment
         {
             Id = ++_nextSegmentId,
@@ -587,16 +530,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         for (var i = 0; i < count; i++) into.Add(Items[first + i]);
     }
 
-    /// <summary>Re-issue a WHOLE segment over a freshly baked run: the items are appended at the retained frame's end and
-    /// the SAME segment index is pointed at them. The recorded op stream is not touched at all - the op that drew this
-    /// segment still stands in its place, so paint order relative to everything else (text, per-unit draws, an instanced
-    /// flush) is unchanged by construction. That is the point: a control whose unit count changed is repaired by re-baking
-    /// the LAYER it belongs to, instead of tearing the layer's segment in two to weave one item into the middle of it.
-    /// False when the arena has no room; the caller falls back to a full walk, which compacts it.</summary>
-    /// <summary>Replace [at, at+replaced) INSIDE a segment with <paramref name="items"/>, shifting only what follows - the
-    /// cheap shape of a layer edit, a hover backdrop being one item among a screenful. The head never moves and the upload
-    /// covers the edit plus the tail it pushed.
-    /// False when the result no longer fits the room this segment owns; the caller then relocates it whole.</summary>
+    /// <summary>Replaces [at, at+replaced) inside a segment, shifting only what follows; false when the result outgrows
+    /// the segment's room.</summary>
     public bool ReplaceInSegment(IGraphicsDevice device, int id, int at, int replaced, ReadOnlySpan<TItem> items)
     {
         var index = IndexOf(id);
@@ -615,11 +550,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         if (delta != 0 && tailLen > 0) Array.Copy(Items, tailAt, Items, tailAt + delta, tailLen);
         items.CopyTo(Items.AsSpan(first + at));
 
-        // A SHRINKING segment leaves a copy of what moved in the slots the tail vacated - Array.Copy reads and writes the
-        // same array and does not clear behind itself, so those bytes stay whole, owner tag included. Nothing draws them
-        // while they sit past the segment's end; the moment it grows back over that ground they are issued again, and a
-        // control that stopped drawing is on screen at the size it had. Clearing here kills the duplicate where it is
-        // made - the upload below already spans this ground (see `touched`).
+        // A shrinking segment leaves stale copies in the vacated tail, which would be issued again when it grows back.
         if (delta < 0) Array.Clear(Items, first + newCount, -delta);
 
         var touched = items.Length + (delta != 0 ? tailLen + Math.Max(0, -delta) : 0);
@@ -675,6 +606,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         _freeBlocks.Add((first, capacity));
     }
 
+    /// <summary>Re-issues a whole segment over new items, keeping its id and op-stream position; false when the arena has
+    /// no room, and the caller falls back to a full walk.</summary>
     public bool RepointSegment(IGraphicsDevice device, int id, ReadOnlySpan<TItem> items, Rect2D scissor)
     {
         var index = IndexOf(id);
@@ -729,28 +662,14 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         return true;
     }
 
-    /// <summary>
-    /// Patch ONE already-flushed slot in place: overwrite its retained CPU + GPU bytes without touching any other slot or
-    /// re-baking the frame. Lets a fast-path partial (a hover recolouring one tile) update just the dirty units' instances
-    /// and then REPLAY last frame's op stream - the recorded segments still point at the same buffer, now with this slot
-    /// updated - instead of re-baking every unit (the O(N) draw-phase cost of a partial). The caller must NOT have begun a
-    /// new frame (Items/_gpu still hold the last walk's data) and slot must be within that retained data.
-    /// </summary>
-    /// <summary>Blanks the slots of a run without touching the segment they sit in. A segment is issued as a RANGE, so a
-    /// control that stops drawing cannot simply be forgotten: its instances stay inside somebody else's range and are
-    /// re-issued with it on every replayed frame. Reclaiming the range belongs to the next recording walk; until then the
-    /// bytes have to draw nothing.</summary>
+    /// <summary>Blanks a run's slots in place; the segment range still covers them until the next recording walk.</summary>
     public override void BlankSlots(IGraphicsDevice device, int first, int count)
     {
         if (first >= 0 && count > 0) BlankRun(device, (uint)first, (uint)count);
     }
 
-    /// <summary>Blanks a run WITHOUT the <see cref="Count"/> clamp - the array outlives the cursor.
-    /// <para><see cref="Count"/> is where THIS frame stopped writing, and <see cref="BeginFrame"/> resets it without
-    /// clearing the array. Everything past it is last time's bytes, still sitting there: when a later frame's segments
-    /// grow back over that ground without rewriting it, those instances are ISSUED again - a control that stopped
-    /// drawing, reappearing at the size it had, once the scene around it grows back. Withdrawing them has to be able to
-    /// reach past the cursor, which is exactly what the clamp forbids.</para></summary>
+    // Blanks without the Count clamp: BeginFrame resets Count but not the array, and stale bytes past it would be issued
+    // again when segments grow back.
     protected void BlankRunPastTheCursor(IGraphicsDevice device, uint first, uint count)
     {
         if (count == 0 || first + count > (uint)(Items?.Length ?? 0)) return;
@@ -769,6 +688,8 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         UploadRange((int)first, (int)count);
     }
 
+    /// <summary>Overwrites one retained slot in place, so a partial frame can replay the recorded ops; call before
+    /// the next BeginFrame.</summary>
     public virtual void UpdateSlot(IGraphicsDevice device, int slot, TItem item)
     {
         PrepareRetainedWrite(device);
