@@ -21,6 +21,7 @@ public partial class SceneViewModel : TabPageViewModel
     {
         _universe = universe;
         _universe.UseTool(Tool);
+        _universe.IsSimulationPaused = IsMenuVisible;
         Status = "Universe ready";
 
         // A rebuilt view brings a new universe with a new camera: its home and speed are taken afresh on the next pulse.
@@ -147,6 +148,7 @@ public partial class SceneViewModel : TabPageViewModel
         _universe?.UseTool(value);
     }
 
+    /// <summary>While the menu is open the game is paused; the scene is still drawn.</summary>
     [Bindable, Affects(nameof(MenuButtonText), nameof(MouseLookEnabled))] private bool _isMenuVisible = true;
     public string MenuButtonText => IsMenuVisible ? "Hide menu" : "Show menu";
 
@@ -155,6 +157,14 @@ public partial class SceneViewModel : TabPageViewModel
     public bool MouseLookEnabled => !IsMenuVisible;
 
     [Command] private void ToggleMenu() => IsMenuVisible = !IsMenuVisible;
+
+    partial void OnIsMenuVisibleChanged(bool value)
+    {
+        if (_universe != null)
+        {
+            _universe.IsSimulationPaused = value;
+        }
+    }
 
     [Bindable] private string _status = "F-15C Eagle";
 
