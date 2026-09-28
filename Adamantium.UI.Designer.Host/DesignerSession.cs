@@ -1,9 +1,10 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Adamantium.Core;
-using Adamantium.Multiverse;
+using Adamantium.Multiverse.Input;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -11,6 +12,7 @@ using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Markup;
 using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
 using Adamantium.UI.EntityServices;
 using Adamantium.UI.Markup.AST;
@@ -18,19 +20,20 @@ using Adamantium.UI.Universes;
 
 namespace Adamantium.UI.Designer.Host;
 
-/// <summary>
-/// A warm headless engine session. Its constructor boots the engine once - loads every engine assembly (so
-/// reflection type resolution sees all controls), creates the graphics device and applies a theme - then
-/// <see cref="Render"/> turns an AUML buffer into a PNG on demand. The device and the
-/// <see cref="DesignerRenderService"/> stay alive between calls so live edits are cheap; the previewed window is
-/// rebound (presenter resized) when the requested size/scale changes, never recreated.
-/// </summary>
+/// <summary>A warm headless session: the first <see cref="Render"/> boots the engine as the previewed project's own
+/// application; the device and window then persist, so each render of AUML text is cheap.</summary>
 public sealed class DesignerSession : IDisposable
 {
-    private readonly DesignerApplication _app;
-    private readonly IGraphicsDevice _device;
-    private readonly IGraphicsDeviceService _deviceService;
-    private readonly IUniverseService _universeService;
+    private UIApplication _app;
+    private IGraphicsDevice _device;
+    private IGraphicsDeviceService _deviceService;
+    private IUniverseService _universeService;
+
+    // Why a file's views may not resolve what they would in their own application: the session booted as another one.
+    private string _servicesNote;
+
+    // The tab a click showed, per file and per tab control (by its place in the tree).
+    private readonly Dictionary<(string Uri, string Place), int> _shownTabs = new();
 
     // One render service for the whole designer session: ONE device (the shared _device) + one renderer/presenter,
     // re-pointed/resized per previewed window (WindowRenderService.RenderHeadlessFrame). It drives the content
@@ -63,18 +66,19 @@ public sealed class DesignerSession : IDisposable
     private const double DefaultWidth = 1280;
     private const double DefaultHeight = 720;
 
-    // Cap the render target so an extreme zoom can't exhaust GPU memory (a render target is design x scale, and
-    // memory grows with its area; 8192^2 BGRA is ~256 MB before the depth buffer). Past the cap the client
-    // upscales the last crisp frame - like a WPF/Avalonia designer that stops re-rasterising beyond a point.
-    // 8192 is plenty of crispness for a preview; the effective cap is clamped to the device's
-    // maxImageDimension2D (guaranteed >= 4096) so it never asks for an image the GPU can't create.
+    // Render-target size cap so extreme zoom cannot exhaust GPU memory; the client upscales past it. Clamped to the
+    // device's maxImageDimension2D.
     private const double PreferredMaxRenderDimension = 8192;
-    private readonly double _maxRenderDimension;
+    private double _maxRenderDimension;
 
     public DesignerSession()
     {
         // Tell design-unsafe code (universe-hosting behaviors etc.) it is running in the previewer, so it stays dormant.
         Design.IsDesignMode = true;
+
+        // Every preview is a one-shot frame: glyphs rasterized in the background would land after it was taken, and the
+        // preview showed no text at all. Filled inline, as an off-screen bake does (see VisualRenderer).
+        Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill = true;
 
         // Every engine assembly of the host's own closure, not every dll in its folder: a leftover of an older build
         // would shadow the previewed project's fresh copy of the same assembly.
@@ -88,36 +92,33 @@ public sealed class DesignerSession : IDisposable
 
             try { Assembly.LoadFrom(dll); } catch { /* ignore unloadable */ }
         }
+    }
 
-        _app = new DesignerApplication();
+    // Boots the engine on the first render, as the previewed project's own application: its services are what its views
+    // and view-models resolve, and without them a view built from view-models (the gallery's tabs) came up empty.
+    private void EnsureBooted(Assembly project)
+    {
+        var wanted = ApplicationTypeOf(project);
+        if (_app != null)
+        {
+            _servicesNote = wanted != null && wanted != _app.GetType()
+                ? $"previewed with the services of {_app.GetType().Name}: the designer was started for another project - restart it to preview with those of {wanted.Name}"
+                : null;
+            return;
+        }
 
-        // The engine's universe services are normally registered by MultiverseApplication.RegisterServices, which only runs
-        // via Run()/Initialize() - which the headless designer skips. Register the universe service explicitly so a
-        // design-aware behavior can resolve IUniverseService and host a universe in the preview (see DriveDesignTimeUniverses).
-        _universeService = new UniverseService();
-        _app.Container.RegisterInstance<IUniverseService>(_universeService);
-        _app.Container.RegisterSingleton<IOutputFactory, UIOutputFactory>();
-        _app.Container.RegisterSingleton<IWindowingPlatform, UIWindowingPlatform>();
+        _app = (UIApplication)Activator.CreateInstance(wanted ?? typeof(DesignerApplication));
 
-        // Headless: nothing opens a window, so trigger device creation explicitly. Vulkan validation is OPT-IN via
-        // ADAMANTIUM_DESIGNER_GRAPHICS_DEBUG=1: when on, the layers report the REAL cause behind a device-lost (bad
-        // descriptor/resource/sync) into the host log + error badge. It is OFF by default because on the dev NVIDIA
-        // driver the validation layer's interception of vkCreateShadersEXT (shader objects) DETERMINISTICALLY
-        // access-violates, which would crash the host before any render - so forcing it on makes the designer useless.
+        // Headless, so create the device explicitly. Vulkan validation is opt-in via ADAMANTIUM_DESIGNER_GRAPHICS_DEBUG=1
+        // and reports into the host log.
         _deviceService = _app.Container.Resolve<IGraphicsDeviceService>();
         _deviceService.IsInDebugMode = Environment.GetEnvironmentVariable("ADAMANTIUM_DESIGNER_GRAPHICS_DEBUG") == "1";
         _deviceService.CreateMainDevice("Designer");
 
-        // Same as UIApplication.LoadThemes() (skipped because we never call Run()): without a theme the controls
-        // have no templates/brushes and render nothing.
-        var theme = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        _app.ThemeManager.AddTheme(theme.Name, theme);
-        _app.ThemeManager.SetTheme(theme);
-
-        // WindowRenderService (the designer's render path) resolves IThemeManager from the container; the headless app
-        // skips the normal registration (no Run()), so register the theme manager it already has. (IResourceFactory is
-        // already registered by the graphics context.)
-        _app.Container.RegisterInstance<IThemeManager>(_app.ThemeManager);
+        // A preview reads no gamepad, and the application's own backend would start GameInput in the designer's process.
+        _app.Container.RegisterSingleton<IGamepadBackend, NoGamepadBackend>();
+        _app.InitializeWithoutRunning();
+        _universeService = _app.Container.IsRegistered<IUniverseService>() ? _app.Container.Resolve<IUniverseService>() : null;
 
         _device = _app.GraphicsContext.CreateGraphicsDevice();
 
@@ -125,6 +126,12 @@ public sealed class DesignerSession : IDisposable
             PreferredMaxRenderDimension,
             _device.Adapter.AdapterProperties.Limits.MaxImageDimension2D);
     }
+
+    // The application a project runs as: the concrete UIApplication its assembly declares. Null for a library of views.
+    private static Type ApplicationTypeOf(Assembly project) => project == null
+        ? null
+        : SafeGetTypes(project).FirstOrDefault(t =>
+            typeof(UIApplication).IsAssignableFrom(t) && !t.IsAbstract && t.GetConstructor(Type.EmptyTypes) != null);
 
     /// <summary>
     /// Loads the AUML text into a live tree, lays it out at the window's design size and renders it to
@@ -144,9 +151,9 @@ public sealed class DesignerSession : IDisposable
         var assetRoot = ResolveAssetRoot(aumlSourcePath);
         if (assetRoot != null) Directory.SetCurrentDirectory(assetRoot);
 
-        // Load the edited file's own project assembly so its types (clr-namespace: controls, behaviors) resolve,
-        // not just engine types. Best-effort and idempotent (LoadFrom caches by path).
-        LoadProjectAssembly(aumlSourcePath);
+        // Load the edited file's own project assembly so its types (clr-namespace: controls, behaviors) resolve, not just
+        // engine types, and the first render boots the engine as that project's application.
+        EnsureBooted(LoadProjectAssembly(aumlSourcePath));
 
         // Hot reload: an edit to a file we already have live -> reconcile the EXISTING tree in place (changed properties
         // re-applied so transitions ease, added/removed children spliced in) instead of rebuilding it. The animation
@@ -188,28 +195,52 @@ public sealed class DesignerSession : IDisposable
 
         // The root may be a Window, or any visual control (a View / UserControl-style root, a panel, a single
         // control). Non-window roots are hosted in a design-time VirtualWindow so the designer previews them too,
-        // the way WPF previews a UserControl. Non-visual roots (ResourceDictionary/StyleSet) aren't previewable.
+        // the way WPF previews a UserControl. A template is shown built; only themes, styles and resources have no
+        // look of their own.
         IWindow window;
-        IMeasurableComponent sizeSource;
+        object authoredVisual;
         switch (load.Root)
         {
             case IWindow w:
+                // Shown as the window being worked in: the caption in its focused look.
+                (w as WindowBase)?.SetIsActive(true);
                 window = w;
-                sizeSource = w as IMeasurableComponent;
+                authoredVisual = w;
                 break;
             case IUIComponent control:
-                window = new VirtualWindow { Content = control };
-                sizeSource = control as IMeasurableComponent;
+                window = CaptionlessHost(control);
+                authoredVisual = control;
                 break;
+            case ControlTemplate controlTemplate:
+                // On an instance of the control it is for, so its TemplateBindings and triggers have a control to follow.
+                var templated = TemplatedHostFor(controlTemplate);
+                window = CaptionlessHost(templated);
+                authoredVisual = templated;
+                break;
+            case UiTemplate template:
+                // A data or items-panel template: its content, against the design data context when there is one.
+                if (template.Build(null)?.RootComponent is not { } content)
+                    return RenderResult.Fail($"{template.GetType().Name} has no content to preview", load.Diagnostics);
+                window = CaptionlessHost(content);
+                authoredVisual = content;
+                break;
+            case null:
+                // The markup did not build: say why, not that the file is of a kind that can't be previewed.
+                var reason = load.Diagnostics.LastOrDefault(d => d.Contains("error", StringComparison.OrdinalIgnoreCase))
+                             ?? load.Diagnostics.LastOrDefault() ?? "unknown error";
+                return RenderResult.Fail($"the markup could not be built: {reason}", load.Diagnostics);
             default:
-                return RenderResult.Fail($"root is not a previewable visual: {load.Root?.GetType().Name ?? "null"}", load.Diagnostics);
+                return RenderResult.Fail(IsThemeStyleOrResource(load.Root)
+                    ? $"{load.Root.GetType().Name} is a theme, style or resource set: it has no look of its own to preview"
+                    : $"{load.Root.GetType().Name} is not a visual element: nothing to preview", load.Diagnostics);
         }
 
+        var sizeSource = authoredVisual as IMeasurableComponent;
         window.AttachContextAndInitialize(_app.UIContext);
 
-        // Design-time DataContext (x:ViewModel, opt-in via x:CreateInDesignTime="True"): rendered with real sample
-        // data so {Binding} paths resolve in the preview - the WPF d:DesignInstance behaviour.
-        var designContext = CreateDesignDataContext(aumlText);
+        // Design-time DataContext (x:ViewModel, opt-in via x:CreateInDesignTime="True"), built through the application's
+        // services so {Binding} paths resolve in the preview.
+        var designContext = CreateDesignDataContext(aumlText, load.Diagnostics);
 
         var designWidth = ResolveDimension(sizeSource?.Width, requestWidth, DefaultWidth);
         var designHeight = ResolveDimension(sizeSource?.Height, requestHeight, DefaultHeight);
@@ -221,23 +252,120 @@ public sealed class DesignerSession : IDisposable
         // templates expand before the DataContext is assigned, then re-run so bound values participate in layout.
         window.Update(_app.ThemeManager, new AppTime());
 
-        if (designContext != null && load.Root is IFundamentalUIComponent rootComponent)
+        if (designContext != null && authoredVisual is IFundamentalUIComponent rootComponent)
         {
             rootComponent.DataContext = designContext;
             window.Update(_app.ThemeManager, new AppTime());
         }
 
-        (designWidth, designHeight) = ShrinkToContent(window, load.Root, sizeSource, designWidth, designHeight);
+        if (ShowTabsShownBefore(window, aumlSourcePath))
+        {
+            window.Update(_app.ThemeManager, new AppTime());
+        }
 
-        // Keep the laid-out tree + source map + AST for a follow-up hittest and for reconciling the next edit.
+        (designWidth, designHeight) = ShrinkToContent(window, authoredVisual, sizeSource, designWidth, designHeight);
+
+        // Keep the laid-out tree + source map + AST for a follow-up hittest and for reconciling the next edit. A template
+        // is rebuilt on every edit: its content is not a live tree the reconciler can patch.
         _lastWindow = window;
         _lastSourceMap = load.SourceMap;
         _lastAst = load.Ast;
-        _liveAuthoredRoot = load.Root;
+        _liveAuthoredRoot = load.Root is UiTemplate ? null : load.Root;
         _lastUri = aumlSourcePath;
 
         return RenderTail(window, designWidth, designHeight, scale, outPath, live, load.Diagnostics, resetCache: true);
     }
+
+    // What is not a window has no caption of its own: it is shown in a window without one.
+    private static VirtualWindow CaptionlessHost(IUIComponent content) => new() { Content = content, UseCustomChrome = false };
+
+    // A click on a tab header shows that tab, as it does in the running application: a page behind another tab is looked
+    // at in the preview too. The markup is left alone. True when the click landed on one.
+    private bool ShowTabAt(double x, double y)
+    {
+        if (_lastWindow is not IUIComponent root) return false;
+
+        for (var node = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault(); node != null; node = node.VisualParent)
+        {
+            if (node is not TabItem tab) continue;
+
+            tab.SpringLoad();
+            if (tab.GetVisualAncestors().OfType<TabControl>().FirstOrDefault() is { } tabs)
+            {
+                _shownTabs[(_lastUri, PlaceOf(tabs))] = tabs.SelectedIndex;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // A rebuild of the same file shows the tabs a click showed before, not the ones its view-models start on.
+    private bool ShowTabsShownBefore(IWindow window, string uri)
+    {
+        var shown = false;
+        foreach (var tabs in DescendantsOf<TabControl>((IUIComponent)window))
+        {
+            if (_shownTabs.TryGetValue((uri, PlaceOf(tabs)), out var index) && index < tabs.Items.Count && tabs.SelectedIndex != index)
+            {
+                tabs.SelectedIndex = index;
+                shown = true;
+            }
+        }
+
+        return shown;
+    }
+
+    // Where an element sits in its tree, as child indices from the root: the same markup builds the same places.
+    private static string PlaceOf(IUIComponent element)
+    {
+        var steps = new List<int>();
+        for (var at = element; at.VisualParent is { } parent; at = parent)
+        {
+            steps.Add(parent.VisualChildren.TakeWhile(child => !ReferenceEquals(child, at)).Count());
+        }
+
+        steps.Reverse();
+        return string.Join('/', steps);
+    }
+
+    private static IEnumerable<T> DescendantsOf<T>(IUIComponent root) where T : class
+    {
+        foreach (var child in root.VisualChildren)
+        {
+            if (child is T found)
+            {
+                yield return found;
+            }
+
+            foreach (var deeper in DescendantsOf<T>(child))
+            {
+                yield return deeper;
+            }
+        }
+    }
+
+    // The control a lone ControlTemplate is shown on: its TargetType when that is a creatable templated control, else a
+    // ContentControl.
+    private static TemplatedUIComponent TemplatedHostFor(ControlTemplate template)
+    {
+        var type = template.TargetType;
+        if (type == null || type.IsAbstract || typeof(IWindow).IsAssignableFrom(type)
+            || !typeof(TemplatedUIComponent).IsAssignableFrom(type) || type.GetConstructor(Type.EmptyTypes) == null)
+        {
+            type = typeof(ContentControl);
+        }
+
+        var host = (TemplatedUIComponent)Activator.CreateInstance(type);
+        host.Template = template;
+        return host;
+    }
+
+    // What the markup kinds with no visual of their own implement: themes, theme variants, resource dictionaries, style
+    // sets (the same interfaces the markup compiler reads an entity type from), and a lone Style.
+    private static bool IsThemeStyleOrResource(object root) =>
+        root is Style || root.GetType().GetInterfaces().Any(i => i.Name is "ITheme" or "IThemeVariant" or "IResourceDictionary" or "IStyleSet");
 
     // A hosted control with no declared size: shrink the design canvas to its natural (content) size so the preview
     // fits the control instead of a full default window. Windows and explicitly-sized controls keep their size.
@@ -263,6 +391,8 @@ public sealed class DesignerSession : IDisposable
     // hot-reload reconcile path.
     private RenderResult RenderTail(IWindow window, double designWidth, double designHeight, double scale, string outPath, bool live, List<string> diagnostics, bool resetCache)
     {
+        if (_servicesNote != null) diagnostics.Add(_servicesNote);
+
         // Design-time universe preview: a design-aware behavior (e.g. DemoUniverseBehavior) created+bound a universe to
         // its RenderTargetPanel while the tree was built. Drive a short snapshot so the universe loads content and
         // publishes a frame to the panel; the content render path composites that below. No-op when none is hosted.
@@ -358,28 +488,26 @@ public sealed class DesignerSession : IDisposable
     }
 
     // Project assemblies loaded this session: load each once so the warm host doesn't add duplicate type copies.
-    private static readonly HashSet<string> _loadedProjectAssemblies = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, Assembly> _loadedProjectAssemblies = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Loads the previewed file's own project assembly from its build output, so the designer can resolve the
-    /// project's own types (<c>clr-namespace:</c> controls, behaviors) - not only engine assemblies. Best-effort:
-    /// no .csproj ancestor, an unbuilt project or an unloadable dll just leaves those types unresolved, as before.
+    /// project's own types (<c>clr-namespace:</c> controls, behaviors) - not only engine assemblies - and returns it.
+    /// Best-effort: no .csproj ancestor, an unbuilt project or an unloadable dll return null and just leave those types
+    /// unresolved, as before.
     /// </summary>
-    private static void LoadProjectAssembly(string? aumlSourcePath)
+    private static Assembly LoadProjectAssembly(string? aumlSourcePath)
     {
         var projectDir = ResolveAssetRoot(aumlSourcePath);
-        if (projectDir == null) return;
+        if (projectDir == null) return null;
         var csproj = Directory.GetFiles(projectDir, "*.csproj").FirstOrDefault();
-        if (csproj == null) return;   // ResolveAssetRoot fell back to a non-project folder
+        if (csproj == null) return null;   // ResolveAssetRoot fell back to a non-project folder
 
         var dll = FindProjectAssembly(csproj);
-        if (dll == null) return;
+        if (dll == null) return null;
 
-        // The project's output dir is where its OWN dependencies live (notably Adamantium.MVVM, which a generated
-        // [ViewModel] derives from and whose commands it returns) - assemblies the designer host doesn't reference, so
-        // they're not on its probing path. Register a resolver that satisfies any missing assembly from there: without
-        // it, reflection can't load the VM's base/member types, silently drops the WHOLE type from GetTypes(), and the
-        // x:ViewModel / {Binding} resolves to nothing (e.g. a bound Width stays NaN -> the control stretches).
+        // Resolve missing assemblies from the project's output dir (e.g. Adamantium.MVVM); otherwise reflection silently
+        // drops view-model types.
         _projectOutputDir = Path.GetDirectoryName(dll);
         lock (_loadedProjectAssemblies)
         {
@@ -388,13 +516,16 @@ public sealed class DesignerSession : IDisposable
                 AppDomain.CurrentDomain.AssemblyResolve += ResolveFromProjectOutput;
                 _resolverRegistered = true;
             }
-            if (!_loadedProjectAssemblies.Add(dll)) return;   // already loaded this session
+            if (_loadedProjectAssemblies.TryGetValue(dll, out var loaded)) return loaded;   // already loaded this session
         }
 
         // Load from a byte copy, not Assembly.LoadFrom: LoadFrom keeps the .dll file locked, which would stop the
         // user rebuilding their project while this warm preview host has it open. Loaded once per session (a rebuild
         // is picked up after a host restart; full hot-reload is a separate, deferred workstream).
-        try { Assembly.Load(File.ReadAllBytes(dll)); } catch { /* ignore unloadable */ }
+        Assembly assembly = null;
+        try { assembly = Assembly.Load(File.ReadAllBytes(dll)); } catch { /* ignore unloadable */ }
+        lock (_loadedProjectAssemblies) _loadedProjectAssemblies[dll] = assembly;
+        return assembly;
     }
 
     // Output dir of the last previewed project; probed by ResolveFromProjectOutput for the project's own dependencies.
@@ -412,13 +543,8 @@ public sealed class DesignerSession : IDisposable
         try { return Assembly.Load(File.ReadAllBytes(path)); } catch { return null; }
     }
 
-    /// <summary>
-    /// The project's own compiled assembly under its build output. Looks in (in order) an explicit
-    /// <c>&lt;BaseOutputPath&gt;</c>, the conventional per-project <c>bin</c>, and a consolidated <c>artifacts/bin</c>
-    /// found by walking up from the project (this engine builds every project into one such folder via a root
-    /// Directory.Build.props). Returns the most recently built match, so the current target framework wins over stale
-    /// leftover TFM builds.
-    /// </summary>
+    // The project's compiled assembly, looked up in BaseOutputPath, bin and an artifacts/bin above it; the newest match
+    // wins over stale TFM builds.
     private static string? FindProjectAssembly(string csprojPath)
     {
         var dllName = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
@@ -458,13 +584,12 @@ public sealed class DesignerSession : IDisposable
     }
 
     /// <summary>
-    /// Instantiates the markup's view-model (<c>x:ViewModel="prefix:Type"</c>) so the preview shows real sample data
-    /// through its bindings - the WPF <c>d:DesignInstance</c> / <c>IsDesignTimeCreatable</c> behaviour. This is opt-in:
-    /// it runs only when <c>x:CreateInDesignTime="True"</c> is set, so a DI view-model (no parameterless ctor in the
-    /// headless designer) or a ctor with side effects is never instantiated unless asked. Returns null when not opted
-    /// in, when there is no x:ViewModel, or when the type has no public parameterless constructor.
+    /// Builds the markup's view-model (<c>x:ViewModel="prefix:Type"</c>) the way the application does, through its
+    /// services, so the preview shows real data through its bindings. Opt-in, as for every view: only with
+    /// <c>x:CreateInDesignTime="True"</c>, because a preview runs the view-model's code. Returns null when not opted in,
+    /// when there is no x:ViewModel, or when it cannot be built (a diagnostic says why).
     /// </summary>
-    private static object CreateDesignDataContext(string aumlText)
+    private object CreateDesignDataContext(string aumlText, List<string> diagnostics)
     {
         if (!string.Equals(MatchAttributeValue(aumlText, "CreateInDesignTime"), "true", StringComparison.OrdinalIgnoreCase))
             return null;
@@ -474,8 +599,21 @@ public sealed class DesignerSession : IDisposable
         viewModel = UnwrapTypeExtension(viewModel);   // accept both "prefix:Type" and "{x:Type prefix:Type}"
 
         var type = ResolveMarkupType(aumlText, viewModel);
-        if (type?.GetConstructor(Type.EmptyTypes) == null) return null;
-        try { return Activator.CreateInstance(type); } catch { return null; }
+        if (type == null)
+        {
+            diagnostics.Add($"x:ViewModel '{viewModel}' was not found in the loaded assemblies");
+            return null;
+        }
+
+        try
+        {
+            return _app.UIContext.Resolve(type);
+        }
+        catch (Exception e)
+        {
+            diagnostics.Add($"x:ViewModel {type.Name} could not be built: {e.GetBaseException().Message}");
+            return null;
+        }
     }
 
     /// <summary>Unwraps the x:Type markup extension: <c>{x:Type prefix:Type}</c> -> <c>prefix:Type</c>. A plain
@@ -550,8 +688,8 @@ public sealed class DesignerSession : IDisposable
     /// </summary>
     private void DriveDesignTimeUniverses()
     {
-        var universes = _universeService.Universes;
-        if (universes.Count == 0) return;
+        var universes = _universeService?.Universes;
+        if (universes is not { Count: > 0 }) return;
 
         var total = TimeSpan.Zero;
         const double dt = 1.0 / 60.0;
@@ -583,7 +721,7 @@ public sealed class DesignerSession : IDisposable
     public HitTestResult HitTest(double x, double y)
     {
         if (FindAuthoredAt(x, y) is not { } found) return null;
-        var (current, span) = found;
+        var (current, file, line, column) = found;
 
         // WorldTransform is already accumulated up the tree → its translation is the element's origin in design space;
         // most controls' rect is origin + RenderSize. A shape's layout box, though, spans from (0,0) to the geometry's
@@ -594,21 +732,22 @@ public sealed class DesignerSession : IDisposable
         {
             geometry.RecalculateBounds();
             var b = geometry.Bounds;
-            return new HitTestResult(span.Line, span.Position, pos.X + b.X, pos.Y + b.Y, b.Width, b.Height);
+            return new HitTestResult(line, column, pos.X + b.X, pos.Y + b.Y, b.Width, b.Height, file);
         }
         if (current is Adamantium.UI.Controls.Shapes.Line ln)
         {
             double minX = Math.Min(ln.X1, ln.X2), minY = Math.Min(ln.Y1, ln.Y2);
-            return new HitTestResult(span.Line, span.Position,
-                pos.X + minX, pos.Y + minY, Math.Abs(ln.X2 - ln.X1), Math.Abs(ln.Y2 - ln.Y1));
+            return new HitTestResult(line, column,
+                pos.X + minX, pos.Y + minY, Math.Abs(ln.X2 - ln.X1), Math.Abs(ln.Y2 - ln.Y1), file);
         }
         var size = current.RenderSize;
-        return new HitTestResult(span.Line, span.Position, pos.X, pos.Y, size.Width, size.Height);
+        return new HitTestResult(line, column, pos.X, pos.Y, size.Width, size.Height, file);
     }
 
-    // Hit-tests the last rendered tree at (x,y) in design space and walks up to the nearest element that came from the
-    // AUML (template-internal parts have no source position). Shared by HitTest (hover/go-to-source) and SelectAt.
-    private (IUIComponent Component, AumlSourceSpan Span)? FindAuthoredAt(double x, double y)
+    // Hit-tests the last rendered tree at (x,y) in design space and walks up to the nearest element with a place in
+    // markup: one of the previewed file's (File null), or one a nested view's generated code recorded (Design.Source) -
+    // template-internal parts have neither. Shared by HitTest, SelectAt and Hover.
+    private (IUIComponent Component, string File, int Line, int Column)? FindAuthoredAt(double x, double y)
     {
         if (_lastWindow is not IUIComponent root || _lastSourceMap is null) return null;
 
@@ -618,21 +757,32 @@ public sealed class DesignerSession : IDisposable
         // background panel, not the control in front" bug.
         var hit = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault();
         for (var current = hit; current is not null; current = current.VisualParent)
+        {
             if (_lastSourceMap.TryGetValue(current, out var span))
-                return (current, span);
+            {
+                return (current, null, span.Line, span.Position);
+            }
+
+            if (Design.SourceOf(current) is { } source)
+            {
+                return (current, source.File, source.Line, source.Column);
+            }
+        }
+
         return null;
     }
 
-    /// <summary>
-    /// Designer selection: hit-tests the last rendered tree at (x,y) in design space and selects the nearest authored
-    /// element by driving the previewed window's framework <see cref="AdornerLayer"/> - so the FRAMEWORK draws the
-    /// selection frame from the element's RenderBounds (no host-side frame) - then re-renders one frame and returns it
-    /// plus the element's markup position so the editor can sync its caret. A miss clears the selection.
-    /// </summary>
+    /// <summary>Selects the authored element at a design-space point (the framework draws the frame) and returns the new
+    /// frame plus its markup position; a miss clears the selection.</summary>
     public RenderResult SelectAt(double x, double y, string outPath)
     {
         if (_lastWindow == null || _renderService == null || _liveWindow == null)
             return RenderResult.Fail("no live session to select in", null);
+
+        if (ShowTabAt(x, y))
+        {
+            _lastWindow.Update(_app.ThemeManager, new AppTime());
+        }
 
         var found = FindAuthoredAt(x, y);
         SetWindowSelection(found?.Component as UIComponent);   // null clears the selection
@@ -641,7 +791,7 @@ public sealed class DesignerSession : IDisposable
             return RenderResult.Fail("render failed", null);
         _renderService.SaveFrameRaw(outPath);
 
-        var hit = found is { } f ? new HitTestResult(f.Span.Line, f.Span.Position, 0, 0, 0, 0) : null;
+        var hit = found is { } f ? new HitTestResult(f.Line, f.Column, 0, 0, 0, 0, f.File) : null;
         // Report the real animation state so the editor keeps streaming after a click - the selection frame persists on
         // the AdornerLayer, so the resumed stream's frames carry it; the preview doesn't freeze on selecting.
         var animating = AnimationManager.HasActiveAnimations || DesignTimeMediaClock.HasActiveMedia;

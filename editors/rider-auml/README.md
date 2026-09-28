@@ -18,10 +18,14 @@ server. Built on **LSP4IJ** (installed automatically as a dependency).
 ## 1. Set versions (one-time)
 
 Edit `gradle.properties`:
-- `platformVersion` / `sinceBuild` — pick an IntelliJ version **≤ your Rider's** version
-  (Rider 2025.2 → `2025.2` / `252`, etc.).
+- `platformVersion` / `sinceBuild` — the **Rider** version the plugin is built against, which is also
+  the oldest one it installs in (Rider 2026.2 → `2026.2` / `262`). The first build downloads that
+  Rider's SDK.
 - `lsp4ijPlugin` — set to the LSP4IJ version you have installed
   (Rider → Settings → Plugins → LSP4IJ → version).
+
+Bump `version` in `build.gradle.kts` with every change you hand out, so the installed build can be told
+apart from the previous one.
 
 ## 2. Build
 
@@ -33,7 +37,7 @@ sync, then run the Gradle task **`buildPlugin`** (Gradle tool window → Tasks �
 ./gradlew buildPlugin
 ```
 
-Either way the result is: `build/distributions/adamantium-auml-0.1.0.zip`.
+Either way the result is: `build/distributions/adamantium-auml-<version>.zip`.
 
 ## 3. Install in Rider
 
@@ -49,5 +53,5 @@ diagnostics should work — **no manual file-type or server configuration**.
   unpacks it to a per-version cache dir and launches it. End users need only the **.NET 10 runtime**.
 - For local development, set the `ADAMANTIUM_AUML_SERVER` environment variable to a built
   `Adamantium.UI.LanguageServer.exe` to skip the bundled copy.
-- After changing the server, rebuild the plugin (the publish reruns) and bump `BUNDLE_VERSION` in
-  `AumlLanguageServerFactory.kt` so the cached copy is refreshed.
+- After changing the server, rebuild the plugin (the publish reruns) and bump its version. The cached copy
+  is keyed by the plugin version and the bundled server's content hash, so it is re-extracted by itself.

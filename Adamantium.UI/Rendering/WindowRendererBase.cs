@@ -29,7 +29,7 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     }
 
-    // Phase 3.2 record/apply split (docs/RENDER_THREAD_PLAN.md). Default no-ops; ForwardWindowRenderer implements them.
+    // Record/apply split. Default no-ops; ForwardWindowRenderer implements them.
     public virtual void RecordData()
     {
 
@@ -76,9 +76,26 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     public bool FirstFrameProcessed { get; private set; }
 
+    private double _renderScale = 1.0;
+
     // Render resolution multiplier (1 = on-screen 1:1). The presenter + viewport are sized ClientSize x RenderScale,
     // the projection stays ClientSize - so the designer renders crisply at design x scale (zoom) without changing layout.
-    public double RenderScale { get; set; } = 1.0;
+    public double RenderScale
+    {
+        get => _renderScale;
+        set
+        {
+            if (_renderScale == value) 
+                return;
+            
+            _renderScale = value;
+            OnRenderScaleChanged();
+        }
+    }
+
+    protected virtual void OnRenderScaleChanged()
+    {
+    }
 
     protected virtual void UnsubscribeFromEvents()
     {
@@ -171,11 +188,7 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     public void ResizePresenter(uint width, uint height)
     {
-        // Re-read the window's transparency and present policy HERE rather than trusting the values captured when this
-        // renderer was built: both are chosen while the swapchain is created, so a rebuild is the only moment a change
-        // can land - and this is the rebuild. Costs two field reads on a path that is already tearing the swapchain
-        // down. The policy was the one left out, so changing it invalidated the renderer, rebuilt the swapchain and
-        // then picked the present mode from the value the renderer started life with: V-Sync did nothing at all.
+        // Re-read transparency and present policy on every rebuild, the only moment a swapchain can pick them up.
         if (Window != null && Presenter != null)
         {
             Presenter.Description.TransparentComposition = Window.UseTransparentComposition;

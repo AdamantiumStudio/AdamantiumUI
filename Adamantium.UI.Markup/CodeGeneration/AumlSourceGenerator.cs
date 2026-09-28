@@ -284,6 +284,13 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             // dependency resolver and assigns it as DataContext when the view goes live (FundamentalUIComponent.ApplyViewModel).
             textGenerator.WriteLine($"public override global::System.Type ViewModelType => typeof(global::{container.RootViewModelTypeName});");
             textGenerator.NewLine();
+
+            // x:CreateInDesignTime="True": the author vouches the view-model is safe to run in the designer.
+            if (container.RootCreateInDesignTime)
+            {
+                textGenerator.WriteLine("public override bool CreateViewModelInDesign => true;");
+                textGenerator.NewLine();
+            }
         }
 
         if (!string.IsNullOrEmpty(container.RootKeepAlive))

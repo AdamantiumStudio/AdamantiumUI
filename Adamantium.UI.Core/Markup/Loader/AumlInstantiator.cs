@@ -5,6 +5,8 @@ using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.MarkupExtensions;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Core.Resources.Triggers;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
@@ -25,6 +27,9 @@ internal sealed class AumlInstantiator
     private readonly List<Assembly> _assemblies;
     private readonly Func<Type, Type> _typeMapper;
     private readonly List<string> _diagnostics;
+
+    // The template results being built, innermost on top: named parts and TemplateBindings register with it.
+    private readonly Stack<TemplateResult> _templates = new();
 
     public AumlInstantiator(ITypeResolver resolver, List<Assembly> assemblies, Func<Type, Type> typeMapper, List<string> diagnostics)
     {
@@ -47,41 +52,186 @@ internal sealed class AumlInstantiator
             return null;
         }
 
+        if (typeof(UiTemplate).IsAssignableFrom(clrType))
+        {
+            return BuildTemplate(node, clrType);
+        }
+
         var actualType = _typeMapper?.Invoke(clrType) ?? clrType;
         var instance = Activator.CreateInstance(actualType);
         if (instance != null) SourceMap[instance] = new AumlSourceSpan(node.Line, node.Position);
 
         foreach (var child in node.Children)
         {
-            switch (child)
+            // One element or property that cannot be built is reported and skipped: it must not take the whole
+            // document - and with it the preview - down.
+            try
             {
-                case AumlAstObjectNode objectNode:
-                    var childObj = Instantiate(objectNode);
-                    if (childObj is IAdamantiumComponent && instance is IContainer container)
-                        container.AddOrSetChildComponent(childObj);
-                    break;
+                switch (child)
+                {
+                    case AumlAstObjectNode objectNode:
+                        var childObj = Instantiate(objectNode);
+                        if (childObj is IAdamantiumComponent && instance is IContainer container)
+                            container.AddOrSetChildComponent(childObj);
+                        break;
 
-                case AumlAstPropertyNode { Property: AumlAstPropertyReference pref } prop:
-                    ApplyProperty(instance, pref, prop);
-                    break;
+                    case AumlAstPropertyNode { Property: AumlAstPropertyReference pref } prop:
+                        ApplyProperty(instance, pref, prop);
+                        break;
 
-                case AumlAstTextNode text when !string.IsNullOrWhiteSpace(text.Text):
-                    if (instance is IContainer textHost) textHost.AddOrSetChildComponent(text.Text);
-                    break;
+                    case AumlAstTextNode text when !string.IsNullOrWhiteSpace(text.Text):
+                        if (instance is IContainer textHost) textHost.AddOrSetChildComponent(text.Text);
+                        break;
+
+                    case AumlAstDirective { Name: "Name" } nameDirective:
+                        ApplyName(instance, (nameDirective.Value as AumlAstTextNode)?.Text?.Trim());
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                _diagnostics.Add($"{DescribeChild(child)} on {actualType.Name}: {InnermostMessage(e)}");
             }
         }
 
         return instance;
     }
 
+    // x:Name: carried at runtime so {Binding ElementName=...} finds the element, and registered with the template being
+    // built so the control finds its named parts - both as the generator emits them.
+    private void ApplyName(object instance, string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return;
+        }
+
+        if (instance.GetType().GetProperty("Name", BindingFlags.Public | BindingFlags.Instance) is { CanWrite: true } nameProperty
+            && nameProperty.PropertyType == typeof(string))
+        {
+            nameProperty.SetValue(instance, name);
+        }
+
+        if (_templates.TryPeek(out var building) && instance is IAdamantiumComponent part)
+        {
+            building.RegisterName(name, part);
+        }
+    }
+
+    // A template is a factory, as the generator emits it: every Build() makes a fresh copy of its content.
+    private object BuildTemplate(AumlAstObjectNode node, Type templateType)
+    {
+        var content = node.Children.OfType<AumlAstObjectNode>().FirstOrDefault();
+        var properties = node.Children.OfType<AumlAstPropertyNode>()
+            .Where(p => p.Property is AumlAstPropertyReference)
+            .ToList();
+        var triggers = properties
+            .Where(p => ((AumlAstPropertyReference)p.Property).Name == "Triggers")
+            .SelectMany(p => p.Values)
+            .OfType<AumlAstObjectNode>()
+            .ToList();
+
+        Func<TemplateResult> builder = () => BuildTemplateResult(content, triggers);
+        UiTemplate template;
+        try
+        {
+            template = (UiTemplate)Activator.CreateInstance(templateType, [builder]);
+        }
+        catch (Exception e)
+        {
+            _diagnostics.Add($"Cannot create template '{templateType.Name}': {InnermostMessage(e)}");
+            return null;
+        }
+
+        SourceMap[template] = new AumlSourceSpan(node.Line, node.Position);
+
+        // The template's own configuration - ControlTemplate.TargetType, HierarchicalDataTemplate.ItemsSource, ...
+        foreach (var prop in properties.Where(p => ((AumlAstPropertyReference)p.Property).Name != "Triggers"))
+        {
+            try
+            {
+                ApplyProperty(template, (AumlAstPropertyReference)prop.Property, prop);
+            }
+            catch (Exception e)
+            {
+                _diagnostics.Add($"{DescribeChild(prop)} on {templateType.Name}: {InnermostMessage(e)}");
+            }
+        }
+
+        return template;
+    }
+
+    private TemplateResult BuildTemplateResult(AumlAstObjectNode content, List<AumlAstObjectNode> triggers)
+    {
+        var result = new TemplateResult();
+        _templates.Push(result);
+        try
+        {
+            result.RootComponent = content == null ? null : Instantiate(content) as IUIComponent;
+            foreach (var triggerNode in triggers)
+            {
+                if (Instantiate(triggerNode) is ITrigger trigger)
+                {
+                    result.Triggers.Add(trigger);
+                }
+            }
+        }
+        finally
+        {
+            _templates.Pop();
+        }
+
+        return result;
+    }
+
+    // Inside a template a part's value is the TEMPLATE's, so the template's own triggers can still change it - the
+    // priority the generator gives it.
+    private void Assign(object instance, PropertyInfo p, object value)
+    {
+        if (_templates.Count > 0 && instance is AdamantiumComponent part && part.GetProperty(p.Name) != null)
+        {
+            part.SetValue(p.Name, value, ValuePriority.Template);
+            return;
+        }
+
+        p.SetValue(instance, value);
+    }
+
+    private static string DescribeChild(IAumlAstNode child) => child switch
+    {
+        AumlAstPropertyNode { Property: AumlAstPropertyReference pref } => $"Property '{pref.Name}'",
+        AumlAstObjectNode obj => $"Element '{obj.TypeReference?.Name}' (line {obj.Line})",
+        _ => "Content"
+    };
+
+    private static string InnermostMessage(Exception e)
+    {
+        while (e is TargetInvocationException { InnerException: not null } wrapped)
+        {
+            e = wrapped.InnerException;
+        }
+
+        return e.Message;
+    }
+
     private void ApplyProperty(object instance, AumlAstPropertyReference pref, AumlAstPropertyNode prop)
     {
-        if (pref.IsAttachedProperty) return; // attached properties not supported in preview yet
+        if (pref.IsAttachedProperty)
+        {
+            ApplyAttachedProperty(instance, pref, prop);
+            return;
+        }
 
         var p = instance.GetType().GetProperty(pref.Name, BindingFlags.Public | BindingFlags.Instance);
         if (p == null)
         {
             _diagnostics.Add($"Property '{pref.Name}' not found on {instance.GetType().Name}");
+            return;
+        }
+
+        if (TryBuildResourceDictionary(p.PropertyType, prop, out var dictionary))
+        {
+            Assign(instance, p, dictionary);
             return;
         }
 
@@ -104,22 +254,41 @@ internal sealed class AumlInstantiator
             return;
         }
 
+        // A style/setter/trigger value, or a template's own configuration, keeps markers and bindings as OBJECTS: the
+        // setter (or the template) applies them to the element later, as the generator emits it.
+        var keepsMarkers = instance is UiTemplate || instance.GetType().Namespace == "Adamantium.UI.Core.Resources";
+
         foreach (var value in prop.Values)
         {
-            // A Binding/MultiBinding (markup-extension OR element syntax) sets up a live binding, not a plain value.
-            //
-            // Asked of AdamantiumComponent, not of IFundamentalUIComponent: SetBinding lives on the former, and so do
-            // BRUSHES. Bound to the narrower interface, a binding written inside a brush - <VisualBrush
-            // Visual="{Binding ElementName=...}"/> - fell through to the plain-value branch and threw "Binding cannot be
-            // converted to IUIComponent", taking the whole document with it.
-            if (instance is AdamantiumComponent bindable && TryBuildBindingBase(value, out var binding))
+            // A Binding/MultiBinding sets up a live binding unless the property holds a binding itself. Checked against
+            // AdamantiumComponent so bindings inside brushes work.
+            if (TryBuildBindingBase(value, out var binding))
             {
-                bindable.SetBinding(pref.Name, binding);
+                if (keepsMarkers || typeof(BindingBase).IsAssignableFrom(p.PropertyType))
+                    Assign(instance, p, binding);
+                else if (instance is AdamantiumComponent bindable)
+                    bindable.SetBinding(pref.Name, binding);
+                else
+                    _diagnostics.Add($"'{pref.Name}' on {instance.GetType().Name} cannot be bound");
+                continue;
+            }
+
+            // {TemplateBinding X}: a part's property follows the templated control's, wired when the template builds.
+            if (value is AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } tbNode)
+            {
+                var templateBinding = CreateMarkupObject(tbNode) as TemplateBinding;
+                if (templateBinding == null) continue;
+                if (keepsMarkers)
+                    Assign(instance, p, templateBinding);
+                else if (_templates.TryPeek(out var building) && instance is IAdamantiumComponent part)
+                    building.AddTemplateBinding(part, pref.Name, templateBinding);
+                else
+                    _diagnostics.Add($"TemplateBinding on '{pref.Name}' is only meaningful inside a ControlTemplate");
                 continue;
             }
 
             // {ThemeResource Key}: a live link to the active theme's accent/focus property (not a data binding).
-            if (instance is IFundamentalUIComponent themed &&
+            if (!keepsMarkers && instance is IFundamentalUIComponent themed &&
                 value is AumlAstMarkupExtensionNode { TypeReference.Name: "ThemeResource" } trNode)
             {
                 var key = (trNode.Arguments.FirstOrDefault()?.Value as AumlAstTextNode)?.Text?.Trim();
@@ -127,32 +296,149 @@ internal sealed class AumlInstantiator
                 continue;
             }
 
+            // {ResourceReference Key} on an element: deferred like the generator does, so a resource local to the
+            // element's subtree resolves once the element is in the tree.
+            if (!keepsMarkers && instance is IAdamantiumComponent referencing &&
+                value is AumlAstMarkupExtensionNode { TypeReference.Name: "ResourceReference" } rrNode)
+            {
+                var key = (rrNode.Arguments.FirstOrDefault()?.Value as AumlAstTextNode)?.Text?.Trim();
+                var priority = _templates.Count > 0 ? ValuePriority.Template : ValuePriority.Local;
+                if (!string.IsNullOrEmpty(key)) ResourceResolver.SetDeferred(referencing, pref.Name, key, priority);
+                continue;
+            }
+
             switch (value)
             {
                 case AumlAstMarkupExtensionNode markup:
-                    var resolved = ResolveMarkupExtension(markup, p.PropertyType);
-                    if (resolved != null) p.SetValue(instance, resolved);
+                    var resolved = ResolveMarkupExtension(markup, p.PropertyType, keepsMarkers ? null : instance, pref.Name);
+                    if (resolved == null) break;
+                    if (p.PropertyType.IsInstanceOfType(resolved)) Assign(instance, p, resolved);
+                    // A live marker ({ObservableResource}, {Ancestor}, {Self}) connects itself to the property in
+                    // ProvideObject and hands itself back - it is not the value.
+                    else if (resolved is not MarkupExtension)
+                        _diagnostics.Add($"Cannot assign {resolved.GetType().Name} to '{pref.Name}' ({p.PropertyType.Name})");
+                    break;
+
+                case AumlAstNullValueNode:
+                    Assign(instance, p, null);
                     break;
 
                 case AumlAstTextNode textNode:
                     if (TryConvert(textNode.Text, p.PropertyType, out var converted))
-                        p.SetValue(instance, converted);
+                        Assign(instance, p, converted);
                     break;
 
                 case AumlAstObjectNode objectNode:
                     var nested = Instantiate(objectNode);
-                    if (nested != null) p.SetValue(instance, nested);
+                    if (nested != null) Assign(instance, p, nested);
+                    break;
+
+                default:
+                    var other = ResolveValue(value, p.PropertyType);
+                    if (other != null) Assign(instance, p, other);
                     break;
             }
         }
+    }
+
+    // Grid.Row, ToolTipService.ToolTip, ...: set through the owner's static Set{Name}, as the generator emits it. Skipping
+    // them laid every grid child out in cell 0,0 and dropped every tooltip from the preview.
+    private void ApplyAttachedProperty(object instance, AumlAstPropertyReference pref, AumlAstPropertyNode prop)
+    {
+        var owner = ResolveClrType(pref.OwnerType);
+        var setter = owner?.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(m => m.Name == "Set" + pref.Name
+                && m.GetParameters() is { Length: 2 } parameters
+                && parameters[0].ParameterType.IsInstanceOfType(instance));
+        if (setter == null)
+        {
+            _diagnostics.Add($"Attached property '{pref.OwnerType?.Name}.{pref.Name}' not found for {instance.GetType().Name}");
+            return;
+        }
+
+        var valueType = setter.GetParameters()[1].ParameterType;
+        if (TryBuildResourceDictionary(valueType, prop, out var dictionary))
+        {
+            setter.Invoke(null, [instance, dictionary]);
+            return;
+        }
+
+        foreach (var value in prop.Values)
+        {
+            if (instance is AdamantiumComponent bindable && TryBuildBindingBase(value, out var binding))
+            {
+                if (owner.GetField(pref.Name + "Property", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) is AdamantiumProperty property)
+                {
+                    bindable.SetBinding(property, binding);
+                }
+                else
+                {
+                    _diagnostics.Add($"Attached property '{owner.Name}.{pref.Name}' has no {pref.Name}Property to bind");
+                }
+
+                continue;
+            }
+
+            var resolved = ResolveValue(value, valueType);
+            if (resolved != null || value is AumlAstNullValueNode)
+            {
+                setter.Invoke(null, [instance, resolved]);
+            }
+        }
+    }
+
+    // <X.Resources> written as children: a dictionary of the keyed entries declared right there, with <ResourceLink>s
+    // pulling dictionary files in - the dictionary the generator builds and hands to the setter.
+    private bool TryBuildResourceDictionary(Type propertyType, AumlAstPropertyNode prop, out ResourceDictionary dictionary)
+    {
+        dictionary = null;
+        if (!typeof(ResourceDictionary).IsAssignableFrom(propertyType) || !prop.Values.Any(v => v is AumlAstObjectNode))
+        {
+            return false;
+        }
+
+        dictionary = new ResourceDictionary();
+        foreach (var entry in prop.Values.OfType<AumlAstObjectNode>())
+        {
+            try
+            {
+                var value = Instantiate(entry);
+                if (value is ResourceLink link)
+                {
+                    dictionary.Includes.Add(link);
+                    continue;
+                }
+
+                var key = entry.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == "Key")?.Value as AumlAstTextNode;
+                if (string.IsNullOrEmpty(key?.Text))
+                {
+                    _diagnostics.Add($"An inline resource '{entry.TypeReference?.Name}' (line {entry.Line}) needs an x:Key");
+                    continue;
+                }
+
+                dictionary.Add(key.Text.Trim(), value);
+            }
+            catch (Exception e)
+            {
+                _diagnostics.Add($"Resource '{entry.TypeReference?.Name}' (line {entry.Line}): {InnermostMessage(e)}");
+            }
+        }
+
+        return true;
     }
 
     /// <summary>A property whose declared type is a concrete collection (non-generic IList/ICollection, as
     /// <c>List&lt;T&gt;</c> is) and isn't parsed from text via [TypeParser] - mirrors the generator's IsCollection().</summary>
     private static bool IsPopulatableCollection(Type t) =>
         t != typeof(string)
-        && (typeof(System.Collections.IList).IsAssignableFrom(t) || typeof(System.Collections.ICollection).IsAssignableFrom(t))
+        && (typeof(System.Collections.IList).IsAssignableFrom(t) || typeof(System.Collections.ICollection).IsAssignableFrom(t)
+            || IsGenericCollection(t))
         && t.GetCustomAttribute<TypeParserAttribute>() == null;
+
+    // The generator's check matches ICollection<T> too (a Roslyn symbol's name carries no arity), so e.g.
+    // RibbonContextualGroups - a TrackingCollection<T> - is filled, not assigned.
+    private static bool IsGenericCollection(Type t) =>
+        t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
 
     /// <summary>
     /// Populates a collection-typed property by ADDING each child element (mirrors the generator's IsCollection path):
@@ -318,6 +604,7 @@ internal sealed class AumlInstantiator
             case "StringFormat": binding.StringFormat = (value as AumlAstTextNode)?.Text; break;
             case "FallbackValue": binding.FallbackValue = ResolveValue(value, typeof(object)); break;
             case "TargetNullValue": binding.TargetNullValue = ResolveValue(value, typeof(object)); break;
+            case "ElementName": if ((value as AumlAstTextNode)?.Text is { } element) binding.ElementName = element.Trim(); break;
             default: _diagnostics.Add($"Unknown Binding property '{name}'"); break;
         }
     }
@@ -346,11 +633,8 @@ internal sealed class AumlInstantiator
         return true;
     }
 
-    // Resolves a markup value node to a runtime object: a markup extension (incl. a converter authored AS a markup
-    // extension, or {ResourceReference}), an inline element (<...><local:MyConverter/></...>), or a text literal.
-    // The transformer runs before this (see AumlLoader), so a directive in value position arrives already turned into
-    // the node it means: {x:Null} -> AumlAstNullValueNode, {x:Type ...} -> AumlAstTypeReferenceValueNode. Without a case
-    // for the latter it fell through to null, and the preview silently showed a tree the build does not produce.
+    // Resolves a value node: markup extension, inline element or literal. Directives such as {x:Null} and {x:Type} arrive
+    // already transformed into their nodes.
     private object ResolveValue(IAumlAstValueNode value, Type targetType) => value switch
     {
         AumlAstNullValueNode => null,
@@ -400,7 +684,16 @@ internal sealed class AumlInstantiator
         return resolved;
     }
 
-    private object ResolveMarkupExtension(AumlAstMarkupExtensionNode markup, Type targetType)
+    // Positional arguments of the markers that take more than a key, in the order the generator reads them.
+    private static readonly Dictionary<string, string[]> PositionalProperties = new(StringComparer.Ordinal)
+    {
+        ["Ancestor"] = ["AncestorType", "Path"],
+        ["Self"] = ["Path"],
+        ["TemplateBinding"] = ["Path"],
+    };
+
+    private object ResolveMarkupExtension(AumlAstMarkupExtensionNode markup, Type targetType,
+        object targetObject = null, string targetProperty = null)
     {
         var name = markup.TypeReference?.Name ?? string.Empty;
 
@@ -419,7 +712,17 @@ internal sealed class AumlInstantiator
         }
 
         // General markup extension - e.g. a converter authored AS a MarkupExtension ({local:MyConverter}). Instantiate
-        // it, set its named args, then call ProvideObject (a converter's ProvideObject typically returns itself).
+        // it with its arguments, then call ProvideObject (a converter's ProvideObject typically returns itself; a live
+        // marker connects itself to the target property).
+        var instance = CreateMarkupObject(markup);
+        var context = new MarkupContext { TargetObject = targetObject, TargetPropertyName = targetProperty };
+        return instance is MarkupExtension ext ? ext.ProvideObject(context) : instance;
+    }
+
+    // The markup extension object with its positional and named arguments set, before ProvideObject.
+    private object CreateMarkupObject(AumlAstMarkupExtensionNode markup)
+    {
+        var name = markup.TypeReference?.Name ?? string.Empty;
         var clrType = ResolveClrType(markup.TypeReference);
         if (clrType == null)
         {
@@ -427,20 +730,44 @@ internal sealed class AumlInstantiator
             return null;
         }
 
+        var positional = markup.Arguments.Where(a => string.IsNullOrEmpty(a.Name)).ToList();
+        PositionalProperties.TryGetValue(name, out var positionalNames);
+
         object instance;
-        try { instance = Activator.CreateInstance(clrType); }
+        try
+        {
+            // {ObservableResource Key}, {ThemeResource Key}: a single positional argument is the constructor's key.
+            var key = positionalNames == null && positional.Count == 1 ? (positional[0].Value as AumlAstTextNode)?.Text?.Trim() : null;
+            instance = key != null && clrType.GetConstructor([typeof(string)]) != null
+                ? Activator.CreateInstance(clrType, key)
+                : Activator.CreateInstance(clrType);
+        }
         catch { _diagnostics.Add($"Cannot create markup extension '{name}'"); return null; }
 
-        foreach (var arg in markup.Arguments)
+        for (var i = 0; i < positional.Count && positionalNames != null && i < positionalNames.Length; i++)
         {
-            if (string.IsNullOrEmpty(arg.Name)) continue;
-            var prop = clrType.GetProperty(arg.Name, BindingFlags.Public | BindingFlags.Instance);
-            if (prop is not { CanWrite: true }) continue;
-            var argValue = ResolveValue(arg.Value, prop.PropertyType);
-            if (argValue != null) prop.SetValue(instance, argValue);
+            SetExtensionArgument(instance, clrType, positionalNames[i], positional[i].Value);
         }
 
-        return instance is MarkupExtension ext ? ext.ProvideObject(new MarkupContext()) : instance;
+        foreach (var arg in markup.Arguments.Where(a => !string.IsNullOrEmpty(a.Name)))
+        {
+            SetExtensionArgument(instance, clrType, arg.Name, arg.Value);
+        }
+
+        return instance;
+    }
+
+    private void SetExtensionArgument(object instance, Type clrType, string name, IAumlAstValueNode value)
+    {
+        var prop = clrType.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+        if (prop is not { CanWrite: true })
+        {
+            _diagnostics.Add($"Markup extension '{clrType.Name}' has no settable '{name}'");
+            return;
+        }
+
+        var argValue = ResolveValue(value, prop.PropertyType);
+        if (argValue != null) prop.SetValue(instance, argValue);
     }
 
     private bool TryConvert(string text, Type targetType, out object result)
@@ -468,6 +795,15 @@ internal sealed class AumlInstantiator
                 if (field != null) { result = field.GetValue(null); return true; }
             }
 
+            // A type named by its short name ({Ancestor Border}, Stop=ScrollViewer), as the generator resolves it.
+            if (t == typeof(Type))
+            {
+                result = (_resolver.ResolveByShortName(text.Trim()) as ReflectionResolvedType)?.ClrType;
+                if (result != null) return true;
+                _diagnostics.Add($"Type '{text}' could not be resolved");
+                return false;
+            }
+
             var parse = t.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, [typeof(string)], null);
             if (parse != null) { result = parse.Invoke(null, [text]); return true; }
 
@@ -478,10 +814,11 @@ internal sealed class AumlInstantiator
             result = TypeParser.Parse(text, t);
             return true;
         }
-        catch { /* fall through */ }
-
-        _diagnostics.Add($"Cannot convert '{text}' to {t.Name}");
-        return false;
+        catch (Exception e)
+        {
+            _diagnostics.Add($"Cannot convert '{text}' to {t.Name}: {InnermostMessage(e)}");
+            return false;
+        }
     }
 
     private Type ResolveClrType(IAumlAstTypeReference typeRef)
@@ -491,11 +828,8 @@ internal sealed class AumlInstantiator
         if (_resolver.Resolve(typeRef.GetFullTypeName()) is ReflectionResolvedType resolved)
             return resolved.ClrType;
 
-        // Nested elements under a NON-entity runtime root (a bare <StackPanel>/<Border> handed to AumlLoader.Load, not a
-        // Window/View/Page) arrive type-UNRESOLVED: DefaultAumlTransformer early-returns for an Unknown-entity root before
-        // its type-resolution BFS reaches the children, so they still carry the raw xmlns URI as their Namespace (the
-        // xmlns-qualified lookup above then misses). Resolve those by type NAME - the same short-name fallback the
-        // transformer itself uses (ResolveByShortName) for local/unprefixed types.
+        // Children of a non-entity root (a bare <StackPanel>) arrive unresolved; fall back to the transformer's short-name
+        // lookup.
         if (_resolver.ResolveByShortName(typeRef.Name) is ReflectionResolvedType byShortName)
             return byShortName.ClrType;
 
@@ -505,11 +839,7 @@ internal sealed class AumlInstantiator
     }
 
     // ==== hot reload: live-tree reconciliation ====================================================================
-    // Apply edited markup to an EXISTING object tree IN PLACE instead of rebuilding it: changed properties are
-    // re-applied to the live instances (so a transition eases and animations elsewhere keep running) and added /
-    // removed / replaced / reordered child elements are spliced into the live tree. <paramref name="oldNode"/> is the
-    // AST the live tree was built from; <paramref name="newNode"/> the edited markup. The two are diffed - only real
-    // changes touch the tree.
+    // Diffs oldNode (what the live tree was built from) against newNode and applies only the changes in place.
 
     public void Reconcile(object live, AumlAstObjectNode oldNode, AumlAstObjectNode newNode)
     {
@@ -543,6 +873,10 @@ internal sealed class AumlInstantiator
 
         var oldKids = ObjectChildren(oldNode);
         var newKids = ObjectChildren(newNode);
+        // No child elements before or after: what the live container holds came from an attribute or a binding (a
+        // Button's Content="Add", a list's ItemsSource), so there is nothing here to splice - rebuilding wiped it.
+        if (oldKids.Count == 0 && newKids.Count == 0) return;
+
         var liveKids = container.GetChildComponents();
 
         // The live children were built from oldKids in order. If that no longer lines up (e.g. a container that didn't

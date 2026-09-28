@@ -7,22 +7,8 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>
-/// Attaches to a <see cref="TextBlock"/> and rewrites its text a few times a second with live engine diagnostics, so the
-/// work that is normally invisible (the layout manager, the binding batcher, the inertia heartbeat) can be SEEN while
-/// exercising the running app - the runtime counterpart to the headless unit tests.
-/// <list type="bullet">
-/// <item>layout pass max (ms) over the refresh window - ~0 when idle (no per-frame tree walk), spikes on scroll/resize;</item>
-/// <item>measure/arrange calls over the window - 0 when idle, bounded by virtualization while scrolling;</item>
-/// <item>[DEFERRED] - a pass in the window hit the frame budget and pushed work to a later frame;</item>
-/// <item>binding target writes over the window - 0 when idle, spikes on scroll (recycled rows rebinding) and on a
-/// binding storm (where the per-flush cap bounds it);</item>
-/// <item>active animations - &gt; 0 while scroll inertia (or any animation) is coasting.</item>
-/// </list>
-/// It rides the same <see cref="AnimationManager"/> heartbeat as everything else. It samples every frame (cheap field
-/// math) but only rewrites the TextBlock ~4x/sec: re-rastering the glyphs every frame is what actually costs FPS, so the
-/// overlay amortises it over a refresh window instead.
-/// </summary>
+/// <summary>Shows live engine diagnostics (layout, bindings, animations) in a <see cref="TextBlock"/>, sampling every frame
+/// on the <see cref="AnimationManager"/> heartbeat but rewriting the text about four times a second.</summary>
 public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 {
     // The PLATE is permanent - it shows what a frame costs, on screen, and that is cheap. Its FILE DUMPS are not: eight
@@ -125,6 +111,13 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
     protected override void OnAttached(TextBlock target)
     {
+        // Statistics of the running loop: the designer has no loop to measure, and this ticker kept its preview streaming
+        // full-size frames for as long as the page was open.
+        if (Adamantium.UI.Core.Design.IsDesignMode)
+        {
+            return;
+        }
+
         Adamantium.UI.Core.VisualTreeNotifications.Attached += c => NoteChurn("attached", c);
         Adamantium.UI.Core.VisualTreeNotifications.Detached += c => NoteChurn("detached", c);
         Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged += c => NoteChurn("collapsed-flip", c);
@@ -200,8 +193,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
 
         // Frame breakdown (averages over the window, so they sum to ~frame time). "other" = the residual the render
-        // pipeline can't see: GPU-fence wait in BeginDraw + swapchain blit + Present. Phase 0 of the render-cache
-        // redesign - shows whether the per-frame cache REBUILD (build+proc) or something else (GPU/present) dominates.
+        // pipeline can't see: GPU-fence wait in BeginDraw + swapchain blit + Present.
+        // Shows whether the per-frame cache REBUILD (build+proc) or something else (GPU/present) dominates.
         var f = 1.0 / _windowFrames;
         var frameMs = _windowElapsed * 1000.0 * f;
         var avgLayout = _sumLayout * f;
@@ -296,11 +289,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
                         $"loop frame max {_secMaxFrame:F2} ms (paced to {Adamantium.UI.UIApplication.UpdateRateHz} Hz " +
                         $"= {1000.0 / Math.Max(1, Adamantium.UI.UIApplication.UpdateRateHz):F2} ms)   " +
                         $"processors max {_secMaxProcs:F2} ms\n" +
-                        // The remainder against the PACING BUDGET, not against the frame. The update thread is capped, so
-                        // a frame that fits inside its budget spends the rest ASLEEP - and subtracting the parts from the
-                        // whole frame reports that sleep as eight unexplained milliseconds, which is the wrong thing to
-                        // go looking for. What is worth naming is the work that fits nowhere: only if this grows past
-                        // the budget is the loop actually behind.
+                        // Work against the pacing budget, not the frame, whose remainder is sleep; only overrun means the
+                        // loop is behind.
                         $"work {work:F2} ms of budget   over budget {Math.Max(0, work - 1000.0 / Math.Max(1, Adamantium.UI.UIApplication.UpdateRateHz)):F2} ms\n";
             System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "build.log"), build);
             if (created + updated > _peakUnits)
@@ -309,16 +299,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
                 System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "build-peak.log"), build);
             }
 
-            // EVERY second, appended. A "peak" file picks one second by one criterion and throws the rest away - and the
-            // criterion picked the initial fill, which measures more than any drag ever will, so the file froze on the
-            // startup second and the thing being hunted was never written at all. A history cannot lose the event.
-            // THE WORST SECOND, kept whole. Every peak file above picks its second by ITS OWN criterion, and the second a
-            // tester reports is picked by a different one entirely - the picture stuttered. So keep the one where the
-            // FEWEST frames went out, with everything that happened in it side by side: that is the second to read.
-            // The first ten are skipped - a cold start beats any stutter and would own this file forever.
-            // BOTH rates, and the worse of them decides. The render thread keeps presenting while a heavy Update crawls,
-            // so a stalled loop leaves the presented count almost untouched - and a stalled loop is exactly what a
-            // stuttering picture is. Judged by the presented count alone, this file never noticed the event at all.
+            // The worst second so far (fewest frames by the lower of loop and presented rates), with its details; the
+            // first ten seconds are skipped as cold start.
             var framesThisSecond = presented - _worstSecondFrom;
             var loopThisSecond = _secondLoopFrames;
             _worstSecondFrom = presented;

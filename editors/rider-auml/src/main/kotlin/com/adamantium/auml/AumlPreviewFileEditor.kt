@@ -15,6 +15,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.UserDataHolderBase
+import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -41,10 +43,14 @@ import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLayeredPane
+import javax.swing.JMenuItem
+import javax.swing.JPopupMenu
 import javax.swing.JToggleButton
 import javax.swing.JPanel
 import javax.swing.JViewport
+import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
+import javax.swing.SwingUtilities
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -166,9 +172,15 @@ class AumlPreviewFileEditor(
         add(diagBadge, JLayeredPane.PALETTE_LAYER as Any?)
         add(errorBadge, JLayeredPane.PALETTE_LAYER as Any?)
     }
+    // The toolbar scrolls instead of setting the preview's minimum width: the splitter stopped at the width of the
+    // buttons, so the preview could be closed but not tucked away. Now it can be pushed almost shut and still used.
     private val root = JPanel(BorderLayout()).apply {
         add(canvasLayer, BorderLayout.CENTER)
-        add(buildToolbar(), BorderLayout.SOUTH)
+        add(JBScrollPane(buildToolbar(), ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED).apply {
+            border = JBUI.Borders.empty()
+            setOverlappingScrollBar(true)
+        }, BorderLayout.SOUTH)
+        minimumSize = JBUI.size(16, 16)
     }
 
     init {
@@ -195,7 +207,12 @@ class AumlPreviewFileEditor(
             override fun mouseMoved(e: MouseEvent) = scheduleHover(e.point)
         })
         canvas.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) = navigateAt(e.point)
+            override fun mouseClicked(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e)) navigateAt(e.point)
+            }
+            // The popup trigger is the press on some platforms and the release on others (Windows).
+            override fun mousePressed(e: MouseEvent) { if (e.isPopupTrigger) showContextMenu(e) }
+            override fun mouseReleased(e: MouseEvent) { if (e.isPopupTrigger) showContextMenu(e) }
             override fun mouseExited(e: MouseEvent) = scheduleHover(null)   // clear the framework hover frame
         })
         scheduleRender(live = true)   // play the design-time animations on first load
@@ -216,7 +233,7 @@ class AumlPreviewFileEditor(
     // Off-EDT (hoverAlarm pool): drive the framework hover frame and show the re-rendered result. Does NOT bump
     // renderToken (so it can't kill a running animation stream); discards its frame if a render/select happened meanwhile.
     private fun requestHover(x: Double?, y: Double?, token: Int, renderScale: Double) {
-        val r = service.hover(x, y)
+        val r = service.hover(x, y, file.path)
         val w = r.width ?: 0
         val h = r.height ?: 0
         val image = r.frames.firstOrNull()?.let { loadRawBgra(it, w, h) } ?: return
@@ -229,14 +246,33 @@ class AumlPreviewFileEditor(
 
     // Click -> select the element: the host drives the framework AdornerLayer so the FRAMEWORK draws the (stroke-aware)
     // selection frame INTO the rendered frame (not a plugin-side rect); show that frame and jump the text editor (the
-    // split's code half) to the element's markup line/column. Clicking empty space clears the selection.
+    // split's code half) to the element's markup line/column. An element of a nested view is only framed - its file
+    // opens from the context menu, so a click never switches files. Clicking empty space clears the selection.
     private fun navigateAt(p: Point) {
+        selectAt(p) { hit -> if (isThisFile(hit)) goToSource(hit) }
+    }
+
+    private fun isThisFile(hit: AumlPreviewService.HitResult) =
+        hit.file == null || FileUtil.pathsEqual(FileUtil.toSystemIndependentName(hit.file), file.path)
+
+    // Right click -> select the element under the cursor and offer to open its markup, in whichever file declared it.
+    private fun showContextMenu(e: MouseEvent) {
+        selectAt(e.point) { hit ->
+            val menu = JPopupMenu()
+            menu.add(JMenuItem("Go to Source").apply { addActionListener { goToSource(hit) } })
+            menu.show(e.component, e.x, e.y)
+        }
+    }
+
+    // Selects the element at the point (see navigateAt), shows the frame it is drawn in, then hands the hit - if any - to onHit.
+    private fun selectAt(p: Point, onHit: (AumlPreviewService.HitResult) -> Unit) {
         val design = canvas.canvasToDesign(p) ?: return
+        val text = document?.text ?: return
         val token = ++renderToken   // a select re-renders; supersede any running stream so it doesn't fight the select frame
         stopPlayback()
         val renderScale = scale
         ApplicationManager.getApplication().executeOnPooledThread {
-            val result = service.select(design.x, design.y)
+            val result = service.select(design.x, design.y, file.path, text, renderScale)
             val r = result.render
             val w = r.width ?: 0
             val h = r.height ?: 0
@@ -247,12 +283,16 @@ class AumlPreviewFileEditor(
                     canvas.setImage(image, r.scale ?: renderScale)
                     canvas.setStale(false)
                 }
-                result.hit?.let { hit ->
-                    OpenFileDescriptor(project, file, (hit.line - 1).coerceAtLeast(0), (hit.column - 1).coerceAtLeast(0)).navigate(true)
-                }
+                result.hit?.let(onHit)
                 if (r.animating) startStreaming(token, renderScale)
             }, ModalityState.any())
         }
+    }
+
+    // Opens the markup that declared the element at its line/column: this file, or the nested view's own.
+    private fun goToSource(hit: AumlPreviewService.HitResult) {
+        val target = hit.file?.let { LocalFileSystem.getInstance().findFileByPath(FileUtil.toSystemIndependentName(it)) } ?: file
+        OpenFileDescriptor(project, target, (hit.line - 1).coerceAtLeast(0), (hit.column - 1).coerceAtLeast(0)).navigate(true)
     }
 
     private fun buildToolbar(): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {

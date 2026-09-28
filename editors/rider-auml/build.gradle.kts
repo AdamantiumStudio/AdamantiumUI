@@ -4,12 +4,12 @@ import org.gradle.api.tasks.bundling.Zip
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.6.0"
+    id("org.jetbrains.kotlin.jvm") version "2.4.20"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 
 group = "com.adamantium"
-version = "1.1.4"
+version = "1.2.2"
 
 repositories {
     mavenCentral()
@@ -20,9 +20,9 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Built against IntelliJ IDEA Community (the plugin only uses platform + XML + LSP4IJ APIs,
-        // so it installs in Rider too). Set platformVersion in gradle.properties to a version <= your Rider.
-        intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
+        // Built against Rider itself, the IDE it is used in: compiled against the platform it runs on, not an older
+        // IntelliJ it merely stays compatible with. Set platformVersion in gradle.properties.
+        rider(providers.gradleProperty("platformVersion"))
 
         // The LSP4IJ plugin provides the LanguageServerFactory / connection-provider API.
         plugin(providers.gradleProperty("lsp4ijPlugin"))

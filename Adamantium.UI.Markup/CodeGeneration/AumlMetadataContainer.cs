@@ -22,6 +22,9 @@ public class AumlMetadataContainer
     /// generated InitializeComponent resolves it from the DI container and assigns it to DataContext.</summary>
     public string RootViewModelTypeName { get; set; }
 
+    /// <summary><c>x:CreateInDesignTime="True"</c> on the root: the designer may build the view-model.</summary>
+    public bool RootCreateInDesignTime { get; set; }
+
     /// <summary>The <c>x:KeepAlive</c> value declared on the root, as the enum member name; null when unstated.</summary>
     public string RootKeepAlive { get; set; }
 
@@ -41,6 +44,9 @@ public class AumlMetadataContainer
     public ITypeResolver TypeResolver { get; }
         
     public string RelativeFilePath { get; set; }
+
+    /// <summary>The markup file's full path; what generated code tells the designer an element came from.</summary>
+    public string SourceFilePath { get; set; }
 
     public string FileName => Path.GetFileNameWithoutExtension(RelativeFilePath);
 

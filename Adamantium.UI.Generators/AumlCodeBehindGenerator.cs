@@ -54,7 +54,7 @@ namespace Adamantium.UI.Generators
 
                 var metadata = new List<AumlDocument>();
 
-                // Phase 1 - report what parsing found, and work on a COPY: the parsed document belongs to the cache.
+                // Report what parsing found, and work on a COPY: the parsed document belongs to the cache.
                 foreach (var file in parsed)
                 {
                     var diagnostics = new RoslynDiagnosticSink(spc);
@@ -84,7 +84,7 @@ namespace Adamantium.UI.Generators
                     metadata.Add(aumlDoc);
                 }
 
-                // Phase 1.5 - pre-register every control document (Window/View/Page) as a generated type BEFORE any body
+                // Pre-register every control document (Window/View/Page) as a generated type BEFORE any body
                 // is transformed, so cross-document references (e.g. <local:ControlsView/>) resolve regardless of file
                 // processing order, including a view embedded inside another view.
                 foreach (var aumlDoc in metadata)
@@ -95,12 +95,12 @@ namespace Adamantium.UI.Generators
                     }
                     catch
                     {
-                        // A malformed document surfaces its real error during the Phase 2 transform below; pre-registration
+                        // A malformed document surfaces its real error during the transform below; pre-registration
                         // is best-effort and must never abort the whole generation.
                     }
                 }
 
-                // Phase 2 - metadata transform and code generation based on sorted metadata
+                // Metadata transform and code generation based on sorted metadata
                 var sortedMetadata = metadata.OrderBy(meta => GetGenerationPriority(meta.Root));
 
                 foreach (var aumlDoc in sortedMetadata)
@@ -166,6 +166,7 @@ namespace Adamantium.UI.Generators
             }
 
             document.RelativeFilePath = relativePath;
+            document.SourceFilePath = path;
             document.RootNamespace = rootNamespace;
 
             return new ParsedAumlFile(path, document);

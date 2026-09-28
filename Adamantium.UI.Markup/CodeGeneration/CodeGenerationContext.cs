@@ -108,6 +108,7 @@ public class CodeGenerationContext
         if (isRoot)
         {
             elementName = "this";
+            EmitDesignSource(elementName, element);
         }
 
         if (!isRoot)
@@ -117,11 +118,8 @@ public class CodeGenerationContext
             elementName = isNamed && !isHeldBack
                 ? named
                 : GenerateNextElementName();
-            // A named element in a control file has a backing field (declared in GenerateControlFile) — assign to
-            // the field, otherwise a local var would shadow it (the field would stay null). Inside a ControlTemplate and in
-            // theme/resource files there is no field → local var (+ RegisterName for the template below).
-            // A held-back element's name is a PROPERTY reading through its slot, not a field - so its build assigns a
-            // local, or it would be writing to something with no setter.
+            // Named elements in a control file assign their backing field; templates, resource files and x:Load elements
+            // use a local.
             var hasBackingField = isNamed
                 && CurrentTemplate == null
                 && !isHeldBack
@@ -129,12 +127,8 @@ public class CodeGenerationContext
                                       or EntityType.ThemeVariant);
             var declaration = hasBackingField ? elementName : $"var {elementName}";
 
-            // A VALUE-TYPE element that carries its value as text content (<Color x:Key="X">#33FFFFFF</Color>): a struct/enum
-            // has no properties to new()+set - its value IS the text - so PARSE the text into the type instead of constructing
-            // it empty (which silently produced a default and, as a resource, a dropped entry). This is what lets a
-            // Color/Thickness/Vector2/... be a keyed resource that {ResourceReference} then applies to a like-typed property
-            // on a UI element. (It does NOT reach a non-element target like a GradientStop.Color - {ResourceReference} resolves
-            // through SetDeferred, which needs an IFundamentalUIComponent.)
+            // A value-type element with text content (<Color x:Key="X">#33FFFFFF</Color>) is parsed from that text, so it
+            // can be a keyed resource.
             var valueText = typeInfo is { TypeKind: ResolvedTypeKind.Struct or ResolvedTypeKind.Enum }
                 ? element.Children.OfType<AumlAstTextNode>().FirstOrDefault()?.Text?.Trim()
                 : null;
@@ -150,6 +144,7 @@ public class CodeGenerationContext
             else
             {
                 TextGenerator.WriteLine($"{declaration} = new {typeInfo.FullName}();");
+                EmitDesignSource(elementName, element);
                 // Carry the x:Name at runtime too, so {Binding ..., ElementName=X} resolves it by walking the tree (a view
                 // exposes named elements as fields; Name is what an ElementName binding matches on). Only for types that
                 // HAVE a Name property - a named non-UI object (e.g. a Transform an animation targets) does not.
@@ -257,12 +252,8 @@ public class CodeGenerationContext
                 var valueTypeName = value.TypeReference.GetFullTypeName();
                 var valueResolvedType = Metadata.TypeResolver.Resolve(valueTypeName);
 
-                // A ResourceDictionary-typed property authored as CHILDREN (ResourceContext.Resources): keyed objects
-                // declared right there, and <ResourceLink>s naming dictionary FILES to pull in.
-                //   <X><ResourceContext.Resources><SolidColorBrush x:Key="Accent"/></ResourceContext.Resources></X>
-                // Build a dictionary instance, fill it, and hand it to the setter. The child build runs with
-                // isResource:false so it does NOT emit the resource-file's trailing keyed Add - we add here, into THIS
-                // dictionary. Scoped by ResourceContext.Scope; live via {ObservableResource}.
+                // A ResourceDictionary property authored as children (keyed objects and <ResourceLink>s): build and fill a
+                // dictionary here; children build with isResource:false.
                 if (Metadata.DefaultTypeContainer.ResourceDictionary != null && resolvedType != null
                     && (resolvedType.FullName == Metadata.DefaultTypeContainer.ResourceDictionary.FullName
                         || resolvedType.InheritsFrom(Metadata.DefaultTypeContainer.ResourceDictionary.FullName))
@@ -356,11 +347,8 @@ public class CodeGenerationContext
                         case "ResourceReference":
                         {
                             var key = extension.Arguments[0].Value.GetTextValue();
-                            // A Setter/trigger value (its target type lives in Adamantium.UI.Core.Resources) is stored as
-                            // a ResourceReference MARKER, resolved later by Setter.Apply / the trigger activator - which
-                            // hold the styled element, so the lookup is TREE-SCOPED (a Local resource resolves only within
-                            // the owner's subtree). True even outside a resource file (e.g. an inline <Style> in a View),
-                            // so this is NOT gated on isResource.
+                            // Setter and trigger values store a ResourceReference marker, resolved tree-scoped when
+                            // applied; in any file, not only resource files.
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 TextGenerator.WriteLine(
@@ -377,16 +365,8 @@ public class CodeGenerationContext
                             }
                             else
                             {
-                                // A direct element property: the element isn't in the tree yet, so defer - resolve
-                                // Theme/Global now and upgrade to a tree-scoped Local hit once the element attaches (see
-                                // ResourceResolver.SetDeferred). Keeps Local resources out of reach of an eager,
-                                // context-free resolve.
-                                // The PRIORITY is decided the same way a literal's is a few hundred lines below: inside a
-                                // ControlTemplate a part's value is the TEMPLATE's, so a trigger targeting that part can
-                                // still override it; written straight onto an element it is that element's own value.
-                                // Without this a metric and a number in the SAME attribute behaved differently - the
-                                // metric landed at Local and silently outranked every trigger on that property, which is
-                                // what a theme gets for following the "no inline numbers" rule.
+                                // A direct property: deferred via ResourceResolver.SetDeferred, at Template priority inside
+                                // a ControlTemplate (so triggers can override) and Local otherwise, like a literal.
                                 var target = isRoot ? "this" : CurrentParent;
                                 var deferredPriority = CurrentTemplate != null
                                     ? "Adamantium.UI.Core.ValuePriority.Template"
@@ -649,13 +629,8 @@ public class CodeGenerationContext
                 }
                 else if (propRef.IsAttachedProperty)
                 {
-                    // Convert the literal to the attached property's value type (quote strings, resolve enums, parse the
-                    // rest) exactly like a regular property. Emitting the raw text only ever compiled for the int-typed
-                    // ones (Grid.Column="0"); a string like ToolTip="hint" broke as bare C# identifiers.
-                    //
-                    // ...but the value is not always a literal. GetTextValue() on anything else returns the AST NODE's
-                    // ToString(), so an {x:Static} here emitted the node's type name as the argument - it compiled, ran,
-                    // and set the property to nonsense. Route a non-text value the way every other property does.
+                    // Convert a literal to the attached property's type like a regular property; route non-text values
+                    // (e.g. {x:Static}) the regular way too.
                     var expr = prop.Values.Count == 1 && !prop.Values[0].IsTextNode()
                         ? ProcessNestedValue(prop.Values[0], diagnostics, isResource)
                         : BuildValueExpression(prop.GetTextValue(), resolvedType);
@@ -664,11 +639,8 @@ public class CodeGenerationContext
                     // property authored on the root (ResourceContext.Scope on a Theme).
                     var attachedTarget = isRoot ? "this" : CurrentParent;
 
-                    // Inside a ControlTemplate the value belongs to the TEMPLATE, not to the element, so write it at
-                    // Template priority - exactly as a regular property is written above. The static CLR setter writes at
-                    // LOCAL priority, which OUTRANKS Trigger, so a trigger could never override an attached value the
-                    // template had stated: a trigger moving a part to another Grid cell lost to the template's own cell
-                    // and silently did nothing at all.
+                    // Inside a ControlTemplate write at Template priority, not via the Local CLR setter, so triggers can
+                    // override it.
                     if (CurrentTemplate != null)
                     {
                         TextGenerator.WriteLine(
@@ -681,12 +653,8 @@ public class CodeGenerationContext
                             $"{propRef.OwnerType.GetFullTypeName()}.Set{propRef.Name}({attachedTarget}, {expr});");
                     }
                 }
-                // A collection populated by CHILD ELEMENTS (<Grid.RowDefinitions><RowDefinition/>...) -> new + Add per
-                // child. The STRING form (StrokeDashArray="10,6", RowDefinitions="Auto,*") is a text node, so `!IsTextNode`
-                // excludes it here and it falls through to the text-node branch, which routes it through the TypeParser.
-                // Key off the value being elements, NOT off the presence of a parser: a collection can support BOTH forms
-                // (RowDefinitions has a TypeParser AND takes <RowDefinition> children) - excluding parser-typed collections
-                // sent the child form to the plain-assignment branch (RowDefinitions = a single RowDefinition -> CS0029).
+                // A collection given child elements: new + Add per child. The string form is a text node and goes through
+                // the TypeParser; a collection may support both.
                 else if (resolvedType.IsCollection() && !value.IsTextNode())
                 {
                     if (resolvedMember.MemberKind == ResolvedMemberKind.Property && resolvedMember.HasSetter())
@@ -712,14 +680,8 @@ public class CodeGenerationContext
                 }
                 else if (value.IsTextNode())
                 {
-                    // Inside a ControlTemplate, apply a PART's literal at TEMPLATE priority instead of the CLR setter's
-                    // LOCAL priority, so a theme trigger targeting that part can override it. WPF precedence is
-                    // Template < Trigger < Local; emitting "part.Prop = value" makes it Local, which outranks the
-                    // trigger and froze e.g. a scrollbar's IsHitTestVisible="False" so the hover trigger could never
-                    // arm it. The cast keeps the value the property's exact type before it is boxed for SetValue.
-                    // Guard on IAdamantiumComponent: a ControlTemplate also hosts plain CLR objects in its Triggers
-                    // (Setter/Animation/KeyFrame/PropertyTrigger) whose attributes are ordinary CLR setters - those have
-                    // no SetValue and must stay plain assignments.
+                    // Template parts get their literals at Template priority so triggers can override them; plain CLR
+                    // objects in triggers keep ordinary assignments.
                     if (CurrentTemplate != null && typeInfo.ImplementsInterface("IAdamantiumComponent"))
                     {
                         var target = isRoot ? "this" : CurrentParent;
@@ -877,13 +839,8 @@ public class CodeGenerationContext
     private void EmitLoadSlot(AumlAstObjectNode child, AumlAstDirective load, int index, string containerVar,
         IResolvedType containerType, IDiagnosticSink diagnostics, bool isResource)
     {
-        // Putting it back where it was written is the container's own incremental child editing (IContainer) - the same
-        // contract the live designer reconciles markup edits through. A container without it has no way to take the
-        // element back at its place, and saying so beats generating something that silently appends or never removes.
-        // A template is applied to MANY controls, and the slot would be one field on the generated class - every
-        // application overwriting the last, so the name would answer with whichever control was templated most
-        // recently. Template parts also live in the template's own namescope rather than as fields, so the accessor
-        // has nowhere right to be. Refuse it instead of generating something that is wrong per control.
+        // Not inside a template: one slot field would be shared by every templated control. The container must support
+        // IContainer to reinsert the element in place.
         if (CurrentTemplate != null)
         {
             diagnostics.ReportError(Metadata.ClassName,
@@ -935,12 +892,6 @@ public class CodeGenerationContext
         TextGenerator.NewLine();
     }
 
-    // Emits `{targetVar} = new {templateType}(Build_xxx);` plus the local builder function that constructs the template's
-    // visual tree and returns a TemplateResult (RootComponent = the single child, plus any Triggers). A UiTemplate
-    // (DataTemplate/ControlTemplate/ItemsPanelTemplate) carries its content ONLY through this builder, so it's used both
-    // when a template is a PROPERTY value (ItemTemplate/Template/...) AND when it's a KEYED RESOURCE entry - a
-    // DataTemplate stored in a ResourceDictionary must build its builder too, else it resolves to an empty template that
-    // renders nothing (a bare `new DataTemplate()` with an orphaned child).
     /// <summary>Whether this value is marked <c>x:Shared="False"</c> - build it per target, do not share one instance.</summary>
     private static bool IsPerTarget(IAumlAstValueNode value)
     {
@@ -993,6 +944,8 @@ public class CodeGenerationContext
         return expression;
     }
 
+    // Emits `target = new Template(Build_xxx)` and the local builder returning a TemplateResult. Templates carry content
+    // only through this builder, whether a property value or a keyed resource.
     private void EmitTemplateBuilder(string targetVar, string templateTypeName, IAumlAstNode templateNode,
         bool isResource, IDiagnosticSink diagnostics)
     {
@@ -1046,11 +999,8 @@ public class CodeGenerationContext
         TextGenerator.UnindentAndWriteCloseBrace();
     }
 
-    // A template's OWN configuration properties (distinct from its visual body): a HierarchicalDataTemplate's ItemsSource
-    // (the child-collection binding - stored as the binding OBJECT, since it is cloned + re-resolved per container), and an
-    // optional ItemContainerStyle / child ItemTemplate. Only {Binding} and object-valued props are emitted: a TEXT value
-    // (e.g. ControlTemplate's TargetType="MenuItem") is a generation-time hint, not a runtime assignment - skip it.
-    // Triggers live in the built result and are handled in the builder.
+    // A template's own configuration (e.g. ItemsSource as a binding object, ItemContainerStyle). Text values such as
+    // TargetType are generation-time hints and skipped.
     private void EmitTemplateConfigProperties(string templateVar, IAumlAstNode templateNode, bool isResource, IDiagnosticSink diagnostics)
     {
         foreach (var prop in templateNode.GetProperties())
@@ -1074,16 +1024,8 @@ public class CodeGenerationContext
         TextGenerator.WriteLine($"{symbolName} = {BuildValueExpression(valueText, member)};");
     }
 
-    // An enum value, which may be a LIST of flags: Allowed="Center,Bottom" is Center | Bottom, exactly as the .NET
-    // parsers read it and as the framework's own runtime conversion does. Emitting the text as written produced
-    // "DockZone.Center,Bottom" - not a diagnostic but a syntax error inside generated code, which lands on the user as
-    // CS1002 pointing at a file they never wrote.
-    // BOTH SPELLINGS, and the pipe is the one an author actually reaches for: DisplayMode="FirstLast|Numeric" is how the
-    // same value is written in C#. .NET's own parser takes only the comma, so the natural form has to be understood
-    // here and in TypeCastFactory.ParseEnum together - accepted by the compiler and rejected by the loader would be
-    // worse than rejected by both.
-    // Not gated on [Flags]: a separator only means one thing here, and a non-flags enum written with one is a mistake
-    // worth reporting as "Bottom is not a member" rather than as a missing semicolon.
+    // Enum flag lists split on ',' or '|', matching TypeCastFactory.ParseEnum; not gated on [Flags], so misuse reports a
+    // clear member error.
     private static readonly char[] EnumFlagSeparators = [',', '|'];
 
     private static string BuildEnumExpression(string valueText, IResolvedType member)
@@ -1173,9 +1115,21 @@ public class CodeGenerationContext
         return null;
     }
 
-    // A C# string literal, not just text between quotes: markup carries quotes (&quot;), backslashes and line breaks, and
-    // any of them written straight through produce code that does not compile - which is how this was found, from a
-    // caption that quoted an attribute value.
+    // Records an element's source position so the designer can map clicks in nested views back here; debug builds only.
+    private void EmitDesignSource(string elementName, AumlAstObjectNode element)
+    {
+        if (string.IsNullOrEmpty(Metadata.SourceFilePath)
+            || EntityType is EntityType.ResourceDictionary or EntityType.StyleSet or EntityType.Theme or EntityType.ThemeVariant)
+        {
+            return;
+        }
+
+        TextGenerator.WriteLine("#if DEBUG");
+        TextGenerator.WriteLine($"global::Adamantium.UI.Core.Design.Source({elementName}, {Quote(Metadata.SourceFilePath)}, {element.Line}, {element.Position});");
+        TextGenerator.WriteLine("#endif");
+    }
+
+    // A proper C# string literal, escaping quotes, backslashes and line breaks from markup.
     private string Quote(string str)
     {
         if (str == null)

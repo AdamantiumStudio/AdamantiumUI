@@ -53,6 +53,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         var container = new AumlMetadataContainer(typeResolver)
         {
             RelativeFilePath = document.RelativeFilePath,
+            SourceFilePath = document.SourceFilePath,
             AssemblyName = document.RootNamespace,
         };
 
@@ -554,12 +555,8 @@ public class DefaultAumlTransformer : IAumlTransformer
             return container;
         }
                 
-        // A root that is not a Window/View/Page/Theme/StyleSet/ResourceDictionary is a FRAGMENT - markup with no class to
-        // generate. That is a statement about CODE GENERATION, not about the tree, and the two used to be one: the walk
-        // below was skipped for such a root, so nothing in a fragment was type-resolved or judged at all. The runtime
-        // loader shares this transformer and previews exactly those fragments, which made the preview quieter than the
-        // build - a typo'd directive passed here and failed on compile. The tree is walked for every root now; whether a
-        // class comes out of it is decided by the generator, off RootEntityType.
+        // Every root's tree is walked, fragments included, so previews report what the build would; whether a class is
+        // generated is decided later from RootEntityType.
         entityType = rootType.EntityType;
         container.RootEntityType = entityType;
 
@@ -701,6 +698,11 @@ public class DefaultAumlTransformer : IAumlTransformer
                             }
                         }
                     }
+                    else if (directive.Name == AumlDirectives.CreateInDesignTime && directive.ParentNode == document.Root)
+                    {
+                        container.RootCreateInDesignTime = directive.Value is AumlAstTextNode createNode
+                            && bool.TryParse(createNode.Text.Trim(), out var create) && create;
+                    }
                     break;
                     
                 case AumlAstMarkupExtensionNode markupExtensionNode:
@@ -795,18 +797,8 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
     }
 
-    /// <summary>
-    /// Pre-registers a control document (Window/View/Page/UIApplication) as a generated type, so a document that EMBEDS
-    /// another - e.g. <c>&lt;local:ControlsView/&gt;</c> - can resolve it during its own transform, regardless of file
-    /// processing order (and so a view-inside-a-view works too). Resolves only the ROOT type (a real framework type,
-    /// always present in the compilation), computes the generated class name + namespace exactly as the source generator
-    /// will, and registers a <see cref="MetadataResolvedType"/>. Must run for ALL documents before any body is transformed.
-    /// <para>A THEME VARIANT counts as embedded too: a theme names its variants as elements, so the class has to resolve
-    /// while the THEME is being transformed. Registering it only when it is generated would make that file order, and
-    /// "Fluent" sorts before "FluentDark".</para>
-    /// <para>A no-op for a resource dictionary, a style set or a theme (pulled in by TYPE through ResourceLink /
-    /// StyleInclude, which resolves by a different route), and for a FRAGMENT root, which generates no class at all.</para>
-    /// </summary>
+    /// <summary>Registers a control document or theme variant as its generated type before any body is transformed, so
+    /// documents embedding it resolve it regardless of file order. No-op for other roots.</summary>
     public IResolvedType PreRegisterDocument(AumlDocument document, ITypeResolver typeResolver)
     {
         typeResolver.ScanXmlnsAttributes();
@@ -838,6 +830,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         var container = new AumlMetadataContainer(typeResolver)
         {
             RelativeFilePath = document.RelativeFilePath,
+            SourceFilePath = document.SourceFilePath,
             AssemblyName = document.RootNamespace,
             RootNode = document.Root,
             RootEntityType = rootType.EntityType,

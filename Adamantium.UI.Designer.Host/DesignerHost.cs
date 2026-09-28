@@ -16,11 +16,13 @@ namespace Adamantium.UI.Designer.Host;
 ///   &lt;- {"frames":["&lt;path0&gt;",...],"frameMs":16.7,"looped":false,"width":1280,"height":720,"scale":1.0,"diagnostics":[...]}
 ///        or {"error":"&lt;message&gt;","diagnostics":[...]}. Frames are RAW B8G8R8A8 (width*height*4 bytes, no encode);
 ///        a settled render returns one, a live render the full animation sequence the client plays at frameMs.
-///   -&gt; {"op":"hittest","x":..,"y":..}   &lt;- {"hit":{"line":..,"column":..,"x":..,"y":..,"width":..,"height":..}}
-///        (maps a design-space point to the authored element's markup position + rect; for hover / go-to-source)
+///   -&gt; {"op":"hittest","x":..,"y":..}   &lt;- {"hit":{"line":..,"column":..,"x":..,"y":..,"width":..,"height":..,"file":..}}
+///        (maps a design-space point to the authored element's markup position + rect; for hover / go-to-source. "file"
+///         names the markup of an element a nested view built and is absent for one of the previewed file)
 ///   -&gt; {"op":"select","x":..,"y":..}   &lt;- {"frames":[..],"hit":{"line":..,"column":..},..}
 ///        (selects the authored element at the point - the FRAMEWORK draws the selection frame - and returns the
-///         updated frame plus the element's markup line/col for editor caret sync; a miss clears the selection)
+///         updated frame plus the element's markup line/col for editor caret sync; a miss clears the selection; a click
+///         on a tab header also shows that tab)
 ///   -&gt; {"op":"hover","x":..,"y":..}   &lt;- {"frames":[..],..}
 ///        (the transient hover frame, also drawn by the FRAMEWORK; returns the updated frame. Omit x/y to clear it)
 ///   -&gt; {"op":"shutdown"}   (exits the process)
@@ -244,7 +246,8 @@ public static class DesignerHost
                         X = hit.X,
                         Y = hit.Y,
                         Width = hit.Width,
-                        Height = hit.Height
+                        Height = hit.Height,
+                        File = hit.File
                     }
                 };
         }
@@ -280,7 +283,7 @@ public static class DesignerHost
                 DesignHeight = result.DesignHeight,
                 Scale = result.Scale,
                 Hit = result.Hit is { } h
-                    ? new HitInfo { Line = h.Line, Column = h.Position, X = h.X, Y = h.Y, Width = h.Width, Height = h.Height }
+                    ? new HitInfo { Line = h.Line, Column = h.Position, X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, File = h.File }
                     : null
             };
         }
@@ -369,5 +372,7 @@ public static class DesignerHost
         public double Y { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
+        // The markup file of an element a nested view built; absent for one of the previewed file.
+        public string File { get; set; }
     }
 }

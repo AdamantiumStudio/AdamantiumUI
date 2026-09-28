@@ -52,7 +52,8 @@ class AumlPreviewService : Disposable {
     )
 
     /** A designer hit-test result: the authored element's markup position (1-based line/column) and its rect in
-     * the frame's design space (for the hover frame). */
+     * the frame's design space (for the hover frame). [file] is the markup of an element a nested view built, null for
+     * one of the previewed file. */
     data class HitResult(
         val line: Int,
         val column: Int,
@@ -60,6 +61,7 @@ class AumlPreviewService : Disposable {
         val y: Double,
         val width: Double,
         val height: Double,
+        val file: String? = null,
     )
 
     /** Result of a designer selection (op "select"): the re-rendered frame WITH the framework's selection frame drawn
@@ -121,8 +123,14 @@ class AumlPreviewService : Disposable {
      * re-renders, returning the updated frame plus the element's markup line/column. A miss clears the selection.
      * Must follow a [render]; off-EDT; on error returns an error RenderResult and a null hit.
      */
-    fun select(x: Double, y: Double): SelectResult {
+    fun select(x: Double, y: Double, ownerPath: String?, text: String, scale: Double): SelectResult {
         synchronized(lock) {
+            // The host selects in its ONE warm scene. If another preview rendered since, that scene is another file: render
+            // this one back first, or the click selects in the other file and navigates by its lines.
+            if (ownerPath != lastRenderPath) {
+                val rendered = render(text, scale, ownerPath, live = true)
+                if (rendered.error != null) return SelectResult(rendered, null)
+            }
             return try {
                 ensureProcess()
                 writer!!.apply { write("{\"op\":\"select\",\"x\":$x,\"y\":$y}"); write("\n"); flush() }
@@ -133,7 +141,8 @@ class AumlPreviewService : Disposable {
                     val ln = (h["line"] as? Double)?.toInt() ?: return@let null
                     HitResult(ln, (h["column"] as? Double)?.toInt() ?: 0,
                         h["x"] as? Double ?: 0.0, h["y"] as? Double ?: 0.0,
-                        h["width"] as? Double ?: 0.0, h["height"] as? Double ?: 0.0)
+                        h["width"] as? Double ?: 0.0, h["height"] as? Double ?: 0.0,
+                        h["file"] as? String)
                 }
                 SelectResult(render, hit)
             } catch (e: Exception) {
@@ -148,8 +157,10 @@ class AumlPreviewService : Disposable {
      * (so the FRAMEWORK draws the stroke-aware hover frame) and re-renders, returning the updated frame. Null coords
      * clear the hover frame. Must follow a [render]; off-EDT; on error returns an error RenderResult.
      */
-    fun hover(x: Double?, y: Double?): RenderResult {
+    fun hover(x: Double?, y: Double?, ownerPath: String?): RenderResult {
         synchronized(lock) {
+            // Another file's scene is on the host: its hover frame is not this preview's picture.
+            if (ownerPath != lastRenderPath) return RenderResult(emptyList(), null, emptyList(), null, null, null)
             return try {
                 ensureProcess()
                 val coords = if (x != null && y != null) ",\"x\":$x,\"y\":$y" else ""

@@ -377,7 +377,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         Dispatcher = Threading.Dispatcher.CurrentDispatcher;
         GraphicsDeviceService.IsInDebugMode = EnableGraphicsDebug;
         GraphicsDeviceService.CreateMainDevice("Adamantium Main");
-        // Before any window: a crash of the driver's compiler then costs a child process, not the application.
+        // Before any window, so a crash while creating shaders costs a child process, not the application.
         ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
         LoadThemes();
         SubscribeToEvents();
@@ -395,6 +395,24 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     protected virtual void OnInitialize()
+    {
+    }
+
+    /// <summary>Sets the application up as <see cref="Run()"/> does - its themes and its services - with no window, loop or
+    /// device of its own: for a host that builds this application's views without running it (the designer).</summary>
+    public void InitializeWithoutRunning()
+    {
+        LoadThemes();
+        OnInitialize();
+        // First: the container resolves the first registration of a service, so a stand-in made here is the one used.
+        RegisterDesignServices(Container);
+        RegisterServices(Container);
+    }
+
+    /// <summary>Registers design-time stand-ins for services the designer must not run for real - the network, files, a
+    /// database. Called only by the designer, BEFORE <see cref="RegisterServices"/>: the first registration of a service
+    /// wins, so a stand-in registered here is what view-models get in the preview.</summary>
+    protected virtual void RegisterDesignServices(IContainerRegistry containerRegistry)
     {
     }
 

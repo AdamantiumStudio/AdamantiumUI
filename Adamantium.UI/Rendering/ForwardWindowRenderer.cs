@@ -84,6 +84,27 @@ public class ForwardWindowRenderer : WindowRendererBase
         }
     }
 
+    // Another window's tree marks into its own scope, so the cache takes a fresh one for it: on the previous root's scope
+    // the new tree's edits reached nothing this cache records from, and the old scene went on being replayed.
+    public override void Retarget(IWindow window)
+    {
+        var another = Presenter != null && window != null && !ReferenceEquals(window, Window);
+        base.Retarget(window);
+        if (!another || window is not Controls.Base.UIComponent root) return;
+
+        Core.RenderDirtyRouter.Forget(_renderCache.Dirty);
+        _renderCache.Dirty = Core.RenderDirtyRouter.NewScope();
+        root.ClaimRenderScope(_renderCache.Dirty);
+        _renderCache.Dirty.MarkStructural();
+    }
+
+    // The clips were baked in the old scale's pixels and nothing in the tree changed, so the next frame read as clean and
+    // replayed them: a designer zoom showed the page clipped at its old size until something forced a walk.
+    protected override void OnRenderScaleChanged()
+    {
+        if (Window != null) _renderCache.Dirty.MarkStructural();
+    }
+
     private void OnDpiChanged(object sender, EventArgs e)
     {
         RenderScale = Window.DpiScale.X;
@@ -135,7 +156,7 @@ public class ForwardWindowRenderer : WindowRendererBase
 
     private double _lastRecordMs;
 
-    // DEVICE-FREE record half (Phase 3.2): walk the tree + component.Render into the packet. No GPU, so it is safe to run
+    // DEVICE-FREE record half: walk the tree + component.Render into the packet. No GPU, so it is safe to run
     // at loop level after the whole Update phase (before BeginDraw's fence). ApplyData realizes what this records.
     public override void RecordData()
     {
@@ -146,8 +167,8 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastRecordMs = _lastRecordMs;
     }
 
-    // GPU apply half (Phase 3.2): realize the recorded packet into units + the per-unit transform re-bake. Runs inside
-    // BeginDraw (after the fence); moves to the render thread in Phase 3.3.
+    // GPU apply half: realize the recorded packet into units + the per-unit transform re-bake. Runs inside
+    // BeginDraw (after the fence).
     public override void ApplyData()
     {
         if (Window == null) return;
@@ -157,11 +178,7 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastApplyMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
         RuntimeStats.LastRenderBuildMs = _lastRecordMs + RuntimeStats.LastApplyMs;
 
-        // Skip the per-unit transform re-bake (proc) when nothing MOVED: a Clean frame (nothing changed at all) or a
-        // GEOMETRY-ONLY partial (a hover re-recorded some draw contents, but no transform changed). Proc walks EVERY unit
-        // (O(N)) and the draw pass re-bakes each drawn unit anyway, so on a big list a hover would otherwise pay an O(N)
-        // re-bake for nothing - the mouse-move FPS drop. Only a real move (transform-dirty partial, or a full re-layout)
-        // needs it before PreRender reads the baked transforms.
+        // Skip the O(N) transform re-bake when nothing moved (a clean frame or a geometry-only partial).
         if (_renderCache.LastBuildKind == RenderBuildKind.Clean
             || (_renderCache.LastBuildKind == RenderBuildKind.Partial && !_renderCache.LastBuildTransformDirty))
         {
@@ -175,8 +192,8 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastRenderProcMs = Stopwatch.GetElapsedTime(t1).TotalMilliseconds;
     }
 
-    // Inline record+apply, unchanged externally: the headless designer's one-shot render and (in Phase 3.2 single-threaded)
-    // BeginDraw both go through here. Phase 3.2b hoists RecordData to the loop and leaves BeginDraw calling ApplyData only.
+    // Inline record+apply, unchanged externally: the headless designer's one-shot render and a single-threaded BeginDraw
+    // both go through here. Otherwise RecordData runs at loop level and BeginDraw calls ApplyData only.
     public override void PrepareData()
     {
         RecordData();

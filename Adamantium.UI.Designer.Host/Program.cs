@@ -75,7 +75,7 @@ public static class Program
         if (hit is null)
             Console.Error.WriteLine($"[auml] hittest ({x},{y}): nothing authored there");
         else
-            Console.Error.WriteLine($"[auml] hittest ({x},{y}): line {hit.Line} col {hit.Position} rect [{hit.X},{hit.Y} {hit.Width}x{hit.Height}]");
+            Console.Error.WriteLine($"[auml] hittest ({x},{y}): {hit.File ?? "this file"} line {hit.Line} col {hit.Position} rect [{hit.X},{hit.Y} {hit.Width}x{hit.Height}]");
         return 0;
     }
 
@@ -108,7 +108,7 @@ public static class Program
         if (result.Hit is null)
             Console.Error.WriteLine($"[auml] select ({x},{y}): nothing authored there (cleared); wrote {outPath} ({result.Width}x{result.Height})");
         else
-            Console.Error.WriteLine($"[auml] select ({x},{y}): line {result.Hit.Line} col {result.Hit.Position}; wrote {outPath} ({result.Width}x{result.Height})");
+            Console.Error.WriteLine($"[auml] select ({x},{y}): {result.Hit.File ?? "this file"} line {result.Hit.Line} col {result.Hit.Position}; wrote {outPath} ({result.Width}x{result.Height})");
         return 0;
     }
 

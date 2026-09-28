@@ -16,4 +16,22 @@ public static class Design
     /// settled state while the live previewer animates.
     /// </summary>
     public static bool IsLivePreview { get; set; }
+
+    // Weak: a source must never keep a discarded preview alive.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, DesignSource> Sources = new();
+
+    /// <summary>Records where generated code built <paramref name="element"/>, so the designer can take a click on an element
+    /// of a nested view back to that view's markup. Does nothing outside the designer.</summary>
+    public static void Source(object element, string file, int line, int column)
+    {
+        if (!IsDesignMode || element == null) return;
+        Sources.AddOrUpdate(element, new DesignSource(file, line, column));
+    }
+
+    /// <summary>Where generated code built <paramref name="element"/>; null when nothing recorded it.</summary>
+    public static DesignSource SourceOf(object element) =>
+        element != null && Sources.TryGetValue(element, out var source) ? source : null;
 }
+
+/// <summary>A place in a markup file: its full path, line and column (1-based, as the parser counts them).</summary>
+public sealed record DesignSource(string File, int Line, int Column);

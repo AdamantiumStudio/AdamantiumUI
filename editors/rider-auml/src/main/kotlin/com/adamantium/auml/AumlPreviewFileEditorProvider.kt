@@ -2,26 +2,17 @@ package com.adamantium.auml
 
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
-import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.TextEditor
-import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
-import com.intellij.openapi.fileEditor.TextEditorWithPreview
+import com.intellij.openapi.fileEditor.TextEditorWithPreviewProvider
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 
 /**
- * Opens `.auml` files in a WPF-style split editor: the XML text on the left, the live engine-rendered
- * preview on the right (via [AumlPreviewFileEditor]). Replaces the plain XML editor for these files.
+ * Opens `.auml` files in a split editor: markup and the live preview ([AumlPreviewFileEditor]). Uses the platform's
+ * split-editor provider, which keeps folding and editor state.
  */
-class AumlPreviewFileEditorProvider : FileEditorProvider, DumbAware {
-    override fun accept(project: Project, file: VirtualFile): Boolean = file.fileType == AumlFileType
-
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor {
-        val textEditor = TextEditorProvider.getInstance().createEditor(project, file) as TextEditor
-        val preview = AumlPreviewFileEditor(project, file)
-        return TextEditorWithPreview(textEditor, preview, "AUML", TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW)
-    }
+class AumlPreviewFileEditorProvider : TextEditorWithPreviewProvider(AumlPreviewProvider()), DumbAware {
+    override fun createSplitEditor(firstEditor: TextEditor, secondEditor: FileEditor): FileEditor =
+        AumlSplitEditor(firstEditor, secondEditor)
 
     override fun getEditorTypeId(): String = "auml-split-editor"
 

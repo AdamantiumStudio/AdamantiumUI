@@ -4,7 +4,8 @@
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
       xmlns:controls="clr-namespace:Adamantium.UI.Controls;assembly=Adamantium.UI.Controls"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
-      x:ViewModel="{x:Type vm:GalleryViewModel}">
+      x:ViewModel="{x:Type vm:GalleryViewModel}"
+      x:CreateInDesignTime="True">
 
     <Grid RowDefinitions="Auto,*" Margin="16">
         <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->

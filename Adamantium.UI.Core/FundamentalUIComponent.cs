@@ -67,13 +67,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         o.SyncClassNames();
     }
 
-    // ClassNames, Styles, _attachedStyles, Behaviors and Triggers used to be built in the constructor for EVERY
-    // component - 784 of a bare Border's 2824 bytes, spent on collections a template-stamped element never fills.
-    //
-    // The GETTERS materialise, not just the setters, and that is load-bearing: markup writes
-    // <Button.Behaviors><local:X/></Button.Behaviors>, which the generator emits as `element.Behaviors.Add(x)` - a READ,
-    // and returning null there would crash the app on ordinary markup. Engine code that only needs to know WHETHER
-    // anything is there must use the Has* members or the raw field; every such site is marked.
+    // Created lazily. The getters materialize, since generated markup calls element.Behaviors.Add(x); engine code that
+    // only checks presence uses the Has* members or the field.
 
     public BehaviorCollection Behaviors
     {
@@ -142,11 +137,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         {
             case NotifyCollectionChangedAction.Add:
             {
-                // Route through AttachStyles (not a bare Style.Apply) so a style added to the Styles collection is TRACKED
-                // in _attachedStyles. That makes it participate in the theme cycle: on (re)theming, ApplyCurrentTheme
-                // detaches it, applies the theme, then re-applies it via ApplyExternalStyles - so a user style always
-                // lands AFTER the theme, even if it was added before the control was themed (e.g. an ItemContainerStyle
-                // set at container creation). A bare Apply left it stacked BEFORE the theme, so the theme's value won.
+                // Through AttachStyles so the style is tracked and re-applied after the theme on every re-theme.
                 var styles = e.NewItems?.Cast<Style>().ToArray();
                 if (styles is { Length: > 0 }) AttachStyles(styles);
                 break;
@@ -214,24 +205,31 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// </summary>
     public virtual Type ViewModelType => null;
 
+    /// <summary>Whether the designer may build <see cref="ViewModelType"/> (<c>x:CreateInDesignTime="True"</c>, generated
+    /// code-behind overriding it). A preview runs the view-model's code - the network, files, data - so only a view that
+    /// says it is safe gets one; the rest preview as layout without data.</summary>
+    public virtual bool CreateViewModelInDesign => false;
+
     /// <summary>What <c>x:KeepAlive</c> declared in markup, generated code-behind overriding it the way it overrides
     /// <see cref="ViewModelType"/>. Pure metadata again: the view states what it wants, and whoever navigates away from
     /// it - not the view itself - decides to park it instead of dropping it.</summary>
     public virtual NavigationCacheMode KeepAlive => NavigationCacheMode.Disabled;
 
-    /// <summary>
-    /// Resolves the <see cref="ViewModelType"/> (if any) from the application's dependency resolver and assigns it as
-    /// the DataContext - but only the first time, and only if the DataContext wasn't set explicitly (so x:ViewModel is
-    /// the default, an explicit DataContext or binding still wins, which keeps a view reusable across view-models).
-    /// Reached through the same ambient <see cref="UIAppContext.Current"/> the framework already uses for theming, so
-    /// the control never stores the container. No-op when no resolver is available (e.g. the headless designer).
-    /// </summary>
+    /// <summary>Resolves <see cref="ViewModelType"/> from the application's resolver as the DataContext, once and only if
+    /// none was set explicitly. No-op without a resolver.</summary>
     protected void ApplyViewModel()
     {
         if (_viewModelApplied) return;
 
         var viewModelType = ViewModelType;
         if (viewModelType == null) return;
+
+        // The designer runs only what the view declared safe to run.
+        if (Design.IsDesignMode && !CreateViewModelInDesign)
+        {
+            _viewModelApplied = true;
+            return;
+        }
 
         if (HasExplicitValue(DataContextProperty))
         {
@@ -242,7 +240,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         var context = UIAppContext.Current?.UIContext;
         if (context == null) return;    // app context not ready yet; a later attach will retry
 
-        DataContext = context.Resolve(viewModelType);
+        try
+        {
+            DataContext = context.Resolve(viewModelType);
+        }
+        catch (Exception e) when (Design.IsDesignMode)
+        {
+            // A view model that fails in the previewer leaves its view without data instead of taking the whole
+            // preview down.
+            Serilog.Log.Logger.Warning("Design time: {ViewModel} could not be created for {View}: {Reason}",
+                viewModelType.Name, GetType().Name, e.Message);
+        }
+
         _viewModelApplied = true;
     }
 
@@ -312,12 +321,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         if (Lifecycle != VisualLifecycle.Discarded) Lifecycle = VisualLifecycle.Recycled;
     }
 
-    /// <summary>It came back. Called wherever an element (re)enters the visual tree, which is the one event that
-    /// settles the question for every way of leaving at once - a re-parent, an unpark, a recycled container taking a
-    /// new item. Without this the states that mean "coming back" would be indistinguishable from death the moment
-    /// anything asked a second time.
-    /// <para>Discarded is final and is NOT revived here: an element that really was destroyed and then somehow got
-    /// re-attached is a bug to find, not a state to paper over.</para></summary>
+    /// <summary>Marks the element live again on (re)entering the visual tree. Discarded is final and is not
+    /// revived.</summary>
     public void Revive()
     {
         if (Lifecycle != VisualLifecycle.Discarded) Lifecycle = VisualLifecycle.Live;
@@ -335,11 +340,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         Lifecycle = VisualLifecycle.Discarded;
         lock (Discarded) Discarded.Add(new WeakReference<FundamentalUIComponent>(this));
 
-        // The WORK is not done here. Releasing a subtree's subscriptions costs a walk per element, and doing it inside
-        // the frame that swaps the content is what made switching to a heavy tab stall for seconds. It is queued and
-        // drained in the idle time between frames, where the drain also gets to re-read the state: anything that has
-        // come back by then is no longer Discarded and is simply skipped. That is the second half of the fix - not only
-        // WHAT is released, but WHEN, and the queue is the only place that can answer the second one honestly.
+        // Release is queued for idle time rather than done inside the frame; anything that comes back meanwhile is
+        // skipped.
         DiscardedVisuals.Enqueue(this);
     }
 
@@ -357,12 +359,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// to something discarded, so the collection went on holding the control for the life of the application.</summary>
     protected virtual void OnDiscarded()
     {
-        // Close this element's BINDINGS. An expression subscribes to its SOURCE, and a source is normally longer-lived
-        // than the target - an ancestor, a view model - so a binding left open on a destroyed element keeps that element
-        // alive from the live side of the tree. CloseConnection is called when a binding is REPLACED or when a template
-        // result is destroyed, and neither reaches a binding created outside a template (a behaviour's, an authored
-        // element's): measured, a live ListBox's PropertyChanged held an AncestorBindingExpression whose target was a
-        // discarded Border, and through it a whole subtree.
+        // Close this element's bindings: a longer-lived source would otherwise keep the destroyed element and its subtree
+        // alive.
         var bindings = Data.BindingEngine.GetBindings(this);
         foreach (var binding in bindings) binding.CloseConnection();
 
@@ -574,11 +572,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         {
             if (old != null && logicalParent != null)
             {
-                // Re-parenting a MOVED element (old AND new both non-null): a re-theme rebuilds a control's template and
-                // re-homes the SAME element content from the torn-down ContentPresenter into the new one without detaching
-                // it first. Rather than throw, detach from the previous parent so the move succeeds. RemoveLogicalChild
-                // fires the detach (via ClearLogicalParent -> SetParent(null), which sets parent=null and raises the
-                // detach event) and keeps the old collection consistent; null the local so the detach isn't raised twice.
+                // A moved element (a re-theme re-homing content): detach from the old parent instead of throwing, and null
+                // the local so detach is not raised twice.
                 old.RemoveLogicalChild(this);
                 old = null;
             }
@@ -609,18 +604,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// rebuilt exactly TWICE, so the question is whether the theme is applied to each element twice.</summary>
     public static long ThemeApplications;
 
-    /// <summary>Theming ONE control, and the boundary that keeps it one control's business.
-    /// <para>A theme is applied per element, over and over, as the tree is built and walked - so a failure here decides
-    /// how far the walk gets. Applying a theme runs markup: it resolves resources, writes setters, attaches triggers and
-    /// builds the control's template, and any of that can throw on a single bad attribute (an unresolvable
-    /// <c>{TemplateBinding}</c> resolves to a null property and throws while the template is BUILT). That throw used to
-    /// travel up through SetParent and the logical-children walk and abandon the rest of the pass, leaving the
-    /// application HALF THEMED - some controls in the new theme, the rest still wearing the old one, and nothing on
-    /// screen saying why. It reads as "the new theme was never written", which is the most misleading symptom there is.</para>
-    /// <para>This is a boundary, not a silence: the control is left as it is - visibly wrong - and the failure is
-    /// reported at Error with its type. The defect still has to be fixed; it just no longer decides how far the theme
-    /// got. The work itself stays overridable through <see cref="ApplyCurrentThemeCore"/>, so every derived kind of
-    /// component is inside the same boundary rather than each having to remember one.</para></summary>
+    /// <summary>Themes this control via <see cref="ApplyCurrentThemeCore"/>. A failure is logged at Error and leaves this
+    /// control as is, so one bad template cannot abort the rest of the theme walk.</summary>
     public void ApplyCurrentTheme()
     {
         try
@@ -646,18 +631,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         System.Threading.Interlocked.Increment(ref ThemeApplications);
 
-        // Re-theming must undo what the PREVIOUS set left behind (a theme swap re-applies without a preceding detach, and
-        // its activators carry live subscriptions) - but ONLY what is genuinely LEAVING. Detaching everything up front
-        // dropped each setter's value for the length of the call, and a property that falls back to its default and
-        // returns is a property that CHANGED, twice, with every callback firing both times.
-        // That is not academic: the applicable set does not change when a control is merely RE-PARENTED (selectors match
-        // on type/id/class - never on the ancestor chain), yet SetParent re-themes. Measured in docking - one dock-back
-        // put a group's ItemsPanel through theme -> default -> theme, and each write rebuilt the items panel, so the tabs
-        // ended up in a panel the layout pass no longer descends into, wearing the positions of their previous life.
-        //
-        // The leavers still go FIRST, before the incoming set is applied. Applying first and cleaning up afterwards looks
-        // tidier and is wrong: a marker setter ({Binding}, {ThemeResource}, {Ancestor}, {Self}) is undone by property
-        // alone, with no style key, so the outgoing theme's teardown would tear out the incoming theme's live link.
+        // Detach only styles that are leaving, so staying setters never flicker to default and back; leavers go first,
+        // since marker setters are undone by property alone.
         var incoming = UIAppContext.Current.ThemeManager?.FindStylesForComponent(this);
         var own = StylesOrNull;   // not Styles: a component with no local styles must not grow one to be re-themed
 
@@ -716,11 +691,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             (child as FundamentalUIComponent)?.InvalidateStylesCore(visited);
         }
 
-        // Cross the template boundary too: template parts (and the content they host) are attached as VISUAL children
-        // via AddTemplateChild, NOT as logical children, so a purely logical walk stops at a templated control and never
-        // re-themes its title bar / content presenter / hosted content. On a theme swap that left them with the OLD
-        // theme's resolved {ThemeResource}/{ResourceReference} setter values (only live {ObservableResource}s updated,
-        // via the global resource-change flush). Walking visual children re-themes the whole rendered subtree.
+        // Walk visual children too: template parts are visual-only, and a logical walk would leave them on the old theme.
         if (this is IUIComponent visual)
         {
             foreach (var child in visual.VisualChildren)
@@ -730,11 +701,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    // A graft moves a whole SUBTREE into the tree, not just the node whose parent was set: what an element deep inside it
-    // can see ABOVE itself changes too, and only the root is told. The visual side already carries its attach down the
-    // subtree (UIComponent.AttachedToVisualTree); the logical side has to as well, or anything that resolves against its
-    // logical ancestry from inside a subtree built detached - an {Ancestor Logical=True} in a popup's ChildTemplate, say -
-    // is established while the subtree is still rootless and is never told to look again.
+    // Carries the logical attach down the grafted subtree, as the visual side does, so logical {Ancestor} lookups inside
+    // it re-resolve.
     private void RaiseAttachedToLogicalTree(LogicalTreeAttachmentEventArgs e)
     {
         OnAttachedToLogicalTree(e);

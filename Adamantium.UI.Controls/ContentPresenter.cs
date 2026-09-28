@@ -253,9 +253,10 @@ public class ContentPresenter : InputUIComponent
                         ? VerticalAlignment.Center
                         : VerticalAlignment
                 };
-                // Bound, not copied: an inherited change can step over the label without notifying it.
+                // Bound, not copied: an inherited change can step over the label without notifying it. A presenter with
+                // no colour of its own says nothing - handed its null, the label threw on every frame it drew.
                 textBlock.SetBinding(nameof(TextBlock.Foreground),
-                    new Core.Data.Binding(nameof(Foreground)) { Source = this });
+                    new Core.Data.Binding(nameof(Foreground)) { Source = this, TargetNullValue = AdamantiumProperty.UnsetValue });
 
                 textBlock.SetBinding(nameof(TextBlock.FontSize),
                     new Core.Data.Binding(nameof(FontSize)) { Source = this });

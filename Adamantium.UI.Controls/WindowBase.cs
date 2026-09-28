@@ -96,11 +96,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        // Escape with nothing to cancel gives the keyboard focus back: the ring is put out and the keyboard leaves the
-        // control. Without this there was NO way to drop it - the ring only goes out when focus MOVES somewhere else,
-        // and clicking empty space moves it nowhere, so a ring lit by one Tab stayed lit for good. Last in line by
-        // construction: a dialog, a popup, an editor cancelling an edit all handle Escape on the way up and never get
-        // here.
+        // Escape that nobody handled on the way up clears keyboard focus, the only way to drop the focus ring.
         if (e.Key == Key.Escape && FocusManager.Focused != null)
         {
             FocusManager.Release(FocusManager.Focused);
@@ -108,17 +104,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        // The reading keys: PageDown / PageUp page the view, Home / End jump to its ends. Handled HERE rather than in
-        // ScrollViewer because routed keys travel up from the FOCUSED element, and a ScrollViewer is deliberately not
-        // focusable - so with the focus outside it, or nowhere at all (the ordinary reading state), it never sees them.
-        //
-        // Nothing is stolen: whatever wanted the key handled it on the way up - a text editor takes Home/End for the
-        // caret, a list or a tree takes them for the selection - and only what nobody wanted reaches the window.
-        //
-        // SPACE is deliberately NOT here, though a browser pages with it. In a browser the focus normally rests on the
-        // document; in an application it rests on a control, and space is the ACTIVATION key - a button, a toggle, a
-        // tab, a drop-down all wait for it. Bound to scrolling as well, it would do one thing or the other depending on
-        // where the focus happens to be, which is not a gesture anyone can predict.
+        // PageUp/PageDown/Home/End nobody handled scroll the view here, since a ScrollViewer is not focusable. Space is
+        // left alone: it activates controls.
         var scrolled = e.Key switch
         {
             Key.PageDown => ScrollNearest(v => v.PageVertically(false)),
@@ -240,12 +227,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private bool _positionFromPlatform;
 
-    /// <summary>The window was moved by the PLATFORM - a caption drag, Aero Snap, a monitor going away - and says where
-    /// it ended up. Without this Left/Top only ever hold what WE last assigned: the OS move loop swallows the gesture,
-    /// so after any drag the window's own idea of its position was wherever it was put programmatically, which is what
-    /// a saved layout then wrote down.
-    /// <para>Assigned without moving the window again: the position is already true, and echoing it back to the OS
-    /// mid-drag fights the move loop.</para></summary>
+    /// <summary>Records a position the platform moved the window to (drag, snap), without moving it again, so Left/Top
+    /// stay true.</summary>
     public void UpdatePositionFromPlatform(double left, double top)
     {
         // Recorded FIRST, and without going near the property system: this is the copy the render thread reads, and it
@@ -302,10 +285,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         typeof(bool), typeof(WindowBase), new PropertyMetadata(true));
 
     // --- Overlay window traits ------------------------------------------------------------------------------------
-    // What an OVERLAY needs and an ordinary window does not: to float above everything, to let clicks through to what is
-    // underneath, never to take focus, and to have a background that is not there. A docking compass needs all four - it
-    // must sit above the window being DRAGGED, which nothing living inside a window can ever do.
-    // Read ONCE by the platform worker at create time, along with the chrome flags: native window styles are fixed then.
+    // Topmost, click-through, non-activating and transparent; read once at window creation, when native styles are fixed.
 
     // Each of these re-applies itself to the LIVE window, so they behave as properties rather than as arguments that
     // only matter before the window exists.
@@ -338,11 +318,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         set => SetValue(ShowWindowBorderProperty, value);
     }
 
-    /// <summary>Per-pixel transparency: the window's rendering is composed by the desktop WITH its alpha, so translucent
-    /// brushes and antialiased edges show what is behind them.
-    /// <para>Settable at any time. The swapchain picks its composite-alpha mode when it is CREATED, so changing this
-    /// cannot take effect in place - it marks the renderer stale and the swapchain is rebuilt at the next frame
-    /// boundary, which is the same path a resize takes.</para></summary>
+    /// <summary>Per-pixel transparency: the desktop composes the window with its alpha. Changing it rebuilds the swapchain
+    /// at the next frame.</summary>
     public static readonly AdamantiumProperty UseTransparentCompositionProperty = AdamantiumProperty.Register(nameof(UseTransparentComposition),
         typeof(bool), typeof(WindowBase), new PropertyMetadata(false, TransparentCompositionChanged));
 
@@ -358,15 +335,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         (component as WindowBase)?.Renderer?.InvalidatePresenter();
     }
 
-    /// <summary>How this window's frames reach the screen: tear-free and paced, or as fast as the engine can produce
-    /// them. <see cref="Presentation.PresentPolicy.Inherit"/> (the default) means "whatever the application says" - most
-    /// applications set it once, and a window that needs its own - a 3D viewport wanting no presentation back-pressure,
-    /// a tool window that does not care - states it. It belongs to the WINDOW because each one owns its swapchain and
-    /// they can sit on different displays.
-    /// <para>Settable at any time. A swapchain picks its present mode when it is CREATED, so this marks the renderer
-    /// stale and the rebuild happens at the next frame boundary - the same path a resize takes. (With
-    /// VK_KHR_swapchain_maintenance1 the mode can be changed without a rebuild; that is a later step, and this property
-    /// is what it will read.)</para></summary>
+    /// <summary>How frames reach the screen: paced and tear-free or as fast as possible; Inherit uses the application's.
+    /// Changing it rebuilds the swapchain at the next frame.</summary>
     public static readonly AdamantiumProperty PresentPolicyProperty = AdamantiumProperty.Register(nameof(PresentPolicy),
         typeof(PresentPolicy), typeof(WindowBase), new PropertyMetadata(PresentPolicy.Inherit, PresentPolicyChanged));
 
@@ -591,18 +561,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         if (e.OldValue is not double oldWidth || double.IsNaN(oldWidth) || e.NewValue is not double newWidth)
             return;
 
-        // NO forced full walks here any more. A client-size change (drag-resize, maximize) used to demand a whole-tree
-        // re-record on every frame until the layout settled, because "parts of that settle never mark the render dirty" -
-        // ghosts of the old layout survived otherwise (tiles at stale positions, a scrollbar stripe mid-window).
-        //
-        // Those unmarked writes have since been found and fixed: a control leaving the drawn set through the DEFAULT value of
-        // Visibility named nobody (the auto-hide scrollbar, and every recycled container - see UIComponent.OnVisibilityChanged),
-        // and Panel's Children collection changed the visual children without naming them either. The settle marks honestly now,
-        // and the resize is just structure changing - so it SPLICES (see ViewportResize_Splices_AndKeepsDrawnGeometryFresh).
-        //
-        // This matters exactly where it hurts: a maximize to 4K realizes thousands of tiles over many frames, and the forced
-        // walk re-recorded all ~20 000 components on every one of them - 100-200 ms per frame of the heaviest thing the app
-        // does. Theme and DPI swaps still force (they rebuild templates through paths no mark can name).
+        // No forced full walk on resize: layout changes mark render dirty themselves, so the resize splices. Theme and DPI
+        // swaps still force one.
 
         // Tell the OS window, exactly as a Left/Top change does. Without this the client size was a managed number the
         // window itself never followed: it kept whatever it was created with, so nothing could be resized from code
@@ -636,13 +596,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         component?.RaiseEvent(args);
     }
 
-    /// <summary>Where the window's top-left sits on the desktop, in PHYSICAL pixels - the same units as
-    /// <see cref="PointToScreen"/> and <c>Mouse.ScreenCoordinates</c>, so a window can be put where a cursor is without
-    /// a conversion in between.
-    /// <para>Deliberately NOT logical, unlike <see cref="ClientWidth"/>. A window's SIZE has one scale - its monitor's.
-    /// Its POSITION does not: the scale belongs to the monitor the point lands on, and which monitor that is can only be
-    /// known once the point is physical. Measured: a torn-off window placed in logical units was born at the origin, on
-    /// the primary monitor, took its 100% scale, and landed at a third of the way to the cursor on a 4K display.</para></summary>
+    /// <summary>The window's left edge on the desktop in physical pixels, like <see cref="PointToScreen"/>: which monitor's
+    /// scale applies is only known from the physical point.</summary>
     public Double Left
     {
         get => GetValue<Double>(LeftProperty);
@@ -776,8 +731,17 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         // The root window has no logical parent, so OnAttachedToLogicalTree never fires for it - resolve its
         // x:ViewModel here, once its tree is built and the context is set. Nested views self-resolve on attach.
         ApplyViewModel();
-        WindowWorkerService = UIAppContext.PlatformService.GetWindowWorker(context);
-        WindowWorkerService.SetWindow(this);
+        WindowWorkerService = CreateWindowWorker(context);
+        if (WindowWorkerService != null)
+        {
+            WindowWorkerService.SetWindow(this);
+        }
+        else
+        {
+            // The platform worker themes the window it creates; with no worker nothing else would, and the window would
+            // never take its style or its template - no caption, no window background.
+            context.ThemeEngine.ApplyCurrentTheme(this);
+        }
 
         var themes = UIAppContext.Current?.ThemeManager;
         if (themes != null)
@@ -787,6 +751,11 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             IsThemeChanging = themes.IsThemeChanging;   // a window opened mid-swap already shows the busy state
         }
     }
+
+    /// <summary>The platform side of this window - an OS window and its message loop. A window drawn inside something
+    /// else has none and returns null; everything that talks to the worker then does nothing.</summary>
+    protected virtual IWindowWorkerService CreateWindowWorker(IUIContext context) =>
+        UIAppContext.PlatformService.GetWindowWorker(context);
 
     private void OnThemeChanging(object sender, ThemeChangedEventArgs e) => IsThemeChanging = true;
 

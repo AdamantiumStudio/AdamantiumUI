@@ -2,13 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Markup.AST;
 
-/// <summary>
-/// Canonical registry of the AUML <c>x:</c> directives (xmlns <c>http://adamantium/ui/xaml/extensions</c>).
-/// SINGLE SOURCE OF TRUTH: the transformer/code generator matches on the name constants, and the language server's
-/// completion/hover derive their list from <see cref="All"/> - so adding a directive here surfaces it in tooling
-/// without editing the language server. (Each directive's actual behaviour still lives in the transformer, since it
-/// differs per directive; only the names + descriptions + the tooling list are consolidated here.)
-/// </summary>
+/// <summary>The registry of AUML <c>x:</c> directive names and descriptions, used by the code generator and by tooling via
+/// <see cref="All"/>; behavior lives in the transformer.</summary>
 public static class AumlDirectives
 {
     public const string Name = "Name";
@@ -32,7 +27,7 @@ public static class AumlDirectives
         new AumlDirectiveInfo(Key, "Key under which this entry is stored in a resource dictionary."),
         new AumlDirectiveInfo(Type, "A reference to a CLR type.", isTypeReference: true, usage: AumlDirectiveUsage.Value),
         new AumlDirectiveInfo(ViewModel, "View-model type for this view (prefix:Type). At runtime the framework resolves an instance from the DI container and assigns it as DataContext; design-time tooling resolves {Binding} paths against this type.", isTypeReference: true),
-        new AumlDirectiveInfo(CreateInDesignTime, "Design-time only: \"True\" makes the preview instantiate x:ViewModel (parameterless ctor) so {Binding}s show real sample data. Off by default - the WPF d:IsDesignTimeCreatable behaviour."),
+        new AumlDirectiveInfo(CreateInDesignTime, "Design-time only: \"True\" lets the designer build this view's x:ViewModel through the application's services, so {Binding}s show real data. Off by default: a preview otherwise runs the view-model's code - network, files, data. Services the designer must not run for real are replaced in UIApplication.RegisterDesignServices."),
         new AumlDirectiveInfo(Null, "An explicit null value: Background=\"{x:Null}\".", usage: AumlDirectiveUsage.Value),
         new AumlDirectiveInfo(KeepAlive, "What this view asks of whoever navigates away from it: Disabled (default - rebuilt on every visit), Enabled (kept, but evictable) or Required (kept, never evicted). Metadata only - the view parks nothing itself."),
         new AumlDirectiveInfo(Load, "When this element is built at all. \"False\" holds it back until something asks for it by name; a binding (x:Load=\"{Binding IsAdvancedShown}\") builds it when the condition turns true and detaches it when it turns false. While unloaded NOTHING under it is constructed - it is not a hidden element, it is an absent one. Worth it for something HEAVY - a page, a list, a panel opened once a session; a small chunk costs more in slot than it saves in construction."),
