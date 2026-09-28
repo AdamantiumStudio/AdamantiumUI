@@ -4,12 +4,8 @@ using System.Collections.Specialized;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>Projects a tree - root items + a per-node children getter + each node's expand state - into a FLAT,
-/// display-ordered <see cref="Rows"/> list: the source a VirtualizingPanel consumes. Expanding a row splices its child
-/// run in right after it (as ONE range edit, so the cost is O(viewport realized), not O(children)); collapsing removes
-/// its whole visible subtree. A level of thousands of siblings therefore costs thousands of cheap <see cref="TreeRow"/>
-/// wrappers, not thousands of controls, and only the viewport is realized. Each expanded node's (and the roots')
-/// children collection is observed, so a lazily- or dynamically-filled branch reconciles into the flat list in place.</summary>
+// Projects a tree into the flat, display-ordered Rows list a virtualizing panel consumes. Expand and collapse splice as
+// one range edit; expanded children collections are observed.
 internal sealed class TreeFlattener
 {
     private readonly Func<object, IEnumerable> _childrenOf;
@@ -20,11 +16,8 @@ internal sealed class TreeFlattener
     private IEnumerable _roots;
     private Subscription _rootsSub;
 
-    // isExpanded / isSelected let a (re)build RESTORE a node's persisted state (a node the view-model still marks
-    // expanded/selected, e.g. after a tab switch recreated the view): an expanded node's row is built already-open with its
-    // subtree spliced in, a selected node's row built already-selected. Null probes = never restore (build starts blank).
-    // detailsOf answers "does this node show a panel under itself, and what is it" - a row of its own, spliced right
-    // after the node's, at the node's depth. Null = this tree has no such thing (the TreeView), and nothing changes.
+    // isExpanded/isSelected restore a node's persisted state on (re)build; detailsOf yields an optional details row
+    // after a node. Null means none.
     public TreeFlattener(Func<object, IEnumerable> childrenOf, Func<object, bool> isExpanded = null,
         Func<object, bool> isSelected = null, Func<object, object> detailsOf = null)
     {

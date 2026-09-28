@@ -60,11 +60,8 @@ public class ContextMenu : ItemsControl
     public double HorizontalOffset { get; set; }
     public double VerticalOffset { get; set; }
 
-    /// <summary>Whether a press on the PLACEMENT TARGET leaves the menu open. For a menu dropped by a BUTTON, yes: the
-    /// press that would dismiss it is the same one the button turns into "close", and without this the second press
-    /// looks like it does nothing (light dismiss closes, the click re-opens).
-    /// <para>Off by default, and it has to be: a right-click menu's target is whatever was clicked - often a whole panel
-    /// - and exempting its subtree means the menu never light-dismisses at all.</para></summary>
+    /// <summary>Whether a press on the placement target leaves the menu open, so a button's second press closes it. Off by
+    /// default: a right-click target may be a whole panel.</summary>
     public bool IgnoreTargetPress { get; set; }
 
     // A flyout occupies NO space where it is authored - its rows live in the popup overlay. Measuring to zero is not

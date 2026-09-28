@@ -6,15 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>THE VIEW BAR of an <see cref="InfiniteCanvas"/>: what was done and undone, how far in you are, and the way
-/// back to the origin.
-/// <para>Every button on it is one of the canvas's OWN commands - steering the camera is the canvas's business, since
-/// zooming about the middle of what can be seen needs to know where that middle is once a docked panel has taken part
-/// of the edge - and each command says when it can be pressed, so undo with nothing behind it switches its button off
-/// without anyone asking.</para>
-/// <para>Undo and redo live HERE rather than in the selection bar: they are about the drawing as a whole, and the
-/// selection bar is not there when nothing is selected - which is exactly when the last thing done most often needs
-/// taking back.</para></summary>
+/// <summary>The view bar of an <see cref="InfiniteCanvas"/>: undo and redo, zoom and home, each one of the canvas's own
+/// commands, which enable and disable themselves.</summary>
 public class CanvasViewBar : Control, ICanvasPart
 {
     public static readonly AdamantiumProperty CanvasProperty = AdamantiumProperty.Register(nameof(Canvas),

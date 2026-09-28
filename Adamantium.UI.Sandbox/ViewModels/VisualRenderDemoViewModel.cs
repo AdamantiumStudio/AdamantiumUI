@@ -57,8 +57,8 @@ public partial class VisualRenderDemoViewModel : TabPageViewModel
         }
     }
 
-    // Phase 1 ghost test: float the last live snapshot as a real layered top-level window over the whole screen (fixed
-    // position for now; following the cursor is the Phase 2 gesture). Proves the per-pixel-alpha ghost path end to end.
+    // Ghost test: float the last live snapshot as a real layered top-level window over the whole screen (fixed
+    // position; following the cursor is the drag gesture's job). Proves the per-pixel-alpha ghost path end to end.
     [Command]
     private void ShowGhost()
     {

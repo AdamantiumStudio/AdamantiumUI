@@ -9,15 +9,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// Reads and writes a <see cref="DockingLayout"/> as text. JSON, indented, with a version at the top: a layout outlives
-/// the code that wrote it, and the first thing a future reader needs is permission to say "I do not know this one".
-/// <para>Panes are named by ID and nothing else - the same reason the model refers to them that way. Loading therefore
-/// yields a layout of ids, and it is the AREA that decides which of them it actually has controls for: a saved id whose
-/// pane no longer exists is dropped, never invented.</para>
-/// <para>What is NOT saved is decided by the caller through <c>keepPane</c>. Tools come back with the workspace;
-/// documents belong to a session and may not even exist next time (see <see cref="Pane.Restore"/>).</para>
-/// </summary>
+/// <summary>Reads and writes a <see cref="DockingLayout"/> as versioned JSON naming panes by id. The area decides which ids
+/// it can still produce; the caller's <c>keepPane</c> decides what is saved.</summary>
 public static class DockingLayoutSerializer
 {
     public const int Version = 1;
@@ -119,11 +112,8 @@ public static class DockingLayoutSerializer
         }
     }
 
-    /// <summary>Reads a layout back. Returns null for text this version does not understand rather than throwing: a
-    /// layout file is user data, and a corrupt one means "start from the authored arrangement", not "do not start".
-    /// <para><paramref name="knownPane"/> answers whether a saved id still stands for a pane that exists. Ids it
-    /// rejects are dropped, and groups and splits left empty by that go with them - a layout must never name a pane
-    /// nobody can produce.</para></summary>
+    /// <summary>Reads a layout back, or null for text this version does not understand. Ids <paramref name="knownPane"/>
+    /// rejects are dropped, with any groups and splits left empty.</summary>
     public static DockingLayout Load(string text, Func<string, bool> knownPane = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
@@ -180,7 +170,7 @@ public static class DockingLayoutSerializer
             writer.WriteNull("content");
         }
 
-        // The edge bars are written SEPARATELY from the tree, because that is where they live (rule 3b).
+        // The edge bars are written SEPARATELY from the tree, because that is where they live.
         var wroteBars = false;
         foreach (var bar in root.Bars)
         {
@@ -228,7 +218,7 @@ public static class DockingLayoutSerializer
         writer.WriteString("split", split.Orientation.ToString());
         writer.WriteString("length", split.Length.ToString());
 
-        // A SPLIT can be the document area too, once the area has been divided (rule 1.6). Written only on the group
+        // A SPLIT can be the document area too, once the area has been divided. Written only on the group
         // before, a saved split area came back as an ordinary row and its editors as tools.
         if (ReferenceEquals(split, well)) writer.WriteBoolean("well", true);
 

@@ -4,11 +4,8 @@ using Adamantium.MVVM;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>One node of the file-system demo tree: a file (leaf) or a directory. A directory is LAZY - it carries a single
-/// placeholder child so the expander shows, and reads its real contents only when first expanded. <see cref="IsExpanded"/>
-/// is a <c>[Bindable]</c> property (source-generated notification) bound two-way to the container via the tree's
-/// ItemContainerStyle, and its generated <c>OnIsExpandedChanged</c> hook is what triggers the load - no hand-written INPC.
-/// That laziness is what makes pointing the tree at a whole drive affordable, and a good stress test for virtualization.</summary>
+/// <summary>A file-system tree node. Directories load lazily: a placeholder child shows the expander, and
+/// <c>OnIsExpandedChanged</c> reads the contents on first expand.</summary>
 [ViewModel]
 public partial class TreeNode : AdamantiumViewModel
 {

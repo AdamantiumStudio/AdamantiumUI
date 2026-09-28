@@ -8,15 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>
-/// View-layer behavior (NOT a view-model): on the button's click it overrides a keyed brush in the given resource SCOPE
-/// (Theme palette entry, Global app resource) with a NEW brush via the resource system's runtime override
-/// (<see cref="IResourceManager.SetResourceInScope"/>). A live <c>{ObservableResource Key}</c> re-resolves to the new
-/// brush; a <c>{ResourceReference Key}</c> keeps the one it resolved once - demonstrating the difference without
-/// touching anything else. A Theme-scope override lives in the CURRENT theme's palette dictionary, so a theme swap
-/// naturally discards it; a Global-scope one belongs to no theme and survives the swap. Attach in markup:
-/// <code>&lt;Button&gt;&lt;Button.Behaviors&gt;&lt;local:CycleScopedResourceBehavior Key="GlobalAccent" Scope="Global"/&gt;&lt;/Button.Behaviors&gt;&lt;/Button&gt;</code>
-/// </summary>
+/// <summary>On click, replaces a keyed brush in a resource scope via <see cref="IResourceManager.SetResourceInScope"/>,
+/// showing that <c>{ObservableResource}</c> follows the change while <c>{ResourceReference}</c> does not.</summary>
 public class CycleScopedResourceBehavior : Behavior<Button>
 {
     private static readonly string[] Colors = ["#F87171", "#FBBF24", "#34D399", "#60A5FA", "#C084FC"];

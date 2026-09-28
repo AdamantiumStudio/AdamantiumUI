@@ -3,13 +3,8 @@ using Adamantium.Core.Collections;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>The flattened tree's row list (the engine's <see cref="TrackingCollection{T}"/>, like RowDefinitions et al.),
-/// with BULK edits that raise ONE range notification instead of a storm of per-item ones. Expanding a branch splices in
-/// its whole (possibly thousands-strong) child run as a single range Add, which the ItemsControl pipeline turns into one
-/// <c>generator.OnItemsInserted(index, count)</c> + one measure pass - so the cost is O(viewport realized), NOT O(rows
-/// inserted). Per-item inserts would instead fire N events, each reindexing the generator and invalidating layout: the
-/// very O(N) hitch this design exists to kill. Storage is mutated through the base's storage-only hooks (no per-item
-/// event), then the single range event is raised.</summary>
+/// <summary>The flattened tree's row list, with bulk edits that raise one range notification, so expanding a large branch
+/// costs O(realized rows) rather than O(inserted rows).</summary>
 internal sealed class FlatRowCollection : TrackingCollection<TreeRow>
 {
     /// <summary>Insert <paramref name="rows"/> at <paramref name="index"/> as ONE range Add.</summary>

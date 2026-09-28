@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- OverlayWindow: a draggable in-window "child window" (analog of MahApps SimpleChildWindow). The template is the chrome
-         card - Border(PART_Window) > accent title bar (PART_TitleThumb is a transparent Grid over the icon+title that starts
-         the drag; PART_PinButton toggles always-on-top; PART_CloseButton closes) + PART_ContentPresenter + PART_ResizeGrip.
-         The overlay, dim scrim, cascade, z-order (pinned on top) and Escape/overlay dismissal are owned by the
-         OverlayWindowManager. Per the small-styles convention: properties, template, triggers. -->
+    <!-- OverlayWindow chrome: PART_Window card with an accent title bar (PART_TitleThumb drags, PART_PinButton,
+         PART_CloseButton), content and PART_ResizeGrip. Properties, template, triggers. -->
 
     <Style Selector="OverlayWindow">
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>

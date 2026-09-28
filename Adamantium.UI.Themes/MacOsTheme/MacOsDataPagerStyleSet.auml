@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The pager: a row of steps through a collection, and a statement of where in it you are. Laid out as one line
-         because that is what it is - a caption for the list above it, not a panel in its own right.
-
-         The arrows are plain Buttons, not RepeatButtons. Auto-repeat looked like the right answer - hold one and walk
-         the pages - but a page turn re-fills the list under the pointer, and repeating at the button's rate turns that
-         into a flicker rather than a walk. One click, one page. Stepping is what they are for; a page further off is
-         reached by typing it in the box, which is the whole reason the box is there.
-
-         Step back and step forward are the pair that works over ANY source - a server that cannot count still knows
-         whether there is a next page - so they are the part of this template that is never conditional.
-
-         "LAST" IS BOUND TO CanGoForward LIKE THE OTHERS, and that is not a shortcut: over a source with an unknown
-         total the control refuses the jump anyway (there is no last page to jump to yet), so the button is live and
-         does nothing. It comes right the moment a short page reveals the end - which is the behaviour to watch for on
-         the stand, and the reason the text below says "of ?" rather than "of 0". -->
+    <!-- The pager, one line: plain Buttons (auto-repeat flickers the list), with step back/forward always shown. "Last" is
+         bound to CanGoForward; with an unknown total the control refuses the jump. -->
 
     <Style Selector="DataPager">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -64,21 +51,12 @@
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
 
-                                <!-- The numbers are a RADIO GROUP wearing the toggle look, which is what the row actually
-                                     is: one choice out of several, and clicking the page you are already on does nothing
-                                     by construction. The ellipsis is an entry of the same shape and just as LIVE - it
-                                     steps one page its way; see PagerPageItem for why it is not a different kind of
-                                     thing.
-                                     ALWAYS THE SAME NUMBER OF ENTRIES - see PageButtonCount. The row neither grows with
-                                     the page count nor loses a place at the ends, so no button under the pointer moves
-                                     out from under it. Anything past the row is typed into the box on the right. -->
+                                <!-- The pages as a toggle-look radio group of a fixed PageButtonCount entries; the ellipsis
+                                     is a live entry (see PagerPageItem). -->
                                 <ItemsControl x:Name="NumbersGroup" ItemsSource="{TemplateBinding PageItems}"
                                               MarginRight="8" VerticalAlignment="Center">
-                                    <!-- NOT VIRTUALIZED, deliberately. As an items host this panel places its children on
-                                         a UNIFORM pitch - one measured extent for all of them - which is right for a
-                                         list of equal rows and wrong here: a page button is as wide as its number, so
-                                         "999" and "1000" are different sizes and the wide ones run into their
-                                         neighbours. There are five buttons; there is nothing to virtualize. -->
+                                    <!-- Not virtualized: the virtualizing host uses a uniform pitch, but page buttons vary
+                                         in width. -->
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
@@ -113,12 +91,8 @@
                                 </Button>
                             </StackPanel>
 
-                            <!-- The right-hand side: how big a page is, and which one you are on. Both are STATEMENTS
-                                 about the whole collection rather than steps through it, which is why they sit apart
-                                 from the buttons instead of extending that row.
-                                 "Page [n] of N" - the box is the ONLY way to reach a far page now that the row no longer
-                                 grows to hold one, so it is not decoration: it commits on Enter and on losing focus, and
-                                 puts the real page back if what was typed is not one. -->
+                            <!-- Page size and "Page [n] of N"; the box commits on Enter or focus loss and restores the
+                                 real page on invalid input. -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" MarginLeft="16"
                                         VerticalAlignment="Center">
                                 <StackPanel x:Name="PageSizeGroup" Orientation="Horizontal" MarginRight="16"
@@ -169,11 +143,8 @@
         </Setter>
     </Style>
 
-    <!-- DisplayMode, part by part. Everything is VISIBLE in the template and a trigger takes it away, rather than the
-         other way round: the default pager shows the lot, so this way the common case runs no triggers at all, and a
-         part that someone forgets to wire is visible-and-obvious instead of missing-and-silent.
-         The flags are read one boolean at a time because that is all a trigger can read - see DataPager for why a flags
-         enum cannot be tested in markup. -->
+    <!-- DisplayMode: parts are visible by default and triggers hide them, one boolean per flag (markup cannot test a
+         flags enum). -->
     <Style Selector="DataPager">
         <!-- DISABLED, said ONCE for the whole row. IsEnabled is not an inheriting property here, so the buttons and
              fields inside never learn they are off and go on looking live - while input is dead, because hit-testing

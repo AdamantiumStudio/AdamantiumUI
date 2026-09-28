@@ -1,26 +1,11 @@
-// SHAPE MATHS - the signed-distance fields every instanced fill is cut from, and the measurements that go with them:
-// how many device pixels one unit of a slot spans, the arc length along a contour, the curvature at a point, and the
-// expansion of the analytic-AA ring.
-//
-// Shared by BOTH effects deliberately: a gradient rect is the SAME rounded rect as a solid one, only filled
-// differently. Include AFTER CommonData.fxh (it reads Projection/ViewportSize and the fringe layouts) and BEFORE
-// StrokeMath.fxh, which builds on the corner radius and the joins.
+// SHAPE MATHS - the SDFs every instanced fill is cut from, plus slot pixel scale, arc length, curvature and AA-ring
+// expansion. Include after CommonData.fxh and before StrokeMath.fxh.
 
 // ---- Shared SDF fill+stroke compositing --------------------------------------------------------------------------
-// Both SDF families (rounded-rect, ellipse) share the same stroke story: given the signed distance `d` to the contour
-// (device-px, negative inside), a fill and an OPTIONAL stroke are composited in ONE pass. The stroke is a ring built
-// analytically from the same `d` (no geometry): a solid stroke is `abs(d - align*halfW) - halfW`, and dashes/trim
-// modulate it via `strokeMask` (0..1, computed by the caller from arc length). Output is STRAIGHT alpha (drawn with a
-// straight AlphaBlend, like the solid fills) - so two straight layers (fill under stroke) are composited to one.
-//
 // stroke0 = (width_px, align[-1 inside/0 center/+1 outside], dashOn, dashGap); stroke1 = (dashOffset, trimStart, trimEnd, flags).
-// How many DEVICE PIXELS one unit of a slot's space spans, per axis. The SDF shapes are baked in the space of their
-// transform-table slot, and that space is not the screen's: an element whose own scale lives in the slot (anything that
-// drives its own transform - an animated one is exactly that) reaches the shader with, say, a 1-unit-wide rect and a
-// scale of 125 in the matrix. Distances then mean 125 px along X and 1 px along Y, and ONE scalar AA width cannot serve
-// both - which is what smeared the tab-selection bar along its whole length. Callers convert their SDF inputs with this,
-// so `d` comes out in pixels and fwidth(d) is ~1 on every axis.
-// NB single exit, no early return: an early `return` in a .fx body has repeatedly tripped an AV inside NVVM here.
+
+// Device pixels per unit of a slot's space, per axis. A slot may carry a non-uniform scale, so callers convert SDF inputs
+// with this to keep fwidth(d) ~1 on both axes.
 float2 SlotPixelScale(float4x4 nodeWorld)
 {
     float4x4 m = mul(nodeWorld, Projection);
@@ -43,17 +28,8 @@ float SdEllipse(float2 p, float2 half)
     return (L - 1.0) / max(length(grad), 1e-6);
 }
 
-// A REGULAR POLYGON, in the same family as the ellipse and for the same reason: it is one field, and the only thing that
-// separates a triangle from a circle is how many corners you ask for (large N is a circle to the pixel). Exact, so it
-// self-anti-aliases and strokes like everything else here.
-//
-// `p` and `half` are the same as the ellipse's, and the shape is INSCRIBED in that box: the maths runs in normalised
-// space (circumradius 1) and the distance is scaled back by the smaller half-axis - the same first-order treatment of an
-// anisotropic box that SdEllipse gives, so a squashed polygon behaves like a squashed circle.
-//
-// The first vertex sits at angle 0, on the +x axis, because that is where the tessellator puts it (Shapes.Polygon walks
-// 2*pi*i/N from there) - a polygon that batches must be the same polygon that the fallback tessellates, rotation
-// included.
+// Signed distance to a regular n-gon inscribed in the `half` box, scaled by the smaller half-axis like SdEllipse. The
+// first vertex is on +x, matching the tessellated Shapes.Polygon.
 float SdRegularPolygon(float2 p, float2 half, float n, float startAngle)
 {
     float2 h = max(half, float2(1e-6, 1e-6));
@@ -93,12 +69,8 @@ float SdRegularPolygon(float2 p, float2 half, float n, float startAngle)
 // right edge. (Start point is arbitrary for dashes; dashOffset shifts the phase.)
 float RoundRectArc(float2 p, float2 b, float4 radii, out float perimeter)
 {
-    // Dashes are measured on the CENTRELINE. In the corner, s = corner-start + phi*r uses the fragment's ANGLE (phi),
-    // not its radius, so it's already uniform across the stroke width AND continuous with the edges - the dash flows
-    // around the corner exactly like on a straight edge (and like the ellipse). No per-corner "single state" is needed.
-    // With four INDEPENDENT radii every arc and every edge has its own length, so the traversal is accumulated corner by
-    // corner instead of multiplying one quarter-arc by four. Order (CCW in SDF space, y down): BR arc, bottom edge,
-    // BL arc, left edge, TL arc, top edge, TR arc, right edge.
+    // Centerline arc length; in corners by angle, uniform across the width. Accumulated per corner (BR arc, bottom,
+    // BL arc, left, TL arc, top, TR arc, right) since radii differ.
     float rTL = radii.x, rTR = radii.y, rBR = radii.z, rBL = radii.w;
     const float HALF_PI = 1.5707963268;
     float aBR = HALF_PI * rBR, aBL = HALF_PI * rBL, aTL = HALF_PI * rTL, aTR = HALF_PI * rTR;
@@ -131,11 +103,8 @@ float RoundRectArc(float2 p, float2 b, float4 radii, out float perimeter)
         else                               s = sTR + (HALF_PI - phi) * rTR;
         return s;
     }
-    // Classify by the NEAREST edge, not just cx/cy vs the CORNER radius r: a thick stroke reaches MORE than r inside, so
-    // the inner part of a top/bottom-edge stroke has cy<=0 (inside the inner box) yet is still nearest the horizontal
-    // edge. Deciding by cx/cy alone mis-routed that inner sliver (width halfW-r) to the VERTICAL-edge arc-length -> a thin
-    // mis-dashed line on the inner edge that only showed when halfW > r (thick stroke / small corner).
-    // An edge is anchored at the corner it STARTS from, which is not necessarily the corner nearest this fragment.
+    // Classify by the nearest edge, since a stroke thicker than r reaches inside the inner box; an edge is anchored at
+    // the corner it starts from.
     bool horizontal = (cx <= 0.0) && (cy > 0.0 || (b.y - ay) < (b.x - ax));
     float s;
     if (horizontal) s = (p.y >= 0.0) ? sBottom + ((b.x - rBR) - p.x) : sTop + (p.x + (b.x - rTL));
@@ -179,8 +148,6 @@ float RoundRectCurvRadius(float2 p, float2 b, float4 radii)
 }
 
 // Radius of curvature of the ellipse at the fragment's parametric angle: |r'|^3 / (rx*ry) for x = rx cos t, y = ry sin t.
-// Kept as its own single-expression helper - the arc functions above have early returns, and giving one of THOSE a second
-// out-parameter made the NVIDIA NVVM compiler AV in vkCreateShadersEXT (see the note on DashTrimMaskCapped).
 float EllipseCurvRadius(float2 p, float2 h)
 {
     float t = atan2(p.y * h.x, p.x * h.y);

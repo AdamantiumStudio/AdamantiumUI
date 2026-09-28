@@ -39,19 +39,10 @@ public static class ResourceResolver
         return resourceManager.FindResourceInScope(key, ResourceScope.Local) ?? resourceManager.FindResource(key);
     }
 
-    // A {ResourceReference} used DIRECTLY on a component property (not via a Setter/trigger). The target is any
-    // AdamantiumComponent, NOT only a UI element: a resource reference is a property-system feature, so it applies to a
-    // GradientStop.Color, a Pen's brush, any animatable component - the same way WPF's Static/DynamicResource work on any
-    // DependencyObject, not just UIElements. The target is not yet in the tree when its properties are assigned during
-    // construction, so a Local resource can't be tree-scoped at that moment. Resolve the Theme/Global value immediately,
-    // then - ONLY for a target that lives in the VISUAL tree - re-resolve tree-scoped once it attaches (the cascade brings
-    // the full ancestor chain, incl. a Local resource's owner, and a nearer Local hit wins).
-    /// <param name="priority">Where the reference was WRITTEN, expressed as a priority - the same one a literal in that
-    /// position gets. Inside a ControlTemplate a part's value must be Template, so a trigger targeting that part can
-    /// still change it; written directly on an element it is that element's own value, which is Local.
-    /// <para>It has to be told, because this method cannot see where it was called from - and getting it wrong is
-    /// silent: with Local, every trigger that has to change a metric-driven part simply stops working, which is how a
-    /// vertical slider lost its handle, its fill and its direction all at once.</para></param>
+    /// <summary>Applies a <c>{ResourceReference}</c> written directly on any component's property: resolves Theme/Global
+    /// now and, for visual-tree targets, re-resolves tree-scoped on attach.</summary>
+    /// <param name="priority">The priority a literal written there would get: Template inside a ControlTemplate, so
+    /// triggers can still change it; Local on an element.</param>
     public static void SetDeferred(IAdamantiumComponent target, string property, string key,
         ValuePriority priority = ValuePriority.Local)
     {
@@ -87,13 +78,8 @@ public static class ResourceResolver
     /// <summary>Whether this target is still waiting on a resource that only a tree can answer.</summary>
     public static bool HasPending(IAdamantiumComponent target) => _pending.TryGetValue(target, out _);
 
-    /// <summary>Ask every <c>{ResourceReference}</c> in this subtree again, because the theme that answers them has
-    /// changed - a scope was given a different theme or variant while the elements stood still.
-    /// <para>Styles are re-applied by the ordinary re-theme, but a reference written straight onto an attribute is not
-    /// a style: it was resolved once, when the element attached, and nothing would ever ask again. That is the
-    /// difference between a scope that can be SWITCHED and one that can only be set before anything is shown.</para>
-    /// <para>Walks the subtree, which is fine for what triggers it: a scope changing is an explicit, rare act, unlike
-    /// the per-frame paths where a walk of this shape would be indefensible.</para></summary>
+    /// <summary>Re-resolves every attribute <c>{ResourceReference}</c> in the subtree after its theme scope changed; styles
+    /// are handled by re-theming. A walk, for a rare explicit act.</summary>
     public static void ReResolveSubtree(IUIComponent root)
     {
         if (root == null) return;

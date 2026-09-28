@@ -4,12 +4,10 @@ using Adamantium.Graphics.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Hands out reusable GPU buffer allocations to a renderer's render units (the "buffer manager" of
-// GPU_BUFFER_REUSE_PLAN §3). Instead of allocating a fresh Vulkan buffer whenever a control's geometry changes (the
-// per-frame churn that tanks resize/animation FPS), a render component rents a <see cref="ReusableBuffer"/> here: a
-// frames-in-flight ring with a high-water-mark capacity, so steady-state animation rewrites in place with zero
-// allocation. One per renderer (created by RenderUnitFactory); a lightweight context - the rented handles are owned and
-// disposed by the components that hold them. (Cross-unit free-list reuse on Return is a later step of the plan.)
+/// <summary>
+/// Rents <see cref="ReusableBuffer"/>s (frames-in-flight rings with high-water capacity) to render units, so changing
+/// geometry rewrites in place instead of allocating. One per renderer; renters own and dispose their buffers.
+/// </summary>
 public sealed class GpuBufferManager
 {
     private readonly GraphicsDevice _device;

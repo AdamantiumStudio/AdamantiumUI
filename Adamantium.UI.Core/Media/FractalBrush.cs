@@ -2,11 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A PROCEDURAL escape-time fractal fill (Julia / Mandelbrot) iterated per fragment - resolution-independent, no
-/// texture. The fragment maps to the complex plane (<see cref="Center"/> + <see cref="Zoom"/>), z = z²+C is iterated up to
-/// <see cref="Iterations"/>, and the smooth escape count maps <see cref="Color1"/> -> <see cref="Color2"/> (the interior
-/// is black). With <see cref="Animate"/> on, <see cref="C"/> drifts on its own each frame (<see cref="MorphSpeed"/>) so the
-/// Julia set morphs in real time. Zoom is limited by float32 precision (~1e5) - true "infinite" zoom needs double/perturbation.</summary>
+/// <summary>A per-fragment Julia/Mandelbrot fill: iterates z = z²+C around <see cref="Center"/> at <see cref="Zoom"/>,
+/// coloring <see cref="Color1"/> to <see cref="Color2"/>. <see cref="Animate"/> drifts <see cref="C"/> over time.</summary>
 public sealed class FractalBrush : Brush
 {
     public FractalBrush() { }
@@ -101,12 +98,8 @@ public sealed class FractalBrush : Brush
         }
     }
 
-    /// <summary>The rest of the centre, carried apart from <see cref="Center"/> so it survives a deep zoom. The centre a
-    /// view actually shows is <see cref="Center"/> + this, and past zoom ~1e13 that sum cannot be held by one double at
-    /// all: the centre is a value of order 1, its step is ~1e-16, and by then the whole visible span is narrower than
-    /// that - a pan step lands below the step of the number carrying it and changes nothing. Keeping the small part
-    /// separate gives it its own full precision, which is the same trick the reference orbit uses one level down.
-    /// <para>Default zero, so a brush that never pans deep reads exactly as it always did.</para></summary>
+    /// <summary>The fine part of the center (shown = <see cref="Center"/> + this), keeping pan precision past double
+    /// resolution at deep zoom. Zero by default.</summary>
     public Vector2 CenterFine
     {
         get => GetValue<Vector2>(CenterFineProperty);

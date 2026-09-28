@@ -54,11 +54,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- THE draggable zone: icon + title, fills the middle `*` column. Transparent = invisible but fully
-                             hit-testable (hit-testing is decoupled from Background in this engine), so the whole strip drags.
-                             Clips so a long title doesn't spill onto the commands. The command columns (0 and 2) sit outside
-                             this element, so their buttons stay clickable; the drag is initiated from managed input here
-                             (see TitleBar), which respects z-order so overlays on top keep their clicks. -->
+                        <!-- The draggable zone (icon + title), transparent but hit-testable and clipped; command columns sit
+                             outside it, and TitleBar starts the drag from managed input so overlays keep their clicks. -->
                         <Grid x:Name="PART_DragArea" Grid.Column="3" Background="Transparent" ClipToBounds="True">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                     HorizontalAlignment="{TemplateBinding TitleAlignment}" Margin="12,0,0,0">
@@ -118,12 +115,8 @@
                                 </ContextMenu.ItemTemplate>
                             </ContextMenu>
 
-                            <!-- Window buttons. Flat caption buttons (Button.CaptionButton); close highlights red. VECTOR Path
-                                 icons (SVG Data + Stroke), NOT font glyphs - crisp and font-independent.
-                                 Focusable is stated HERE as well as in the class style: a value set on a template PART
-                                 wins over a style setter, so this is the one that is guaranteed to hold. Without it a
-                                 click left the button focused and the button template drew its focus ring around it -
-                                 a frame sitting in the caption long after the click. -->
+                            <!-- Window caption buttons with vector icons; Focusable is set on the parts too, since a part value
+                                 beats the class style and a focused caption button would keep a focus ring. -->
                             </StackPanel>
 
                             <!-- A GRID, not a stack, and only because the ORDER has to be swappable when the buttons

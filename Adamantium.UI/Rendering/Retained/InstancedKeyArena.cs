@@ -7,17 +7,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering.Retained;
 
-/// <summary>
-/// One geometry KEY of the instanced fill, seen as a retained arena (<see cref="BatchArena"/>) - so a control drawing a
-/// vector shape is repaired the way every other batched family is, instead of costing the frame a walk of the window.
-/// <para>The fit is exact once named: a key's instances are one append-only array, and a flush record keeps, per key,
-/// a contiguous <c>(first, count)</c> of it under ONE clip. That IS a segment. The arena is the KEY rather than the
-/// collector because a slot number only means something inside its own array, and one collector holds one array per
-/// shape; the segment ID is the FLUSH index, because a key appears in a record at most once, so the pair is unique.</para>
-/// <para>SOLID fills only. A key carries four parallel instance families (solid, gradient, pattern, textured) and the
-/// other three answer "not mine" - the same way a family with nothing to stage answers today, and visible by name in
-/// the refusal rather than as a silent walk.</para>
-/// </summary>
+// One instanced-fill key as a BatchArena, so vector shapes are patched like other batches: a flush record's per-key
+// range is a segment, and the flush index is its id. Solid fills only.
 internal sealed class InstancedKeyArena : BatchArena
 {
     private readonly InstancedFillCollector _collector;

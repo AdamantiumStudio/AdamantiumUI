@@ -7,16 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A selected-content host shows one of its OWNER'S items - a ribbon tab, a selected page - and the owner keeps it in
-/// Items and hands it back the next time it is picked. So switching away from it must not announce it DISCARDED.
-/// <para>A discard is one way: <c>Revive</c> refuses a discarded element and the render cache skips one. Announcing it
-/// here killed every ribbon tab the moment it was switched away from - it came back parented, measured, arranged and
-/// correctly sized, and never drew again for the rest of the session. That is the worst shape a bug can take, because
-/// every number a probe prints looks right.</para>
-/// <para>What the presenter DOES still discard is content it was given to keep - an authored view swapped out of a
-/// ContentControl - which is the leak the announcement was added for. Showing something is not owning it.</para>
-/// </summary>
+// A selected-content host switching away from its owner's item must not discard it (discard is one-way); it still
+// discards content it owned.
 [TestFixture]
 public class PresenterDoesNotDiscardOwnersItemsTests
 {

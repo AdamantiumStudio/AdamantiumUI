@@ -4,13 +4,8 @@ using Adamantium.UI.Core.MarkupExtensions;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// Markup extension <c>{ThemeResource Key}</c>: a live reference to a brush property of the ACTIVE theme (its
-/// accent/focus colours). Unlike <see cref="ResourceReference"/> - a one-time lookup in the brush dictionary - this
-/// stays connected: changing the theme's accent/focus at runtime flows straight to every control that references it,
-/// with no theme reload. Structured like <see cref="TemplateBinding"/> (a markup extension backed by its own
-/// expression), but its source is the global current theme rather than a templated parent.
-/// </summary>
+/// <summary><c>{ThemeResource Key}</c>: a live reference to a property of the active theme (accent, focus colors) that
+/// follows runtime changes, unlike the one-shot <see cref="ResourceReference"/>.</summary>
 public class ThemeResource : MarkupExtension
 {
     // Live expressions created by Apply, per target, keyed by "property@priority". Lets a setter/trigger dispose the

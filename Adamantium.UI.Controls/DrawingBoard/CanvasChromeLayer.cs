@@ -6,30 +6,15 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Where an <see cref="InfiniteCanvas"/>'s <see cref="CanvasPane"/>s live: a layer on the GLASS that puts
-/// each one where its <see cref="CanvasPane.Placement"/> says, in screen pixels, and never moves with the camera.
-/// <para>A layer rather than the canvas placing them itself, for the same reason the controls on the plane have one: a
-/// panel has to be a real child of something to be laid out, drawn and given input at all.</para>
-/// <para>It also answers what the panes take AWAY - see <see cref="Inset"/>. A docked pane is a wall, and the canvas
-/// has to know where its usable middle actually is.</para></summary>
+/// <summary>The screen-space layer that places an <see cref="InfiniteCanvas"/>'s <see cref="CanvasPane"/>s by their
+/// <see cref="CanvasPane.Placement"/>; <see cref="Inset"/> says what docked panes take away.</summary>
 public class CanvasChromeLayer : Panel
 {
-    // THE PANES THIS LAYER PLACES - the canvas's own, declared in its template beside the layers. A canvas dresses
-    // itself - the rail, the inspector, the view bar are what an editor IS - so those panes are parts of the template
-    // like any other, and not something every application has to write out again.
-    //
-    // ORDER IS THE TEMPLATE'S and is left alone: children later in the collection draw over earlier ones, so a theme
-    // saying which panel is in front is a matter of which line it is written on. Hence the SELECTION bar comes first
-    // there - it is a passing label and must not cover the furniture it lands on.
+    // The panes declared in the canvas's template; their template order is their drawing order.
     private readonly List<CanvasPane> _panes = new();
 
-    /// <summary>NOT ITSELF A TARGET. A panel in this engine catches the mouse across its whole box whether or not it has
-    /// a background - deliberately, so a forgotten background never makes a container silently click-through - and this
-    /// one is the size of the canvas and lies on top of everything. Left as it was, it swallowed every press on the
-    /// plane: the panes it holds are still hit-tested, because children are tested before the panel and are not touched
-    /// by this, but the empty glass between them stops being a wall.
-    /// <para><c>IsHitTestVisible</c> would not do: it prunes the whole subtree, and the panes are the point of the
-    /// layer.</para></summary>
+    /// <summary>The layer itself is not a hit target, so presses between panes reach the plane; its panes are still tested,
+    /// which <c>IsHitTestVisible</c> would prevent.</summary>
     public override bool HitTestCore(Vector2 localPoint) => false;
 
     public static readonly AdamantiumProperty PaneInsetProperty = AdamantiumProperty.Register(nameof(PaneInset),
@@ -175,13 +160,7 @@ public class CanvasChromeLayer : Panel
 
     public CanvasChromeLayer()
     {
-        // A PART AND ITS OWN CHILDREN DO NOT ARRIVE TOGETHER: the layer is found by name the moment the canvas's
-        // template is applied, and its panes are built after that. Taking them up right then took up an EMPTY set - the
-        // panes stood in the tree, nothing ever placed them, and a canvas came up wearing its tool rail and nothing
-        // else. So the layer listens instead of asking once.
-        //
-        // HERE and not in the measure pass: taking a pane up settles whether it is on screen, and Visibility is a
-        // layout INPUT - written while laying out, it invalidates the very pass that wrote it.
+        // Listen for panes, which are built after the layer is found, and gather them here rather than while laying out.
         Children.CollectionChanged += (_, _) => Gather();
     }
 

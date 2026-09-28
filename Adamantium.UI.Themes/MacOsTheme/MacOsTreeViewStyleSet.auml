@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS tree - a source list. The whole set, not a patch over Fluent's: a theme owns its control outright, and
-         two sets on one selector is two sets, not an override.
-
-         What is macOS here is the ROW's plate: inset by 4 rather than running edge to edge, and 24 tall. Both are
-         agreement with THIS theme's own list rows (MacOsListBoxItemStyleSet), which are inset by exactly the same 4 - a
-         tree whose plate runs into the corners of the well beside it is the theme disagreeing with itself. The whole row
-         still takes the click; the inset is on the chrome, not the hit area.
-
-         The tree itself, its flattening and the expander glyph are unchanged from the borrowed set - none of them differ
-         on a Mac - and are restated here rather than left behind, because that is what owning the set means. -->
+    <!-- The macOS tree (a source list), a full set rather than a patch: row plates 24 high, inset 4 like list rows, with
+         the full row still hit-testable. -->
 
     <Style Selector="TreeView" BasedOn="ItemsControl">
         <Setter Property="Background" Value="Transparent"/>

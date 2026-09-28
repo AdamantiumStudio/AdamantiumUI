@@ -11,19 +11,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Writes a DRAWING out as SVG and reads one back.
-/// <para>SVG and not a format of our own because a drawing is the half of a canvas that other people's tools have a
-/// claim on: it is opened in a browser, dropped into a document, edited in Inkscape and sent back. A graph is the
-/// opposite - it means something only here - which is why it is kept as JSON by
-/// <see cref="CanvasGraphSerializer"/>.</para>
-/// <para>TWO READERS ARE SERVED AT ONCE. Everything is written as the standard element that says it - a stroke is a
-/// polyline, a polygon is a polygon with its corners spelled out - so a stranger's viewer draws it correctly with no
-/// knowledge of us. What SVG has no word for rides alongside in <c>data-</c> attributes: how many sides a polygon was
-/// asked for, which kind of spline a curve is, the four separate corner radii of a rectangle. Ours reads those and
-/// gets the object back exactly; anyone else ignores them and still sees the picture.</para>
-/// <para>What is NOT written: controls placed on the plane and the wires between nodes. A control is a living thing
-/// with a template and behaviour, and a rectangle labelled "Button" in a file would be a lie about what it is.</para>
-/// </summary>
+/// <summary>Writes a drawing as standard SVG and reads it back; what SVG cannot say rides in <c>data-</c> attributes for an
+/// exact round trip. Controls and wires are not written.</summary>
 public static class CanvasSvg
 {
     public const string Namespace = "http://www.w3.org/2000/svg";
@@ -62,11 +51,7 @@ public static class CanvasSvg
         // however many arrows use it, which is what a marker is for.
         var defs = new XElement(Svg + "defs");
 
-        // BY THE NUMBER THE ITEM CARRIES, not by the order the list happens to be in. A document is read top to bottom,
-        // so writing it in any other order would be writing a different drawing - and the list handed in may be a
-        // selection, picked up in whatever order the person clicked. Controls and wires are left out on the way here,
-        // which is exactly why the number is also written down: the places left behind are holes, and a file that only
-        // said "these five, in this order" could not put them back where they were.
+        // Written in layer-number order, not selection order; the number is saved too, so skipped controls leave holes.
         var ordered = new List<ICanvasItem>(items);
         ordered.Sort(static (ICanvasItem a, ICanvasItem b) => a.Order.CompareTo(b.Order));
 
@@ -267,11 +252,7 @@ public static class CanvasSvg
                 var alike = corner.TopLeft == corner.TopRight && corner.TopRight == corner.BottomRight
                             && corner.BottomRight == corner.BottomLeft;
 
-                // SVG rounds a <rect> with ONE radius, and ours has four. Alike, that is exactly what a rect says;
-                // unalike, it is not sayable at all - written as a rect anyway, every corner came out the size of the
-                // top-left one for everybody but us. So an unequal shape goes out as its own OUTLINE, which any viewer
-                // draws as drawn, with the four numbers riding alongside so it comes home as a rectangle and not as a
-                // path.
+                // A <rect> has one radius: unequal corners go out as an outline, with the four radii alongside for us.
                 if (alike)
                 {
                     element = new XElement(Svg + "rect",
@@ -409,16 +390,8 @@ public static class CanvasSvg
         return element;
     }
 
-    // One marker per head shape, color and SIZE - two arrows alike share it, and one with a longer head gets its own
-    // rather than quietly wearing somebody else's.
-    //
-    // The numbers are the canvas's own: a head is measured in LINE THICKNESSES (see ArrowHead), and so is a marker -
-    // markerUnits defaults to strokeWidth - so they go in as they are. Written as a fixed 6 by 6 out of a 10 by 10
-    // view, every head came out about twice as long and twice as wide as the one on the plane, and on a thick line
-    // that is not a head any more, it is a pair of bars across the end of the arrow.
-    //
-    // ONE PATH for both ends, pointing along the line: orient="auto-start-reverse" turns it round for marker-start.
-    // Mirroring the path by hand as well turned it twice, so the head at the start pointed back down its own arrow.
+    // One marker per head shape, color and size, in line thicknesses like markerUnits; one path for both ends, turned by
+    // orient="auto-start-reverse".
     private static void Head(XElement arrow, XElement defs, CanvasArrowHead head, Brush brush, bool start,
         double length, double width)
     {
@@ -745,11 +718,7 @@ public static class CanvasSvg
             String.IsNullOrWhiteSpace(family) ? null : new FontFamily(family));
     }
 
-    // A PATH is where somebody else's drawing arrives. Straight runs and cubics are followed exactly; an arc is not,
-    // and a path holding one is left out rather than drawn as the chords nobody asked for.
-    // A PATH COMES IN AS A PATH. Read by the engine's own SVGParser - the one reader of path data there is - so it
-    // arrives with its sub-paths apart, its arcs as arcs and its fill rule intact. Walked into a run of points instead
-    // it became one stroke: no fill, no holes, and a line joining the end of every sub-path to the start of the next.
+    // A path comes in as a path through the engine's SVGParser, keeping sub-paths, arcs and fill rule.
     private static ICanvasItem Trace(XElement element, ref int skipped)
     {
         var data = (string)element.Attribute("d");

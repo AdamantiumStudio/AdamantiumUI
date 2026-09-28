@@ -1,12 +1,6 @@
 namespace Adamantium.UI.Core.Input.Raw;
 
-/// <summary>
-/// What a pointer event IS, named by meaning. The values are our own and deliberately arbitrary: they used to be the
-/// Win32 message numbers, which let the platform cast a message straight into this enum - convenient, and wrong twice
-/// over. It tied a platform-neutral type to one OS's numbering, and it hid a collision: <see cref="EnterWindow"/> had
-/// no value of its own and so silently took <c>MouseMove + 1</c> - which is exactly <see cref="LeftButtonDown"/>.
-/// Nothing produced EnterWindow, so nothing had gone wrong yet.
-/// </summary>
+/// <summary>The kind of a raw pointer event. Values are platform-neutral and arbitrary, not OS message numbers.</summary>
 public enum RawMouseEventType : uint
 {
    MouseMove,

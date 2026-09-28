@@ -13,12 +13,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>Where the gap between tiles on the Layout tab actually comes from, in pixels, under a real theme.
-/// <para>Reported from the stand as "giant margins between containers", and every guess so far has been wrong: the
-/// panel hands out exact cells, and the row's Padding really is 0 (ItemContainerStyleVsThemeTests). So this walks the
-/// chain instead of arguing about it - the cell, then the container's rect, then the tile's - and prints what each
-/// step costs.</para>
-/// </summary>
+// Prints each step of the tile inset chain under a real theme (cell, container rect, tile rect).
 [TestFixture]
 public class TileInsetChainTests
 {

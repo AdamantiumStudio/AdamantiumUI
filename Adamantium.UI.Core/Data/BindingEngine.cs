@@ -86,12 +86,8 @@ public static class BindingEngine
         map.Clear();
     }
 
-    /// <summary>Closes every binding's source subscription but KEEPS it registered - used when a virtualizing panel parks
-    /// an off-screen container: the tile drops out of any shared source's fan-out (no storm on a shared-property change).
-    /// Unlike <see cref="ClearBindings"/> the map is left intact so that re-establish has something to re-establish.
-    /// <para>Whoever closes these OWNS re-opening them, with <see cref="RefreshBindings"/>. It used to be left to the
-    /// DataContext change a rebind makes, which is not a change when a parked container is handed back the same item it
-    /// already held - and the row then came back on screen with every binding dead.</para></summary>
+    /// <summary>Closes every binding's source subscription but keeps it registered, for parked containers. The caller must
+    /// reopen them with <see cref="RefreshBindings"/>.</summary>
     public static void DeactivateBindings(IAdamantiumComponent target)
     {
         if (_bindings.TryGetValue(target, out var map))

@@ -71,12 +71,8 @@
          document order decides, so it must follow the plain RadioButton styles it replaces. -->
     <Style Selector="RadioButton.Toggle" BasedOn="ToggleButton"/>
 
-    <!-- A PAGE NUMBER in a pager's row: the toggle look, sized to the line's cell. NO PADDING - the control padding is a
-         text inset, symmetric across but not down, and it made the button's width a function of its LABEL, so "1" and
-         "146" came out different widths and every button beside them shifted as the reader paged. Zero inset plus a
-         floor leaves the number centred in a cell that only grows once a number is genuinely wider than it.
-         The alignment is said outright because a plain RadioButton is a dot with a label BESIDE it: its content is
-         left-aligned, and centring arrives only through the toggle look this is based on. -->
+    <!-- A pager page number: the toggle look in the pager cell with no padding, so widths do not change with the label;
+         content centered explicitly. -->
     <Style Selector="RadioButton.PagerPage" BasedOn="ToggleButton"/>
 
     <Style Selector="RadioButton.PagerPage">

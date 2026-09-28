@@ -43,12 +43,8 @@ public class TabTearOffBehavior : Behavior<TabControl>
             Position = e.ScreenPosition - new PixelPoint(60, 20)
         };
 
-        // Showing a window belongs to the UI thread (Window.Show verifies it) while the tear-off is detected on the LOOP
-        // thread, where input and the visual tree live - so the window is asked for across that seam. InvokeAsync, not
-        // Invoke: a blocking hop into the pump would stall the frame the gesture is still running in.
-        // Show first (it attaches the window and creates the OS one), THEN the content, or the subtree never joins a
-        // live, themed window. A Window IS a ContentControl, so handing it the ITEM plus the strip's own selector makes
-        // it render exactly what the tab body rendered - nothing is built by hand.
+        // Windows are shown on the UI thread, so hop there without blocking the frame. Show before setting content (the
+        // item plus the strip's selector) so it joins a live, themed window.
         UIAppContext.Current.Dispatcher.InvokeAsync(() =>
         {
             window.ContentTemplate = _tabs.ContentTemplate;
@@ -56,17 +52,8 @@ public class TabTearOffBehavior : Behavior<TabControl>
             window.Content = e.Item;
             window.Show();
 
-            // Put the CAPTION under the cursor, not the window's corner: the pointer holds the window by its title bar,
-            // so it belongs halfway down it. The window states its own caption height, so no template part is measured
-            // here and a restyle cannot drift from it.
-            //
-            // The cursor is read HERE, live. e.ScreenPosition is where it was when the threshold was crossed, and this
-            // runs later - on the UI thread, after the window was built - by which time the pointer has moved on (~27px
-            // in a measured run). Aiming at the old position is what put the cursor below the caption instead of on it.
-            // Where on the window the cursor is holding it, measured in the window's OWN logical units and turned into a
-            // desktop distance - FromLogical cannot be written without naming a scale, so the conversion cannot be the
-            // thing that is forgotten. The scale is the NEW window's, not the strip's: it may well have been born on
-            // another monitor, and that is exactly the case this went wrong in.
+            // Put the caption under the live cursor position (the gesture's has moved on by now), converting the grab
+            // offset with the new window's own scale, which may be another monitor's.
             var grab = PixelPoint.FromLogical(
                 new Mathematics.Vector2((float)(window.ClientWidth / 2), (float)(window.TitleBarHeight / 2)),
                 window.DpiScale);

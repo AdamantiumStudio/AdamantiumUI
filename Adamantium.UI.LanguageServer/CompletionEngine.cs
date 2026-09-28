@@ -55,13 +55,8 @@ public sealed class CompletionEngine
             .ToList();
     }
 
-    // Inside "{Name arg}": complete the argument generically for ANY markup extension. The extension's own settable
-    // properties drive the NAMED arguments (after the first comma); the value of the positional (default) argument and
-    // of each named argument is completed by its TYPE from the appropriate external source - a view-model path for a
-    // PropertyPath, type names for a Type, enum members / booleans / brush colors for those. Extensions whose value
-    // isn't a plain CLR property on the extension (TemplateBinding -> the templated parent's properties; x:Type -> type
-    // names; resources -> resource keys) are dispatched by name. Before, only TemplateBinding/Binding-path/x:Type were
-    // special-cased and named arguments (Mode/Converter/FallbackValue/...) had no completion at all.
+    // Completes arguments of any "{Name arg}" extension: named arguments from its properties, values by type; extensions
+    // with special sources (TemplateBinding, x:Type, resources) by name.
     private IReadOnlyList<AumlCompletionItem> CompleteMarkupExtensionArg(
         AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset)
     {
@@ -551,13 +546,8 @@ public sealed class CompletionEngine
     private static AumlCompletionItem AttrItem(string label, AumlCompletionItemKind kind, string? detail) =>
         new(label, kind, detail, $"{label}=\"$0\"");
 
-    // Substring match (case-insensitive): the typed text may appear ANYWHERE in the candidate, not only at the start,
-    // so a half-remembered name still finds it ("Dash" -> StrokeDashArray, "ound" -> Background). Used for NARROW,
-    // already-scoped lists - an element's own properties, an enum's members, brush colours, binding-path segments -
-    // where matching in the middle is helpful and the list is short. NOT used for the big global catalogs (control /
-    // type names across every namespace): there substring floods the list, so those use MatchesStart instead.
-    // The matched letters are highlighted by the CLIENT (LSP has no field to send highlight ranges - the client
-    // re-matches the typed text against filterText/label and bolds the run).
+    // Case-insensitive substring match for short scoped lists; large global catalogs use MatchesStart. The client
+    // highlights matches.
     private static bool Matches(string candidate, string prefix) =>
         string.IsNullOrEmpty(prefix) || candidate.Contains(prefix, StringComparison.OrdinalIgnoreCase);
 

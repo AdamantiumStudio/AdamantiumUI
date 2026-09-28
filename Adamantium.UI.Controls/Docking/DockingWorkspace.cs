@@ -3,13 +3,8 @@ using System.Threading.Tasks;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// The saved arrangement, owned by a VIEW MODEL: <c>&lt;docking:DockingArea Workspace="{Binding Workspace}"/&gt;</c>.
-/// The view model creates one, keeps it, and calls <see cref="Save"/> / <see cref="Load"/> from its own commands.
-/// <para>Why an object in between at all: a view model cannot reach the control (it does not know the view), and the
-/// control must not decide WHERE a layout is kept - a file, a settings store, a server - which is the application's
-/// business. This is the handle the two meet on, and it holds no state of its own.</para>
-/// </summary>
+/// <summary>The handle a view model keeps for the docking arrangement, calling <see cref="Save"/> and <see cref="Load"/>
+/// itself; where the layout is stored stays the application's business.</summary>
 public class DockingWorkspace
 {
     private DockingArea _area;
@@ -66,15 +61,8 @@ public class DockingWorkspace
     // two different arrangements under one name.
     internal void Attach(DockingArea area)
     {
-        // A workspace serves ONE area. A view rebuilt on re-entry hands over a new one, and the outgoing area is still
-        // holding the floating windows it opened - nobody detaches it, because leaving the tree is not a detach. Let it
-        // go of them here, or every visit stacks another set of windows on top of the last (three visits, six windows).
-        // The ARRANGEMENT belongs to the workspace, not to whichever control happened to be showing it. A view rebuilt
-        // on re-entry hands over a brand-new area with an empty tree, and the outgoing one takes the zones with it - so
-        // the arrangement is carried across the handover here, or every return from another tab (and every theme swap,
-        // which rebuilds the same way) started from the authored markup again and the region adapter re-opened every
-        // pane in the DEFAULT zone: two document areas came back as one holding all the tabs. Measured on the stand -
-        // the incoming area reported roots=0, and every pane arrived at Center with the model not knowing it.
+        // One area at a time: release the outgoing area's floating windows and carry the arrangement to the new one, or each
+        // re-entry stacks windows and resets the layout.
         string carried = null;
         if (_area != null && !ReferenceEquals(_area, area))
         {

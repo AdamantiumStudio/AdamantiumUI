@@ -9,16 +9,8 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>WHAT A NODE IS - the part of a node that a change of kind replaces, while the node itself stays the object
-/// every wire and the selection already point at.
-/// <para>It is three things at once and deliberately: it SHAPES the node (which sockets it has and what they carry), it
-/// is the node's CONTENT (the body template is picked for its type and binds to its properties), and it is what the
-/// node COMPUTES. The last one is why this graph is not a picture of a graph: a value arrives along the wires, each
-/// node does its bit, and the result comes out at the end.</para>
-/// <para>A VIEW-MODEL, and said the way every other one here is said: the notification side is not written by hand at
-/// all - what a person sets is a <c>[Bindable]</c> field and the generator writes the property. The derived kinds need
-/// it too: the generator writes a property for a field only when the class it is in already has somewhere to raise the
-/// change from.</para></summary>
+/// <summary>The kind-specific part of a node, replaced when its kind changes: it defines the sockets, is the body's
+/// content, and computes the node's output.</summary>
 [ViewModel]
 public abstract partial class NodeSpecialization : ICanvasNodeSpecialization, ICanvasNodeWork
 {

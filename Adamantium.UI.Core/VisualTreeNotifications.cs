@@ -2,16 +2,8 @@ using System;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// What an element says about ITSELF: I joined the tree, I left it, I became invisible, my content is stale, I resized, I
-/// moved, my colour changed, a theme swap has begun. Facts about the visual tree - and not one word about how, or whether,
-/// any of it is drawn.
-///
-/// This is the seam between the two layers. A control announces a fact and knows nothing more: no dirty registry, no marks,
-/// no render cache. The RENDERER listens here and decides what each fact costs it - a splice, a re-record, a re-bake, or
-/// nothing at all (see RenderDirtyBridge). That decision is the renderer's alone, and it can change completely without a
-/// single line moving in the control layer.
-/// </summary>
+/// <summary>Facts an element announces about itself (attached, detached, invisible, stale, resized, moved, recolored). The
+/// renderer listens (see RenderDirtyBridge) and decides what each costs.</summary>
 public static class VisualTreeNotifications
 {
     // Whoever cares must be listening BEFORE the first fact is announced, or that fact is simply lost. So the listeners are

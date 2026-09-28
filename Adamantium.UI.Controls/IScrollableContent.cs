@@ -4,14 +4,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// The seam between a <see cref="ScrollViewer"/> and the element that actually scrolls its content - a physical
-/// <see cref="ScrollContentPresenter"/> today, a virtualizing panel later. Replaces WPF's sprawling IScrollInfo: the
-/// viewer owns scroll <em>policy</em> (wheel step, page size, bar visibility) and the content owns the
-/// <em>mechanism</em> (given a desired offset, translate or realize). Metrics are size/vector valued and a single
-/// event announces any change, so the viewer never juggles six separate doubles nor a zoo of
-/// LineUp/PageDown/MouseWheel methods.
-/// </summary>
+/// <summary>The seam between a <see cref="ScrollViewer"/> and the element that scrolls its content: the viewer owns
+/// scroll policy, the content owns the mechanism, and one event announces any metric change.</summary>
 public interface IScrollableContent
 {
     /// <summary>Total size of the scrolled content.</summary>

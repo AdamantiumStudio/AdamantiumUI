@@ -2,13 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// The name everything invalidating itself already calls - now a ROUTER over per-stage <see cref="RenderDirtyScope"/>s
-/// rather than one shared set (see <see cref="RenderDirtyRouter"/>). A mark goes to the scope of the component that
-/// makes it; a question is asked of a scope, so a cache asks its OWN.
-/// <para>Kept as the single spelling on purpose: a control states a fact about itself ("my geometry changed") and has no
-/// business knowing which stage it is drawn by, or that stages exist at all.</para>
-/// </summary>
+/// <summary>Render marks for components, routed to the <see cref="RenderDirtyScope"/> of the stage drawing each one (see
+/// <see cref="RenderDirtyRouter"/>), so controls need not know about stages.</summary>
 public static class RenderDirty
 {
     /// <summary>The window content's marks - the scope everything belongs to until a stage claims it.</summary>

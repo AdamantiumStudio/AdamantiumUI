@@ -5,13 +5,9 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A resize affordance for a fully custom-chromed window: a small grip in the bottom-right corner whose bounds are
-/// published as the window's <see cref="IWindow.ResizeGripRect"/>, so the platform hit-test treats a point in it as the
-/// bottom-right sizing corner (HTBOTTOMRIGHT) and the OS runs its native resize from there. Used with
-/// <see cref="WindowResizeMode.CanResizeWithGrip"/> - a window with NO edge resize borders, where the grip is the only
-/// way to resize. The visual (diagonal dots) is a template; this class only publishes the region.
-/// </summary>
+/// <summary>A bottom-right resize grip for custom-chromed windows: publishes its bounds as
+/// <see cref="IWindow.ResizeGripRect"/> so the OS resizes from there. Used with
+/// <see cref="WindowResizeMode.CanResizeWithGrip"/>.</summary>
 public class ResizeGripper : Control
 {
     /// <summary>Whether the grip publishes its rect to the OS window as the native sizing corner (HTBOTTOMRIGHT). Default

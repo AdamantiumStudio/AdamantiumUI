@@ -7,15 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The ARRANGEMENT belongs to the workspace, not to whichever control happens to be showing it. A view rebuilt on
-/// re-entry - leaving a tab and coming back, or a theme swap, which rebuilds the same way - hands the workspace a
-/// brand-new area with an empty tree, and the outgoing one takes the zones with it.
-/// <para>Measured on the stand before the fix: the incoming area reported roots=0, and the region adapter then
-/// re-opened every pane in the DEFAULT zone - so two document areas came back as one holding all the tabs. Nothing was
-/// pruned or collapsed on the way (no empty group dropped, no split merged); the arrangement was simply never carried
-/// across the handover.</para>
-/// </summary>
+// The arrangement belongs to the workspace: a rebuilt view's new docking area receives the outgoing area's layout.
 [TestFixture]
 public class DockingWorkspaceHandoverTests
 {

@@ -9,13 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The chosen span of a range slider runs from one handle's CENTRE to the other's - under both of them.
-/// <para>It used to run BETWEEN them, edge to edge, which measures as touching and looks like falling short: a handle
-/// is round, so where its box ends the circle has narrowed to a point and the band ends against nothing. Rounding the
-/// placement onto whole units (the vertical demo landed on halves, the horizontal one on wholes) made the edge crisp
-/// and did not close it - what settled it was that a handle's shadow is translucent, so a band running underneath would
-/// show through it, and none did.</para>
-/// </summary>
+// A range slider's band runs from one handle's center to the other's, under both round handles.
 [TestFixture]
 public class MacOsRangeBandTests
 {
@@ -113,12 +107,7 @@ public class MacOsRangeBandTests
         });
     }
 
-    /// <summary>A press aimed at an end handle must grab THAT handle, though the band now runs underneath it.
-    /// <para>Asked of the decision itself, not of a stand-in for it. The first version of this test checked the order
-    /// the parts sit in the track's Children and called that "the thumbs are on top" - which is true of PAINTING and
-    /// says nothing about the press: the slider picks the handle by span, in its own order, and while the three could
-    /// not overlap that order did not matter. It does now, and asking the children list would have gone on passing
-    /// while every press on a handle dragged the whole span.</para></summary>
+    // A press on an end handle grabs that handle, not the band beneath it; asked of the slider's own pick.
     [TestCase(Orientation.Horizontal)]
     [TestCase(Orientation.Vertical)]
     public void APressOnAnEndHandle_GrabsThatHandle_NotTheBand(Orientation orientation)

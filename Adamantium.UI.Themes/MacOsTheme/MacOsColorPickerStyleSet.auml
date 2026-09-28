@@ -2,14 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- ColorPicker, macOS: a saturation/value square, a hue rail, an alpha rail, a preview swatch and the hex + R/G/B/A
-         fields. What the control drives from code is unchanged and every part keeps its name - the square's pure-hue
-         background, the alpha gradient, the preview fill and all four thumb positions are set by PART name.
-
-         WHAT CHANGES: the rails and their grips. Fluent draws a 22-wide bar with a flat white slab across it; a Mac
-         draws a slim capsule with the SAME round knob its sliders use - white, rimmed, with the shadow that seats it -
-         because these rails ARE sliders and a platform has one grip, not three. The panel itself takes the window
-         surface rather than a card: a colour panel on this platform is a small window, not a card laid on one. -->
+    <!-- ColorPicker, macOS: same parts as Fluent's, but the rails are slim capsules with the slider knob, and the panel
+         takes the window surface. -->
 
     <Style Selector="ColorPicker">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>

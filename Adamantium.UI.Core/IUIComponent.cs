@@ -24,18 +24,12 @@ public interface IUIComponent : IFundamentalUIComponent
     Boolean IsHitTestVisible { get; set; }
     bool IsGeometryValid { get; }
 
-    /// <summary>Its last record produced NO draw commands - a layout-only container (a tile's Border with no brush, a
-    /// presenter, a panel with no Background). RECORDER-owned: the only thing that can know it is the record that just
-    /// counted the commands. False until it has been recorded once, so a component nobody has seen yet is never skipped.
-    /// <para>Its SUBTREE is untouched by this - children are separate components with flags of their own, and a container
-    /// that draws nothing is routinely full of things that do.</para></summary>
+    /// <summary>Whether its last record produced no draw commands; set by the recorder, false until first recorded. Says
+    /// nothing about its children.</summary>
     bool DrawsNothing { get; set; }
 
-    /// <summary>The geometry went stale because what it DRAWS changed (<see cref="InvalidateRender"/>, an AffectsRender
-    /// property - a hover brush arriving), as opposed to because it was re-laid-out. The two used to be one flag, which
-    /// is why resizing 2000 tiles re-recorded 21000 components and 16000 of them rendered to nothing: a resize
-    /// invalidates only what a component draws, and a container that draws nothing has no geometry for it to invalidate.
-    /// Cleared by <see cref="Render"/>.</summary>
+    /// <summary>Geometry is stale because what it draws changed, not because of layout; cleared by
+    /// <see cref="Render"/>.</summary>
     bool GeometryStaleByContent { get; }
     Size RenderSize { get; set; }
     //Vector2 Location { get; }
@@ -59,34 +53,22 @@ public interface IUIComponent : IFundamentalUIComponent
     /// there is one answer to "whose space am I in", not two that can drift apart.</summary>
     IUIComponent RenderParent { get; }
 
-    /// <summary>Whether the RENDER PARENT's own <see cref="ClipToBounds"/> applies to this component. True for ordinary
-    /// content - a child lives inside its parent's box. False for an ADORNER: it draws in its target's space precisely
-    /// in order to paint AROUND it, so being clipped to that target's box erases exactly what it exists to draw (a focus
-    /// ring vanished on every control whose template clips its content, and survived only on those that do not). Above
-    /// the target, only <see cref="ClipsAdorners"/> boundaries apply.</summary>
+    /// <summary>Whether the render parent's <see cref="ClipToBounds"/> applies; false for adorners, which draw around
+    /// their target and are clipped only by <see cref="ClipsAdorners"/>.</summary>
     bool ClippedByRenderParent { get; }
 
-    /// <summary>Whether this component's <see cref="ClipToBounds"/> also cuts ADORNERS drawn on the content inside it.
-    /// False almost everywhere: a container clipping its children is a layout detail, and letting every such box shave
-    /// the focus ring made any standoff at all unusable - cards, tab strips and docking panels each took a bite out of
-    /// it. True where the clip means a VIEWPORT rather than a box: a ring on a half-scrolled row must not spill out of
-    /// the list it belongs to, which is exactly what a scroll presenter is for.</summary>
+    /// <summary>Whether this <see cref="ClipToBounds"/> also clips adorners inside it; true only for viewports such as a
+    /// scroll presenter.</summary>
     bool ClipsAdorners { get; }
 
     IRootVisualComponent RootVisual { get; }
 
-    /// <summary>The subtree root that OWNS this element's layout, when that is not the visual root: overlay content is
-    /// drawn by the window but measured and arranged by the popup layer, which alone knows its constraint (unbounded)
-    /// and its slot (the computed position). Null everywhere else, where the visual root owns layout as usual.
-    /// <para>Two owners running in one frame is not a slowdown but a CRASH: both drive the same virtualizing panel, and
-    /// its generator is re-entered mid-enumeration.</para></summary>
+    /// <summary>The subtree root owning this element's layout when it is not the visual root (the popup layer for overlay
+    /// content); null otherwise. Only one owner may lay it out.</summary>
     IUIComponent LayoutRoot { get; }
 
-    /// <summary>Which STAGE draws this element - the window content, the popup/overlay layer, the adorners - and so
-    /// whose dirty marks its own are. Inherited down the subtree at attach, like <see cref="LayoutRoot"/>, because the
-    /// answer is the same for a whole subtree and a mark is far too hot a path to go looking for it.
-    /// <para>Null until a stage claims the subtree, which means the window content: that is what one shared set of marks
-    /// used to mean for everybody.</para></summary>
+    /// <summary>Which stage draws this element and so owns its dirty marks; inherited at attach. Null means the window
+    /// content.</summary>
     RenderDirtyScope RenderScope { get; }
 
     Int32 ZIndex { get; set; }
@@ -101,22 +83,12 @@ public interface IUIComponent : IFundamentalUIComponent
     /// for it must survive. Detachment alone means "gone"; parking is what tells the difference.</summary>
     bool IsParked { get; }
 
-    /// <summary>Draw this element's SUBTREE once per matrix here, instead of once at its own place - the element becomes
-    /// a PROTOTYPE and each matrix a clone. Null or empty (the normal case) means the ordinary single draw.
-    /// <para>What this buys: N copies of a visual cost ONE real element. The clones exist only in the instance buffer -
-    /// they are in no tree, take no layout, take no hit-test and hold no state. A virtualizing panel's loading skeletons
-    /// are the first user: it built a full template instance per empty slot (measured: 3469 template builds in a 0.25 s
-    /// window against 147 realized containers), and every property write of every build marked layout dirty.</para>
-    /// <para>The matrix is COMPOSED, not substituted: a unit is drawn at <c>clone * itsWorld</c>, so the subtree keeps
-    /// its internal layout and the clone only says where the copy goes.</para></summary>
+    /// <summary>Draws the subtree once per matrix (composed as <c>clone * world</c>) instead of once; clones have no
+    /// layout, hit-test or state. Null or empty means a single draw.</summary>
     IReadOnlyList<Matrix4x4F> RenderClones { get; }
 
-    /// <summary>A render MOTION NODE: this element's subtree translates as a unit (a transform-only-scrolled panel).
-    /// The render cache bakes its descendants' batched instances in THIS node's space and gives them its transform-table
-    /// slot, so moving the node costs one matrix write instead of re-baking the subtree (the O(1)-scroll path). Set by
-    /// the element that drives such movement (a virtualizing items host) - or by the COMPOSITOR, which promotes any element
-    /// whose transform it takes over: one matrix write is precisely what the render thread can do on its own, and a
-    /// world-baked element could not be moved without a re-record, which is the loop thread's job.</summary>
+    /// <summary>A motion node: its subtree is baked in its own space, so moving it is one matrix write. Set by virtualizing
+    /// hosts and by the compositor for transforms it animates.</summary>
     bool IsRenderMotionNode { get; set; }
 
     bool IsRootComponent { get; }
@@ -152,13 +124,8 @@ public interface IUIComponent : IFundamentalUIComponent
     /// <see cref="PropertyMetadataOptions.AffectsPaint"/>).</summary>
     void InvalidatePaint();
 
-    /// <summary>
-    /// Narrow-phase hit test: is <paramref name="localPoint"/> (in this element's local coordinates) actually on the
-    /// element's geometry? The hit-test walk uses <see cref="ClipRectangle"/> as the cheap broad-phase (and to descend
-    /// into children); this is the tight test for whether the element ITSELF is hit. The default is the bounding box
-    /// (always true within it); shapes override it for their real geometry (a Line by distance to its segment, an
-    /// Ellipse by the ellipse equation, a Path by point-in-geometry) so clicks off the shape don't select it.
-    /// </summary>
+    /// <summary>Narrow-phase hit test of a local point against the element's own geometry; the default is its bounds,
+    /// shapes override it.</summary>
     bool HitTestCore(Vector2 localPoint);
 
     void Render(IDrawingContext context);

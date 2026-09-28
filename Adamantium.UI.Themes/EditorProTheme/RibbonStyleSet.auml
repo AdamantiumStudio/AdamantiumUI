@@ -2,27 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's ribbon. An editor does not LEAD with a ribbon - it is a toolbar here, not the way anything is
-         really done - and two things follow from that, which are what this whole file is about:
-
-         1. NO ACCENT WALLS. Fluent paints the File tab and the entire backstage rail in the accent colour: a 180-wide
-            column of the loudest colour in the palette, standing next to the work. This theme's whole premise is that
-            the WORK is the bright thing on screen and the furniture is not, so the rail is an ordinary raised panel
-            and the row whose page is open is marked by an accent RULE down its leading edge - the same mark the tabs
-            use, at a hundredth of the area.
-            This is not only taste. The quick-access bar sits on the caption, and Fluent's version darkens on hover
-            (OnAccentShade*) precisely because it assumes an accent caption underneath. Editor Pro's caption is a plain
-            dark plate, so those brushes would be all but invisible on it: the bar has to lighten here, not darken. A
-            borrowed ribbon could not have got that right.
-
-         2. SQUARE, AND THIS THEME'S DENSITY. Plates meet edge to edge; the band is three of this theme's rows plus a
-            caption rather than Fluent's 106.
-
-         The PART NAMES, the panels and every trigger are Fluent's on purpose - that is behaviour, and a great deal of
-         it: which host holds a collapsed group's content, how the adaptive pass reaches the sizes, when the scroll
-         arrows appear. Copying the names keeps all of it working while this file states the shape.
-
-         Per convention: simple properties, then the template, then the triggers. -->
+    <!-- Editor Pro's ribbon: no accent-filled File tab or backstage (an accent rule marks the open row), a quick-access bar
+         that lightens on hover, square and dense. Part names and triggers are Fluent's, keeping its behavior. -->
 
     <Style Selector="Ribbon">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
@@ -118,12 +99,8 @@
                                         ToolTip="Collapse the ribbon"/>
                             </Grid>
 
-                            <!-- Holds the SELECTED TAB ITSELF, which presents its own groups; the strip shows a header
-                                 for it. Minimizing MOVES that presenter into the flyout below, so its groups keep the
-                                 variants they worked out.
-                                 One step up from the strip and closed by a rule, exactly as this theme's tab rail: the
-                                 open tab header shares this ground, so the two read as one plate with the accent line
-                                 saying which tab it belongs to. -->
+                            <!-- Hosts the selected tab itself; minimizing moves this presenter into the flyout, keeping
+                                 group variants. Shares the open header's ground. -->
                             <Border x:Name="Band" Grid.Row="1"
                                     Height="{TemplateBinding GroupsAreaHeight}"
                                     Background="{ResourceReference SolidBackgroundFillColorTertiary}"
@@ -131,12 +108,8 @@
                                     BorderThickness="0 1 0 0"
                                     ClipToBounds="True">
                                 <Border x:Name="PART_BandHost">
-                                    <!-- STRETCHED across, not sized to content: the open tab has to be told how much
-                                         room the band actually has, because that arrange width is what the groups
-                                         choose their variants from. Sized to content, a tab would always be handed
-                                         exactly what it asked for and would never learn the window had narrowed. The
-                                         groups still sit left - their panel lays out from x=0 and reports what it
-                                         used. -->
+                                    <!-- Stretched, so the tab's arrange width tells the groups the room available for
+                                         choosing their variants. -->
                                     <ContentPresenter x:Name="PART_SelectedContentHost"
                                             Content="{TemplateBinding SelectedContent}"
                                             ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -148,12 +121,8 @@
                             <!-- The band's own row: whatever the application puts under it. -->
                             <ContentPresenter Grid.Row="2" Content="{TemplateBinding FooterContent}"/>
 
-                            <!-- The minimized band's groups, drawn OVER the content below. An overlay is not a choice:
-                                 kept in a row of its own it would push the content down - the one thing a minimized
-                                 ribbon must not do - and be clipped by the root border. But it must not READ as a
-                                 flyout: it is the band itself, so it spans the ribbon's full width and wears the
-                                 band's own chrome. The width also does the aligning - Bottom placement CENTRES on its
-                                 target, so anything narrower than the ribbon drifts into the middle of the window. -->
+                            <!-- The minimized band as an overlay over the content, full ribbon width with band chrome
+                                 (Bottom placement centers, so full width also aligns it). -->
                             <Popup x:Name="PART_Flyout" Grid.Row="1" Placement="Bottom">
                                 <Border Width="{TemplateBinding ActualWidth}"
                                         Height="{TemplateBinding GroupsAreaHeight}"
@@ -311,12 +280,8 @@
         </MultiTrigger>
     </Style>
 
-    <!-- A tab is its groups in a row, plus the last-resort scroll: a full-height arrow at each edge with a fade BESIDE
-         it (inward), so the row dissolves into the arrow instead of being cut by a hard line. No scrollbar - a bar
-         would eat height from a band that has none to spare. The arrows overlay the row rather than taking width from
-         it: reserving space would make the width depend on the answer it produces, and every tab that never scrolls
-         would pay for them. Each arrow therefore rides an OPAQUE plate, and the row scrolls underneath it.
-         The plate is painted in the BAND's ground here, not the strip's: this row lives in the band. -->
+    <!-- A tab's groups in a row, with last-resort scroll arrows overlaid on opaque band-ground plates at each edge, each
+         with an inward fade; no scrollbar. -->
     <Style Selector="RibbonTab">
         <Setter Property="ItemsPanel">
             <Setter.Value>
@@ -445,11 +410,8 @@
         </Setter>
         <Setter Property="Template">
             <Setter.Value>
-                <!-- ONE template for both presentations, never swapped. PART_Content is the group's commands and
-                     caption as a SINGLE block, and the group MOVES it between PART_InlineHost and PART_PopupHost when
-                     it collapses. Swapping the template instead rebuilds the packing panel the adaptive pass measures
-                     through, and that panel is the one thing that must survive: it holds the variants, their measured
-                     widths, and the sizes currently applied to the commands. -->
+                <!-- One template for both presentations: collapsing moves PART_Content between PART_InlineHost and
+                     PART_PopupHost, preserving the packing panel's variant state. -->
                 <ControlTemplate TargetType="RibbonGroup">
                     <Grid ColumnDefinitions="*,Auto">
                         <Grid Grid.Column="0">
@@ -951,12 +913,8 @@
                         <!-- FillWindow: the backstage takes the window over. KeepOpen because there IS no outside to
                              press - Escape and the back arrow are the ways out. -->
                         <Popup x:Name="PART_Popup" FillWindow="True" KeepOpen="True">
-                            <!-- The whole backstage builds on FIRST OPEN (ChildTemplate), not with the ribbon's
-                                 template: it is a window-sized page plus a row per command, and an application never
-                                 asked for its File page pays for none of it. {Ancestor} rather than {TemplateBinding},
-                                 because a ChildTemplate is built against the POPUP; and rather than a DataContext on
-                                 the popup, because the rows' PAGES bind to the view model and a DataContext here would
-                                 take it from them. -->
+                            <!-- The backstage builds on first open (ChildTemplate). {Ancestor} since the template is
+                                 built against the popup; no DataContext, which the pages need from the view-model. -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
                                   <Grid RowDefinitions="Auto,*">
@@ -969,11 +927,8 @@
 
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*"
                                             Background="{ResourceReference SolidBackgroundFillColorSecondary}">
-                                        <!-- A PANEL, not an accent wall. Fluent paints this whole column in the accent
-                                             colour, which in a 1080-tall window is a two-hundred-pixel band of the
-                                             loudest colour the theme owns. Here it is the raised panel ground with a
-                                             rule down its edge, and the row whose page is open is marked by an accent
-                                             line - the same mark every other selected thing in this theme wears. -->
+                                        <!-- The rail is a raised panel with an edge rule; the open row gets an accent
+                                             line. -->
                                         <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto"
                                                 Width="{Ancestor RibbonApplicationMenu, RailWidth, Logical=True}"
                                                 Background="{ResourceReference SolidBackgroundFillColorTertiary}">
@@ -1542,11 +1497,8 @@
 
     <!-- A plain row of small buttons; no chrome of its own - it sits inside the caption's. -->
     <Style Selector="RibbonQuickAccess">
-        <!-- The ink its icons are drawn with, STATED. Every command in the bar strokes itself with
-             {Ancestor RibbonQuickAccess, Foreground}, so a bar nobody dressed draws a row of buttons in nothing at
-             all - present, sized, and invisible. The caption's instance still overrides this with the title bar's own
-             colour; the instance UNDER the ribbon has no title bar to ask and had no colour of any kind, which is why
-             moving the bar down made it vanish. -->
+        <!-- The icon ink commands read via {Ancestor RibbonQuickAccess, Foreground}; the caption instance overrides it,
+             the one under the ribbon relies on it. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centres what it is given,
              and something that fills the slot has nothing left to centre. -->
@@ -1619,11 +1571,8 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- A DATA item in the bar. Most commands are an icon button; one that brought its OWN compact form (a slider, a
-         drop-down) is drawn by that instead - the bar's selector owns the choice, because an ItemTemplate would win
-         over it and it would never be asked. An authored control is its own container and reaches neither.
-         The theme states the LOOK of the ordinary case only: an application that puts its own selector on the bar to
-         add a case of its own keeps this button for everything else. -->
+    <!-- Data items in the bar: the selector picks a command's own compact form or this icon button (an ItemTemplate would
+         bypass it). -->
     <Style Selector="RibbonQuickAccess">
         <Setter Property="DefaultItemTemplate">
             <Setter.Value>

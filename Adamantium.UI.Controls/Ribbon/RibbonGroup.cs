@@ -104,13 +104,8 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         return size;
     }
 
-    /// <summary>A command in a group can be sent to the quick-access bar, so it is equipped with the menu that asks -
-    /// built HERE, one per command, because a menu has a single <see cref="ContextMenu.PlacementTarget"/> and cannot be
-    /// shared. WHAT is in it is not decided here: it comes from
-    /// <see cref="Ribbon.CommandContextMenuTemplateProperty"/>, which the theme states.
-    /// <para>Only when the command has none of its own. An author who wrote a menu keeps it exactly as written, and adds
-    /// <see cref="RibbonQuickAccessMenuItem"/> to it themselves - a row appearing in someone's menu unasked is worse
-    /// than one they placed.</para></summary>
+    /// <summary>Gives each command without its own context menu one built from
+    /// <see cref="Ribbon.CommandContextMenuTemplateProperty"/>; an author's menu is left as written.</summary>
     protected internal override void PrepareContainer(IUIComponent container, object item)
     {
         base.PrepareContainer(container, item);

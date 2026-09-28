@@ -1,25 +1,7 @@
-// GPU stroke effect (line-rendering Phase B/C). One compute technique (StrokeExpand) turns a polyline + half-thickness
-// into a miter-joined triangle-LIST ribbon written straight into a vertex buffer via a BDA device address, and one
-// graphics technique (StrokeDraw) rasterizes it. Both live in a single .fx so the generator emits one Effect class
-// (StrokeEffect) - no C# wrapper needed. Shader bodies are Slang.
-//
-//   output: one thread per SEGMENT emits a quad as 2 triangles (6 vertices) -> segmentCount * 6 vertices.
-//   open   => PointCount - 1 segments;  closed => PointCount segments (last wraps back to point 0).
-//
-// A triangle LIST (not a strip) keeps segments independent, which is the basis for disjoint dashes and variable
-// per-join fans (round joins) added on top.
-//
-// CAPS ARE A MASK, NOT GEOMETRY. A triangle list can only ADD material, so a cap that has to SUBTRACT (the concave ones
-// bite half a thickness inward) cannot be geometry: whatever else lands in the notch - the next quad, a join disc -
-// fills it straight back in. That overlap was the row of horns on every dash end. Instead every vertex carries its
-// position in the two END FRAMES of its PIECE (a piece = one dash, one trim run, or the whole open contour) plus the
-// cap code at each end, and StrokePS carves them per fragment. Two consequences worth knowing:
-//   - the mask covers the WHOLE piece, joins included, so a corner that falls inside a concave cap's bite is carved by
-//     the same curve as the ribbon instead of poking out of it;
-//   - the frames are STRAIGHT (anchor + tangent at the end), which is what a cap actually is. Measuring the bite along
-//     the CONTOUR instead wraps it around corners, and a round join - whose fragments carry a RADIAL distance, not a
-//     perpendicular one - then turned the bite into a circular hole punched through the dash.
-// Convex caps stay geometry-free too: the quad simply extends past the end and the mask shapes the bulge/tip.
+// GPU stroke: StrokeExpand (compute) writes a polyline's triangle-list ribbon, one quad per segment (open: N-1, closed:
+// N), and StrokeDraw rasterizes it.
+// Caps are a per-fragment mask, not geometry, since concave caps must subtract: each vertex carries its position in the
+// straight end frames of its piece (a dash, trim run or open contour).
 
 // --- StrokeExpand (compute) globals ---
 uint64_t PointsAddress;   // float2[] polyline points (PointCount of them)
@@ -50,11 +32,8 @@ float4x4 Projection;
 float4 StrokeColor;
 
 // --- union coverage (translucent strokes only) ---
-// A translucent ribbon that crosses itself blends twice and leaves dark veins. The fix is to blend ONCE with the
-// coverage of the UNION, and the union's coverage is the MAXIMUM over the pieces that meet on a pixel. Depth carries
-// that maximum: the ribbon is drawn once writing 1 - coverage under a Less test (so the deepest = the most covered
-// wins), then again testing Equal, which lets exactly the winner through. The caller clears depth over the stroke's
-// own bounds first, so the range is known to start at 1.0 and nothing else in the frame has to change.
+// Blend once with the max coverage over overlapping pieces: draw writing depth 1 - coverage (Less), then again with
+// Equal; the caller clears depth over the stroke first.
 
 // The two ends of the piece being emitted: where each one is, which way the contour runs there (dA points INTO the
 // piece, dB OUT of it) and which cap each wears - capStart + 8*capEnd, with 6 meaning "this end is not an end"
@@ -91,14 +70,8 @@ float2 SegmentNormal(float2 a, float2 b)
     return float2(-d.y, d.x);
 }
 
-// Is a join at this turn worth emitting at all? What a missing join leaves is not a shallow dent but a SECTOR: the two
-// per-segment rectangles end on their own perpendiculars through the vertex, so a turn of angle t opens a slit of angle
-// t and radius hw between them, running from the centerline right out to the edge. Its width out there is hw * t - FIRST
-// order in the angle. (Measuring the sagitta hw*(1-cos(t/2)) instead - second order, t^2/8 - is off by 20-50x at the
-// angles a tessellated curve actually turns, and declaring those joins unnecessary made the ribbon fall apart.)
-// A join is skipped only when that slit is under a quarter pixel wide, which on a dense curve it genuinely is - and it
-// is worth skipping there, because a disc is not free: its feathered rim blends over the ribbon it sits in, and that is
-// the join "showing through" a dash.
+// Whether a join is needed: a missing join leaves a slit of width hw * t at the edge (first order in the turn angle t).
+// Skipped only below a quarter pixel, since a join disc's rim shows through a dash.
 bool JoinIsVisible(float2 dIn, float2 dOut)
 {
     float hw = HalfThickness + Fringe * 0.5;
@@ -168,8 +141,7 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
 
 // Position + unit tangent at arc length `target` along the contour. The cut needs the piece's END before it writes the
 // piece's FIRST vertex - a cap that carves inward reaches back over everything in between - and the end is known in arc
-// length long before the walk gets there. No early return: an early exit inside an inlined .fx helper has made the
-// NVIDIA NVVM compiler AV in vkCreateShadersEXT before.
+// length long before the walk gets there.
 void PointAtArc(float target, out float2 pos, out float2 dir)
 {
     float2* points = (float2*)PointsAddress;
@@ -197,18 +169,8 @@ void PointAtArc(float target, out float2 pos, out float2 dir)
     }
 }
 
-// One output vertex = 10 floats: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB).
-//   perp      = signed perpendicular distance from the centerline (a disc's radial distance) -> the ribbon's AA band
-//   u / v     = the vertex in that end's STRAIGHT frame: how far inside the piece (u > 0), and across it
-//   arc       = the same distance to that end, but measured ALONG THE CONTOUR - the cap's REACH
-//   caps      = capStart + 8 * capEnd (6 = no cap on that end)
-// Shape from the frame, extent from the arc, and BOTH are needed - each alone has been tried and is a distinct bug.
-//   * The arc alone cannot shape: it is constant across a join disc, so a bite came out as a circular hole punched
-//     through the dash. `perp` cannot stand in for v either, for exactly the same reason - it is RADIAL on a disc.
-//   * The frame alone cannot bound: its axis is an infinite plane, so where the contour turns back on itself (the far
-//     edge of a thin star spike, a tight U) ribbon that is 20px away along the path lands "behind" the cap and gets
-//     shaved into a hair.
-// All ten are affine in the position along a segment, so they interpolate exactly across a triangle.
+// Vertex: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB); perp drives AA, u/v place it in each end's frame, arc is the
+// distance along the contour, caps = capStart + 8 * capEnd (6 = none). All affine along a segment.
 void WriteVert(float* o, uint vi, float2 p, float perp, float arcA, float arcB, PieceFrame f, float pieceId)
 {
     float2 rA = p - f.A;
@@ -248,12 +210,8 @@ void EmitDegenerateQuad(float* outVerts, uint o, float2 p)
     for (uint q = 0u; q < 6u; ++q) WriteVert(outVerts, o + q, p, 0.0, 1e6, 1e6, none, 0.0);
 }
 
-// Round-join disc at V (radius half, an OPAQUE over-approximation of the corner wedge). Writes triangles at `base`, at
-// most `maxTris`, returns how many it wrote.
-// A disc spans half a thickness EITHER SIDE of its corner, so its arc distances have to advance across it just like the
-// ribbon's do - along the incoming direction on the start side, the outgoing on the end side. Giving the whole disc the
-// corner's own arc puts it wholly inside or wholly outside a cap's reach: park the corner just past that reach and the
-// half of the disc that lies inside the carved notch is left unmasked, and bulges out of the dash end.
+// Round-join disc at V (radius half), at most `maxTris` triangles at `base`; returns the count. Arc distances advance
+// across the disc like the ribbon's, so caps carve it correctly.
 uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, float arcB,
               float2 dIn, float2 dOut, PieceFrame f, float pieceId)
 {
@@ -273,15 +231,8 @@ uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, fl
     return n;
 }
 
-// StrokeExpandCS - CONTINUOUS mode (the dash/trim cut is a SEPARATE kernel, StrokeDashCutCS; merging both into one
-// compute shader reliably tripped the NVIDIA NVVM vkCreateShadersEXT compiler). One thread per POINT: emits the
-// outgoing segment's quad PLUS a per-join fan (round disc / bevel wedge) at its point into a fixed per-point slot
-// (6 + RoundSegments*3 verts) - a deterministic triangle LIST, no atomics, plain Draw.
-//   - MITER joins: a continuous bisector ribbon (constant width, spike clamped); the fan slot stays empty.
-//   - BEVEL/ROUND joins: each segment is a full-width rectangle offset by its OWN perpendicular normal (so the stroke
-//     never pinches at a corner the way a shared, pulled-back bisector point would), and the fan fills the corner wedge:
-//     a disc (round) or two triangles (bevel).
-// The piece here is the whole contour: an open one is capped at its two ends, a closed loop has no ends at all.
+// StrokeExpandCS, continuous mode (dash/trim is StrokeDashCutCS): one thread per point writes its segment quad and join
+// fan into a fixed slot. Miter joins use a bisector ribbon; bevel/round use per-segment rectangles plus a wedge or disc.
 [shader("compute")]
 [numthreads(64, 1, 1)]
 void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
@@ -413,12 +364,8 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
     }
 }
 
-// Emits the BEVEL/ROUND join between two dash quads at corner V (the dash crosses the corner): round = a disc, bevel =
-// a both-sided corner wedge. nInU/nOutU are the UNIT normals of the incoming / outgoing segments. MITER is NOT emitted
-// here - the dash quad ends are mitred onto the shared bisector offset (like StrokeExpandCS), so its corner already
-// meets with constant width and needs no wedge.
-// The join belongs to the dash PIECE that crosses it and carries that piece's frame, so a corner falling inside a
-// concave cap's bite is carved by the same curve as the ribbon instead of poking out of the notch.
+// The bevel/round join where a dash crosses corner V (miter needs none), carrying the piece's frame so caps carve it
+// like the ribbon.
 uint EmitJoin(float* outVerts, uint vCount, uint maxV, float2 V, float2 dIn, float2 dOut,
               float arcA, float arcB, PieceFrame f, float pieceId)
 {
@@ -458,11 +405,8 @@ float PieceCaps(float pieceStart, float pieceEnd, float tStart, float tEnd)
     return float(capS + 8u * capE);
 }
 
-// StrokeDashCutCS - DASH/TRIM mode, a SEPARATE compute kernel (see StrokeExpandCS note re: the NVVM compiler). A
-// single thread walks the contour by arc length, applies the trim window and dash pattern, emits a quad per visible
-// piece AND a join at every corner the dash crosses, and writes the vertex count into the VkDrawIndirectCommand for
-// DrawIndirect.
-// Zero per-frame CPU work: dashes/trim/caps are uniforms; the CPU only uploaded the raw contour + the pattern once.
+// StrokeDashCutCS, dash/trim mode: one thread walks the contour by arc length, emits visible pieces and their joins, and
+// writes the vertex count for DrawIndirect.
 [shader("compute")]
 [numthreads(1, 1, 1)]
 void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
@@ -506,11 +450,8 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     float pieceStart = -1e30;
     float pieceEnd = 1e30;
     if (PatternCount > 0u && on) { pieceStart = -(pattern[pi] - rem); pieceEnd = rem; }
-    // A CLOSED contour with no trim window has no ends at all, so a run that crosses the seam must NOT be clamped to it:
-    // the walk still emits it as two pieces (arc runs 0..total), but both keep the run's TRUE arc bounds - one starting
-    // before 0, the other ending past total. Their caps then sit outside the walk and the arc gate leaves the seam
-    // alone, so the dash crosses it whole. Clamping put a cap on each side of the seam instead: two concave bites
-    // face to face, gouging the one corner the arc length happens to start at.
+    // An untrimmed closed contour has no ends: a run crossing the seam keeps its true arc bounds, so no caps appear at the
+    // seam.
     bool wraps = (IsClosed != 0u) && (TrimStart <= 0.0) && (TrimEnd >= 1.0);
     pieceStart = wraps ? pieceStart : max(pieceStart, tStart);
     pieceEnd = wraps ? pieceEnd : min(pieceEnd, tEnd);
@@ -665,18 +606,8 @@ PSInput StrokeVS(VSInput input)
     return o;
 }
 
-// Signed distance to a cap's boundary. `u` = how far the fragment lies inside the piece along that end's straight axis
-// (the SHAPE), `arc` = the same distance measured along the CONTOUR (the REACH), `v` = the fragment's distance across
-// the stroke. Positive = painted. The six caps are six boundary curves on the same ribbon - the convex ones reach OUT
-// past the end, the concave ones bite IN - and being a distance, each feathers with the ribbon's own AA.
-//
-// The arc gate is LOAD-BEARING and cannot be replaced by anything the axis knows. A straight axis is an infinite plane,
-// and a contour that turns back on itself - the far edge of a thin star spike, a tight U - puts ribbon that is 20px
-// away ALONG THE PATH "behind" the cap, which then shaves it into a hair. Nothing more than a cap's own reach along the
-// contour can be part of that cap.
-// `hBite` is the CONCAVE forms' depth: a cap may not eat past the middle of its own piece, or a dash shorter than a
-// thickness is consumed by its two caps and leaves only the slivers at the ribbon's edges. The convex forms keep the
-// full half-thickness - their bulge is what makes a zero-length dot render as a circle.
+// Signed distance to a cap boundary (positive = painted) from u (along the end's axis), v (across) and arc (along the
+// contour, which gates caps where the path folds back). hBite caps concave bites at mid-piece.
 float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
 {
     if (cap == 6u) return 1e9;                                    // this end is not an end (interior join, closed loop)
@@ -689,12 +620,8 @@ float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
     return u;                                                     // flat
 }
 
-// Analytic AA: coverage from the signed distance to the nearest boundary - the ribbon's two long edges (|v| vs
-// HalfThickness) and the piece's two caps. 1 in the core, 0.5 on the nominal boundary, 0 a feather past it.
-// Fringe == 0 (analytic AA off) => a hard edge, the mask still shapes the caps.
-// A concave cap may not eat past the middle of its own piece - hBite is that limit.
-// ONE function for all three passes: the union passes compare their depths for EQUALITY, so both must reach the same
-// value down to the bit, which only a shared body guarantees.
+// Analytic AA coverage from the nearest boundary (edges and caps); Fringe == 0 gives hard edges. Shared by all three
+// passes so their depths match bit for bit.
 float StrokeCoverage(PSInput input)
 {
     uint caps = uint(round(input.Cap1.x));
@@ -706,11 +633,8 @@ float StrokeCoverage(PSInput input)
     return Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
 }
 
-// The depth a fragment claims: coverage in the high 8 bits (more coverage = deeper, so a Less test over a 1.0-cleared
-// range settles on the MAXIMUM), the piece serial in the low 16. The whole thing is an integer below 2^24 scaled by a
-// power of two, so a 32-bit float holds it EXACTLY and both passes reach the same bits - which is what an Equal test
-// needs. The serial is what makes it injective: without it two pieces covering a pixel equally (a crossing covers both
-// fully) would both match, and blend twice - the very thing being fixed.
+// Depth = coverage in the high 8 bits and piece id in the low 16, exact in float32, so max coverage wins and ties never
+// blend twice.
 float CoverageDepth(float coverage, float pieceId)
 {
     float covered = round(saturate(1.0 - coverage) * 255.0);

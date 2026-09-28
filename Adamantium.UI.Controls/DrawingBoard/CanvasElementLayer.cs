@@ -8,13 +8,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Where the CONTROLS on an <see cref="InfiniteCanvas"/> live: a layer that places each one at the rectangle
-/// its <see cref="ElementItem"/> claims in the world, turned into screen pixels by the camera.
-/// <para>A layer rather than the canvas placing them itself, because a control has to be a real child of something to
-/// be laid out, drawn and given input at all - which is the whole point of putting one here instead of drawing a
-/// picture of it.</para>
-/// <para>Panning and zooming re-ARRANGE it and nothing more: the size a control was measured at only changes when its
-/// own rectangle does, so the camera never re-measures what is inside one.</para></summary>
+/// <summary>Places the controls on an <see cref="InfiniteCanvas"/> at their <see cref="ElementItem"/> rectangles in screen
+/// pixels. Panning and zooming only re-arrange; they never re-measure.</summary>
 public class CanvasElementLayer : Panel
 {
     private readonly List<ElementItem> _items = new();
@@ -75,12 +70,8 @@ public class CanvasElementLayer : Panel
         InvalidateMeasure();
     }
 
-    /// <summary>Puts each hosted control in or out of the pointer's reach, by what it IS.
-    /// <para>A button, a field, a box: editing, it is invisible to the pointer so that a press lands on the plane and
-    /// the tool picks it up - a press cannot both operate one and drag it.</para>
-    /// <para>A NODE is the exception. What is in one is a field, a switch, a list, and a node whose contents cannot be
-    /// clicked is a picture of a node - so it stays live whatever the mode, and is dragged by its title strip. That
-    /// press is the only one this layer forwards, in <see cref="OnPressed"/>.</para></summary>
+    /// <summary>Puts hosted controls out of the pointer's reach while editing, so the tool gets the press; nodes stay live and
+    /// are dragged by their title strip (<see cref="OnPressed"/>).</summary>
     internal void ApplyDesignMode()
     {
         var editing = Owner is { IsDesignMode: true };
@@ -92,16 +83,8 @@ public class CanvasElementLayer : Panel
 
     }
 
-    // WHICH OF THE TWO a press on a node means, decided here because this is the last place that can decide it: the
-    // press bubbles on to the canvas, and a canvas that also heard it would pick the node up while the field inside it
-    // was being typed in.
-    //
-    // A bubbling handler and not one per node: a press lands on whatever is actually under the pointer - a strip, a
-    // socket, a presenter, a button three levels inside the content - and only the node can say which of those is a
-    // handle.
-    //
-    // The RIGHT button is left alone on purpose: it puts the tool back, and that means the same thing over a node as
-    // anywhere else on the plane.
+    // Decides whether a press on a node drags it or operates its content, before it bubbles to the canvas; the node says
+    // which part is a handle. The right button is left alone.
     private void OnPressed(object sender, MouseButtonEventArgs e)
     {
         if (e.Handled || Owner == null || e.ChangedButton != MouseButtons.Left) return;
@@ -196,14 +179,8 @@ public class CanvasElementLayer : Panel
 
             if (Children[i] is not IUIComponent visual) continue;
 
-            // A CONTROL CANNOT BE SMALLER THAN IT CAN BE, and the item has to say so - the floor is the control's own
-            // (a theme's MinWidth, its content) and the camera changes none of it. Dragged out at 8x, a box 200 screen
-            // pixels wide is 25 in the world, which a field refuses: it stood at 120 and drew eight times that, while
-            // the frame and every hit stayed on the 25 nobody could see. Read after the arrange, because that is where
-            // a floor shows - a measure answers within what it was offered.
-            //
-            // A control TOLD what size to be is left alone: that size is the application's word, not a floor, and the
-            // item's box stays what it was given.
+            // Grow the item to a control's own floor (MinWidth, content), read after arrange; a size set by the application
+            // is left alone.
             if (!_items[i].SizeFollowsContent && Free(visual)
                 && (visual.RenderSize.Width > world.Width + 0.5 || visual.RenderSize.Height > world.Height + 0.5))
             {

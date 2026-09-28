@@ -10,15 +10,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="KeyTipAdorner">
-                    <!-- The three colours are the palette's (KeyTipPlateFill / KeyTipPlateStroke / KeyTipForeground) and
-                         are their OWN tokens: a badge is read over whatever it lands on - the band, an icon, the accent
-                         of an active tab - so no fill or text colour of the ordinary ramp suits it. Each palette states
-                         a plate that CONTRASTS with its own surface (light on the dark theme, dark on the light one),
-                         which is the only way a badge does not go missing against the background it happens to cover.
-                         Opaque throughout: a see-through badge over a glyph is unreadable at 12px. -->
-                    <!-- One SIZE for every badge, not one per glyph: a plate that hugs its letter comes out a different
-                         width for F, H and M, and a row of them reads as noise. A minimum square holds a single
-                         character; two characters widen it and no more. -->
+                    <!-- Opaque badge in dedicated KeyTip* palette tokens that contrast with any surface; a minimum square
+                         so single letters share one size. -->
                     <Border Background="{ResourceReference KeyTipPlateFill}"
                             BorderBrush="{ResourceReference KeyTipPlateStroke}"
                             BorderThickness="1"

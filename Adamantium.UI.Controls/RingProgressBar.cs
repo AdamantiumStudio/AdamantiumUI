@@ -7,14 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Circular progress gauge over a [<see cref="RangeBase.Minimum"/>, <see cref="RangeBase.Maximum"/>] range: a dim full
-/// ring under an accent arc swept to the filled <see cref="Percentage"/>. Always square - it derives the missing side
-/// from the one the consumer set, so sizing by only Width OR only Height still gives a round ring. Circle-specific knobs:
-/// <see cref="RingThickness"/>, an optional centred percentage label (<see cref="ShowValueText"/>), the arc's
-/// <see cref="StartPosition"/> (which clock position 0% sits at) and its sweep <see cref="Direction"/>. The linear
-/// variant is <see cref="ProgressBar"/>.
-/// </summary>
+/// <summary>A circular progress gauge: an accent arc swept to <see cref="Percentage"/> over a dim ring. Always square;
+/// setting only Width or Height is enough. The linear variant is <see cref="ProgressBar"/>.</summary>
 public class RingProgressBar : RangeBase
 {
     private Ellipse _indicator;      // PART_Indicator - the accent arc swept to Percentage
@@ -112,11 +106,8 @@ public class RingProgressBar : RangeBase
         if (d is RingProgressBar r) r.ApplyArcTransform();
     }
 
-    // Rotate the arc's 0% end (natively 3 o'clock) to StartPosition, and flip it vertically for the direction that is NOT
-    // the native one. Which one that is was measured, not assumed: an Ellipse swept 0..90 fills from the right edge to the
-    // BOTTOM (UI space has y down), so its native winding is CLOCKWISE and CounterClockwise is the mirrored one - this had
-    // it the other way round and reversed both settings. The flip keeps the on-axis 3 o'clock start fixed, so the same
-    // rotation still applies either way. Pinned by RingProgressBarDirectionTests.
+    // Rotate the arc's 0% end (natively 3 o'clock) to StartPosition; flip vertically for CounterClockwise, since the
+    // native winding is clockwise with y down.
     private void ApplyArcTransform()
     {
         if (_startRotate == null) return;

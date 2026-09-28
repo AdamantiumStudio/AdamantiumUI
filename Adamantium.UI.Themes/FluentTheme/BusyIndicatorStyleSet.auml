@@ -2,14 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The indicator with NO class: what a control shows when nobody asked for a particular effect. Fluent's is a
-         sweeping arc over a dim ring.
-
-         This file used to hold nine class variants as well (Dots, Bar, Ripple, Arc, Ants, Shimmer, Flip, Equalizer,
-         Heartbeat). They are not this theme's opinion about anything - they are effects an application asks for BY
-         NAME, built from keys every theme answers - and they lived here AND in Editor Pro, in two copies that differed
-         by nothing but line breaks. They now live once, in Shared/BusyEffectsStyleSet, which every theme includes.
-         What is left here is the part that really is Fluent's: the plain one. -->
+    <!-- The classless indicator: a sweeping arc over a dim ring. Named variants live in Shared/BusyEffectsStyleSet. -->
 
     <Style Selector="BusyIndicator">
         <Setter Property="Width" Value="{ResourceReference BusySize}"/>

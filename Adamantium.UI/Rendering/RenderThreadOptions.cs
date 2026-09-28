@@ -2,7 +2,7 @@ namespace Adamantium.UI.Rendering;
 
 /// <summary>
 /// Rendering ALWAYS runs on a dedicated render thread: the loop thread does Update + device-free RECORD, the render thread
-/// does the GPU APPLY + Render + Present from a double-buffered packet (docs/RENDER_THREAD_PLAN.md, Phase 3.3). The record
+/// does the GPU APPLY + Render + Present from a double-buffered packet. The record
 /// runs at loop level; the render thread is spawned at startup.
 /// </summary>
 public static class RenderThreadOptions

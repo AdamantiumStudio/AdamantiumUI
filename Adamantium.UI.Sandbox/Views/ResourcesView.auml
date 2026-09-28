@@ -123,14 +123,7 @@
         </StackPanel>
 
         <!-- ═══ Theme SCOPE stand ═══════════════════════════════════════════════════════════════════════════════
-             Four panes, each showing a different VARIANT of the theme at the same time. What to look for:
-
-               1. the panes differ from each other - one palette cannot hold two variants at once, so a variant that is
-                  not the one the theme is currently showing resolves to a sibling with its own brushes;
-               2. toggling the APPLICATION's light/dark above re-colours the rest of this tab and leaves the first two
-                  panes alone - they name their variant, so nothing else decides it for them;
-               3. the third pane follows the OPERATING SYSTEM (change light/dark in the OS settings);
-               4. the fourth changes only when its OWN checkbox does. -->
+             Four panes on different variants: two pinned, one following the OS, one following its own checkbox. -->
         <TextBlock Text="Theme scope — a subtree with a variant of its own" FontSize="18" Margin="0,28,0,4"/>
         <TextBlock Text="Each pane names its own variant, so toggling the application's light/dark above leaves them where they are."
                    Margin="0,0,0,10"/>

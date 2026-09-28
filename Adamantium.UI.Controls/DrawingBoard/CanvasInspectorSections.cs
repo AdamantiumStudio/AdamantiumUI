@@ -9,13 +9,8 @@ public class CanvasSectionSets : TrackingCollection<CanvasSectionSet>
 {
 }
 
-/// <summary>What a canvas's inspector SHOWS - a list of <see cref="CanvasSectionSet"/>, each saying which kind of thing
-/// its lines belong to.
-/// <para>The default one ships with the themes as a shared resource; an application declares its own and the canvas
-/// lays it over the default - see <see cref="InfiniteCanvas.InspectorSections"/>. So putting something new on the plane
-/// costs the lines it is set by, and nothing else: no flag on the panel, no edit to three themes.</para>
-/// <para>ORDER is part of what is being said: the sections come out in the order they were written, general before
-/// particular, so a rectangle shows what every shape has and then its own corners.</para></summary>
+/// <summary>What a canvas's inspector shows: <see cref="CanvasSectionSet"/>s in written order, general before particular.
+/// An application's own list is laid over the theme default (<see cref="InfiniteCanvas.InspectorSections"/>).</summary>
 [PerTarget]
 public class CanvasInspectorSections : AdamantiumComponent
 {
@@ -23,11 +18,8 @@ public class CanvasInspectorSections : AdamantiumComponent
     [Content]
     public CanvasSectionSets Sets { get; } = new();
 
-    /// <summary>The sections that belong to a thing of these names, in order.
-    /// <para>Every set whose <see cref="CanvasSectionSet.For"/> is empty or matches one of the names, which is how a
-    /// rectangle gets both what every shape has and what only a rectangle has. The caller says which names it means -
-    /// for something on the plane that is its class and its <see cref="ICanvasItem.Sort"/>, for a tool its
-    /// <see cref="ICanvasTool.Name"/>.</para></summary>
+    /// <summary>The sections, in order, whose <see cref="CanvasSectionSet.For"/> is empty or matches one of the names (an
+    /// item's class and <see cref="ICanvasItem.Sort"/>, or a tool's <see cref="ICanvasTool.Name"/>).</summary>
     public IReadOnlyList<PropertySection> For(IReadOnlyList<string> names)
     {
         var found = new List<PropertySection>();
@@ -42,11 +34,8 @@ public class CanvasInspectorSections : AdamantiumComponent
         return found;
     }
 
-    /// <summary>This list with another laid OVER it: a set naming something the first already covers replaces it, a set
-    /// naming something new is added after.
-    /// <para>What lets an application say only its own part. Replacing wholesale is still open to it - it declares a
-    /// resource under the default's own key - but the ordinary case is one more kind of thing, and that must not cost a
-    /// copy of the panel.</para></summary>
+    /// <summary>This list with another laid over it: a set for something already covered replaces it, a new one is added
+    /// after.</summary>
     public CanvasInspectorSections With(CanvasInspectorSections other)
     {
         if (other == null || other.Sets.Count == 0) return this;

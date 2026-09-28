@@ -4,12 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>Fills a shape with a <see cref="Drawings.Drawing"/> - shapes, text and pictures authored in markup rather
-/// than loaded from a file. WPF's <c>DrawingBrush</c>. Everything about tiling and fitting is
-/// <see cref="TileBrush"/>'s; what this adds is only where the content comes from.
-/// <para>The drawing is handed on as a <see cref="Imaging.DrawingImage"/>, which is what the render paths already know
-/// how to draw and to bake. A brush that reimplemented that would be a second way to draw the same drawing, and the
-/// two would drift.</para></summary>
+/// <summary>Fills with a <see cref="Drawings.Drawing"/> authored in markup, rendered through a
+/// <see cref="Imaging.DrawingImage"/>; tiling and fitting come from <see cref="TileBrush"/>.</summary>
 public sealed class DrawingBrush : TileBrush
 {
     // PAINT: the drawing fills the shape it is given, so swapping it re-colours the same pixels and never touches layout.

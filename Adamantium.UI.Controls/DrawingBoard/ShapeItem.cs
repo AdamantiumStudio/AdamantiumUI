@@ -9,11 +9,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A rectangle, an ellipse, a line, an arrow or a regular polygon on the plane: a box in WORLD units with a
-/// fill and an outline.
-/// <para>One type for all three because they are the same thing to everything around them - something with a box that
-/// can be moved, resized, hit and drawn. Which is also why a resize here is one field and not a walk: unlike a stroke,
-/// a shape IS its box.</para></summary>
+/// <summary>A rectangle, ellipse, line, arrow or regular polygon: a world-unit box with a fill and an outline. The shape is
+/// its box, so a resize is one field.</summary>
 public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
 {
     private CanvasArrowBrush _paint;
@@ -65,12 +62,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     /// a shape drawn by hand on the plane.</summary>
     public ICanvasObject Model { get; internal set; }
 
-    /// <summary>The box it occupies, in WORLD units - the shape itself, without its outline. Always the right way round:
-    /// a box dragged out upwards and to the left is the same box as one dragged down and to the right, and everything
-    /// downstream may assume it.
-    /// <para>For a shape standing for an application's object this IS that object's box, read and written straight
-    /// through - one storage, so a shape dragged on the plane and a shape moved from a field are one thing happening.
-    /// </para></summary>
+    /// <summary>Its normalized box in world units, without the outline; for an application object it reads and writes that
+    /// object's own box.</summary>
     public Rect World
     {
         get => Model == null ? _world : new Rect(Model.Left, Model.Top, Model.Width, Model.Height);
@@ -233,22 +226,12 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     /// <summary>Where it stands in paint order - stamped by the scene. See ICanvasItem.Order.</summary>
     public int Order { get; set; }
 
-    /// <summary>WHAT THIS IS: the shape, not the class - "Rectangle", "Ellipse", "Polygon", "Arrow", "Line".
-    /// <para>A panel asking what a thing is means the shape: corners belong to a rectangle, a side count to a polygon,
-    /// heads to an arrow, and one name covering all five would answer none of them. See
-    /// <see cref="ICanvasItem.Sort"/>; the class name still matches every shape, which is where what they share
-    /// lives.</para></summary>
+    /// <summary>The shape's own name ("Rectangle", "Arrow"), so the inspector shows its specific lines; see
+    /// <see cref="ICanvasItem.Sort"/>.</summary>
     public string Sort => Shape.ToString();
 
-    /// <summary>The box it occupies - the box itself, outline included, because the outline is drawn INSIDE it.
-    /// <para>It used to be the box grown by half the thickness, on the reasoning that a pen straddles the path it
-    /// follows. True of a pen and wrong for a shape somebody sized: making the outline thicker then made the shape
-    /// BIGGER, and a rectangle dragged out to a size quietly outgrew it. A shape IS its box; a fatter outline eats
-    /// inwards.</para>
-    /// <para>A LINE and an ARROW are the exception, and not a small one: their box is a DIAGONAL, which has no width at
-    /// all - a horizontal arrow's box is a rectangle of zero height. The stroke straddles it and the heads reach well
-    /// past its ends, so the box is nothing like what is drawn, and a frame taken from it is drawn inside the shape it
-    /// is supposed to be around.</para></summary>
+    /// <summary>Its box, outline included since the outline is drawn inside; for a line or arrow, what the stroke and heads
+    /// actually reach.</summary>
     public Rect Bounds => IsRun ? Reach() : World;
 
 
@@ -507,11 +490,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
                     break;
                 }
 
-                // The shaft stops at each head's BASE. It used to run tip to tip, on the reasoning that the difference
-                // is a fraction of a pixel under a head of the same colour - and that is true of a hairline and wrong
-                // of anything thicker. A stroked line ends in a ROUND cap, so half a thickness of shaft sticks out past
-                // the tip the head points at: at a thickness of forty that is a stub poking out of the arrowhead, and
-                // what the eye reads is not a long shaft but a head set too far back.
+                // The shaft stops at each head's base, so its round cap does not poke past a thick arrow's tip.
                 session.DrawLine(Base(from, to, StartHead, width), Base(to, from, EndHead, width), pen);
 
                 Head(session, to, from, EndHead, width, pen);
@@ -598,12 +577,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         to = Reversed ? start : finish;
     }
 
-    // The box and the two bits that hold a line running between these two points. The box is normalised, so the points
-    // themselves cannot be stored: this is what turns them back into one.
-    //
-    // INTERNAL, because the tool that drags a shape out has the same two points and must arrive at the same three
-    // values. It used to set the box and the lean by hand and leave Reversed alone, so a fresh arrow dragged up and to
-    // the left put its head back where the drag STARTED - pointing at the hand instead of away from it.
+    // Sets the normalized box plus the lean and direction bits for a line between two points; the drag tool uses it too.
     internal void SetEnds(Vector2 from, Vector2 to)
     {
         World = new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y),
@@ -621,13 +595,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     // The whole run - shaft and both heads - as ONE quad whose fragments decide the shape. Returns false when the run
     // cannot be painted that way and the geometry below has to draw it after all: a turn is applied to a geometry and a
     // fill that is not a plain colour says nothing about where a line is.
-    /// <summary>Whether a run goes through the ARROW PASS - one quad, the whole shape decided per pixel - rather than
-    /// being built as a stroked line and a mesh per head.
-    /// <para>On, and here to be turned off. Creating a shader object is <c>vkCreateShadersEXT</c>, it happens the first
-    /// time a pass is used, and a driver that will not have it takes an access violation there - which cannot be
-    /// caught, so the application dies on the first arrow drawn rather than drawing it some other way. This driver was
-    /// asked directly and agreed (see UiShaderCreationTests); one that does not can be given the geometry back.</para>
-    /// </summary>
+    /// <summary>Whether lines and arrows draw through the one-quad arrow pass rather than a stroked line plus a mesh per head.</summary>
     public static bool PaintsRuns = true;
 
     private bool PaintRun(IDrawingSession session, Vector2 from, Vector2 to, double width)
@@ -661,14 +629,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         return true;
     }
 
-    // Where the shaft stops at an end that wears a head, which is NOT the same answer for the two kinds.
-    //
-    // A TRIANGLE is filled from its base to its tip, so the shaft stops at the base and the fill covers the join.
-    // BARBS are two strokes and nothing else - there is no fill at the base to cover anything, so a shaft stopped there
-    // hangs in the air with a gap between it and its own head. It has to reach the TIP.
-    //
-    // ...but stop half a thickness short of it, because a stroked end is ROUND: the cap then lands exactly on the tip
-    // instead of half a thickness past it, which is the stub that read as a head set too far back.
+    // Where the shaft stops at a headed end: at a triangle's base, or half a thickness short of a barbed head's tip so the
+    // round cap lands on it.
     private Vector2 Base(Vector2 tip, Vector2 tail, CanvasArrowHead kind, double width)
     {
         if (kind == CanvasArrowHead.None) return tip;
@@ -697,14 +659,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         if (kind == CanvasArrowHead.None) return;
         if (!ArrowHead.Points(from, tip, width, HeadLength, HeadWidth, out var left, out var right)) return;
 
-        // A NEW geometry each time, and this is the whole of it: a drawing holds what it is handed BY REFERENCE and
-        // turns it into a mesh later, so a geometry kept and reopened is one the renderer may be reading exactly while
-        // it is being rewritten. What that looks like is a head drawn where the arrow used to be and a flicker whenever
-        // anything moves - which is what it did.
-        //
-        // What this costs is one small object per head per RECORD, and a record happens when something changed, not
-        // every frame. What it buys is that nothing the renderer holds is ever written to again. The mesh cache is
-        // keyed by CONTENT and not by identity, so a head that has not actually moved still costs nothing to draw.
+        // A new geometry per record: the renderer holds geometries by reference, and rewriting one it reads flickers. The
+        // mesh cache is keyed by content, so an unchanged head costs nothing.
         var geometry = new StreamGeometry();
         var figure = geometry.Open();
 
@@ -760,12 +716,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         return new Rect(cx - rx, cy - ry, rx * 2, ry * 2);
     }
 
-    /// <summary>A POLYGON's corners, in world units - where they actually are, which is on the ellipse the shape is
-    /// fitted into rather than on the one its box holds. Empty for every other shape: a rectangle and an ellipse are
-    /// said by their box and have no corner list to give.
-    /// <para>Here rather than worked out by whoever needs it: the fitting is a rule with a reason behind it, and a
-    /// second statement of it somewhere else is a second rule that drifts. Written out to a file, this is what makes a
-    /// hexagon land in a stranger's viewer exactly where it sits here.</para></summary>
+    /// <summary>A polygon's corners in world units, as fitted into its box; empty for other shapes. The one statement of the
+    /// fitting rule, used for export too.</summary>
     public IReadOnlyList<Vector2> Outline
     {
         get

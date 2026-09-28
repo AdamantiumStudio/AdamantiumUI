@@ -4,12 +4,7 @@ namespace Adamantium.UI.Core;
 
 public static class TypeCastFactory
 {
-    /// <summary>Reads an enum value from markup, combined flags included: <c>"FirstLast|Numeric"</c> and
-    /// <c>"FirstLast,Numeric"</c> both mean the same set.
-    /// <para>The pipe is the form an author reaches for, because it is how the same value is written in C#, and .NET's
-    /// own parser accepts only the comma - so a markup file written the natural way threw from inside the loader
-    /// instead of setting the property. One entry point for every reader, so the two spellings cannot be accepted in
-    /// one place and rejected in the next.</para></summary>
+    /// <summary>Reads an enum value from markup; flags may be combined with <c>|</c> or <c>,</c>.</summary>
     public static object ParseEnum(Type enumType, string text) =>
         Enum.Parse(enumType, text.Replace('|', ','), ignoreCase: true);
 

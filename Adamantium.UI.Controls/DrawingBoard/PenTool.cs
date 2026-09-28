@@ -5,11 +5,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Ink. Free, the button draws a stroke that is smoothed when it is lifted; snapped to the grid it places
-/// VERTICES and the line runs straight from one to the next until a double click ends it.
-/// <para>Those really are two gestures and not one with a setting, because a snap says where the points ARE: everything
-/// a freehand drag would record between two marks is exactly what the snap says is not there. So under a snap there is
-/// nothing to smooth either - every vertex is somewhere that was aimed at.</para></summary>
+/// <summary>Ink: a freehand stroke smoothed on release, or, snapped to the grid, straight segments between placed vertices
+/// until a double click.</summary>
 public class PenTool : ICanvasTool
 {
     // How far the pointer must move, in SCREEN pixels, before a freehand stroke takes another point. A pointer reports

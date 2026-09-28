@@ -7,11 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>ONE ORDER FOR EVERYTHING ON THE PLANE. A control and a drawn thing stand in the same queue, and "bring to
-/// front" moves either of them past the other - a stroke over a picture, a picture over a stroke.
-/// <para>What that costs is layers: a control has to be a real child of one to be laid out, drawn and clicked, and a
-/// layer is one place in paint order. So the canvas cuts a layer per RUN of neighbours of the same sort - not per
-/// item, which is what keeps a plane of ten thousand things affordable.</para></summary>
+// Controls and drawn items share one paint order; the canvas cuts a layer per run of same-sort neighbors, not per item.
 [TestFixture]
 public class CanvasOrderTests
 {

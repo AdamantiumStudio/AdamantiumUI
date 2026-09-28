@@ -8,13 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Handing a live control to a NEW parent without taking it out of the old one first. Every control-level move does
-/// this - an items presenter builds a fresh items panel and fills it with the containers the previous panel still
-/// lists, a docking rebuild moves tabs between groups - so the answer decides whether one control can end up being laid
-/// out twice, by two parents, at two different places.
-/// <para>Companion to <see cref="VisualChildDetachTests"/>, which covers the tidy path (remove, then add).</para>
-/// </summary>
+// Adding a live control to a new parent without removing it from the old one leaves it with exactly one parent (see
+// VisualChildDetachTests for remove-then-add).
 [TestFixture]
 public class VisualChildReparentTests
 {

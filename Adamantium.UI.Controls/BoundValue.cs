@@ -6,11 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>One value, produced by a real <see cref="BindingBase"/> against one object - the ONLY way an inspector row
-/// or a grid cell reads and writes a value. The declared binding is cloned per object and applied here, so converters,
-/// <c>StringFormat</c>, <c>MultiBinding</c> and validation all come with it, which a member name could not carry.
-/// <para>A <see cref="FundamentalUIComponent"/> so it can join the row's logical tree - a binding that reads an
-/// ancestor then resolves like any other.</para></summary>
+/// <summary>One value produced by a real <see cref="BindingBase"/> against one object - how an inspector row or grid cell
+/// reads and writes, with converters and validation included. Joins the row's logical tree.</summary>
 internal sealed class BoundValue : FundamentalUIComponent
 {
     /// <summary>Two-way by default, so an editor writing here reaches the object without every binding in every

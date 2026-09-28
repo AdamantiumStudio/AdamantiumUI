@@ -52,11 +52,8 @@
         </Setter>
     </Style>
 
-    <!-- ScrollBarPageButton (the trough/page areas of a ScrollBar and a Slider's Track): a RepeatButton SUBTYPE that must
-         be INVISIBLE but hit-testable (click the trough to page). Style matching is IS-A, so the RepeatButton chrome above
-         now bleeds onto this subtype (it used to stay untouched under exact-type matching); reset it to a fully transparent,
-         border-less region. The hover/press brushes must be transparent too, or the RepeatButton triggers below would tint
-         the trough on hover. A UIComponent still hit-tests its box with a transparent Background, so paging keeps working. -->
+    <!-- Trough page areas (ScrollBarPageButton, a RepeatButton subtype) stay invisible but hit-testable, with state
+         brushes cleared too so hover does not tint them. -->
     <Style Selector="ScrollBarPageButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

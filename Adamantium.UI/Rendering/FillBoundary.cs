@@ -5,14 +5,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// Extracts the RESOLVED fill boundary (the outline of what is actually painted, holes included) from a tessellated fill
-/// mesh, as closed point loops. The analytic-AA fringe needs THIS - not the raw path contours - so that a self-
-/// intersecting shape (a pentagram) or a shape with holes gets its inner edges feathered too: the tessellator already
-/// resolved the fill (even-odd / non-zero) into triangles, so the boundary between filled and un-filled is exactly the
-/// set of triangle edges that belong to a SINGLE triangle. Chaining those boundary edges gives the outer outline plus one
-/// loop per hole; the fringe's own even-odd nesting then feathers holes inward and outers outward.
-/// </summary>
+// Extracts the painted outline of a tessellated fill as closed loops (edges owned by a single triangle), so the AA
+// fringe also feathers holes and self-intersections.
 internal static class FillBoundary
 {
     // Positions are quantised (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -

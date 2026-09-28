@@ -40,11 +40,8 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
-                        <!-- A GRID, not a stack: the middle track is starred, so when a tab is given MORE room than its
-                             content needs - a lone document filling its strip (TabControl.StretchSingleTab) - the extra
-                             goes to the header and the close button stays against the right edge. Stacked, the button
-                             sat glued to the end of the text with the whole rest of the strip empty after it. A
-                             content-sized tab is unchanged: the starred track is then exactly the header's width. -->
+                        <!-- A starred header track, so a stretched tab (StretchSingleTab) keeps its close button at the
+                             right edge. -->
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
                             <!-- What marks the tab, drawn from DATA by IconTemplate. Collapsed by default and revealed by
                                  the HasIcon trigger below: an empty presenter measures to nothing, but its MARGIN is

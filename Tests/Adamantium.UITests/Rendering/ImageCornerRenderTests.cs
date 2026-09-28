@@ -11,11 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>A PICTURE'S ROUNDED CORNER. It used to be cut out of the MESH - an arc broken into segments - so the edge
-/// came out visibly stepped while a rounded rectangle beside it, cut by the SDF per fragment, was smooth. No amount of
-/// tessellation fixes that: the edge stays hard whatever the segment count.
-/// <para>A GPU test because nothing on the CPU can tell a stepped edge from a faded one - only the pixels across the
-/// corner say which was drawn.</para></summary>
+// A picture's rounded corner is cut per fragment (smooth), not by a tessellated arc; checked in pixels on the GPU.
 [TestFixture]
 [Category("Gpu")]
 public class ImageCornerRenderTests

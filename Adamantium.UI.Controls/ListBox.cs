@@ -12,18 +12,9 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A <see cref="Selector"/> with selectable items. Each item is hosted in a <see cref="ListBoxItem"/> container
-/// (generated + recycled like any ItemsControl). The primary selection (<see cref="Selector.SelectedItem"/> /
-/// <see cref="Selector.SelectedIndex"/>) comes from the base; ListBox widens it to a full set via
-/// <see cref="SelectedItems"/> + <see cref="SelectionMode"/> (single / multiple / extended). The selection lives on the
-/// control (by item) and is reflected onto the containers' <see cref="ListBoxItem.IsSelected"/> - including when a recycled
-/// container is rebound on scroll.
-/// <para/>
-/// Unlike WPF, <see cref="SelectedItems"/> is a settable, two-way-bindable collection: a view-model can hand the ListBox
-/// its OWN <see cref="ObservableCollection{T}"/> and the two stay in sync (the control mutates that same instance as the
-/// user selects, and listens to it so the view-model can drive the selection) - no attached-behaviour workaround needed.
-/// </summary>
+/// <summary>A <see cref="Selector"/> hosting items in <see cref="ListBoxItem"/>s, with multi-selection via
+/// <see cref="SelectionMode"/>. <see cref="SelectedItems"/> is settable and two-way: a view-model's own collection stays in
+/// sync.</summary>
 public class ListBox : Selector
 {
     static ListBox()
@@ -43,11 +34,7 @@ public class ListBox : Selector
         // focus wandering off to a neighbouring control instead of down the rows.
     }
 
-    /// <summary>WHAT A DOUBLE CLICK ON A ROW MEANS - open it, go to it, put it in view. The item is handed over as the
-    /// parameter.
-    /// <para>On the list because the gesture is the list's. Double click is read as a press with a click count of two -
-    /// there is no separate event for it - and every application that wanted "open what I picked" was writing that same
-    /// press handler again, in a behaviour of its own.</para></summary>
+    /// <summary>Runs on a double click on a row, with the item as the parameter.</summary>
     public static readonly AdamantiumProperty ItemActivatedCommandProperty = AdamantiumProperty.Register(
         nameof(ItemActivatedCommand), typeof(ICommand), typeof(ListBox), new PropertyMetadata(null));
 
@@ -149,11 +136,8 @@ public class ListBox : Selector
             FocusManager.Focus(focusable, NavigationMethod.Directional);
         }
 
-        // Scroll by the row's place in the PANEL - it answers from the index, the same number before and after a scroll,
-        // whereas a container answers with where it is drawn right now, still carrying the previous offset until layout
-        // has run. With a held arrow key that lag makes each step aim slightly wrong and the next one correct it. Works
-        // for a row that was never realized too, which is the case this path already existed for. The container path
-        // remains for panels that cannot place an item by index.
+        // Ask the panel by index: a container's position lags one layout behind, which makes held arrow keys overshoot.
+        // The container path is for panels that cannot place an item by index.
         if (ItemsHostPanel is VirtualizingPanel panel && panel.TryGetItemRect(index, out var rect))
         {
             EnclosingScrollViewer()?.BringIntoView(rect);

@@ -21,11 +21,8 @@ public static class Keyboard
    public static readonly RoutedEvent LostKeyboardFocusEvent = EventManager.RegisterRoutedEvent("LostKeyboardFocus",
       RoutingStrategy.Bubble, typeof(KeyboardFocusChangedEventHandler), typeof(Keyboard));
 
-   /// <summary>"The focus is now on me OR on something inside me" - raised on every element that JOINED the focused
-   /// element's ancestor chain, and its Lost counterpart on every element that left it. Direct, because they are raised
-   /// individually along the chain: a composite control (a NumericUpDown whose editor holds the focus) has to know that
-   /// the focus is in there without being the focused element itself. Same machinery as IsMouseOver - see
-   /// <c>AncestorState</c>.</summary>
+   /// <summary>Raised (direct) on each element that joined the focused element's ancestor chain; the Lost counterpart on
+   /// each that left it.</summary>
    public static readonly RoutedEvent GotKeyboardFocusWithinEvent = EventManager.RegisterRoutedEvent(
       "GotKeyboardFocusWithin", RoutingStrategy.Direct, typeof(RoutedEventHandler), typeof(Keyboard));
 

@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- NumericUpDown: one framed row holding an editor and two stepper buttons. The frame belongs to THIS control, so
-         the inner TextBox is stripped of its own chrome - two nested borders would draw a box inside a box.
-         The five-column grid is what lets the buttons move: the number always sits in the starred middle, and the two
-         Auto columns on each side are the four seats a button can take. An Auto column with nothing in it costs nothing,
-         so the unused seats do not show. Per the small-styles convention: properties, template, placement, states. -->
+    <!-- NumericUpDown: one framed row with a chromeless editor in the starred middle column and four Auto seats for the
+         buttons. Properties, template, placement, states. -->
 
     <Style Selector="NumericUpDown">
         <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
@@ -49,12 +46,8 @@
                                     Margin="{TemplateBinding Padding}"
                                     MinWidth="0" MinHeight="0"
                                     VerticalAlignment="Center">
-                                <!-- The editor is EMBEDDED, so it must bring no chrome of its own: the frame around it
-                                     is already this control's. Stripping the properties is not enough - the TextBox
-                                     theme's state triggers write to its PART_Border, and a trigger outranks a value a
-                                     template sets, so a focused editor painted its own lighter fill INSIDE our box, over
-                                     the text only. A template with no such part leaves those setters with nothing to
-                                     find, and a setter whose target is missing does nothing. -->
+                                <!-- The embedded editor gets a bare template, so the TextBox theme's state triggers find no
+                                     PART_Border to restyle. -->
                                 <TextBox.Template>
                                     <ControlTemplate TargetType="TextBox">
                                         <ScrollViewer x:Name="PART_ContentHost"

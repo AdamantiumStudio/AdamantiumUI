@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<!-- Editor Pro in daylight. The SAME skin - same rows, same type, same hairlines - lit from the other side.
-
-     Not an inversion of the dark variant, and that is the whole craft of a light editor theme: dark chrome hides its
-     seams in shadow, light chrome has nowhere to hide them, so the strokes carry MORE weight here and the grounds
-     carry less. A ground stepped down as far as the dark one is stepped up would read as dirty grey.
-
-     Every key the dark variant declares is declared here, in the same order. Theme.ValidateVariants enforces that: a
-     key one variant answers and another does not makes the appearance depend on which variant it was switched FROM,
-     which is not a thing anyone can reason about. -->
+<!-- Editor Pro light: heavier strokes and lighter ground steps than the dark variant, not an inversion. Declares the
+     same keys in the same order (Theme.ValidateVariants). -->
 
 <ThemeVariantDefinition xmlns="http://adamantium/ui"
                         Key="Light">

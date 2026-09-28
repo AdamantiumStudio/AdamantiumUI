@@ -9,13 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A circular HSV picker (the payoff of the conic gradient): a hue wheel (angle = hue) whose radius is saturation
-/// (desaturated centre -> full-hue rim), dragged to set hue + saturation at once; <see cref="Value"/> (brightness) rides a
-/// separate slider and dims the wheel. The visual is authored from a <c>ConicGradientBrush</c> (hue) under a radial
-/// white-&gt;transparent overlay (saturation) - no bespoke rendering. HSV is the internal source of truth (hue is KEPT at
-/// grey/black, where RGB can't tell it), and <see cref="SelectedColor"/> is derived from it and, when set, decomposed back.
-/// </summary>
+/// <summary>A circular HSV picker: angle is hue, radius is saturation, and <see cref="Value"/> rides a separate slider. HSV is
+/// the source of truth, so hue survives grays.</summary>
 public class ColorWheel : Control
 {
     // HSV is the source of truth: hue 0..360, sat/val 0..1.

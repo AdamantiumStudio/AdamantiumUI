@@ -16,15 +16,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A rounded rect's four corners are INDEPENDENT: each carries its own radius in the instance record and the shader
-/// picks the one belonging to the fragment's own corner. Before this, a rect whose corners differed left the SDF batch
-/// entirely and was tessellated per unit - a different class of cost for the commonest shape in a UI (a tab head, a
-/// card with a flat bottom, a grouped button).
-/// <para>Asserted three ways, because each can pass while another is broken: the corner that was asked to round is the
-/// only one cut; the shape is the MIRROR of itself when the radii are mirrored (an arc-length or quadrant mix-up shows
-/// up here and nowhere else); and the batched picture agrees with the tessellated one away from the AA edge.</para>
-/// </summary>
+// Independent per-corner radii in the batch: only the asked corner rounds, mirrored radii mirror the shape, and the batch
+// matches the tessellated picture.
 [TestFixture]
 [Category("Gpu")]
 public class PerCornerRadiusRenderTests

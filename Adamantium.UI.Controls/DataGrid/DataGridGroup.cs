@@ -2,12 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>One group of rows: the value they share, and what is under it - either the rows themselves or the next
-/// level of groups.
-/// <para>A group is a NODE of the same tree the rows already live in, not a second kind of list. That is what lets
-/// grouping cost nothing new: the flattener splices a group open exactly as it splices a branch, the virtualizer
-/// realizes a group header exactly as it realizes a row, and a grouped table of a million rows still builds only what
-/// is on screen.</para></summary>
+/// <summary>One group of rows: the shared value and what is under it (rows or the next level of groups). A node of the rows'
+/// own tree, so flattening and virtualization handle it like a row.</summary>
 public sealed class DataGridGroup
 {
     internal DataGridGroup(DataGridColumn column, object key, int level, string path)

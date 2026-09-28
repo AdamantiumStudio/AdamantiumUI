@@ -4,13 +4,8 @@ using Adamantium.UI.Markup.AST;
 
 namespace Adamantium.UI.Generators;
 
-/// <summary>Warns about a drop-down command whose menu rows are written as CONTROLS while the command may still be
-/// taken into the quick-access bar.
-/// <para>The bar never gets the control itself - a <c>ContextMenu</c> is a logical child and a logical parent is one,
-/// so lending it would take the menu away from the ribbon. What travels is the row DATA
-/// (<c>RibbonQuickAccessEventArgs</c> reads <c>menu.ItemsSource</c> and nothing else), and a menu built from literal
-/// children has none. The command then reaches the bar as an arrow that drops an empty list - with a clean build, a
-/// working ribbon, and no sign of the fault until someone puts it in the bar and presses it.</para></summary>
+/// <summary>Warns when a drop-down command that can go to the quick-access bar has literal menu rows: the bar copies only
+/// <c>menu.ItemsSource</c>, so its menu would be empty.</summary>
 internal static class QuickAccessMenuCheck
 {
     private static readonly HashSet<string> DropDownCommands = new() { "RibbonDropDownButton", "RibbonSplitButton" };

@@ -5,11 +5,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Sandbox.Views;
 
-/// <summary>How THIS shell draws its own commands in the quick-access bar. The bar's items are the shell's own type, so
-/// only the shell can switch on what they are - here, whether the command has a checked state.
-/// <para>This is where a command's compact form is decided, and the reason it is here rather than in the engine: the
-/// ribbon holds a VISUAL of a command, never the command itself, so asking it to carry state across to a second visual
-/// would make it own what it only displays. The application already owns the command model; the selector reads it.</para></summary>
+/// <summary>Picks this shell's quick-access templates from its own command items, e.g. by whether a command has a checked
+/// state.</summary>
 public class ShellQuickAccessTemplateSelector : RibbonQuickAccessTemplateSelector
 {
     /// <summary>A command that is ON or OFF. Its template binds the ITEM's state, so the button in the caption and the

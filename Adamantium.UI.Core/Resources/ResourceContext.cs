@@ -24,11 +24,8 @@ public static class ResourceContext
 
         UIAppContext.Current.ResourceManager.AddSource(element, value.Source, value.Scope );
 
-        // A GLOBAL source is APP-WIDE: it must NOT be torn down when the declaring element unloads. A theme swap unloads
-        // and reloads the subtree, which would otherwise RemoveSources -> abandon the (last-owner) dictionary -> lose any
-        // runtime override on it (e.g. a cycled GlobalAccent) and re-create a fresh copy. Surviving a theme swap is the
-        // whole point of Global scope, so it is never lifecycle-bound to its declaring element. Local sources stay tied to
-        // their element (tree-scoped, cleaned up on unload).
+        // Global sources are app-wide and survive their element unloading (e.g. in a theme swap); Local ones are removed
+        // on unload.
         if (value.Scope == ResourceScope.Global) return;
 
         if (element is IInputComponent inputComponent)
@@ -62,11 +59,8 @@ public static class ResourceContext
         element.SetValue(ScopeProperty, value);
     }
 
-    // The element's resources: <X><ResourceContext.Resources>...</ResourceContext.Resources></X>. Two kinds of child,
-    // freely mixed - a <ResourceLink> naming a dictionary TYPE (its own .auml file: a palette, an icon set) and a keyed
-    // object declared right here. Scoped by ResourceContext.Scope (Local unless said otherwise); a link may state its own
-    // Scope to override that. Attributes are applied before property elements, so the scope is already known here
-    // however the two are ordered in the markup.
+    // The element's resources: <ResourceLink>s to dictionary types and inline keyed objects, scoped by
+    // ResourceContext.Scope (Local by default) unless a link says otherwise.
     public static readonly AdamantiumProperty ResourcesProperty =
         AdamantiumProperty.RegisterAttached<ResourceDictionary>("Resources", typeof(AdamantiumComponent));
 

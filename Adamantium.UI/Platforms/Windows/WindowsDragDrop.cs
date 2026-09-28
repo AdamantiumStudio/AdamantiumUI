@@ -11,15 +11,10 @@ using Serilog;
 namespace Adamantium.UI.Platforms.Windows;
 
 /// <summary>
-/// The Windows half of <see cref="INativeDragDrop"/>: OLE. DROP-IN is an <see cref="IDropTarget"/> registered on every
-/// window for its whole life; DRAG-OUT is one <c>DoDragDrop</c> per gesture, opted into by the source.
-/// <para>
-/// THREADING: every OLE call here must happen on the thread that owns the windows (the message pump). Registration
-/// already runs there (window creation); a drag-out is REQUESTED from the UI loop thread, so it is posted as a private
-/// message to a hidden window of ours and the modal <c>DoDragDrop</c> loop then runs on the pump thread - the same trick
-/// the caption drag uses. The loop thread never blocks, so the app keeps updating and rendering throughout the drag.
-/// </para>
+/// OLE <see cref="INativeDragDrop"/>: an <see cref="IDropTarget"/> on every window, and one <c>DoDragDrop</c> per
+/// outgoing drag.
 /// </summary>
+// OLE calls run on the pump thread; drag-out is posted there, so the loop thread never blocks.
 public sealed class WindowsDragDrop : INativeDragDrop
 {
     // Private message (WM_APP range) that carries a drag-out request from the loop thread to the pump thread.

@@ -2,19 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// A point on the DESKTOP, in physical pixels - where a window sits, where the pointer is, where a monitor begins.
-/// <para>It has its own type on purpose. Everything inside a window is measured in LOGICAL units (DIP), the desktop is
-/// measured in physical ones, and the two were both <see cref="Vector2"/>: the difference lived in comments, and a
-/// comment is not checked. Adding a window's position to a control's offset compiled perfectly and was wrong by the
-/// display's scale - invisible at 100%, and the reason a torn-off window landed nowhere near the cursor on a 4K
-/// display. With a type of its own the mistake stops compiling, and the only way across is
-/// <see cref="ToLogical"/>/<see cref="FromLogical"/>, which cannot be written without naming a scale.</para>
-/// <para>Why the desktop is not measured in logical units at all: with two monitors at different scales there is no
-/// such thing as "the logical position of a desktop point" - the same point converts differently depending on which
-/// monitor you ask. Physical is the one description every monitor agrees on, so it is what crosses between windows;
-/// the conversion happens at a window, against THAT window's scale.</para>
-/// </summary>
+/// <summary>A desktop point in physical pixels. A separate type so it cannot mix with DIPs; convert with
+/// <see cref="ToLogical"/>/<see cref="FromLogical"/> against a specific window's scale.</summary>
 public readonly struct PixelPoint : IEquatable<PixelPoint>
 {
     public PixelPoint(double x, double y)

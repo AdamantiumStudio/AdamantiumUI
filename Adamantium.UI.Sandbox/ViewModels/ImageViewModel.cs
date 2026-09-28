@@ -6,11 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Image tab: shows the image-format/animation variations (static PNG, APNG, GIF, TGA, JPG, mip-mapped) inside
-/// a ScrollViewer. One <see cref="Opacity"/> slider fades them all through the view-model.
-/// <para>It also drives the stretch playground: every knob that decides how a picture fills the box it is handed - the
-/// stretch rule, which directions that rule may scale in, the alignment (which is what says whether the element TAKES
-/// the box or shrinks to the picture), and the box itself.</para></summary>
+/// <summary>Image tab: image formats and animations with one <see cref="Opacity"/> slider, plus a playground for stretch,
+/// stretch direction, alignment and box size.</summary>
 [ViewModel]
 public partial class ImageViewModel : TabPageViewModel
 {

@@ -146,11 +146,8 @@ public class CombinedGeometry : Geometry
             return;
         }
 
-        // Fast path for non-crossing input (clean nesting / disjoint shapes - e.g. a Border's outer/inner rounded
-        // rect). The boolean result is then fixed by containment + mode alone, so we keep the BOUNDARY rings (the
-        // ones across which mode-membership toggles) and earcut them via the even-odd nesting path - skipping the
-        // O(n^2) intersection scan + segment marking + scanline that dominate an animated resize. Crossing input
-        // (combined icon paths etc.) returns false and falls through to the full pipeline below.
+        // Fast path for non-crossing input (nested or disjoint): containment and mode decide the result, skipping the
+        // O(n^2) intersection pipeline.
         if (TryFastCombine(geometryType)) return;
 
         if (Geometry1 is {IsClosed: true})
@@ -276,12 +273,7 @@ public class CombinedGeometry : Geometry
         }
         else
         {
-            // Bounding boxes don't overlap -> the shapes are disjoint, so the result depends on the mode:
-            //   Union     -> both shapes
-            //   Exclude   -> Geometry1 only (subtracting a disjoint Geometry2 changes nothing)
-            //   Intersect -> empty (no overlap)
-            // (Xor is handled above.) The previous code added both for every mode, which was wrong for
-            // Intersect (should be empty) and Exclude (should be Geometry1 only).
+            // Disjoint shapes: Union keeps both, Exclude keeps Geometry1, Intersect is empty (Xor is handled above).
             if (GeometryCombineMode is GeometryCombineMode.Union or GeometryCombineMode.Exclude)
             {
                 foreach (var contour1 in OutlineMesh1.Contours)

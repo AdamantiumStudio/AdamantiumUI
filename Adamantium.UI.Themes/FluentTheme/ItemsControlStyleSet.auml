@@ -22,19 +22,7 @@
         </Setter>
     </Style>
 
-    <!-- Loading skeleton CARD (theme-authored): one is shown PER budget-deferred slot by a virtualizing panel while a big
-         cold fill / fast fling outruns the per-frame bind budget - the classic per-item skeleton look. A muted rounded card
-         that gently BREATHES, hit-transparent so clicks fall through to real tiles. Cards are pooled and reused by the
-         panel, which positions them and shows/hides them as slots enter/leave the pending set. No C# owns the look.
-         The card paints with the SHARED {SkeletonPulseFill} brush (the palette's, one instance for every card of every
-         list) rather than a private brush per card: the breathe is then ONE animation on ONE brush, not one per card -
-         and one brush-change fan-out per frame instead of thousands (a screenful can be 4000+ cards; per-card pulses cost
-         ~140 ms/frame of animation tick alone). {ObservableResource} (not {ResourceReference}) so a live theme swap
-         re-points the pooled cards at the new palette's brush - the one the pulse then runs on. -->
-    <!-- The hole a drag opens at its insertion point. Reads as an OUTLINE, not as a filled card: a dashed accent frame
-         around empty space says "what you are holding goes here", where the skeleton's filled pulsing plate says
-         "content is loading". Keeping them visually distinct matters most when both are on screen at once - dropping
-         into a list that is still filling. -->
+    <!-- The drop gap placeholder: a dashed accent outline, distinct from the filled, pulsing loading skeleton. -->
     <Style Selector="ItemsControl">
         <Setter Property="DropPlaceholderTemplate">
             <Setter.Value>
@@ -48,6 +36,8 @@
         </Setter>
     </Style>
 
+    <!-- The loading skeleton card for budget-deferred slots: muted, rounded, hit-transparent, painted with the shared
+         SkeletonPulseFill via {ObservableResource}, so one animation serves every card. -->
     <Style Selector="ItemsControl">
         <Setter Property="ItemSkeletonTemplate">
             <Setter.Value>
@@ -67,13 +57,8 @@
         </Setter>
     </Style>
 
-    <!-- The skeleton BREATHE (its own style). The pulse belongs to the LIST, not to a card: IsLoadingItems is true exactly
-         while the panel is showing skeleton cards, so one EnterAction starts the prebuilt PulseAnimation (a baked Min<->Max
-         loop) on the shared skeleton brush's Opacity and one ExitAction stops it once the last card is recycled. Every card
-         re-renders from its brush-change subscription, so they all breathe in step. TargetName resolves a keyed RESOURCE
-         here (no template part by that name) - which is exactly how a trigger reaches a deliberately shared brush. A
-         second list loading at the same time RETAINS the same brush, so whichever finishes first doesn't stop the other's
-         pulse (AnimationManager.Retain/Release). -->
+    <!-- The list pulses the shared skeleton brush's Opacity while IsLoadingItems (TargetName resolves the keyed resource);
+         AnimationManager holds keep one list from stopping another's pulse. -->
     <Style Selector="ItemsControl">
         <PropertyTrigger Property="IsLoadingItems" Value="True">
             <PropertyTrigger.EnterActions>

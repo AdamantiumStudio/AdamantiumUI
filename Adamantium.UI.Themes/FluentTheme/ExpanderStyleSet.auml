@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Expander: a header you press to fold the content under it.
-
-         THE WHOLE HEADER IS THE BUTTON, not the chevron - the control hooks PART_Header, so the area that reacts is the
-         area that is drawn. A chevron-sized target is a target people miss.
-
-         COLLAPSED = the content host is COLLAPSED, not hidden: a hidden element is still measured, and a page of thirty
-         folded sections would build thirty pages' worth of rows for nothing.
-
-         The chevron turns rather than being swapped for another glyph, so the four directions need one icon and not
-         four. -->
+    <!-- Expander: the whole PART_Header toggles; folded content is Collapsed so it is not measured; one chevron rotates
+         for all four directions. -->
 
     <Style Selector="Expander">
         <Setter Property="Background" Value="Transparent"/>

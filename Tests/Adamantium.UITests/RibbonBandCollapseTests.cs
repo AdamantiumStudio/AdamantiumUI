@@ -11,13 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Minimizing the ribbon must give the band's ROW back, not just empty it. The theme states that as a trigger on the
-/// ribbon that collapses the named band part, and the band carries an explicit Height inside an Auto row - so "the row
-/// goes away" rests on a collapsed element with a stated height contributing nothing to its parent.
-/// <para>Written after the band stayed full height while its content moved into the flyout: an empty strip of nothing
-/// where the groups had been.</para>
-/// </summary>
+// Minimizing the ribbon gives the band's Auto row back: a collapsed band with an explicit Height contributes nothing.
 [TestFixture]
 public class RibbonBandCollapseTests
 {

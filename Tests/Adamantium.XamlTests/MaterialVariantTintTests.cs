@@ -5,15 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A material's TINT has to follow the theme's variant, and it did not.
-/// <para>The colour was in both palettes all along - light and dark each declare AcrylicFillColorDefault - but the brush
-/// took it with <c>{ResourceReference}</c>, which resolves ONCE, and a brush does not live in the visual tree for a
-/// later pass to catch. So every acrylic and liquid-glass surface kept the colour of the variant it was built under and
-/// stayed dark through a switch to light, while the solid fills beside it followed. Gradient stops fell into exactly
-/// this trap before, which is what <c>{ObservableResource}</c> was written for.</para>
-/// <para>Asked of the BRUSH after a variant change rather than of the palette: the palette was never wrong.</para>
-/// </summary>
+// A material brush's tint follows variant switches ({ObservableResource}); asked of the brush, not the palette.
 [TestFixture]
 public class MaterialVariantTintTests
 {

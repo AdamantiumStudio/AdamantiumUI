@@ -8,26 +8,15 @@ using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Animations tab: a BENCH, not a showcase. It exists to answer one question with numbers instead of opinions -
-/// what does a running animation actually cost per frame, and does the cost follow the number of ANIMATIONS or the number
-/// of things they repaint.
-/// <para>Why it is here at all: a page navigated away used to leave its loading pulses running forever, and 25 orphans
-/// took the presented frame rate from ~900 to ~200 while the loop stayed at 115. The leak is fixed; the fact that 25
-/// animations cost that much is a separate question, and this tab is where it gets measured.</para></summary>
+/// <summary>Animations tab: a bench measuring what running animations cost per frame, and whether the cost follows their
+/// count or what they repaint.</summary>
 [ViewModel]
 public partial class AnimationsViewModel : TabPageViewModel
 {
     public AnimationsViewModel() : base("Animations") { }
 
-    /// <summary>Each entry is one running indicator - the collection IS the count, so the view just binds to it.
-    /// One collection per indicator CLASS, because the classes differ in what they animate, and that - not the number of
-    /// animations - is what the cost turned out to follow:
-    /// <list type="bullet">
-    /// <item>Ring: one animation, on a transform (RotationAngle).</item>
-    /// <item>Dots: three animations, all transforms (ScaleX/Y).</item>
-    /// <item>Ripple: four - two transforms plus two on element Opacity, which has no compositor channel yet.</item>
-    /// <item>Arc: two - a transform plus StrokeTrimEnd, which is GEOMETRY and rebuilds the stroke every frame.</item>
-    /// </list></summary>
+    /// <summary>One entry per running ring indicator (a transform animation); each indicator class has its own collection,
+    /// since cost follows what is animated.</summary>
     public ObservableCollection<int> Spinners { get; } = new();
 
     // One collection per indicator CLASS - every kind the theme ships, so the bench covers the whole zoo rather than the

@@ -4,17 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// What <c>x:Load</c> leaves in place of an element that is not built yet: the factory that would build it and the
-/// condition that says when. While the condition is false NOTHING under it exists - this is an absent element, not a
-/// hidden one.
-/// <para>The slot is a LOGICAL child only, never a visual one: layout and rendering never see it, so the container has
-/// no placeholder to skip over. It has to be in the logical tree at all, rather than waiting outside like the element
-/// it holds, because a condition may be a binding - and a binding resolves against the DataContext in force AT THE
-/// ELEMENT'S PLACE. Nothing outside the tree has one.</para>
-/// <para>Inserting and removing belong to whoever generated the markup: a panel adds to Children, a decorator sets
-/// Child, a content control sets Content. The slot is handed both as closures rather than guessing the shape.</para>
-/// </summary>
+/// <summary>What <c>x:Load</c> leaves in place of an unbuilt element: its factory and load condition. A logical child only,
+/// so a bound condition resolves against the DataContext at the element's place.</summary>
 public sealed class LoadSlot : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty ConditionProperty =

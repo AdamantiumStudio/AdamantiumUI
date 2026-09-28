@@ -4,14 +4,7 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
-/// <summary>WHICH TEMPLATE draws what a node carries, by the type of the thing it carries.
-/// <para>The templates themselves are written in the view, where visuals belong; this only says which one goes with
-/// which state. Without it the table of kinds would have to build controls, and a view-model that builds controls is
-/// a view-model drawing - and then the value a person set would have to be dug back out of the visual tree to save
-/// it.</para>
-/// <para>A selector and not one template per node, because the CONTROL is one - a node - and what is in it differs by
-/// kind. The engine has no way to pick a template from a data type on its own yet; when it grows one this whole class
-/// goes away and the templates stand on their own.</para></summary>
+/// <summary>Picks the view's template for a node's body by the type of its content; the templates stay in the view.</summary>
 public sealed class NodeBodySelector : DataTemplateSelector
 {
     /// <summary>A single number a person sets - an amount, a brightness.</summary>

@@ -10,14 +10,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Reads and writes the GRAPH on a canvas as text - JSON, indented, with a version at the top, for the same
-/// reason <see cref="Docking.DockingLayoutSerializer"/> has one: a file outlives the code that wrote it, and the first
-/// thing a future reader needs is permission to say "I do not know this one".
-/// <para>Nodes are named by an ID that exists only inside the file, and wires refer to a node and a socket BY NAME.
-/// Never by index: a node deleted between one save and the next would silently re-point every wire after it at its
-/// neighbour, and a drawing that loads wrong is worse than one that refuses to.</para>
-/// <para>The CAMERA is saved with the graph. A plane has no edges, and a big graph opened at the origin with the work
-/// three screens away reads as an empty document.</para></summary>
+/// <summary>Reads and writes a canvas's graph and camera as versioned JSON; wires refer to nodes and sockets by name, never
+/// by index.</summary>
 public static class CanvasGraphSerializer
 {
     public const int Version = 1;
@@ -72,11 +66,8 @@ public static class CanvasGraphSerializer
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
-    /// <summary>Reads a graph back onto the canvas: the nodes it describes, the wires between them, and the camera it
-    /// was left at. Returns false for text this version cannot read, having changed nothing.
-    /// <para>What is already on the plane of the other mode is untouched - a graph is loaded INTO a canvas, not over
-    /// it. The graph that was there is replaced, because two graphs in one place is not a thing a file can mean.</para>
-    /// </summary>
+    /// <summary>Loads a graph (nodes, wires, camera) onto the canvas, replacing the previous graph; false, with nothing
+    /// changed, for text this version cannot read.</summary>
     /// <param name="make">Asked for each node, with the kind and payload the file recorded. Returning null - or not
     /// being given at all - leaves the engine to make a plain node from the shape.</param>
     public static bool Load(InfiniteCanvas canvas, string text, Func<CanvasNodeSeed, CanvasNode> make = null)

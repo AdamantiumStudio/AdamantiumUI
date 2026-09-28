@@ -7,13 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Primitives;
 
-/// <summary>
-/// The interactive area of a <see cref="ScrollBar"/> or a Slider: a draggable <see cref="Thumb"/> flanked by two
-/// <see cref="RepeatButton"/>s that page towards/away from the thumb. It sizes and positions those three parts from
-/// <see cref="Minimum"/>/<see cref="Maximum"/>/<see cref="Value"/>/<see cref="ViewportSize"/>. The parts themselves are
-/// supplied by the CONSUMING template (so each theme fully owns their look - a scrollbar's grey bar + invisible page
-/// areas, a slider's accent fill + accent thumb), never created here. Mirrors WPF's Track.
-/// </summary>
+/// <summary>The interactive area of a <see cref="ScrollBar"/> or Slider: lays out a <see cref="Thumb"/> and two paging
+/// <see cref="RepeatButton"/>s, all supplied by the consuming template, from the range values.</summary>
 public class Track : Panel
 {
     /// <summary>The shortest the thumb may get along the track, so it stays grabbable however long the content is. A
@@ -211,13 +206,8 @@ public class Track : Panel
         return finalSize;
     }
 
-    /// <summary>Where the CENTRE of the thumb sits for a fraction of the range, in pixels from the start of the track -
-    /// the same mapping <see cref="ArrangeOverride"/> uses. Anything that has to line up with the thumb (a Slider's accent
-    /// fill) must read it from here rather than project the fraction itself: the thumb travels the trough MINUS its own
-    /// length, so a second projection onto the FULL length drifts by half a thumb at either end - short of the thumb at
-    /// the minimum, past it at the maximum, agreeing only in the middle. The FRACTION is the caller's, deliberately: the
-    /// value-to-fraction step belongs to whoever owns the range, and taking a value here would answer from this track's
-    /// own copy of Minimum/Maximum instead. NaN before the first arrange, when there is no geometry to answer with.</summary>
+    /// <summary>The thumb center for a range fraction, in pixels from the track start, using the same mapping as arrange;
+    /// anything aligned to the thumb should read it here. NaN before the first arrange.</summary>
     public double ThumbCentreFromFraction(double fraction)
     {
         if (_remaining <= 0) return double.NaN;
@@ -247,16 +237,8 @@ public class Track : Panel
         return Minimum + offset * _density;
     }
 
-    /// <summary>How far a PAGE step may go before the thumb reaches <paramref name="point"/>: the Value at which the
-    /// thumb EDGE facing that point arrives exactly on it. <paramref name="increasing"/> says which way the step moves.
-    /// <para>This is the position paging would have stopped at on its own, had the page button noticed the thumb sliding
-    /// under the pointer. It cannot: the pointer does not move, the AREA moves out from under it, and enter/leave are
-    /// raised from pointer movement - so the button never hears it left and repeats all the way to the end. The caller
-    /// clamps to this instead.</para>
-    /// The EDGE, not the centre: the thumb must come up to the cursor, not swallow it, which for a long thumb is half
-    /// its length of overshoot. Computed here rather than by shifting <see cref="ValueFromPoint"/> by half a thumb -
-    /// that one CLAMPS its own travel first, so at either end the clamp had already thrown away the distance the shift
-    /// needed and the thumb stopped half a thumb short of both stops, on both axes.</summary>
+    /// <summary>The Value at which the thumb edge facing <paramref name="point"/> reaches it, so a repeating page step can
+    /// stop at the pointer. <paramref name="increasing"/> gives the step direction.</summary>
     public double PageLimitFromPoint(Vector2 point, bool increasing)
     {
         if (_remaining <= 0) return increasing ? Maximum : Minimum;

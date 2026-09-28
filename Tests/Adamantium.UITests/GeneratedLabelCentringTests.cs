@@ -10,17 +10,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A row whose content is a plain string: the ContentPresenter builds the label itself, and it is LAYOUT that has to
-/// place it - not the text alignment inside it.
-/// <para>Why that distinction is the whole bug: the text layout is fed the block's EXPLICIT Height, which a label
-/// leaves NaN, i.e. unbounded. So VerticalTextAlignment.Center centres the text inside its own line box and knows
-/// nothing about the row. A stretched block therefore sat against the top of the row with its text centred in the
-/// wrong box, and every label in every list was a few pixels high - in both themes, and uncorrectable from either,
-/// because no theme setting reaches past the block's own box.</para>
-/// <para>So a stretched presenter CENTRES its generated label instead of stretching it. Layout does the placing, which
-/// also costs nothing: nothing is re-shaped.</para>
-/// </summary>
+// A stretched presenter centers the label it generates from a string by layout, since text alignment only acts inside
+// the label's own box.
 [TestFixture]
 public class GeneratedLabelCentringTests
 {
@@ -41,11 +32,7 @@ public class GeneratedLabelCentringTests
         return (presenter.LogicalChildren.OfType<TextBlock>().FirstOrDefault(), presenter);
     }
 
-    /// <summary>The reported defect, in numbers: equal space above and below.
-    /// <para>Both halves of this matter, and the second one is what makes it a real check. A block that FILLS the row
-    /// also has equal space above and below - zero and zero - while its text sits wherever its own line box puts it.
-    /// So the label must first be shown to be its own INK height, and only then is "centred" a statement about where
-    /// the text is rather than about where an invisible box is.</para></summary>
+    // Equal space above and below, after checking the label is its own ink height (a filling label would pass trivially).
     [Test]
     public void AStretchedRowCentresItsLabel()
     {

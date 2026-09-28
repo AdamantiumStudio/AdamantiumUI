@@ -5,12 +5,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>What the plain left button DOES. A swappable object, so that the canvas knows about a camera, a grid and a
-/// scene and about no gesture at all: the pen, the selection frame and every shape are the same size of thing, and one
-/// more of them is a new class rather than another branch in the control.
-/// <para>The canvas keeps panning and zooming for itself - the middle button, space, the wheel, Home - because those
-/// are how you LOOK at a drawing rather than how you change it, and a tool that could take them away would have to give
-/// them back.</para></summary>
+/// <summary>What the left button does, as a swappable object, so a new tool is a new class. Panning and zooming stay with the
+/// canvas.</summary>
 public interface ICanvasTool
 {
     /// <summary>Whether a gesture is in progress that spans releases of the button - a line being drawn point to point.
@@ -38,12 +34,8 @@ public interface ICanvasTool
     /// </summary>
     string Description => string.Empty;
 
-    /// <summary>The name of the FAMILY this tool belongs to, or empty for a tool that stands on its own.
-    /// <para>Tools sharing a group take ONE button on the rail, which opens a list of them. A rail is a column beside
-    /// the drawing and it is always too short: a family that can grow without limit - every control an application is
-    /// willing to put on the plane, say - would push everything else off the end. Which tools are in a family, and
-    /// whether there is a family at all, is the application's to say; the rail only shows what it is given.</para>
-    /// </summary>
+    /// <summary>The tool's family, or empty; a family shares one rail button that opens a list, so a large family does not
+    /// overflow the rail.</summary>
     string Group => string.Empty;
 
     /// <summary>Whether this tool has anything to do in a given mode. Everywhere by default - select, pan and delete

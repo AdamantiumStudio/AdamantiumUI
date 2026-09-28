@@ -12,11 +12,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>One node of the grid's data. A tree AND a table: the first columns are flat facts, the hierarchy starts
-/// wherever the expander column is put - which is the case this control was written for.
-/// <para>It reports its OWN errors (<see cref="System.ComponentModel.INotifyDataErrorInfo"/>), which is the second of the two
-/// ways the grid learns a cell is wrong - the first being a rule on the column. Both are shown on this page on purpose:
-/// a rule is what a page without a validating model uses, and this is what a model that knows better says for itself.</para></summary>
+/// <summary>One node of the grid's tree-and-table data. It reports its own errors via
+/// <see cref="System.ComponentModel.INotifyDataErrorInfo"/>, alongside column rules.</summary>
 public class GridNode : System.ComponentModel.INotifyDataErrorInfo
 {
     public string Code { get; set; }

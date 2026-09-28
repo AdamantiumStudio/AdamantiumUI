@@ -6,12 +6,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A command asking to be put in the quick-access bar, or taken out of it. Carries a SLEEP of what the command
-/// looks like rather than the command itself, so whoever answers can build its own kind of item out of it - the bar's
-/// collection belongs to the application, and the ribbon never writes into it.
-/// <para>The same object reaches the application twice over: as the argument of the routed event, and as the parameter
-/// of <see cref="Ribbon.AddToQuickAccessCommandProperty"/>. A view written in AUML has no code-behind, so hearing the
-/// event there means writing a behaviour - which works, but a bound command is the short way to a view model.</para></summary>
+/// <summary>A request to add a command to the quick-access bar or remove it, describing the command so the application
+/// builds its own item. Also the parameter of <see cref="Ribbon.AddToQuickAccessCommandProperty"/>.</summary>
 public class RibbonQuickAccessEventArgs : RoutedEventArgs
 {
     public RibbonQuickAccessEventArgs(RoutedEvent routedEvent, IUIComponent command)

@@ -3,11 +3,7 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>THIS PAGE'S OWN thing on the plane - a plain <see cref="ICanvasObject"/>.
-/// <para>An application's object and not the engine's: a control works with the data it is given and generates what
-/// shows it, the way an items control does, and a view-model is the application's side of that line.</para>
-/// <para>Said the way every view-model here is said - the framework's base and <c>[Bindable]</c> fields, so the
-/// notification side of it is written by the generator and not by hand.</para></summary>
+/// <summary>This page's own item on the plane: a plain <see cref="ICanvasObject"/> view-model.</summary>
 [ViewModel]
 public partial class CanvasObjectViewModel : ICanvasObject
 {

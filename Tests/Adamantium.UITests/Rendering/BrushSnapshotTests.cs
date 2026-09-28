@@ -7,16 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// The contract between an ANIMATABLE brush and the render thread.
-//
-// A brush is a live AdamantiumComponent the update thread mutates in place; the bake/draw path may run on another thread,
-// so it must never read one. It reads an immutable SNAPSHOT instead - and the two halves of that have to hold together:
-// the snapshot must be immutable (thread safety) AND current (the animation has to reach the screen).
-//
-// Getting the second half wrong is invisible in a still frame, which is exactly how it survived: a payload that stored the
-// snapshot taken when the element was RECORDED pinned the appearance the brush had at that instant. A paint change then
-// re-baked - faithfully - a snapshot from minutes ago, so every brush animation (a gradient shimmer, a pulsing skeleton, a
-// colour fade) was a no-op on screen while every counter said it was running.
+// The render thread reads brushes through snapshots that are immutable and current, so brush animations reach the screen.
 [TestFixture]
 public class BrushSnapshotTests
 {

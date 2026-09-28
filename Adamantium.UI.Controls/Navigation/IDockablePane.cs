@@ -2,11 +2,8 @@ using Adamantium.UI.Controls.Docking;
 
 namespace Adamantium.UI.Controls.Navigation;
 
-/// <summary>What a view model says about the pane a docking region opens for it. A view model that does not implement it
-/// still navigates - it lands in the document well under its type name - but then the type name is the whole of its
-/// identity, so a second view model of the same type would activate the first one's pane instead of opening its own.
-/// <para>Read only when the pane is CREATED: navigating to something already open activates it where the user last put
-/// it, rather than dragging it back to where it was first opened.</para></summary>
+/// <summary>How a docking region opens a pane for this view model; read only at creation. Without it, the type name is the
+/// pane's identity, so two view models of one type share a pane.</summary>
 public interface IDockablePane
 {
     /// <summary>Identity in the layout. Two view models standing for different things must not share one.</summary>

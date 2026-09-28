@@ -64,11 +64,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       return true;
    }
 
-   /// <summary>Lines of cells: an arrow along the flow is the neighbour on this line, one across it is the nearest tile
-   /// on the next. Answered from the ARRANGED positions, which is what lets it work for tiles of different sizes - and
-   /// under virtualization too, where the realized children are the ones on screen and therefore exactly the ones an
-   /// arrow can reach. A neighbour that is not realized yet answers null, and the key then does nothing (the panel
-   /// keeps its arrows) until the scroll-to-materialize half of the plan lands.</summary>
+   /// <summary>Arrow navigation from arranged positions: along the flow to the neighbor, across it to the nearest tile on
+   /// the next line; null while that neighbor is not realized.</summary>
    public override IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction)
    {
       if (!IsArrow(direction)) return base.Navigate(from, direction);
@@ -177,11 +174,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
                                         // 1-frame realize (a row visibly "catching up" to the scroll, esp. scrolling UP
                                         // where the top lead is thinnest); 2 keeps a realized row ahead of the edge.
 
-   // ...but a LINE is not a fixed amount of screen. With small cells a line is a thin strip and two of them are nothing;
-   // with tall ones a line can be a fifth of the viewport, and two on each side nearly DOUBLE the realized set - four
-   // hundred tiles of lead for a screen that shows six hundred. So the lead is a fraction of the VIEWPORT, converted to
-   // whole lines: scale-invariant, which is what a fixed line count never was. Never zero (a row must still be realized
-   // before it is revealed) and never more than MaxBuffer, so the small-cell case is byte-for-byte what it was.
+   // ...but the lead is a fraction of the viewport converted to lines (1..MaxBuffer), so tall cells do not double the
+   // realized set.
    private const double LeadFraction = 0.10;
 
    private int _bufferLines = MaxBuffer;   // resolved per measure from the live viewport + cell (see ResolveBufferLines)
@@ -192,24 +186,12 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       return Math.Clamp((int)Math.Round(viewportScroll * LeadFraction / _cellScroll), 1, MaxBuffer);
    }
    private const int MaxCellPasses = 4; // bound the in-pass convergence of the auto-sized cell
-   // Per-frame (re)bind TIME budget. A rebind is cheap (~20 us) but CREATING a container (new item + template + bindings)
-   // is ~50x that, so a fixed COUNT that is fine for scroll would spend >100 ms/frame building the initial window (or a
-   // post-resize burst) - freezing the app. Instead SetWindow (re)binds until BindBudgetMs of frame time is spent, then
-   // defers the rest to skeletons + the next pass. Time-based self-tunes INSTANTLY to per-op cost: few EXPENSIVE
-   // creates/frame (UI stays live, skeletons show progress) but many CHEAP rebinds/frame (fast scroll) - with no
-   // count-estimate to mis-size on a cheap->expensive regime change (the multi-monitor DPI-resize freeze).
-   // The slice is the USER's now: VirtualizingPanel.ScrollBindBudget / FillBindBudget / MinBindsPerPass, with 0 meaning
-   // no budget at all. It used to be two static fields, which made it un-tunable from markup and turned a machine- and
-   // window-dependent number into a constant - measured on the stand, 6 ms binds ~357 slots a pass while ~4487 are
-   // deferred, so on some windows it is exactly the wrong value and there was no way to say so.
+   // Binding is budgeted by time, not count (creating a container costs ~50x a rebind); the budget comes from
+   // VirtualizingPanel.ScrollBindBudget / FillBindBudget / MinBindsPerPass (0 = none), and deferred slots show skeletons.
    private const int ParallelArrangeThreshold = 64;   // arrange tiles across cores only above this many realized (else thread overhead > win)
 
-   // The offset the previous measure ran against - tells an ACTIVE scroll (offset moving frame-to-frame) from a static fill.
-   // A REALIZE budget must be a GUARANTEED slice, never "whatever the frame has left": the per-frame O(window) overhead
-   // (skeleton reconcile + bindorder + render build) can eat a 12 ms frame ceiling BEFORE the bind loop runs, leaving it
-   // ~0 -> only MinBinds/frame -> a huge cold fill dribbles ~10 tiles/frame for tens of seconds, paying the O(window)
-   // overhead hundreds of times. A fixed generous fill slice blasts the window in a handful of frames instead (the total
-   // bind work is fixed; a big slice just pays the O(window) overhead a dozen times, not ~400).
+   // The previous measure's offset, telling an active scroll from a static fill; the fill gets a guaranteed generous slice
+   // rather than whatever the frame has left.
    private Vector2 _lastMeasuredOffset = new(double.NaN, double.NaN);
 
    // The last FINITE viewport extent on the scroll axis. When a measure comes in with an infinite scroll-axis viewport (a
@@ -529,11 +511,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       var viewportFlow = horizontal ? availableSize.Width : availableSize.Height;
       var viewportScroll = horizontal ? availableSize.Height : availableSize.Width;
 
-      // An UNCONSTRAINED flow axis is a parent asking "what is your natural width", not a viewport that wide. Answering
-      // it with infinity divided by the cell gives int.MaxValue columns (the conversion saturates) and an extent of
-      // int.MaxValue x cell - which is not a big number but a broken one: it propagates up as a desired size no window
-      // can hold, and everything sharing that layout is stretched to match. The scroll axis has always fallen back to the
-      // last real viewport here; the flow axis has to do the same.
+      // An unconstrained flow axis falls back to the last real viewport, as the scroll axis does; infinity would saturate
+      // the column count.
       if (double.IsInfinity(viewportFlow))
          viewportFlow = _lastViewportFlow > 0 ? _lastViewportFlow : DefaultViewportFlow;
       else if (viewportFlow > 0)
@@ -567,12 +546,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          _columns = Math.Max(1, (int)Math.Floor(viewportFlow / _cellFlow));
          var lines = (count + _columns - 1) / _columns;
 
-         // A ScrollViewer measures its content UNCONSTRAINED on the scroll axis (to learn the natural extent), so a
-         // virtualizing panel gets viewportScroll == infinity on the FIRST measure after (re)entering a view - BEFORE
-         // arrange establishes the real viewport. Realizing all `count` items then (the old OnNoViewport path) rebuilt the
-         // WHOLE list every tab-entry (the 4590-tile freeze). Instead realize a BOUNDED window sized to the last real
-         // viewport (or a default screenful), and still return the full extent below - so the ScrollViewer gets correct
-         // scrollbars and the next measure, with the real finite viewport, corrects the window. O(count) freeze -> O(viewport).
+         // An unconstrained scroll axis (a ScrollViewer probing extent) realizes a window sized to the last real viewport,
+         // still reporting the full extent.
          double effectiveViewport;
          if (double.IsInfinity(viewportScroll))
          {
@@ -586,11 +561,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          }
 
          var scrollOffset = horizontal ? offset.Y : offset.X;
-         // Recycling-ring invariant #1 (CONSTANT window): derive BOTH edges from the same floor(top) so they move in
-         // lockstep. Independent floor(top)/ceil(bottom) advance at different sub-cell offsets, so a fractional (real
-         // inertia) scroll oscillated the window by one row each frame - which broke donor reuse and churned a whole
-         // row's Visibility every frame. A fixed spanRows slides cleanly: floor advances 1 => first++ AND last++, so
-         // every leaving row's container is reused for the entering row. spanRows covers viewport + top/bottom buffer.
+         // Both window edges derive from floor(top) plus a fixed spanRows, so fractional scrolls slide the window without
+         // oscillating.
          _bufferLines = ResolveBufferLines(effectiveViewport);
          var spanRows = (int)Math.Ceiling(effectiveViewport / _cellScroll) + 1 + 2 * _bufferLines;
          var topLine = (int)Math.Floor(scrollOffset / _cellScroll);
@@ -599,21 +571,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          _lastFirstLine = firstLine;
          first = firstLine * _columns;
          last = Math.Min(count - 1, (lastLine + 1) * _columns - 1);
-         // The window is ALWAYS the full visible range - NOT truncated to a per-frame realize cap. A big burst (a huge
-         // viewport filling from empty, or a far fling) would otherwise hang one frame building ~hundreds of containers
-         // (the resize freeze); instead SetWindow's RebindBudget caps how many are (re)bound this pass and the rest
-         // become PendingIndices - covered by skeletons this frame and streamed in over the next passes. So the whole
-         // viewport shows content (real or skeleton) immediately, and the fill is bounded WITHOUT shrinking the window.
-
-         // Reconcile the realized grid window to exactly [first,last] (rebind in place; hide only true surplus). Cap the
-         // rebinds this pass to RebindBudget: an aggressive fling that turns the whole window over in one frame does
-         // O(window) rebinds (layout+render both scale with it) and drops frames. Past the budget, slots are DEFERRED
-         // (generator.PendingIndices) - a skeleton fills them this frame and the next pass rebinds them. Slow/normal
-         // scroll rebinds far fewer than the budget, so nothing defers and there is zero visible difference.
-         // Bind + attach + MEASURE each newly-(re)bound tile INSIDE SetWindow's time budget (OnSlotBound does the measure),
-         // so the budget bounds bind+measure together - the expensive measure is no longer a separate unbudgeted loop that
-         // blows the frame (the multi-monitor/resize 2200-tile freeze). Deferred slots become PendingIndices -> skeletons.
-         // GrowCell (unpinned-cell convergence) feeds back through _cellGrew.
+         // The window is always the full visible range; SetWindow binds and measures (OnSlotBound) within the budget and
+         // defers the rest to PendingIndices, shown as skeletons. GrowCell feeds back through _cellGrew.
          _measuringHorizontal = horizontal;
          _cellGrew = false;
          _onSlotBound ??= OnSlotBound;
@@ -624,10 +583,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          if (!_cellGrew) break;
       }
 
-      // Budget-deferred slots remain this frame -> continue on the NEXT pass to (re)bind the next RebindBudget slice
-      // (skeletons cover them meanwhile). Must be the next-pass primitive, not a bare InvalidateMeasure: we are inside
-      // the layout pass (with _inLayout set, which mutes the panel's own InvalidateMeasure anyway), and a same-pass
-      // re-measure would just try to realize the whole window this frame - defeating the budget.
+      // Deferred slots continue next pass (InvalidateMeasureNextPass; a same-pass re-measure would defeat the budget).
       if (Owner.ItemContainerGenerator.PendingIndices.Count > 0)
          LayoutManager.For(this).InvalidateMeasureNextPass(this);
 
@@ -646,15 +602,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    {
       var horizontal = Orientation == Orientation.Horizontal;
 
-      // ABSOLUTE grid slots - the scroll offset is applied by the ScrollContentPresenter translating this panel and
-      // clipping (transform-only scroll), NOT baked into each tile. A tile's rect is then CONSTANT across scroll, so
-      // Arrange short-circuits for tiles that kept their index; only the rebound row re-runs ArrangeCore (O(one row)).
-      // Snapshot indices into a REUSED buffer (not a fresh ToList): the window scan runs every scroll frame, so the
-      // per-frame list alloc over ~800 realized indices was steady gen0 churn.
-      // Nothing a rect depends on moved => a tile that kept its index kept its rect, and only the slots (re)bound since
-      // the last arrange can need anything. A tile invalidated on its OWN is not stranded: LayoutManager.ArrangeDirty
-      // arranges it into PreviousArrangeSlot, the very rect this loop would hand it. Anything that moves a rect without
-      // rebinding a slot - cell, columns, drop gap, items inserted or removed - forces one full pass, which re-stamps.
+      // Tiles sit at absolute slots (the presenter translates the panel on scroll), so only rebound slots re-arrange; a
+      // change of cell, columns, drop gap or item count forces one full pass.
       var gapNow = DropGapIndex;
       var itemsNow = Owner?.Items?.Count ?? 0;
       var full = !_stampValid
@@ -764,11 +713,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    // axis is left free so the item reports its natural size and we can grow the cell to fit it (text stays on one line).
    private Size CellConstraint(bool horizontal)
    {
-      // BOTH axes pinned (the uniform-tile case, e.g. the slider-driven grid): the item's MEASURED size is never used -
-      // GrowCell can't grow a pinned axis and ArrangeVirtualized forces every item to the exact cell. So measure with an
-      // UNBOUNDED (constant) constraint instead of the cell: it doesn't change when the cell does, so each item's measure
-      // gate SKIPS re-measuring the whole visible grid on every cell change (a slider drag). Only genuinely new/dirty
-      // items measure; the rest just re-ARRANGE into the new cell. This is the fix for the resize re-measure storm.
+      // Both axes pinned: the measured size is unused, so a constant unbounded constraint lets cell changes skip
+      // re-measuring (items only re-arrange).
       if (!double.IsNaN(ItemWidth) && !double.IsNaN(ItemHeight)) return Size.Infinity;
 
       var flow = (horizontal ? !double.IsNaN(ItemWidth) : !double.IsNaN(ItemHeight)) ? _cellFlow : double.PositiveInfinity;

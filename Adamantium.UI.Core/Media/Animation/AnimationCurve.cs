@@ -2,20 +2,8 @@ using System;
 
 namespace Adamantium.UI.Core.Media.Animation;
 
-/// <summary>
-/// A PURE animation curve: elapsed seconds in, a value per track out. It holds no target, writes no property and carries no
-/// mutable state, so ANY thread may evaluate it at ANY time, as often as it likes.
-/// </summary>
-/// <remarks>
-/// That is the whole basis of the compositor. An animation that lives inside <c>SetValue</c> can only advance as fast as the
-/// thread that owns the property system - so while the loop thread is busy (a theme cascade re-templating the tree), every
-/// spinner on screen freezes precisely when the user most needs to see one. With the timing separated from the writing, the
-/// render thread evaluates the curve on ITS clock and presents a smooth frame regardless, and the loop thread evaluates the
-/// SAME curve on demand (a hit-test, a binding read) - so the tree never disagrees with the screen about where a spinning
-/// element is.
-///
-/// Immutable by construction: the arrays are built once (see <see cref="RunningKeyFrameAnimation"/>) and never handed out.
-/// </remarks>
+/// <summary>A pure, immutable curve from elapsed seconds to one value per track, safe to evaluate on any thread; lets the
+/// render thread animate while the loop thread is busy.</summary>
 public sealed class AnimationCurve
 {
     /// <summary>One animated property and its keyframe stops, sorted by cue. Cues are 0..1 within one iteration.</summary>

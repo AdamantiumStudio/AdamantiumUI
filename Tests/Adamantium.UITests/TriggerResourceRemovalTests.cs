@@ -7,15 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A trigger that paints a part through <c>{ThemeResource}</c> / <c>{ObservableResource}</c> must take its colour back
-/// with it when it leaves - even while ANOTHER trigger still owns the same part property.
-/// <para>The symptom this was written for: tick a checkbox and untick it, and the box keeps the accent fill in every
-/// theme. The tick itself (a plain Opacity setter) cleared correctly, which is what pointed at the marker path rather
-/// than at the trigger machinery: two accent triggers share <c>Box.Background</c> - checked, and checked+pressed - and
-/// the first to leave found the second still registered on the slot, refreshed IT, and returned without clearing its
-/// own contribution. That value then had no owner and nothing ever took it off the stack.</para>
-/// </summary>
+// A trigger painting a part via {ThemeResource}/{ObservableResource} removes its own value on exit, even while another
+// trigger still owns that part property.
 [TestFixture]
 public class TriggerResourceRemovalTests
 {

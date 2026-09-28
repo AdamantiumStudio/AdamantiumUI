@@ -12,15 +12,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.Primitives;
 
-/// <summary>
-/// A row in a <see cref="ContextMenu"/> (or a nested submenu). A LEAF item runs its <see cref="Command"/> / raises
-/// <see cref="Click"/> when clicked; a PARENT item (one that has child items) instead opens a submenu flyout to the right
-/// on hover. As an <see cref="ItemsControl"/> its children ARE the submenu, so it hosts either literal markup children
-/// (<c>&lt;MenuItem Header="New"/&gt;</c>) or a data-driven tree via <see cref="ItemsControl.ItemsSource"/> +
-/// a <see cref="HierarchicalDataTemplate"/>. The label is <see cref="Header"/>; <see cref="Icon"/> and
-/// <see cref="InputGestureText"/> (a shortcut hint) are optional. A divider is a separate <see cref="Separator"/>, generated
-/// for an <see cref="ISeparatorItem"/> node - never a MenuItem.
-/// </summary>
+/// <summary>A menu row: a leaf runs <see cref="Command"/> and raises <see cref="Click"/>; an item with children opens them
+/// as a submenu on hover. Dividers are <see cref="Separator"/>s, never MenuItems.</summary>
 public class MenuItem : ItemsControl, IHeaderedItemsControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),

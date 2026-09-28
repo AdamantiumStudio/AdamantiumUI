@@ -5,13 +5,8 @@ using Serilog;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-/// <summary>
-/// Brings OLE up on the UI (message-pump) thread - the precondition for every OS-level drag-drop call
-/// (<c>RegisterDragDrop</c>, <c>DoDragDrop</c>). OLE demands a single-threaded apartment, so the application's entry
-/// point should carry <c>[STAThread]</c>; we try to set it here for an app that forgot, and if the thread is already an
-/// MTA we log and stay OUT of OLE entirely rather than initializing it behind the runtime's back.
-/// <para>Everything in-app keeps working without OLE - only exchanging payloads with OTHER applications is off.</para>
-/// </summary>
+// Initializes OLE on the pump thread for OS drag-drop. Needs an STA; on an MTA thread it logs and stays out, and only
+// cross-application drag-drop is lost.
 internal static class WindowsOle
 {
     private static bool _initialized;

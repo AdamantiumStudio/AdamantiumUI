@@ -1,14 +1,5 @@
-// THE BACKDROP'S BLUR PYRAMID - one level filled from the one above it.
-//
-// The levels used to be filled by a halving BLIT, which filters LINEAR: the average of the 2x2 under each destination
-// texel. That is a box, and a box does not remove what is above Nyquist before it decimates - so a regular pattern
-// behind a pane did not blur, it folded into moire, worse at every level. A checkerboard made it unmissable.
-//
-// A wide blur is never one wide kernel. It is a pyramid, and what matters is the filter used going DOWN: suppress the
-// high frequencies first, decimate second. Thirteen taps in the pattern from Jimenez's SIGGRAPH course (four corner
-// quads plus a centre quad, each tap bilinear and therefore two texels wide) do that for the price of thirteen
-// fetches per destination texel - and a destination texel is a quarter of the level above it, so the whole pyramid
-// costs less than a third of one full-resolution pass.
+// THE BACKDROP'S BLUR PYRAMID - each level downsampled from the one above with Jimenez's 13-tap filter (SIGGRAPH), which
+// low-passes before decimating; a plain halving blit aliases into moire.
 
 #include "Includes/CommonData.fxh"
 

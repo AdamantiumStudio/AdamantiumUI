@@ -9,18 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A number with two buttons that step it. The limits and the two step sizes come from <see cref="RangeLimitsBase"/>,
-/// which is also where a Slider gets them; this control owns the text side of it - formatting, parsing, what a keystroke
-/// is allowed to be - and the stepping.
-/// <para>Its <see cref="Value"/> is NULLABLE, because an entry box can be empty and empty is not zero. That is why it
-/// does not sit on <see cref="RangeBase"/>, whose Value is a plain double: the limits live one level up precisely so a
-/// control can bring its own idea of what is selected inside them (a RangeSlider brings two). MahApps had to go all the
-/// way down to Control for the same reason, having no such rung.</para>
-/// <para>Where the buttons sit is <see cref="ButtonsPlacement"/>, and WHICH of the pair is which is the separate
-/// <see cref="AreButtonsSwapped"/>: keeping them apart means every placement can be had in either order, instead of one
-/// enum having to spell out the product of the two.</para>
-/// </summary>
+/// <summary>A number with two step buttons. <see cref="Value"/> is nullable because an empty box is not zero, which is why
+/// it derives from <see cref="RangeLimitsBase"/> rather than <see cref="RangeBase"/>.</summary>
 public class NumericUpDown : RangeLimitsBase
 {
     private TextBox _text;
@@ -118,11 +108,8 @@ public class NumericUpDown : RangeLimitsBase
     public static readonly AdamantiumProperty ScrubPixelsPerStepProperty = AdamantiumProperty.Register(
         nameof(ScrubPixelsPerStep), typeof(double), typeof(NumericUpDown), new PropertyMetadata(4.0));
 
-    /// <summary>The pointer shown while the drag is running LEFT (the value going down), and the one for RIGHT. Two,
-    /// because the drag has a direction and the pointer is the only thing that says which way it is currently reading -
-    /// the pair of one-way shapes every 3D tool uses. The catalog has no such pair yet, so both start as the plain
-    /// double-headed <see cref="Cursors.SizeEWE"/>; point them at your own <c>.cur</c> (<c>new Cursor(path)</c>) or at
-    /// any other catalog shape to change that.</summary>
+    /// <summary>The pointers shown while a scrub drag runs left and right; both default to <see cref="Cursors.SizeEWE"/>
+    /// until set to one-way shapes.</summary>
     public static readonly AdamantiumProperty ScrubLeftCursorProperty = AdamantiumProperty.Register(
         nameof(ScrubLeftCursor), typeof(Cursor), typeof(NumericUpDown), new PropertyMetadata(Cursors.SizeEWE));
 

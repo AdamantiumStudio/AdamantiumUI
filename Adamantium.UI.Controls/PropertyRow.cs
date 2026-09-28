@@ -8,13 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>One line of an inspector, drawn from a <see cref="PropertyDefinition"/>: name, the grip between the halves,
-/// and the value. The value half holds a LIVE EDITOR, not a label that turns into one - an inspector is a form. A
-/// read-only row shows text instead, which is also how it says it is read-only.
-/// <para>The value comes from the definition's binding, one live <see cref="BoundValue"/> per inspected object, so the
-/// row follows the model and writes back through the same binding.</para>
-/// <para>Template: PART_Layout (a three-column Grid the row sets the widths of), PART_Name, PART_Grip, PART_Value, and
-/// PART_Expander on a composite row.</para></summary>
+/// <summary>One inspector line drawn from a <see cref="PropertyDefinition"/>: name, grip and a live editor bound to each
+/// inspected object. Parts: PART_Layout, PART_Name, PART_Grip, PART_Value, PART_Expander.</summary>
 public class PropertyRow : Control
 {
     public static readonly AdamantiumProperty IsReadOnlyProperty = AdamantiumProperty.Register(nameof(IsReadOnly),
@@ -74,13 +69,8 @@ public class PropertyRow : Control
 
     public PropertyRow()
     {
-        // The WHOLE LINE opens a composite, not the fourteen pixels of chevron beside its name: a composite row reads as
-        // a header, and a header is something you click. Taken on the ROW and through MouseDown, which BUBBLES - the
-        // press lands on whatever the template put under the pointer, and MouseLeftButtonDown is DIRECT, so a handler on
-        // the name presenter never heard a press that landed on the label inside it. In the CONSTRUCTOR, because the
-        // row's own event is the row's for its whole life and has nothing to do with the parts a theme gives it. A row
-        // with no children ignores it, so an ordinary line is still just a line - and a line WITH children has no editor
-        // in its other half to take the press instead.
+        // The whole line toggles a composite. MouseDown because it bubbles (MouseLeftButtonDown is direct); rows without
+        // children ignore it.
         MouseDown += OnRowPressed;
     }
 
@@ -352,11 +342,7 @@ public class PropertyRow : Control
             AddLogicalChild(bound);
             bound.PointAt(target, Definition.Binding);
 
-            // A LINE STANDS FOR THE OBJECTS IT IS ABOUT, and no others. What is selected is whatever the hand drew a
-            // band round - nodes, wires, strokes - and a line asking whether a node is folded cannot be answered by a
-            // wire. An object with no such property is NOT one that disagrees about it: counted as one, selecting a
-            // graph whole made every node's line read "they differ", and the rule for that is "make them all agree" -
-            // which folded every node in it.
+            // Objects without this property are skipped, not counted as disagreeing.
             if (!bound.Reads)
             {
                 bound.Release();
@@ -401,13 +387,8 @@ public class PropertyRow : Control
         Value = first;
         IsMixed = false;
 
-        // Not on a read-only row: the reset it would offer is a write, and a write there is refused. A mark promising
-        // a button that does nothing is worse than no mark.
-        //
-        // TWO WAYS a line can know it was touched. The markup may SAY what untouched means - `DefaultValue="0"` - which
-        // is the only way for a plain object whose properties nothing stands behind. Failing that the property system
-        // knows by itself: a value written into a component sits in its own slot, above the style's and the theme's, so
-        // "was this edited" is a question the object can answer and no theme has to repeat forty times.
+        // Never on a read-only row. Modified means differs from DefaultValue when one is given, otherwise a local value
+        // on a component.
         IsModified = !IsReadOnly &&
             (Definition is { HasDefault: true } ? !Definition.SameValue(first, Default()) : Edited());
     }
@@ -457,11 +438,7 @@ public class PropertyRow : Control
 
         var icon = Definition.ActionIcon;
 
-        // NOTHING unless it CHANGED. This runs on every refresh of the row, and a refresh happens whenever anything the
-        // row is pointed at is re-read - which on a busy inspector is constant. Building a picture and handing it over
-        // each time is a new object on the button every time, and a new object is a changed property: the button
-        // invalidates, its parents invalidate, and the pass runs again. A row that had not changed at all was the
-        // busiest thing in the application.
+        // Only when changed: this runs on every refresh, and a new icon object would invalidate layout each time.
         if (_actionIcon == icon && _actionTip == Definition.ActionTip) return;
 
         _actionIcon = icon;
@@ -509,13 +486,8 @@ public class PropertyRow : Control
 
         ApplyAction();
 
-        // The DESCRIPTION becomes the row's tip. The property has been on the definition from the start and nothing
-        // read it, which made it a line of markup that quietly did nothing; and the name column is narrow enough that a
-        // header often has to be short, so somewhere to say the rest of it is exactly what an inspector needs.
-        //
-        // ...unless the line says its VALUE is the tip: a path or an address is longer than the cell it sits in, and
-        // what it actually says is the one thing being asked. Empty, the description comes back - a tip that is nothing
-        // reads as a broken one.
+        // The tip is the description, or the value for lines that ask for it (long paths); an empty value falls back to
+        // the description.
         ApplyTip();
 
         // The whole line of a COMPOSITE opens it, so the whole line says so. On the ROW, because that is the target:
@@ -537,14 +509,8 @@ public class PropertyRow : Control
 
         _valueHost.ContentTemplate = template;
 
-        // A presenter given null content builds NOTHING, editor included - and the row's value is null exactly when the
-        // selected objects disagree. Left at null the row would lose its editor at the one moment it is most needed:
-        // putting ONE value on all of them is what inspecting several objects is for. Empty content instead, so the
-        // editor is built and stands empty - unless the definition says its editor has no empty state, and a blank row
-        // is then the honest answer rather than an editor showing a value neither object holds.
-        // ...and "no editor" is for objects that DISAGREE, not for a value nobody has set yet. A colour line whose
-        // property is empty - a node wearing the theme's accent - showed a blank cell, so the first colour could never
-        // be picked: there was nothing there to press.
+        // Null content builds no editor, so give empty content to keep one for disagreeing objects, unless the editor has
+        // no empty state. An unset value still gets an editor.
         var nothing = template != null && (Definition.EditorCanShowNothing || !IsMixed);
 
         _valueHost.Content = HasChildren
@@ -675,11 +641,7 @@ public class PropertyRow : Control
     {
         if (e.Property != ToggleButton.IsCheckedProperty) return;
 
-        // NOT WHILE THE ROW IS FILLING ITSELF. Showing a line puts what the objects say into the box, and that raises
-        // the same signal a click does - read as a click, it writes the row's own answer back into everything the row
-        // stands for. On a line the objects DISAGREE on that answer is "true for all", so selecting a graph folded
-        // every node in it: the line was shown, not pressed. Commit() has always known this; the mixed branch below
-        // went round it.
+        // Not while the row fills itself: that raises the same signal as a click and would write back to every object.
         if (_writing) return;
 
         // A click on an indeterminate box lands on FALSE - that is the three-state cycle - while the row's rule for a
@@ -697,12 +659,8 @@ public class PropertyRow : Control
         if (e.Property == ColorPickerButton.SelectedColorProperty) Commit();
     }
 
-    /// <summary>Runs the definition's action. The row hands over the OBJECTS it stands for unless the definition named
-    /// a parameter of its own: a command that opens a longer form for this property needs to know what it is being
-    /// opened on, and having to say so on every line is a thing to forget.</summary>
-    /// <summary>Puts the property's default back on every object the row stands for. Goes through the same write as an
-    /// edit does, so a definition that paints INTO its value still paints instead of replacing, and a read-only row
-    /// refuses exactly as it would refuse anything else.</summary>
+    /// <summary>Writes the property's default back to every object the row stands for, through the same path as an
+    /// edit.</summary>
     public bool ResetToDefault()
     {
         if (Owner == null) return false;
@@ -745,6 +703,8 @@ public class PropertyRow : Control
         return dropped;
     }
 
+    /// <summary>Runs the definition's action with the row's objects, unless the definition names its own
+    /// parameter.</summary>
     public bool RunAction()
     {
         if (Definition?.ActionCommand is not { } command) return false;

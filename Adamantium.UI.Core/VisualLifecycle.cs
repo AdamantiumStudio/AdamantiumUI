@@ -1,19 +1,7 @@
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Where a visual stands between being built and being released. The question every teardown has to answer is not
-/// "is it in the tree" - a great many live visuals are temporarily out of it - but "may its subscriptions be undone",
-/// and only one of these states says yes.
-/// </summary>
-/// <remarks>
-/// This was a bool (<c>IsDiscarded</c>), and a bool cannot tell apart the two ways a visual leaves the tree: gone for
-/// good, and gone on purpose and coming back. Worse, a bool that is only ever set is permanent - a keep-alive view
-/// returned still carrying the mark it was given when its template was last torn down, so every sweep went on
-/// answering "destroyed" for content that was on screen, and released it under the user.
-/// <para>Ordering matters as much as the states themselves. Something may be told it is going long before it has
-/// stopped taking part in the rebuild that is replacing it, which is why <see cref="Detaching"/> exists as its own
-/// state: it says the teardown has STARTED, and nothing may be released yet.</para>
-/// </remarks>
+/// <summary>Where a visual stands between being built and released; only one state allows undoing its subscriptions.
+/// <see cref="Detaching"/> means teardown has started but nothing may be released yet.</summary>
 public enum VisualLifecycle
 {
     /// <summary>In use. Either in the tree, or briefly out of it and coming straight back (a re-parent).</summary>

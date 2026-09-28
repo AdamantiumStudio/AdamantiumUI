@@ -3,15 +3,8 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core.RoutedEvents;
 ﻿namespace Adamantium.UI.Core.Media;
 
-/// <summary>
-/// A soft band of colour around a shape's outline - what makes a control look LIT rather than lifted. It has no
-/// direction: an aura reaches the same distance on every side, which is exactly what separates it from a
-/// <see cref="Shadow"/> and why the two are different properties rather than one with the offset zeroed.
-/// <para>Drawn OUTSIDE the element's <see cref="Adamantium.UI.Core.IUIComponent.Bounds"/> (or inside it, with
-/// <see cref="Inner"/>). The engine does NOT grow the layout to fit it: bounds drive draw order and the repaint region,
-/// and widening them from here would mean rewriting the shared render path. Leave the room yourself with
-/// <c>Margin</c> - an aura with no margin is clipped by the first ancestor that clips, and nothing will say so.</para>
-/// </summary>
+/// <summary>A directionless soft glow around a shape's outline, drawn outside its bounds (inside with <see cref="Inner"/>).
+/// Layout does not grow to fit it; leave room with <c>Margin</c> or a clipping ancestor cuts it.</summary>
 public sealed class Aura : AdamantiumComponent
 {
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),

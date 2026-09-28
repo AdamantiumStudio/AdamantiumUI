@@ -7,12 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>Where the macOS switch's thumb actually ends up, measured on the SHIPPED style set rather than a hand-built
-/// lookalike - which is the whole point, because every wrong answer so far came from a reproduction that left out the
-/// one thing that mattered.
-/// <para>The thumb is held off the track by a single <c>Margin="2"</c> and only its ALIGNMENT moves, so off and on are
-/// the same number at opposite ends. Anything else means something outside this template writes to the part.</para>
-/// </summary>
+// The macOS switch thumb, on the shipped style set: one Margin="2" and only alignment moves, so off and on mirror.
 [TestFixture]
 public class MacOsSwitchThumbTests
 {

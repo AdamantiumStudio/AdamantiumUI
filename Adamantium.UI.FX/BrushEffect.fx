@@ -1,22 +1,5 @@
-// THE BRUSHES. Everything whose fill is COMPUTED or SAMPLED rather than a flat colour: gradients, procedural patterns
-// and noise, textures, fractals - and the backdrop materials (acrylic/mica) when they land.
-//
-// Split out of BatchEffect.fx, which had grown to 2966 lines and twenty records with the shapes and the fills tangled
-// together. The shapes stayed there; the fills came here. Two reasons beyond reading:
-//
-//  - A PARAMETER BUDGET. BatchEffect's own notes record that ONE more unused uint64_t declaration killed shader
-//    creation 3 runs out of 3 on this driver. Two effects = two blocks, and neither spends the other's.
-//  - A PASS BUDGET. The pattern pixel shader branches over fourteen kinds and is documented in those same notes as
-//    "already maxed" - the driver dropped vkCreateShadersEXT whenever it grew, and branches had to be rewritten
-//    branch-free because NVVM device-lost on a ternary. Splitting the family into techniques is what makes room.
-//
-// ONE TECHNIQUE PER BRUSH FAMILY, one pass per CARRIER - what the fill is painted onto: Sdf (an analytic shape),
-// Mesh (tessellated geometry) or Fringe (the AA ring around either). The C# accessor for a pass is
-// "{Technique}{Pass}Pass" - technique Gradient, pass Sdf -> Effect.GradientSdfPass.
-//
-// Shared with BatchEffect.fx through CommonData.fxh: the vertex layouts, the globals both need (Projection, the
-// instance/transform addresses, the viewport), and the maths every fill re-uses - the SDF shapes, stroke/dash
-// compositing, the fringe expansion, the base simplex noise.
+// THE BRUSHES: computed or sampled fills (gradients, patterns, noise, textures, fractals). One technique per family, one
+// pass per carrier (Sdf, Mesh, Fringe); shares CommonData.fxh with BatchEffect.fx.
 
 // In dependency order - each header builds on the ones above it, and BrushData is last because everything in it is
 // built from the other four. NOTHING after the path on these lines: a trailing comment on an #include stops the
@@ -33,11 +16,8 @@
 // .y the length. Zero (address 0) when no deep-zoom fractal is live - the shader only dereferences it on the deep path.
 uint64_t OrbitAddress;
 
-// ---- GradientRect: the SAME SDF rounded-rect batch, but the FILL is a LINEAR or RADIAL gradient (up to 8 stops)
-// evaluated per fragment, instead of one solid colour. Per-instance GradientRectData from the BDA storage buffer by
-// SV_InstanceID; the pixel shader reads the record (BDA) to get the gradient geometry + stops. Solid rects stay in the
-// cheaper RectBatch untouched - this is a sibling pass only rects with a gradient fill route to. Matches CPU
-// GradientRectItem. Fill+stroke are composited by the shared CompositeFillStroke, so a gradient tile still strokes.
+// ---- GradientRect: the SDF rect batch filled with a linear or radial gradient (up to 8 stops) per fragment. Matches
+// the CPU GradientRectItem; strokes via CompositeFillStroke.
 struct GradientRectData
 {
     float4 Bounds;       // world x, y, w, h
@@ -142,17 +122,8 @@ float3 OklabToLinear(float3 c)
         -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
 }
 
-// The colour at parameter t (already spread-mapped to 0..1) by interpolating the (offset-sorted) stops. `aa` is the pixel
-// footprint of t (fwidth) so every stop transition is at least one pixel wide - ANTI-ALIASES hard stops (two stops on one
-// offset), which otherwise stair-step; a smooth segment keeps its exact linear ramp. Summed OVER-lerps (not an early-out
-// lookup) so a zero-width segment still contributes its 1px transition. `mode` 1 interpolates in OKLab (perceptual): the
-// stops are converted to OKLab up front, blended there, and the result converted back - only the blend space changes (mode
-// 0 is byte-for-byte the old sRGB path).
-// The stops arrive ALREADY UNPACKED, from the caller's own body. They are four bytes each in both records, and the
-// obvious place to widen them is right here where they are used - but this evaluator is shared with GradGeomColor, and
-// the MESH gradient stage will not take the widening in a function it did not write: measured, the body stops drawing
-// entirely (255 -> 0, FillFringeRenderTests) and the device follows. Each stage does its own, in line, and hands the
-// result over. Same shape as the three other passes in this effect that cannot take a shared unpack.
+// The color at spread-mapped t from the sorted stops, already unpacked by the caller. Transitions are at least `aa` (one
+// pixel) wide, so hard stops antialias; `mode` 1 blends in OKLab.
 float4 GradColor(GradientRectData it, float4 cols[8], float t, float aa, int mode)
 {
     int n = int(it.Params.z);
@@ -203,9 +174,8 @@ struct GradPSInput
     nointerpolation uint InstId : TEXCOORD3;   // instance -> re-read GradientRectData in the PS for its gradient
     nointerpolation float Scale : TEXCOORD4;   // slot unit -> device px: the PS re-reads the stroke record, which is
                                                // baked in slot units, and has to match a pixel-space SDF
-    nointerpolation float Fade  : TEXCOORD5;   // the element's alpha, fetched in the VERTEX stage: reaching the node
-                                               // table from the PIXEL stage blanks the window on this driver
-    nointerpolation float4 ClipBox   : TEXCOORD6;   // the rounded ancestor clip's shape - fetched there for the same reason
+    nointerpolation float Fade  : TEXCOORD5;   // the element's alpha, fetched in the vertex stage
+    nointerpolation float4 ClipBox   : TEXCOORD6;   // the rounded ancestor clip's shape, also fetched in the vertex stage
     nointerpolation float4 ClipRadii : TEXCOORD7;
 };
 
@@ -261,8 +231,8 @@ float4 GradientPS(GradPSInput input) : SV_Target
     float d = BrushShapeDistance(input.Local, input.Half, r4, joinType, shape);
 
     float2 uv = input.Local / max(input.Half * 2.0, float2(1e-4, 1e-4)) + 0.5;   // 0..1 across the bounds
-    // Params.w packs spread (low 3 bits), interp mode (bit 3) and the opacity slot above them - the slot is unpacked in
-    // the VERTEX stage (o.Fade), because reading the node table from here blanks the window on this driver.
+    // Params.w packs spread (low 3 bits), interp mode (bit 3) and the opacity slot above them; the slot is unpacked in
+    // the vertex stage (o.Fade).
     int packedW = int(it.Params.w + 0.5);
     float gt = GradSpread(GradParam(it, uv), packedW & 7);
     // Wrap-aware AA width: at a conic/repeat seam gt jumps 1->0 so fwidth(gt) spikes to ~1 (the whole gradient collapses to
@@ -305,12 +275,8 @@ float4 GradientPS(GradPSInput input) : SV_Target
     return float4(outColor.rgb, outColor.a * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
-// ---- GradientFill: general instanced geometry (a shared tessellated mesh drawn N times) whose FILL is a LINEAR/RADIAL
-// gradient - the gradient sibling of InstancedFill. Per-instance GradientGeometryInstance from a BDA storage buffer by
-// SV_InstanceID. Mirrors the PROVEN-STABLE unified GradientPS profile: the PIXEL shader re-reads the record by BDA and
-// only a FEW interpolators cross the stage (the fragment's local mesh position + the instance id). Passing the whole
-// gradient (15 float4) as interpolators was a much heavier shader signature and tripped the driver's shader-object flake
-// far more often; BDA-in-PS with a light signature is what the stable rect/ellipse gradient already does.
+// ---- GradientFill: a shared mesh drawn N times with a linear/radial gradient fill. The pixel shader re-reads the record
+// by BDA, so only local position and instance id are interpolated.
 struct GradGeomData
 {
     float4x4 Local;      // element local -> SLOT space (the slot's matrix is applied on top, from the transform table)
@@ -324,12 +290,8 @@ struct GradGeomData
     float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
 };
 
-// The opacity slot rides PACKED in Params.w next to the interpolation mode (0 sRGB / 1 OKLab): this record has no free
-// component - Geom1.z is the SHAPE FLAG the pixel shader branches on, and writing the slot there drew nothing at all.
-// Same trick the SDF gradient already uses for its own spread/interp/slot triple. Unpacked by hand at each site: a
-// helper that takes NodeSlot* blanks the window on this driver, so the fetch is never wrapped in one.
-// The VERTEX stages do the same arithmetic in line rather than calling a helper here: one that takes the record BY
-// VALUE is another whole-record read, which is the thing those stages must not do (see GradientFillVS).
+// The opacity slot is packed in Params.w with the interpolation mode (0 sRGB, 1 OKLab), since the record has no free
+// component. Vertex stages unpack it inline (see GradientFillVS).
 int GradGeomInterp(GradGeomData it)   { return int(fmod(it.Params.w, 2.0)); }
 
 struct GradFillPSInput
@@ -337,8 +299,7 @@ struct GradFillPSInput
     float4 Position : SV_Position;
     float2 Local : TEXCOORD0;                   // varying: fragment's local mesh xy (for uv)
     nointerpolation uint InstId : TEXCOORD1;    // instance -> re-read GradGeomData in the PS (light signature)
-    // The opacity slot's alpha, fetched in the VERTEX stage and carried down: reading the node table from the PIXEL
-    // stage is what this driver answers with a device loss, so the fetch happens once per vertex and rides a varying.
+    // The opacity slot's alpha, fetched once per vertex and carried down as a varying.
     nointerpolation float Fade : TEXCOORD2;
     nointerpolation float4 ClipBox   : TEXCOORD3;   // the ancestor's rounded clip, fetched the same way
     nointerpolation float4 ClipRadii : TEXCOORD4;
@@ -523,23 +484,15 @@ PatternPSInput PatternRectInstancedVS(uint vertexId : SV_VertexID, uint instance
     o.InstId = instanceId;
     o.Scale  = iso;
     ClipShapeBoxAndRadii(it.Anim.w, o.ClipBox, o.ClipRadii);   // the clip slot rides in Anim.w - see PatternRectData
-    // ...and the opacity slot in Anim.z. An INT test and a branch, NOT the `nodes[max(slot, 0)]` + lerp/step the
-    // sibling passes still use: that form takes this driver to device-lost from a freshly changed shader - measured
-    // here and on the polygon VS in BatchEffect, where the same swap cured it.
+    // ...and the opacity slot in Anim.z.
     int patFadeSlot = int(it.Anim.z);
     o.Fade = patFadeSlot < 0 ? 1.0 : nodes[(uint)patFadeSlot].Params.x;
     return o;
 }
 
 
-// --- Alternative base noise functions for NoiseBrush.NoiseType. All texture-free ALU, return ~[-1,1] to match SimplexNoise so
-// FBM/gradient-map stay identical across types. Only the base field changes. ---
-// Dave Hoskins hash12 (same family as Hash22, which is seam-free in Worley). Reduces the input with frac FIRST (robust at
-// large lattice coords, no sin), mixes every component into every other via the dot, and finishes with an ADDITION
-// (p3.x+p3.y)*p3.z - so it never collapses to ~0 along an axis the way frac(p.x*p.y*(p.x+p.y)) did (that zero-column was
-// the vertical seam in value/perlin). Returns [0,1).
-// Hash21 moved to NoiseMath.fxh - it is a primitive, and the backdrop materials need it for grain without needing any
-// of the fields built on it.
+// --- Alternative base noise for NoiseBrush.NoiseType: texture-free, returning ~[-1,1] like SimplexNoise. Hash21 (Dave
+// Hoskins' hash12) lives in NoiseMath.fxh. ---
 
 float2 Hash22(float2 p)
 {
@@ -582,7 +535,7 @@ float PerlinNoise(float2 v)
 
 // Worley (cellular / Voronoi): squared distance to the nearest of one feature point per cell over the 3x3 neighbourhood,
 // inverted so cell centres are bright. `phase` orbits each cell's feature point on a per-cell Lissajous so the cells FLOW in
-// place when animated (phase=0 -> a fixed per-cell point, i.e. a static Voronoi). NESTED loop - this driver's weak spot.
+// place when animated (phase=0 -> a fixed per-cell point, i.e. a static Voronoi).
 float WorleyNoise(float2 v, float phase)
 {
     float2 i = floor(v);
@@ -605,7 +558,7 @@ float WorleyNoise(float2 v, float phase)
 // iq's Voronoi distance (shadertoy Xd23Dh): distance to the nearest cell BORDER (the Voronoi edge network), NOT the nearest
 // point - thin glowing cell walls / cracks instead of Worley's filled cells. Pass 1 finds the nearest feature point (mr) and
 // its cell (mb); pass 2 takes the min distance to the perpendicular bisectors with the neighbours of mb. Feature points orbit
-// by `phase` so the whole network morphs. Guards normalize(0) at the nearest cell itself. TWO nested loops - driver risk.
+// by `phase` so the whole network morphs. Guards normalize(0) at the nearest cell itself.
 float VoronoiEdge(float2 v, float phase)
 {
     float2 n = floor(v);
@@ -746,11 +699,8 @@ void BoardCorner(float2 p, float2 tile, float2 c, float dv, float dh, inout floa
     }
 }
 
-// One tile, laid out from which of its edges carry a bus. Two opposite ones run straight across; two neighbouring ones turn
-// the corner, if that is the corner both the column's and the row's current agree with; all four turn two corners or run
-// straight. Whatever that leaves goes into a chip: in the middle of the tile, or beside a bus that runs straight through.
-// Returns .x the distance to the nearest track or pin, .y how far along it, .z the distance to a chip's body and .w to its
-// pin-one mark, all in tiles.
+// One circuit tile laid out from which edges carry a bus; leftover space holds a chip. Returns distances in tiles: .x to a
+// track or pin, .y along it, .z to a chip body, .w to its pin-one mark.
 float4 BoardTile(float2 g)
 {
     float2 tile = floor(g);
@@ -948,18 +898,14 @@ float FbmFold(float2 p, int oct, float lacunarity, float gain, int mode, float p
     return (norm > 1e-5) ? sum / norm : 0.0;
 }
 
-// Pattern mix factor at fragment `p` (device px from the rect's top-left): 0 = Color1, 1 = Color2. Anti-aliased by the
-// fragment's pixel footprint (fwidth) - the checkerboard analytically (iq's filtered checker), the others via a ~1px
-// smoothstep on a signed field - so edges stay crisp without a tiled texture. Type 4 is FBM noise (continuous 0..1).
-// The phase this instance flows at. The clock is SHARED and keeps running while any brush animates, so an animating
-// instance rides it minus its own offset (anim.x), and a paused one holds the phase it stopped at (anim.y). Reading the
-// raw clock instead makes a pause leak: the field would still advance while stopped, and resuming would jump it forward
-// by the whole length of the pause. Branch-free: a ?: in this pass has device-lost form on this driver.
+// This instance's phase on the shared clock: animating rides Time minus its offset (anim.x), paused holds anim.y.
 float NoisePhase(float octavesSigned, float2 anim)
 {
     return lerp(anim.y, Time - anim.x, step(octavesSigned, -0.0001));
 }
 
+// Pattern mix at `p` (px from the rect's top-left): 0 = Color1, 1 = Color2, antialiased by fwidth (the checker via iq's
+// filtered checker). Type 4 is continuous FBM noise.
 float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
 {
     cell = max(cell, 1.0);
@@ -1057,7 +1003,6 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
         // crossing read as depth rather than as a flat plaid.
         float bh = mh * (0.55 + 0.45 * saturate(1.0 - dh / halfW));
         float bv = mv * (0.55 + 0.45 * saturate(1.0 - dv / halfW));
-        // step(), not a ternary: the whole family is written branch-free here (NVVM has device-lost on one).
         float onTop = step(over, 0.5);
         float top = lerp(bv, bh, onTop);
         float under = lerp(bh, bv, onTop);
@@ -1071,8 +1016,8 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
 }
 
 // --- Combustible Voronoi (Shane, shadertoy 4tlSzl): 3D Voronoi fBm coloured by a blackbody FIRE palette. Its own colour
-// path (the palette returns RGB, not a 2-colour lerp), so PatternPS handles type 13 specially. 5 layers x a 3x3x3 cell
-// search - the heaviest pattern branch; watch the driver. ---
+// path (the palette returns RGB, not a 2-colour lerp), so PatternPS handles type 13 specially. fBm layers x a 3x3x3
+// cell search - the heaviest pattern branch. ---
 float3 Hash33(float3 p)
 {
     float n = sin(dot(p, float3(7.0, 157.0, 113.0)));
@@ -1114,7 +1059,7 @@ float NoiseLayers(float3 p, float time)
     float tot = 0.0;
     float sum = 0.0;
     float amp = 1.0;
-    for (int i = 0; i < 3; i++)   // 3 layers (was 5) - trimmed to buy NVVM budget for the configurable palette
+    for (int i = 0; i < 3; i++)
     {
         tot += Voronoi3(p + t) * amp;
         p *= 2.0;
@@ -1134,14 +1079,8 @@ float3 FirePalette(float i)
     return 1.0 - exp(-5e8 / L);
 }
 
-// Shared FILL colouring for the pattern/noise family - called by BOTH the SDF rect pattern PS and the arbitrary-geometry
-// pattern-fill PS, so the two paths colour identically. `pTopLeft` = fragment from the shape's top-left (the pattern origin,
-// fed to PatternMix); `centerRel`/`halfY` = fragment relative to the shape centre + half-height (the Combustible fireball).
-// Single return (no early return - NVVM dislikes those in .fx helpers).
-// Exactly what evaluating a pattern needs, and nothing else. It used to take the whole PatternRectData, which made both
-// callers put a copy of that record on the STACK - the SDF pass to scale one field, the mesh pass by reconstructing a
-// record it has no business owning. Once the record's pen became four bytes that stack copy was what the driver refused,
-// and the refusal is fair: neither caller was passing a record because the evaluator wanted one.
+// What evaluating a pattern needs, shared by the SDF and mesh pattern passes so both color identically. `pTopLeft` is
+// the pattern origin; `centerRel`/`halfY` serve the combustible fireball.
 struct PatternFill
 {
     float4 Params;
@@ -1154,9 +1093,8 @@ struct PatternFill
 
 float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 centerRel, float halfY)
 {
-    // ptype comes in as a compile-time CONSTANT from the pass entry point, not out of the record: that is what lets the
-    // optimiser drop every branch but one and leave each pass with a small pixel shader instead of the fourteen-way
-    // monster this used to be (which the driver kept refusing to create).
+    // ptype comes in as a compile-time constant from the pass entry point, so the optimiser drops every branch but one
+    // and each pass gets a small pixel shader.
     float4 fill;
     if (ptype == 107)   // Combustible Voronoi: its own 3D-ray + fire-palette colour path (ignores Color1/Color2 as a lerp)
     {
@@ -1170,7 +1108,7 @@ float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 cente
         c = max(c + dot(Hash33(rd) * 2.0 - 1.0, float3(0.015, 0.015, 0.015)), 0.0);   // subtle dust
         c *= sqrt(c) * 1.5;                                  // contrast
         // Palette. noise.w = flag (>=0.5 built-in blackbody fire; <0.5 the brush's own Color1->MidColor->Color2 ramp). Both
-        // are computed and selected BRANCH-FREE by step() - the NVVM AV'd on this over-full PS with a divergent branch here.
+        // are computed and selected by step().
         float3 fireCol = sqrt(saturate(pow(FirePalette(c), float3(1.25, 1.25, 1.25))));
         float cc = saturate(c);
         float3 duo3 = lerp(it.Color1.xyz, it.Color2.xyz, cc);
@@ -1184,8 +1122,8 @@ float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 cente
     else
     {
         float k = PatternMix(ptype, pTopLeft, it.Params.z, it.Noise, it.Anim.xy);
-        // TRITONE gradient-map (Color1 -> Color3 mid -> Color2), BRANCH-FREE (step, no vector ternary - the NVVM device-lost
-        // on a nested ternary here). Color3.w==0 (no mid colour) blends back to the plain two-colour duotone.
+        // TRITONE gradient-map (Color1 -> Color3 mid -> Color2), selected by step(). Color3.w==0 (no mid colour) blends
+        // back to the plain two-colour duotone.
         float4 duo = lerp(it.Color1, it.Color2, k);
         float4 triLo = lerp(it.Color1, it.Color3, saturate(k * 2.0));
         float4 triHi = lerp(it.Color3, it.Color2, saturate(k * 2.0 - 1.0));
@@ -1225,8 +1163,7 @@ float4 PatternSdfShade(PatternPSInput input, int kind)
 
     float2 p = input.Local + input.Half;   // fragment from the shape's TOP-LEFT (stable pattern origin at the corner)
     float4 fill = PatternFillColor(itPx, kind, p, input.Local, input.Half.y);
-    // NOT faded through the slot: one more varying on this pass - the heaviest pixel shader of the family - aborted
-    // shader creation on this driver, before a single tab was drawn. The opacity CHAIN stays in the colour here.
+    // Not faded through the slot: the opacity chain stays in the colour here.
 
     float widthPx = it.Stroke0.x * sc;
     float mask = 1.0;
@@ -1304,12 +1241,7 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 }
 
 // ---- ONE ENTRY POINT PER KIND ---------------------------------------------------------------------------------------
-// Each of these is the SAME body with a different literal, so there is no copied logic - and because the literal is
-// known at compile time, the optimiser keeps only that kind's branch. That is the point of the split: the fourteen-way
-// pixel shader these replace was documented in this file as "already maxed", the driver dropped vkCreateShadersEXT
-// whenever it grew, and its branches had to be written branch-free because NVVM device-lost on a ternary inside it.
-//
-// The numbers are PatternType / NoiseType as the CPU bakes them into Params.y (see PatternType.cs, NoiseType.cs):
+// The same body with a compile-time literal, so each pass keeps only its branch. Literals are the Params.y values:
 // 0 checker, 1 stripes, 2 dots, 3 grid, 5 hexagon, 6 hatch; noise 4 simplex, 7 perlin, 8 value, 9 worley, 10 ridged,
 // 11 turbulence, 12 voronoi borders, 13 combustible voronoi.
 
@@ -1350,10 +1282,8 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 [shader("fragment")] float4 NoiseCircuitMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 108); }
 
 
-// ---- TEXTURED rounded rect: the first fill of this batch whose colour is SAMPLED rather than computed. Deliberately the
-// SHORTEST pixel shader here - SDF, one uv wrap, one sample, one multiply - because this driver flakes on
-// vkCreateShadersEXT the moment a pass grows (see the MeshGradient note above). No stroke: a textured fill with a pen
-// falls back to the per-unit path rather than dragging the stroke machinery in.
+// ---- TEXTURED rounded rect: a fill whose colour is SAMPLED rather than computed - SDF, one uv wrap, one sample, one
+// multiply. No stroke: a textured fill with a pen falls back to the per-unit path.
 struct TexRectData
 {
     float4 Bounds;     // NODE-local x, y, w, h - the SHAPE, which never shrinks with the picture
@@ -1414,7 +1344,7 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     TexRectData it = items[input.InstId];
 
     // A NEGATIVE baked corner radius is the ELLIPSE shape flag (a rect passes radius >= 0) - same signal the pattern
-    // pass uses. Branch-free (a ?: in this pass has device-lost form on this driver): both distances, picked by a step.
+    // pass uses. Both distances are computed and picked by a step.
     float isPolygon = step(it.Params.x, -1.5);
     float isEllipse = step(it.Params.x, -0.0001) * (1.0 - isPolygon);
     float lim = min(input.Half.x, input.Half.y);
@@ -1435,7 +1365,7 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     // MIRRORED repeat: every other copy runs backwards, so a picture that was never drawn to tile still meets its own
     // reflection at the seam. A triangle wave, not a branch.
     float2 mirrored = abs(frac(n * 0.5) * 2.0 - 1.0);
-    // Branch-free (a ?: in this family has device-lost form): flag 1 = mirror X, 2 = mirror Y, 3 = both.
+    // Flag 1 = mirror X, 2 = mirror Y, 3 = both.
     float flags = it.Params.w;
     float2 pick = float2(step(0.5, fmod(flags, 2.0)), step(0.5, floor(flags * 0.5)));
     float2 inTile = lerp(tileLocal, mirrored, pick);
@@ -1451,7 +1381,7 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     // A SQUARE piece is drawn CRISP, not feathered. Nine-slice cuts a picture into nine quads that share edges, and a
     // coverage ramp puts 0.5 on both sides of every shared edge - alpha-composited that is ~0.75, a dark hairline down
     // every joint. Feathering is for a shape with a curve to it, so only a corner radius earns the ramp.
-    // Branch-free (a ?: in this pass has device-lost form on this driver): pick between the two with a step on the radius.
+    // Picked between the two with a step on the radius.
     float aa = max(fwidth(d), 1e-4);
     float ramp = saturate(0.5 - d / aa);
     float crisp = step(d, 0.0);
@@ -1467,11 +1397,8 @@ float4 TexRectPS(TexPSInput input) : SV_Target
 }
 
 
-// ---- TexFill: general instanced geometry (a shared tessellated mesh drawn N times) whose FILL is SAMPLED from a
-// texture - the textured sibling of GradientFill/PatternFill, so an ImageBrush works on ANY geometry (Path/Polygon) and
-// N such shapes cost ONE draw instead of N. A tessellated mesh carries neither an SDF nor a usable uv0, so the picture
-// is mapped across the shape's own LOCAL bounding box, with the same tiling arithmetic the SDF textured batch uses.
-// WHICH texture is not in the record: one texture is bound per DRAW, exactly as TextureBatchCollector does per segment.
+// ---- TexFill: a shared mesh drawn N times with a texture fill, mapped over the shape's local bounds with the SDF batch's
+// tiling. The texture is bound per draw, not stored in the record.
 struct TextureGeomData
 {
     float4x4 Local;      // element local -> SLOT space (the slot's matrix is applied on top, from the transform table)
@@ -1532,11 +1459,7 @@ float4 TexFillPS(TexFillPSInput input) : SV_Target
     float2 n = (inTile - it.Drawn.xy) / max(it.Drawn.zw, float2(1e-4, 1e-4));
     float2 uv = it.UvRect.xy + saturate(n) * it.UvRect.zw;
 
-    // SampleLevel, not Sample: frac() makes uv discontinuous at every tile seam, and the derivative Sample picks its mip
-    // by spikes there - one column of pixels from the smallest mip, i.e. a thin line down each seam.
-    // Component by component, not float4(it.Tint): the whole-vector conversion of a uint8_t4 is what this driver's
-    // shader compiler will not take in the TEXTURED MESH passes - it access-violates inside vkCreateShadersEXT, the
-    // one shader of this effect that would not create. The SDF textured pass above takes the plain form.
+    // SampleLevel, not Sample: frac() breaks derivatives at tile seams, which would pick the smallest mip there.
     float4 tint = float4(it.Tint.x, it.Tint.y, it.Tint.z, it.Tint.w) * (1.0 / 255.0);
     float4 color = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * tint;
 
@@ -1601,9 +1524,6 @@ float4 TexFringePS(TexFringePSInput input) : SV_Target
     float2 n = (inTile - it.Drawn.xy) / max(it.Drawn.zw, float2(1e-4, 1e-4));
     float2 uv = it.UvRect.xy + saturate(n) * it.UvRect.zw;
 
-    // Component by component, not float4(it.Tint): the whole-vector conversion of a uint8_t4 is what this driver's
-    // shader compiler will not take in the TEXTURED MESH passes - it access-violates inside vkCreateShadersEXT, the
-    // one shader of this effect that would not create. The SDF textured pass above takes the plain form.
     float4 tint = float4(it.Tint.x, it.Tint.y, it.Tint.z, it.Tint.w) * (1.0 / 255.0);
     float4 color = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * tint;
     float inside = step(0.0, n.x) * step(n.x, 1.0) * step(0.0, n.y) * step(n.y, 1.0);
@@ -1713,14 +1633,8 @@ float4 NewtonColor(float2 z, int maxIt, bool animate, float4 c1, float4 c2)
     return float4(baseCol.rgb * shade, baseCol.w);
 }
 
-// ONE shading body, and a pass per FORMULA that calls it with a literal - the shape the pattern family already has.
-// Both selectors arrive as compile-time constants, so each pass keeps only its own arithmetic: an escape pass loses the
-// other four formulas AND the whole perturbation block, the deep pass loses the plain loop, and Newton - which is not
-// escape-time at all - shares none of it. The per-iteration formula test leaves the hot loop with them.
-//
-// That is not tidiness. One shader carrying all of it was the longest in this effect, and it sat at the edge of what
-// this driver's compiler will take: three unpacked colours hoisted into locals across it was enough to lose the device
-// on every tab that drew a fractal. Short passes are what buys that margin back.
+// One shading body called by a pass per formula with compile-time literals, so each pass keeps only its own arithmetic
+// and the formula test leaves the hot loop.
 float4 FractalShade(FractalPSInput input, int formula, bool deep)
 {
     FractalRectData* items = (FractalRectData*)InstancesAddress;
@@ -1768,13 +1682,8 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             // pixel offset from the REFERENCE point: (pixel - view centre) + (view centre - C_ref). The second term
             // (Ref.zw) lets the CPU pick a reference OFF the view centre (a longer-living orbit) without moving the view.
             float2 delta = (input.Local / minHalf) * (1.5 / max(it.Geom.z, 1e-4)) + float2(it.Ref.z, it.Ref.w);
-            // SEGMENTED REBASING (Zhuoran, driver-friendly form): the naive rebase indexes the orbit by a data-dependent
-            // variable (orbit[ofs+m], m resets to 0) - the driver's NVVM shader compiler AVs on that at startup. Here the
-            // reference index is the INNER loop COUNTER j (monotonic, like the plain perturbation loop the driver accepts);
-            // a rebase just breaks the inner loop and the OUTER loop starts a fresh segment from j=0. One orbit serves any
-            // depth: no glitch blobs (reference near zero) and no short-orbit truncation.
-            // The rebase target needs its residue as much as the orbit steps do: a rebase assigns Ref0 straight into the
-            // delta, so dropping the lo term here injects the ~1e-7 error back into dz on every single rebase.
+            // Segmented rebasing (Zhuoran): the orbit is indexed by the inner loop counter, and a rebase restarts the outer
+            // loop at j=0. Ref0 keeps its lo residue, or each rebase reinjects ~1e-7 error.
             float4 Ref0p = orbit[ofs];
             float2 Ref0 = Ref0p.xy;
             float2 Ref0l = Ref0p.zw;
@@ -1784,7 +1693,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             float2 pz = float2(0.0, 0.0);
             bool escaped = false;
             bool done = false;
-            for (int seg = 0; seg < maxIt; seg++)   // one segment per rebase; runtime bound so the driver does not unroll
+            for (int seg = 0; seg < maxIt; seg++)   // one segment per rebase
             {
                 bool rebased = false;
                 int j = 0;
@@ -1807,12 +1716,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
                     pi = pi + 1;
                     float4 Znp = orbit[ofs + (uint)(j + 1)];          // MONOTONIC (j+1)
                     pz = (Znp.xy + dz) + Znp.zw;                      // full z after the advance
-                    // Rebase when the delta measured FROM Ref0 is the smaller one - not when |pz| is. The two agree for
-                    // Mandelbrot, whose Ref0 is the origin, and differ for Julia, whose reference starts at z0: testing
-                    // |pz| there rebased on the wrong iterations and showed as shimmer.
-                    // Rebase when the delta measured FROM Ref0 is the smaller one - not when |pz| is. The two agree for
-                    // Mandelbrot, whose Ref0 is the origin, and differ for Julia, whose reference starts at z0: testing
-                    // |pz| there rebased on the wrong iterations, and a Julia shimmered hard from ~1e6 up.
+                    // Rebase when the delta from Ref0 is smaller, not |pz|; they differ for Julia, whose reference starts at z0.
                     float2 rel = (pz - Ref0) - Ref0l;
                     if (dot(rel, rel) < dot(dz, dz)) { dz = rel; rebased = true; break; }
                 }
@@ -1948,18 +1852,8 @@ float4 FractalDeepPS(FractalPSInput input) : SV_Target { return FractalShade(inp
 
 
 // =====================================================================================================================
-// TECHNIQUES - one per BRUSH FAMILY, kept at the end so the shader code above reads top-to-bottom. A pass names what the
-// family is being asked to draw, not which shader happens to do it:
-//
-//   Sdf    - an ANALYTIC shape: rounded rect, ellipse or regular polygon, told apart by a flag in the record and cut
-//            from a signed-distance field (quad from SV_VertexID, record by SV_InstanceID). Not "Rect" - one pass
-//            draws all three, and naming it after one of them sends the reader looking for the other two.
-//   Mesh   - arbitrary TESSELLATED geometry: one shared local mesh drawn N times, when a shape has no closed form
-//   Fringe - the analytic-AA ring around either of those, one shared scale-free ring
-//
-// The C# accessor is "{Technique}{Pass}Pass" - technique Gradient, pass Sdf -> Effect.GradientSdfPass. No EffectName
-// here: it defaults to the file's own name, and repeating it in every pass is how a copied block ends up publishing
-// itself under the wrong effect.
+// TECHNIQUES - one per brush family. Passes: Sdf (rounded rect, ellipse or polygon by record flag), Mesh (a shared
+// tessellated mesh), Fringe (the AA ring). Accessor: technique Gradient, pass Sdf -> Effect.GradientSdfPass.
 // =====================================================================================================================
 
 // LINEAR / RADIAL gradients, up to 8 stops, interpolated perceptually in OKLab. The gradient is evaluated PER FRAGMENT,
@@ -1987,16 +1881,8 @@ technique Gradient
     }
 }
 
-// PROCEDURAL two-colour fills - both the regular patterns (checker, stripes, dots, grid, honeycomb, hatch) and the
-// noise fields (simplex, perlin, value, WorleyNoise, ridged, turbulence, voronoi). They share one pixel stage today, which
-// is the thing the theme work's step 2 splits into a pass per kind.
-// REGULAR PATTERNS. One pass per KIND, and within the name the carrier: Checkerboard on an analytic shape is
-// CheckerboardSdf, the same pattern on tessellated geometry is CheckerboardMesh. The vertex stage is shared - only the
-// pixel stage differs, and only in which field it evaluates.
-//
-// No Fringe pass in either family: a pattern's ring is flat-coloured and therefore identical to the solid one, so it is
-// drawn by BatchEffect's PatternFringe. An effect may not carry a shader another effect already carries - the pool
-// merges by BYTECODE and refuses two owners for one shader.
+// Procedural two-color fills, one pass per kind and carrier (CheckerboardSdf, CheckerboardMesh). Their fringe is
+// BatchEffect's PatternFringe, since one shader may belong to only one effect.
 technique Pattern
 {
     pass CheckerboardSdf
@@ -2220,10 +2106,7 @@ technique Texture
     }
 }
 
-// The BACKDROP MATERIALS are NOT here - they are in MaterialEffect.fx. They were, briefly, and adding them made
-// vkCreateShadersEXT die with an access violation on the GRADIENT pass, which had worked for months: one effect can
-// only carry so many shader objects before this driver's compiler gives out, and the brushes were already at that
-// line. Anything added here from now on should be weighed against that, not against the file's length.
+// The backdrop materials live in MaterialEffect.fx.
 
 // Escape-time fractals: z = z^2 + c per fragment, coloured by the smooth escape count, with a perturbation path for
 // deep zoom (see OrbitAddress). No Fill/Fringe - a fractal fills a rect, and its edge is the rect's own SDF.

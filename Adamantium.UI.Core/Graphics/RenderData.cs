@@ -25,11 +25,8 @@ public class RenderData
     
     public Matrix4x4F ProjectionMatrix { get; set; }
 
-    /// <summary>The nearest ROUNDED ancestor clip, in DEVICE pixels: <c>xy</c> = the clip rect's origin, <c>zw</c> = its
-    /// size, and the four corner radii beside it. Zero size = nothing rounded cuts this command.
-    /// <para>Here rather than only in the transform table because a PER-UNIT draw cannot read that table: the batched
-    /// families fetch the same two values by slot, and these carry them to the passes that take them as uniforms. Set at
-    /// bake, beside <see cref="Opacity"/>, since both follow the ancestor chain and neither survives a re-record.</para></summary>
+    /// <summary>The nearest rounded ancestor clip in device pixels (xy origin, zw size); zero size means none. Carried
+    /// here for per-unit draws, which cannot read the transform table.</summary>
     public Vector4F RoundedClipBox { get; set; }
 
     /// <inheritdoc cref="RoundedClipBox"/>

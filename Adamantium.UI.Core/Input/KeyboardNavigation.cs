@@ -242,11 +242,8 @@ public static class KeyboardNavigation
         return null;
     }
 
-    /// <summary>Steps the focus INTO <paramref name="container"/> - onto the first place inside it the focus can land.
-    /// False when there is nowhere: a container whose content has not been built yet answers exactly that, which is how
-    /// a caller knows to ask again once it has.
-    /// <para>What "open this" means for a container that is not part of the tab order on its own - a tab's page, a
-    /// wizard's next step - where the step in is a decision, not a Tab away.</para></summary>
+    /// <summary>Moves focus onto the first focusable place inside <paramref name="container"/>; false when there is none
+    /// yet, so the caller can retry once it is built.</summary>
     public static bool MoveInto(IUIComponent container, NavigationMethod method = NavigationMethod.Tab)
     {
         if (FirstStop(container, FocusNavigationDirection.Next) is not { } stop)
@@ -426,12 +423,7 @@ public static class KeyboardNavigation
         return backwards && IsStop(node, direction) ? (IInputComponent)node : null;
     }
 
-    /// <summary>The children of <paramref name="node"/> in the order the way IN should try them: the panel's own TAB
-    /// order when it has one, and the order they stand in otherwise (which is what the arrows want - they are a question
-    /// about the layout, not about an order someone numbered).
-    /// <para>Without this the step INTO a container landed on the first child in the tree while every step after it
-    /// followed the numbering - so a form numbered 3 1 4 2 was entered at 3 and then walked 1, 4, 2. The way in has to
-    /// be where Tab would have taken you first.</para></summary>
+    // Children in entry order: the panel's tab order when it has one, otherwise their layout order (what arrows want).
     private static IEnumerable<IUIComponent> EntryOrder(IUIComponent node, FocusNavigationDirection direction)
     {
         var children = node.VisualChildren;

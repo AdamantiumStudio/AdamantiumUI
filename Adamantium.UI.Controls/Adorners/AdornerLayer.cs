@@ -4,13 +4,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Adorners;
 
-/// <summary>
-/// Holds the active adorners for a window and is rendered as a separate stage ON TOP of the content (it is NOT part of
-/// the content visual tree, so it never pollutes the user's tree and can be toggled). The designer drives it via
-/// <see cref="SetSelection"/> (persistent, on click) and <see cref="SetHover"/> (transient, on mouse move); the renderer
-/// consumes <see cref="Adorners"/> as a flat list of visuals to draw last. Both the selection and hover frames are drawn
-/// by the framework (stroke-aware), so the designer host never draws its own.
-/// </summary>
+/// <summary>A window's active adorners, rendered as a stage on top of the content; the designer drives it through
+/// <see cref="SetSelection"/> and <see cref="SetHover"/>.</summary>
 public class AdornerLayer
 {
     private readonly List<Adorner> _selection = [];
@@ -55,11 +50,8 @@ public class AdornerLayer
             _focus.AttachStyles(style);
     }
 
-    /// <summary>Takes the focus ring down if it decorates something inside <paramref name="root"/> - what a closing
-    /// overlay calls for its own content. The ring is normally cleared by the element itself when it loses the focus, but
-    /// an element hosted on the overlay reaches this layer through the record its popup layer keeps, and that record is
-    /// gone by the time the content comes apart. The ring then had nobody left to take it down and hung in empty space
-    /// until something else happened to take the focus.</summary>
+    /// <summary>Takes the focus ring down if it decorates something inside <paramref name="root"/>; a closing overlay calls it,
+    /// since its content can no longer clear the ring itself.</summary>
     public void ClearFocusWithin(IUIComponent root)
     {
         if (root == null || _focus == null) return;

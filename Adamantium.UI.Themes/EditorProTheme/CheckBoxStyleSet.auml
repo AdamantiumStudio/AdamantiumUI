@@ -2,14 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's checkbox. The box is SQUARE and smaller, and it is the only accent-filled thing in a settings
-         column - which is the whole reason the rest of this theme's controls gave up their fills.
-
-         Fluent overlays two markers, a check and a square, and cross-fades their opacity. This theme shows the same two
-         states but draws the indeterminate one as a RULE across the box rather than a filled square: at this size a
-         square inside a square is two nested boxes and reads as a rendering artefact, while a bar reads as "partly".
-
-         Per the small-styles convention: properties, template, triggers. -->
+    <!-- Editor Pro's checkbox: a small square box, accent-filled when checked; indeterminate is a bar, not a nested
+         square. Properties, template, triggers. -->
 
     <Style Selector="CheckBox">
         <Setter Property="Background" Value="Transparent"/>

@@ -6,12 +6,8 @@ using System.Reflection;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>Resolves a node's child collection WITHOUT a container, by reflecting a <c>HierarchicalDataTemplate.ItemsSource</c>
-/// path (e.g. <c>{Binding Children}</c> → the <c>Children</c> property) against the node. The flattener needs each node's
-/// children to project the tree flat, but only the viewport gets containers - so the children can't come off a generated
-/// child ItemsControl the way the nested tree did. A compiled getter is cached per (type, segment), mirroring
-/// <c>BindingExpression</c>'s accessor cache, so resolving thousands of siblings' children is a dictionary hit + a
-/// near-native call, not a reflection invoke each time. Dotted paths (<c>A.B</c>) are walked segment by segment.</summary>
+// Resolves a node's children without a container by reflecting the template's ItemsSource path; compiled getters are
+// cached per (type, segment).
 internal static class TreeChildResolver
 {
     private static readonly ConcurrentDictionary<(Type, string), Func<object, object>> Getters = new();
@@ -59,12 +55,8 @@ internal static class TreeChildResolver
 
     private static readonly ConcurrentDictionary<(Type, string), PropertyInfo> Props = new();
 
-    /// <summary>A writer for a <see cref="bool"/> <paramref name="path"/> on a node (e.g. the node's <c>IsSelected</c>), so
-    /// the TreeView can persist a selection onto the node itself - INCLUDING off-screen rows that have no container to carry
-    /// a binding. No-op for an empty/unresolved path. Not a hot path (selection changes on click), so a plain reflected set.</summary>
-    /// <summary>A writer for any <paramref name="path"/> - what committing a cell edit needs. Converts to the property's
-    /// own type, so a text editor's string lands in an int column. Returns whether it wrote: a read-only member, a wrong
-    /// type or an unresolved path is a refusal, not a silent no-op the caller cannot see.</summary>
+    /// <summary>A writer for any <paramref name="path"/>, converting to the member's type; returns false when it cannot
+    /// write.</summary>
     public static Func<object, object, bool> SetterForPath(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -103,6 +95,8 @@ internal static class TreeChildResolver
         };
     }
 
+    /// <summary>A writer for a <see cref="bool"/> <paramref name="path"/> such as <c>IsSelected</c>, so selection persists
+    /// on off-screen nodes; no-op for an unresolved path.</summary>
     public static Action<object, bool> SetterForBoolPath(string path)
     {
         if (string.IsNullOrEmpty(path))

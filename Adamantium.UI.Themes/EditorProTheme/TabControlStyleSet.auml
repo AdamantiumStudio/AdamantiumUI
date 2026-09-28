@@ -2,24 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tab control is a RAIL over a page, not a card with a row of cards on top of it.
-
-         Two shape decisions run through the whole file, and both are why this could not be a handful of overrides on
-         Fluent's set:
-
-         1. THE STRIP IS ITS OWN GROUND, one step up from the content, closed by a hairline on the content-facing edge.
-            An editor stacks these inside docked panes, and a card with four rounded borders sitting inside another
-            pane's border is a box inside a box - by the third level nobody can tell which frame belongs to what. A
-            rail plus a rule reads at any depth.
-         2. THE CONTENT HAS NO FRAME OF ITS OWN. Its Border is still bound to BorderThickness, so an author who asks
-            for one still gets one; the theme just does not ask. The separating rule belongs to the STRIP (it is the
-            strip's underline) which is also what makes it vanish together with the strip when ShowTabStrip is off -
-            a rule left hanging over content with no tabs above it is the classic leftover.
-
-         Everything else - the part names, the triggers, the pinned row, the overflow flyout, the edge fades - is
-         Fluent's structure on purpose. That is behaviour: which parts the control finds, when it shows the overflow
-         button, how the indicator is driven. Copying the names keeps all of it working while this file states only
-         the shape. -->
+    <!-- Editor Pro's tab control: a strip on its own ground with a hairline rule (which hides with ShowTabStrip) over a
+         frameless page. Structure and part names follow Fluent's to keep its behavior. -->
 
     <Style Selector="TabControl" BasedOn="ItemsControl">
         <!-- The page paints NOTHING: whatever hosts the tab control - a docked pane, a window - already owns that
@@ -118,12 +102,8 @@
         </Setter>
     </Style>
 
-    <!-- The overflow flyout's list: a ScrollViewer capped by MaxHeight that scrolls the CONTENT, so the list
-         virtualizes - it may hold every tab of a long session, and realizing them all would cost exactly what the
-         strip already costs at startup. The bar is HIDDEN, not disabled: it would overlay the rows' close button, and
-         the wheel is how this list is scrolled anyway. This theme's own ScrollViewer keeps its bars visible, which is
-         precisely why the visibility has to be said here.
-         Applied BY CLASS, so this template lives once for every placement's overflow list. -->
+    <!-- The overflow list (by class): a MaxHeight-capped virtualizing ScrollViewer with a hidden bar, which would cover
+         the rows' close buttons. -->
     <Style Selector="ListBox.TabOverflowList">
         <Setter Property="Template">
             <Setter.Value>
@@ -184,13 +164,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
                     <Grid RowDefinitions="Auto,*">
-                        <!-- Two rows and three columns: the pinned row on top, then the scrolling strip with the
-                             overflow button in its own Auto column beside it. The button RESERVES its space rather
-                             than floating over the tabs, so the last tab ends before it instead of hiding behind it.
-                             Its visibility is set POST-layout by the control, not mid-arrange.
-                             The pinned row is OUTSIDE the scroller on purpose - that is what makes a pinned tab
-                             impossible to scroll out of sight - and it WRAPS, so many pinned tabs cost further lines
-                             instead of squeezing the rest. -->
+                        <!-- A wrapping pinned row outside the scroller on top, then the strip with the overflow button in
+                             its own Auto column (shown post-layout by the control). -->
                         <Grid x:Name="StripRow" Grid.Row="0"
                               RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto"
                               Background="{ResourceReference SolidBackgroundFillColorBase}">

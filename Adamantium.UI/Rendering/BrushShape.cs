@@ -3,13 +3,8 @@ using Adamantium.UI.Rendering.Payloads;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>Which SHAPE a brush batch paints its fill on. Three batches - gradient, pattern/noise and texture - differ
-/// only in where the colour comes from, and each of them draws a rounded rect, an ellipse or a regular polygon. They
-/// share ONE distance function in the shader (<c>BrushShapeDistance</c>), so they share this description of the shape
-/// too, instead of each inventing its own flag.
-/// <para>Nothing grows in the records: the shape rides in the corner-radius slot a non-rect has no use for - the
-/// largest radius for a rect, a negative sentinel otherwise - and a polygon's own three numbers (corners, start angle,
-/// ring) take the four corner radii it does not have.</para></summary>
+// The shape (rounded rect, ellipse, polygon) a brush batch fills, shared with the shader's BrushShapeDistance. It rides
+// in the corner-radius fields: a negative sentinel for non-rects, and the polygon's numbers in the radii.
 internal readonly record struct BrushShape(BrushShapeKind Kind, Vector4F Numbers)
 {
     public static readonly BrushShape Rect = new(BrushShapeKind.RoundedRect, Vector4F.Zero);

@@ -53,13 +53,9 @@ public class RibbonTab : ItemsControl, IHeaderedItemsControl
         set => SetValue(ContextualGroupKeyProperty, value);
     }
 
-    // --- Scrolling the row (§3.4) ------------------------------------------------------------------------------------
-    //
-    // The last resort, once shrinking and collapsing have run out. The tab owns the CHROME - two repeat buttons over the
-    // row's edges and a fade under each - because the panel that does the scrolling lives inside the items presenter,
-    // where a template cannot reach it. The arrows OVERLAY the row rather than taking width from it: reserving space
-    // for them would make the width depend on the very answer it produces (see RibbonQuickAccessPanel for what that
-    // costs), and paying two buttons' width on every tab that never scrolls is worse than drawing over an edge.
+    // --- Scrolling the row -------------------------------------------------------------------------------------------
+    // The last resort after shrinking and collapsing. The arrows overlay the row's edges instead of taking width, which
+    // would feed back into the width they depend on.
 
     public static readonly AdamantiumProperty CanScrollBackProperty = AdamantiumProperty.Register(nameof(CanScrollBack),
         typeof(bool), typeof(RibbonTab), new PropertyMetadata(false));

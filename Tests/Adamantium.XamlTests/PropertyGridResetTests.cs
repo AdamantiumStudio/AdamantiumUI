@@ -10,13 +10,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>TAKING AN EDIT BACK. The row has carried a reset button and a mark for it from the start, and both were
-/// shown only where the markup had SAID what untouched means - <c>DefaultValue="0"</c> - so a panel whose lines did not
-/// say it offered no way back at all.
-/// <para>The property system already knows: a value written into a component sits in its own slot, above the style's
-/// and the theme's. So the line asks the object, and resetting DROPS what was written rather than writing a type's
-/// default over it - the difference between a button going back to the theme's colour and a button going
-/// transparent.</para></summary>
+// Reset works without a DefaultValue: the row asks the property system whether a local value exists, and resetting clears
+// it back to the style or theme value.
 [TestFixture]
 public class PropertyGridResetTests
 {

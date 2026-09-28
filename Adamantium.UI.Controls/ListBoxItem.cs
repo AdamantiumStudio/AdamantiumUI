@@ -5,13 +5,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A selectable item container in a <see cref="ListBox"/>. Carries the selectable chrome (border / corner / padding) and
-/// the hover/pressed/selected brushes the default template's triggers project, plus its <see cref="IsSelected"/> /
-/// <see cref="IsPressed"/> visual state. Pressing it selects it in the owning ListBox. Like all item containers it is
-/// recycled, so its selected state is driven BY the ListBox (set in PrepareContainer / on selection change), never
-/// stored only here.
-/// </summary>
+/// <summary>A selectable item container in a <see cref="ListBox"/>. It is recycled, so <see cref="IsSelected"/> is driven
+/// by the ListBox, never stored only here.</summary>
 public class ListBoxItem : ContentControl, ISelectable
 {
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
@@ -37,11 +32,8 @@ public class ListBoxItem : ContentControl, ISelectable
 
     static ListBoxItem()
     {
-        // A list item has NO background by default - only the hover/pressed/selected states paint one (via the theme
-        // triggers). So a rest item creates no fill render unit and no analytic-AA fringe: ~60 transparent-fill fringes
-        // in a scrolled wrap list were exhausting GPU memory. Hit-testing is bounds-based, so the whole row stays
-        // clickable without a background brush. (Control's default is Brushes.Transparent - a SolidColorBrush, which
-        // would build a fringe.)
+        // No background at rest, so an idle row builds no fill or fringe; hit-testing is bounds-based, so the row stays
+        // clickable.
         BackgroundProperty.OverrideMetadata(typeof(ListBoxItem),
             new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
         // A list item is a keyboard-focus target (arrow-key navigation, selection) - opt in, since the base default is

@@ -43,24 +43,15 @@ public struct RectItem
     /// packed into <see cref="Stroke1"/>.w. A pattern longer than one ON/GAP period lives here.</summary>
     public Vector4F Dash;
 
-    /// <summary>The BORDER's thickness on each side, in device px: x = left, y = top, z = right, w = bottom. All zero =
-    /// no border, and the shader takes the plain fill path. A border is drawn INSIDE the bounds, in
-    /// <see cref="StrokeColor"/>, together with the fill in one pass - so their shared outline is anti-aliased once.
-    /// <para>Why not the pen: a pen is ONE width offset from a contour. Four widths are not an offset of anything, and a
-    /// border with different sides is what every second control in a theme asks for.</para></summary>
+    /// <summary>Per-side border thickness in device px (left, top, right, bottom), drawn inside the bounds in
+    /// <see cref="StrokeColor"/> with the fill; all zero = no border.</summary>
     public Vector4F Inset;
 
     /// <summary>.x = the CLIP SLOT this instance is cut by, or -1. A rounded clip cannot be a scissor, so the shape
     /// travels in a transform-table slot and the fragment's coverage is multiplied by it; .yzw spare.</summary>
     public Vector4F Clip;
 
-    /// <summary>WHOSE instance this is - the paint group that baked it. CPU bookkeeping: no shader reads it.
-    /// <para>It is here, in the instance, rather than in a table beside it, because the arena moves these bytes
-    /// constantly - a re-issued layer copies its neighbours over, a patch rebuilds a whole range - and anything kept
-    /// alongside would have to be moved by every one of those paths. That is a rule that gets forgotten, and forgetting
-    /// it blanks LIVE content. Riding in the instance, ownership travels with the bytes by construction.</para>
-    /// <para>What it is FOR: a segment is drawn as a RANGE, so the instances of a control that stopped drawing are
-    /// re-issued along with the neighbours they sit between - a scrollbar the window outgrew, still painting its track
-    /// at the size it had when it was last needed. Knowing whose each slot is, is what lets exactly those be blanked.</para></summary>
+    /// <summary>The paint group that baked this instance (CPU-only), carried in the bytes so it survives arena copies and
+    /// lets a departed control's instances be blanked.</summary>
     public int OwnerTag;
 }

@@ -7,16 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A palette key is served as a BRUSH or as a COLOUR, and which one is decided by the declaration (<c>As="Color"</c>),
-/// not by the slot that asks. Put a brush-served key in <c>GradientStop.Color</c> and the getter casts it and throws -
-/// at RENDER time, on every frame, from inside the record walk.
-/// <para>That failure is invisible until the thing is run: the markup compiles, the theme loads, every template builds.
-/// One such key cost a whole window - a bare frame with no caption and no content, because the walk that records the
-/// scene was abandoned on the first component that painted with it.</para>
-/// <para>Textual, like <see cref="ThemeTemplateBindingTests"/>, and for the same reason: what a resource marker
-/// resolves to is decided while the template runs, which is exactly the moment that throws.</para>
-/// </summary>
+// Color-typed slots (GradientStop.Color) only reference keys declared As="Color"; checked textually, like
+// ThemeTemplateBindingTests.
 [TestFixture]
 public class ThemeResourceServingTests
 {

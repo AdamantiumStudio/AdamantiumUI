@@ -9,11 +9,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>The eraser. Dragged over the drawing it rubs a hole in what it passes - or takes the whole stroke, if that
-/// is the mode - and shows a ring so the hand can see how wide it is before it is put down.
-/// <para>Only INK erases by point: half an ellipse is not an ellipse and half a button is not a button, so a shape, a
-/// piece of text and a control go whole whichever mode is set. That is not a shortcut - it is the difference between
-/// something made of a path and something made of a definition.</para></summary>
+/// <summary>The eraser, shown as a ring: it rubs holes in ink (or takes whole strokes), while shapes, text and controls always
+/// go whole.</summary>
 public class EraseTool : ICanvasTool
 {
     private readonly List<StrokeItem> _pieces = new();

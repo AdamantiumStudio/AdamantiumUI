@@ -8,16 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// CLONES (docs/RENDER_CACHE_REDESIGN.md §4o): a prototype's SUBTREE is drawn once per matrix instead of once at its own
-/// place, so N copies of a visual cost one real element. Born из the measured disaster it removes: a virtualizing panel
-/// built a full template instance per empty slot - 3469 template builds in a 0.25 s window against 147 realized
-/// containers, every property write of every build marking layout dirty.
-/// <para>The dangerous failure is not "clones missing" - that is visible at once - but a clone run that swallows the
-/// groups AFTER the prototype, drawing unrelated content N times. So these are written as NEGATIVE guards: they state
-/// what must NOT be multiplied, and one of them pins the TOTAL across the whole tree, which fails on any over-cloning
-/// including the kinds nobody thought to name.</para>
-/// </summary>
+// Clones draw a prototype's subtree once per matrix. Negative guards: groups after the prototype must not be multiplied,
+// and one test pins the total across the tree.
 [TestFixture]
 public class RenderCloneTests
 {

@@ -144,8 +144,7 @@ public sealed class BitmapImage : BitmapSource
    public uint EndFrame { get; set; }
 
    /// <summary>Whether an animation's frames are kept as LAYERS of one texture (the default) or as a texture per frame
-   /// (the old path). Set ADAMANTIUM_FRAME_ARRAY=0 to fall back - kept while the array path is being proven out on this
-   /// driver, so both can be compared from one build.</summary>
+   /// (the old path). Set ADAMANTIUM_FRAME_ARRAY=0 to fall back, so both can be compared from one build.</summary>
    public static bool UseFrameArrayTextures { get; set; } =
       Environment.GetEnvironmentVariable("ADAMANTIUM_FRAME_ARRAY") != "0";
 
@@ -310,13 +309,8 @@ public sealed class BitmapImage : BitmapSource
    {
       var path = uri.OriginalString.Replace("file://", "");
 
-      // A FILE THAT CANNOT BE READ IS NOT A FAULT IN THE PROGRAM. It is a path somebody typed, a file that has moved,
-      // a drive that is not there - ordinary facts about the world - and this runs on a thread pool thread out of an
-      // async void, where anything thrown takes the whole PROCESS down. An application must not be killed by a
-      // mistyped path.
-      //
-      // The picture simply stays unloaded, which is a state every reader already handles: it has no frames, it draws
-      // nothing, and an element showing it falls back to its ground exactly as it does before any file is chosen.
+      // An unreadable file must not throw from this async void, which would kill the process; the image just stays
+      // unloaded.
       try
       {
          var rawImg = BitmapLoader.Load(path);

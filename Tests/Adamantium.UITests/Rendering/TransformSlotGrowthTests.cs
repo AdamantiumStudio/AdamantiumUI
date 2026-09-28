@@ -12,15 +12,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Every element that moves on its own takes a SLOT in the shared transform table, and that slot carries the element's
-/// ALPHA next to its matrix. The table DOUBLES when it runs out - and growth was written in two places, only one of
-/// which made the new slots opaque. Everything past the initial capacity therefore drew fully transparent while still
-/// answering the mouse: whole pages of tiles missing, but only once some other page had pushed the table over the edge,
-/// which is what made it look like a haunting rather than a bug.
-/// The pair is the point. The first case sits under the boundary and always worked - it pins the measurement itself, so
-/// a failure in the second one cannot be blamed on the harness. Only the second crosses the growth.
-/// </summary>
+// Slots from a grown transform table start opaque. The first case stays under the boundary to validate the measurement.
 [TestFixture]
 [Category("Gpu")]
 public class TransformSlotGrowthTests
@@ -84,11 +76,7 @@ public class TransformSlotGrowthTests
         Assert.That(PaintedPixels(RenderRotatedTiles(16)), Is.GreaterThan(200), "the on-screen tile must be painted");
     }
 
-    // NEGATIVE: the SAME tile, once past the boundary, so its slot comes out of a GROWN table.
-    // Stated as a COMPARISON against the under-boundary count on purpose. A bare "must be > 200" fails identically
-    // whether the growth regressed, the harness stopped rendering, or the tile moved - and then every future failure
-    // here has to be re-diagnosed from scratch. Measuring both in one test makes the message say which of the two it
-    // is: the same tile, drawn twice, differing only in how many slots were claimed before it.
+    // The same tile past the boundary, compared against its under-boundary count so a failure names the growth.
     [Test]
     public void TilePastTheSlotBoundaryIsDrawnTheSame()
     {

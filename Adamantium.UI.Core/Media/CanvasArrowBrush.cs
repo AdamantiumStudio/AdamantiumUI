@@ -2,15 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A whole ARROW - a shaft between two points with a head on either end, or neither - drawn by a pass of its
-/// own with no geometry at all.
-/// <para>A brush and not a shape, like the ink and the canvas ground, because a brush is the parameter block that
-/// reaches the shader. The two ends are in the drawing element's OWN coordinates and so is the thickness, so whoever
-/// draws the arrow decides what those units mean - a canvas hands over screen positions and a screen thickness, which
-/// keeps the numbers reaching the GPU small however far the arrow is from the world's origin.</para>
-/// <para>What this is instead of: a stroked line plus a tessellated mesh per head, rebuilt whenever anything moved. A
-/// mesh handed to the renderer is read later, so one kept and rewritten can be read while it is being written - and
-/// that is a head drawn where the arrow used to be. Here there is nothing to keep.</para></summary>
+/// <summary>An arrow (shaft with optional heads) drawn by its own shader pass, no geometry. Ends and thickness are in the
+/// drawing element's coordinates; a canvas passes screen values to keep them small.</summary>
 public sealed class CanvasArrowBrush : Brush
 {
     /// <summary>Where the arrow starts, in the drawing element's own coordinates - the end <see cref="StartHead"/> sits

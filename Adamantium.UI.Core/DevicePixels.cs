@@ -3,16 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Putting geometry onto WHOLE DEVICE PIXELS, for anything that draws a thin edge.
-/// <para>A 1-DIP line is 1.5 physical pixels at 150%, and where it starts depends on every offset above it in the tree.
-/// Half a pixel off the grid, it is drawn at half coverage on both sides and reads as no line at all - measured on a
-/// docking panel at 150%, where the same 1-DIP border was crisp along the top and "half a pixel" along the bottom,
-/// purely from where the two edges fell.</para>
-/// <para>This belongs at RENDER, not in layout: what has to sit on the grid is the line's place ON SCREEN, and that is
-/// known only once the whole chain of offsets above it is in. Rounding layout to whole DIPs cannot express it either -
-/// one DIP is not a pixel at a fractional scale.</para>
-/// </summary>
+/// <summary>Snaps geometry to whole device pixels at render time, so thin edges stay crisp at fractional scales, where one
+/// DIP is not one pixel.</summary>
 public static class DevicePixels
 {
     // Anything but a plain offset - a zoomed or rotated subtree - and "one device pixel" is no longer a fixed length in
@@ -84,13 +76,8 @@ public static class DevicePixels
         return new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
     }
 
-    // A local coordinate taken to the nearest pixel boundary and brought back into local units.
-    //
-    // AwayFromZero, NOT the default. At a fractional scale a whole number of DIPs lands on HALF a pixel - at 150% every
-    // integer coordinate does - so essentially every edge is a midpoint case. The default rounds midpoints to the nearest
-    // EVEN pixel, which means the direction flips with parity: 58.5 goes down to 58 while 85.5 goes up to 86. Two edges
-    // half a pixel out then move OPPOSITE ways, and neighbours that should line up end up a pixel apart - which is
-    // exactly what made two tabs of the same height look different at 150%.
+    // A local coordinate snapped to the nearest pixel boundary. AwayFromZero: at 150% integer DIPs land on midpoints, and
+    // banker's rounding would move neighbors opposite ways.
     private static double Edge(double local, double origin, double scale)
     {
         return Math.Round((origin + local) * scale, MidpointRounding.AwayFromZero) / scale - origin;

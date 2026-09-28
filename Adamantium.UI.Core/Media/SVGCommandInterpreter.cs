@@ -4,11 +4,8 @@ namespace Adamantium.UI.Core.Media;
 
 internal class SVGCommandInterpreter
 {
-    /// <summary>Reads a path's commands into figures.
-    /// <para>Three rules SVG states and this used to miss, each of which quietly bends a drawing rather than breaking
-    /// it: a LOWERCASE command is relative to where the pen is; one command carries AS MANY argument sets as it was
-    /// given ("L 1 1 2 2" is two lines, and "M" after its first pair continues as lineto); and Z puts the pen back at
-    /// the start of its sub-path, which is where anything after it begins.</para></summary>
+    /// <summary>Reads path commands into figures, honoring relative lowercase commands, repeated argument sets and Z
+    /// returning to the sub-path start.</summary>
     public StreamGeometry InterpretCommands(List<SVGCommand> commands)
     {
         var current = Vector2.Zero;

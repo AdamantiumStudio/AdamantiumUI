@@ -1,12 +1,7 @@
 namespace Adamantium.UI.Core;
 
-/// <summary>Asking the user for a file, through whatever the operating system puts in front of them. A control that
-/// produces a file - a table exporting itself, a document saving - writes to a stream the application hands it; WHERE
-/// that stream goes is the user's to say, and this is where they say it.
-///
-/// <para>Behind a platform, because there is no shared dialog to share: Windows has the shell's, macOS has NSSavePanel,
-/// and on Linux it belongs to the desktop environment. What they agree on is the QUESTION - a title, a suggested name,
-/// the kinds of file on offer - and that is all <see cref="SaveFileRequest"/> carries.</para></summary>
+/// <summary>Asks the user for a file through the platform's native dialog; <see cref="SaveFileRequest"/> carries the
+/// title, suggested name and file types.</summary>
 public static class FileDialog
 {
     /// <summary>The platform that answers, registered once at startup. Null where none is written yet - ask

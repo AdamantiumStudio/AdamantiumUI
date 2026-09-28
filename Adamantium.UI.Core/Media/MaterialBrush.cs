@@ -3,20 +3,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A BACKDROP MATERIAL: a fill made from what is already drawn behind the element - frosted glass, a tinted
-/// pane, a lens. WinUI calls the first two Acrylic and Mica; the third is the material Apple introduced as Liquid Glass.
-///
-/// <para>A BRUSH, not an effect, deliberately: it goes wherever a brush goes - any Background, any Fill, any themed
-/// resource - and it takes part in the theme's variant model like every other brush, instead of being a separate thing
-/// bolted onto an element.</para>
-///
-/// <para>What separates the kinds is the SOURCE, not the numbers. Acrylic and LiquidGlass read the frame behind the
-/// element and therefore follow whatever moves under them; Mica reads the window's background and therefore does not.
-/// Give a LiquidGlass zero <see cref="Refraction"/> and it becomes acrylic - those two are one range - but no setting
-/// turns either into Mica, because Mica is looking at something else.</para>
-///
-/// <para>Costs a capture of the region behind the element per frame for the first two (a downscaling blit - see
-/// BackdropCapture), and nothing per frame for Mica.</para></summary>
+/// <summary>A backdrop material brush (Acrylic, Mica, Liquid Glass). Acrylic and Liquid Glass sample the frame behind
+/// the element, one capture per frame; Mica samples the wallpaper at no per-frame cost.</summary>
 public sealed class MaterialBrush : Brush
 {
     public MaterialBrush() { }
@@ -102,14 +90,8 @@ public sealed class MaterialBrush : Brush
     public static readonly AdamantiumProperty MetalColorProperty = AdamantiumProperty.Register(nameof(MetalColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(196, 200, 208, 255), PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>What the metal has to reflect. PROCEDURAL and not a capture, deliberately: behind a UI there is no
-    /// world, and capturing the frame would give a mirror of the window rather than of a room. One colour - the "sky"
-    /// of a studio gradient, darkened towards the floor - is cheap, controllable, and enough to read as metal. Metal
-    /// only.
-    ///
-    /// <para>NEUTRAL by default, and that matters more than it looks: a metal shows the room MULTIPLIED by its own
-    /// reflectance, so a tinted room stains every metal towards its own hue and gold, copper and steel converge into
-    /// one another. Colour the room deliberately, or not at all.</para></summary>
+    /// <summary>The color of the procedural studio environment a metal reflects. Neutral by default, since a tint stains
+    /// every metal toward it.</summary>
     public static readonly AdamantiumProperty EnvironmentColorProperty = AdamantiumProperty.Register(nameof(EnvironmentColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(226, 228, 231, 255), PropertyMetadataOptions.AffectsPaint));
 
@@ -130,15 +112,8 @@ public sealed class MaterialBrush : Brush
     public static readonly AdamantiumProperty CutProperty = AdamantiumProperty.Register(nameof(Cut),
         typeof(WoodCut), typeof(MaterialBrush), new PropertyMetadata(WoodCut.Flat, PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>Whether the wood is FINISHED - lacquered, French polished, varnished - or left raw. A separate answer
-    /// from <see cref="Roughness"/> and not a value of it: bare timber has no film on it to reflect anything, however
-    /// smoothly it is planed, while a finished board carries a clear coat that shows the room and glares along the
-    /// edge. Roughness then says what KIND of finish, from oiled satin to a mirror.
-    ///
-    /// <para>The visible difference is mostly at the RIM, and that is honest rather than a shortcut: on a face seen
-    /// straight on a clear coat reflects about four per cent, but at a grazing angle it reflects nearly everything -
-    /// which is why a polished table looks like wood from above and like a mirror from the end of the room.</para>
-    /// </summary>
+    /// <summary>Whether the wood has a clear coat (reflecting mostly at grazing angles); <see cref="Roughness"/> then sets
+    /// the finish from satin to mirror.</summary>
     public static readonly AdamantiumProperty VarnishedProperty = AdamantiumProperty.Register(nameof(Varnished),
         typeof(bool), typeof(MaterialBrush), new PropertyMetadata(true, PropertyMetadataOptions.AffectsPaint));
 

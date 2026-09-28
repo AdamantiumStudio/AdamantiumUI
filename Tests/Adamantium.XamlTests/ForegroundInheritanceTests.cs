@@ -76,13 +76,7 @@ public class ForegroundInheritanceTests
             "the window is several levels above the text that takes its colour from it");
     }
 
-    /// <summary>
-    /// An ancestor LETTING GO of its ink is not the same as an ancestor stating a new one. The push down the tree writes
-    /// into each descendant's Inherited slot, which outranks TypeDefault - where a bare-type style puts a control's own
-    /// colour. So a push that carries the ancestor's DEFAULT pins that default into the whole subtree permanently: a
-    /// later re-resolve walks up, finds no ancestor holding an explicit value, and leaves the stale slot standing.
-    /// Measured on a theme swap: every ribbon command drawn at its right size, hoverable, pressable, and transparent.
-    /// </summary>
+    // An ancestor clearing its value must clear descendants' Inherited slots, not pin its default above their TypeDefault.
     [Test]
     public void AnAncestorLettingGoOfItsInkDoesNotPinItsDefaultOnTheSubtree()
     {

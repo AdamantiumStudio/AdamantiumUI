@@ -10,11 +10,7 @@ public sealed class ContentControlRegionAdapter : IRegionAdapter
 {
     private readonly IViewLocator _viewLocator;
 
-    /// <summary>What one HOST is currently showing. Per host, not per adapter: RegionAdapterMappings hands out a single
-    /// adapter INSTANCE for a control type, so every ContentControl region in the app shares this object. Keeping "what
-    /// is shown" in its fields meant two such regions overwrote each other's answer, and each then decided a navigation
-    /// was "already shown" and drew nothing - which is what a second ContentControl region turned up the moment one
-    /// existed.</summary>
+    // What one host is showing; per host because one adapter instance serves every ContentControl region.
     private sealed class Shown
     {
         // Read off the ContentControl instead and a transition that has not finished swapping hands back the wrong one.

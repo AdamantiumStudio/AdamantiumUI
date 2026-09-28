@@ -53,21 +53,14 @@ public class DockingRestoreTwiceTests
         Assert.That(PaneIdsIn(area), Is.EquivalentTo(before), "and after three");
     }
 
-    /// <summary>The panes are CONTROLS as well as ids: a restore that puts the id back but leaves the control out of
-    /// its group is exactly "the tab is there and empty".
-    /// <para>OPEN BUG, reproduced here and not yet fixed: after a SECOND restore of the same layout every pane is still
-    /// in the model (the test above passes) but its control is in no panel at all. On screen that is the reported
-    /// "tabs come back empty, then stop coming back". Ignored so the suite stays green while it is being chased -
-    /// remove the attribute to see it fail.</para></summary>
-    // Whether the pane's CONTROL is in the items of some panel. Not VisualParent: these tests run without a theme, so
-    // no TabControl template is applied and no items presenter exists - measured, after a first version of this test
-    // "failed" on panes that had never been restored at all.
+    // Whether the pane's control is in some panel's items; not VisualParent, since no theme means no items presenter.
     private static bool IsInSomePanel(DockingArea area, string paneId)
     {
         var pane = area.PaneById(paneId);
         return pane != null && area.Groups.Any(group => group.Items.Contains(pane));
     }
 
+    // Panes are controls as well as ids: after a second restore each control must still be in a panel, not an empty tab.
     [Test]
     public void AfterASecondRestore_EveryPaneIsStillInAPanel()
     {

@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// Rule 1.6: the document area splits WITHIN ITSELF and every part of it stays a document. A tool may be dropped into
+/// The document area splits WITHIN ITSELF and every part of it stays a document. A tool may be dropped into
 /// the area, but the area itself is never dragged into a tool - the centre of editing is a PLACE, not a panel.
 /// </summary>
 [TestFixture]
@@ -48,8 +48,7 @@ public class DocumentAreaTests
         });
     }
 
-    /// <summary>Both halves are documents, whatever they were before: a TOOL dropped into the area is one too, which
-    /// is rule 1.2 read through the new definition of "inside".</summary>
+    /// <summary>Both halves are documents, whatever they were before: a TOOL dropped into the area is one too.</summary>
     [Test]
     public void ATOOLDroppedIntoTheArea_BecomesPartOfIt()
     {
@@ -84,7 +83,7 @@ public class DocumentAreaTests
     }
 
     /// <summary>The area itself never moves: it is a place. Everything IN it may leave, including the last group - the
-    /// place stays behind, empty, ready to be opened into (rule 1.4).</summary>
+    /// place stays behind, empty, ready to be opened into.</summary>
     [Test]
     public void TheAreaStaysPut_WhileEverythingInItMayLeave()
     {
@@ -183,12 +182,8 @@ public class DocumentAreaTests
         });
     }
 
-    /// <summary>A TOOL carried out into a window of its own stands in THAT window's centre, and a centre belongs to
-    /// documents (rule 1.2) - so it is dressed as one while it stands there alone, and a document dropped in beside it
-    /// is a document too. Dock something to its SIDE and both are tools again, which is the only thing that makes one.
-    /// <para>Measured before the rule: a window born of a tool stayed a tool window forever, and a document dropped into
-    /// it turned into a tool - the same drop meaning two different things depending on which window it landed in.</para>
-    /// </summary>
+    // A tool alone in its own window's center is dressed as a document, as is anything dropped beside it; docking to its
+    // side makes both tools again.
     [Test]
     public void ATOOLCarriedIntoItsOwnWindow_StandsInThatWindowsCentre()
     {
@@ -215,8 +210,7 @@ public class DocumentAreaTests
     }
 
     /// <summary>A window has its own document AREA, not a "these are documents" badge across the whole of it: a tool
-    /// docked BESIDE the editor out there is still a tool, and one dropped INTO it is a document - the same rule 1.6
-    /// that holds at home.
+    /// docked BESIDE the editor out there is still a tool, and one dropped INTO it is a document, as at home.
     /// <para>Measured before this: the window carried a flag, so everything in it came out with document chrome - the
     /// inspector included, caption and pin gone.</para></summary>
     [Test]

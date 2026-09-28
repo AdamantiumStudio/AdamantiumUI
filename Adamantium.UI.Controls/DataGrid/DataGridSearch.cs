@@ -70,12 +70,8 @@ internal sealed class DataGridSearch
     /// <summary>The cell the search is looking at, or null when it is looking at none.</summary>
     public (object Item, int Column)? At => Current > 0 ? _found[Current - 1] : null;
 
-    /// <summary>Whether <paramref name="text"/> holds what is being searched for. One place, so the pass that finds the
-    /// matches and anything that re-checks a cell can never disagree.
-    /// <para>ORDINAL, ignoring case, which is what a search box in an editor does. Measured: the culture-aware
-    /// comparison cost 60 ms of a 106 ms pass over ten thousand rows and four columns - more than the reading itself.
-    /// What is given up with it is culture-specific equivalence (ß against ss, the Turkish dotless i); case folding for
-    /// Latin and Cyrillic is the same either way.</para></summary>
+    /// <summary>Whether <paramref name="text"/> contains the sought text, compared ordinally ignoring case - the culture-aware
+    /// comparison cost more than the reading itself.</summary>
     public static bool Matches(string text, string sought) =>
         !string.IsNullOrEmpty(sought) && text != null
         && text.IndexOf(sought, StringComparison.OrdinalIgnoreCase) >= 0;

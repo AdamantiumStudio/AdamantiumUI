@@ -6,15 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A star track has to be written on EVERY arrange, including to zero. It used to be assigned only while there was room
-/// left over to share, so a star squeezed out entirely kept the width it had at the previous, larger arrange - and the
-/// tracks after it stayed pushed along by that much.
-/// <para>Found on a docking panel folded against a side: the group went from 70 wide to 32, its template grid is
-/// Auto,*,Auto with the folded tab strip in the last column, and the strip was laid out at x=38 - the share the star
-/// still held from the 70-wide pass. The strip drew outside its own panel, hard against the window's edge, while its
-/// bounds, its hit-testing and every render snapshot agreed with each other and were all "correct".</para>
-/// </summary>
+// Star tracks are written on every arrange, including to zero, so a squeezed-out star does not keep its old width.
 [TestFixture]
 public class GridStarShrinkTests
 {

@@ -49,11 +49,8 @@ public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius co
     /// amounts moves the centre by half their difference - which is why it is stated once here.</summary>
     public Rect FrameInnerRect => DestinationRect.Deflate(BorderThickness);
 
-    /// <summary>The inner outline's corners: each shrinks by the THICKER of the two sides meeting at it. A scalar corner
-    /// cannot stay parallel to the outer one under unequal sides, and taking the thicker of the pair keeps the inner arc
-    /// from bulging out past the border on the heavier side.
-    /// <para>Must match CompositeFillBorder in BatchEffect.fx - the batch and the tessellated fallback have to cut the
-    /// same ring, or a rect that leaves the batch (a rotated world) would visibly change shape.</para></summary>
+    /// <summary>The inner outline's corners, each shrunk by the thicker of its two sides; must match CompositeFillBorder in
+    /// BatchEffect.fx.</summary>
     public CornerRadius FrameInnerCorners
     {
         get

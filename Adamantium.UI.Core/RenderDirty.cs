@@ -2,41 +2,17 @@
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Per-frame render dirty registry for the render-cache redesign (docs/RENDER_CACHE_REDESIGN.md §4a/§4i). Instead of
-/// re-walking the whole visual tree every frame, invalidation records WHAT changed here, and the render cache re-does
-/// only that:
-/// <list type="bullet">
-/// <item><b>Geometry</b> - components whose RECORDED draw output changed (colour/size/shape/opacity/visibility). Only
-/// these re-render (a partial rebuild); every other unit is kept as-is.</item>
-/// <item><b>Transform</b> - something MOVED (a <c>Bounds</c> / <c>RenderTransform</c> change). The recorded geometry is
-/// unchanged, so nothing re-renders; the render pass just re-bakes the world transforms (drop the frame-scoped memo).</item>
-/// <item><b>Structural</b> - a visual child was added/removed, or a partial re-render changed a component's draw-command
-/// COUNT (so the retained paint-order list no longer matches). Forces a full walk to rebuild that list.</item>
-/// </list>
-/// A frame with none of these set is fully clean: the cache re-draws last frame's retained units with ~0 CPU.
-/// </summary>
-/// <remarks>
-/// CONSERVATIVE by construction: over-marking only costs a redundant re-render/rebuild (correct, just slower); the only
-/// unsafe outcome - a real change marking NOTHING - can't happen because every mutation path marks at least one of the
-/// three (and a running property animation marks Geometry each tick). Single-threaded (UI/render thread).
-/// </remarks>
+/// <summary>Per-frame record of what changed, so the render cache redoes only that: Geometry (re-render those), Transform
+/// (re-bake world transforms) and Structural (full walk). A clean frame replays retained units.</summary>
+/// <remarks>Conservative: over-marking only costs time, and every mutation path marks at least one kind.</remarks>
 public sealed class RenderDirtyScope
 {
     private readonly HashSet<IUIComponent> GeometrySet = new();
     private bool _transform;
     private bool _structural;
 
-    // Force full structural rebuilds while a multi-frame state swap SETTLES (a theme swap, a DPI change): those cascades
-    // re-style, re-resolve keyed resources (brushes) and re-layout over SEVERAL passes - spread further by the layout
-    // frame budget - and some of their writes don't route through a RenderDirty mark (the restyle/ResourcesChanged
-    // flush), so a Clean-frame op-replay would keep showing the stale build until an unrelated mark (a hover) forced a
-    // walk. "Settled" is signalled by the LAYOUT itself (NotifyLayoutQuiescent - a pass that found NO work: every queue
-    // empty), not by a frame count: a heavy tree under a tight budget keeps forcing for exactly as long as it drains, a
-    // light one stops after a couple of frames. All the swap's activity flows through the layout pass (binding flush at
-    // its start, style/measure/arrange drains, the resource flush at its end), and the pass runs BEFORE the frame's
-    // render build - so the quiescent frame's OWN build (still forced, via _finalForcedBuild) is guaranteed to see even
-    // the writes made by the LAST pass's end-of-pass resource flush. Then the flag clears in Clear().
+    // Forces full walks while a theme or DPI swap settles, since some of its writes are unmarked; cleared after the build
+    // of the first frame whose layout pass found no work.
     private bool _forceUntilSettled;
     private bool _finalForcedBuild;
 
@@ -47,12 +23,8 @@ public sealed class RenderDirtyScope
     /// <summary>Records that <paramref name="component"/>'s recorded geometry changed - it will re-render.</summary>
     public void MarkGeometry(IUIComponent component)
     {
-        // Locked: writers run on MORE than the render-loop thread - a PARALLEL arrange pass (VirtualizingPanel) as each
-        // tile's size settles, AND Dispatcher operations (e.g. an Image frame-timer's InvalidateRender) which execute on
-        // the Win32 message-pump thread, NOT the render loop. HashSet is not thread-safe, so every read/clear the build
-        // does must take THIS lock too (see SnapshotGeometryInto/GeometryCount/Clear) - a lock-free Add racing the build's
-        // enumeration corrupted the set (NRE + "concurrent update" + a stuck-dirty FPS collapse). The scalar counters below
-        // stay lock-free (a lost increment only mis-counts a diagnostic).
+        // Locked: writers include parallel arrange and the message-pump thread, so every read and clear takes this lock.
+        // Diagnostic counters stay lock-free.
         if (component == null) return;
         lock (GeometrySet) GeometrySet.Add(component);
         LoopSignal.Request();   // the scene changed - the loop owes a frame
@@ -84,14 +56,8 @@ public sealed class RenderDirtyScope
     /// <summary>The geometry-dirty count, read under the write lock (safe against a concurrent mark).</summary>
     public int GeometryCount { get { lock (GeometrySet) return GeometrySet.Count; } }
 
-    // PAINT-dirty: the component draws the SAME thing, in the same shape, with a different colour/brush/opacity (a hover, a
-    // selection, a theme fade, an animated brush). Its recorded draw commands are unchanged and so are its units - only the
-    // GPU data those units bake from the brush is stale. So it is NOT geometry-dirty: the recorder must not re-render it, and
-    // the applier only re-bakes what it already holds.
-    //
-    // The distinction is what makes an animated SHARED brush affordable. Everything painting with it changes at once (the
-    // pulsing skeleton cards: ~470 of them), and treating that as geometry meant re-running OnRender, rebuilding every draw
-    // command, re-reconciling every unit and re-publishing every frozen layout entry - for one number that moved.
+    // Paint-dirty: same commands, new colors; the applier re-bakes existing units without re-rendering. Keeps an animated
+    // shared brush cheap.
     private readonly HashSet<IUIComponent> PaintSet = new();
 
     /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new colour.</summary>
@@ -122,21 +88,10 @@ public sealed class RenderDirtyScope
 
     public int PaintCount { get { lock (PaintSet) return PaintSet.Count; } }
 
-    // NOTE on what is deliberately NOT here: assigning a DIFFERENT brush to a property (a hover, a selection, a focus ring)
-    // still goes through the ordinary geometry path and re-records that element. It could be made cheaper - the recorded
-    // command holds the old brush by reference, and both brushes are known at the change, so the renderer could swap the
-    // reference inside the payloads it already holds. It is not worth it: that is an O(1) event (one row, one button), and
-    // buying it would mean the render cache reaching into the media types to mutate them - coupling the control layer to the
-    // renderer's internals for no measurable gain. The O(N) case - one SHARED brush animating under thousands of elements -
-    // is the one that mattered, and it needs none of that (the object is the same; only its value moved).
+    // Assigning a different brush still re-records the element: a one-element case, not worth coupling to the renderer.
 
-    // WHICH components moved this frame (a Bounds move, a RenderTransform tick). The global <see cref="_transform"/> flag
-    // above says "something moved" - enough to drop the derived world/clip memos - but the render's FROZEN layout snapshot
-    // needs identities: a component's snapshot entry (its LocalTransform) is stale exactly when the component itself moved,
-    // and nothing else's is (a descendant's LOCAL transform is unchanged by an ancestor's move - only the composed WORLD
-    // transform is, and that is a memo). Recording the movers lets the recorder refresh O(moved) snapshot entries instead
-    // of dropping the whole snapshot and re-capturing it from the RENDER-side retained groups every scroll frame - which is
-    // both O(scene) and a cross-thread read of render-owned state (docs/RENDER_THREAD_PLAN.md Phase 3.3).
+    // Which components moved this frame, so the recorder refreshes only their layout-snapshot entries instead of
+    // re-capturing it all.
     private readonly HashSet<IUIComponent> MovedSet = new();
 
     // A move whose COMPONENT we can't name (a Transform ticking while it is not assigned as anyone's RenderTransform, so
@@ -239,15 +194,8 @@ public sealed class RenderDirtyScope
     /// <summary>How many components are structurally marked, read under the write lock.</summary>
     public int StructuralCount { get { lock (StructuralSet) return StructuralSet.Count; } }
 
-    /// <summary>True when the recorder cannot know WHAT entered or left the drawn set, and so must re-walk the whole tree.
-    /// Two ways that happens:
-    /// <list type="bullet">
-    /// <item>a structural change nobody could name (<see cref="MarkStructural"/> with no component);</item>
-    /// <item>a multi-frame state SWAP is settling (<see cref="ForceStructuralUntilSettled"/> - a theme swap, a DPI change).
-    /// That is the whole point of that flag: such a cascade re-styles, re-resolves keyed resources and re-layouts over several
-    /// passes, and SOME of its writes never route through a RenderDirty mark at all. An incremental record would splice
-    /// nothing and leave every retained unit stale - the window would keep drawing the pre-swap scene.</item>
-    /// </list></summary>
+    /// <summary>Whether the recorder must re-walk the whole tree: an unnamed structural change, or a swap settling (see
+    /// <see cref="ForceStructuralUntilSettled"/>).</summary>
     public bool IsStructuralUnknown => _structuralUnknown || _forceUntilSettled || _finalForcedBuild;
 
     /// <summary>Force full structural rebuilds until the layout signals it has fully settled (see
@@ -288,7 +236,7 @@ public sealed class RenderDirtyScope
     public bool IsStructural => _structural || _forceUntilSettled || _finalForcedBuild;
     public bool IsTransform => _transform;
 
-    /// <summary>True while a multi-frame structural state swap (resize / DPI / theme) is still settling. The Phase 3.2
+    /// <summary>True while a multi-frame structural state swap (resize / DPI / theme) is still settling. The
     /// decoupled render path uses this as a lightweight barrier: it records such a window INLINE (record + apply together
     /// in BeginDraw) instead of at loop level, so the packet can't straddle the swap's per-frame relayout + presenter /
     /// projection finalisation and desync (chrome left at the old size while dirty content re-records at the new one).</summary>

@@ -191,11 +191,8 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         return true;
     }
 
-    // The reference this brush's orbit is built around, or false when the deep path does not apply. Quantized to a
-    // power-of-2 grid ~ the view span so it stays FIXED across small pans/zooms: panning then moves the tiny
-    // (viewCentre - ref) OFFSET - float has fine ABSOLUTE precision at small magnitudes (~1e-13 at 1e-6) - instead of the
-    // O(1) orbit values, whose float ULP (~1e-7) exceeds the deep per-pixel step and made the image snap (the "jitter").
-    // The reference plane is c (Mandelbrot) or z0 (Julia); the Julia constant stays fixed.
+    // The orbit reference (c for Mandelbrot, z0 for Julia), quantized to a power-of-2 grid near the view span so small
+    // pans move only the small float offset; false when the deep path does not apply.
     private static bool DeepReference(FractalBrush f, out double refX, out double refY, out double offX, out double offY)
     {
         refX = refY = offX = offY = 0.0;
@@ -203,11 +200,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
 
         double span = 1.5 / System.Math.Max(f.Zoom, 1e-4);
         double gridStep = System.Math.Pow(2.0, System.Math.Floor(System.Math.Log2(span)));
-        // Which CELL the reference sits in is decided by the WHOLE centre. Rounding here costs nothing - a cell is about
-        // a view span wide - but asking only the coarse part does: panning now lives in the fine part, so the coarse one
-        // stops moving, and the reference would stay behind at the cell the view started in while the view walked away.
-        // The orbit would then be built around a point no longer on screen, and the offset would grow to order 1, where
-        // the float it ships in steps by ~6e-8 - which is what turned the picture into blocks.
+        // The cell comes from the whole center (coarse + fine), since panning lives in the fine part.
         refX = System.Math.Round((f.Center.X + f.CenterFine.X) / gridStep) * gridStep;
         refY = System.Math.Round((f.Center.Y + f.CenterFine.Y) / gridStep) * gridStep;
         // The OFFSET is where the precision has to survive: subtract the coarse part first - two nearby doubles subtract
@@ -217,14 +210,8 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         return true;
     }
 
-    // Compute this fractal's high-precision (double) REFERENCE ORBIT at the quantized reference and append it to the shared
-    // orbit buffer, stamping Ref onto the item. Only Quadratic (z²+c) past DeepZoomThreshold - other formulas / shallow zoom
-    // leave Ref length 0 (deep path off) and render on the float path unchanged.
-    //
-    // Each step ships as a HI/LO PAIR of floats, not one float. Z_n is O(1) and a float carries it to ~1e-7 ABSOLUTE, but
-    // at zoom 1e8 the whole view is 1.5e-8 across - the reference missed by more than the picture, which is what put the
-    // wall at ~1e8. The lo term is the residue the hi float could not hold, so the pair carries ~1e-14 and the wall moves
-    // with it. The deltas stay single floats: they are small, and only their RELATIVE precision matters.
+    // Appends the double-precision reference orbit (Quadratic past DeepZoomThreshold only) as hi/lo float pairs, which
+    // carry ~1e-14 where one float stops at ~1e-7; deltas stay single floats.
     private void AppendOrbit(RectanglePayload p, ref FractalRectItem item)
     {
         if (p.Brush is not FractalBrush f) return;

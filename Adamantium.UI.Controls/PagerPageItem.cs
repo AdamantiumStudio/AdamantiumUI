@@ -2,15 +2,8 @@ using System;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// One entry in a <see cref="DataPager"/>'s row of page numbers - either a page to jump to, or the ellipsis standing in
-/// for the pages left out.
-/// <para>An ellipsis is an entry rather than a hole in the template on purpose: with one shape for both, the row is a
-/// plain list of buttons and needs no way to ask "is this one a number or an ellipsis" in markup. The engine ships no
-/// value converters, so a template that had to branch would have nothing to branch WITH.</para>
-/// <para>AND IT IS LIVE, not a label: it steps one page towards the side it is on, which is also the direction it is
-/// pointing. A dead button in the middle of a row of live ones is a place the pointer goes to be refused.</para>
-/// </summary>
+/// <summary>One entry in a <see cref="DataPager"/>'s page row: a page number or an ellipsis. An ellipsis steps one page
+/// toward its side.</summary>
 public sealed class PagerPageItem
 {
     internal PagerPageItem(string text, bool isCurrent, bool isEnabled, ICommand command)

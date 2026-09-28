@@ -44,13 +44,8 @@ public static class AumlLoader
         return result;
     }
 
-    /// <summary>
-    /// Hot reload: reconciles an existing live tree (<paramref name="liveRoot"/>, built from <paramref name="oldAst"/>)
-    /// against edited markup IN PLACE - changed properties are re-applied to the live instances (transitions ease,
-    /// other animations keep running) and added/removed/reordered children are spliced in, without rebuilding the tree.
-    /// On success <see cref="AumlLoadResult.Reconciled"/> is true and <see cref="AumlLoadResult.Ast"/> is the new AST.
-    /// It declines (Reconciled=false) when the root element type changed - the caller should then do a full rebuild.
-    /// </summary>
+    /// <summary>Applies edited markup to <paramref name="liveRoot"/> in place. <see cref="AumlLoadResult.Reconciled"/> is
+    /// false when the root type changed, and the caller must rebuild.</summary>
     public static AumlLoadResult Reconcile(object liveRoot, AumlAstObjectNode oldAst, string newAumlText,
         IEnumerable<Assembly> assemblies = null, Func<Type, Type> typeMapper = null)
     {

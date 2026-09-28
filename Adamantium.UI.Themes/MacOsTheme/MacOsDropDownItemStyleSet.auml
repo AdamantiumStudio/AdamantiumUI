@@ -2,23 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A row in the pop-up button's menu, and two things distinguish it from a list row:
-
-         A MENU ROW FOLLOWS THE POINTER. Everywhere else in this theme hover changes nothing, because a Mac control
-         answers the press. A menu is the exception on the platform itself: the row under the pointer is highlighted
-         while the menu is open, because that is how the pointer says which row a release will choose. A list has no
-         such pending choice, so it has no such highlight - see MacOsListBoxItemStyleSet. The keyboard's row highlights
-         the same way, and must: it is the same statement made by the arrows instead of by the pointer.
-
-         AND THE CHOSEN ROW IS MARKED WITH A TICK, NOT FILLED. This is the correction that matters. Filling it with the
-         accent - which is what this did at first - gives a menu two rows painted the same accent plate, one because it
-         is the current value and one because the pointer happens to be over it, and nothing on screen says which is
-         which. A Mac never had that problem because it never fills the chosen row: it ticks it in the margin and keeps
-         the plate for the pointer alone. So the plate means exactly one thing here - "a release lands HERE" - and the
-         tick means the other - "and THIS is what the control holds now".
-
-         The margin the tick sits in is reserved on every row, chosen or not, so a menu does not re-indent itself as the
-         selection moves. -->
+    <!-- A pop-up menu row: the accent plate follows the pointer or keyboard, the current value gets a tick in a margin
+         reserved on every row. -->
 
 
     <Style Selector="DropDownItem" BasedOn="ListBoxItem">

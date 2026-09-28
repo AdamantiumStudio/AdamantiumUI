@@ -257,13 +257,7 @@ public class RecordCostProbe
         // between this and a Border is what being an ELEMENT costs on top of being a property owner.
         Cost("SolidColorBrush (AdamantiumComponent)", () => new SolidColorBrush());
 
-        // The broad sweep: what an EMPTY instance of each control costs before anyone has done anything with it. Ordered
-        // by nothing in particular on purpose - the point is to let the numbers pick the targets rather than to confirm a
-        // guess about which control is fat. A LEAF (Rectangle, TextBlock, Ellipse) is the interesting shape: it can never
-        // have visual children, so anything it builds for them is spent on nothing.
-        // A bare instance is not what a template produces - it produces one with several properties SET, and each write is
-        // what brings the value map and a container into being. The difference between these two rows is the real cost of
-        // "this element has properties", multiplied by every element a template stamps out.
+        // The cost of an empty instance of each control, then what writing properties adds (as templates do).
         TestContext.Out.WriteLine("  -- what WRITING properties adds on top of a bare instance --");
         Cost("Border, bare", () => new Border());
         // Different properties carry different metadata FLAGS, and the flags run different code on write. Measured side
@@ -311,12 +305,7 @@ public class RecordCostProbe
         Cost("Dictionary<string,object>", () => new Dictionary<string, object>());
         Cost("TrackingCollection<IUIComponent>", () => new Adamantium.Core.Collections.TrackingCollection<IUIComponent>());
 
-        // The FundamentalUIComponent constructor builds FIVE collections unconditionally - ClassNames, Styles,
-        // _attachedStyles, Behaviors, Triggers - and three of them go through SetValue, so each also seeds a container in
-        // the property store. For a Border stamped out by a template all five are EMPTY: no classes, no local styles, no
-        // behaviors, no triggers. Every AdamantiumCollection pays for itself plus a `new object()` lock plus a
-        // `new T[5]` backing array before a single item exists. This is the same shape as the styleValues/triggerValues
-        // dictionaries that were already made lazy - measured here rather than assumed.
+        // The five collections FundamentalUIComponent builds unconditionally (usually empty on template parts).
         TestContext.Out.WriteLine("  -- the five collections every component builds whether or not it uses them --");
         Cost("Classes", () => new Adamantium.UI.Core.Resources.Classes());
         Cost("StylesCollection", () => new Adamantium.UI.Core.Resources.StylesCollection());

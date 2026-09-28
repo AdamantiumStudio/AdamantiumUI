@@ -3,19 +3,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// An indeterminate "something is happening" indicator: it has no progress value, only <see cref="IsActive"/>.
-/// </summary>
-/// <remarks>
-/// The control carries NO look of its own. Every indicator in the pack - the spinning ring, the bouncing dots, the
-/// indeterminate bar, the ripple - is a THEME template selected by class (<c>&lt;BusyIndicator Classes="Dots"/&gt;</c>),
-/// exactly as <see cref="ProgressBar"/> picks its ring template; and each template starts/stops its own animation off
-/// <see cref="IsActive"/>. So a new look is a new style, not a new enum value here, and an app can supply its own without
-/// touching the engine.
-///
-/// Turning it OFF must actually stop the animation: a looping animation never ends by itself, so a template's IsActive
-/// trigger pairs its RunAnimationAction with a StopAnimationAction (see BusyIndicatorStyleSet).
-/// </remarks>
+/// <summary>An indeterminate activity indicator with only <see cref="IsActive"/>. Each look is a theme template chosen by
+/// class, which starts and stops its own animation off IsActive.</summary>
 public class BusyIndicator : TemplatedUIComponent
 {
     public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.Register(nameof(IsActive),

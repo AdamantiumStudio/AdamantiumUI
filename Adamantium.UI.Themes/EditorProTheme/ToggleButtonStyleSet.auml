@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's toggle button - the thing a toolbar is made of: wrap, whitespace, word-wrap, each one a button
-         that STAYS DOWN.
-
-         Checked is a held FILL, not an accent flood. Fluent paints a checked toggle in the full accent and flips its
-         label to the on-accent colour, which is right for a button that is also a statement; in a toolbar of eight it
-         turns half the strip blue. Here a checked toggle keeps its own text colour and takes the subtle fill plus an
-         accent RULE along its bottom edge - the same mark the tab strip uses, so "this one is active" reads the same
-         way everywhere in the theme.
-
-         Same resting chrome as the plain button: a hairline OUTLINE and no fill, so a toggle says it can be pressed
-         before the pointer is on it. -->
+    <!-- Editor Pro's toggle: a hairline outline at rest like the button; checked keeps its text color and adds a subtle
+         fill plus a bottom accent rule, like the tab strip. -->
 
     <Style Selector="ToggleButton">
         <Setter Property="Background" Value="Transparent"/>

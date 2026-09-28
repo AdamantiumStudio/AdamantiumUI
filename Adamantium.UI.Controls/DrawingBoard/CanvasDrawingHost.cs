@@ -8,11 +8,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Keeps what the application says is ON THE PLANE in step with what draws it, in both directions - the
-/// drawing's <see cref="CanvasGraphHost"/>.
-/// <para>THE CANVAS MAKES ITS OWN TYPES. The application hands over data - where a thing is and what it is - and never
-/// a scene item, and never a control: a shape described here becomes the canvas's own drawing of it, and anything else
-/// becomes a control the canvas builds from the template chosen for that data's type.</para></summary>
+/// <summary>Keeps the application's plane data and what draws it in step both ways, like <see cref="CanvasGraphHost"/>. The
+/// application hands over data; the canvas builds its own items and controls.</summary>
 internal sealed class CanvasDrawingHost
 {
     private readonly Dictionary<ICanvasObject, ICanvasItem> _placed = new();

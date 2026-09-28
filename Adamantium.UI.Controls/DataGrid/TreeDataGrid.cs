@@ -400,11 +400,7 @@ public partial class TreeDataGrid : Selector
 
         _rawChildren = ChildrenSelector
                        ?? (_relation != null ? _relation.ChildrenOf : TreeChildResolver.ForPath(ChildrenPath));
-        // EVERYTHING starts shut, a group exactly like a branch. Open was tried and is wrong: a table is grouped in
-        // order to FOLD it, and an open group is the table back again with captions in it. Measured on the stand -
-        // grouping ten thousand rows by Region and Batch makes 495 batch groups, and closing one only uncovered the
-        // next open one, five hundred times over. A group the user HAS opened comes back open: that is what
-        // IsGroupOpen answers, by path.
+        // Groups start shut like branches, since grouping is for folding; one the user opened comes back open (by path).
         _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
         _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : _roots));
         _flattener.SetRoots(_shapedRoots);
@@ -715,11 +711,8 @@ public partial class TreeDataGrid : Selector
     /// <summary>Whether the strip for a new record is standing right now.</summary>
     internal bool HasNewItemRow => ShowNewItemRow && CanUserAddRows;
 
-    /// <summary>Blank space after the last row, so that row can be scrolled CLEAR of the horizontal scrollbar. The bar
-    /// is drawn over the content, so without this the last row is permanently half-covered - and the row it covers is
-    /// the one a table with a placeholder needs most.
-    /// <para>Added only when the table can scroll sideways at all: a short table that ends in an inch of nothing looks
-    /// like a fault, and there is no bar there to clear.</para></summary>
+    /// <summary>Blank space after the last row so it scrolls clear of the overlaid horizontal scrollbar; added only when the
+    /// table can scroll sideways.</summary>
     public static readonly AdamantiumProperty EndPaddingProperty = AdamantiumProperty.Register(
         nameof(EndPadding), typeof(Double), typeof(TreeDataGrid),
         new PropertyMetadata(16.0, PropertyMetadataOptions.AffectsMeasure));
@@ -984,12 +977,7 @@ public partial class TreeDataGrid : Selector
             group.Add(item);
         }
 
-        // BY THE KEY, not by which value happened to turn up first. The loop above meets values in row order, so on a
-        // table sorted by anything else - or by nothing - the captions came out in no order at all (measured on the
-        // stand: Size 3832, 8711, 6609, 523...), and a list of captions nobody can scan is not a fold of the table, it
-        // is a shuffle of it. The SAME comparison the columns sort by, so a group of numbers orders as numbers.
-        // Direction follows the table only when the table is sorted BY THIS COLUMN - then the captions and the rows
-        // under them run the same way; otherwise ascending, which is what a list of labels is expected to be.
+        // Groups order by key with the columns' comparison; descending only when the table is sorted by this column.
         var descending = ReferenceEquals(SortColumn, column) && SortDescending;
         order.Sort((a, b) => descending
             ? Compare(((DataGridGroup)b).Key, ((DataGridGroup)a).Key)
@@ -1125,11 +1113,8 @@ public partial class TreeDataGrid : Selector
         set => SetValue(CanUserChooseColumnsProperty, value);
     }
 
-    /// <summary>Whether the headers offer their filter funnels at all. On by default - a table you cannot narrow is a
-    /// report - and turned off here for a table that is narrowed some other way, or not at all, rather than by saying so
-    /// on every column in turn.
-    /// <para>The column's own <see cref="DataGridColumn.CanUserFilter"/> still answers for itself: this one can only
-    /// take the funnel away, never give it to a column that refused it.</para></summary>
+    /// <summary>Whether the headers offer filter funnels at all; it can only take a funnel away, never override a column's
+    /// own <see cref="DataGridColumn.CanUserFilter"/>.</summary>
     public static readonly AdamantiumProperty CanUserFilterColumnsProperty = AdamantiumProperty.Register(
         nameof(CanUserFilterColumns), typeof(bool), typeof(TreeDataGrid),
         new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure, OnCanUserFilterColumnsChanged));
@@ -2113,12 +2098,8 @@ public partial class TreeDataGrid : Selector
     /// <summary>How wide the RIGHT pinned zone is. Zero when nothing is pinned there.</summary>
     public double RightFrozenWidth { get; private set; }
 
-    /// <summary>Slides the right-pinned columns from the end of the content, where the width pass puts them, back to
-    /// the viewport's right edge. ONE number for the whole zone, and it ALREADY carries the scroll. Zero when the table
-    /// does not overflow, and zero again when it is scrolled fully across.</summary>
-    /// <remarks>Measured against THE SCROLLER's own extent, not against <see cref="ColumnsWidth"/>: the two differ by
-    /// whatever the presenter adds around the columns, and the difference showed as the zone stepping a couple of
-    /// pixels sideways at the far end - the one place where the two definitions of "fully scrolled" disagree.</remarks>
+    /// <summary>Slides the right-pinned columns from the content's end to the viewport's right edge; includes the scroll and
+    /// is measured against the scroller's own extent.</summary>
     internal double RightPinShift
     {
         get
@@ -2397,11 +2378,7 @@ public partial class TreeDataGrid : Selector
         var row = ActiveRow < 0 ? 0 : Math.Clamp(ActiveRow + rowStep, 0, rowCount - 1);
         var column = ActiveColumn < 0 ? 0 : Math.Clamp(ActiveColumn + columnStep, 0, Columns.Count - 1);
 
-        // A caption or a details panel holds no cells, so there is nothing there to take: the keyboard takes the ROW.
-        // ActiveColumn is deliberately LEFT WHERE IT WAS - stepping over a caption and carrying on has to land back in
-        // the column you were walking down, and a row that has no columns cannot say which one that was. The selection
-        // survives a SHIFT walk for the same reason the rectangle does: extending over a caption must not cost the block
-        // already taken.
+        // A caption or details panel has no cells, so the keyboard takes the row and ActiveColumn stays, to land back in it.
         if (!HoldsCells(rows[row].Node))
         {
             if (!extend) SelectedCells.Clear();
@@ -2554,11 +2531,8 @@ public partial class TreeDataGrid : Selector
         e.Handled = true;
     }
 
-    /// <summary>Walks the table with the arrows, Shift extending from the anchor. False for any other key, so the
-    /// caller can go on to its own.
-    /// <para>Sideways on a CAPTION opens and closes it instead of walking columns: there are no columns to walk there,
-    /// and opening a group is the one thing the keyboard has to be able to do to a caption at all. Already open, Right
-    /// walks on into it; already closed, Left walks out of it - so neither key is ever dead.</para></summary>
+    /// <summary>Walks the table with the arrows, Shift extending from the anchor; on a caption, Left and Right close and open
+    /// it. False for other keys.</summary>
     public bool Walk(Key key, bool extend = false)
     {
         var rows = Rows;
@@ -2892,11 +2866,8 @@ public partial class TreeDataGrid : Selector
         return true;
     }
 
-    // Focus leaving a cell of the TABLE saves it: the row is already there, and what was typed is an edit of a value
-    // that exists. Focus leaving the strip for a new record CREATES NOTHING - a record that appears because someone
-    // clicked elsewhere is worse than a few characters lost - but it does not throw the strip away either: a click on
-    // the next field moves the focus before it opens anything, so discarding here emptied the strip on the way to the
-    // very field being reached for. The strip is emptied by Escape, and turned into a record by a commit.
+    // Leaving a table cell saves it; leaving the new-record strip neither creates a record nor empties the strip (Escape
+    // does that, a commit creates).
     internal void FinishEditOnFocusLoss()
     {
         if (_newRow is { IsEditing: true }) _newRow.Close();
@@ -3058,12 +3029,8 @@ public partial class TreeDataGrid : Selector
         return text.ToString();
     }
 
-    /// <summary>Writes the clipboard into the table, starting at the top-left of the selection - or at the active cell
-    /// when nothing is selected. False when there was nothing to paste, or when nothing would take it.
-    /// <para>Every value goes through <see cref="CellEditEnding"/>, so a view-model that refuses a value refuses it
-    /// however it arrives, and through the column's binding, which converts it and REFUSES what will not fit. A
-    /// read-only cell, a column with no binding of its own to write through, and anything past the last row or column
-    /// are all simply not written: the table does not grow to take a paste.</para></summary>
+    /// <summary>Pastes the clipboard from the selection's top-left (or the active cell), each value through
+    /// <see cref="CellEditEnding"/> and the column's binding; the table does not grow. False when nothing was taken.</summary>
     public bool PasteSelection()
     {
         if (IsEditing && !CommitEdit()) return false;
@@ -3261,11 +3228,7 @@ public partial class TreeDataGrid : Selector
         _firstColumn = Math.Max(0, first - 1);
         _lastColumn = Math.Min(Columns.Count - 1, last + 1);
 
-        // A row builds its cells from this window IN ITS OWN MEASURE, and the window is moved HERE - in the grid's.
-        // A row measured before this ran has last pass's window, and nothing else would ever tell it otherwise: on the
-        // stand, scrolling sideways left the rows holding the columns that had just gone off the left and none of the
-        // ones that had come in from the right. Resizing any column put it right, which is what said the rows were
-        // stale rather than misplaced - it is the only other thing that re-syncs them.
+        // Rows build cells from this column window in their own measure, so a moved window must re-measure them.
         if (_firstColumn != wasFirst || _lastColumn != wasLast) InvalidateRealizedRows();
     }
 
@@ -3306,11 +3269,7 @@ public partial class TreeDataGrid : Selector
             desired = base.MeasureOverride(availableSize);
         }
 
-        // A panel measured to a different height than the stack had reserved for it. Telling the stack is all that
-        // happens here - it lays the rows out again on the NEXT pass. Re-running the measure now instead would measure
-        // every open panel a second time in the same frame, and a panel is a whole templated subtree: measured on the
-        // stand with eight of them open, layout went to 60 ms a pass. One frame at the previous height is not worth
-        // doubling every frame.
+        // A panel changed height: tell the stack for the next pass rather than measuring every open panel twice now.
         if (_detailsHeightChanged)
         {
             _detailsHeightChanged = false;

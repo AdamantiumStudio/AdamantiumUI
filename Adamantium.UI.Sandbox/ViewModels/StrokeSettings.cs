@@ -58,13 +58,8 @@ public sealed class StrokeSettings : PropertyChangedBase
     public double Corner { get => _corner; set { if (SetProperty(ref _corner, value)) RaisePropertyChanged(nameof(CornerRadius)); } }
     public CornerRadius CornerRadius => new(_corner);
 
-    // FOUR separate caps, because they are four separate properties and conflating them is what hid the bugs: the demo
-    // used to bind all of them to one setting, so the interesting cases - a dash cap that differs from the line cap,
-    // a start that differs from an end - could not be produced at all.
-    //
-    // The rule they follow: Start/End belong to the whole stroke and exist ONLY at its two real ends; every other dash
-    // end takes its own dash cap; a CLOSED, untrimmed contour has no real ends at all, so it is dash caps everywhere.
-    // The two dash caps set differently make each dash an arrow (a concave bite behind a convex tip).
+    // Four independent caps: Start/End only at the stroke's real ends (none on a closed untrimmed contour), dash caps
+    // everywhere else.
     private PenLineCap _dashStartCap = PenLineCap.ConvexRound;
     public PenLineCap DashStartCap { get => _dashStartCap; set => SetProperty(ref _dashStartCap, value); }
 

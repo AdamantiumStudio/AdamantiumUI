@@ -8,18 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// Every <c>{TemplateBinding X}</c> in a theme names a property of the control the template is FOR. When it names one
-/// that does not exist, the binding resolves to a null property and the whole template BUILD throws
-/// (TemplateBindingExpression.UpdateTarget -> GetValue(null)) - so the control keeps whatever template it had before.
-/// <para>What that looks like on screen is the worst part: not a blank control, not an error, but the PREVIOUS theme's
-/// look, indistinguishable from "the new style was never written". One such typo (SlidePanel has Header, not Title)
-/// cost a session's worth of a whole theme appearing not to apply.</para>
-/// <para>The check is TEXTUAL because a built ControlTemplate is a compiled builder with nothing left to inspect - the
-/// binding is created while it runs, which is exactly the moment that throws. So the markup is read the way the
-/// generator reads it: a stack of enclosing ControlTemplate TargetTypes, since a TemplateBinding always resolves
-/// against the NEAREST one (a Popup.ChildTemplate binds to the Popup, not to the control outside it).</para>
-/// </summary>
+// Every {TemplateBinding X} names a property of the nearest enclosing ControlTemplate's TargetType; checked textually,
+// since a bad one throws while the template builds.
 [TestFixture]
 public class ThemeTemplateBindingTests
 {

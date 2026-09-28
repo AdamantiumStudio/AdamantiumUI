@@ -9,30 +9,16 @@ internal class ValueContainer
     // items. Now a plain fixed-size array indexed by (int)priority.
     private static readonly int SlotCount = Enum.GetValues<ValuePriority>().Length;
 
-    // The slots, allocated ON THE FIRST REAL WRITE. A component seeds a container for every property its type registers
-    // and then writes a handful of them: an element carries about 58 and sets maybe five. Allocating the array up front
-    // cost one object[9] per property per element - 615 000 arrays to build one tab, measured - for slots that stay
-    // empty for the object's whole life. Until something is written, the DEFAULT alone describes the container, and it
-    // lives in a field.
+    // Slots are allocated on the first write; most properties are never written, and the default lives in a field.
     private object[] _values;
 
     private object _defaultValue = AdamantiumProperty.UnsetValue;
 
-    // The effective value (the highest-priority set slot), computed WHEN A SLOT IS WRITTEN. Reads outnumber writes by
-    // orders of magnitude - measure/arrange read Margin/alignment/min-max on every node, hundreds of thousands of times
-    // a scroll frame - so the scan belongs on the rare side.
-    //
-    // It used to be computed lazily ON READ (a dirty flag re-scanned on the next GetEffective), which made READING a
-    // WRITE: two threads reading the same property could tear it - one clearing the flag before the other saw the new
-    // value - and that is why a read had to take the component's lock at all. Now a read is a single volatile field
-    // read, so it can never observe a half-finished update and needs no lock of its own.
+    // The effective value, computed on write so a read is one lock-free volatile read; reads vastly outnumber writes.
     private volatile object _effective = AdamantiumProperty.UnsetValue;
 
-    // The winning slot's value BEFORE coercion - what was actually asked for. Coercion is a mapping from this to the
-    // effective value, not a rewrite of the request: keeping the request means it can be mapped AGAIN when the things
-    // the coercion depends on change. Without it a value that had to be clamped is gone for good - a lower bound of 20
-    // clamped to 1 because the upper bound had not arrived yet could never come back to 20 once it did.
-    // Only read/written under the container's lock (writes and re-coercions), so it needs no volatile of its own.
+    // The winning value before coercion, kept so it can be re-coerced when its constraints change; guarded by the
+    // container's lock.
     private object _base = AdamantiumProperty.UnsetValue;
 
     // The lowest-priority SOURCE slot; everything below it is the computed tail (see ValuePriority).
@@ -101,15 +87,8 @@ internal class ValueContainer
     /// re-resolving costs nothing to the rest.</summary>
     public long InheritedStamp { get; set; } = -1;
 
-    /// <summary>Fills the INHERITED slot with a value resolved from an ancestor, without going through the write path:
-    /// this is a cache fill, not a set. Nothing is notified, because from the outside the value did not change - it is
-    /// the same value the property already read as, only now it is resolved rather than walked for.
-    /// <para>This is a WRITE ON THE READ PATH, which this class otherwise refuses to do (see <c>_effective</c>). It is
-    /// allowed here on one condition: the writes are ordered so that a concurrent reader can never see a HALF-resolved
-    /// value. Each field below is written atomically on its own, the published <see cref="Effective"/> goes LAST and is
-    /// volatile, and the stamp after it - so a racing reader sees either the value from before this fill or the one
-    /// after it, and at worst resolves the same answer a second time. Two threads resolving at once compute the same
-    /// value from the same ancestors, so the race costs work, never correctness.</para></summary>
+    /// <summary>Caches an inherited value resolved from an ancestor, without notifying. Writes are ordered so a racing
+    /// reader sees the value before or after, never half of it.</summary>
     public void SetInheritedCache(object raw, object coerced, long epoch)
     {
         if (raw == AdamantiumProperty.UnsetValue)

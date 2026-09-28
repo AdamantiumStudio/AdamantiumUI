@@ -2,23 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS checkbox. Four differences from Fluent's, and each is a platform convention rather than a taste:
-
-         IT IS SMALL. 16 across, against Fluent's 20. AppKit sizes the box to the TEXT beside it - the box and a line of
-         body type are about the same height - where Windows gives it a square of its own that stands clear of the
-         label. So the pair reads as one line of writing rather than as a control with a caption.
-
-         AppKit's own number is 14, and 14 was tried: a Mac has drawn these on a 2x screen since Retina, so 14 points
-         are 28 device pixels and the tick keeps its shape. At 1x they are 14 pixels and a 1.8-wide tick inside them
-         goes to mush. 16 is the smallest that survives one pixel to the point - see MacOsRadioButtonStyleSet, which
-         holds the same line for the same reason.
-
-         MIXED IS A DASH, NOT A SQUARE. The three-state marker on a Mac is a single horizontal bar. A filled square is
-         the Windows marker, and it is the one thing that gives a re-coloured Fluent checkbox away instantly.
-
-         NO HOVER. Same decision as the button and the switch, for the same reason: a Mac control answers the press.
-
-         PRESSING DARKENS IT, in both states - the off box and the accent-filled one alike. -->
+    <!-- The macOS checkbox: a 16px box sized to the text (AppKit's 14 blurs the tick at 1x), a dash for mixed, no hover,
+         and pressing darkens it in both states. -->
 
     <Style Selector="CheckBox">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>

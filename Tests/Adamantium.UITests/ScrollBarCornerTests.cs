@@ -10,12 +10,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The square where two scrollbars cross belongs to neither of them, and a theme cannot see that for itself:
-/// each bar's visibility is decided from the metrics inside the viewer, and a style trigger cannot ask a sibling part
-/// how it came out.
-/// <para>Why it matters: the shipped templates shortened the horizontal bar by a bar's width UNCONDITIONALLY, so a
-/// viewer with only a horizontal bar left a gap at the right for a vertical bar that was not there.</para>
-/// </summary>
+// The scrollbar corner is reserved only when both bars show, which the viewer, not the theme, must decide.
 [TestFixture]
 public class ScrollBarCornerTests
 {

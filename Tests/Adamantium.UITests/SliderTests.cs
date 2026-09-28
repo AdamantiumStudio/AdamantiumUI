@@ -155,11 +155,7 @@ public class SliderTests
     // the TemplateBinding that feeds it.
     private sealed class ValueSource { public double V { get; init; } }
 
-    // The real slider bug: Value is data-bound AND coerced (RangeBase clamps to [Min,Max]). Minimum is applied first
-    // (during construction, coercing the default 0 up to Min) and the {Binding} resolves later (once DataContext is
-    // set). If the Minimum-coercion writes Value at LOCAL priority, it outranks the {Binding} (Local=1 beats Binding=2)
-    // and the slider stays pinned at Minimum forever - the thumb sat at the start. The coerced default must sit at its
-    // own (default) priority so the binding can still apply.
+    // Coercing the default Value to Minimum must not write at Local priority, or the later {Binding} never applies.
     [Test]
     public void BoundValue_WithMinimumMaximum_AppliesBindingOverCoercedMinimum()
     {

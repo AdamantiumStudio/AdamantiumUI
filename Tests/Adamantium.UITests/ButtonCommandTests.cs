@@ -3,13 +3,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A button follows its command's availability - it greys itself out while the command says no, and lights up again
-/// when the answer changes, without anything touching it. The mechanism lives in <c>ButtonBase</c>, so every control of
-/// the family inherits it (Button, RepeatButton, ToggleButton and through it CheckBox / RadioButton / ToggleSwitch).
-/// It was working and untested, which for the one behaviour that decides whether a control can be used at all is not a
-/// state to leave it in.
-/// </summary>
+// Buttons follow their command's CanExecute (ButtonBase, so the whole button family does).
 [TestFixture]
 public class ButtonCommandTests
 {

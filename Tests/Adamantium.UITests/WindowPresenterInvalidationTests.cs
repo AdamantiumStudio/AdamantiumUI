@@ -9,13 +9,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A swapchain picks its composite-alpha mode when it is CREATED, so turning a window's per-pixel transparency on or
-/// off cannot land in place - the swapchain has to be rebuilt. It must NOT be rebuilt from the setter either: that runs
-/// on whatever thread wrote the property, while the render thread may be mid-frame with the very swapchain that would
-/// be destroyed. So the setter only marks the presenter stale, and the frame loop rebuilds it at the next boundary -
-/// the same path a resize already takes.
-/// </summary>
+// Toggling transparency marks the presenter stale; the frame loop rebuilds the swapchain at the next boundary, as for a
+// resize.
 [TestFixture]
 public class WindowPresenterInvalidationTests
 {

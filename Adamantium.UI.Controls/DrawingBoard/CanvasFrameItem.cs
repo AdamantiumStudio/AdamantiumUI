@@ -7,15 +7,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A titled box drawn BEHIND a group of nodes - the comment frame every graph editor has.
-/// <para>What it is FOR: a graph of forty nodes is unreadable as forty nodes and readable as five labelled areas. It is
-/// the only documentation a graph ever gets, and it is the cheapest thing in the editor to provide.</para>
-/// <para>It holds nothing. A frame is not a container and does not own what is inside it - which is what makes it
-/// harmless: nodes are added, moved and deleted without ever consulting it, and a frame drawn round a node that has
-/// since moved away is simply a frame with nothing in it. What it DOES do is carry them: dragged, it takes along
-/// whatever was standing on it when the drag began - see <see cref="Catch"/>.</para>
-/// <para>Made at the BOTTOM of the order, and sent there when it is drawn round something: a frame over its own nodes
-/// would be a sheet of colour over the thing it is about.</para></summary>
+/// <summary>A titled comment frame drawn behind a group of nodes. It owns nothing, but a drag carries what stood on it
+/// (<see cref="Catch"/>); it sits at the bottom of the order.</summary>
 public class CanvasFrameItem : ICanvasItem
 {
     private readonly List<ICanvasItem> _caught = new();

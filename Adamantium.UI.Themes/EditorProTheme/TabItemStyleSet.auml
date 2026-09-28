@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tab is a LINE, not a card: no fill, no corners, and the current one is marked by an accent rule
-         under it. That is a shape difference, so this theme writes its own template rather than overriding numbers.
-
-         The PART NAMES are Fluent's on purpose. Its trigger style still applies to this control (both sets are in the
-         theme), and those triggers carry a lot of behaviour that has nothing to do with the look: when the close and
-         pin buttons are reserved, revealed or pinned open, when the icon slot exists. Keeping the names means all of
-         that keeps working and this file states only what actually differs. The card fill it would paint is turned off
-         by making the selected background transparent, not by re-declaring the triggers.
-
-         Per the small-styles convention: properties, then the template, then the triggers. -->
+    <!-- Editor Pro's tab: no fill or corners, the current tab marked by the strip's accent rule. Part names match
+         Fluent's. Properties, then the template, then the triggers. -->
 
     <Style Selector="TabItem">
         <Setter Property="MinHeight" Value="{ResourceReference TabStripHeight}"/>
@@ -38,13 +30,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <!-- No rule of its own here. The accent rule under the current tab belongs to the STRIP, not to the
-                         item: the tab control owns PART_SelectionIndicator and SLIDES it as the selection moves, and a
-                         second static line drawn per item meant two accent marks for one selection - plainly visible in
-                         a docked layout, where the strip's own indicator sat under the group while the item's sat under
-                         the label. One selection, one mark, and it is the one the control drives.
-                         Weight and colour still come from this theme: SelectionIndicatorThickness resolves against
-                         Editor Pro's own metrics. -->
+                    <!-- No rule per item: the tab control's sliding PART_SelectionIndicator is the one mark
+                         (SelectionIndicatorThickness from this theme's metrics). -->
                     <Grid>
                         <Border x:Name="TabBorder"
                                 CornerRadius="{TemplateBinding CornerRadius}"
@@ -93,12 +80,7 @@
     </Style>
 
 
-    <!-- The STATES. These are not decoration - they are most of what a tab does, and they are the reason a tab with a
-         template but no triggers looks like plain text: no hover, no close button, no icon slot, nothing to say which
-         one is current beyond the strip's own rule.
-         They used to come from Fluent's set, which this theme included and this file leaned on by keeping its part
-         names. When that include was dropped the template stayed and the behaviour left with it - the same way the
-         list's did. A theme that owns a control's template owns its STATES too. -->
+    <!-- The tab's states (hover, close button, icon slot, current), owned here with the template. -->
     <Style Selector="TabItem">
         <PropertyTrigger Property="IsMouseOver" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
@@ -112,11 +94,8 @@
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
         </PropertyTrigger>
-        <!-- The close button reveals on hover and stays on the current tab, the way every editor and browser does it.
-             Three states, and the middle one is the point: off = Collapsed (no space at all); on but idle = Hidden,
-             which RESERVES the space so the tab does not change width the moment the pointer arrives; on and
-             hovered/selected = Visible. Later triggers win on the value stack, so those two override the reserved
-             Hidden. -->
+        <!-- Close button: Collapsed when off, Hidden (space reserved) when idle, Visible on hover or selection; later
+             triggers override the Hidden. -->
         <PropertyTrigger Property="ShowCloseButton" Value="true">
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden"/>
         </PropertyTrigger>
@@ -162,11 +141,7 @@
         </MultiTrigger>
     </Style>
 
-    <!-- A LONE document tab stretched across its strip. Fluent fills it with the accent, which in a one-tab window
-         paints a bar the width of the screen in the loudest colour there is - and says only what the window's caption
-         already says. Here it stays an ordinary tab that happens to be wide: the same rule under it, the same ground.
-         The style exists to say that outright, because without it the base rules for a stretched tab would be whatever
-         another theme happened to leave. -->
+    <!-- A lone stretched tab stays an ordinary tab (no accent fill), stated explicitly for this theme. -->
     <Style Selector="TabItem[IsStretched=true]">
         <Setter Property="BackgroundSelected" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>

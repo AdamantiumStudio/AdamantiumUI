@@ -258,12 +258,8 @@
                                    FontSize="12" MarginBottom="6"
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                        <!-- WHICH FACE, and the only thing here the user chooses outright - properties follow what is
-                             selected, the list does not follow anything. RADIOS and not toggles: one of them is always
-                             on, and a radio is the control that cannot be clicked into a state where neither is.
-                             TWO CHOICES IN ONE ROW, told apart by a rule: what the canvas is being used AS, and which
-                             face is showing. Pictograms, because four buttons with words took two rows of a panel
-                             whose whole job is the rows below them. -->
+                        <!-- Two radio groups in one row, split by a rule: the canvas mode and the visible face; pictograms
+                             keep it to one row. -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
                             <RadioButton Classes="Toggle" GroupName="CanvasMode"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
@@ -390,13 +386,8 @@
                                               ResetButton="{Ancestor CanvasInspector, Canvas.ResetButton}"/>
                             </ScrollViewer>
 
-                            <!-- The SECOND face. ONE BINDING per row and the grid does the rest: a line written here
-                                 becomes a step in the canvas's memory by itself, and the canvas - which listens to that
-                                 memory - draws the plane again. Items on a canvas are DATA and say nothing when they
-                                 are written to, which is what lets a drawing hold tens of thousands of them; this is
-                                 what closes that gap with no bookkeeping anywhere else.
-                                 STEPPERS ON EVERY NUMBER - see Fluent's set: one panel that nudges a number on a node
-                                 and refuses to on a shape is worse than a slightly narrower field. -->
+                            <!-- The second face: each row's edit becomes an undo step the canvas listens to and redraws
+                                 from; steppers on every number. -->
                             <PropertyGrid x:Name="PART_Selected"
                                           Visibility="{TemplateBinding SelectionFace}"
                                           SelectedObjects="{TemplateBinding Selection}"

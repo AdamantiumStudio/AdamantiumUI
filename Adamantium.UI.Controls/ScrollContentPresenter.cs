@@ -304,11 +304,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
         if (Delegating)
         {
-            // The inner virtualizing panel realizes only the visible window and arranges those tiles at ABSOLUTE slots
-            // (offset NOT baked in). We scroll it like physical content: keep the panel VIEWPORT-sized (so its clamp +
-            // scrollbar stay correct) and slide it up/left by the offset. Tiles that scrolled off overflow the panel; our
-            // ClipToBounds trims to the viewport. A scroll is then ONE translation here plus the panel rebinding the row
-            // that entered - staying tiles keep their slots and Arrange short-circuits.
+            // The virtualizing panel arranges at absolute slots: keep it viewport-sized and slide it by the offset, so a
+            // scroll is one translation here.
             var offset = _inner.Offset;
             _lastTranslatedInnerOffset = offset;   // so OnInnerMetricsChanged only re-invalidates on a REAL offset change
             if (VisualChildren.FirstOrDefault() is IMeasurableComponent inner)
@@ -355,11 +352,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     private void OnInnerMetricsChanged(object sender, EventArgs e)
     {
-        // The inner panel re-clamped its offset (e.g. the content shrank): re-translate the panel by the new -Offset so the
-        // content snaps into view WITHOUT a manual scroll nudge. GUARD on an actual offset change - this event also fires
-        // from the panel's OWN arrange, so an unconditional InvalidateArrange would re-enqueue us mid-arrange, re-arrange
-        // the panel, re-fire this, and loop (the crash). The re-clamp is idempotent, so once we've translated to the new
-        // offset the values match and the loop stops.
+        // Re-translate after the panel re-clamps its offset, but only on a real change: this also fires from the panel's
+        // own arrange and would loop.
         if (Delegating && _inner.Offset != _lastTranslatedInnerOffset) InvalidateArrange();
         RaiseMetricsChanged();
     }

@@ -51,7 +51,7 @@ public class DockingSizingTests
     }
 
     /// <summary>
-    /// Rule 7.6. Every tool docked against the centre is paid for by the centre, so without a floor enough of them
+    /// Every tool docked against the centre is paid for by the centre, so without a floor enough of them
     /// squeeze it out of existence - measured before the fix at 60px against a stated minimum of 200.
     /// </summary>
     [Test]

@@ -124,13 +124,8 @@ public class ContentControl : Control, IContentControl
 
    }
 
-   /// <summary>Whether this control shows its <see cref="Content"/> ITSELF while it has no template. True for an
-   /// ordinary content control: a button with no style should still show its label.
-   /// <para>False where the content is somebody else's to draw. A tab container is the case that named this: its
-   /// Content is the PAGE, which the TabControl's body presenter shows - the container itself only ever draws a header
-   /// in the strip. A theme swap re-styles the tree over several frames, so every templated control spends a moment
-   /// without one; for a tab that moment put an entire page inside a header card, and the strip measured itself to it
-   /// (a 480,000-pixel-tall tab strip with the page drawn across it).</para></summary>
+   /// <summary>Whether this control shows its <see cref="Content"/> itself while it has no template. False where the content
+   /// is drawn elsewhere, such as a tab's page.</summary>
    protected virtual bool HostsContentWithoutTemplate => true;
    
    private void UpdateVisualsForContent(object content)
@@ -158,11 +153,8 @@ public class ContentControl : Control, IContentControl
          return;
       }
 
-      // Animate when a transition is selected and there is new content - including the FIRST content (slides in from
-      // the side and settles, MahApps-style). NEVER in the designer (live or one-shot): a content transition fires on
-      // content replacement, which in the previewer only happens on initial load / a live-reconcile re-apply (not a
-      // real swap), so it would slide the content off-screen and capture a blank frame (the white-screen). The designer
-      // shows the settled content instead, like the WPF designer.
+      // Animate a selected transition on new content, the first included; never in the designer, where it captures a blank
+      // frame.
       var animate = ContentTransition != ContentTransition.None && content != null
                     && !Design.IsDesignMode;
 
@@ -231,11 +223,8 @@ public class ContentControl : Control, IContentControl
       return finalSize;
    }
 
-   /// <summary>Arranges the template/content at its own desired (content) size instead of filling the slot, and reports
-   /// that size. For a control whose visual can't grow - a CheckBox's box+glyph+label, a RadioButton's ring+label - this
-   /// keeps ActualWidth/RenderSize/ClipRectangle equal to what is actually drawn, and the template's own centring then
-   /// anchors to that real box, not to the whole slot. The base ArrangeOverride fills the slot, which is correct only
-   /// for a control whose chrome stretches to match (a Button: its visible border == its size).</summary>
+   /// <summary>Arranges the content at its desired size instead of filling the slot, for controls whose visual cannot grow
+   /// (CheckBox, RadioButton), so what is drawn and RenderSize agree.</summary>
    protected Size ArrangeContentSize(Size finalSize)
    {
       foreach (var visual in VisualChildren)
@@ -244,13 +233,7 @@ public class ContentControl : Control, IContentControl
          var size = new Size(Math.Min(child.DesiredSize.Width, finalSize.Width),
                              Math.Min(child.DesiredSize.Height, finalSize.Height));
 
-         // THE CONTENT IS NOT THE ONLY THING THAT SETS THIS CONTROL'S SIZE. Width/Height/Min*/Max* are what the element
-         // itself asked to be; measure already applied them to its DesiredSize, and dropping them here made the two
-         // disagree - the control desired one size and then drew at another. A radio wearing a toggle template is the
-         // case that found it: its MinWidth widened it in measure and this collapsed it back onto the digit, so a row of
-         // page buttons hugged its numbers however wide the theme said they were.
-         // Still never PAST the slot - not filling the slot is the whole point of this method, and the clamp below is
-         // what keeps that true when a constraint asks for more than there is room for.
+         // Width/Height/Min/Max still apply, as measure applied them, but never past the slot.
          size = this.ApplyLayoutConstraints(size);
          size = new Size(Math.Min(size.Width, finalSize.Width), Math.Min(size.Height, finalSize.Height));
 

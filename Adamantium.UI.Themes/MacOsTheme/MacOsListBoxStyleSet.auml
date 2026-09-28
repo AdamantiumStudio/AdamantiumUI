@@ -2,15 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS list. Same parts as Fluent's - a bordered surface round a scroll host round the items presenter -
-         because that is what the control needs; what is macOS is what the surface is MADE of.
-
-         A LIST IS A WELL, the same one a text field is. Fluent builds it from a card fill, which is the material of
-         something laid ON the window; a Mac sinks a list INTO it. That is the same decision already made for the text
-         field, and making it twice from one key is the point - a field and a list side by side have to be the same
-         depth or the window looks like it has two floors.
-
-         Rounder than Fluent's 4, because everything here is: the corner radius is the theme's own. -->
+    <!-- The macOS list: Fluent's parts on the same well surface as text fields, with the theme's corner radius. -->
 
     <Style Selector="ListBox" BasedOn="ItemsControl">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>

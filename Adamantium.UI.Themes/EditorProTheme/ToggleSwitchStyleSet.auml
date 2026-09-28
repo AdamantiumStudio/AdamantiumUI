@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's switch. Same idea as everywhere else in this theme: the OFF state carries no fill, so a settings
-         column at rest is a column of text with a few outlines in it rather than a column of grey pills.
-
-         Off, it is an empty stadium with a muted thumb; on, the track takes the accent and the thumb goes to the
-         on-accent colour. Fluent fills the track in both states and relies on the fill CHANGING - which at this size
-         reads as "grey pill" versus "blue pill" and makes an untouched settings page look busy.
-
-         No BasedOn. Fluent's switch derives from ToggleButton to inherit its brushes, and then has to spend a trigger
-         undoing the accent-label that comes with them. A switch is not a button that stays pressed - it is a track and
-         a thumb - so this theme states its own three brushes and inherits nothing it then has to cancel. -->
+    <!-- Editor Pro's switch: an empty outlined track with a muted thumb when off, accent track and on-accent thumb when on.
+         No BasedOn; it states its own brushes. -->
 
     <Style Selector="ToggleSwitch">
         <Setter Property="Background" Value="Transparent"/>

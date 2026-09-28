@@ -13,13 +13,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A 1-unit-wide rectangle blown up by RenderTransform.ScaleX - exactly how the TabControl selection bar is drawn
-/// (a 1px base rect, TranslateX = the tab's offset, ScaleX = the tab's extent). The scale lives in the transform TABLE
-/// (nothing is baked into the instance any more), so the SDF rect shader still sees a 1-unit-wide rect and everything
-/// it measures in LOCAL units - its outset, and the coverage ramp derived from it - is stretched by the same factor on
-/// screen. This asserts the bar's edges stay crisp and where they belong.
-/// </summary>
+// A 1-unit rect scaled by RenderTransform.ScaleX (the tab selection bar) keeps crisp, correctly placed edges.
 [TestFixture]
 [Category("Gpu")]
 public class ScaledRectEdgeTests

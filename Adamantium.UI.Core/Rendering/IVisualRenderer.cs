@@ -7,7 +7,7 @@ namespace Adamantium.UI.Core.Rendering;
 /// Renders a visual into a texture off-screen - the engine's analog of UWP's <c>RenderTargetBitmap</c>. The result is a
 /// drawable <see cref="ImageSource"/> (feed it to an <c>Image.Source</c> / <c>DrawImage</c>). Behind an interface so it is
 /// mockable in tests and resolvable via DI. Shared foundation for the drag-drop ghost, VisualBrush/DrawingBrush bakes, and
-/// previews/thumbnails (see docs/DRAG_DROP_PLAN.md Phase 0).
+/// previews/thumbnails.
 /// </summary>
 public interface IVisualRenderer
 {
@@ -34,13 +34,8 @@ public interface IVisualRenderer
     /// <summary>Parses AUML and renders it at the tree's own desired size (auto-fit, never clipped).</summary>
     ImageSource Render(string aumlText, double scale = 1.0, Color? clearColor = null);
 
-    /// <summary>
-    /// Requests a snapshot of a LIVE, on-screen element WITHOUT reparenting it or disturbing the window's render. Call from
-    /// the UI thread: the request is RECORDED on the loop thread (reading the live subtree read-only through a parallel
-    /// render cache) and DRAWN on the render thread (which owns the shared GPU device), so it never races or hangs. When the
-    /// bitmap is ready (or null, if the element has no visible size) <paramref name="onReady"/> is invoked back on the UI
-    /// thread. The drag-ghost path for live content.
-    /// </summary>
+    /// <summary>Snapshots a live element without reparenting it; <paramref name="onReady"/> gets the bitmap (null if it has
+    /// no size) on the UI thread. Used for drag ghosts.</summary>
     void RequestSnapshot(IUIComponent visual, Action<ImageSource> onReady);
 
     /// <summary>
@@ -51,11 +46,11 @@ public interface IVisualRenderer
     /// </summary>
     void RequestRender(IUIComponent visual, Size size, double scale, Color? clearColor, Action<ImageSource> onReady);
 
-    /// <summary>App-loop plumbing, LOOP thread: stage 1 of a live snapshot - read the queued live subtrees and build their
+    /// <summary>App-loop plumbing, LOOP thread: records a live snapshot - read the queued live subtrees and build their
     /// caches (device-free). Called every frame at a quiescent boundary; a no-op when nothing is queued. Not for general use.</summary>
     void RecordPendingSnapshots();
 
-    /// <summary>App-loop plumbing, RENDER thread: stage 2 of a live snapshot - draw the recorded caches into off-screen
+    /// <summary>App-loop plumbing, RENDER thread: finishes a live snapshot - draw the recorded caches into off-screen
     /// targets and deliver the bitmaps. Called every frame by the device-owning thread; a no-op when nothing is queued.</summary>
     void DrawPendingSnapshots();
 }

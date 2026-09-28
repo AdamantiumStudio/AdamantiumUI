@@ -2,28 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS stepper field. The STRUCTURE is Fluent's and stays Fluent's on purpose - a five-seat grid with the
-         number in the starred middle and four Auto seats the two buttons can take - because that structure is what the
-         control's ButtonsPlacement/AreButtonsSwapped contract is expressed in. A theme that re-drew it as a single
-         stacked unit would quietly lose Split placement, and a theme is not the place to retire a control's feature.
-
-         What is macOS here:
-
-         THE FIELD IS A WELL. Same surface as MacOsTextBoxStyleSet - SolidBackgroundFillColorSecondary, sunk into the
-         window - so a stepper and a plain field sitting in one form read as the same kind of thing. Fluent gives it a
-         ControlFill, the button material, which is what makes a Windows field look pressable.
-
-         NO HOVER. Fluent brightens the frame when the pointer crosses it; a Mac answers the press. The frame keeps its
-         hairline whatever the pointer does.
-
-         THE BUTTONS ARE GLYPHS, NOT PLATES. They carry no fill and no outline of their own: inside a framed field a
-         Mac's arrows sit directly on the field's surface, and a plate under them would build a second control inside
-         the first. Pressing tints the seat rather than lighting it - the same direction everything else in this theme
-         takes - and that tint is the only chrome they ever have.
-
-         Placement and states are restated in full rather than borrowed. That is the standing rule here: the include
-         they replace is deleted, and a set that is deleted takes its triggers with it - a trigger addresses parts BY
-         NAME, so leaving Fluent's in place would have it writing Grid.Column onto these identically-named parts. -->
+    <!-- The macOS stepper field: Fluent's five-seat grid (it carries ButtonsPlacement), a well surface like TextBox, no
+         hover, glyph-only buttons that tint when pressed. Placement and states are restated, not borrowed. -->
 
     <Style Selector="NumericUpDown">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>
@@ -64,11 +44,8 @@
                                     Margin="{TemplateBinding Padding}"
                                     MinWidth="0" MinHeight="0"
                                     VerticalAlignment="Center">
-                                <!-- The editor is EMBEDDED and must bring no chrome: the frame around it is already this
-                                     control's. Stripping its properties is not enough - the TextBox theme's state
-                                     triggers write to its PART_Border, and a trigger outranks what a template sets, so
-                                     a focused editor would paint its own well INSIDE this one. A template with no such
-                                     part leaves those setters nothing to find. -->
+                                <!-- The embedded editor gets a bare template, so the TextBox theme's state triggers find no
+                                     PART_Border to restyle. -->
                                 <TextBox.Template>
                                     <ControlTemplate TargetType="TextBox">
                                         <ScrollViewer x:Name="PART_ContentHost"

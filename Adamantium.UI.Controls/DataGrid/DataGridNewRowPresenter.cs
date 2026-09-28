@@ -4,15 +4,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The strip for a record that does not exist yet - what most people look for first, and the only way to fill
-/// a table that is empty. Placed by the SAME numbers the rows, the header and the totals use, so a field can never
-/// stand under another column.
-/// <para>A STRIP and not a row in the list, which was the second attempt. As a row it had to be a node the source does
-/// not contain: the virtualizer hands out containers by the source's own indices, one extra root at the end put them
-/// out of step, and a record from the middle of the table was drawn over the blank row. It also had to be kept out of
-/// the sort, the filters, the totals, the file and the clipboard - five separate "except this one"s for a thing that
-/// is not data. Outside the list it is none of those, and it is always in view: nobody scrolls ten thousand rows to
-/// add a record.</para></summary>
+/// <summary>The strip for a new record, placed by the same column layout as the rows. A strip outside the list, so it stays
+/// in view and out of sorting, filters and totals.</summary>
 public class DataGridNewRowPresenter : Panel
 {
     /// <summary>It scrolls sideways with the columns, so a field that has slid past the left edge is CUT there rather
@@ -102,12 +95,7 @@ public class DataGridNewRowPresenter : Panel
             cell.Attach(columns[i], i, null);
             cell.IsEditing = i == _editing;
 
-            // EMPTY, never null. A cell's template is a DataTemplate over its Content, so null content builds nothing at
-            // all - the editor included: an edit would open on a field whose TextBox was never made, and the typing
-            // would go nowhere.
-            // What is already in this column, OPEN OR NOT. The editor is built over the cell's content - PrepareEditor
-            // is handed exactly that - so a field opened a second time on an empty content came up empty and threw
-            // away what had been typed into it.
+            // What was typed in this column, or empty - never null, which would build no editor at all.
             cell.Content = _typed.TryGetValue(i, out var kept) ? kept
                 : !cell.IsEditing && _typed.Count == 0 && IsFirstShown(columns, i) ? Owner?.NewRowHint
                 : string.Empty;

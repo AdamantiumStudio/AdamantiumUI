@@ -7,12 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>THE LIST OF NODE KINDS, opened where a wire was let go or where a node is being placed.
-/// <para>Made of the canvas's own <see cref="InfiniteCanvas.NodeKinds"/> and nothing else: the catalogue is data, each
-/// entry says which family it belongs to, and that is everything a palette needs. Picking one IS the answer - a list
-/// opened by a gesture is answered by choosing from it - so the canvas puts the node down and closes the list.</para>
-/// <para>The narrowing is here rather than in the application because it is about the WORDS the catalogue already
-/// carries, not about what they mean.</para></summary>
+/// <summary>The searchable list of <see cref="InfiniteCanvas.NodeKinds"/>, opened where a wire was dropped or a node is
+/// placed; picking one places the node and closes the list.</summary>
 public class CanvasNodePalette : Control, ICanvasPart
 {
     public static readonly AdamantiumProperty CanvasProperty = AdamantiumProperty.Register(nameof(Canvas),
@@ -31,11 +27,8 @@ public class CanvasNodePalette : Control, ICanvasPart
     public static readonly AdamantiumProperty HasSearchProperty = AdamantiumProperty.Register(nameof(HasSearch),
         typeof(Boolean), typeof(CanvasNodePalette), new PropertyMetadata(false));
 
-    /// <summary>What was picked out of the list - an entry of the catalogue, which the palette hands straight to the
-    /// canvas. PICKING IS THE ANSWER: a list opened by a gesture is answered by choosing from it.
-    /// <para>The palette carries this rather than the list writing into the canvas through it: a two-way binding whose
-    /// path goes THROUGH another object (<c>Canvas.PickedKind</c>) never wrote back, so every pick was silently
-    /// dropped - the row lit up and no node appeared.</para></summary>
+    /// <summary>The catalog entry picked, handed straight to the canvas; held here because a two-way binding through
+    /// <c>Canvas.PickedKind</c> never wrote back.</summary>
     public static readonly AdamantiumProperty PickedKindProperty = AdamantiumProperty.Register(nameof(PickedKind),
         typeof(ICanvasNodeKind), typeof(CanvasNodePalette),
         new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnPickedKindChanged));

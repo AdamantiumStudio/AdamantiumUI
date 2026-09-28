@@ -10,14 +10,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Docking a pane BACK into a group must leave its tab strip laid out - the tabs side by side, each at its own place.
-/// The bug this pins down: after a dock-back the newly arrived tab sat on top of a neighbour, because it reached the
-/// arrange pass never having been measured (a tab of zero desired extent starts where the previous one started).
-/// <para>Driven through the REAL layout manager (<see cref="WindowExtension.UpdateTree"/>), not by calling Measure and
-/// Arrange by hand: calling them directly lays out everything unconditionally and so cannot see a lost invalidation,
-/// which is the whole question here.</para>
-/// </summary>
+// A pane docked back into a group is measured before arrange, so its tab does not overlap a neighbor. Driven through
+// the real layout manager (UpdateTree), which can observe lost invalidations.
 [TestFixture]
 public class DockRedockLayoutTests
 {
@@ -150,13 +144,8 @@ public class DockRedockLayoutTests
             $"two tabs at one position: [{string.Join(", ", positions)}]");
     }
 
-    /// <summary>
-    /// The style cycle a control goes through whenever it is RE-PARENTED: SetParent calls ApplyCurrentTheme, which
-    /// detaches the previously applied styles before applying the theme again. Detaching removes the ItemsPanel setter's
-    /// value, so the property really does go to null and back - which is not a no-op re-application and so is not caught
-    /// by the "same instance" guard. Standing in for it here by writing null and the template back, because the real
-    /// call needs an application context; the writes are exactly the ones Style.Detach + Style.Attach make.
-    /// </summary>
+    // Re-parenting restyles the control, so ItemsPanel goes null and back; simulated with the same writes Style.Detach
+    // and Style.Attach make.
     [Test]
     public void AStyleCycle_LeavesTheTabsInThePanelThatIsLaidOut()
     {

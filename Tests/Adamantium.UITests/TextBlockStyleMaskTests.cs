@@ -9,14 +9,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>Why the themes deliberately keep TextBlockStyleSet EMPTY, measured rather than argued.
-/// <para>The objection this answers is a reasonable one: surely a per-TextBlock style would be fine as long as its
-/// value came from the theme - <c>{ThemeResource}</c> rather than a hard-coded brush? It would not, and the reason has
-/// nothing to do with where the value comes from. A Setter puts its value in the <see cref="ValuePriority.Style"/>
-/// slot whatever the markup extension is (Setter.cs applies ThemeResource and ObservableResource at exactly that
-/// priority), and Style outranks Inherited. Inheritance is the channel a control uses to recolour its OWN content on a
-/// state change, so a TextBlock style masks it.</para>
-/// </summary>
+// A Setter lands at ValuePriority.Style whatever its markup extension, and Style outranks Inherited, so it masks the state
+// colors controls push to their content.
 [TestFixture]
 public class TextBlockStyleMaskTests
 {

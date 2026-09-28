@@ -4,15 +4,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The one number that lets a per-frame reader ask "has anything repainted" without walking its whole record.
-/// <para>The render cache used to poll: once a frame it compared every brush in the scene against the version it had
-/// baked, to find the handful that had changed. On a screen of a few thousand tiles that scan was measured at ~1 ms -
-/// about half the entire draw - and it was spent, every frame, discovering that there was nothing to do. The shape is
-/// the defect: a question whose answer is almost always "no" must be askable once, not per candidate.</para>
-/// <para>So the contract this pins is not a timing, which would be flaky, but the two facts the gate rests on: a quiet
-/// application does not move the epoch, and any brush rewriting itself does.</para>
-/// </summary>
+// Brush.PaintEpoch: a quiet application does not move it, and any brush rewriting itself does.
 [TestFixture]
 public class BrushPaintEpochTests
 {

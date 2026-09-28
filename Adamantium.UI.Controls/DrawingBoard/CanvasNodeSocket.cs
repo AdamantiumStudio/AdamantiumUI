@@ -4,12 +4,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>The little disc on the edge of a <see cref="CanvasNode"/> that a connection docks into.
-/// <para>A TYPE of its own, and that is the whole reason it exists: the disc used to be an unnamed border inside an
-/// item template, which is a thing nothing outside can find. A connection is held by the two sockets it joins rather
-/// than by two points, so somebody has to be able to ask WHERE a socket is and WHICH socket is under the pointer -
-/// and the answer has to survive the node being moved, resized, given another socket or restyled by a theme.</para>
-/// <para>It carries no behaviour. What it is is a place, and being findable is what a place has to be.</para></summary>
+/// <summary>The disc on a <see cref="CanvasNode"/>'s edge a connection docks into; a type of its own so a socket can be
+/// found under the pointer. No behavior.</summary>
 public class CanvasNodeSocket : Border
 {
     /// <summary>The socket this disc stands for - its own <see cref="DataContext"/>, said out loud so that whoever

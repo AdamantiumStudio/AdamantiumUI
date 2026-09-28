@@ -19,12 +19,8 @@ namespace Adamantium.UI.Platforms.Windows;
 /// </summary>
 internal static class OleDataBridge
 {
-    /// <summary>Read an incoming OLE payload into a managed package, EAGERLY: the source's data object is only
-    /// guaranteed valid inside the callback that handed it over, and the drop itself is delivered to the view-model a
-    /// frame later on the UI loop thread.
-    /// <para>A drag that started in OUR app comes back as our own <see cref="Win32DataObject"/> (the CCW round-trips to
-    /// the same managed instance), so the LIVE payload is handed straight through - no serialization, the in-app fast
-    /// path survives even when the gesture is running through the OS.</para></summary>
+    // Reads eagerly: the data object is valid only inside the OLE callback. Our own Win32DataObject yields its live
+    // package.
     public static IDataPackage Read(ComTypes.IDataObject data)
     {
         if (data is Win32DataObject ours) return ours.Package;
@@ -335,11 +331,7 @@ internal static class OleDataBridge
     /// <summary>An HGLOBAL holding raw bytes - a custom format, carried opaquely.</summary>
     public static IntPtr CreateBytesGlobal(byte[] bytes) => bytes is { Length: > 0 } ? CreateGlobal(bytes) : IntPtr.Zero;
 
-    /// <summary>A PNG rendered as CF_DIB: a BITMAPINFOHEADER followed straight by 32-bit BGRA pixels, BOTTOM-UP (which
-    /// is what a positive biHeight means). For the applications that never learned to read PNG off the clipboard -
-    /// Paint, older Office. Zero when the picture cannot be decoded, which simply drops that one format from the offer.
-    /// <para>The alpha byte rides along but BI_RGB says nothing about it, so a consumer is free to ignore it and
-    /// composite on white - the same deal every other toolkit gets from this format.</para></summary>
+    // A PNG as bottom-up 32-bit BGRA CF_DIB for apps without PNG support; zero when it cannot be decoded.
     public static IntPtr CreateDibGlobal(byte[] png) => CreateBytesGlobal(DibBytes(png));
 
     /// <summary>The DIB block itself, so a caller can build it ONCE and hand out copies: a target asks for the same

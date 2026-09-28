@@ -370,7 +370,7 @@ public class InfiniteCanvasTests
             Assert.That(item.Camera.Z, Is.EqualTo(2.5f), "screen pixels per world unit");
             Assert.That(item.Step.X, Is.EqualTo(200), "the step ALREADY coarsened - the shader works none of it out");
             Assert.That(item.Step.Z, Is.EqualTo(1f / 12).Within(1e-6),
-                "the pitch as a RECIPROCAL: a division in the pixel stage stopped the driver creating the pass");
+                "the pitch as a reciprocal, divided once on the CPU");
             Assert.That(item.Params.X, Is.EqualTo(3), "transform slot");
             Assert.That(item.Params.Y, Is.EqualTo(2), "lines");
             Assert.That(item.Background.W, Is.EqualTo(1).Within(1e-6));
@@ -707,11 +707,7 @@ public class InfiniteCanvasTests
         });
     }
 
-    // ...AND SO DOES AN ORDINARY CONTROL. It used to take its size in SCREEN pixels, so that one dropped at any zoom
-    // looked the same to whoever was looking - but that made its WORLD size follow the camera: dropped at 0.36x a
-    // checkbox landed nearly three times its own size, while the box and the label inside it stayed what they always
-    // are. A small control adrift in the corner of a large empty frame, and no way back but resizing it by hand.
-    // It is small on screen when it is dropped zoomed out, like everything else on the plane.
+    // ...and so does an ordinary control: its world size is its own, so it looks small when dropped zoomed out.
     [Test]
     public void AButtonDroppedByAClickIsTheSameSizeWhateverTheZoom()
     {

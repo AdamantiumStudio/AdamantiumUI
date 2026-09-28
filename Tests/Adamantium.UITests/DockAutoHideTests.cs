@@ -5,13 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Collapsing a group folds it down to its own tab strip - IN PLACE. It keeps its spot in the tree and gives up
-/// everything but the strip, so the tabs stay exactly where the panel was and clicking one brings it straight back.
-/// <para>How much room that leaves is measured, not stated: the group's length becomes Auto and the strip answers for
-/// itself. A number here would be a second opinion about a height the strip already knows, and the two would disagree
-/// the first time anything about the tabs changed.</para>
-/// </summary>
+// Collapsing folds a group in place to its tab strip, its length becoming Auto; clicking a tab restores it.
 [TestFixture]
 public class DockAutoHideTests
 {
@@ -44,7 +38,7 @@ public class DockAutoHideTests
         Assert.Multiple(() =>
         {
             Assert.That(inspector.State, Is.EqualTo(PaneGroupState.Collapsed));
-            Assert.That(inspector.Parent, Is.Null, "out of the split tree entirely (rule 3b)");
+            Assert.That(inspector.Parent, Is.Null, "out of the split tree entirely");
             Assert.That(layout.Main.EdgeOfBarred(inspector), Is.EqualTo(DockZone.Right), "and onto the edge it was on");
             Assert.That(inspector.PaneIds, Is.EqualTo(new[] { "inspector" }), "with its panes still in it");
             Assert.That(inspector.RestoreLength, Is.EqualTo(PaneLength.Pixels(240)), "and what it is worth docked");
@@ -195,7 +189,7 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>Glancing at a tool does not move the layout about. Measured before rule 3.10: revealing gave the panel
+    /// <summary>Glancing at a tool does not move the layout about. Before the fix, revealing gave the panel
     /// its docked length back, so every look at a tool shoved its neighbours aside and then back again.</summary>
     [Test]
     public void RevealingAGroup_DoesNotDisturbItsNeighbours()
@@ -377,7 +371,7 @@ public class DockAutoHideTests
     }
 
     // --- The document well: the centre is a PLACE, not a property of the panes in it ---------------------------------
-    // Rule 1 of DOCKING_PLAN's rules. Everything inside the well is a document and everything outside it is a tool, which
+    // Everything inside the well is a document and everything outside it is a tool, which
     // is what makes a tool dropped into the centre behave like a document: the zones for tools are the EDGES, and a panel
     // in the centre has no edge to fold against.
 
@@ -418,7 +412,7 @@ public class DockAutoHideTests
     }
 
     /// <summary>The centre cannot be put away or docked somewhere else: there is no edge for it to fold against, and a
-    /// window whose centre has moved into a tool panel is not a layout state that should be reachable (rule 1.6).
+    /// window whose centre has moved into a tool panel is not a layout state that should be reachable.
     /// <para>Its CONTENTS are another matter - see DocumentAreaTests: the last group may be carried out into a window
     /// of its own, and what stays behind is the empty place.</para></summary>
     [Test]
@@ -483,13 +477,7 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>
-    /// A put-away panel that something is docked OUTSIDE of comes back: being folded is a statement about an edge, and it
-    /// is no longer on one.
-    /// <para>Measured before the fix: it stayed Collapsed, so its caption and body were still hidden by the theme, while
-    /// its strip - off the edge now - turned back horizontal. What was left on screen was an empty box with tabs along
-    /// the bottom and no title.</para>
-    /// </summary>
+    // A folded panel that is no longer on an edge (something docked outside it) unfolds.
     [Test]
     public void APutAwayPanel_IsUntouchedByAnythingThatHappensInTheTree()
     {
@@ -533,7 +521,7 @@ public class DockAutoHideTests
     /// <summary>A band dropped on the BOTTOM edge anchor splits the centre column, not the whole window - so the side
     /// panels keep their full height and a put-away strip stays on the edge it is folded against.
     /// <para>Measured before the rule: the band was aimed at the root, which cut the right-hand strip off at the band's
-    /// top edge - and a strip pushed off its edge is no longer a strip on an edge (rule 2.3).</para></summary>
+    /// top edge - and a strip pushed off its edge is no longer a strip on an edge.</para></summary>
     [Test]
     public void ABandDroppedOnTheBottomAnchor_DoesNotRunUnderTheSides()
     {

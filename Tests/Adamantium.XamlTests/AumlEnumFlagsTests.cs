@@ -5,13 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A flags enum written in markup, in both spellings. The COMMA is what .NET's own parser takes; the PIPE is what an
-/// author reaches for, because it is how the same value is written in C#.
-/// <para>Both have to be understood by the compiler AND by the loader. Accepted by one and rejected by the other is the
-/// worse failure of the two: the markup compiles, ships, and then throws from inside the loader on a machine that reads
-/// the file at runtime instead of generating code from it.</para>
-/// </summary>
+// Flags enums in markup with commas or pipes, accepted identically by the compiler and the runtime loader.
 [TestFixture]
 public class AumlEnumFlagsTests
 {

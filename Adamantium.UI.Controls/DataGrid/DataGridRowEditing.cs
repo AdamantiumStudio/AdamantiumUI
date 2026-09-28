@@ -153,11 +153,8 @@ public partial class TreeDataGrid
         var item = args.NewItem ?? NewItemLike(FirstItem(owner));
         if (item == null) return null;
 
-        // EVERY field that was filled in, and all of them BEFORE the record goes in. Added first, it would be sorted,
-        // filtered and grouped by what it does not hold yet, and then move again the moment it did - a record that
-        // lands twice in two places.
-        // Written STRAIGHT, not through the history: the record is not in the table yet, so there is nothing to take a
-        // value back to. Taking the record out again is what undoing this act means, and that is the one thing recorded.
+        // Fill every field before the record goes in, so it is sorted and grouped once; written straight, since undo takes
+        // the whole record out.
         foreach (var pair in values)
         {
             if (pair.Key?.Binding != null) pair.Key.Write(item, pair.Value);

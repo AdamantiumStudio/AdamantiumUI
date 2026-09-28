@@ -37,13 +37,8 @@
         </Setter>
     </Style>
 
-    <!-- The card shown per slot while a cold fill outruns the per-frame bind budget. Square and hairline like every
-         other surface here; what it says is "content is on its way", and it must not be mistaken for the drop outline
-         above when both are on screen - dropping into a list that is still filling. They differ in KIND: this one is
-         filled and breathes, that one is an empty dashed frame.
-         The card paints with the SHARED SkeletonPulseFill brush - one instance for every card of every list - so the
-         breathe is ONE animation on ONE brush rather than one per card (a screenful can be four thousand cards).
-         {ObservableResource}, so a live theme swap re-points the pooled cards at the new palette's brush. -->
+    <!-- The loading skeleton card: filled and breathing (unlike the dashed drop outline), painted with the shared
+         SkeletonPulseFill brush via {ObservableResource}, so one animation serves all cards. -->
     <Style Selector="ItemsControl">
         <Setter Property="ItemSkeletonTemplate">
             <Setter.Value>
@@ -60,12 +55,8 @@
         </Setter>
     </Style>
 
-    <!-- The breathe belongs to the LIST, not to a card: IsLoadingItems is true exactly while the panel is showing
-         skeletons, so one action starts the pulse on the shared brush and one stops it when the last card is recycled.
-         Every card re-renders from its brush-change subscription, so they breathe in step. TargetName resolves a keyed
-         RESOURCE here - which is how a trigger reaches a deliberately shared brush. Two lists loading at once retain
-         the same brush, so whichever finishes first does not stop the other's pulse.
-         Shallower and slower than Fluent's: this theme's ground is darker, so the same swing reads as a flash. -->
+    <!-- The list pulses the shared brush while IsLoadingItems (TargetName resolves the keyed resource); shared holds keep
+         one list from stopping another's pulse. Gentler than Fluent's. -->
     <Style Selector="ItemsControl">
         <PropertyTrigger Property="IsLoadingItems" Value="True">
             <PropertyTrigger.EnterActions>

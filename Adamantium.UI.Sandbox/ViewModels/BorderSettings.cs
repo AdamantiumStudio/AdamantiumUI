@@ -31,14 +31,8 @@ public sealed class BorderSettings : PropertyChangedBase
     public double BottomRight { get => _bottomRight; set { if (SetProperty(ref _bottomRight, value)) RaisePropertyChanged(nameof(Corners)); } }
     public double BottomLeft { get => _bottomLeft; set { if (SetProperty(ref _bottomLeft, value)) RaisePropertyChanged(nameof(Corners)); } }
 
-    // The border's own ALPHA, which is where this stand earns its keep. A ring drawn as its own shape blends the outline
-    // it shares with the fill twice, and every corner - where two edges meet - counts a third time: translucency turns
-    // that arithmetic into a picture. Here fill and ring come out of ONE field as complementary coverages, so the ring is
-    // a single layer at any alpha, and the CORNER must stay the same tone as the straight run beside it. The flat swatch
-    // next to the stand is the reference: same colour, same alpha, no border arithmetic at all.
-    //
-    // The brush is MUTATED rather than replaced, which is also the interesting path: recolouring a brush re-bakes the
-    // instances that paint with it (AffectsPaint) instead of re-recording the element.
+    // A translucent border shows whether fill and ring blend as one layer (corners match the edges and the reference
+    // swatch). Mutated in place, exercising the AffectsPaint path.
     public SolidColorBrush BorderBrush { get; } = new(new Color((byte)245, (byte)158, (byte)11, (byte)128));
 
     /// <summary>Same colour and alpha as the border, with nothing drawn under or over it - drag the alpha and the

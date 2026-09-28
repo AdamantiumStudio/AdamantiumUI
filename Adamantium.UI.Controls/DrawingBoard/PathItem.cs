@@ -6,14 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A CONTOUR on the plane - what an imported drawing is made of: several sub-paths, filled by a rule, with
-/// curves and arcs that no run of points can stand in for.
-/// <para>It keeps the path DATA it was given and hands it to <see cref="SVGParser"/>, the engine's one reader of path
-/// data - so what the plane shows is what the file says, and what is written back is the same grammar read by the same
-/// code. Walked into a list of points instead, an icon arrived as one long stroke: no fill, no holes, and a line
-/// joining the end of every sub-path to the start of the next.</para>
-/// <para>Moving and resizing do not touch the contour. The item holds the box it stands in, and the contour is mapped
-/// into it when it is drawn - so a path dragged across the plane and back is the path that arrived.</para></summary>
+/// <summary>A contour from path data (sub-paths, fill rule, curves and arcs) read through <see cref="SVGParser"/>. Moving and
+/// resizing change only its box; the contour is mapped in when drawn.</summary>
 public class PathItem : ICanvasItem, ICanvasTransformed
 {
     private string _data;

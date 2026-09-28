@@ -13,17 +13,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>
-/// Base for panels that can host an <see cref="ItemsControl"/>'s items with virtualization: it owns the whole mechanism
-/// (the <see cref="IScrollableContent"/> seam, the realized window, realize/recycle through the generator, and the
-/// measure/arrange dispatch) and leaves only the geometry to subclasses (StackPanel = 1D, WrapPanel = 2D). As a plain
-/// container (no owner) it lays its <see cref="Panel.Children"/> out via <see cref="MeasurePlain"/>/<see cref="ArrangePlain"/>
-/// exactly as before; as an items host it realizes only the visible window. When given an unbounded extent on the scroll
-/// axis (no viewport) it realizes everything (the degenerate case) and reports it via <see cref="OnNoViewport"/> instead of
-/// silently being slow. Set <see cref="IsVirtualizing"/> = false for a small mixed-height host (a menu: 34px rows + a 9px
-/// separator) where the uniform-cell assumption would give every item the same slot - then it realizes all items and stacks
-/// them by their OWN measured extents.
-/// </summary>
+/// <summary>Base for panels that virtualize an <see cref="ItemsControl"/>'s items; subclasses supply only the geometry.
+/// Set <see cref="IsVirtualizing"/> to false for small mixed-height hosts, which then realize and stack every item.</summary>
 public abstract class VirtualizingPanel : Panel, IScrollableContent
 {
     private Size _extent;
@@ -35,20 +26,12 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     // realized window and the arranged positions consistent.
     private Vector2 _passOffset;
 
-    // The virtualizing panel's own desired size is count*itemExtent - INDEPENDENT of its children. So while it realizes
-    // /rebinds its window inside its own measure/arrange, a container's InvalidateMeasure (the rebind re-resolves the
-    // item template's AffectsMeasure bindings) must NOT propagate up and re-invalidate the panel: that would make the
-    // layout manager run a SECOND full MeasureVirtualized (re-realizing the whole window) on every pass - a ~2x layout
-    // cost on every scroll/relayout frame. Muting child-originated invalidation during the pass reflects that the
-    // panel's measure does not depend on its children (the plan's "propagate up only where the parent depends on the
-    // child" principle); the panel re-measures each realized container itself inside MeasureVirtualized.
+    // The panel's size does not depend on its children, so child invalidations raised while it rebinds its own window
+    // are muted; otherwise every pass would measure the window twice.
     private bool _inLayout;
 
-    // As an items host, this panel's DesiredSize is the virtual extent (count×cell) computed in MeasureVirtualized -
-    // it does NOT depend on any realized tile's measured size. So the layout manager must NOT let a tile's queue-drained
-    // re-measure propagate an InvalidateMeasure back up into this panel: that spurious re-dirty is what span the layout
-    // pass to MaxPassIterations (the whole realize backlog draining in ONE pass instead of one slice per frame). As a
-    // plain container (no owner) the size tracks children, so defer to the base (fixed Width+Height still a boundary).
+    // As a virtualizing items host the desired size is the virtual extent, independent of tiles, so a tile re-measure
+    // must not re-dirty this panel.
     public override bool IsMeasureBoundary => (IsItemsHost && IsVirtualizing) || base.IsMeasureBoundary;
 
     public override void InvalidateMeasure()
@@ -68,13 +51,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         set => SetValue(IsVirtualizingProperty, value);
     }
 
-    /// <summary>Milliseconds a single pass may spend (re)binding containers WHILE SCROLLING; whatever does not fit is
-    /// deferred to the next pass and shows a skeleton. <b>0 means no budget</b> - bind the whole window in one pass.
-    /// <para>A budget is legitimate HERE, unlike the general layout budget that was banned: the intake is bounded at the
-    /// source (a pass can never want more than one window) and a deferred slot draws a skeleton, which is an honest
-    /// placeholder rather than a stale rect. It is a dial rather than a constant because there is no right value for all
-    /// windows: measured, 6 ms binds ~357 slots a pass and defers ~4487 on a big one, while a small one is better off
-    /// binding everything at once.</para></summary>
+    /// <summary>Milliseconds a pass may spend binding containers while scrolling; the rest defer to the next pass as
+    /// skeletons. 0 means no budget.</summary>
     public static readonly AdamantiumProperty ScrollBindBudgetProperty = AdamantiumProperty.Register(nameof(ScrollBindBudget),
         typeof(double), typeof(VirtualizingPanel), new PropertyMetadata(6.0));
 
@@ -114,11 +92,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     /// way the generator understands it.</summary>
     protected static double BudgetOrUnlimited(double ms) => ms <= 0 ? double.MaxValue : ms;
 
-    /// <summary>Index a dropped item would land at, or -1 (the default) for no drop in progress. A panel that honours it
-    /// leaves a REAL empty slot there - items from that index on move along by one, so a wrapped line genuinely reflows
-    /// instead of tiles sliding over each other - and fills the freed slot with the same skeleton card a not-yet-bound
-    /// item gets. Layout stays the authority on where everything ends up; the motion between two of its answers is what
-    /// gets animated, which is the only way a gap can open in a wrapping panel without lying about the result.</summary>
+    /// <summary>Index a dropped item would land at, or -1 for none. The panel leaves a real empty slot there and animates
+    /// the items that move.</summary>
     public static readonly AdamantiumProperty DropGapIndexProperty = AdamantiumProperty.Register(nameof(DropGapIndex),
         typeof(int), typeof(VirtualizingPanel), new PropertyMetadata(-1, OnDropGapChanged));
 
@@ -135,11 +110,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         if (a is VirtualizingPanel panel) panel.InvalidateMeasure();
     }
 
-    /// <summary>The slot a drop at <paramref name="point"/> (in this panel's own coordinates) would land in, or false when
-    /// the panel cannot say. It MUST NOT be derived from where the containers currently sit: the gap moves them, so an
-    /// index read off them changes the gap, which moves them again - on a slot boundary that oscillates every frame. A
-    /// panel with a regular grid answers from the grid itself, which the gap does not touch, so the answer is stable no
-    /// matter what the gap is currently doing.</summary>
+    /// <summary>The slot a drop at <paramref name="point"/> would land in, or false. Must come from the grid, not from
+    /// container positions, which the gap itself moves.</summary>
     public virtual bool TryGetDropSlot(Vector2 point, out int index)
     {
         index = -1;
@@ -189,11 +161,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     {
         Children.Clear();   // drop any plain children; the window is managed via the generator from here
         Owner = owner;
-        // Do NOT clip on the panel itself. In transform-only scroll the ScrollContentPresenter SLIDES this panel by -offset,
-        // so a self-clip would move WITH the panel (its clip rect lands at [-offset, -offset+viewport] in world space) and
-        // scissor out the very tiles now scrolled into view - the "only the first page renders" bug. Buffer/overflow tiles
-        // are trimmed by the ScrollContentPresenter's clip instead, which stays anchored at the viewport (world origin) and
-        // is the correct place to bound the list. (A virtualizing panel is always hosted inside that clipping presenter.)
+        // No self-clip: the presenter slides this panel, so its own clip would move with it. The presenter's clip bounds
+        // the list.
         InvalidateMeasure();
     }
 
@@ -214,12 +183,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         InvalidateMeasure();
     }
 
-    /// <summary>Applies a collection change to the realized window IN PLACE - no teardown. The generator reindexes its
-    /// realized set, the added/removed slots (re)bind on the next measure via <c>SetWindow</c>, and every UNCHANGED
-    /// container keeps its measured/arranged/rendered state. A full <see cref="Revirtualize"/> on every add instead
-    /// re-created every container and re-probed the item extent off a not-yet-settled fresh container, which shifted the
-    /// list on each add and left the window in a state that then mis-hit-tested on scroll (dynamic-only, never static -
-    /// because a static list never runs this path). Reset/Move/Replace still rebuild (rare; correctness over cleverness).</summary>
+    // Applies Add/Remove to the realized window in place, so unchanged containers keep their state; Reset, Move and
+    // Replace still rebuild.
     internal void OnItemsChanged(NotifyCollectionChangedEventArgs e)
     {
         if (Owner?.ItemContainerGenerator is not { } generator) return;
@@ -254,13 +219,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         var clamped = ClampOffset(offset, _extent, _viewport);
         if (clamped == _offset) return;
 
-        // Re-realize the window ONLY when the offset actually shifts which items are on screen (crosses a cell/row
-        // boundary). A high-resolution wheel / touchpad emits a stream of SUB-PIXEL scroll deltas, and re-measuring the
-        // whole virtualized window on each one - just to land on the SAME first/last - churned the layout every frame:
-        // it re-pushed the scroll metrics (re-rendering the whole scrollbar) and re-ran SetWindow, and an occasional
-        // full render walk landing on that perpetual churn dropped a just-(re)bound cell for a frame (the "random empty
-        // cell"). Within a row the content still slides smoothly (the ScrollContentPresenter translates this panel by
-        // -offset) and the thumb still tracks (RaiseMetrics), but the realized window is left untouched.
+        // Re-realize only when the offset crosses a cell boundary; sub-pixel wheel deltas just slide the content.
         var windowMoves = RealizedWindowMovesFor(_offset, clamped);
         _offset = clamped;
         if (windowMoves) InvalidateMeasure();   // the on-screen set changes -> realize/measure the new window
@@ -284,12 +243,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             _passOffset = _offset;   // snapshot: the matching arrange positions against exactly this
             var extent = MeasureVirtualized(availableSize, _offset);
             _extent = extent;
-            // An UNBOUNDED axis is a question ("how big would you like to be?"), not a statement that everything is
-            // visible - a Grid star row probes its child unbounded to learn its natural size before resolving the row,
-            // so this arrives every single pass. Reading it as a viewport collapses the scroll range to nothing, which
-            // clamps the offset back to zero at the top of the NEXT measure: the list refuses to scroll and realizes
-            // only its first window. Keep the viewport we already know on such an axis; only a bounded one updates it,
-            // and only a never-measured axis falls back to the extent.
+            // An unbounded axis is a size probe, not a viewport: keep the known viewport there, falling back to the
+            // extent only if the axis was never measured.
             _viewport = new Size(
                 double.IsInfinity(availableSize.Width) ? (_viewport.Width > 0 ? _viewport.Width : extent.Width) : availableSize.Width,
                 double.IsInfinity(availableSize.Height) ? (_viewport.Height > 0 ? _viewport.Height : extent.Height) : availableSize.Height);
@@ -306,11 +261,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             {
                 _offset = reclamped;
                 _passOffset = reclamped;
-                // The window above was realized for the PRE-clamp offset, but the arrange positions against _passOffset
-                // (now the corrected offset) - so the realized window and the translation would disagree for THIS frame:
-                // a gap at the leading edge that only fills on the next pass. Re-realize the window for the corrected
-                // offset NOW so window + arrange agree this frame. The extent is offset-independent (item count x cell), so
-                // re-realizing can't shrink it again -> no loop. (Still schedule a follow-up pass as a safety net.)
+                // Re-realize for the clamped offset so window and arrange agree this frame; the extent does not depend
+                // on the offset, so this cannot loop.
                 MeasureVirtualized(availableSize, _offset);
                 LayoutManager.For(this).InvalidateMeasureNextPass(this);
             }
@@ -363,24 +315,19 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         return container;
     }
 
-    /// <summary>Parks an off-screen container: hide it AND deactivate every binding in its subtree so it drops out of any
-    /// shared source's fan-out (no storm on a shared-property change while it sits off screen). It stays attached and
-    /// pooled - NO detach, so no structural re-record - and is re-subscribed for free when reused, because the reuse sets
-    /// its DataContext which runs RefreshBindings. Deactivate is O(1)-per-binding (SharedSourceRegistry).</summary>
-    /// <summary>Where item <paramref name="index"/> sits in this panel's own coordinates, whether or not it has been
-    /// realized. The point of it: something scrolling TO an item that was virtualized away has no container to aim at,
-    /// and the panel is the only one that knows where the item WOULD be. False when it cannot say.</summary>
+    /// <summary>Where item <paramref name="index"/> sits in this panel's coordinates, realized or not; false when the panel
+    /// cannot say.</summary>
     public virtual bool TryGetItemRect(int index, out Rect rect)
     {
         rect = default;
         return false;
     }
 
-    /// <summary>How many containers virtualization has parked. A park is a Visibility write plus a binding walk over the
-    /// container-s subtree, and a window that shrinks a lot does thousands at once - which is a render-cache structural
-    /// frame, not a layout one. Counting them is what told a slider stutter apart from a layout cost.</summary>
+    /// <summary>How many containers virtualization has parked; a large shrink parks thousands at once.</summary>
     public static long ParkCalls;
 
+    /// <summary>Hides an off-screen container and deactivates its bindings, keeping it attached and pooled; reuse sets its
+    /// DataContext, which re-subscribes them.</summary>
     protected static void ParkContainer(IUIComponent container)
     {
         ParkCalls++;
@@ -394,20 +341,11 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         foreach (var child in node.VisualChildren) DeactivateSubtreeBindings(child);
     }
 
-    /// <summary>
-    /// Enforces the invariant "a container is visible IFF it is in the realized window". A fast scroll can leave a
-    /// container attached and still visible but no longer mapped to any index by the generator; ArrangeVirtualized only
-    /// positions the realized indices, so such a container freezes at its last spot, and over a fast scroll these ghosts
-    /// pile up overlapping the real items (and, recorded, blur into impossible-looking labels). Hide every visible
-    /// container the generator no longer knows, and hand it back to the pool so it is reused rather than leaked.
-    /// </summary>
+    // A container is visible only if it is in the realized window: hide and pool any the generator no longer maps.
     private void HideUnmappedContainers()
     {
-        // This used to read EVERY child on EVERY arrange pass - measured at 130-205 thousand reads a second, finding
-        // nothing across a 43-second run. A container only becomes a ghost when its index mapping is dropped, and the
-        // generator knows exactly when that happens, so it records them and this drains the record: O(what changed).
-        // The candidate set is a SUPERSET of the ghosts (every path that drops a mapping records it, every path that
-        // takes one back removes it), so the three tests below still decide - the drain only says where to look.
+        // Drain the generator's record of dropped mappings rather than scan every child: a superset of the ghosts, so
+        // the tests below still decide.
         var generator = Owner.ItemContainerGenerator;
         var candidates = generator.DrainUnmapped();
         for (var i = 0; i < candidates.Count; i++)
@@ -433,18 +371,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         }
     }
 
-    // ---- Per-slot loading skeletons: one themed ItemSkeletonTemplate card per budget-deferred slot ----
-    // A virtualizing fill can defer part of the window past the per-frame bind budget (generator.PendingIndices). Rather
-    // than a hole, each deferred slot shows a pulsing placeholder card - the classic skeleton look, per-item and clear.
-    // Cards are POOLED (reused across slots/frames, never recreated) and every card is an instanced SDF rect, so a whole
-    // screenful is cheap on the GPU. The breathe is theme-authored and SHARED: every card paints with the ONE keyed
-    // skeleton brush, whose Opacity a single PulseAnimation drives while this list reports IsLoadingItems (see
-    // SyncLoadingState) - a screenful of cards costs one animation, not one per card. Skipped when the ItemsControl has
-    // no ItemSkeletonTemplate.
-    // ONE card, drawn once per pending slot through RenderClones (§4o) - not one card per slot. Building a full template
-    // instance per slot is what this replaces: measured on a tile-size drag, 3469 template builds in a 0.25 s window
-    // against 147 realized containers, and every property write of every build marked layout dirty (measure=15952,
-    // arrange=44949, frame down to 30 fps). The clones live only in the instance buffer: no layout, no hit-test, no state.
+    // ---- Loading skeletons for budget-deferred slots ----
+    // One ItemSkeletonTemplate card, drawn at every pending slot through RenderClones; clones have no layout or state.
     private UIComponent _skeletonPrototype;
     private Size _prototypeSize;
     private List<Matrix4x4F> _skeletonClones;   // fresh list per change - the draw walk may read it off the render thread
@@ -453,11 +381,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     protected int ActiveSkeletonCount => _skeletonClones?.Count ?? 0;
     private readonly HashSet<IUIComponent> _skeletonSet = new();             // panel-owned visuals (skip in HideUnmappedContainers)
 
-    /// <summary>Shows a loading placeholder at each of the generator's budget-deferred slots. ONE themed
-    /// <c>ItemSkeletonTemplate</c> card is built, measured and arranged - every slot is a CLONE of it
-    /// (<see cref="IUIComponent.RenderClones"/>), which exists only in the instance buffer. <paramref name="slotRect"/>
-    /// maps a slot index to its absolute grid rect; the subclass owns that geometry and calls this from
-    /// ArrangeVirtualized. O(pending) matrix writes, and not one element per slot.</summary>
+    /// <summary>Shows a skeleton card at each budget-deferred slot; <paramref name="slotRect"/> maps a slot index to its
+    /// rect. Call from ArrangeVirtualized.</summary>
     protected void ReconcileSkeletons(Func<int, Rect> slotRect)
     {
         var pending = Owner.ItemContainerGenerator.PendingIndices;
@@ -468,11 +393,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             return;
         }
 
-        // NO delay. There used to be one - six FRAMES, on the reasoning that at 60 fps it is ~100ms and stops cards
-        // flashing on a fill that clears immediately. But a fill is exactly when frames are slow, so those six frames
-        // ran to half a second on a heavy tab and the window looked hung: the heuristic held the placeholder back
-        // hardest in the case it exists for. A deferred slot is a hole on screen; showing it at once is the honest
-        // answer, and the cheap one (every card is a CLONE of one prototype - see below).
+        // No delay: a fill is when frames are slow, so a frame-count delay made the window look hung.
         var template = Owner?.ItemSkeletonTemplate;
         if (template == null) return;   // unthemed ItemsControl - no skeletons
 
@@ -504,11 +425,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         var clones = new List<Matrix4x4F>(pending.Count);
         for (var i = 0; i < pending.Count; i++) AddClone(clones, slotRect(pending[i]), inset);
 
-        // A slot leaves PendingIndices the moment it gets a CONTAINER - which is one or more passes before that container
-        // is arranged and drawn. Dropping its card then opens a hole with neither tile nor skeleton, and a streaming fill
-        // shows it as a band along the realize frontier. (The old per-slot cards hid this by accident: they were dismissed
-        // with Visibility=Collapsed, which only takes effect on a later pass, so a card lingered exactly long enough.)
-        // The honest rule is not a delay but a condition: a skeleton stands until its slot is actually LAID OUT.
+        // A slot gets its container passes before it is laid out; keep its skeleton until then, or a band of holes shows.
         foreach (var index in Owner.ItemContainerGenerator.RealizedIndices)
         {
             if (Owner.ItemContainerGenerator.ContainerFromIndex(index) is IMeasurableComponent { IsArrangeValid: true }) continue;
@@ -594,27 +511,16 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         m.Arrange(slot.rect);
     }
 
-    // A card from the pool (already attached + pulsing) or a fresh one built from the theme's ItemSkeletonTemplate. The
-    // panel owns no skeleton visual or animation - the card's whole look + breathe live in the template.
-    // Where each ITEM last sat. Keyed by the DATA ITEM, never by the container: containers are recycled onto other items
-    // as the window scrolls, so "where this container was last time" is a different item's position and would fling
-    // tiles in from wherever the recycled container came from.
+    // Where each item last sat, keyed by the data item: containers are recycled onto other items.
     private readonly Dictionary<object, Vector2> _lastItemPos = new();
     private int _animatedGap = -1;   // the gap the last animated pass ran for
     private static readonly TimeSpan LayoutMoveDuration = TimeSpan.FromSeconds(0.18);
 
-    /// <summary>Animates the tiles that layout just MOVED, from where they were to where they now are. Layout stays the
-    /// authority - it has already put everything in its final place, including a line that reflowed around the drop gap -
-    /// and this only interpolates the difference on the render transform, which is why a wrapping panel can open a hole
-    /// without tiles sliding over each other. Nothing animates the first time an item is seen (it has no previous place),
-    /// and scrolling moves nothing, since the grid is absolute and an item's slot does not change when the view does.</summary>
     // Rows promoted for the duration of an open gap. A promotion costs a transform slot, so it is not left behind: the
     // moment the gap closes they all go back to being ordinary children.
     private readonly HashSet<UIComponent> _promoted = new();
 
-    /// <summary>Makes a row carry its own subtree (or stop). The snapshot records this, and the draw side bakes the
-    /// subtree node-relative or world-baked accordingly - so a change nobody announced leaves the two disagreeing about
-    /// where everything is. Idempotent, which is what keeps it cheap to call every arrange.</summary>
+    // Makes a row carry its own subtree (or stop), marking it so the render side re-bakes; idempotent.
     private static void AsMotionNode(UIComponent row, bool on)
     {
         if (row.IsRenderMotionNode == on) return;
@@ -624,6 +530,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         RenderDirty.MarkSubtreeGeometry(row);   // its subtree is baked in a DIFFERENT space now - re-take the record
     }
 
+    /// <summary>Animates tiles that layout just moved from their previous place to the new one via the render transform;
+    /// layout stays the authority. New items and scrolling animate nothing.</summary>
     protected void AnimateLayoutMoves(Func<int, Rect> slotRect)
     {
         // Gap closed: nothing is travelling any more, so give the slots back.
@@ -685,12 +593,8 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
 
     private UIComponent _gapCard;   // the drop placeholder; separate from the skeleton pool ON PURPOSE - see below
 
-    /// <summary>Puts the drop PLACEHOLDER in the open gap - the card that says "what you are holding lands here".
-    /// Deliberately NOT a loading skeleton, and kept out of the skeleton pool and out of <c>IsLoadingItems</c>: a
-    /// skeleton means "content is on its way", it pulses the whole list while it is up, and it waits several frames
-    /// before appearing so a quick fill does not flash. All three are wrong for a placeholder that has to appear under
-    /// the cursor at once and must not tell the user about work that is not happening. Called from ArrangeVirtualized;
-    /// <paramref name="slotRect"/> is the same geometry the tiles use.</summary>
+    /// <summary>Puts the drop placeholder in the open gap. Not a loading skeleton and not counted in
+    /// <c>IsLoadingItems</c>. Call from ArrangeVirtualized.</summary>
     protected void ReconcileDropPlaceholder(Func<int, Rect> slotRect)
     {
         var gap = DropGapIndex;

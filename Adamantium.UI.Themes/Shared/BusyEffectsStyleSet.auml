@@ -2,28 +2,9 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The loading-indicator EFFECTS, and the one style set in this project that belongs to no theme.
-
-         WHY IT IS SHARED. A BusyIndicator has no look of its own - only IsActive - so each of these is purely a
-         template picked by class (<BusyIndicator Classes="Dots"/>). But a class here is not a PLATFORM's opinion about
-         how a control should look; it is an effect an application asks for BY NAME, and "Ants" means the same thing
-         whichever theme is loaded. Every one of them is built entirely from keys each theme already answers - the live
-         accent, BusyDotSize, BusyArcThickness, BusyEqualizerBarWidth - so a theme dresses them without owning them.
-         They lived twice, once in Fluent and once in Editor Pro, and the two copies differed by nothing but line breaks
-         and the wording of their comments. A third copy was about to be made for macOS. This is that third copy not
-         being made, and the other two collapsing into one: a fix to Shimmer is now made once.
-
-         WHAT STAYS WITH A THEME is the indicator with NO class - the plain one a control shows when nobody asked for an
-         effect. That one IS a platform's opinion (Fluent's sweeping arc, macOS's eight spokes) and lives in each
-         theme's own BusyIndicatorStyleSet.
-
-         Each look starts its animation on an IsActive trigger and STOPS it on the way out: these loops never end by
-         themselves (IterationCount="Infinity"), so without the ExitAction a hidden indicator would keep animating - and
-         a looping animation on a detached element is a leak. Per the small-styles convention, one <Style> per concern.
-
-         A theme's own plain style also carries an IsActive trigger, aimed at ITS parts, and that trigger reaches a
-         classed indicator too - where those parts do not exist. That is harmless by construction, not by luck:
-         RunAnimationAction resolves its TargetName and returns when nothing answers. -->
+    <!-- Busy indicator effects picked by class (<BusyIndicator Classes="Dots"/>), shared by all themes and built from
+         keys every theme answers; the classless indicator stays in each theme. -->
+    <!-- Each effect starts on IsActive and stops in ExitAction, since infinite loops would otherwise leak. -->
 
     <!-- ============================== Dots: three dots breathing in sequence ============================== -->
     <Style Selector="BusyIndicator.Dots">
@@ -273,14 +254,8 @@
                 <ControlTemplate TargetType="BusyIndicator">
                     <!-- Nothing here rotates: the dashes travel ALONG the contour (StrokeDashOffset), which is a different
                          motion from a spin - the ring stands still and the pattern flows through it. -->
-                    <!-- A RECTANGLE, not a ring, and that is the whole effect rather than a styling preference: on a
-                         circle "the dashes travel along the contour" and "the dashed ring spins" are the SAME motion -
-                         nothing can tell them apart, so the marching reads as a spin (which the Ring class already is).
-                         Straight runs and corners are what make it legible, which is also why every selection marquee
-                         this effect is named after is rectangular.
-                         The numbers are in pixels (the array is not scaled by thickness): a dash must be longer than the
-                         stroke is thick or it reads as a dot, and a ROUND dash cap adds half the thickness at each end,
-                         fattening the dash and eating the gap. Flat caps, dash a little shorter than the gap. -->
+                    <!-- A rectangle, since marching dashes on a circle read as a spin. Dash lengths are in pixels, with
+                         flat caps and dashes slightly shorter than gaps. -->
                     <Rectangle x:Name="AntsRing"
                                         CornerRadius="{ResourceReference BusyPieceRadius}"
                                         Stroke="{ThemeResource AccentFillColorDefault}"
@@ -323,13 +298,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
-                    <!-- ONE rounded card, painted by ONE gradient whose stops travel. Not a band sliding inside a clipping
-                         Grid, which is what this used to be: the clip is RECTANGULAR (it knows nothing about CornerRadius),
-                         so as the band reached an end it filled the card's rounded corner square while the other end stayed
-                         round. With a single shape there is nothing to clip and the rounding is the card's own - the bug
-                         cannot come back. See docs/TECH_DEBT.md for the clip gap itself, which is still open.
-                         The colours are themed resources (a white glare on dark, a dark sweep on light); a gradient STOP
-                         takes a resource reference just like an element property. -->
+                    <!-- One rounded card painted by a gradient with traveling stops, so no rectangular clip squares its
+                         corners. Stop colors are themed resources. -->
                     <Rectangle CornerRadius="{ResourceReference BusyShimmerRadius}" Stroke="Transparent">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">

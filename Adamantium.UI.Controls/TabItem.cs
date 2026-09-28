@@ -18,13 +18,8 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public class TabItem : ContentControl, ISelectable, ISpringLoadable
 {
-    /// <summary>A tab's Content is its PAGE, and the page is drawn by the TabControl's body presenter - never by the tab
-    /// itself, which lives in the strip and shows a header. So it does not fall back to hosting its own content while it
-    /// is without a template, the way an ordinary content control does.
-    /// <para>Measured: a theme swap re-styles the tree over several frames, and in that window every templated control is
-    /// briefly template-less. For a tab that meant the whole page parented into its header card - the strip measured
-    /// itself to the page (480,132 px tall), the body's row collapsed to nothing, and the page was drawn across the tab
-    /// headers.</para></summary>
+    // A tab's Content is its page, drawn by the TabControl's body, so a template-less tab (mid theme swap) must not host
+    // it in the strip.
     protected override bool HostsContentWithoutTemplate => false;
 
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
@@ -37,13 +32,8 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         typeof(DataTemplate), typeof(TabItem),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnHeaderTemplateChanged));
 
-    /// <summary>Dirty the header PRESENTER, not just this tab. The presenter learns of the new template through a
-    /// {TemplateBinding}, and those are flushed in a batch - so on the tab's next measure the presenter is still
-    /// measure-VALID, holding the size of a visual built from the OLD template, and the row simply reuses it. Only a
-    /// LATER direct measure of the presenter rebuilds it, and by then this tab has already answered.
-    /// <para>Measured, folding a tool strip: the presenter reported the turned label at 17x54 while its tab kept the
-    /// 78x29 it had lying flat, three measures deep - and the one tab that happened to get a fourth measure was the only
-    /// one that came out right.</para></summary>
+    // Dirty the header presenter too: it learns of the template through a batched TemplateBinding and would otherwise
+    // report the old size.
     private static void OnHeaderTemplateChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is TabItem tab && tab.GetTemplateChild("PART_ContentPresenter") is IMeasurableComponent presenter)
@@ -69,11 +59,8 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     public static readonly AdamantiumProperty ForegroundSelectedProperty = AdamantiumProperty.Register(
         nameof(ForegroundSelected), typeof(Brush), typeof(TabItem), new PropertyMetadata(default(Brush)));
 
-    /// <summary>What the tab is marked with, next to its header - DATA, not a control: a key, a glyph, a view model, an
-    /// image source. <see cref="IconTemplate"/> says how to draw it.
-    /// <para>Data on purpose. The same tab is drawn in more than one place at once - the strip and the overflow flyout -
-    /// and a control can only ever be in one of them; handing the same instance to both takes it out of the first. Data
-    /// plus a template builds a fresh visual per place, so an icon can appear in as many as it likes.</para></summary>
+    /// <summary>The tab's icon as data, drawn by <see cref="IconTemplate"/>; data because the strip and overflow flyout
+    /// each build their own visual.</summary>
     public static readonly AdamantiumProperty IconProperty = AdamantiumProperty.Register(nameof(Icon),
         typeof(object), typeof(TabItem), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnIconChanged));
 
@@ -465,11 +452,7 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         base.OnMouseMove(sender, e);
         if (!_pressed) return;
 
-        // Whether the button is DOWN is the device's to answer, not ours to remember. The flag above is only where the
-        // gesture started; kept as the sole authority it goes stale - pressing a folded strip re-templates the tree
-        // under the cursor (the group expands), the button-up lands in the new tree and never reaches this tab, and the
-        // flag stays latched for the life of the control. After that a plain hover, with nothing held down, walked
-        // straight into the drag path and slid the tabs away.
+        // Ask the device whether the button is down: the flag goes stale if the button-up lands in a re-templated tree.
         if (e.MouseDevice.LeftButton != MouseButtonState.Pressed)
         {
             AbandonDrag();

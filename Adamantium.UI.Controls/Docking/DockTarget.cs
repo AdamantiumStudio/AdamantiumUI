@@ -2,15 +2,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// Where a dragged pane would land: which NODE it is aimed at, on which side of it, and the rectangle it would end up
-/// occupying. The preview rectangle is part of the ANSWER rather than something the compass works out for itself -
-/// what the user is shown and what the drop then does must come from one calculation, or the preview becomes a
-/// decoration that happens to be right most of the time.
-/// <para>A node, not a group, because an EDGE anchor - "along the whole left side" - is the same move aimed at the
-/// root. There is no second kind of drop and no zone meaning "but of the area this time": the root is a node like any
-/// other, and splitting it is what spanning the whole side means.</para>
-/// </summary>
+/// <summary>Where a dragged pane would land: the target node, the side, and the resulting rectangle, one answer for preview
+/// and drop. A node, so an edge anchor is the same move aimed at the root.</summary>
 public readonly struct DockTarget
 {
     public DockTarget(PaneNode node, Rect bounds, DockZone zone, Rect preview, bool isEdge = false)

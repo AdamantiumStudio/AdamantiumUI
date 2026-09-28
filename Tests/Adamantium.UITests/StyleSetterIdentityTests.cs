@@ -5,14 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A style setter whose value is an OBJECT - a panel template, a control template - must hand out the same object every
-/// time it is applied. Anything else and the property "changes" on every re-application, and whoever listens for that
-/// change tears down and rebuilds what the value controls.
-/// <para>Found through docking: the items panel of a tab strip was being rebuilt over and over, each time leaving the
-/// live panel orphaned while the tabs moved to a fresh one. Measured in the running app, ItemsPanel arrived as a
-/// DIFFERENT instance on every application (#58549640, then #63772203, then #53681453).</para>
-/// </summary>
+// A style setter with an object value (a template) hands out the same instance on every application.
 [TestFixture]
 public class StyleSetterIdentityTests
 {

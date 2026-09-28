@@ -9,13 +9,8 @@ public static class InputExtensions
       return root.GetInputElementsAt(p).FirstOrDefault();
    }
 
-   /// <summary>
-   /// The input elements under <paramref name="p"/>, FRONT-TO-BACK: the visually top-most (last-painted / highest
-   /// ZIndex) hit comes first, so <see cref="HitTest"/> returns it. Children paint over their parent and later
-   /// children over earlier ones, so they are tested in reverse paint order; an element itself sits behind its
-   /// children. Earlier this returned the BOTTOM-most overlapping sibling, so a control drawn on top of another (e.g.
-   /// a Line over a Panel) couldn't be hit/selected.
-   /// </summary>
+   /// <summary>The input elements under <paramref name="p"/>, front to back (reverse paint order), so
+   /// <see cref="HitTest"/> returns the top-most.</summary>
    public static IEnumerable<IInputComponent> GetInputElementsAt(this IUIComponent root, Vector2 p)
    {
       var result = new List<IInputComponent>();
@@ -60,11 +55,8 @@ public static class InputExtensions
          result.Add(element);
    }
 
-   /// <summary>The top-most INPUT element whose BOUNDS contain <paramref name="p"/> - the narrow phase (a shape's real
-   /// geometry, a panel's visible background) is skipped, so a transparent container still counts. The mouse-over
-   /// FALLBACK when the pixel-accurate <see cref="HitTest"/> misses: the pointer over a gap between transparent tiles is
-   /// still geometrically inside the scroll viewer, so the over-chain must stay anchored there instead of collapsing to
-   /// the window root (which flickers the viewer's IsMouseOver and restarts its auto-hide fade every few frames).</summary>
+   /// <summary>The top-most input element whose bounds contain <paramref name="p"/>, skipping the narrow phase; the
+   /// mouse-over fallback when <see cref="HitTest"/> misses.</summary>
    public static IInputComponent HitTestBounds(this IUIComponent root, Vector2 p)
    {
       var result = new List<IInputComponent>();
@@ -77,13 +69,8 @@ public static class InputExtensions
       if (element.Visibility != Visibility.Visible || !element.IsHitTestVisible)
          return;
 
-      // A DISABLED ELEMENT STILL TAKES THE PRESS - it just does nothing with it. Skipped entirely, it became a hole:
-      // the press went through to whatever was behind, so a greyed button on a row folded the row, and turning a
-      // control off silently changed what the thing under it does. Every control that can be disabled already refuses
-      // the press by itself (see ButtonBase), so being a target costs nothing and being transparent costs correctness.
-      //
-      // Its CHILDREN are not walked: they are disabled with it, and one of them answering would be the same hole one
-      // level down.
+      // A disabled element still takes the press (and ignores it) rather than letting it fall through; its children are
+      // not walked.
       if (!element.IsEnabled)
       {
          if (element is IInputComponent off && element.ClipRectangle.Contains(p)) result.Add(off);
@@ -91,13 +78,7 @@ public static class InputExtensions
          return;
       }
 
-      // A RENDER TRANSFORM moves what you SEE, so it has to move what you can HIT. Undone here, before anything is
-      // compared with anything: the point arrives in the parent's space, and the element's box, its children and its
-      // geometry are all stated in the element's own. Without this a transformed element was hit-tested where it was
-      // LAID OUT rather than where it is drawn - so a canvas that scales what it hosts could be operated at 1:1 and
-      // nowhere else, and the further from the element's origin, the wider the miss.
-      //
-      // Only when there IS one, which is almost never: everything else keeps the plain subtraction it always had.
+      // Undo a render transform first, so the element is hit where it is drawn rather than where it was laid out.
       if (element.RenderTransform != null)
       {
          var back = Matrix4x4F.Invert(element.LocalTransform);
@@ -124,25 +105,13 @@ public static class InputExtensions
       // it must stay for self-hit or every filled element would register as hit everywhere.
       var inBox = element.ClipRectangle.Contains(p);
 
-      // ...but it must NOT gate recursion into children when the element does not clip them. A non-clipping element
-      // (ClipToBounds=false, the default) does not clip its children in RENDER, so a child may legitimately overflow
-      // its parent's box and still be drawn - and therefore must stay hittable. Pruning recursion by the parent box
-      // made such overflow dead to the mouse (e.g. a StackPanel squeezed a few px shorter than its rows by a tight
-      // slot: the last row rendered but its lower part could not be clicked). A CLIPPING element (ClipToBounds=true)
-      // does hide what leaves its box, in render and here, so it still prunes.
+      // ...but only a clipping element prunes its children: without ClipToBounds, overflowing children are drawn and must
+      // stay hittable.
       if (element.ClipToBounds && !inBox)
          return;
 
-      // Into the element's local space, then recurse into ALL visual children front-to-back (not only input ones), so a
-      // NON-input container - a Border / any Decorator - is descended THROUGH and the interactive content it wraps stays
-      // reachable. Filtering to IInputComponent here made anything inside a Border dead to the mouse (e.g. a ScrollBar
-      // whose template root is a Border: its Track/Thumb were unhittable).
-      //
-      // Use the TRUE arranged origin (Bounds), NOT ClipRectangle.Location: for Center/Right-aligned content WIDER than its
-      // slot, the alignment clamps ClipRectangle.Location to the visible slot edge (MeasurableUIComponent arrange) while the
-      // children are laid out against the real, overflowing Bounds origin. Subtracting the clamped clip origin shifted every
-      // child hit by the overflow - a click landed on a tile a couple of columns off in a window narrower than the board.
-      // ClipRectangle stays the broad-phase VISIBLE gate (inBox) above, so a click in the clipped-away region still misses.
+      // Recurse into all visual children, input or not, relative to the true arranged origin (Bounds), not the clamped
+      // ClipRectangle origin.
       var local = p - element.Bounds.Location;
       foreach (var child in HitTestChildren(element, local))
          Collect(child, local, result, boundsOnly);

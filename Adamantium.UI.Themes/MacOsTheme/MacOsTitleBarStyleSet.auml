@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS caption. Three things separate it from the Windows one, and all three are conventions rather than
-         decoration - a Mac user reads a window by them:
-
-         THE LIGHTS SIT LEFT, and closing is outermost - close, minimise, zoom. This template lays them out in that
-         order directly, so it needs no reordering trigger; CaptionButtonPlacement is still set to Left because that is
-         the window's own statement of where its caption controls live, and the placement belongs to the theme rather
-         than to every window that uses it.
-
-         THE TITLE IS CENTRED IN THE WINDOW, not beside the icon. Centred in the WINDOW and not in the space left over:
-         a caption with commands on one side would otherwise push the title off-centre, and on a Mac a title that drifts
-         reads as a mistake. So the title is its own layer spanning the whole bar, and the interactive things sit over
-         it - the drag area, the lights, the commands.
-
-         THE LIGHTS ARE COLOURED CIRCLES AND SHOW THEIR GLYPHS ONLY UNDER THE POINTER. That is not a flourish either:
-         at rest the caption is meant to be quiet, and the symbols appear when the hand is on its way to them. -->
+    <!-- The macOS caption: traffic lights on the left (close, minimize, zoom; CaptionButtonPlacement=Left), the title
+         centered on the window, glyphs shown only under the pointer. -->
 
     <Style Selector="TitleBar">
         <Setter Property="Background" Value="Transparent"/>
@@ -33,28 +20,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TitleBar">
-                    <!-- COLUMNS for the things that have a side, and the title as a LAYER ACROSS them. Both halves
-                         matter. Columns because a side is a place, and asking a stretched child to align itself inside
-                         a shared cell is a wish rather than a layout - the commands did exactly that and landed on top
-                         of the lights. The title spanning all three because it must be centred on the WINDOW: centred
-                         in the space left over, it would drift the moment one side held more than the other, and a
-                         drifting title is the first thing that reads as wrong on a Mac.
-
-                         The drag area spans too, underneath everything: whatever part of the caption is not a control
-                         drags the window. -->
-                    <!-- The hairline under the caption is what separates it from the body - see the window's comment on
-                         why the caption is its own surface. A Border, because a Grid is a panel and has no edge. -->
+                    <!-- Columns for each side, with the title and drag area spanning all three, so the title centers on
+                         the window. A Border draws the hairline under the caption. -->
                     <Border Background="{TemplateBinding Background}"
                             BorderThickness="0 0 0 1" BorderBrush="{ObservableResource ControlStrokeColorDefault}">
                     <Grid ColumnDefinitions="Auto,*,Auto">
 
                         <Border x:Name="PART_DragArea" Grid.Column="0" Grid.ColumnSpan="3" Background="Transparent"/>
 
-                        <!-- NOT HIT-TESTABLE, and it has to be said out loud: the title spans the whole bar so it can
-                             be centred on the WINDOW, which puts it on top of the drag area underneath. Caption drag
-                             only begins when the drag area is genuinely the topmost thing under the pointer, so a
-                             title that takes hits is a window that cannot be dragged by its middle - which is most of
-                             it. A label is not interactive anyway. -->
+                        <!-- Not hit-testable: it lies over the drag area, and drag starts only when that is topmost. -->
                         <TextBlock x:Name="PART_Title" Grid.Column="0" Grid.ColumnSpan="3" IsHitTestVisible="False"
                                 Text="{TemplateBinding Title}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -99,12 +73,8 @@
                                 </Grid>
                             </StackPanel>
 
-                        <!-- The application's own slot - a quick-access bar, a search box, whatever it puts there.
-                             AFTER the lights, for the same reason the left commands are: on this platform the window's
-                             own controls come first and anything the application adds follows them, which is exactly
-                             where a Mac toolbar starts. Missing it does not fail loudly: the window hands the content
-                             over and the caption simply drops it, so a ribbon's quick-access bar was passed in and
-                             never appeared. -->
+                        <!-- The application's leading slot (e.g. a quick-access bar), after the lights; without this
+                             presenter the caption silently drops LeadingContent. -->
                         <ContentPresenter x:Name="PART_LeadingContent"
                                 Content="{TemplateBinding LeadingContent}"
                                 VerticalAlignment="Center" MarginLeft="12"/>
@@ -204,13 +174,7 @@
         <Setter Property="Focusable" Value="False"/>
     </Style>
 
-    <!-- ONE TEMPLATE PER LIGHT, and the repetition is deliberate. The glyph differs and it is GEOMETRY: routing three
-         different path strings through one template means carrying them in some general-purpose slot (Tag) and hoping
-         a converter turns them back into geometry - a silent failure when it does not, which is a caption with three
-         blank circles and nothing in the log. Written out, each light says what it draws.
-
-         The glyph rides at zero opacity until the pointer arrives. Drawn rather than typed: these symbols are eight
-         pixels across, and a font at that size hints itself into mush. -->
+    <!-- One style per light for its color; the glyphs are images in the caption template, shown on hover. -->
     <Style Selector="Button.CloseLight">
         <Setter Property="Background" Value="#FF5F57"/>
         <Setter Property="Template">

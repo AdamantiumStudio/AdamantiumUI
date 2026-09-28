@@ -20,7 +20,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         var min = MinSizeAppliesAlong(orientation) ? LargestPaneMinimum() : 0;
         min = System.Math.Max(min, StripExtent(orientation));
 
-        // The DOCUMENT area has a floor of its own along both axes (rule 7.6): it pays for every tool docked against
+        // The DOCUMENT area has a floor of its own along both axes: it pays for every tool docked against
         // it, and its panes cannot state this - documents come and go, the centre outlives all of them.
         if (Kind == PaneKind.Document && Area is { } area) min = System.Math.Max(min, area.DocumentMinSize);
 
@@ -207,7 +207,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     }
 
     /// <summary>Document group or tool group: a tool wears a caption and keeps its tabs at the bottom, a document wears
-    /// tabs on top and nothing else. Taken from WHERE THE GROUP STANDS (rule 1.2), not from the panes in it - reading
+    /// tabs on top and nothing else. Taken from WHERE THE GROUP STANDS, not from the panes in it - reading
     /// it off the first pane put a caption with an auto-hide button in the middle of the editing area. The pane's own
     /// <see cref="Pane.Kind"/> is unaffected: that is policy, not looks.</summary>
     public static readonly AdamantiumProperty KindProperty = AdamantiumProperty.Register(nameof(Kind),
@@ -311,11 +311,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
             pane.LabelRotation = rotation;
         }
 
-        // The flyout follows the state, and it is driven from HERE rather than by a trigger in the template. A trigger
-        // has to be UNDONE to close the popup, and undoing it went through ClearValue - which leaves the property Unset,
-        // so the next reader (GetValue<bool>) threw and took the rest of this method with it. Measured: the panel docked
-        // with its tab labels still turned on their side, because the line above never ran.
-        // LAST in this method, after everything that must happen whatever the popup does.
+        // The flyout follows the state from here, not a template trigger, and last, after everything that must happen anyway.
         if (_flyout != null)
         {
             _flyout.IsOpen = State == PaneGroupState.Revealed;
@@ -326,11 +322,8 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         // what throws the live strip away and builds another.
     }
 
-    /// <summary>How far the flyout of a REVEALED panel reaches across its edge, in pixels - the room the panel is worth
-    /// docked. Pushed from the model, where that number lives (<see cref="PaneGroupNode.RestoreLength"/>); a star length
-    /// is turned into pixels against the docking area, because a flyout is placed, not shared out.
-    /// <para>Only the flyout uses it. In the tree a revealed panel is still just its strip - it draws OVER its
-    /// neighbours rather than pushing them aside (rule 3.10).</para></summary>
+    /// <summary>How far a revealed panel's flyout reaches across its edge, in pixels, from
+    /// <see cref="PaneGroupNode.RestoreLength"/>. The flyout draws over its neighbors.</summary>
     public static readonly AdamantiumProperty RevealExtentProperty = AdamantiumProperty.Register(nameof(RevealExtent),
         typeof(double), typeof(PaneGroup), new PropertyMetadata(240.0));
 
@@ -340,11 +333,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         set => SetValue(RevealExtentProperty, value);
     }
 
-    // WHERE the active pane's content is hosted - in the panel's own body, or in the flyout. Exactly one of them holds it
-    // at a time, because one piece of content belongs to one tree: a presenter goes on holding its child even when the
-    // body around it is hidden, so handing the same element to the flyout would give it a second parent.
-    // Two properties rather than a trigger that nulls the presenter's Content: a local write would outrank the template
-    // binding and never give it back.
+    // Where the active pane's content is hosted: exactly one of body and flyout holds it, since an element has one parent.
 
     public static readonly AdamantiumProperty DockedContentProperty = AdamantiumProperty.Register(nameof(DockedContent),
         typeof(object), typeof(PaneGroup), new PropertyMetadata(null));
@@ -397,11 +386,8 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         set => SetValue(RevealLengthProperty, value);
     }
 
-    /// <summary>Where the flyout sits relative to this strip's top-left corner - both axes, in pixels.
-    /// <para>The popup is placed <see cref="PlacementMode.Relative"/> to the strip and moved by these, rather than by one
-    /// of the named placements: those CENTRE the popup on its target (right for a tooltip, which is what they were built
-    /// for), and a flyout seven times wider than the strip it belongs to ended up half a window to the left of it. The
-    /// docking area knows exactly where the panel should appear, so it says so outright.</para></summary>
+    /// <summary>Where the flyout sits relative to the strip's top-left corner, in pixels; the named placements would center
+    /// it on the strip.</summary>
     public static readonly AdamantiumProperty RevealOffsetXProperty = AdamantiumProperty.Register(nameof(RevealOffsetX),
         typeof(double), typeof(PaneGroup), new PropertyMetadata(0.0));
 
@@ -455,12 +441,8 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     private ButtonBase _flyoutCloseButton;
     private Popup _flyout;
 
-    /// <summary>The flyout light-dismissed itself (a press outside it), which for a revealed panel means "put it away".
-    /// <para>The popup owns this rather than the docking area: the flyout lives in the window's popup layer, OUTSIDE this
-    /// group's own subtree, so an area-level "was the press inside the group?" test would count a press on the panel's
-    /// own body as a press elsewhere and shut it the moment it was used.</para>
-    /// <para>The local IsOpen the popup wrote is cleared, or it would outrank the template trigger and the panel could
-    /// never be revealed again.</para></summary>
+    /// <summary>The flyout light-dismissed itself, so the revealed panel is put away. The popup's local IsOpen is cleared so
+    /// the template trigger can reveal it again.</summary>
     private void OnFlyoutPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {
         if (e.Property != Popup.IsOpenProperty || _flyout is not { IsOpen: false }) return;
@@ -565,11 +547,8 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         _flyoutCloseButton = null;
     }
 
-    /// <summary>Auto-hide: a docked group folds away to the edge it sits on, leaving its panes as buttons on that edge's
-    /// strip; a folded one - whether put away or merely being looked at - comes back into the layout, tabs and all. The
-    /// area owns the move, because which state a panel is in belongs to the layout.
-    /// <para>NOT called "pin", though the button is a thumbtack: pinning belongs to a TAB (<see cref="Pane.IsPinned"/>),
-    /// and one word cannot mean both "keep this tab" and "put this panel away".</para></summary>
+    /// <summary>Auto-hide: folds a docked group to its edge's strip, or brings a folded one back. Not "pin", which belongs to a
+    /// tab (<see cref="Pane.IsPinned"/>).</summary>
     private void OnAutoHideClicked(object sender, RoutedEventArgs e)
     {
         e.Handled = true;

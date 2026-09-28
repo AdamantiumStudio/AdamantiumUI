@@ -6,13 +6,8 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>A NODE OF THIS PAGE'S GRAPH - the application's own object, implementing the canvas's <see
-/// cref="ICanvasNode"/>.
-/// <para>It lives here and not in the engine, for the same reason a list's items do: a control works with the data it
-/// is handed and generates what shows it. The canvas never makes one of these itself - it asks the catalogue of kinds,
-/// which is this page's too.</para>
-/// <para>A view-model said the way every view-model here is said: the framework's base and <c>[Bindable]</c> fields,
-/// so what a property does when it changes is a partial method and not a hand-written setter.</para></summary>
+/// <summary>A node of this page's graph: the application's <see cref="ICanvasNode"/> data, created through the page's
+/// catalog of kinds rather than by the canvas.</summary>
 [ViewModel]
 public partial class CanvasNodeViewModel : ICanvasNode
 {

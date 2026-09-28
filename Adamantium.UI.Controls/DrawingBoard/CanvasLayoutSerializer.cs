@@ -8,11 +8,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>How the canvas was left, as text: where its panels stand, how wide they were pulled, what is folded away,
-/// and - when the switches say so - where the camera was looking and what was in hand. Handed over rather than saved
-/// here: where it is kept is the application's business.
-/// <para>A panel's place is a fraction of its travel, so another window size brings it back where it belongs; its
-/// width is in pixels, held down to what the window can show.</para></summary>
+/// <summary>How the canvas was left, as text for the application to store: panel places (as fractions) and widths, folds,
+/// and optionally camera and tool.</summary>
 public static class CanvasLayoutSerializer
 {
     public const int Version = 1;

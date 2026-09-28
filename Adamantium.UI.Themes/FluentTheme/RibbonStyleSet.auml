@@ -41,7 +41,7 @@
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run: the group's colour carrying its title (docs/RIBBON_PLAN.md §4). -->
+    <!-- The ledge over a contextual run: the group's colour carrying its title. -->
     <Style Selector="RibbonContextualLedge">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeMicro}"/>
@@ -106,11 +106,8 @@
                                     BorderThickness="0 1 0 0"
                                     ClipToBounds="True">
                                 <Border x:Name="PART_BandHost">
-                                    <!-- STRETCHED across, not left-aligned: the open tab has to be told how much room the
-                                         band actually has, because that arrange width is what the groups choose their
-                                         variants from. Sized to content instead, a tab would always be handed exactly what
-                                         it asked for and would never learn that the window had narrowed. The groups still
-                                         sit left - their panel lays them out from x=0 and reports only what it used. -->
+                                    <!-- Stretched, so the tab's arrange width tells the groups the room available for
+                                         choosing their variants. -->
                                     <ContentPresenter x:Name="PART_SelectedContentHost"
                                             Content="{TemplateBinding SelectedContent}"
                                             ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -122,12 +119,8 @@
                             <!-- The band's own row: whatever the application puts under it. -->
                             <ContentPresenter Grid.Row="2" Content="{TemplateBinding FooterContent}"/>
 
-                            <!-- The minimized band's groups, drawn OVER the content below. An overlay is not a choice:
-                                 kept in a row of its own it would push the content down (which is the one thing a
-                                 minimized ribbon must not do) and be clipped by the root border. But it must not READ as
-                                 a flyout - it is the band itself, so it spans the ribbon's full width and wears the
-                                 band's own chrome. The width also does the aligning: Bottom placement CENTRES on its
-                                 target, so anything narrower than the ribbon drifts into the middle of the window. -->
+                            <!-- The minimized band as an overlay over the content, full ribbon width with band chrome
+                                 (Bottom placement centers, so full width also aligns it). -->
                             <Popup x:Name="PART_Flyout" Grid.Row="1" Placement="Bottom">
                                 <Border Width="{TemplateBinding ActualWidth}"
                                         Height="{TemplateBinding GroupsAreaHeight}"
@@ -137,7 +130,7 @@
                                         ClipToBounds="True">
                                     <!-- The band SLIDES out from under the strip: the frame above is a fixed-height
                                          window that clips, and this is what moves inside it. A transform, not a height:
-                                         a growing height would re-run the whole adaptive pass (§3.3) every frame, while
+                                         a growing height would re-run the whole adaptive pass every frame, while
                                          a transform is a compositor channel and costs nothing per frame. -->
                                     <Border x:Name="PART_FlyoutHost">
                                         <Border.RenderTransform>
@@ -224,7 +217,7 @@
                 <ControlTemplate TargetType="RibbonTabHeader">
                     <Grid>
                         <!-- Square and un-antialiased: plates meeting edge to edge, and a soft edge leaves a hairline
-                             down each join (see docs/RIBBON_PLAN.md §4.4). -->
+                             down each join. -->
                         <Border x:Name="Chrome"
                                 Background="{TemplateBinding Background}"
                                 UseAnalyticAA="False"
@@ -281,11 +274,8 @@
         </MultiTrigger>
     </Style>
 
-    <!-- A tab is its groups in a row, plus the last-resort scroll: a full-height arrow at each edge with a fade BESIDE it
-         (inward), so the row dissolves into the arrow instead of being cut by a hard line. No scrollbar - a bar would eat
-         height from a strip that has none to spare. The arrows overlay the row instead of taking width from it:
-         reserving space would make the width depend on the answer it produces, and every tab that never scrolls would
-         pay for them. Each arrow therefore rides an OPAQUE plate - the row scrolls underneath it. -->
+    <!-- A tab's groups in a row, with last-resort scroll arrows overlaid on opaque plates at each edge, each with an
+         inward fade; no scrollbar. -->
     <Style Selector="RibbonTab">
         <Setter Property="ItemsPanel">
             <Setter.Value>
@@ -414,12 +404,8 @@
         </Setter>
         <Setter Property="Template">
             <Setter.Value>
-                <!-- ONE template for both presentations, never swapped. PART_Content is the group's commands and
-                     caption as a SINGLE block, and the group MOVES it between PART_InlineHost and PART_PopupHost when it
-                     collapses - the same arrangement WPF's RibbonGroup uses (PART_TemplateContentControl /
-                     PART_PopupGrid). Swapping the template instead rebuilds the packing panel that the adaptive pass
-                     measures through, and that panel is the one thing that must survive: it holds the variants, their
-                     measured widths, and the sizes currently applied to the commands. -->
+                <!-- One template for both presentations: collapsing moves PART_Content between PART_InlineHost and
+                     PART_PopupHost (as WPF's RibbonGroup does), preserving the packing panel's variant state. -->
                 <ControlTemplate TargetType="RibbonGroup">
                     <Grid ColumnDefinitions="*,Auto">
                         <Grid Grid.Column="0">
@@ -463,8 +449,7 @@
                                 </Grid>
                             </ToggleButton>
 
-                            <!-- NOT clipped: our ClipToBounds is rectangular and this card is rounded (open debt in
-                                 TECH_DEBT.md). Its content is PART_Content, moved here by the group. -->
+                            <!-- NOT clipped: our ClipToBounds is rectangular and this card is rounded. Its content is PART_Content, moved here by the group. -->
                             <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True">
                                 <!-- The card builds on FIRST OPEN, not with the group's template: a band carries a
                                      couple of dozen groups and hardly any of them are ever collapsed, let alone opened.
@@ -896,12 +881,8 @@
                         <!-- FillWindow: the backstage takes the window over. KeepOpen because there IS no outside to
                              press - Escape and the back arrow are the ways out. -->
                         <Popup x:Name="PART_Popup" FillWindow="True" KeepOpen="True">
-                            <!-- The whole backstage builds on FIRST OPEN (ChildTemplate), not with the ribbon's template:
-                                 it is a window-sized page plus a row per command, and an application that is never asked
-                                 for its File page pays for none of it. {Ancestor} rather than {TemplateBinding}, because a
-                                 ChildTemplate is built against the POPUP; and rather than a DataContext on the popup,
-                                 because the rows' PAGES bind to the view model and a DataContext here would take it from
-                                 them. The back button and the items host arrive with the content (Popup.ContentBuilt). -->
+                            <!-- The backstage builds on first open (ChildTemplate); {Ancestor} since it is built against
+                                 the popup, and no DataContext, which the pages need. Parts arrive via Popup.ContentBuilt. -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
                                   <Grid RowDefinitions="Auto,*">
@@ -1431,11 +1412,8 @@
 
     <!-- A plain row of small buttons; no chrome of its own - it sits inside the caption's. -->
     <Style Selector="RibbonQuickAccess">
-        <!-- The ink its icons are drawn with, STATED. Every command in the bar strokes itself with
-             {Ancestor RibbonQuickAccess, Foreground}, so a bar nobody dressed draws a row of buttons in nothing at
-             all - present, sized, and invisible. The caption's instance still overrides this with the title bar's own
-             colour; the instance UNDER the ribbon has no title bar to ask and had no colour of any kind, which is why
-             moving the bar down made it vanish. -->
+        <!-- The icon ink commands read via {Ancestor RibbonQuickAccess, Foreground}; the caption instance overrides it,
+             the one under the ribbon relies on it. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centres what it is given,
              and something that fills the slot has nothing left to centre. -->
@@ -1507,11 +1485,8 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- A DATA item in the bar. Most commands are an icon button; one that brought its OWN compact form (a slider, a
-         drop-down) is drawn by that instead - the bar's selector owns the choice, because an ItemTemplate would win over
-         it and it would never be asked. An authored control is its own container and reaches neither.
-         The theme states the LOOK of the ordinary case only: an application that puts its own selector on the bar to add
-         a case of its own keeps this button for everything else. -->
+    <!-- Data items in the bar: the selector picks a command's own compact form or this icon button (an ItemTemplate would
+         bypass it). -->
     <Style Selector="RibbonQuickAccess">
         <Setter Property="DefaultItemTemplate">
             <Setter.Value>

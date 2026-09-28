@@ -36,13 +36,8 @@ public abstract class TriggerActivatorBase : ITriggerActivator
         TargetsTemplateParts = ReachesTemplateParts(trigger);
     }
 
-    // Does this trigger reach into the TEMPLATE - through a setter that names a part, OR through an ACTION that does?
-    //
-    // Actions count, and forgetting them was a real bug: a trigger whose only reach is a RunAnimationAction (a loading
-    // indicator's spin/pulse lives entirely in its enter/exit actions - it has no setters at all) was classified as
-    // template-INDEPENDENT, so a template rebuild never re-pointed it. The animation then kept running on the parts of the
-    // discarded template while the rendered ones - the ones on screen - sat frozen. And a control gets re-templated
-    // routinely: a class-selected look means both the base style and the class style write Template.
+    // Whether the trigger reaches template parts through a setter or an action; such triggers are re-pointed on a
+    // template rebuild.
     private static bool ReachesTemplateParts(TriggerBase trigger)
     {
         // A trigger that READS a part reaches the template just as surely as one that writes to it: the part it listens
@@ -110,11 +105,8 @@ public abstract class TriggerActivatorBase : ITriggerActivator
         foreach (var applied in teardowns)
             applied.Teardown();
 
-        // Deactivated while the condition still HELD (a theme/template swap - the state never crossed back), so the exit
-        // edge never came and the ExitActions never ran. An enter-action that left something RUNNING must still be undone
-        // here, or a looping animation (a loading pulse) keeps ticking against the discarded brush/part for the rest of
-        // the session - one orphan per swap. Only the undoable ones: re-running the ExitActions wholesale would instead
-        // START their animations (an auto-hide scrollbar fades OUT from its ExitActions) on parts already thrown away.
+        // Torn down while the condition held, so no exit edge: undo the undoable enter-actions rather than running
+        // ExitActions, which may start animations.
         var invoked = _actionTargets;
         _actionTargets = null;
         if (!wasConditionMet) return;
@@ -177,15 +169,7 @@ public abstract class TriggerActivatorBase : ITriggerActivator
     // both the base and Accent button). A plain string is parsed.
     private void ApplySetter(ISetter setter)
     {
-        // A setter's target need not be a UI ELEMENT. A named Aura or Shadow declared inside a template is an
-        // AdamantiumComponent with properties like anything else, and switching one on is exactly what a state trigger
-        // is for - Aura.IsEnabled says so in its own summary. This resolved as IFundamentalUIComponent, so the cast
-        // produced null for such a target and the setter did nothing, SILENTLY: the part was found by name, the trigger
-        // fired, and nothing happened.
-        //
-        // Everything a plain-value setter needs - GetProperty, SetTriggerValue, ClearTriggerValue - is on
-        // IAdamantiumComponent. Only the markers that link to a POSITION IN THE TREE need more than that (a tree-scoped
-        // resource lookup, a ThemeResource, a relative binding), and each of those still asks for an element below.
+        // A setter target may be any component (a named Aura); only tree-bound markers below require an element.
         var target = Context.FindTarget(setter.TargetName);
         var component = target as IAdamantiumComponent;
         var element = target as IFundamentalUIComponent;

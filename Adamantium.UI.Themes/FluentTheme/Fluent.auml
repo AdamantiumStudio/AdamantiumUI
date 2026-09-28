@@ -8,16 +8,8 @@
        SystemDarkVariant="Dark"
        ResourceContext.Scope="Theme">
 
-  <!-- ONE theme with two VARIANTS, replacing the FluentDark / FluentLight pair.
-
-       Those two files declared the SAME 49 style includes, the same icons and the same metrics; they differed by a
-       palette and four accent values. So the engine was doing a full theme swap - rebuilding every template in the
-       application, re-applying every style, ~18000 property writes - to change a hundred colours. Measured cost of
-       that mistake: a four-second stall leaving a heavy tab, and 200 MB retained per swap.
-
-       Here light and dark are variants of one theme: the styles below are shared, the brushes belong to the theme,
-       and a variant supplies their COLOURS. Switching is a colour write per palette key - about a hundred - and not a
-       single template is rebuilt. See docs/THEME_VARIANTS_PLAN.md. -->
+  <!-- One theme with light and dark variants: styles and brushes are shared and a variant supplies the colors, so
+       switching rebuilds no template. -->
 
   <ResourceContext.Resources>
     <!-- FIRST, so any theme can still override a key of its own: the canvas's pictures belong to the canvas and not to

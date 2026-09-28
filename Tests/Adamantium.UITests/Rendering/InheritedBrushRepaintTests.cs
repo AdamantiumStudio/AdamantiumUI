@@ -18,17 +18,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Recolouring a brush must repaint everything DRAWN with it - including the elements that take it by INHERITANCE.
-/// <para>This is the whole of what a theme variant switch does: the palette keeps its brush objects and writes new
-/// colours into them. Backgrounds followed, because an element's own Background property holds the brush and a brush
-/// tells its OWNERS. Text did not: a TextBlock almost never owns its Foreground - the window sets it once and every
-/// block below takes the value through its ancestors - so no block is an owner, nothing told them, and every piece of
-/// text stayed in the previous variant's colour until something unrelated forced a rebuild.</para>
-/// <para>Written as a rendered-pixel test on purpose. Every unit test that asked the model - is the brush the same
-/// object, did its colour change, was the value resolved - passed while the screen was wrong, because the question
-/// they were asking was never the one that failed.</para>
-/// </summary>
+// Recoloring a brush repaints everything drawn with it, including text that inherits it (a variant switch); asserted in
+// rendered pixels.
 [TestFixture]
 [Category("Gpu")]
 public class InheritedBrushRepaintTests
@@ -182,12 +173,7 @@ public class InheritedBrushRepaintTests
             "the text has to follow a brush it inherits, with nothing else nudging the frame");
     }
 
-    /// <summary>The invariant the pixel tests above could not see: an element that PAINTS with a brush must be in that
-    /// brush's owner map, because the map is the only thing the brush can tell when its colour changes.
-    /// <para>Taking the link is wired to the property system's Changed hook, and an INHERITED value does not always
-    /// raise one - the inheritance walk has a cheap path that steps over an element without writing or notifying, and
-    /// the value is filled in later, on the read, as a cache. Nothing took the link there. Measured on the stand before
-    /// the fix: of 1028 elements painting with a palette brush, 724 were not owners of it.</para></summary>
+    // Every element painting with a brush is in its owner map, including values inherited without a Changed notification.
     [TestCase(1)]
     [TestCase(4)]
     public void TextThatInheritsABrush_IsRegisteredAsItsOwner(int depth)
@@ -223,13 +209,7 @@ public class InheritedBrushRepaintTests
             $"text {depth} levels below the element that holds the brush has to follow it too");
     }
 
-    /// <summary>The recolour has to survive a frame that WALKS instead of patching.
-    /// <para>A paint mark is only ever honoured by the patch path. When anything structural happens in the same frame -
-    /// which, in a running application, it constantly does - the frame falls to the full walk, and the walk re-bakes a
-    /// block from its render COMPONENT rather than from its payload. Every other family bakes from the payload, which
-    /// holds the live brush; text bakes from a component that dereferenced the brush's snapshot once, when the block was
-    /// recorded. So on a walking frame the text alone came out in the previous colour. Measured on the stand: 675
-    /// paint-dirty components reached the walk, and not one of the 106 text blocks among them was re-coloured.</para></summary>
+    // The recolor survives a frame that walks instead of patching (text bakes from its component there).
     [Test]
     public void RecolouringTheBrush_RepaintsTheText_EvenOnAFrameThatWALKS()
     {
@@ -262,11 +242,7 @@ public class InheritedBrushRepaintTests
             "a recolour must reach the text on a walking frame too, not only on a patched one");
     }
 
-    /// <summary>A subtree that was OUT OF THE TREE while the brush was recoloured has to come back in the new colour.
-    /// <para>This is what a parked tab is (x:KeepAlive), and what a recycled row is. Leaving gives up every render
-    /// attachment, so while it is away the brush has no way to reach it and it is told nothing; coming back re-takes the
-    /// attachments but nobody marks it, and its units still hold what they were baked with. From outside: the tab comes
-    /// back in the previous variant's colours and stays that way until a scroll forces a walk.</para></summary>
+    // A subtree detached during the recolor (a parked tab, a recycled row) returns in the new color.
     [Test]
     public void RecolouringTheBrush_RepaintsASubtreeThatWasAWAYForIt()
     {

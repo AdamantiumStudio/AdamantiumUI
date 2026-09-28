@@ -1,25 +1,5 @@
-// INK - a stroke drawn as ONE shape: one instance per stroke, and the fragment asks how far it is from the whole
-// polyline. Not one capsule per segment, which is what stood here first.
-//
-// Why that had to change, and it is not a matter of degree. A capsule per segment is N separate draws over the same
-// pixels, and each one BLENDS. Opaque ink hides that: the second capsule covers what the first put down. Translucent
-// ink does not - every overlap composites twice, every joint darkens, and a stroke at half alpha reads as a chain of
-// beads rather than a line. A highlighter is exactly a translucent stroke, so a highlighter was impossible.
-//
-// One instance per stroke fixes it at the root: the coverage of the WHOLE stroke is decided in one fragment, and the
-// blend happens once. The points are already on the GPU - they were being expanded into segments - so this reads them
-// where they are instead.
-//
-// HOW THE RECORDS ARE LAID OUT. There is one buffer, and it carries two kinds of record:
-//   - a HEADER, one per stroke: the box to cover, the width, the color, and where its points start.
-//   - a POINT, one per point of that stroke, written straight after its header.
-// The draw issues an instance for every record, header and point alike, because the buffer is one array and the count
-// is its length. A point record's vertex shader emits a quad of ZERO area, so it is thrown away before any fragment -
-// which costs a vertex and nothing else. That is the price of not needing a second buffer, and it is a small one.
-//
-// A FIFTH effect, for the reason the third and fourth record: the driver's shader-object compiler has a ceiling on what
-// one effect can carry, and adding shaders to BrushEffect has already killed vkCreateShadersEXT on a pass that worked
-// for months.
+// INK - each stroke's coverage is decided against its whole polyline, so translucent ink blends once without darkened
+// joints. One buffer: a header record per stroke followed by its point records.
 
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
@@ -75,11 +55,7 @@ InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_Instan
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    // The stroke's own box, grown by the radius and by one DEVICE pixel in local units so the analytic edge has
-    // somewhere to fade - a quad cut to the exact radius clips the fade and leaves a hard, aliased rim.
-    // THIS RECORD'S OWN SEGMENT, from its point to the next one - the box to cover, and nothing wider. Grown by the
-    // radius and by one DEVICE pixel in local units so the analytic edge has somewhere to fade: a quad cut to the exact
-    // radius clips the fade and leaves a hard, aliased rim.
+    // This record's segment box, grown by the radius plus one device pixel so the antialiased edge is not clipped.
     float grow = it.Params.x + 1.0 / max(iso, 1e-6);
     float2 low = min(it.Segment.xy, it.Segment.zw) - grow;
     float2 high = max(it.Segment.xy, it.Segment.zw) + grow;
@@ -122,14 +98,8 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
     uint count = (uint)it.Clip.y;
     uint first = (uint)((int)i.InstId + (int)it.Clip.z);
 
-    // The NEAREST segment of the WHOLE polyline, not of the one this quad was raised for - and WHICH one it was, which
-    // is the whole test.
-    //
-    // This quad covers one segment's box and nothing more, so what gets shaded is a chain of little boxes hugging the
-    // line rather than one box the size of the stroke. Where two of those boxes lie over the same pixel - at a joint,
-    // at a crossing - both fragments run, and only the one that owns the nearest segment keeps it. One owner, one
-    // blend: overlapping capsules compositing twice is exactly what made a highlighter impossible, and it is why this
-    // pass was one instance per stroke before.
+    // The nearest segment of the whole polyline: where segment quads overlap, only the quad owning it keeps the pixel,
+    // so the stroke blends once.
     float nearest = 1e30;
     uint owner = 0u;
 

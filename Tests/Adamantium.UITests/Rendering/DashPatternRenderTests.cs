@@ -15,15 +15,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A dash pattern is not always one ON/GAP pair: dash-dot-dot is six runs, and until now anything past the first pair
-/// left the batch for the compute expander - a GPU buffer per element for what is a handful of numbers.
-/// The instance carries up to six runs (0 and 1 in Stroke0.zw, 2..5 in Dash, the count packed with the cap codes), and
-/// the shader walks them.
-/// <para>The tests assert the two halves of that: the RULE (which patterns the batch will take, and that an odd or
-/// over-long one is honestly refused rather than silently drawn wrong), and the PICTURE (a long-short pattern is not
-/// the same ring as a plain one, and the same pattern written as its own repetition draws identically).</para>
-/// </summary>
+// Batched dash patterns of up to six runs: which patterns batch (odd or longer ones are refused) and what they draw.
 [TestFixture]
 [Category("Gpu")]
 public class DashPatternRenderTests

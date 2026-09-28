@@ -2,13 +2,8 @@ using System.Collections.ObjectModel;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// Binds one target property to several sources at once: each child in <see cref="Bindings"/> produces a value, and
-/// <see cref="Converter"/> (an <see cref="IMultiValueConverter"/>) combines them into the target value. A child can be
-/// a plain <see cref="Binding"/> or another <see cref="MultiBinding"/>, so multi-bindings nest arbitrarily. With no
-/// converter, <see cref="BindingBase.StringFormat"/> is used instead. (One-way for now; <c>ConvertBack</c> wiring is
-/// a later addition.)
-/// </summary>
+/// <summary>Combines several nestable <see cref="Bindings"/> into one target value via <see cref="Converter"/>, or
+/// <see cref="BindingBase.StringFormat"/> without one. One-way.</summary>
 public class MultiBinding : BindingBase
 {
    public Collection<BindingBase> Bindings { get; } = new();

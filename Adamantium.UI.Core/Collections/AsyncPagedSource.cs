@@ -8,29 +8,8 @@ using System.Threading.Tasks;
 
 namespace Adamantium.UI.Core.Collections;
 
-/// <summary>
-/// A page at a time from somewhere that does not hand over everything at once - a query, a service, a file. The items
-/// shown are whatever the last completed fetch returned, so this is bound to a list exactly as an in-memory view is.
-///
-/// <para>Three things a fetch that takes time forces, and all three are the reason this is not just a lambda:</para>
-/// <list type="number">
-/// <item>SUPERSEDING. Click 3, then 5 before 3 lands, and the later one wins - the earlier result is dropped rather
-/// than applied when it turns up, or the list flashes page three after page five.</item>
-/// <item>CANCELLATION. A superseded request has its token cancelled, so the work actually stops instead of merely
-/// having its answer ignored. <see cref="PageChanging"/> can refuse the turn outright.</item>
-/// <item>FAILURE. A fetch that throws leaves the PREVIOUS page on screen: emptying the list on an error shows the
-/// reader "there is nothing here", which is a different and worse lie than "that did not work".</item>
-/// </list>
-///
-/// <para>An unknown total is not a defect either. A source that cannot count says so, and the end is then discovered:
-/// a page that comes back SHORT is the last one, and the total becomes known by arriving at it - at which point the
-/// page numbers and the "last page" button can appear.</para>
-/// </summary>
-// INotifyCollectionChanged IS DECLARED, not merely raised. The event was here from the start and fired on every page
-// that arrived, but the interface was missing from this line - and a list subscribes by ASKING (`source is
-// INotifyCollectionChanged`), never by looking for an event of that name. So the answer was no, nobody subscribed, and a
-// page fetched from a server landed in this object and was never shown: the request completed, the state properties all
-// updated, and the rows on screen stayed as they were.
+/// <summary>Pages fetched asynchronously; items are the last completed fetch. A newer request supersedes and cancels an
+/// older one, a failed fetch keeps the previous page, and an unknown total is found when a short page arrives.</summary>
 public class AsyncPagedSource : IPagedSource, IEnumerable, IReadOnlyList<object>, INotifyCollectionChanged
 {
     private readonly PageFetch _fetch;

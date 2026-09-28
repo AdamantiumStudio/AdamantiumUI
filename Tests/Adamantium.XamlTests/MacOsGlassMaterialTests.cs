@@ -5,14 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// The macOS theme's transient surfaces are LIQUID GLASS, and they say so under Fluent's key names.
-/// <para>The keys are the contract: <c>FlyoutSurfaceFill</c> names the surface a menu, a drop-down, a ribbon flyout or
-/// a slide panel is made of, and three of those sets are still Fluent's own. Overriding the KEY is what changes the
-/// material for all of them without touching a line of those templates - and it only works because the macOS
-/// dictionary is linked AFTER Fluent's. Link order is not a thing anyone will remember, so it is pinned here: if the
-/// two links are ever reordered, this fails instead of the theme quietly going back to frosted plastic.</para>
-/// </summary>
+// macOS answers the shared FlyoutSurfaceFill key with liquid glass, which requires its dictionary linked after Fluent's.
 [TestFixture]
 public class MacOsGlassMaterialTests
 {
@@ -54,11 +47,7 @@ public class MacOsGlassMaterialTests
         return found as MaterialBrush;
     }
 
-    /// <summary>The same key, asked the way a TEMPLATE asks it - from an element. Two lookups, and only one of them was
-    /// measured at first: a style writes {ResourceReference FlyoutSurfaceFill} on a part, which resolves tree-scoped
-    /// from that part, while the assertion above asks the manager with no requester at all. If those two ever disagree,
-    /// the theme resolves one material and every control wears the other - which is exactly the shape of "I renamed the
-    /// key, the test is green, and the panel on screen is still acrylic".</summary>
+    // The same key resolved tree-scoped from an element, as templates do, which must agree with the manager's answer.
     private MaterialBrush SurfaceFromAnElement(string key)
     {
         var themes = new ThemeManager(new Adamantium.Core.DependencyInjection.AdamantiumDependencyContainer());

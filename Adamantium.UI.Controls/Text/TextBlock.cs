@@ -124,12 +124,8 @@ public class TextBlock : InputUIComponent
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
-        // Wrap boundary: an explicit Width wins; otherwise, for a WRAPPING block, fall back to the width the container
-        // gave this measure (WPF-style reflow to the parent) so wrapping needs no hardcoded Width. A NoWrap block keeps
-        // the old unbounded behaviour (explicit Width only) so ordinary labels never start trimming to their slot. An
-        // unconstrained parent (Infinity) stays unbounded. ProcessText maps NaN -> unbounded.
-        // ...and a block that ASKED to be trimmed asked for a boundary by the same words: trimming with nothing to trim
-        // against can never do anything, which is why a tab header (NoWrap, no Width) could not ellipsize at all.
+        // Boundary: an explicit Width, else the available width for wrapping or trimming blocks; plain NoWrap labels stay
+        // unbounded. NaN means unbounded.
         var width = Width;
         if (double.IsNaN(width)
             && (TextWrapping != TextWrapping.NoWrap || TextTrimming != TextTrimming.None)
@@ -331,14 +327,7 @@ public class TextBlock : InputUIComponent
         return size;
     }
 
-    /// <summary>Lays the text out and then takes the WHOLE SLOT, as WPF's TextBlock does - it does not shrink back to
-    /// the ink.
-    /// <para>This used to return the text's own size, and that quietly disabled both text alignments: a block arranged
-    /// at its ink is pinned to the top-left of the slot, so "centre the text" centred it inside a box that was itself
-    /// against the edge. In a list row it put every label several pixels high - visible enough that it was reported by
-    /// eye - and no alignment setting anywhere could correct it, because alignment can only place text within the box
-    /// the block was given.</para>
-    /// <para>The layout call stays: it is what produces the text, and it is not free to skip. Only the answer changes.</para></summary>
+    /// <summary>Lays the text out and takes the whole slot, so text alignment works within it.</summary>
     protected override Size ArrangeOverride(Size finalSize)
     {
         // A trimmed block trims to the slot it actually GOT, which is not always the one it was measured against: a tab

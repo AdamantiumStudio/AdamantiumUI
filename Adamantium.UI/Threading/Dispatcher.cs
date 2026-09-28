@@ -145,13 +145,8 @@ public sealed class Dispatcher : IDispatcher
     }
 
     /// <summary>
-    /// Queues <paramref name="action"/> to run on the UI loop thread (drained at the start of the next Update, before
-    /// layout). Window input arrives on the OS message thread; routing it through here keeps the event handling - and
-    /// the tree mutations it triggers - on the same thread as layout/render, instead of racing them. Called already on
-    /// the loop thread it runs inline.
-    ///
-    /// The queue is <see cref="Core.LoopSignal"/> - the same pipe the loop sleeps on. So every mouse move, key, and window
-    /// event is BOTH the work and the wake: posting it is what pulls the loop out of an idle sleep.
+    /// Queues <paramref name="action"/> for the UI loop thread (next Update, before layout), waking the loop; runs inline
+    /// when already on it.
     /// </summary>
     public void Post(Action action)
     {

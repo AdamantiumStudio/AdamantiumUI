@@ -8,14 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A zoom + pan viewport. Hosts <see cref="ContentControl.Content"/> at a bindable scale inside a
-/// <see cref="ScrollViewer"/>: the scale is a <see cref="UIComponent.LayoutTransform"/>, so it PARTICIPATES in layout and
-/// the scrollable extent grows with the zoom - scrollbars and drag-pan track the zoomed size (a render-only scale would
-/// not). Built-in gestures: the wheel zooms toward the cursor, dragging pans. All state is bindable two-way:
-/// <see cref="ScaleX"/>/<see cref="ScaleY"/> and <see cref="OffsetX"/>/<see cref="OffsetY"/>. Scenario: a fixed-size
-/// window onto large content (a map), zoomed and scrolled inside.
-/// </summary>
+/// <summary>A zoom and pan viewport: content scaled by a layout transform inside a <see cref="ScrollViewer"/>; the wheel
+/// zooms toward the cursor, dragging pans. Scale and offset are two-way bindable.</summary>
 public class ZoomBox : ContentControl
 {
     private ScrollViewer _scroll;

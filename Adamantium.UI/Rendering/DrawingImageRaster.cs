@@ -11,16 +11,8 @@ using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// The RASTER half of <see cref="DrawingImage"/>: bakes a drawing into a real picture for the consumers that cannot
-/// replay it - anything sampling a texture (<c>ImageBrush</c>, <c>NineSliceBrush</c>) rather than issuing draws. The
-/// vector path stays the default and this is the fallback, exactly as the tile-brush plan sets out: a bake gives up
-/// resolution independence, so it happens only where nothing else will do.
-/// <para>Baking cannot happen where the texture is ASKED for. That question is put on the render thread while batches
-/// are being filled, and a bake is loop-thread work - it builds a visual, measures it, arranges it and runs a frame. So
-/// the ask is answered from this cache, and a miss QUEUES the bake onto the loop thread and repaints when it lands.
-/// That is the same shape as <c>TexturedBrushSource</c>, which already solves it for a picture still being decoded.</para>
-/// </summary>
+// Bakes a DrawingImage to a texture for consumers that sample one (ImageBrush, NineSliceBrush). Asked on the render
+// thread, so a miss queues the bake on the loop thread and repaints when it lands, like TexturedBrushSource.
 internal static class DrawingImageRaster
 {
     // Keyed by the drawing AND the size it was baked at: the same icon used as a small tiled fill and as a large one
@@ -68,13 +60,8 @@ internal static class DrawingImageRaster
         }
     }
 
-    /// <summary>What to draw for this drawing at this size RIGHT NOW - the exact bake, else a stand-in, else null - and
-    /// the exact bake is queued on the way out when it does not exist yet. Render-thread safe: it reads the cache and
-    /// posts the bake to the loop thread, never waiting for one.
-    /// <para>The queueing lives IN HERE, not at the call site, and that is the whole point. It used to be the caller's
-    /// second step, taken only when this returned null - so the moment a stand-in was good enough to return, the exact
-    /// bake was never ordered and the stand-in became permanent. On screen that read as a viewbox that changed nothing:
-    /// every new slice was answered, for ever, by whichever slice had been baked first.</para></summary>
+    // The exact bake, else a stand-in, else null; a missing exact bake is always queued here, even when a stand-in is
+    // returned. Render-thread safe.
     public static BitmapSource Get(DrawingImage image, Size size, IUIComponent owner, Vector4F slice = default)
     {
         DropStaleBakes();
@@ -117,15 +104,8 @@ internal static class DrawingImageRaster
             : candidate.Slice == wanted.Slice ? 0 : 1;
     }
 
-    /// <summary>Which of the bakes in hand to show while the asked-for one is queued; -1 when none may. Both ranks were
-    /// learned from a defect on the stand, and it is the ORDER between them that makes each safe.
-    /// <para>The SAME slice at another size comes first: it is the same picture, only sharper or blurrier. Preferring
-    /// anything else there is what made the viewbox appear to do nothing at all - every not-yet-baked viewbox was
-    /// handed whichever slice happened to be baked first.</para>
-    /// <para>Another slice is taken only when this one has no bake at any size - which is exactly what a viewbox that
-    /// has just changed is. Refusing it left the fill BLANK on every step of the slider, so the picture blinked its way
-    /// through the drag. It settles honestly because the exact bake lands a frame later and outranks it from then on -
-    /// a wrong slice is what shows in flight, never what shows at rest.</para></summary>
+    // The stand-in to show while the exact bake is queued, or -1: the same slice at another size first, another slice only
+    // when this one has no bake at all (better than blank while a viewbox changes).
     internal static int PickStandIn(IReadOnlyList<(int Width, int Height, int Slice)> candidates, (int Width, int Height, int Slice) wanted)
     {
         var best = -1;

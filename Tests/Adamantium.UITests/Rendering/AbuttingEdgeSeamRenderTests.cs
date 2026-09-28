@@ -10,13 +10,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>Two shapes that share an edge must leave no seam between them - whatever coordinate that edge falls on.
-/// <para>From a range slider whose chosen span visibly stopped short of its handles when it was VERTICAL and met them
-/// exactly when it was horizontal. The layout was measured and abuts to the number in both (MacOsRangeBandTests), and
-/// the pixel snapping rounds an ABSOLUTE coordinate, so two elements sharing an edge move the same way. The one thing
-/// that did differ was where the edges landed: the vertical case puts them on HALF units, the horizontal one on whole
-/// ones. So that is what this draws.</para>
-/// </summary>
+// Shapes sharing an edge leave no seam, whether the edge lands on whole or half units.
 [TestFixture]
 [Category("Gpu")]
 public class AbuttingEdgeSeamRenderTests

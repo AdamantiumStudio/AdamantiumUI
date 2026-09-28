@@ -2,23 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS spinner, and it is a different OBJECT from Fluent's, not a recolour of it.
-
-         WHAT SPINS IS NOTHING. Fluent turns an accent arc around a dim ring; a Mac draws a fixed wheel of spokes and
-         runs a FADE around it. Nothing rotates - each spoke sits still and dims in its turn, one eighth of a cycle
-         apart, which is what gives the thing its stepped, mechanical read.
-
-         IT IS GREY, NOT ACCENT. This indicator says "wait", not "here is your selection". The accent is spent on the
-         thing the user chose; spending it here would put the loudest colour in the theme on something nobody acts on.
-
-         THE GEOMETRY IS TIED TO BusySize (40 in the borrowed metrics): a spoke is drawn at the top and rotated about
-         the CONTROL's centre, so RotationCenterY is the distance from the spoke's own top edge to that centre. The two
-         numbers move together - change the size and the centre has to follow, which is why the size is stated on the
-         control here rather than left to a caller.
-
-         The class variants (Dots, Bar, Ripple, Arc, Ants, Shimmer) stay Fluent's: they are effects an application asks
-         for BY NAME, not the platform's own indicator, and a theme has no business silently answering a request for
-         "Ripple" with something else. -->
+    <!-- The macOS spinner: a still wheel of grey spokes with a fade running around it, one eighth of a cycle apart.
+         RotationCenterY is tied to BusySize, so the size is set here; the named class variants stay Fluent's. -->
 
     <Style Selector="BusyIndicator">
         <Setter Property="Width" Value="{ResourceReference BusySize}"/>

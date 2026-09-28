@@ -10,14 +10,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// An inline colour picker: a saturation/value square, a hue bar and an alpha bar (each dragged), plus a hex field and
-/// numeric R/G/B/A fields - every surface bound to the same <see cref="SelectedColor"/>. HSV is the internal source of
-/// truth (so the hue thumb doesn't jump when the colour hits grey/black, where hue is undefined in RGB); the RGBA/hex
-/// fields and <see cref="SelectedColor"/> are derived from it and, when edited, fed back into it. The text fields bind
-/// two-way to these properties from the template via <c>{Ancestor ColorPicker, ..., Mode=TwoWay}</c> (TemplateBinding is
-/// one-way by design, like WPF - the Ancestor binding is the two-way relative-source path).
-/// </summary>
+/// <summary>An inline color picker - saturation/value square, hue and alpha bars, hex and RGBA fields - all bound to
+/// <see cref="SelectedColor"/>. HSV is the source of truth, so hue survives grays.</summary>
 public class ColorPicker : Control
 {
     // HSV is the source of truth: hue 0..360, sat/val/alpha 0..1.

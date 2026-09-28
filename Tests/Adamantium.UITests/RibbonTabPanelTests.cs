@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The strip's own panel (docs/RIBBON_PLAN.md §4.2): headers in a row, and over any run of NEIGHBOURING tabs
+/// <summary>The strip's own panel: headers in a row, and over any run of NEIGHBOURING tabs
 /// sharing a contextual group, that group's ledge. It replaces the TabPanel the strip borrowed until the ledges
 /// existed, so it also has to keep what that one did - above all sizing headers to their content rather than to the
 /// slot.</summary>

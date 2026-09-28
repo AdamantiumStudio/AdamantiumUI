@@ -177,12 +177,7 @@ public class PropertyGridTests
         });
     }
 
-    // A ROW IS A SHAPE, NOT A VALUE. Pointed at a different object, the same line is the same row re-aimed - so a
-    // rebuild that finds the same lines must keep the rows it already has.
-    //
-    // Measured before this was so: one click on the plane rebuilt the inspector, and that rebuild made about two
-    // hundred and fifty controls and built two hundred and thirty templates, with a property write per part of each and
-    // thousands of layout invalidations behind them. That was the whole of what a slow click was.
+    // A rebuild with the same lines against another object keeps and re-aims its existing rows.
     [Test]
     public void RebuildingWithTheSameLinesKeepsTheRowsItHas()
     {
@@ -924,13 +919,8 @@ public class PropertyGridTests
         Assert.That(RowOf(grid, hidden), Is.Not.Null, "the grid has to rebuild when a line says it is shown again");
     }
 
-    // A rebuild asked for FROM INSIDE a rebuild - a definition whose IsVisible binding settles while the rows are being
-    // built - must not re-enter: the inner pass fills the host and the outer one, still holding its place, adds the rest
-    // of the sections a second time. A panel holding the same child twice makes the paint order's "next sibling" chain
-    // point at itself, and the frame recorder walks that chain for ever: the whole application freezes, on the first
-    // change that records a structural frame, with nothing in the stack to blame it on.
-    // Reading its one property asks a definition to become visible - which is what a binding settling mid-pass does,
-    // and the only way to ask for a rebuild from INSIDE one.
+    // A rebuild requested during a rebuild must not re-enter (it would add sections twice). Reading this property makes
+    // a definition visible, requesting a rebuild mid-pass.
     private sealed class Tripwire : INotifyPropertyChanged
     {
         private bool _tripped;

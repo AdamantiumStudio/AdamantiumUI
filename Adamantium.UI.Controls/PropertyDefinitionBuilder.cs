@@ -7,15 +7,8 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>Builds inspector definitions from a type by reflection: a property becomes the definition that fits it, and
-/// <c>[Category]</c> becomes a section.
-/// <para>A CLASS OF ITS OWN, not a method on the grid. An inspector that is written out by hand must not drag
-/// reflection in with it, and an editor that builds its properties from metadata of its own must be able to replace
-/// this wholesale.</para>
-/// <para>What it makes are ordinary definitions carrying ordinary bindings - the same thing markup would have declared,
-/// so nothing downstream can tell a generated inspector from a written one.</para>
-/// <para>It knows nothing about any component system: it is handed objects and gives back sections. What an entity's
-/// components are is the application's business.</para></summary>
+/// <summary>Builds inspector definitions from a type by reflection, one section per <c>[Category]</c>. Its output is the
+/// same definitions markup would declare; separate from the grid so it can be replaced.</summary>
 public class PropertyDefinitionBuilder
 {
     private readonly Dictionary<Type, object> _pristine = new();
@@ -124,11 +117,7 @@ public class PropertyDefinitionBuilder
         return definition;
     }
 
-    /// <summary>What this property is worth on a FRESH instance of its type - which is what "the default" means for a
-    /// class, and is why a generated inspector can offer to reset without a line of markup anywhere.
-    /// <para>A type that cannot be made without arguments simply gets no defaults, and its rows offer no reset. Better
-    /// than a guess: an inspector that puts back a value the object never had is worse than one that puts nothing
-    /// back.</para></summary>
+    // The default is the value on a fresh instance; a type without a parameterless constructor gets no defaults.
     private void ReadDefault(PropertyDefinition definition, PropertyInfo property)
     {
         if (property.DeclaringType is not { } owner) return;

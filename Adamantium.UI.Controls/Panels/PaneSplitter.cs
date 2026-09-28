@@ -7,28 +7,16 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>
-/// The grip between two neighbours in a <see cref="PaneHost"/>. Dragging it moves the boundary by fixing both
-/// neighbours at the PIXELS they now occupy - the layout's own numbers - rather than any size of its own.
-/// <para>Pixels because a drag is a statement about size: the user put that boundary exactly there. Written as a share
-/// it would silently mean something else the moment the row gained or lost a pane. The pair keeps the same total, so
-/// nobody else in the row moves.</para>
-/// <para>That is the point of not building this on a Grid: a GridSplitter writes lengths into row/column definitions,
-/// which then have to be mirrored back into the layout that gets saved. Here there is one number, and the drag edits
-/// it in place - the area copies it back into the model after the pass, so a rebuild cannot undo the drag.</para>
-/// </summary>
+/// <summary>The grip between two neighbours in a <see cref="PaneHost"/>. A drag moves their boundary, editing the pane
+/// lengths in place; the pair keeps its total, so no one else in the row moves.</summary>
 public class PaneSplitter : Thumb
 {
     private double _originBefore;
     private double _originAfter;
     private double _extent;
 
-    /// <summary>Which way this splitter resizes - set by the host from its own orientation. Setting it also picks the
-    /// cursor: without the resize arrows there is nothing telling the user this thin strip can be dragged at all.
-    /// <para>A REAL property rather than a field, because a THEME has to be able to answer it: the grip a splitter
-    /// draws runs across the gap, so which way it runs is decided by this. As a plain CLR property the setter announced
-    /// nothing, a <c>PropertyTrigger</c> keyed on it never fired, and a horizontal splitter went on drawing the
-    /// vertical grip - a sliver as tall as the gap instead of a line along it.</para></summary>
+    /// <summary>Which way this splitter resizes, set by the host; picks the cursor, and themes trigger on it to orient the
+    /// grip.</summary>
     public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.Register(nameof(Orientation),
         typeof(Orientation), typeof(PaneSplitter),
         new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsRender, OnOrientationChanged));
@@ -92,12 +80,8 @@ public class PaneSplitter : Thumb
         var lengthBefore = PaneHost.GetPaneLength(before);
         var lengthAfter = PaneHost.GetPaneLength(after);
 
-        // The boundary moves, and the pair keeps the same total, so everyone else in the row is untouched. What each of
-        // them is STATED IN does not change, though: a share stays a share and a fixed size stays fixed.
-        // Writing pixels into both - which is what this did - turned the document area's share into a number. The row's
-        // lengths then no longer added up to the row (measured: 370px stated across 682px of host), the last pane
-        // swallowed the difference, and the layout stopped growing with the window: after one drag the panels were
-        // pinned to the sizes the window happened to have, and the grip could not move them any more.
+        // Move the boundary, keeping each length's unit: a share stays a share and a fixed size stays fixed, so the row
+        // still grows with the window.
         if (lengthBefore.IsStar && lengthAfter.IsStar)
         {
             // Two shares of one pool: divide their COMBINED weight the way the pixels now divide, so the pair is worth

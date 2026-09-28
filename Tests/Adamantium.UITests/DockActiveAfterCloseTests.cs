@@ -8,13 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Which panel is the one being worked in is remembered as a pane ID, because the id outlives the group holding it. A
-/// group counts as active while it CONTAINS that id - so closing the active pane leaves the id naming something that no
-/// longer exists, no group contains it, and the accent goes out everywhere while the panel underneath is plainly still
-/// the one in use. Its own tab strip has already picked the next tab, so the tab looks selected inside a panel that
-/// looks inactive; clicking the panel is the only way to get the frame back.
-/// </summary>
+// Closing the active pane keeps its group active (the active pane id moves to the newly selected tab).
 [TestFixture]
 public class DockActiveAfterCloseTests
 {

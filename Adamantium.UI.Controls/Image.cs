@@ -36,12 +36,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public static readonly AdamantiumProperty FilterBrushProperty = AdamantiumProperty.Register(nameof(FilterBrush),
       typeof(Brush), typeof(Image), new PropertyMetadata(Brushes.White, PropertyMetadataOptions.AffectsRender));
 
-   /// <summary>The GROUND the picture is drawn on, rounded by the same <see cref="CornerRadius"/> and filling the
-   /// whole element.
-   /// <para>What it is for: an Image with no source at all draws NOTHING - it is a hole the size of its slot, which is
-   /// indistinguishable from a broken layout while a picture is being chosen, or loading, or failed to load. A ground
-   /// gives it something to be seen and taken hold of.</para>
-   /// <para>WHEN it is drawn is <see cref="BackgroundState"/>'s to say, not this one's.</para></summary>
+   /// <summary>The ground under the picture, rounded by <see cref="CornerRadius"/>; gives a sourceless image something
+   /// visible. <see cref="BackgroundState"/> decides when it is drawn.</summary>
    public static readonly AdamantiumProperty BackgroundProperty = AdamantiumProperty.Register(nameof(Background),
       typeof(Brush), typeof(Image), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
@@ -52,22 +48,14 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       nameof(BackgroundState), typeof(ImageBackgroundState), typeof(Image),
       new PropertyMetadata(ImageBackgroundState.WhenEmpty, PropertyMetadataOptions.AffectsRender));
 
-   /// <summary>Whether the PICTURE is drawn at all - the foreground, as against the ground behind it. ON, obviously;
-   /// off leaves the element standing at its own size showing only its <see cref="Background"/>.
-   /// <para>Not the same as clearing <see cref="Source"/>: the picture is kept, its file is still named, everything
-   /// about how it would be laid out is still set - it is simply not painted, and putting it back is one switch rather
-   /// than choosing the file again.</para>
-   /// <para>A picture switched off counts as NO PICTURE for <see cref="BackgroundState"/>: turning the foreground off
-   /// to see the ground and getting a blank element instead would be a switch that undoes itself.</para></summary>
+   /// <summary>Whether the picture is painted; off keeps <see cref="Source"/> and layout but shows only the
+   /// <see cref="Background"/>, and counts as no picture for <see cref="BackgroundState"/>.</summary>
    public static readonly AdamantiumProperty ShowsForegroundProperty = AdamantiumProperty.Register(
       nameof(ShowsForeground), typeof(bool), typeof(Image),
       new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
 
-   /// <summary>Whether the picture is laid down ONCE or REPEATED across the element, and whether every other copy is
-   /// mirrored. NONE by default, which is a picture in a frame; anything else is a texture, and is what lets a small
-   /// file dress a large surface without being stretched into mush.
-   /// <para>Declared here, DONE by <see cref="ImageBrush"/>: repeating a picture is a brush's trade, and this control
-   /// hands it the work rather than growing a second implementation of it.</para></summary>
+   /// <summary>Whether the picture is drawn once or tiled (optionally mirrored) across the element; None by default.
+   /// Tiling is done by <see cref="ImageBrush"/>.</summary>
    public static readonly AdamantiumProperty TileModeProperty = AdamantiumProperty.Register(nameof(TileMode),
       typeof(TileMode), typeof(Image),
       new PropertyMetadata(TileMode.None, PropertyMetadataOptions.AffectsRender));
@@ -376,11 +364,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          await bitmap.EnsureLoadedAsync();
          if (!ReferenceEquals(_bitmap, bitmap)) return;   // Source changed mid-load -> this result is stale
 
-         // Frames are decoded ON DEMAND - GetFrameFromCache decodes and caches a frame the first time it is asked for.
-         // Decoding every frame here only LOOKED asynchronous: DecodeFramesTillAsync runs a plain loop and hands back an
-         // already-completed Task, so the await continued INLINE, on whatever thread set Source - which for anything that
-         // is not a URI (a drop, a stream) is the loop thread that owns layout. A 200-frame GIF therefore froze the whole
-         // UI, scrolling included, for as long as it took to decode all of it - and decoded frames nobody may ever see.
+         // Frames decode on demand in GetFrameFromCache; decoding them all here ran synchronously on the loop thread and
+         // froze the UI for a large GIF.
          FrameCount = _bitmap.FrameCount;
          _frameCursor = FrameRange().Start;
          _layerIndex = _frameCursor;
@@ -411,36 +396,24 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
    {
       base.OnAttachedToVisualTree(e);
-      // Resume playback after a re-attach (tab switch, virtualization recycle): the ticker self-removed on detach. Post
-      // runs inline when already on the loop thread (attach normally runs during the loop's layout pass).
-      // There is not always a loop to post to - an off-screen bake, a RenderTargetBitmap, the designer host all attach
-      // a tree with no application behind it, and an unguarded read threw NRE out of the middle of the ATTACH WALK,
-      // taking the rest of the subtree with it. Nothing to resume there either: playback rides the loop's heartbeat.
+      // Resume playback after a re-attach; the ticker removed itself on detach. Off-screen bakes and the designer host
+      // attach without an application, so there may be no dispatcher.
       UIAppContext.Current?.Dispatcher?.Post(StartRuntimePlayback);
 
       // ...and watch the drawing again. See OnDetachedFromVisualTree for why the watch does not simply stay.
       WatchDrawing(null, Source);
    }
 
-   /// <summary>Stop watching the drawing while this element is out of the tree.
-   /// <para>A DrawingImage is usually a THEME RESOURCE - it lives in the resource dictionary for as long as the
-   /// application does - and this element subscribes to it. The subscription is only ever undone when Source is
-   /// REASSIGNED, which never happens to an element that is simply discarded, so the resource went on holding it and,
-   /// through it, its whole subtree. Found by walking the object graph from the strong handles: ResourceManager ->
-   /// ResourceProvider -> the theme's dictionary -> DrawingImage -> its Changed list -> a discarded Image.</para></summary>
+   /// <summary>Stops watching the drawing while out of the tree: a DrawingImage theme resource outlives this element and
+   /// would otherwise keep it and its subtree alive.</summary>
    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
    {
       base.OnDetachedFromVisualTree(e);
       WatchDrawing(Source, null);
    }
 
-   // Runtime frame-based playback rides the per-frame loop heartbeat (AnimationManager, on the render-loop thread),
-   // replacing a background System.Timers.Timer whose per-frame completion hopped through Dispatcher.Invoke onto the Win32
-   // MESSAGE-PUMP thread. That hop ran only when the pump woke (on input), and the dispatcher's coalescing signal woke it
-   // for just the FIRST queued image - so animations froze until the mouse moved and only ONE image advanced. It also ran
-   // AdvanceFrame (mutating _frame) off the loop thread while the render read it. Registered when an animated source loads
-   // (ProcessImageSource) and on re-attach (OnAttachedToVisualTree), both via Dispatcher.Post onto the loop thread; the
-   // ticker self-removes when the source stops being animated or the image detaches.
+   // Playback rides the loop heartbeat (AnimationManager), so frames advance on the thread that renders them. The ticker
+   // removes itself when the source stops animating or the image detaches.
    private void StartRuntimePlayback()
    {
       if (_runtimePlaying || Design.IsDesignMode || _bitmap is not { FrameCount: > 1 }) return;
@@ -602,15 +575,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    protected override Size ArrangeOverride(Size finalSize)
    {
-      // A Stretch alignment means "take the slot" - so take it, and CENTRE the fitted picture inside it (OnRender).
-      // Returning only the fitted size made the element smaller than the slot it was given, and the base arrange anchors
-      // Stretch at the start, so the whole leftover piled up on ONE side: a picture whose aspect differs from its slot
-      // sat against the left/top edge with an empty strip on the right/bottom. Any other alignment still shrinks to the
-      // picture - that is the size THAT alignment then positions.
-      // NO SOURCE IS NOT NO SIZE. This used to return zero outright, so an Image with nothing named took up nothing
-      // whatever slot it was handed - and since it also drew nothing, a picture being chosen was an element that was
-      // not there at all: on a canvas, a selection frame around empty plane. What the source decides is the FITTED
-      // size of the picture; whether the element takes its slot is the alignment's business, as below.
+      // Stretch alignment takes the whole slot and OnRender centers the picture in it; other alignments shrink to the
+      // fitted picture. No source still takes its slot, so an unfilled image remains selectable.
       var fitted = Source != null
          ? CalculateScaling(Stretch, finalSize, new Size(Source.Width, Source.Height))
          : Size.Zero;
@@ -646,16 +612,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       // and re-invalidates once loaded. A decoded _frame (BitmapFrame) or a non-BitmapImage source is always ready.
       if (image is BitmapImage { IsLoaded: false }) return;
 
-      // AS A RECTANGLE PAINTED WITH THE PICTURE, which is what an ordinary picture IS. The engine already draws those
-      // analytically: a rounded rect whose colour is sampled from an image goes through the textured SDF batch, where
-      // the corner is cut per fragment and comes out smooth at any size and any zoom.
-      //
-      // The path below builds a MESH instead, and a mesh's rounded corner is an arc broken into segments - visibly
-      // stepped, which no amount of tessellation fixes because the edge stays hard. So the mesh is for what a brush
-      // cannot carry, and nothing else:
-      //  - a DRAWING replays its own shapes;
-      //  - an ANIMATION draws one layer of a frame-array texture, chosen per frame;
-      //  - a LIVE SURFACE (a universe rendering into a panel) is imported and owned per component.
+      // An ordinary picture is a rounded rect painted with an image brush, so corners stay smooth at any zoom. The mesh
+      // path below is only for drawings, animations and live surfaces, which a brush cannot carry.
       if (Brushed(image))
       {
          context.ForControl(this).DrawRectangle(Tiling(image), new Rect(0, 0, Bounds.Width, Bounds.Height),
@@ -663,12 +621,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          return;
       }
 
-      // Scale the picture per Stretch, then CENTRE it in what the element occupies. Two directions to the leftover:
-      // a fit SMALLER than the element leaves an equal margin on both sides (Uniform in a box of another aspect);
-      // a fit LARGER is CROPPED, equally on both sides, by drawing only the part of the source that stays inside -
-      // which is what makes None (1:1, cropped), UniformToFill (fills, crops the long axis) and Fill (squashes to
-      // the box) three different pictures. Squeezing the whole source into the element instead made all three the
-      // same drawing: Fill.
+      // Scale per Stretch and center: a smaller fit gets equal margins, a larger one is cropped equally on both sides,
+      // which is what keeps None, UniformToFill and Fill distinct.
       var fitted = CalculateScaling(Stretch, Bounds.Size, new Size(Source.Width, Source.Height));
       var visibleU = fitted.Width > 0 ? Math.Min(1.0, Bounds.Width / fitted.Width) : 1.0;
       var visibleV = fitted.Height > 0 ? Math.Min(1.0, Bounds.Height / fitted.Height) : 1.0;

@@ -9,13 +9,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>A margin has to hold a child off the edge it is aligned to, at EITHER edge.
-/// <para>Written while chasing a macOS switch whose thumb sat further from one end of its track than from the other.
-/// The verdict it delivers is a NEGATIVE one and worth keeping as such: the placement is identical for a Border and an
-/// Ellipse, in a plain Grid, in a rounded track, in a track whose 1px border leaves the thumb a box too short for it,
-/// and across a live alignment flip on an already-laid-out tree. The primitive was blamed and is innocent - the theme
-/// was including two ToggleSwitch style sets, and the losing one's trigger was still writing the margin.</para>
-/// </summary>
+// A margin holds a child off whichever edge it aligns to, identically for Border and Ellipse, in several track shapes
+// and across a live alignment flip.
 [TestFixture]
 public class AlignedMarginTests
 {
@@ -63,12 +58,8 @@ public class AlignedMarginTests
         return child.Bounds;
     }
 
-    /// <summary>The track the thumb actually sat in when it looked wrong: a 38x22 border ONE pixel thick, so the box
-    /// handed to an 18 thumb with 2 all round is 36x20 - which 18+2+2 does not fit vertically. Two things were changed
-    /// at once to cure it (the border went AND the thumb stopped being an Ellipse); this separates them.
-    /// <para>Bounds are PARENT-LOCAL - <c>ArrangeCore</c> builds them from the rect the parent passed, and a panel lays
-    /// its cells out from its own origin. So these read against the 36-wide inner box, not against the 38 track.</para>
-    /// </summary>
+    // A 38x22 track with a 1px border, leaving a 36x20 box too short for an 18 thumb with 2 all round. Bounds are
+    // parent-local, so they read against the 36-wide inner box.
     private static Rect InOutlinedTrack(MeasurableUIComponent thumb, HorizontalAlignment alignment)
     {
         thumb.Width = 18;

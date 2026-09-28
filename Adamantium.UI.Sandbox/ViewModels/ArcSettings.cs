@@ -5,13 +5,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>The sector playground on the Shapes tab. A sector and a segment are the same ellipse the batch already draws
-/// with a straight boundary added, so every combination these sliders reach comes out of one instanced pass - which is
-/// worth having under a mouse rather than only in a test.
-/// <para>The two closings differ in ways that are easy to state and easy to get wrong, so the stand shows them side by
-/// side: a <see cref="EllipseType.Sector"/> closes through the CENTRE (and its stroke runs along both radii), while
-/// <see cref="EllipseType.EdgeToEdge"/> closes by the CHORD - and stroked, it is an open arc with two ends and nothing
-/// drawn across it.</para></summary>
+/// <summary>The sector playground on the Shapes tab: <see cref="EllipseType.Sector"/> closes through the center,
+/// <see cref="EllipseType.EdgeToEdge"/> by the chord and strokes as an open arc.</summary>
 public sealed class ArcSettings : PropertyChangedBase
 {
     private double _startAngle = 30;

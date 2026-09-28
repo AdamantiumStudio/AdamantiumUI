@@ -2,16 +2,8 @@ using System;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// Where a pane sits, or where a drop would put it - and, combined, where a pane is ALLOWED to be.
-/// <para>One enum rather than a value type plus a matching set type: two parallel lists of the same members drift the
-/// moment a zone is added to one and not the other, and nothing complains. Flags cover both readings - a PLACE is one
-/// bit (<see cref="Pane.Zone"/>), a PERMISSION is several (<see cref="Pane.Allowed"/>). The price is that the compiler
-/// will not stop someone writing <c>Left | Right</c> as a place; the layout treats an unknown combination as its first
-/// set bit rather than inventing a meaning for it.</para>
-/// <para>Plain data on purpose - a view-model may name a zone without referencing anything visual, the same way it
-/// names a <c>CursorType</c> rather than building a cursor.</para>
-/// </summary>
+/// <summary>Where a pane sits or a drop would put it (one bit, <see cref="Pane.Zone"/>), or combined, where it may be
+/// (<see cref="Pane.Allowed"/>). A combination read as a place counts as its first bit.</summary>
 [Flags]
 public enum DockZone
 {

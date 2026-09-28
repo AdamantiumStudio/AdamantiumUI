@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The slide-over panel: an inspector that comes in from an edge. Same parts as Fluent's - a docked popup holding a
-         header row and the content - and three things are macOS:
-
-         THE CLOSE BUTTON IS AN ICON BUTTON, with a hover plate. It used to be a plain Button, and in this theme a plain
-         button does not answer the pointer at all - which is right for a bordered push button and wrong for a bare
-         glyph, so the cross sat there looking like a picture. See Button.Icon in MacOsButtonStyleSet; the correction is
-         explained there rather than here, because it is about buttons and not about panels.
-
-         THE HEADER IS SET IN THE SUBTITLE SIZE, not the title. A Mac inspector titles itself quietly - the panel is a
-         companion to the window, not a document of its own - and Fluent's title size makes a 264-wide drawer read as a
-         page with a masthead.
-
-         THE SURFACE IS THE SHARED FLYOUT ONE, which in this theme is liquid glass. Nothing is said about it here on
-         purpose: the panel asks for a role and the theme answers with a material (see MacOsMaterials), and repeating
-         the material's name in every consumer is exactly what made the keys need renaming in the first place. -->
+    <!-- The slide-over panel: Fluent's parts on FlyoutSurfaceFill, a Button.Icon close button, and a subtitle-size
+         header. -->
 
     <Style Selector="SlidePanel">
         <Setter Property="Background" Value="{ResourceReference FlyoutSurfaceFill}"/>

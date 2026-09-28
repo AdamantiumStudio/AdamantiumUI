@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's ROW - the unit the whole theme is built around.
-
-         Two things differ from Fluent, and both are about a list that holds hundreds of rows rather than a dozen:
-
-         1. A MINIMUM HEIGHT. Fluent's row has none: it stands as tall as its content plus its padding, which works in a
-            theme with generous padding. This theme's padding is nearly nothing, so without a floor the rows would be as
-            tall as the text and a list would read as a wall of words.
-         2. SELECTION IS A FLAT PLATE, not the accent. A file list with twenty selected rows in the loudest colour the
-            palette owns is unreadable, and in an editor multi-selection is ordinary. The plate says "these", and the
-            accent is spent on the one thing that is CURRENT.
-
-         This file used to be the MinHeight setter alone, riding on Fluent's template; when Fluent's set left the theme
-         the rows had no template at all. Now it states the whole row.
-
-         Per the small-styles convention: properties, then the template, then the triggers. -->
+    <!-- Editor Pro's row: a minimum height (padding is minimal) and a flat selection plate, keeping the accent for what is
+         current. Properties, then the template, then the triggers. -->
 
     <Style Selector="ListBoxItem">
         <!-- No rest Background: a transparent fill would still build a fill unit and an AA fringe per row, which in a
@@ -77,11 +64,8 @@
         </Setter>
     </Style>
 
-    <!-- Hover, then pressed, then selected. The trigger value stack is ACTIVATION-ordered - the most recently activated
-         live trigger wins the shared Background token - so hovering an ALREADY selected row would otherwise swap its
-         plate for the hover wash and the row would look deselected while the pointer is on it. The MultiTriggers below
-         re-assert a brighter plate for selected+hover and selected+pressed, declared LAST so they land on top while
-         both hold, and pop cleanly back on release. -->
+    <!-- Hover, pressed, selected; MultiTriggers declared last give selected+hover and selected+pressed a brighter plate,
+         so a selected row never looks deselected. -->
     <Style Selector="ListBoxItem">
         <PropertyTrigger Property="IsMouseOver" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>

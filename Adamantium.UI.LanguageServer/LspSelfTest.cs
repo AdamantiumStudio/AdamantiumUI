@@ -269,7 +269,7 @@ internal static class LspSelfTest
             }
         }
 
-        // Phase 2 smoke: go-to into an external (metadata-only) type decompiles it to a temp .cs.
+        // Smoke: go-to into an external (metadata-only) type decompiles it to a temp .cs.
         try
         {
             var model = new AumlWorkspace().GetModelForFile(Path.Combine(sandbox, "Completion.auml"));

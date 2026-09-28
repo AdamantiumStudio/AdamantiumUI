@@ -32,12 +32,8 @@ public static class PlatformSettings
    /// Used to check that a remembered window position still exists - see <see cref="IsOnScreen"/>.</summary>
    public static Rect VirtualScreen => Platform?.VirtualScreen ?? default;
 
-   /// <summary>Whether enough of a remembered rectangle still falls on a monitor for a window there to be reachable.
-   /// A layout saved with a panel on a second screen is loaded on a machine that no longer has one, and a window put
-   /// back at those coordinates is a window nobody can get to - not even to close it.
-   /// <para>"Enough" is its top-left corner plus a grabbable strip: a window is usable as long as some of its caption
-   /// is on a screen, and demanding the whole rectangle would reject a window the user themselves left half off the
-   /// edge. With no platform answer everything passes, which is what happened before the question was asked.</para></summary>
+   /// <summary>Whether a saved window rectangle is still reachable: its top-left and a grabbable caption strip are on a
+   /// monitor. True when the platform cannot tell.</summary>
    public static bool IsOnScreen(Rect bounds)
    {
       var screen = VirtualScreen;
@@ -50,15 +46,8 @@ public static class PlatformSettings
              && bounds.Y + bounds.Height > screen.Y;
    }
 
-   /// <summary>True once the pointer has moved far enough from where it was pressed for the gesture to be a DRAG. The
-   /// delta is the one a control measured IN ITS OWN SPACE, so the element it was measured in comes with it - that is
-   /// what turns those units into the physical pixels the OS states its threshold in. Per-axis, not radial: that is
-   /// what the OS setting means, and what every other application on the desktop does with it.
-   /// <para>The element is not optional, and that is the point. The threshold is a statement about how far a HAND moved,
-   /// and a delta in an element's own space is that same distance only at 100% zoom on a 100% display. Comparing the two
-   /// directly - which this used to do - silently scaled the user's setting by everything in between: at 150% a 4px
-   /// threshold took 6 physical px of travel to cross, and inside a 2x ZoomBox on that display, 12. The other way round
-   /// under reduction, where a zoomed-OUT subtree turned clicks into drags.</para></summary>
+   /// <summary>Whether a <paramref name="delta"/> measured in <paramref name="measuredIn"/>'s space exceeds the OS drag
+   /// threshold per axis, after converting to physical pixels.</summary>
    public static bool ExceedsDragThreshold(Vector2 delta, IUIComponent measuredIn)
       => ExceedsDragThreshold(delta, PhysicalPerUnit(measuredIn));
 
@@ -76,12 +65,8 @@ public static class PlatformSettings
              || Math.Abs(delta.Y * physicalPerUnit.Y) > threshold.Height;
    }
 
-   /// <summary>How many PHYSICAL pixels one unit of <paramref name="element"/>'s own space is worth: everything scaling
-   /// between it and its window (a ZoomBox, a designer zoom) times the window's DPI scale. 1,1 for an element in no
-   /// window, which is the honest answer when there is no screen to measure against.
-   /// <para>Deliberately NOT <see cref="DevicePixels"/>'s walk, which refuses anything but a plain offset: it is placing
-   /// geometry on the pixel grid, and a scaled subtree has no fixed pixel to place it on. A scaled subtree is exactly
-   /// the case this one has to answer for.</para></summary>
+   /// <summary>Physical pixels per unit of <paramref name="element"/>'s space, including scaling ancestors and window
+   /// DPI; (1, 1) outside a window.</summary>
    public static Vector2 PhysicalPerUnit(IUIComponent element)
    {
       if (element?.RootVisual is not IWindow window) return Vector2.One;

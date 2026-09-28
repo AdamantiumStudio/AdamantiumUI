@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Saturation/value square, hue bar, alpha bar, a preview and the numbers. The pure-hue backdrop, the alpha ramp
-         and the preview are set from code (they follow the picked colour); the overlays and the rainbow are here.
-
-         STACKED, not laid out in a row. Fluent puts the fields in a column beside the square, which makes the whole
-         thing about 480 wide - a dialog. This one drops out of a swatch in a properties column, so it is as wide as
-         the square and everything else goes underneath. That is the difference between a picker you open over your
-         work and one that belongs to the row you are editing.
-
-         The markers are hairline squares rather than fat white rings, for the same reason as on the wheel: a ring three
-         units thick covers the very neighbourhood of colours you are choosing between. Two hairlines, black outside
-         and white inside, so the mark survives on any hue. -->
+    <!-- SV square, hue and alpha bars, preview and numbers, stacked to the square's width for a properties column. Code
+         sets the hue backdrop, alpha ramp and preview; markers are black/white hairline squares. -->
 
     <Style Selector="ColorPicker">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>

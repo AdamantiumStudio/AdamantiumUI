@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The swatch that opens a picker. In an editor this sits in a properties row next to a label, so it is a SQUARE
-         chip with a hairline frame and almost no padding: the point of it is the colour, and every pixel spent on
-         chrome is a pixel not spent showing the colour being judged.
-         The popup's content is bound {Ancestor}-two-way, which walks the LOGICAL tree - the one that stays intact for
-         popup content, where the visual tree does not reach. -->
+    <!-- A square swatch chip with a hairline frame for property rows. The popup content binds two-way via a logical
+         {Ancestor}, since popups have no visual path. -->
 
     <Style Selector="ColorPickerButton">
         <Setter Property="Template">

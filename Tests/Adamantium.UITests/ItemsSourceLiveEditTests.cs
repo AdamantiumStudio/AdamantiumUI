@@ -8,13 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A source EDITED in place, rather than replaced. An items control subscribes to its source's collection changes, so a
-/// row added to a live list has to appear without anything being re-assigned - which is the ordinary case for a list an
-/// application lets the reader add to.
-/// <para>Written because a page-size picker in a pager did not: the same collection, shown twice, moved in one place and
-/// not in the other. Asked of the CONTROL rather than of the screen, so the answer says which of the two is wrong.</para>
-/// </summary>
+// A source edited in place (not replaced) reaches the items control through its collection change notifications.
 [TestFixture]
 public class ItemsSourceLiveEditTests
 {
@@ -55,11 +49,7 @@ public class ItemsSourceLiveEditTests
         Assert.That(drop.Items, Does.Contain(50));
     }
 
-    /// <summary>A PAGED SOURCE reaches the list the same way, and this is asked through the LIST rather than through the
-    /// source's event on purpose. The event was always raised; what was missing was the interface that declares it, and
-    /// a list subscribes by asking `source is INotifyCollectionChanged` - never by looking for an event of that name.
-    /// So every page a server returned landed in the source and was never shown: the request completed, every state
-    /// property updated, and the rows on screen stayed as they were. A test on the event alone would have passed.</summary>
+    // A paged source reaches the list too; asked through the list, since it subscribes only via INotifyCollectionChanged.
     [Test]
     public async Task AnItemsControl_ShowsThePageAPagedSourceFetches()
     {

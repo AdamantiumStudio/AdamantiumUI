@@ -83,13 +83,7 @@ public class LayoutTransformTests
         });
     }
 
-    /// <summary>
-    /// A quarter turn swaps the footprint: 100x50 laid on its side occupies 50x100. This is what makes a sideways label
-    /// possible at all - the parent has to be told the TURNED extent, or it reserves room for text lying flat and the
-    /// text is then drawn outside it.
-    /// <para>Found through docking: a tab folded against a side edge kept the width of its horizontal label (measured
-    /// 78px for "Inspector"), so the collapsed strip stayed as wide as the words in it.</para>
-    /// </summary>
+    // A quarter turn swaps the footprint: 100x50 on its side occupies 50x100.
     [Test]
     public void Rotate90_Measure_SwapsTheFootprint()
     {
@@ -149,15 +143,7 @@ public class LayoutTransformTests
         });
     }
 
-    /// <summary>
-    /// The footprint is only half the promise: what is DRAWN has to land inside it. A layout transform reserves a
-    /// bounding box and the content must fill that box - so after the transform, the content's own corners map to
-    /// (0,0)..(footprint) and nowhere else.
-    /// <para>Scaling happens to satisfy this for free, because scaling about the origin grows right and down into the
-    /// box. Rotation does not: turning about the origin sends the content out of the box entirely, and it is then drawn
-    /// beside or above the space that was reserved for it - measured in the sandbox, a 90-degree box overlapped its
-    /// neighbours while the layout around it was correctly spaced.</para>
-    /// </summary>
+    // The transformed content's corners map to (0,0)..footprint, which rotation about the origin would not.
     [Test]
     public void Rotate90_DrawsInsideTheFootprintItReserved()
     {

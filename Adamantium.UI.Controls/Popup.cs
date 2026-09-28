@@ -215,22 +215,17 @@ public class Popup : MeasurableUIComponent, IContainer
         base.OnDetachedFromVisualTree(e);
     }
 
-    // A popup's hosted CHILD is a logical-only child rendered detached on the overlay - it has NO visual path back to the
-    // window. So a popup opened from WITHIN an overlay (a submenu inside an open menu) can't find the window by walking its
-    // anchor's visual ancestors. Record each hosted overlay root -> its window here; a nested popup then finds the SAME
-    // window via the recorded entry on its anchor's overlay-root ancestor. Weak-keyed so a closed popup's child is collectable.
+    // Overlay content has no visual path back to its window, so each overlay root records its window here; weak-keyed
+    // so closed content is collectable.
     private static readonly ConditionalWeakTable<IUIComponent, IPopupHost> OverlayRootHost = new();
 
-    /// <summary>The window an element hosted on the overlay belongs to, for anything that has to walk OUT of a popup and
-    /// cannot do it visually - the focus ring looking for the layer to draw itself on, most of all. Null for an element
-    /// that is not inside an open popup.</summary>
-    /// <summary>Records that <paramref name="overlayRoot"/> is hosted on <paramref name="host"/>'s overlay. Called by the
-    /// LAYER, which is the one thing every route onto the overlay goes through - see PopupLayer.Add.</summary>
+    // Called by PopupLayer.Add, which every route onto the overlay goes through.
     internal static void RegisterOverlayRoot(IUIComponent overlayRoot, IPopupHost host) =>
         OverlayRootHost.AddOrUpdate(overlayRoot, host);
 
     internal static void UnregisterOverlayRoot(IUIComponent overlayRoot) => OverlayRootHost.Remove(overlayRoot);
 
+    /// <summary>The window whose overlay hosts <paramref name="element"/>, or null outside an open popup.</summary>
     public static IPopupHost HostOf(IUIComponent element)
     {
         for (var node = element; node != null; node = node.VisualParent)
@@ -323,11 +318,8 @@ public class Popup : MeasurableUIComponent, IContainer
         _escapeDismiss ??= OnGlobalPreviewKey;
         root.AddHandler(Keyboard.PreviewKeyDownEvent, _escapeDismiss, handledEventsToo: true);
 
-        // ...and on the popup's OWN content root. PreviewKeyDown TUNNELS, so its route runs from the root of the focused
-        // element's tree down to that element - and this content lives in the overlay layer, a tree of its own. With only
-        // the window hooked, Escape worked until something inside the popup took focus and then stopped: the route no
-        // longer passed through the window at all. (A drawer with a button in it: click the button, Escape went dead.)
-        // Both hooks firing is harmless - the handler acts only for the innermost popup and bails on e.Handled.
+        // ...and on the popup's own content root, a separate tree whose key route never passes the window. The handler
+        // acts only for the innermost popup, so both firing is harmless.
         _escapeContentRoot = Child as IInputComponent;
         _escapeContentRoot?.AddHandler(Keyboard.PreviewKeyDownEvent, _escapeDismiss, handledEventsToo: true);
 

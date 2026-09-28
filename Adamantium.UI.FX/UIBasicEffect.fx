@@ -7,11 +7,7 @@ float4 fillColor;
 sampler sampleType;
 Texture2D shaderTexture;
 
-// An animation's frames live as LAYERS of one texture, and playing it is choosing a layer - no upload, no allocation and
-// no texture per frame. The layer arrives as a plain effect constant (one draw = one frame), which keeps this the
-// SIMPLEST non-constant form there is: no VS->PS varying, no branching, a single sample. That matters because this
-// driver's shader-object compiler is known to AV on richer Texture2DArray use - see the bisection note in FontEffect.fx,
-// where the layer is per-GLYPH and therefore needs a varying.
+// An animation's frames are layers of one texture; the layer to show arrives as an effect constant, one frame per draw.
 Texture2DArray shaderTextureArray;
 float textureLayer;
 

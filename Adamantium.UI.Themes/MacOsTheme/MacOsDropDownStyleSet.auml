@@ -2,23 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS pop-up button. After the traffic lights this is the most recognisable control on the platform, and
-         all of the recognition is in one detail:
-
-         THE INDICATOR IS AN ACCENT BADGE WITH TWO CHEVRONS, not a grey chevron in the corner. A Windows drop-down puts
-         a small dark arrow at the right-hand end of an otherwise plain box; a Mac puts a filled blue tile there with a
-         white chevron pointing UP and another pointing DOWN. The two arrows are the point: they say the list opens in
-         BOTH directions from the current value - a Mac pop-up menu appears over the button with the chosen row under
-         the pointer, rather than dropping below it - and that is why one arrow would be the wrong drawing even before
-         it was the wrong colour.
-
-         The badge is inset 2 from the button's edge on three sides, which means the header's Padding cannot wrap it -
-         hence the padding sits on the CONTENT presenter here rather than on the header Border.
-
-         NO HOVER, as everywhere in this theme. Pressing darkens the button.
-
-         The chevrons are drawn here rather than added to the icon dictionary: they are two triangles that exist for
-         this one control, and an icon resource would have to carry the on-accent colour with it. -->
+    <!-- The macOS pop-up button: an accent badge with up and down chevrons, inset 2 on three sides, so padding sits on
+         the content presenter. No hover; pressing darkens. -->
 
     <Style Selector="DropDown" BasedOn="ItemsControl">
         <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>

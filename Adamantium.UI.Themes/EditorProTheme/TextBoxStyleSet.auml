@@ -2,19 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's field. A settings panel is a column of these, and Fluent's answer - an outlined filled box that
-         turns accent all round when focused - puts a lit frame in the middle of a quiet column every time the caret
-         moves.
-
-         So this field is a LINE, not a box: a rule under the text, which thickens and takes the accent on focus. The
-         ground stays the panel's until focus, when it lifts by one step - enough to say "typing happens here" without
-         the field becoming an object. The structure differs too: the rule is its own element under the text rather
-         than the border of the box, because a border cannot be one-sided AND change weight without moving the text
-         inside it.
-
-         The rule holds for FIELDS only. A button, a toggle and a list carry a real outline at rest - they are things
-         you press or pick from, and they have to say so before the pointer arrives. A field is already a column of
-         values under labels, and its line is enough to say where the value goes. -->
+    <!-- Editor Pro's field: a rule under the text (its own element, so it thickens without moving the text) that takes
+         the accent on focus, when the ground lifts a step. -->
 
     <Style Selector="TextBox">
         <Setter Property="Background" Value="Transparent"/>
@@ -27,12 +16,8 @@
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
-        <!-- What the field paints ITSELF with, none of it reachable from the template: the caret and the placeholder are
-             drawn by the control onto its own surface. Saying nothing here does not mean "inherit" - it means the
-             property-system defaults, which are the literals Brushes.Gray and Brushes.White, so the label ignored the
-             palette and the caret was white on the light variant's ground. Every theme must answer these.
-             The label going accent as it floats is the same statement this theme's rule makes on focus: it marks the
-             field being typed into. Resting, it is tertiary text - a name, not a value. -->
+        <!-- Caret and placeholder brushes the control draws itself; every theme must set them or the gray/white defaults
+             apply. The floating label turns accent on focus. -->
         <Setter Property="PlaceholderForeground" Value="{ResourceReference TextFillColorTertiary}"/>
         <Setter Property="FloatingPlaceholderForeground" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="CaretBrush" Value="{ResourceReference TextFillColorPrimary}"/>

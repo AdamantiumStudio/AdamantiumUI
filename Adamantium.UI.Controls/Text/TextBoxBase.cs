@@ -15,14 +15,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-/// <summary>
-/// The editable-text CORE shared by every text input control. A TEMPLATED control (<see cref="Control"/>): the theme
-/// supplies the chrome (a Border + a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>), and this class owns
-/// the text buffer, caret + selection, keyboard navigation + editing, character input, the caret blink, clipboard, and a
-/// caret-following horizontal scroll offset. The presenter is a thin surface that just measures / renders / hit-tests by
-/// calling back here, so a concrete control (<see cref="TextBox"/>) or a future rich editor reuses ALL of this and only
-/// its template changes.
-/// </summary>
+/// <summary>The editing core of text input controls: buffer, caret, selection, keyboard, clipboard and scroll. The
+/// template supplies a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>.</summary>
 public abstract class TextBoxBase : Control
 {
     // --- Text + editing state ------------------------------------------------------------------------------------
@@ -409,13 +403,8 @@ public abstract class TextBoxBase : Control
     // aren't clipped by the control's bottom edge (the em-based advance can be shorter than ascent+descent).
     private double ContentHeight => (_lineCount - 1) * _lineHeight + _glyphLineHeight;
 
-    // Text-local caret rect (before the scroll offset) sitting BEFORE character index: X from the caret model, Y from
-    // the line's own two reference lines - the ascender line down to the baseline, each rounded exactly as
-    // CalculateGlyphPosition rounds it, so the caret starts on the row the caps and digits start on and ends on the row
-    // they sit on. The font's ascent-to-descent band is NOT that: for the default face the ascent barely clears the cap
-    // height while the descent hangs three pixels under the baseline, so a caret cut to it sat a pixel below the tops of
-    // the digits and four pixels under their feet - measured on screen, and it reads as a caret that slipped down.
-    // Descenders hang below it, as they hang below the baseline they are measured from.
+    // Text-local caret rect before character index: from the ascender line to the baseline, rounded as glyphs are, not
+    // the font's ascent-descent band, which sits low.
     internal Rect CaretRect(int index)
     {
         EnsureLayout();

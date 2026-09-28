@@ -2,19 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- TabControl, macOS: the strip is a SEGMENTED CONTROL - a sunk groove with one raised capsule on it - above a
-         content box, which is what a Mac has instead of paper tabs. The capsule is painted by the tab itself (see
-         MacOsTabItemStyleSet); what this set adds is the GROOVE the segments sit in, and switching the sliding accent
-         bar OFF: that bar is a 1px rectangle stretched to the tab's width by its RenderTransform, so a corner radius on
-         it would be stretched by the same factor and come out an ellipse rather than a capsule.
-
-         The bar is silenced by thickness and brush, not by deleting the part: TabControl looks
-         PART_SelectionIndicator up by name, animates it and hides one of the two rows' bars itself. A part is a
-         contract with the control, and a template that drops one takes the machinery with it.
-
-         Everything the strip can DO is unchanged and every part is still here - wheel panning, edge fades, the pinned
-         row and its own bar, the overflow chevron with its lazy flyout list, drag reorder. This is a re-drawing, not a
-         reduction. -->
+    <!-- TabControl, macOS: a segmented control, a groove whose selected tab paints its own capsule. PART_SelectionIndicator
+         stays (the control drives it) but is silenced by thickness and brush; every other strip part is kept. -->
 
     <Style Selector="TabControl" BasedOn="ItemsControl">
         <!-- The content is PAPER on the window's surface, which is this palette's whole premise - white in light
@@ -84,12 +73,8 @@
         </Setter>
     </Style>
 
-    <!-- The overflow chevron. Its own look rather than the plain ToggleButton one, and for two separate reasons.
-         FIRST, it must not read as a fourth segment: a filled, bordered button standing in the groove beside three
-         capsules is exactly what one looks like. SECOND, it has to answer the pointer - this theme's ToggleButton
-         deliberately has no hover at all (a bordered control on this platform does not light up), which is right for a
-         push button and wrong for a piece of chrome you are aiming at. Icon buttons hover here; this is one.
-         Its rounding matches a segment's, so when it does light up it reads as part of the same rail. -->
+    <!-- The overflow chevron: an unfilled icon button that hovers, so it does not read as another segment; rounded like
+         a segment. -->
     <Style Selector="ToggleButton.SegmentedOverflow">
         <Setter Property="Template">
             <Setter.Value>
@@ -198,11 +183,8 @@
                         <Border x:Name="StripTrack" Grid.Row="0"
                                 Background="{ResourceReference SegmentedTrackColor}"
                                 CornerRadius="7" Padding="2" Margin="0 0 0 8">
-                            <!-- TWO lists, not one strip kept in sorted order: pinned tabs above, the ones that come and
-                                 go below. The pinned row is OUTSIDE the scroller on purpose - that is what makes a
-                                 pinned tab impossible to scroll out of sight - and it WRAPS, so many pinned tabs cost
-                                 further lines instead of squeezing the rest. The overflow button sits in the BOTTOM
-                                 row's column: it belongs to the scrolling strip. -->
+                            <!-- Pinned tabs wrap in a row outside the scroller; the overflow button belongs to the
+                                 scrolling row below. -->
                             <Grid x:Name="StripRow" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
                                 <!-- The pinned row carries a bar of its own. Only ever ONE of the two is visible - the
                                      one in the row holding the selected tab - so a bar never points at a tab in
@@ -270,12 +252,8 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <!-- Focusable=False: chrome, not a keyboard destination. Transparent, because it stands
-                                     ON the groove - a filled button here would read as a fourth segment.
-                                     CENTRED, not stretched: stretching made the chevron the tallest thing in the row,
-                                     so the ROW took its height and the segments - shorter - sat against the top of the
-                                     groove with the slack all underneath (measured: 2 above, 4 below). A groove is a
-                                     rail its segments sit centred in, so nothing in it may be taller than they are. -->
+                                <!-- Not focusable; centered, not stretched, so it never sets the row taller than the
+                                     segments. -->
                                 <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"

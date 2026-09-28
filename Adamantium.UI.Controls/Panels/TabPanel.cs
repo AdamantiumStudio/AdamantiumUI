@@ -6,16 +6,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>
-/// The tab strip's items panel. The owning <see cref="TabControl"/> decides both things it does: IsVirtualizing says
-/// whether only the visible headers are built, and TabWidth/TabHeight give the slot. Virtualizing implies a uniform
-/// slot - slot n starts at n x slot, so an unbuilt tab still has an exact position - and a default stands in when none
-/// was set. Otherwise every tab is realized and stacked at its own measured size.
-/// <para>There is deliberately no third mode. Guessing where an unrealized tab of unknown width sits gives an estimate
-/// that moves as its neighbours are realized - slots slide under the pointer and a drag lands beside its target.</para>
-/// <para>Positions are ABSOLUTE: the host applies the scroll offset by translating this panel and clipping (see
-/// <see cref="TabStripScroller"/>), so panning is one matrix write.</para>
-/// </summary>
+/// <summary>The tab strip's items panel: virtualized with a uniform slot, so unbuilt tabs have exact positions, or every tab
+/// realized at its own size. Positions are absolute; <see cref="TabStripScroller"/> pans by translating the panel.</summary>
 public class TabPanel : VirtualizingPanel
 {
     private const int Buffer = 2;             // realized either side of the viewport

@@ -11,11 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The application menu's page - backstage or dropped card - lives in the popup's ChildTemplate, built on FIRST
-/// OPEN. It is the heaviest thing the theme declares: a window-sized page, a rail, and a row per command, all of it paid
-/// for by an application whose File page is never asked for. Two things the deferral could break, and both are guarded
-/// here: the parts (back button, items host) are no longer in the owner's namescope, and the page's own bindings can no
-/// longer be {TemplateBinding} - they reach the menu as a LOGICAL ancestor, across the popup boundary.</summary>
+// The application menu page is built on first open: its parts are found outside the owner's namescope, and its bindings
+// reach the menu as a logical ancestor across the popup.
 [TestFixture]
 public class RibbonApplicationMenuDeferredPageTests
 {

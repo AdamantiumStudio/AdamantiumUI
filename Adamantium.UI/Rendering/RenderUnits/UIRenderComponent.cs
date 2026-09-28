@@ -21,7 +21,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
 {
     // UI body geometry lives in mappable (BAR) memory and is reused across frames through the buffer manager: a
     // size/shape change rewrites the current frame's ring slot in place (UpdateGeometry) instead of allocating a fresh
-    // Vulkan buffer. See GPU_BUFFER_REUSE_PLAN.
+    // Vulkan buffer.
     private const MemoryPropertyFlags UiMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private static readonly int VertexStride = System.Runtime.InteropServices.Marshal.SizeOf<UIVertex>();
 
@@ -75,12 +75,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         _indices = mesh is { HasIndices: true } && _vertexCount > 0 ? (int[])mesh.Indices.Clone() : null;
         _indexCount = _indices != null ? (uint)_indices.Length : 0u;
 
-        // Do NOT allocate the GPU vertex/index buffer here. A BATCHED unit (e.g. a solid item-background rect) is drawn
-        // by the RectBatch's ONE shared instanced buffer and never calls its own Render(), so allocating a per-unit
-        // buffer per Border is pure waste - and hundreds of them (a big virtualized tile grid) exhaust device memory,
-        // which is the vkAllocateMemory=ErrorOutOfDeviceMemory. The buffer is allocated LAZILY on the first INDIVIDUAL
-        // Render (Acquire -> EnsureCapacity); a re-mesh of an already-drawn unit just invalidates so the next Acquire
-        // re-uploads the new geometry (the resize/animation fast path is preserved for units that DO draw themselves).
+        // Buffers are allocated lazily on the first individual Render, since batched units never draw themselves.
         _vertexBuffer?.Invalidate();
         _indexBuffer?.Invalidate();
     }
@@ -373,12 +368,8 @@ public class ImageRenderComponent : UIRenderComponent
         base.Render();
     }
 
-    // A live shared surface (universe->panel) is imported per generation and sampled by THIS component alone, so the
-    // component owns its GPU lifetime and frees it here. This is fence-gated: the component reaches Dispose only through
-    // the render device's deferred-dispose queue - either a rebuild onto the producer's NEXT surface defers the old
-    // component, or a detach removes the unit - i.e. after the frame that sampled it has retired, so the render thread
-    // can never submit an op that references a freed import (the resize-crash). A regular bitmap's Texture is owned by
-    // its BitmapSource and shared across units, so it is left alone - only a live shared-surface import is freed here.
+    // Frees a live shared-surface import this component owns (reached via the deferred queue, so no frame still samples
+    // it); bitmap textures belong to their BitmapSource.
     protected override void Dispose(bool disposeManagedResources)
     {
         if (Texture is Adamantium.Graphics.SharedSurface shared) shared.Dispose();
@@ -417,17 +408,8 @@ public class TextRenderComponent : ImageRenderComponent
 
     private readonly uint _rtWidth, _rtHeight;
 
-    // The block's PRIVATE text target, allocated ONLY for the path that actually uses it - PreRender rasterizes the glyphs
-    // into it and Render composites it. Neither of the two live paths does: batched text goes into the shared glyph SSBO, and
-    // FontRenderer.UseDirectTextDraw (the default) draws the glyphs straight into the main pass. Allocating it up front, in the
-    // ctor, made EVERY text block pay a Vulkan render-target creation it would never read - measured at ~28 ms per block, which
-    // was 1.3 s of the 1.9 s it took to fill a 4K viewport, and by far the single biggest cost in the whole fill. Same reasoning
-    // that already makes the per-block glyph vertex buffer (EnsureGlyphVtx) and a batchable rect's whole body lazy.
-    //
-    // Supersampled: TextSupersample x the logical text size, and it must scale together with FontRenderer.RenderScale (set in
-    // PreRender) - RT and rasterization scale have to match or the glyphs and the target disagree (the "crumpled" SSAA bug).
-    // No MSAA: the glyphs are MSDF-textured quads, so their edge AA comes from the font pixel shader (screenPxRange median),
-    // not from coverage sampling - MSAA would only AA the quad's own axis-aligned borders while costing 4x sample memory.
+    // The block's private text target, created lazily since the batched and direct paths never use it. Supersampled by
+    // TextSupersample in step with FontRenderer.RenderScale; no MSAA, MSDF glyphs anti-alias themselves.
     private IRenderTarget EnsureRenderTarget() => _renderTarget ??= ToDispose(GraphicsDevice.CreateRenderTarget(
         _rtWidth, _rtHeight, MSAALevel.None, SurfaceFormat.R8G8B8A8.UNorm, name: "TextRenderer"));
     
@@ -441,7 +423,7 @@ public class TextRenderComponent : ImageRenderComponent
     // The frozen glyph snapshot BOTH text paths bake from (set by TextRenderUnit after each TextLayout.Update): the batch
     // packs it into the shared SSBO, the direct/composite fallback uploads it into this component's own vertex buffer
     // (EnsureGlyphVtx). Neither reads the live, reshaped-in-place TextLayout at draw, so the whole text draw path is a pure
-    // function of the frozen snapshot - render-thread safe (docs/RENDER_THREAD_PLAN.md). Null only before the first snapshot.
+    // function of the frozen snapshot - render-thread safe. Null only before the first snapshot.
     private FrozenGlyphRun _glyphRun;
     public FrozenGlyphRun GlyphRun
     {
@@ -497,7 +479,7 @@ public class TextRenderComponent : ImageRenderComponent
     public override void PreRender()
     {
         // Direct main-pass draw: glyphs are drawn straight into the main pass in Render() - no private-RT
-        // rasterization pre-pass at all. See FontRenderer.UseDirectTextDraw + docs/TEXT_GLYPH_BATCH_PLAN.md §9.
+        // rasterization pre-pass at all. See FontRenderer.UseDirectTextDraw.
         if (FontRenderer.UseDirectTextDraw) 
             return;
         
@@ -538,12 +520,8 @@ public class TextRenderComponent : ImageRenderComponent
         base.Render();
     }
 
-    // CPU pre-transform text batch, Stage 1 (docs/TEXT_GLYPH_BATCH_PLAN.md §9): draw the glyphs directly into the main
-    // pass instead of compositing a pre-rastered target. Glyph local pos g -> control-local (g + TextArea) -> world
-    // (RenderData.TransformMatrix) -> clip (RenderData.ProjectionMatrix). The RT path's +pad/-pad cancel (RT origin was
-    // at -pad, rasterization added +pad), so TextArea alone is the offset. Row-vector convention (FontEffect.fx does
-    // mul(pos, MatrixTransform), and EffectParameter transposes the matrix on upload). RenderScale = 1: no supersample
-    // target - the MSDF pixel shader self-anti-aliases from screen-space derivatives.
+    // Draws one block's glyphs straight into the main pass: local + TextArea, then world and projection (row vectors),
+    // at RenderScale 1.
     private void RenderDirect()
     {
         if (GlyphRun == null) return;

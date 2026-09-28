@@ -6,11 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>Scales its single <see cref="Decorator.Child"/> to fit the space it is given, honouring <see cref="Stretch"/>
-/// and <see cref="StretchDirection"/> - the analog of WPF's Viewbox. The child is measured at its NATURAL (unconstrained)
-/// size and drawn through a scale transform, so vector content stays crisp at any size. The Viewbox manages the child's
-/// <see cref="UIComponent.RenderTransform"/> (as the content-transition/tab controls do), so don't set your own on the
-/// direct child - wrap it if you need one.</summary>
+/// <summary>Scales its child to fit per <see cref="Stretch"/> and <see cref="StretchDirection"/>. It owns the child's
+/// <see cref="UIComponent.RenderTransform"/>; wrap the child to use your own.</summary>
 public class Viewbox : Decorator
 {
     public static readonly AdamantiumProperty StretchProperty = AdamantiumProperty.Register(nameof(Stretch),

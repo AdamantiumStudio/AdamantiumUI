@@ -2,15 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A row in an open drop-down. It is a LIST row - the same height, the same inset, the same plate - because an
-         open drop-down is a list, and two row heights in one theme is exactly the drift the Metrics exist to prevent.
-
-         One thing differs from a list row and it is not cosmetic: here the accent MARKS THE CURRENT VALUE. A drop-down
-         has exactly one selected row and it is the answer the control is holding, so the loud mark is affordable and is
-         the whole point; a file list may have twenty selected rows, which is why that one stays a plate.
-
-         This file used to be a MinHeight setter alone, riding on Fluent's template; when Fluent's set left the theme
-         the rows had no template at all. -->
+    <!-- A drop-down row, sized like a list row, except the single current value gets the accent mark. -->
 
     <Style Selector="DropDownItem" BasedOn="ListBoxItem">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>

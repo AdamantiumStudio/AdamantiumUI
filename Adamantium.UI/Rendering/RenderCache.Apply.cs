@@ -95,27 +95,15 @@ public partial class RenderCache
         foreach (var atlas in _warmAtlases) atlas.RequestAsync(text);
     }
 
-    /// <summary>Take in the glyphs the workers finished - device work, so it belongs on this side - and rebuild the text
-    /// blocks that were built before their letters arrived. Nothing else about the frame changes, so this costs a walk of
-    /// the text units and the quad rebuild of the few that were waiting.</summary>
-    /// <summary>The glyph-arrival version this cache has already taken account of. Per CACHE, because the arrival is
-    /// global and the adoption is not.</summary>
+    // The glyph-arrival version this cache has adopted; per cache, since arrival is global and adoption is not.
     private int _seenGlyphVersion;
 
+    // Adopts glyphs the workers finished and rebuilds text built before its letters arrived.
     private void AdoptReadyGlyphs()
     {
         if (_renderUnitFactory.GraphicsDevice == null) return;
 
-        // Pumping the atlas and ADOPTING into this cache are two different things, and tying them together was the bug.
-        // PumpReadyGlyphs drains a QUEUE: whoever asks first takes the batch and returns true, everyone after it gets
-        // false. There is more than one cache - window content, the adorner stage, the popup stage - and each asks in its
-        // own Apply, so the first one adopted the new letters for ITS groups and the popup's cache bailed out here and
-        // left its text with no recorded run. A SlidePanel opened with a blank close cross the first time and a correct
-        // one the second, once the atlas was warm: `by=TextRenderUnit<TextBlock> noRecordedRun`.
-        //
-        // So the gate is kept - walking every unit on every frame would declare the stream stale constantly and cost the
-        // patch its frame - but it is asked PER CACHE: pump for the side effect, then compare a version this cache
-        // remembers. Whoever wins the race to the queue, everyone sees that something landed exactly once.
+        // Pump drains a shared queue that only the first caller sees, so each cache compares its own version instead.
         Adamantium.Graphics.Fonts.FontAtlasStore.PumpReadyGlyphs();
 
         var landedVersion = Adamantium.Graphics.Fonts.FontAtlasStore.LandedVersion;
@@ -129,11 +117,7 @@ public partial class RenderCache
             if (unit is RenderUnits.TextRenderUnit text) arrived |= text.RefreshGlyphsIfArrived();
         }
 
-        // Letters that land are a change to what the frame DRAWS, and this one is announced by nobody: the marks are the
-        // loop thread's and this runs on the render thread, so a mark made here can be cleared before the recorder ever
-        // sees it. Say it where it cannot be lost - the retained stream describes a run that is no longer the run - and
-        // ask for the frame that re-records it. Until this, a block whose letters arrived late stayed BLANK until some
-        // unrelated event (a mouse move) happened to force a walk.
+        // Nobody marks arrived glyphs dirty (marks belong to the loop thread), so stale the stream here and request a frame.
         if (!arrived) return;
 
         StreamStaleBecause("glyphsArrived");
@@ -149,21 +133,8 @@ public partial class RenderCache
         && a.IsMotionNode == b.IsMotionNode
         && ReferenceEquals(a.RenderParent, b.RenderParent);
 
-    // ...and what it can survive one entry CHANGING, which is the whole difference between a drag that patches and a drag
-    // that re-records the window every frame.
-    //
-    // Its PLACE, always: where an element sits lives in its transform-table slot, and the draw writes that slot
-    // (RefreshMovedNodes for a motion node, RefreshMovedComponents for anything else).
-    //
-    // Its SIZE, but only while the element is being RE-BAKED on this same frame AND nothing under it clips. A size is not
-    // in the matrix, it is in the drawn payload - so unless the patch is already rewriting that payload there is nothing
-    // to carry it. Arrange marks a resized element geometry-invalid without exception (MeasurableUIComponent: "A size
-    // change must re-run OnRender"), so that half is the ordinary case, not a lucky one. The clip half is the harder
-    // one: a viewport that changes SHAPE changes which units fall outside it, and a unit culled at record time has no op
-    // in the stream to correct.
-    //
-    // Nothing else. It started clipping, became a motion node, changed parent - each of those changes what the stream
-    // baked in a way no slot write reaches.
+    // The stream survives a move (slot writes carry it) and a resize only if the element is re-baked this frame and
+    // nothing under it clips; any other snapshot change needs a re-record.
     private bool StreamSurvives(IUIComponent c, LayoutSnapshot was, LayoutSnapshot now) =>
         _forgivenMoves.Contains(c)
         && was.ClipToBounds == now.ClipToBounds
@@ -225,32 +196,9 @@ public partial class RenderCache
         // component's transform/size/clip. A full walk resets it and carries the whole scene.
         if (packet.SnapReset) _applySnap.Clear();
 
-        // A packet that changes the LAYOUT invalidates the retained op stream, whatever kind it calls itself. The stream
-        // bakes the layout of the frame that recorded it into its scissors and its per-unit worlds; folding a new snapshot
-        // in without re-recording leaves the two describing different frames, and a replay then draws that mixture - old
-        // clips and old per-unit positions under an already-updated snapshot. It is invisible to a write probe (nothing is
-        // written incorrectly) and to the validation layer (every command is legal); the frame is simply built from two
-        // moments at once. Measured: dozens of Clean packets per second of scrolling arrive carrying snapshot deltas, and
-        // the flicker disappears exactly when replay is refused.
-        // A packet that MOVES things leaves the recorded stream describing the previous positions. The per-unit draws are
-        // re-pointed at replay (see ExecuteOps), but a recorded SCISSOR is a world-space rect baked at record time and
-        // nothing re-derives it - so a move still has to force a rebuild. A packet that changes nothing about layout
-        // (a recolour) leaves the stream perfectly valid and keeps its replay.
-        // ...but a snapshot ENTRY is not a layout change: it is re-published whenever a component re-renders, and a hover
-        // re-publishes an entry whose transform, size and clip are word for word the ones the stream already baked. So
-        // compare what the stream actually baked, instead of taking the entry's presence as proof of movement.
-        // ...and a moved MOTION NODE is not a layout change either, for the same reason a composited move isn't: the
-        // batches read the node's slot matrix live, and the draw re-points what rides it (RefreshMovedNodes, which also
-        // proves every drawn unit under the node is node-aware).
-        //
-        // A recorded SCISSOR used to be the exception - a world-space rect nothing re-derived - so a node whose subtree
-        // clipped forced a rebuild. It is derived again now (RefreshMovedScissors), so the clip no longer decides. That
-        // matters most where it looked least important: a TAB TRANSITION slides a whole view rigidly, and every one of
-        // those frames re-recorded the window because there was a scroll viewer somewhere inside it.
-        //
-        // A RESIZE is different and still refuses when anything under it clips: a clip that changes SHAPE changes which
-        // units fall outside it, and a unit culled at record time has no op in the stream at all. Deriving the rect again
-        // cannot conjure a draw that was never recorded.
+        // Layout changes invalidate the retained stream unless a patch can carry them: moves of nodes and components are
+        // slot writes and scissors are re-derived (RefreshMovedScissors); a resize under a clip cannot add culled draws.
+        // Re-published entries are compared with what the stream baked, not taken as movement.
         _forgivenMoves.Clear();
         _forgivenResize.Clear();
         foreach (var node in packet.MovedNodes)
@@ -259,36 +207,15 @@ public partial class RenderCache
             if (!SubtreeClips(node)) _forgivenResize.Add(node);
         }
 
-        // An ORDINARY mover is forgiven on the same terms, and it is the same fact about the frame: where the element
-        // sits lives in its transform-table slot, so a move is a slot write, not a re-record. The difference is only in
-        // HOW MANY slots - a node moves its whole subtree by one matrix, an ordinary mover has to have its subtree's
-        // written one by one (RefreshMovedComponents).
-        //
-        // This was tried once WITHOUT that write and it was wrong: forgiving the move while nothing carried it left the
-        // drag-and-drop gap shut until a walk arrived, and then everything jumped at once. That is not an argument
-        // against forgiving a move; it is what forgiving one without doing its work looks like.
-        //
-        // An unnameable mover (a bare Transform with no owner) forgives nothing: then Moved is not the whole story and
-        // there is no subtree to carry.
+        // Ordinary movers are forgiven too, their subtree's slots written one by one (RefreshMovedComponents); a mover
+        // with no owner forgives nothing.
         _rebakedThisPacket.Clear();
         foreach (var dirty in packet.PartialDirty) _rebakedThisPacket.Add(dirty);
 
         var moversCarried = !packet.TransformUnknown;
 
-        // A mover that CLIPS is forgiven now, and the reason it was not is gone. The old rule was "a recorded Scissor is
-        // a world-space rect and nothing re-derives it" - true when it was written, and RefreshMovedScissors has since
-        // derived them again, for all three carriers of a clip. What it cost meanwhile was the whole tab transition:
-        // measured on a maximized 3198x1762 window at 24x24 cells, EVERY switch spent one 105-129 ms frame walking an
-        // 8960-tile scene, named by the probe as movedClips<LayoutView> - a tab body moving into place, taking its own
-        // scroll area with it.
-        //
-        // Forgiving it is not the same as claiming it always works: what a patch genuinely cannot do is add a draw that
-        // was never recorded, and a unit CULLED by its clip has no op at all. That is refused where it can be seen -
-        // CollectMovedSubtree tests the cull and hands the frame to the walk - rather than here, where "something under
-        // it clips" condemns every mover that has a scroll area anywhere beneath it.
-        //
-        // A RESIZE is still not forgiven on the same terms (_forgivenResize below): a clip that changes SHAPE changes
-        // which units fall outside it, and that is a different question from one that only changes place.
+        // Clipping movers are forgiven as well; CollectMovedSubtree refuses when a culled unit would need a new draw.
+        // Resizes follow stricter terms (_forgivenResize).
         foreach (var mover in packet.Moved)
         {
             _forgivenMoves.Add(mover);
@@ -372,18 +299,8 @@ public partial class RenderCache
 
             case RenderBuildKind.Structural:
             {
-                // A control that starts drawing is a count change from nothing, which is exactly what the splice repairs:
-                // it is given its own segment, placed by its own paint rank, and no recorded op moves. So an ARRIVAL does
-                // not have to cost the frame a walk of the window - a hover affordance, a scroll chevron, an edge fade.
-                // A DEPARTURE does, and stays on the old path: what left has no group left to name, so the splice cannot
-                // reach the ops still drawing it, and a patched frame would keep painting a control that is gone. That is
-                // the phantom the removal tests pin - AControlThatStoppedDrawing_IsGoneFromAPlainREPLAY and its family.
-                // Ranks must also be untouched: a RENUMBER moves everyone, which is not a local change by any reading.
-                // A RENUMBER is not a reorder. It re-derives every rank with fresh gaps and changes no relative position,
-                // so the recorded stream already draws in that sequence and the applier only has to re-sort the groups
-                // it names - which is what RenumberOrder was written to be. Counting it as a reorder is what made a tab
-                // switch cost a full walk every few switches: inserting a 9000-component view divides the gap it goes
-                // into, so the third or fourth insert has no room and renumbers (measured: reranks x8982, 105-117 ms).
+                // Arrivals splice in their own segment; departures still need a walk, since the splice cannot reach ops of
+                // a group that is gone. A renumber keeps relative order, so it is not a reorder.
                 var reordered = packet.Reranks.Count > 0 && !packet.Renumbered;
                 var local = packet.Removed.Count == 0 && packet.Undrawn.Count == 0
                             && !reordered && !packet.SnapReset && !_layoutChangedSinceRecord;
@@ -459,25 +376,15 @@ public partial class RenderCache
         // structural path has to put it back.
         if (hidden) return HasRank(component) ? PartialRecord.Undrawn : PartialRecord.Skip;
 
-        // A component from a FOREIGN tree (a popup, a menu, a tooltip - drawn by that stage's OWN cache) does not reach
-        // here at all any more: marks go to the scope of the surface that draws them, and this cache reads only its own
-        // (see RenderDirtyRouter). It used to arrive, and had to be recognised and stepped over WITHOUT rendering,
-        // because rendering it would consume the IsGeometryValid the popup stage's gate polls - the main cache eating it
-        // starved the gate and a menu hover never redrew. That was a symptom of one set with no owner, not a rule.
+        // Components of foreign trees (popups, tooltips) never arrive here: RenderDirtyRouter routes marks per surface.
 
         // Marked dirty EXTERNALLY (an animation heartbeat) while its own geometry is still VALID: Render() would no-op and
         // record ZERO commands, read as "now draws nothing" -> the units get DELETED (the mass tile vanish on ease-back).
         // Its recorded geometry is unchanged - keep the units as-is.
         if (component.IsGeometryValid) return PartialRecord.Skip;
 
-        // It was RE-LAID-OUT, and it draws nothing: a tile's Border with no brush, a presenter, a panel with no
-        // Background. There is no recorded geometry for a new size to invalidate, so rendering it again only produces the
-        // same zero commands - measured at 16000 of the 21000 records a tile-grid resize made, three quarters of the
-        // record half of the frame. It is only the ELEMENT that is stepped over: its children are separate components,
-        // marked in their own right, and a container that draws nothing is routinely full of things that do. Its layout
-        // snapshot is still re-frozen (CaptureSnapshot reads the DIRTY SET, not the packet), so a container that clips
-        // still clips at its new size. Any change to what it draws - a hover brush arriving - comes in as a CONTENT
-        // invalidation and is recorded here as before.
+        // A relaid-out element that draws nothing re-records nothing; its children and snapshot are handled separately, and
+        // content changes still arrive as content invalidations.
         if (component.DrawsNothing && !component.GeometryStaleByContent) return PartialRecord.Skip;
 
         // No paint rank: invisible/absent when the order was last derived, now appearing with no structural mark to place
@@ -571,7 +478,7 @@ public partial class RenderCache
 
         // Count/type changed. The change stays LOCAL to this control's group (BuildUnitsFor refreshes its Units in place,
         // no other group moves). The recorded op stream + rect-slot map still reference the old unit set, so the draw
-        // phase re-walks this frame (per-group op patching is the planned follow-up).
+        // phase re-walks this frame.
         _partialSpliced = true;
         // (Re)insert into the paint order when the group is NEW *or* exists but has fallen OUT of the order - the same
         // check ApplyStructural makes. Without the InOrder half, a container that was hidden (its group left the order,
@@ -618,11 +525,7 @@ public partial class RenderCache
 
         FlushOrderRemovals();
 
-        // ...and the batch is re-armed for the two loops BELOW, which take groups out of the order to put them back in a
-        // new place. Every one of those went through the unbatched path - a scan and a shift of a twenty-thousand-entry
-        // list, per group - so a frame that re-ranks a couple of thousand tiles did tens of millions of operations for
-        // work the merge at the end does in one pass. Exactly the shape the batch was written for; it just did not reach
-        // this far. Flushed again below, before anything reads the order.
+        // Re-armed for the re-ranking loops below, so their removals batch into one pass; flushed before the order is read.
         _batchOrderRemovals = true;
 
         // 3. What ARRIVED (or re-recorded): build/refresh its units. Groups to place are collected for ONE merge below (a
@@ -634,14 +537,8 @@ public partial class RenderCache
         {
             if (draw.Commands.Count == 0)
             {
-                // Recorded nothing. Clean -> draws what it already drew (a panel with no background); dirty -> now draws
-                // nothing, so its stale units must go. Same disambiguation as the full walk's ProcessRenderCommands.
-                // Re-rendered and drew nothing. That is an ordinary, frequent state - a hover background that just lost
-                // the pointer, a close button that faded out - and it happens dozens of times a second while a tab strip
-                // scrolls under a still cursor. EMPTY the group; do NOT drop it. Dropping it took the control out of the
-                // paint ORDER, so coming back a frame later it had to be re-inserted and its neighbours re-ranked, and
-                // whatever the retained stream still said about them no longer held. An empty group draws nothing at zero
-                // cost and keeps its rank, so the return is a refill instead of a structural change.
+                // Recorded nothing: clean keeps what it drew; dirty now draws nothing, so empty the group but keep its rank
+                // so a return is a refill, not a re-insert.
                 if (!draw.WasGeometryValid && _groupById.TryGetValue(draw.Component.RenderId, out var emptied))
                 {
                     foreach (var unit in emptied.Units) unit?.DeferDispose();
@@ -716,12 +613,7 @@ public partial class RenderCache
         Core.Diagnostics.RuntimeStats.LastApplyGroups = _groups.Count;
     }
 
-    // Takes a group OUT of the paint order (it stops drawing) without touching its units.
-    //
-    // The list removal can be BATCHED, and on a whole view leaving it has to be: _groups is a list kept in paint order,
-    // so one removal is a scan plus a shift, and leaving a tab hides its whole realized subtree at once - measured at
-    // 21685 components in one packet. Twenty-one thousand scans of a twenty-one-thousand list is the shape of the thing,
-    // not a constant to shave: batched, the same work is one pass.
+    // Groups leaving the paint order; removals are batched into one pass, since a whole view can leave at once.
     private readonly HashSet<ControlGroup> _orderBatch = new();
     private bool _batchOrderRemovals;
 

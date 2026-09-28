@@ -2,21 +2,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Input;
 
-/// <summary>
-/// The routed drag-drop events - the CONTROL-side half of the drop API (the view-model side is <c>DragDrop.DropCommand</c>
-/// and friends). A control that wants to react to a drag flying over it handles these instead of needing a view-model.
-/// <para>
-/// They are raised on the nearest element with <c>DragDrop.AllowDrop="True"</c> under the pointer: first the Preview
-/// pair TUNNELS from the window down to it, then the plain one BUBBLES back out - one argument object shared by both, so
-/// a parent that sets <c>Handled</c> in the preview vetoes the bubbling handlers AND the matching command.
-/// <c>OriginalSource</c> names the deepest element actually hit. <c>Effects</c> is decided by
-/// <see cref="DragOverEvent"/> - the one that fires on every move; Enter/Leave are notifications of the target changing.
-/// </para>
-/// <para>
-/// Declared here rather than on <c>DragDrop</c> because that class lives above the controls that expose the CLR event
-/// wrappers - the same reason <see cref="Mouse"/> owns the pointer events.
-/// </para>
-/// </summary>
+/// <summary>Routed drag-drop events for controls, raised on the nearest <c>AllowDrop</c> element: Preview tunnels, then the
+/// plain event bubbles with shared args. <see cref="DragOverEvent"/> decides <c>Effects</c>.</summary>
 public static class DragDropEvents
 {
     /// <summary>A drag entered this drop target.</summary>

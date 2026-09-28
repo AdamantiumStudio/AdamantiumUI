@@ -6,16 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>
-/// Lays its children one after another along <see cref="Orientation"/>, each taking the length it declares - so many
-/// pixels, or a weight in what is left over. Splits nest inside splits: that recursion is the docking layout.
-/// <para>A Grid's RULE (fixed first, stars share the rest), deliberately not a Grid: a Grid keeps sizes in its
-/// row/column definitions while the docking model keeps its own, and two copies of one number have to be synchronised
-/// in both directions (drag a divider, load a layout, split a node) - every synchronisation being a place they drift
-/// apart, and a save then reads whichever one lost. Here the length exists in ONE place and this panel only spends it.
-/// <para>That was also the lesson: the first version kept a fraction AND a pixel hint, which is the very second copy it
-/// set out to avoid, only inside its own panel. Every layout bug lived in the seam between the two.</para></para>
-/// </summary>
+/// <summary>Lays children along <see cref="Orientation"/>, each taking its declared pixels or a weight of the rest. Not a
+/// Grid, so each length lives in one place, the docking model, instead of being synced into row definitions.</summary>
 public class PaneHost : Panel, IPaneMinimum
 {
     /// <summary>Squeezing this host squeezes its children, so it answers with theirs: along its OWN axis the minimums
@@ -59,11 +51,8 @@ public class PaneHost : Panel, IPaneMinimum
     }
 
 
-    /// <summary>Smallest share of the row a child may be squeezed to. Without a floor a drag can take a pane to nothing,
-    /// and a pane of nothing has no edge left to grab - it can never be dragged back out. Settable (and themeable)
-    /// rather than a constant: how small is "too small" depends on what the panes hold and how big the window is.
-    /// <para>A pane's own <c>MinSize</c> wins over this whenever it asks for more - this is only the floor that applies
-    /// when nothing else has an opinion.</para></summary>
+    /// <summary>The smallest share a child may be squeezed to, so a pane always keeps an edge to drag. A larger pane
+    /// <c>MinSize</c> wins.</summary>
     public static readonly AdamantiumProperty MinFractionProperty = AdamantiumProperty.Register(nameof(MinFraction),
         typeof(double), typeof(PaneHost), new PropertyMetadata(0.05));
 
@@ -198,14 +187,8 @@ public class PaneHost : Panel, IPaneMinimum
     /// agree by construction.</summary>
     internal double ContentExtent => _contentExtent;
 
-    /// <summary>
-    /// Fills <see cref="_sizes"/> with a pixel size per content child and returns how many there are. ONE rule, used by
-    /// both passes - measuring by one rule and arranging by another is what leaves a tab strip measured for a height it
-    /// is never given.
-    /// <para>A Grid's rule, and for a Grid's reason: the fixed panes take their pixels off the top, and what remains is
-    /// split between the starred ones by weight. So a docked inspector keeps the width it was given while the window
-    /// resizes around it, and pulling a pane out of the row moves nobody but the stars.</para>
-    /// </summary>
+    // Fills _sizes per content child and returns the count; fixed panes first, stars split the rest by weight. Both
+    // passes use it so measure and arrange agree.
     private int Distribute(double along)
     {
         _content.Clear();
@@ -277,14 +260,8 @@ public class PaneHost : Panel, IPaneMinimum
         return _content.Count;
     }
 
-    /// <summary>Holds every child at or above what it says it may shrink to (<see cref="IPaneMinimum"/>). A share knows
-    /// nothing of minimums, so enough splits down one side drove a neighbour to a few pixels while it was asking for
-    /// 200 - measured: the document column was handed 60 against a minimum of 200. Whoever is under its minimum is
-    /// pinned AT it and the cost comes out of those still above theirs, in proportion to the slack each has.
-    /// <para>Until now the minimums were a SPLITTER's business alone, so only a drag respected them - and every other
-    /// way a size changes (a panel docked, a layout loaded, the window resized) walked straight past them.</para>
-    /// <para>When the minimums do not all fit, everyone is scaled down together: there is no distribution that honours
-    /// them, and refusing to lay out is not one of the options.</para></summary>
+    // Pins children under their IPaneMinimum at it, taking the difference from the others in proportion to their slack.
+    // When the minimums cannot all fit, everyone scales down together.
     private void EnforceMinimums(double along)
     {
         if (_minimums.Length < _content.Count) _minimums = new double[_content.Count];

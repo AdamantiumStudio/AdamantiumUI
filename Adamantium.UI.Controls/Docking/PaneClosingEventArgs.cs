@@ -2,11 +2,8 @@ using System;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>Raised before a pane leaves the layout, and BEFORE anything is removed. Set <see cref="Cancel"/> to refuse:
-/// the pane stays exactly where it was, as if the close had never been asked for.
-/// <para>This is what a document with unsaved work answers on. It matters most for the BULK operations - "close all",
-/// "close others" - where one refusal must stop that pane and no other: they close one at a time, through here, so a
-/// single "no" never turns into "nothing closed" or "everything closed anyway".</para></summary>
+/// <summary>Raised before a pane leaves the layout; set <see cref="Cancel"/> to keep it where it was. Bulk closes ask per
+/// pane, so one refusal stops only that pane.</summary>
 public class PaneClosingEventArgs : EventArgs
 {
     public PaneClosingEventArgs(string paneId, bool canRestore)

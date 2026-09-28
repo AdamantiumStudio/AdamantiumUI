@@ -2,24 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Docking - the furniture an editor actually IS. Style matching is by EXACT type here, so a derived control
-         inherits nothing by default: that is why each of these says BasedOn explicitly instead of quietly relying on its
-         base. A pane group IS a tab control and a pane IS a tab item, so they take those looks whole; the splitter needs
-         its own, because a Thumb has no look at all - and a control with no template renders nothing and cannot be hit,
-         which is exactly what makes a grip that refuses to be dragged.
-
-         Everything about EDGES, STATES, folding and flyout placement below is behaviour rather than looks, and is
-         carried over unchanged. Two things are this theme's own, and both come from the same place:
-
-         THE TOOL CAPTION IS NOT ACCENT-FILLED. Fluent paints it with the accent, which reads well when one tool panel is
-         open. An editor has six - Solution, Properties, Output, Errors, Watch, Find - and the accent stops meaning "this
-         one" the moment more than one thing on screen wears it. Here the caption is a quiet band closed with a hairline,
-         and WHICH panel you are in is said by the accent on its border, which is a mark exactly one panel carries at a
-         time. Fluent has that border rule too; without the accent captions competing with it, it can finally be read.
-
-         HOVER IS NEUTRAL, DRAGGING IS ACCENT. On the splitter Fluent uses the accent for both. Moving the pointer across
-         a docked layout crosses splitters constantly and means nothing, so an ambient accent flash is the same spend as
-         the captions. The drag is a deliberate act, one at a time - that one keeps the accent. -->
+    <!-- Docking. Matching is by exact type, so each style says BasedOn; the splitter needs its own template. Tool
+         captions are quiet (only the active panel's border is accented), and splitters use the accent only while dragged. -->
 
     <!-- A floating panel's window looks like any other window. Stated explicitly because matching here is by EXACT type:
          without this line a DockingWindow gets no template at all - and a window with no template is a frame with
@@ -40,21 +24,11 @@
 
     <Style Selector="PaneGroup" BasedOn="TabControl"/>
 
-    <!-- A panel is separated by its GROUND, not by a frame of its own. It first shipped with a hairline border on every
-         group, and that is what a docked layout cannot afford: panels sit edge to edge, so two neighbours put two
-         hairlines side by side and they read as one thick smeared line - and at fractional scaling they merge outright.
-         Everything that has to live at a panel's edge then collides with it: the tab strip's accent indicator runs into
-         it, and the header's ground covers it along the left.
-         So the panel carries the LIGHTER ground and the docking area behind it the darker one; the gap between two
-         panels is then a groove rather than a pair of lines. This is what Visual Studio does, and it is why its dense
-         layouts stay readable at any number of splits. -->
+    <!-- Panels are separated by ground, not frames: a lighter panel on the darker area, so the gap reads as a groove
+         rather than two merged hairlines. -->
     <Style Selector="PaneGroup">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
-        <!-- The frame is always THERE and almost always INVISIBLE: constant thickness, transparent while the panel is
-             not the one being worked in. Constant, because a border that appears on focus insets the panel's content by
-             its own width and every zone switch would nudge the text. Transparent, because only one panel is active at
-             a time - so exactly one frame is ever drawn and two neighbours can no longer put two hairlines side by
-             side. Which is what a frame per panel did, and what merged them into one thick line. -->
+        <!-- A constant-thickness frame, transparent unless this is the active panel, so focus never shifts the content. -->
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="{ResourceReference StrokeThin}"/>
     </Style>
@@ -69,12 +43,8 @@
 
     <Style Selector="Pane" BasedOn="TabItem"/>
 
-    <!-- A tab whose panel has folded down against a SIDE: the label lies on its side, because the strip that is left is
-         a narrow column. BOTH sides turn the same way - top to bottom - so a glance down one edge reads the same as a
-         glance down the other. Facing the text out of its own panel sounded symmetrical and reads as two different
-         conventions in one window.
-         Two styles with a literal angle each rather than one with a bound angle - a Transform is not a component and
-         cannot be a binding target at all. -->
+    <!-- A tab folded against a side turns its label to read top to bottom on both sides; one literal angle per style,
+         since a Transform cannot be a binding target. -->
     <Style Selector="Pane[LabelRotation=Left]">
         <Setter Property="HeaderTemplate">
             <Setter.Value>
@@ -107,12 +77,8 @@
         </Setter>
     </Style>
 
-    <!-- A TOOL group is dressed differently from a document one, and the difference is not decoration: a tool has a
-         HEADER carrying its name and the two things you do to a tool and never to a document - put it away and close it -
-         while its tabs sit along the BOTTOM. A document has many siblings and no caption of its own; a tool has few and
-         is part of the workspace rather than of the work.
-         Close buttons and the stretched lone tab are BEHAVIOUR, not looks: they live on PaneGroup and DockingArea so a
-         host changes them without touching a theme. -->
+    <!-- A tool group has a caption with hide and close buttons and its tabs along the bottom. Close buttons and lone-tab
+         stretching are PaneGroup/DockingArea behavior. -->
 
     <Style Selector="PaneGroup[Kind=Tool]">
         <Setter Property="TabStripPlacement" Value="Bottom"/>
@@ -194,12 +160,8 @@
                         <!-- Tabs BELOW the content, which is where a tool window keeps them while it is docked. -->
                         <TabStripScroller x:Name="PART_TabStrip" Grid.Row="2" Grid.Column="1" Orientation="Horizontal"
                                 Margin="{ResourceReference DockStripInset}">
-                            <!-- The strip carries the SELECTION INDICATOR over the headers, exactly as a plain
-                                 TabControl's does: the control places and slides it and it only needs to exist and be
-                                 out of the way of the pointer.
-                                 Auto both ways: a Grid with no definitions stretches to whatever it is offered, and this
-                                 one sits in the Auto column of a folded strip - so it made the narrow column as wide as
-                                 the body used to be. Sized to its content, the column is the width of a turned label. -->
+                            <!-- Holds the selection indicator over the headers. Auto-sized both ways so a folded strip's
+                                 column stays as narrow as a turned label. -->
                             <Grid x:Name="StripFill" RowDefinitions="Auto" ColumnDefinitions="Auto">
                                 <ItemsPresenter x:Name="PART_ItemsPresenter"/>
                                 <Rectangle x:Name="PART_SelectionIndicator"
@@ -212,14 +174,8 @@
                             </Grid>
                         </TabStripScroller>
 
-                        <!-- The FLYOUT of a revealed panel. Only the panel's BODY travels here - its tabs stay on the
-                             edge, because that is what a revealed panel is: a strip you are glancing behind. It is a
-                             popup so that it draws OVER the neighbours instead of pushing them aside; the strip is what
-                             it is placed against, so it opens exactly where the panel would have been. Its own caption,
-                             because the docked one is not on screen in this state - and a flyout you cannot dock back is
-                             a panel you can only look at.
-                             Placed against the GROUP, not the tab strip inside it: the strip sits at whatever inset the
-                             chrome gives it, and a flyout lined up with the strip carried that inset along. -->
+                        <!-- A revealed panel's body in a popup over the neighbors, with its own caption; tabs stay on the
+                             edge. Placed against the group, not the strip, to avoid its inset. -->
                         <Popup x:Name="PART_RevealFlyout" Grid.Row="2" Grid.Column="1"
                                 PlacementTarget="{Binding ElementName=Chrome}"
                                 Placement="Top" KeepOpen="False">
@@ -290,11 +246,8 @@
                             </Border>
                         </Popup>
 
-                        <!-- The panel's frame, drawn LAST and over everything. Under the content it was eaten: the
-                             caption's ground and the body's ground are opaque and reach the panel's edge, so at
-                             fractional scaling their outer pixel lands on the frame's and covers it. Over the content
-                             nothing can take it, and it costs the layout nothing because it is not in the flow: no
-                             inset, so switching panels does not nudge what is inside them. -->
+                        <!-- The frame, drawn last over the opaque grounds and outside the layout flow, so it is never
+                             covered and never insets the content. -->
                         <Border x:Name="Frame" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
                                 IsHitTestVisible="False"
                                 BorderBrush="{TemplateBinding BorderBrush}"
@@ -326,12 +279,8 @@
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
-                        <!-- REVEALED: in the tree this panel is still just its strip - the same as put away - and its
-                             body is shown in the flyout OVER the neighbours. Emptying the docked presenter is not
-                             cosmetic: one piece of content belongs to one tree, and a presenter goes on holding its
-                             child even when the body around it is hidden.
-                             IsOpen is driven by the control (PaneGroup.SyncFold), not from here: a trigger has to be
-                             UNDONE to close the popup, and undoing it left the property Unset. -->
+                        <!-- Revealed: only the strip stays docked and the body moves to the flyout, so the docked
+                             presenter is emptied. IsOpen is driven by PaneGroup.SyncFold. -->
                         <PropertyTrigger Property="State" Value="Revealed">
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
@@ -367,11 +316,8 @@
                             <Setter TargetName="FlyoutRoot" Property="Width" Value="{TemplateBinding RevealLength}"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="State" Value="Collapsed">
-                            <!-- Only a PUT-AWAY strip is a row of buttons rather than a strip you rearrange in: there is
-                                 no panel open here to rearrange. A REVEALED panel IS open - its body is showing in the
-                                 flyout - so its tabs reorder and tear off like any other. Keyed on Collapsed rather
-                                 than on IsFolded, which covers both states and so switched dragging off for a panel
-                                 that was open in front of the user. -->
+                            <!-- Tab dragging is off only when Collapsed (put away), not when revealed, whose tabs still
+                                 reorder and tear off. -->
                             <Setter Property="AllowTabDrag" Value="false"/>
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
@@ -447,11 +393,8 @@
                     <Border Background="{TemplateBinding Background}">
                         <!-- Default is a VERTICAL line: a splitter in a left-to-right host separates side by side, and
                              the host hands it its own orientation (see PaneHost). -->
-                        <!-- One line per orientation, swapped by visibility rather than one line whose Width is
-                             cleared: Width is a Double, so there is no value that means "back to Auto" for a trigger
-                             to write, and the turned case kept the thickness it had instead of stretching.
-                             Two units thick, not one: at a hairline the mark was there and nobody could see it. Half
-                             the gap still reads as a LINE inside the groove rather than as the groove filled in. -->
+                        <!-- One line per orientation swapped by visibility, since a trigger cannot reset Width to Auto; two
+                             units thick to stay visible. -->
                         <Grid>
                             <Border x:Name="LineV" Background="Transparent"
                                     Width="{ResourceReference StrokeAccentValue}"

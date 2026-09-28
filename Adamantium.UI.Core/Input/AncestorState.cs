@@ -4,18 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Input;
 
-/// <summary>
-/// Drives "self-or-descendant" aggregate input states up the visual tree - states that are true for an element while a
-/// focal leaf (the element under the pointer, the captured element, the focused element, ...) is that element or one of
-/// its visual descendants. <see cref="IInputComponent.IsMouseOver"/> was the first such state; <c>IsKeyboardFocusWithin</c>
-/// runs on the same machinery (see FocusManager.AnnounceFocusMove), and IsMouseCaptureWithin / IsStylusOver would fit it
-/// too when they are added.
-///
-/// The backing enter/leave events are Direct (they must not bubble), so when the leaf moves the dispatcher raises them
-/// individually: <paramref name="leaveEvent"/> on every element that left the leaf's ancestor chain and
-/// <paramref name="enterEvent"/> on every element that joined it. Common ancestors are left untouched, so their state
-/// never spuriously toggles when the leaf moves between their descendants.
-/// </summary>
+// Drives self-or-descendant states (IsMouseOver, IsKeyboardFocusWithin): when the focal leaf moves, raises leave/enter
+// only on elements that left or joined its ancestor chain.
 internal static class AncestorState
 {
     /// <param name="makeArgs">Creates a fresh event-args for the given event - one per raise, so per-element Handled /

@@ -8,15 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A <c>{ResourceReference}</c> hands a property whatever the metrics filed under that key - and nothing checks that
-/// the two are the same KIND of thing. Putting a <c>Double</c> gap into a <c>Padding</c> is not a wrong number, it is a
-/// wrong type, and the whole template it sits in stops working: a collapsed ribbon group opened onto nothing at all,
-/// and the designer's selection and hover frames drew no border.
-/// <para>Which is worse than it sounds, because the theme still LOADS: nothing is missing, nothing logs, and the
-/// control simply behaves as though the author had never written that line. So the check is textual and blunt - for
-/// every <c>Attribute="{ResourceReference Key}"</c>, does the key's declared type fit the property's?</para>
-/// </summary>
+// Every Attribute="{ResourceReference Key}" names a key whose declared type fits the property (a Double in a Padding
+// breaks the template silently).
 [TestFixture]
 public class ThemeResourceTypeTests
 {

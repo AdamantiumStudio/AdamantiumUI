@@ -8,14 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>
-/// Displays frames produced by an external engine/process (possibly another graphics API). The producer renders
-/// into a shared surface and hands its <see cref="SharedSurfaceDescriptor"/> to this panel via
-/// <see cref="SetSource"/>; the panel imports it zero-copy and samples it during compositing. With no source the
-/// panel allocates nothing and draws its <see cref="Panel.Background"/> as a placeholder. Interop resources are
-/// freed when the source changes/clears and when the panel leaves the visual tree — the control stays
-/// non-disposable (its lifetime is the visual tree's, not the caller's).
-/// </summary>
+/// <summary>Displays frames an external producer renders into a shared surface, imported zero-copy via
+/// <see cref="SetSource"/>. Interop resources are freed on source change and when the panel leaves the tree.</summary>
 public class RenderTargetPanel : Grid
 {
    private SharedSurfaceImage _image;
@@ -107,30 +101,16 @@ public class RenderTargetPanel : Grid
       InvalidateAfterSourceChange();
    }
 
-   /// <summary>
-   /// Marks the panel for re-record after a source swap, DEFERRED to the START of the next loop frame. The producer (the
-   /// universe loop) binds the surface during the loop's DRAW phase - AFTER this frame's UI record - so an INLINE
-   /// <see cref="UIComponent.InvalidateRender"/> marks geometry too late: the frame's <c>RenderDirty.Clear</c> wipes the
-   /// mark before any record snapshots it, and the surface is bound ONCE (no per-frame retry), so the panel would stay on
-   /// its placeholder and never draw the universe. Neither dispatcher facade fits: <c>Dispatcher.Post</c> runs INLINE when
-   /// already on the loop thread (same bad timing), and <c>Dispatcher.Invoke</c> runs on the message-pump thread, which
-   /// races the loop's record→clear and loses the mark. <see cref="LoopSignal.Post"/> ALWAYS queues onto the loop thread's
-   /// pre-record drain (<c>DrainPending</c>, start of Update), so the mark is set before that frame's record and cannot be
-   /// cleared first.
-   /// </summary>
+   // The source is bound after this frame's record, whose dirty clear would wipe an inline mark; LoopSignal.Post defers
+   // the mark to before the next record.
    private void InvalidateAfterSourceChange()
    {
       if (UIAppContext.Current != null) LoopSignal.Post(() => InvalidateRender(false));
       else InvalidateRender(false);
    }
 
-   /// <summary>
-   /// Drops the current source WITHOUT freeing its imported surface. The GPU import's lifetime belongs to the
-   /// ImageRenderComponent that samples it: it frees the import through the render device's fence-gated deferred-dispose
-   /// once the compositor switches off it (the producer resize hands over a NEW surface, the pipeline rebuilds the
-   /// panel's op onto it and releases the old component then). Freeing it here would race the render thread, which may
-   /// still be replaying an op that samples the old import - the resize-crash (vkQueueSubmit against a freed surface).
-   /// </summary>
+   // Drops the source without freeing its import: the sampling render component frees it fence-gated, since the render
+   // thread may still be replaying it.
    private void DropCurrentSource()
    {
       _image = null;
@@ -152,7 +132,7 @@ public class RenderTargetPanel : Grid
       var session = context.ForControl(this);
       if (_image != null)
       {
-         // TODO(Phase 4): wait(produce) before sampling and signal(consume) after, wired into the compositor's
+         // TODO: wait(produce) before sampling and signal(consume) after, wired into the compositor's
          // queue submit (OnRender only records draw commands, so the semaphores can't be driven from here).
          session.DrawImage(_image, Background, rect, CornerRadius.Empty);
       }
@@ -182,11 +162,8 @@ public class RenderTargetPanel : Grid
    {
       if (_looking || !IsMouseLookEnabled) return;
       _looking = true;
-      // Remember where the cursor sat ON THIS PANEL (panel-relative), so it reappears there on release instead of at the
-      // re-centre point. The panel owns this position; the worker just warps to the screen point we hand back. Computed as
-      // the EXACT inverse of PointToScreen (root-client of the screen cursor, minus the accumulated ClipRectangle offsets)
-      // so PointToScreen(_engagePoint) round-trips back to the same screen pixel - MouseDevice.GetPosition uses a different
-      // base (Bounds), so its error would accumulate a drift across engage/release cycles.
+      // Remember the panel-relative cursor so it reappears there on release; the exact inverse of PointToScreen, so it
+      // does not drift across engage cycles.
       _engagePoint = ScreenToPanel(MouseDevice.CurrentDevice.GetScreenPosition());
       Focus();
       CaptureMouse();

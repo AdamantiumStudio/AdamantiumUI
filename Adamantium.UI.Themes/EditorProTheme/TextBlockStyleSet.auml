@@ -2,13 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Plain text, and in THIS theme it is the file that carries the theme's density: the body size here is 12 against
-         Fluent's 14, so a label that fell back to TextBlock's own C# default stood out beside controls that had gone
-         denser around it.
-
-         The file used to be deliberately empty - see the long note in Fluent's copy for why a setter here was once
-         fatal, and why it no longer is: a selector that narrows by nothing but the type is filed as a default for the
-         type, below inheritance, so it dresses loose text without masking what a control says about its own content. -->
+    <!-- Plain text at this theme's body size (12). A type-only selector is a type default below inheritance, so it does
+         not mask what controls set for their content. -->
 
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>

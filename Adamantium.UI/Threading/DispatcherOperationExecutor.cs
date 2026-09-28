@@ -46,11 +46,7 @@ internal class DispatcherOperationExecutor
         return operation.Task;
     }
 
-    // TAKEN UNDER THE LOCK, RUN OUTSIDE IT. An operation is somebody else's code: it lays out, it draws, it walks the
-    // application's own collections - and anything it touches may, on another thread, be in the middle of asking for
-    // one of these. Run under the lock, that pair is a deadlock with no way out and nothing in the log: the canvas
-    // froze on a delete exactly so, with the pump thread holding this lock inside an operation and waiting on a
-    // collection, while the loop thread held that collection and waited here.
+    // Operations are dequeued under the lock but run outside it, since running foreign code under it can deadlock.
     public void Execute()
     {
         for (var i = (int) DispatcherPriority.MaxValue; i >= (int) DispatcherPriority.MinValue; i--)

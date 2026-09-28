@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS in-window card window. Same machinery as the borrowed set - the manager owns the scrim, the cascade,
-         the z-order and Escape - and one decision differs, the same one this theme already made for the real window:
-
-         THE CAPTION IS NOT AN ACCENT BAR. Fluent paints it with the accent and writes the title in the on-accent colour;
-         a Mac's caption belongs to the WINDOW and takes its own surface, with the title in ordinary text. So the strip
-         here is a layer above the card rather than a band of colour on top of it, and INACTIVE says so by dimming the
-         TITLE - not by repainting the strip.
-
-         THE CORNERS are the window's own generous radius, the most recognisable number in this theme, so a card reads as
-         the same kind of object as the window behind it. -->
+    <!-- The macOS in-window card: a window-surface caption instead of an accent bar (inactive dims the title), with the
+         window's corner radius. -->
 
     <Style Selector="OverlayWindow">
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
@@ -40,11 +32,8 @@
                             ClipToBounds="True">
                         <Grid RowDefinitions="Auto,*">
 
-                            <!-- The lights sit LEFT and are the very same Buttons the window's own caption uses - same
-                                 classes, same size, same gap, same inset - because a card window on a Mac is a window.
-                                 The pin takes a light of its own beside them rather than a glyph button on the far side.
-                                 The TITLE is CENTRED, which is where a Mac puts it; PART_TitleThumb is the transparent,
-                                 hit-testable star column, so dragging works anywhere the lights are not. -->
+                            <!-- The window's traffic lights on the left (plus a pin light), a centered title; PART_TitleThumb
+                                 is the transparent star column that drags. -->
                             <Grid x:Name="PART_TitleBar" Grid.Row="0" ColumnDefinitions="Auto,*"
                                     Background="{TemplateBinding TitleBarBackground}" Height="28">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"

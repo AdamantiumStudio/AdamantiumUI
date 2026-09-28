@@ -8,16 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// How LOCAL a style's rules are is decided by the TYPE ITS SELECTOR NAMES, not by where the style landed in a
-/// BasedOn chain.
-/// <para>A control's rules are spread over several style blocks - one concern each, per the small-styles convention -
-/// while the base it is built on arrives through the ONE block that says <c>BasedOn</c>. Banding by position in the
-/// collected chain therefore ranked a BASE style ABOVE a derived one whose block declared no BasedOn of its own, and a
-/// trigger written to un-inherit a base rule lives in exactly such a block: ToggleButton contributes three style blocks,
-/// so its checked-label rule sat on band 2 while the ToggleSwitch rule meant to overrule it sat on band 0. On screen the
-/// label of a checked switch, checkbox and radio button came out white on a light panel.</para>
-/// </summary>
+// A style's band comes from the type its selector names, not its position in a BasedOn chain, so derived-type blocks
+// outrank base-type blocks.
 [TestFixture]
 public class StyleBandBySelectorTests
 {

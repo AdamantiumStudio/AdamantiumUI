@@ -4,15 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// The live connection behind <c>{ObservableResource Key}</c>: resolves a keyed resource TREE-SCOPED from the target
-/// (Local dictionaries on the target or an ancestor, then Theme, then Global), pushes it onto the target property, and
-/// RE-RESOLVES whenever the resource set changes (a theme swap, or a dictionary loaded/unloaded) or the target re-parents
-/// into a different Local scope. Unlike <see cref="Resources.ResourceReference"/> - a one-shot lookup resolved once on
-/// attach - this stays connected, so a runtime theme switch flows straight through with no reload. Mirrors
-/// <see cref="ThemeResourceExpression"/>, but its source is the ResourceManager's keyed dictionaries (tree-scoped) rather
-/// than a single theme property.
-/// </summary>
+/// <summary>The live connection behind <c>{ObservableResource Key}</c>: resolves a keyed resource tree-scoped (Local, then
+/// Theme, then Global) and re-resolves on any resource-set change or re-parent.</summary>
 public class ObservableResourceExpression : BindingExpressionBase
 {
     private readonly string _key;

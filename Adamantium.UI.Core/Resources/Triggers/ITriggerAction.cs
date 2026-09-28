@@ -22,13 +22,8 @@ public interface ITargetedTriggerAction : ITriggerAction
     string TargetName { get; }
 }
 
-/// <summary>
-/// An enter-action that leaves LASTING state behind - a running (possibly looping) animation. A trigger is normally
-/// undone by its exit edge, but an activator can also be torn down while its condition still HOLDS: a theme or template
-/// swap deactivates it outright, and then the ExitActions never fire. Whatever the enter-action started would keep
-/// ticking against a part/brush nobody shows any more, so the activator asks it to undo itself instead
-/// (<see cref="TriggerActivatorBase.TearDown"/>).
-/// </summary>
+/// <summary>An enter-action with lasting state, such as a looping animation, undone on
+/// <see cref="TriggerActivatorBase.TearDown"/> when an activator is removed while its condition holds.</summary>
 public interface IUndoableTriggerAction : ITriggerAction
 {
     /// <param name="target">The component the action was actually INVOKED on, remembered by the activator. Re-resolving

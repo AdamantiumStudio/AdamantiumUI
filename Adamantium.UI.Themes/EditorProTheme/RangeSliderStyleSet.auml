@@ -2,13 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's range slider - the same bar handles as the plain slider, for the same reason, and with one thing
-         the round version could not have: the handles now BUTT AGAINST the selected band instead of overlapping it.
-
-         Fluent's round handles sit on top of the band's square ends, which is why that template says the ends must be
-         square - a rounded end beside a circle reads as a gap. With bar handles there is nothing to hide: the span is
-         a rectangle with a slightly taller rectangle at each end, and the whole thing reads as one object with two
-         grips rather than as two circles with a line between them. -->
+    <!-- Editor Pro's range slider: bar handles like the plain slider, butting against the selected band so it reads as
+         one object. -->
 
     <Style Selector="RangeSlider">
         <Setter Property="MinHeight" Value="{ResourceReference ControlHeightCompact}"/>

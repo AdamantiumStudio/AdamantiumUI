@@ -1,13 +1,7 @@
 namespace Adamantium.UI.Core.Input;
 
-/// <summary>
-/// The PLATFORM-NEUTRAL names of the standard payload formats an <see cref="IDataPackage"/> can carry across the OS
-/// boundary (level 3 of docs/DRAG_DROP_PLAN.md). Each platform maps them onto its own identifiers - Windows
-/// <c>CF_UNICODETEXT</c>/<c>CF_HDROP</c>, macOS <c>NSPasteboardType*</c>, Linux <c>text/plain</c>/<c>text/uri-list</c> -
-/// so a view-model writes <c>data.Contains(DataFormats.Files)</c> once and it works everywhere.
-/// A live CLR object keeps travelling under its own type name (the fast in-app path); these are only for what crosses to
-/// another process.
-/// </summary>
+/// <summary>Platform-neutral names of the standard formats an <see cref="IDataPackage"/> carries across processes; each
+/// platform maps them to its own. In-app CLR objects travel under their type name.</summary>
 public static class DataFormats
 {
     /// <summary>Unicode text. Value type: <see cref="string"/>.</summary>
@@ -24,15 +18,8 @@ public static class DataFormats
     /// <summary>Rich Text Format. Value type: <see cref="string"/> holding the RTF source.</summary>
     public const string Rtf = "Rtf";
 
-    /// <summary>
-    /// A picture. Value type: <c>byte[]</c> holding it ENCODED - PNG, JPEG, GIF, BMP, TIFF, whatever the source had.
-    /// Deliberately not "PNG only": re-encoding is by far the most expensive thing that can happen to a drag (an
-    /// animated GIF is a hundred megapixels of frames), so the bytes travel exactly as they came and each side decodes
-    /// by CONTENT rather than by the name it arrived under. Read it with an image loader, not by assuming a format.
-    /// <para>The platform renders what a target asks for out of the same bytes: on Windows the picture is offered both
-    /// as a <c>CF_DIB</c> (decoded, cheap) and under its own registered format, so PNG-takers and bitmap-takers are both
-    /// served without a conversion in the middle.</para>
-    /// </summary>
+    /// <summary>A picture as encoded <c>byte[]</c> in its original format, never re-encoded; decode by content with an
+    /// image loader.</summary>
     public const string Image = "Image";
 
     // Anything else is a format of your own: name it what you like and store a byte[]. It crosses as a registered

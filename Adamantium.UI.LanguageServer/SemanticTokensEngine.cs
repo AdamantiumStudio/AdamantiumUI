@@ -3,13 +3,8 @@ namespace Adamantium.UI.LanguageServer;
 /// <summary>A semantic-highlighting token: a byte span in the buffer and its LSP token-type index.</summary>
 public sealed record SemToken(int Start, int Length, int TokenType);
 
-/// <summary>
-/// Type-aware highlighting for AUML. A lenient tag scanner (no full parse, so it survives mid-edit
-/// buffers — and works even when an undeclared prefix makes the doc invalid XML) classifies element
-/// names, xmlns prefixes, attribute names and x: directives. An element name that resolves gets
-/// 'type'; one that doesn't gets 'unknown' (painted red by the client, like ReSharper's unresolved
-/// types), so deleting an xmlns turns the controls red. Indices match the server's advertised legend.
-/// </summary>
+/// <summary>Type-aware AUML highlighting from a lenient tag scanner that survives invalid buffers; unresolved element
+/// names get 'unknown'. Indices match the advertised legend.</summary>
 public static class SemanticTokensEngine
 {
     public const int Namespace = 0, Type = 1, Property = 2, Macro = 3, Unknown = 4;

@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS menu, whole: the row, the separator, the scrollbar-less scroll host and the context menu's card. A
-         theme owns its control outright - two sets on one selector is two sets, not an override.
-
-         THE ROW UNDER THE POINTER IS FILLED WITH THE ACCENT, and the label AND the shortcut hint both go on-accent. A
-         grey shortcut left on a blue row is the one detail that gives away a Windows menu wearing Mac colours.
-
-         THE ROWS ARE SHORTER - 22 against 34 - and the plate is inset from the card's edge so it sits inside the rounded
-         surface instead of running into its corners. The same inset the list and the tree use in this theme.
-
-         THE SURFACE is FlyoutSurfaceFill, which in this theme is liquid glass. -->
+    <!-- The macOS menu: rows, separator, scroll host and context-menu card on FlyoutSurfaceFill. The hovered row is an
+         inset accent plate with label and shortcut on-accent; rows are 22 high. -->
 
     <Style Selector="MenuItem" BasedOn="ItemsControl">
         <Setter Property="Background" Value="Transparent"/>
@@ -123,28 +115,8 @@
     <!-- The scroll host a menu uses: NO scrollbar. Arrows are RepeatButtons in their own rows, 0-tall while collapsed;
          a hold repeats the step. The * row bounds the presenter (the card carries a MaxHeight) so there is something to
          scroll at all. -->
-    <!-- The arrows carry a SOLID fill, the way Fluent and Editor Pro do, and it took a while to earn that line.
-
-         They used to answer FlyoutSurfaceFill - a second sheet of liquid glass laid on the glass card. That is wrong on
-         its own: a material is a screen-space pass over its own rectangle, so the strip painted over what was inside it,
-         glyph included, and doubled the tint. Both arrows read as empty bars that still scrolled when clicked.
-
-         Transparent looked like the answer - the card underneath is already glass - and it fixed the BOTTOM arrow only.
-         What that left is worth writing down, because four theories died on it: the flag, the visibility, the 18px slot,
-         the position and the presenter's clip were all measured CORRECT (spClip=0,18,189,660, exactly under the arrow),
-         and an opaque test fill drew the button and its glyph perfectly. Turning the material's blur off changed nothing,
-         and so did turning its refraction off. What is left is the thing glass is FOR: a transparent strip shows what is
-         behind the window, and what lies behind the top of a flyout is not what lies behind its bottom. No material
-         setting fixes that, because it is not a defect - it is the material working.
-
-         So the glyph carries its own contrast instead: a HALO - offset zero, spread one - in the card's own tint, which
-         is dark in the dark variant and light in the light one, so it is always the opposite of the glyph on top of it.
-         A solid strip would work too (Fluent and Editor Pro take that road) but it reads as a slab laid on the glass,
-         and the point of this theme is that the card is one piece. Transparent, not unset: the strip still has to catch
-         the click. Nothing scrolls under it either - the presenter is the middle row, between the two.
-
-         The glyph is PRIMARY, like the item labels beside it, and every brush here is {ObservableResource} so it follows
-         a variant switch instead of keeping the colour it resolved under - the one-shot trap the materials file documents. -->
+    <!-- Arrow strips are transparent (a second glass layer would paint over the glyph); the glyph carries a halo in the
+         card's tint for contrast over whatever the glass shows. Brushes are {ObservableResource} to follow variants. -->
     <Style Selector="MenuScrollViewer" BasedOn="ScrollViewer">
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>

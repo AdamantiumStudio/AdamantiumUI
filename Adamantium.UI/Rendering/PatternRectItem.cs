@@ -4,11 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the pattern rounded-rect batch (see BatchEffect.fx, pass Pattern): a rounded rect whose fill is a
-/// PROCEDURAL two-colour pattern (checkerboard/stripes/dots/grid) evaluated per fragment, position baked to WORLD space.
-/// Packed into a BDA STORAGE buffer and read by SV_InstanceID (the shader's <c>PatternRectData</c>); the quad comes from
-/// SV_VertexID and the pixel shader reconstructs the rounded corners analytically (self-AA) AND the pattern. Mirrors
-/// <see cref="GradientRectItem"/>'s stroke fields so the shared CompositeFillStroke draws the stroke identically.
+/// One procedural pattern rounded-rect instance (pass Pattern), matching <c>PatternRectData</c>; stroke fields mirror
+/// <see cref="GradientRectItem"/>.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct PatternRectItem

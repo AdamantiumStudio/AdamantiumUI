@@ -1,14 +1,5 @@
-// Item-background batch (docs/TEXT_GLYPH_BATCH_PLAN.md - the item-backing instancing). Draws MANY solid rounded-rect
-// fills (ItemsControl item backgrounds, and any solid rounded-rect fill) in ONE instanced draw: each fill is one
-// per-instance RectItem, expanded to a quad in the vertex stage (corner from SV_VertexID), and the pixel shader
-// reconstructs the rounded-rect coverage ANALYTICALLY from a signed-distance field - self-anti-aliasing, so there is
-// no separate AA fringe unit per fill. Positions are baked to WORLD space on the CPU during aggregation; the vertex
-// shader applies only a single static Projection (the one driver-safe form on this Turing - no per-instance matrix).
-// Slang bodies. Row-vector convention (matches the engine's other effects).
-//
-// This one effect now holds the whole retained batch/instancing family as separate PASSES: RectBatch (the SDF rounded-
-// rect instancing above) and InstancedFill (general geometry instancing - a SHARED local mesh drawn N times, per-instance
-// world transform + colour fetched from a StructuredBuffer by SV_InstanceID; docs/RENDER_CACHE_REDESIGN.md sec. 4h/4j).
+// The instanced batch family, one pass each: SDF rounded rects (a quad per instance, self-antialiased coverage) and
+// InstancedFill (a shared mesh drawn N times). Row-vector convention.
 
 // In dependency order - each header builds on the ones above it. NOTHING after the path on these lines: a trailing
 // comment on an #include makes the preprocessor stop with "unexpected tokens after directive".
@@ -78,15 +69,8 @@ float4 RectBatchPS(PSInput input) : SV_Target
         bool concaveCap = max(fmod(dashCaps, 8.0), floor(dashCaps / 8.0)) >= 4.0;
         float bite = (concaveCap && input.Stroke0.z > 0.0) ? 0.5 * input.Stroke0.z / max(halfW, 1e-3) : 1e9;
         capScl = min(capScl, bite);
-        // Dash on the CONTINUOUS centreline arc-length through corners too (like the ellipse), so a dash flows around a
-        // corner uniformly instead of the whole corner snapping to one on/off state at its midpoint - the latter cut a
-        // dash short at the corner (a stub that wandered with the dash phase) when the run ended inside the corner arc.
-        // No corner special-casing here on purpose. The nearest-point arc is DISCONTINUOUS at a corner's bisector, and
-        // every attempt to patch that from inside this mask - picking the "more on" of the two edges, unioning their two
-        // coverages - trades one artifact for another, because the honest question is a DISTANCE to the dashed path and
-        // no sampling of the arc answers it. Instead the batch now DECLINES a dashed stroke thicker than its corner is
-        // round (RectBatchCollector.IsPenBatchable) and the compute expander takes it, which builds the dash pieces as
-        // real geometry. What is left here is the case this model is exact for: corners at least as round as the stroke.
+        // Dash along the continuous centerline arc length through corners. Exact only for corners at least as round as
+        // the stroke; others go to the compute expander (RectBatchCollector.IsPenBatchable).
         mask = DashTrimMaskCapped(s, s, perim, input.Stroke0.z, input.Stroke0.w, input.Stroke1.x, input.Stroke1.y,
                             input.Stroke1.z, dPerp * capScl, halfW * capScl, input.Stroke1.w, input.Dash);
     }
@@ -94,7 +78,7 @@ float4 RectBatchPS(PSInput input) : SV_Target
     return float4(painted.rgb, painted.a * clip);
 }
 
-// ---- InstancedFill pass: general retained geometry instancing (sec. 4h/4j) --------------------------------------------
+// ---- InstancedFill pass: general retained geometry instancing ---------------------------------------------------------
 // A SHARED local mesh (bound as the only vertex buffer) drawn instanceCount times; each instance's world transform and
 // colour are fetched from this StructuredBuffer by SV_InstanceID. So N identical shapes = ONE instanced draw, and a
 // move/resize/recolour is a patch of one record - no per-frame re-record. Matches Retained/GeometryInstance.cs.
@@ -177,11 +161,8 @@ float4 InstancedFringePS(FringePSInput input) : SV_Target
     return c;
 }
 
-// The analytic-AA fringe of the PATTERN/NOISE instances: the same shared ring and the same instance buffer as their
-// body, so N elements cost one draw instead of N. The ring is one pixel wide, so it does not evaluate the pattern - it
-// takes the brush's LOW colour, exactly as the per-unit fringe did (a procedural field is mostly its background, so an
-// edge blends into Color1 rather than ringing a bright midpoint). The BODY of those instances is a brush and lives in
-// BrushEffect; this ring is not, and reads the record from the shared header.
+// The AA fringe of pattern/noise instances, one draw for all; the one-pixel ring uses the brush's Color1 instead of
+// evaluating the pattern. Their body lives in BrushEffect.
 [shader("vertex")]
 FringePSInput InstancedPatternFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
@@ -203,11 +184,8 @@ FringePSInput InstancedPatternFringeVS(FringeVertex v, uint instanceId : SV_Inst
     return o;
 }
 
-// ---- RectBatchInstanced: the SAME SDF rounded-rect batch, but per-instance RectItem read from a BDA STORAGE buffer by
-// SV_InstanceID (like InstancedFill) instead of a per-instance VERTEX buffer. This lets the instance data be RETAINED +
-// patched only over its dirty range (no full re-upload each frame) and, with tiles baked in a stable space, a scroll
-// updates one offset uniform instead of re-baking N instances. Plain (no vertex semantics) struct matching the CPU
-// RectItem's Vector4F layout; the quad still comes from SV_VertexID. Pixel shader is the shared RectBatchPS.
+// ---- RectBatchInstanced: the SDF rect batch with RectItems read from a retained BDA buffer by SV_InstanceID, patched
+// by dirty range. Matches the CPU RectItem layout.
 struct RectData
 {
     float4 Bounds;       // NODE-local x, y, w, h (world for slot-0 legacy bakes - identity matrix)
@@ -250,12 +228,8 @@ PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_I
     o.Half   = item.Bounds.zw * 0.5 * px;
     o.Local  = (corner - 0.5) * item.Bounds.zw * px + (corner * 2.0 - 1.0) * outsetPx;
     o.Radii = item.Radii * iso;
-    // The slot's alpha multiplies BOTH fill and stroke: fading a node fades what it draws, its outline included. Read
-    // from the SAME record the matrix came from - no second buffer, no second address.
-    // The element's fade, read from its opacity slot. Written INLINE, with an unsigned index and no helper taking the
-    // pointer: the same read wrapped in a function that took `NodeSlot*` and a signed index left the window blank -
-    // measured, and this driver is documented right below as going device-lost on shapes it dislikes.
-    // .w < 0 means nothing above this element fades, and the select keeps that branch-free.
+    // The element's fade from its opacity slot, multiplying fill and stroke; read inline. .w < 0 means no fading
+    // ancestor.
     float slotAlpha = nodes[(uint)max(item.Params.w, 0.0)].Params.x;
     slotAlpha = lerp(1.0, slotAlpha, step(0.0, item.Params.w));
     float4 rectFill = float4(item.Color) * (1.0 / 255.0);
@@ -275,7 +249,7 @@ PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_I
     return o;
 }
 
-// ---- Ellipse batch: solid ellipse/circle fills, resolution-independent SDF (docs/PER_MONITOR_DPI_PLAN.md, the "SDF
+// ---- Ellipse batch: solid ellipse/circle fills, resolution-independent SDF (the "SDF
 // family"). Draws MANY solid ellipses in ONE instanced draw: each fill is a per-instance EllipseData record (from the BDA
 // storage buffer) expanded to a quad in the vertex stage (corner from SV_VertexID), and the pixel shader reconstructs the
 // ellipse coverage from its implicit field - self-anti-aliasing, no AA fringe, no tessellation (crisp at any DPI/zoom).
@@ -330,14 +304,8 @@ float4 EllipseBatchPS(EllipsePSInput input) : SV_Target
 {
     float d = SdEllipse(input.Local, input.Half);
 
-    // A SECTOR or a SEGMENT is this same ellipse with a straight boundary added, so the FILL is the intersection of the
-    // two fields. The OUTLINE is a different question, and the two closings answer it differently - the tessellator draws
-    // exactly this distinction (`isClosed` is true only for a full ellipse or a Sector):
-    //   SECTOR - closed contour: filled inside AND stroked all the way round, radii included. The combined distance is
-    //            the outline, so the stroke follows it for free.
-    //   EDGE-TO-EDGE - open contour: it is an ARC, and a ribbon along an arc has two ends, not four edges. The stroke
-    //            stays on the ELLIPSE and is masked to the swept range, so a ring gauge reads as a ribbon that stops -
-    //            not as a wedge outlined across its chord (which is what it looked like before this split).
+    // Sector and segment fills intersect the ellipse with a straight boundary. A sector strokes its closed outline; an
+    // edge-to-edge arc strokes only the ellipse, masked to the swept range.
     float dStroke = d;
     float mask = 1.0;
 
@@ -492,12 +460,8 @@ PolygonPSInput PolygonBatchInstancedVS(uint vertexId : SV_VertexID, uint instanc
     o.Half   = item.Bounds.zw * 0.5 * px;
     o.Local  = (corner - 0.5) * item.Bounds.zw * px + (corner * 2.0 - 1.0) * outsetPx;
 
-    // The element's alpha from the OPACITY SLOT, as every other batched family reads it - see PolygonItem.Clip for why
-    // it sits in the clip field. -1 means nothing above this element fades.
-    // An INT test and a branch, NOT the sibling passes' `nodes[(uint)max(slot, 0.0)]`: that form takes this driver to
-    // device-lost from this shader, 3 runs of 3, with the index MEASURED (painted to the screen) as a plain -1 and with
-    // a known-good index in its place - so it is the shape of the read, not the value. `min`-clamping the index also
-    // cured it, and was rejected: the bound would be an invented constant, and this form needs none.
+    // The element's alpha from its opacity slot, kept in the clip field (see PolygonItem.Clip); -1 means no fading
+    // ancestor.
     int polyFadeSlot = (int)item.Clip.y;
     float polyFade = polyFadeSlot < 0 ? 1.0 : nodes[(uint)polyFadeSlot].Params.x;
     float4 polyFill = float4(item.Color) * (1.0 / 255.0);
@@ -588,7 +552,7 @@ HaloPSInput HaloRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : S
     o.InstId = instanceId;
     o.ClipBox   = ClipShapeBox(it.Field.y);     // the band is cut by the ancestor's rounding like any other fill
     o.ClipRadii = ClipShapeRadii(it.Field.y);
-    int haloFadeSlot = int(it.Field.z);         // int test + branch, not lerp/step - this driver dislikes that form
+    int haloFadeSlot = int(it.Field.z);
     o.Fade = haloFadeSlot < 0 ? 1.0 : nodes[(uint)haloFadeSlot].Params.x;
     return o;
 }
@@ -640,8 +604,7 @@ float4 HaloRectPS(HaloPSInput input) : SV_Target
     // An inner band grows INWARD, so its spread shrinks the source shape instead of inflating it.
     float spread = lerp(it.Band.z, -it.Band.z, step(0.5, inner)) * sc;
 
-    // Shape 2 = a SAMPLED field (arbitrary geometry); 0/1 are the analytic rect and ellipse. Branch-free: both are
-    // evaluated and picked, because a ?: in this family has device-lost form on this driver.
+    // Shape 2 = a SAMPLED field (arbitrary geometry); 0/1 are the analytic rect and ellipse; both are evaluated and picked.
     float sampled = step(1.5, isEllipse);
     float analyticShape = saturate(isEllipse);   // 0 rect, 1 ellipse - shape 2 never uses it, but must not extrapolate
     float rangePx = it.Field.x * sc;
@@ -674,13 +637,8 @@ float4 HaloRectPS(HaloPSInput input) : SV_Target
     return color;
 }
 
-// ---- Living halo: an aura whose REACH wanders along the outline and drifts over time, travelling a palette. A biofield
-// rather than a rim of colour. Its own pass on purpose: the noise below is real ALU, and a plain shadow - which is most
-// of what this family draws - must neither pay for it nor risk a heavier shader on a driver with this one's history.
-//
-// The wander is sampled in the coordinates that BELONG to an outline: ANGLE around the shape (along it) and DISTANCE
-// from it (away). Sampling in screen space instead would shimmer independently of the shape, which reads as noise laid
-// over a glow rather than as a glow that is alive.
+// ---- Living halo: an aura whose reach wanders along the outline over time through a palette. Its own pass, so plain
+// shadows skip the noise; sampled by angle around and distance from the shape.
 struct HaloLivingData
 {
     float4 Bounds;
@@ -732,8 +690,6 @@ HaloPSInput HaloLivingVS(uint vertexId : SV_VertexID, uint instanceId : SV_Insta
 float4 LivingPalette(HaloLivingData it, float t)
 {
     float count = it.Ramp.x;
-    // Unpacked HERE rather than through a shared helper: the same arithmetic wrapped in a function is what three of
-    // this effect's stages answer with a device loss (see the halo rect's own unpack below and BrushEffect's notes).
     float4 colours[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
                           float4(it.Stop2) * (1.0 / 255.0), float4(it.Stop3) * (1.0 / 255.0),
                           float4(it.Stop4) * (1.0 / 255.0), float4(it.Stop5) * (1.0 / 255.0),
@@ -810,11 +766,8 @@ float4 HaloLivingPS(HaloPSInput input) : SV_Target
 }
 
 // =====================================================================================================================
-// TECHNIQUE - one technique, one pass per draw variant (kept together at the end of the file so the shader code above
-// reads top-to-bottom without technique boilerplate breaking it up). Each pass names its vertex + pixel shader; the C#
-// accessor for a pass is "{Technique}{Pass}Pass" (e.g. pass Rect -> Effect.BatchRectPass). Every pass is INSTANCED: the
-// per-instance data lives in a BDA storage buffer read by SV_InstanceID, so there is NO per-instance vertex buffer (Rect
-// and Ellipse generate their quad from SV_VertexID; Fill draws a shared local mesh).
+// TECHNIQUE - one pass per draw variant, all instanced from a BDA buffer by SV_InstanceID. The C# accessor is
+// "{Technique}{Pass}Pass" (pass Rect -> Effect.BatchRectPass).
 // =====================================================================================================================
 technique Batch
 {

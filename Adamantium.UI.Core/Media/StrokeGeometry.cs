@@ -284,12 +284,8 @@ public class StrokeGeometry : Geometry
       return dashesData;
    }
 
-   /// <summary>The dash pattern to walk a closed contour with. Unchanged unless the pen asks for fitting, in which case
-   /// it is scaled so <paramref name="contourLength"/> holds a whole number of periods - the difference between a ring
-   /// that closes on itself and one with a visible long dash at the seam. <paramref name="scale"/> is handed back so the
-   /// caller can put the dash OFFSET in the same units.
-   /// <para>NB the fit is computed from the pattern alone. A non-flat dash cap adds half the thickness at each end of
-   /// every gap, so with round caps the fit is approximate - close enough to hide the seam, not exact.</para></summary>
+   // The dash pattern for a closed contour, scaled to a whole number of periods when the pen asks; approximate with
+   // non-flat caps. Returns the scale for the offset.
    private static double[] FitDashArray(Pen pen, double contourLength, out double scale)
    {
       scale = 1.0;

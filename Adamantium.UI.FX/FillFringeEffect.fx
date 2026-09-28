@@ -1,16 +1,5 @@
-// GPU fill anti-aliasing (Analytic AA). Rasterizes a coverage fringe RING around a CLOSED fill contour - inner edge on
-// the contour (coverage = 1, meets the solid body), outer edge (coverage = 0) - with the fill colour and alpha *=
-// coverage, feathering the edge analytically (no MSAA), drawn on top of the CPU-triangulated solid body. Fills are
-// closed loops, so there are no caps/ends here. Shader bodies are Slang. Single .fx -> one Effect class.
-//
-// The ring's TRIANGLES come from the CPU (Rendering/FringeGeometry.cs) - the same builder the instanced fringe uses, so
-// the ring has one definition. A vertex holds the contour point plus, on the outer edge, the two adjacent EDGE
-// DIRECTIONS; the VS turns those into a screen-space miter and pushes the vertex FringePixels out. So the buffer holds
-// no scale anywhere: it is built once per shape and stays correct at any zoom. (It used to be expanded by a compute
-// pass at a LOCAL width of 1px/scale, which made every scale a different buffer - that pass is gone, since a ring that
-// never changes has nothing to re-expand.) Building the miter from the screen edge directions also keeps the width
-// honest under anisotropic scale, skew and rotation, where a local-space miter mapped to screen is not perpendicular
-// to the screen edge.
+// Analytic AA for fills: a coverage ring around a closed contour, drawn over the solid body. The ring (FringeGeometry.cs)
+// is scale-free; the VS builds a screen-space miter from edge directions, so width holds at any transform.
 
 float4x4 Projection;
 float4 FillColor;

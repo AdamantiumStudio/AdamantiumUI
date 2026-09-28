@@ -109,13 +109,8 @@ public class ResourceManager : IResourceManager
                 return Materialize(local);
         }
 
-        // The PALETTE of the theme in force AT THIS ELEMENT, before the global theme scope. This is the step that makes
-        // a theme scope reach markup at all: {ResourceReference} resolves here, not through ITheme.GetResource, so a
-        // palette consulted only there would answer for code and never for the files themes are actually written in.
-        // Below the Local dictionaries, deliberately - a dictionary on the requester's own subtree still shadows the
-        // theme, or a theme key could not be overridden locally.
-        // Per-requester rather than from a global scope, because two subtrees may be showing two variants of the same
-        // theme at once, and a single Theme scope in this manager could only hold one of them.
+        // The palette of the theme in force at this element, after Local dictionaries and before the global scope;
+        // per requester, since subtrees may show different variants.
         if (ThemeContext.For(requester) is Theme scoped && scoped.PaletteValue(name) is { } fromPalette)
             return fromPalette;
 
@@ -127,8 +122,7 @@ public class ResourceManager : IResourceManager
     }
 
     // Logical parent first (bridging a template boundary via TemplatedParent, so template content still sees resources
-    // declared on its host control), then the visual parent as a last resort for a node with neither. See
-    // docs/TREE_MODEL_DESIGN.md.
+    // declared on its host control), then the visual parent as a last resort for a node with neither.
     private static IFundamentalUIComponent LogicalOrVisualParent(IFundamentalUIComponent node)
         => node.GetLogicalParentOrBridge() ?? (node as IUIComponent)?.VisualParent;
 

@@ -21,19 +21,12 @@ using Adamantium.UI.Core.Templates;
 namespace Adamantium.UI.Input;
 
 /// <summary>
-/// The in-window drag-drop engine (level 1) + its attached-property facade. Retrofit onto ANY element without touching it:
-/// set <c>DragDrop.AllowDrag="True"</c> + <c>DragDrop.DragData</c> on a source, <c>DragDrop.AllowDrop="True"</c> +
-/// <c>DragDrop.DropCommand</c> on a target. On press+threshold the source is baked to a ghost that follows the cursor (a
-/// real layered OS window, <see cref="IDragGhost"/>); on release the target under the cursor gets the payload through its
-/// <c>DropCommand</c> - MVVM-first, no UI types in the VM (docs/DRAG_DROP_PLAN.md). App-global, one drag at a time.
+/// Attached drag-drop: <c>AllowDrag</c> + <c>DragData</c> on a source, <c>AllowDrop</c> + <c>DropCommand</c> on a target;
+/// the dragged element follows the cursor as an <see cref="IDragGhost"/>. One drag at a time.
 /// </summary>
 public static partial class DragDrop
 {
-    // How far the pointer must travel before a press becomes a drag comes from the USER's own OS setting
-    // (PlatformSettings.DragThreshold) - a click is not a drag, and where that line sits is their choice, not ours.
-    // Everything tunable lives in DragDropOptions (ours) or PlatformSettings (the user's) - see those two for why the
-    // split matters. Only the auto-scroll CADENCE stays a constant here: it is a frame interval, not a preference, and
-    // letting it be set would just let someone make the scroll stutter.
+    // Tunables live in DragDropOptions and PlatformSettings; the auto-scroll cadence is a frame interval, not a preference.
     private const double AutoScrollTickMs = 16;
 
     // ------------------------------------------------------------------ attached properties
@@ -133,7 +126,7 @@ public static partial class DragDrop
     public static DataTemplate GetDragTemplate(AdamantiumComponent e) => e.GetValue(DragTemplateProperty) as DataTemplate;
     public static void SetDragTemplate(AdamantiumComponent e, DataTemplate value) => e.SetValue(DragTemplateProperty, value);
 
-    // Opt-in escalation to the OS (docs/DRAG_DROP_PLAN.md phase 6): a source that declares this hands the WHOLE gesture
+    // Opt-in escalation to the OS: a source that declares this hands the WHOLE gesture
     // to the platform drag loop the moment it starts, so the payload can be dropped into other applications (and files
     // dragged out land in Explorer). Off by default - the in-app loop keeps the live CLR payload and costs no OLE.
     // The choice is made ONCE at the start of the gesture, never mid-drag.
@@ -429,12 +422,8 @@ public static partial class DragDrop
         // of losing it and appending to the end. First non-dragged item at/after the caret; null (append) if there is none.
         _insertBefore = AnchorAt(list, index);
         var items = list.Items;
-        // A panel that can open a real hole at the insertion point says so itself, and then the hole IS the cue: a caret
-        // as well would mark the same place twice, and the two disagree the moment a line reflows. Everything else keeps
-        // the caret.
-        // An EMPTY list has no seam to mark: a caret says "between these two", and there are no two. It also had nothing
-        // to size itself from, so it stretched across the whole list. The target's own drag-over highlight is the cue
-        // here; the drop still lands at index 0.
+        // Panels that open a gap at the insertion point need no caret; an empty list has no seam, so its drag-over
+        // highlight is the cue and the drop lands at index 0.
         if ((items?.Count ?? 0) == 0)
         {
             SetDropGap(null, -1);
@@ -530,11 +519,8 @@ public static partial class DragDrop
         _indicatorRect = rect;
         _indicatorFrame = frame;
 
-        // A real, themed control: its look is a ControlTemplate from the active theme (restyle the drop cue in the theme,
-        // not here). Orientation drives the caret axis; IsFrame swaps the caret for a "drop into" outline.
-        // The rect is TOLD to the cue rather than arranged onto it: the adorner stage lays every adorner out again on
-        // every frame (LayoutAdorner -> PlaceIn), so an Arrange from here lived exactly one frame before being replaced
-        // by the adorned element's whole box.
+        // A themed control; IsFrame swaps the caret for a "drop into" outline. The rect is given to the cue, since the
+        // adorner stage re-arranges adorners every frame.
         var indicator = new DropInsertionIndicator
         {
             AdornedElement = list, Orientation = orientation, IsFrame = frame, TargetRect = rect
@@ -564,12 +550,8 @@ public static partial class DragDrop
         return new SolidColorBrush(Colors.DodgerBlue);
     }
 
-    // Insert index + the caret's rect (in the LIST's local coords). Two steps: (1) the nearest realized container + which
-    // side of its mid-line gives the insertion INDEX - nearest, not "directly under", because a WrapPanel's margins let a
-    // gap point fall through hit-test; (2) the caret is placed in the SEAM between item[index-1] and item[index] - the
-    // midpoint of their gap - so its position depends only on the index, not on which plate is nearest. That is what stops
-    // it sticking to one plate's edge then flipping to the other's a few px later. Mouse.GetPosition(c) gives each
-    // container's rect in list coords, so no TransformToVisual is needed.
+    // The index comes from the nearest realized container's mid-line (gaps fall through hit-test); the caret sits in the
+    // seam between index-1 and index, in list coordinates, so it depends only on the index.
     private static int ComputeInsertion(ItemsControl list, Orientation flow, out Rect caret)
     {
         const double thickness = 8.0;   // the caret's thin dimension (fits the theme template's end-cap dots)
@@ -616,11 +598,7 @@ public static partial class DragDrop
         return c.TransformBoundsToVisual(list);
     }
 
-    // The caret's rect for the seam at the insertion index. When the two neighbours share a LINE -> the MIDPOINT of their
-    // gap (never sticks to one plate's edge and flips). At a WRAP BOUNDARY or a list END the two representations (trailing
-    // edge of the previous column vs leading edge of the next) are far apart, so anchor to `nearest` - the item UNDER THE
-    // CURSOR - on the side the cursor is on (afterSide). That keeps the caret where the pointer is instead of jumping to the
-    // far column's/row's edge. Runs ACROSS the flow, spanning the anchor's cross-axis extent.
+    // Neighbors on one line: the midpoint of their gap. At a wrap or list end: the side of `nearest` the cursor is on.
     private static Rect SeamCaret(bool horizontal, double t, Rect? before, Rect? after, Rect nearest, bool afterSide)
     {
         if (before is { } b && after is { } a)
@@ -666,13 +644,8 @@ public static partial class DragDrop
 
     // A gap belongs to ONE panel at a time: moving to another list has to close the first, or a list the cursor left
     // would keep a hole in it for the rest of the gesture.
-    /// <summary>The item a drop should land BEFORE, given the seam it lands at: the first one at or after that seam
-    /// which is NOT being dragged. Said ONCE, because both cues need the same answer and only one of them had it.
-    /// <para>Why the skip: the source removes the dragged items and the target then inserts them before this anchor -
-    /// that order is what turns a drop back into the origin list into a reorder rather than a delete. So the anchor has
-    /// to be something that SURVIVES the removal. The gap path took <c>items[slot]</c> outright, and hovering the gap an
-    /// item left behind makes that item its own anchor: once the source removed it the target had nothing to insert
-    /// before and appended to the end instead - the item read as having vanished from where it was.</para></summary>
+    // The first item at or after the seam that is not being dragged: the source removes dragged items before the target
+    // inserts before this anchor, so it must survive the removal.
     private static object AnchorAt(ItemsControl list, int index)
     {
         var items = list?.Items;
@@ -737,11 +710,8 @@ public static partial class DragDrop
             if (strip.PanNear(along, band, strip.AutoScrollRate)) return;
         }
 
-        // Walk OUTWARDS through every scrollable area under the pointer and take the first that can actually move the
-        // way the edge is pulling. Taking the innermost one unconditionally is what makes a drag dead-end over a short
-        // or empty inner list: it swallows the pull and has nowhere to go, so the page behind it never scrolls. Chaining
-        // is the same contract the wheel already honours, and a container can opt out of it the same way
-        // (ScrollViewer.ScrollChaining="False" keeps the pull for itself).
+        // Chains outward to the first scrollable that can move in the pull direction, like the wheel
+        // (ScrollViewer.ScrollChaining="False" opts out).
         foreach (var sv in ScrollablesUnder(hit, window, screen))
         {
             var local = Mouse.GetPosition((IInputComponent)sv);
@@ -794,13 +764,8 @@ public static partial class DragDrop
         return 0;
     }
 
-    /// <summary>
-    /// The scrollable area the pointer is over. Walking up from the hit element covers the usual case, but the hit test
-    /// only reports INTERACTIVE elements - drag over the empty part of a page and there is nothing to walk up FROM, so
-    /// a plain ScrollViewer never scrolled while a list, whose rows are hit-testable, did. The fallback therefore asks
-    /// what VISUALS are under the point (that collector includes non-interactive ones) and takes the innermost
-    /// scrollable among them, which is what "auto-scroll works anywhere" actually requires.
-    /// </summary>
+    // Walks up from the hit element; hit-testing skips non-interactive elements, so it falls back to the visuals under
+    // the point.
     private static IEnumerable<ScrollViewer> ScrollablesUnder(IUIComponent hit, IWindow window, PixelPoint screen)
     {
         var seen = new HashSet<ScrollViewer>();
@@ -894,26 +859,13 @@ public static partial class DragDrop
     }
 
     /// <summary>
-    /// Starts a drag from CODE, without waiting for a press to cross the drag threshold - for the gestures the engine
-    /// cannot recognise on its own: a context menu's "Move to…", a keyboard/accessibility pick-up, a long tap, or a
-    /// source that is not an element at all (an object drawn on a canvas, a span of selected cells) and so has nowhere
-    /// to hang <c>AllowDrag</c>. Everything downstream is the ordinary gesture: ghost, targeting, spring-load,
-    /// auto-scroll, the drop and the source's <c>DragCompleted</c>.
-    /// <para>
-    /// Unlike WPF's <c>DoDragDrop</c> this does NOT block and cannot return the outcome: our drag runs on the event
-    /// loop, not a modal one. It answers whether the drag STARTED; the result arrives at the source's
-    /// <c>DragCompletedCommand</c> with the final <c>Effects</c>. The gesture ends the way any other does - the left
-    /// button coming up drops, Esc cancels - so calling it while the button is already held reads as one continuous
-    /// drag, and calling it with the button up gives a "pick up, move, click to drop" gesture.
-    /// </para>
+    /// Starts a drag from code without a threshold gesture. Non-blocking: the outcome arrives at the source's
+    /// <c>DragCompletedCommand</c>; release drops, Esc cancels.
     /// </summary>
-    /// <param name="source">The element the drag belongs to: it holds the capture, is pictured by the ghost (unless it
-    /// declares a <c>DragTemplate</c>), and receives the DragStarted / DragCompleted commands.</param>
-    /// <param name="data">The payload. An <see cref="IDataPackage"/> is taken as-is; anything else is wrapped, exactly
-    /// as <c>DragDrop.DragData</c> would be. Null falls back to the source's own <c>DragData</c>.</param>
-    /// <param name="allowedEffects">What this drag may end as. The modifier still chooses within it (Ctrl = Copy,
-    /// otherwise Move); a target may narrow it further, never widen it.</param>
-    /// <returns>False when a drag is already in flight, or the source is null - never throws.</returns>
+    /// <param name="source">Holds the capture, is pictured by the ghost and receives the drag commands.</param>
+    /// <param name="data">The payload; null falls back to the source's <c>DragData</c>.</param>
+    /// <param name="allowedEffects">Allowed outcomes; Ctrl picks Copy, and targets may only narrow them.</param>
+    /// <returns>False when a drag is already in flight or the source is null.</returns>
     public static bool DoDragDrop(IInputComponent source, object data = null,
         DragDropEffects allowedEffects = DragDropEffects.Copy | DragDropEffects.Move)
     {
@@ -939,11 +891,8 @@ public static partial class DragDrop
         Mouse.Capture(_source);   // so move/up keep coming once the cursor leaves the source
         _source.LostMouseCapture += OnLostCapture;   // an external overlay (a screenshot tool) stealing capture must not hang the drag
 
-        // Tell the source the drag has begun - it records WHERE the payload came from now, before any target touches its
-        // collections (so DragCompleted can remove it from the right place).
-        // In the SOURCE's own coordinates, like every other drag event carries. This used to hand over the raw desktop
-        // point: both were bare vectors, so it compiled, and it was right only at 100% and only in a window at the
-        // origin. See PixelPoint.
+        // The source records the payload's origin before any target touches its collections; the point is in source
+        // coordinates.
         var startArgs = new DragDropEventArgs(_data, _source, SourceClientPoint(_startScreen))
         {
             // The origin collection (the source list's ItemsSource), so the VM can identify WHERE the drag came from by
@@ -977,11 +926,7 @@ public static partial class DragDrop
         if (badge != null) Renderer?.RequestSnapshot(badge, OnBadgeReady);
     }
 
-    // Opt-in (DragDropOptions.OfferImagesAsFiles): a picture also travels as a FILE, because a great many targets ask
-    // only for a file list and never look at a bitmap. Added AFTER DragStarted, so the source has had its chance to put
-    // the picture there - and only when it did not offer files of its own, which would be the app's own decision to
-    // respect. Deferred, so the copy is written on the drop that asks for it and never on a drag that goes nowhere.
-    // Neutral by construction: this is one entry in the package, so every platform's bridge gets it for free.
+    // Added after DragStarted and only if the source offered no files; the file is written lazily when a drop asks.
     private static void OfferPictureAsFile()
     {
         if (!DragDropOptions.OfferImagesAsFiles || _data is not { } package) return;

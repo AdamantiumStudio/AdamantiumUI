@@ -2,11 +2,8 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>Drives the fractal auto-morph clock. While any LIVE <see cref="FractalBrush"/> has <see cref="FractalBrush.Animate"/>
-/// on (ref-counted through <see cref="Acquire"/>/<see cref="Release"/>), one AnimationManager ticker advances <see cref="Time"/>
-/// each frame. The ticker has NO target, so it keeps the render loop presenting (HasActiveAnimations) WITHOUT dirtying the
-/// scene - the retained fractal draw just replays with a fresh Time and the shader morphs (no re-bake, no full walk). The
-/// last Release drops the ticker so the loop can idle again.</summary>
+// Advances Time each frame while any animated FractalBrush holds it (Acquire/Release); a targetless ticker keeps frames
+// coming without dirtying the scene.
 internal static class FractalClock
 {
     private static int _active;

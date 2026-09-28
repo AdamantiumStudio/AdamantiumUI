@@ -3,15 +3,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Remembers where the keyboard was when an overlay opened, and puts it back when that overlay closes.
-/// <para>Without it, closing a menu or a dialog strands the focus: it was on something inside the overlay, that
-/// something is now gone, and the next Tab starts again from the top of the window instead of carrying on from the
-/// control that opened the thing. Escape especially - you press it to get back to where you were.</para>
-/// <para>The focus goes back ONLY if it is still inside the overlay (or nowhere). If it has moved on - a click landed
-/// somewhere else while the overlay was up - then the person has already said where they want to be, and putting it
-/// back would take that away.</para>
-/// </summary>
+/// <summary>Remembers where focus was when an overlay opened and restores it on close, but only if focus is still inside
+/// the overlay (or nowhere); focus the user moved elsewhere stays put.</summary>
 public sealed class FocusReturn
 {
     private IInputComponent _element;

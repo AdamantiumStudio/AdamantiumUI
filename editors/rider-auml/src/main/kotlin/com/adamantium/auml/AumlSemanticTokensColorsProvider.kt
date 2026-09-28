@@ -7,11 +7,8 @@ import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsProvider
 
 /**
- * Maps the AUML language server's semantic token types to editor colours. The point of overriding
- * LSP4IJ's default is `unknown` (an element whose type doesn't resolve) → the red "unresolved
- * reference" colour, so deleting an xmlns turns the controls red like ReSharper. The other types are
- * mapped to sensible defaults too, so colouring is consistent whether this provider augments or
- * replaces the default one.
+ * Maps AUML semantic token types to editor colors, notably `unknown` (an unresolved element type) to the red
+ * "unresolved reference" color.
  */
 class AumlSemanticTokensColorsProvider : SemanticTokensColorsProvider {
     override fun getTextAttributesKey(tokenType: String, tokenModifiers: List<String>, file: PsiFile): TextAttributesKey? =

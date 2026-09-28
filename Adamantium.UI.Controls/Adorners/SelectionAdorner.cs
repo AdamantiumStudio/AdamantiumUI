@@ -6,13 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Adorners;
 
-/// <summary>
-/// A decorated selection frame: an outlined rectangle just INSIDE the adorned element's painted bounds plus small square
-/// handles tucked into the four corners. Drawn by the adorner stage on top of everything - this replaces the designer's
-/// own host-side frame. The chrome is kept INSIDE the bounds on purpose: the adorner shares the window's framebuffer, so
-/// a frame drawn OUTSIDE an edge-touching element's bounds would fall off-window and be clipped away (only stray corner
-/// bits survive) - exactly the "no frame, 4 short corner marks" the designer showed for stretched/edge elements.
-/// </summary>
+/// <summary>A selection frame with corner handles, drawn just inside the adorned element's bounds so an element touching the
+/// window edge does not lose it off-window.</summary>
 public class SelectionAdorner : Adorner
 {
     private const double FrameThickness = 4;

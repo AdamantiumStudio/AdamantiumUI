@@ -6,17 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Draws the curve a wire is, as INK - a polyline handed over as DATA rather than as a shape.
-/// <para>Not a style choice. Drawn as a geometry it cost the frame, and worse the longer a drag went on: a geometry is
-/// cached by its CONTENT, a wire being pulled about has different content every frame, and that cache is never emptied
-/// and is walked once per frame. So every frame of a drag left an entry behind - with a ring of GPU buffers attached -
-/// and every following frame walked all of them. A few seconds of dragging and the thing crawls.</para>
-/// <para>Ink has none of that: the points ARE the parameter block, one instance draws the whole polyline, and nothing
-/// is built, cached or left behind. It is the same pass a pen stroke goes through, and it exists for this shape of
-/// problem exactly.</para>
-/// <para>One of these per thing that draws a wire, because the brush and the buffer are handed over by reference and
-/// held until the frame is drawn - two wires sharing one would both come out wherever the last was written.</para>
-/// </summary>
+/// <summary>Draws a wire's curve as ink, not geometry, which would fill the geometry cache on every drag frame. One per wire
+/// drawer, since brush and buffer are held by reference until the frame draws.</summary>
 internal sealed class WirePainter
 {
     // Enough that a curve reads as a curve rather than as a chain of chords at any zoom a wire is looked at: the

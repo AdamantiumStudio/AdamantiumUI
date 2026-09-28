@@ -2,11 +2,7 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>Drives the noise flow clock. While any LIVE <see cref="NoiseBrush"/> has <see cref="NoiseBrush.Animate"/> on
-/// (ref-counted through <see cref="Acquire"/>/<see cref="Release"/>), one AnimationManager ticker advances <see cref="Time"/>
-/// each frame. The ticker has NO target, so it keeps the render loop presenting (HasActiveAnimations) WITHOUT dirtying the
-/// scene - the retained pattern draw just replays with a fresh Time and the Worley feature points orbit (no re-bake). The
-/// last Release drops the ticker so the loop can idle again. Mirrors <see cref="FractalClock"/>.</summary>
+// Advances Time each frame while any animated NoiseBrush holds it (Acquire/Release), like FractalClock.
 internal static class NoiseClock
 {
     private static int _active;

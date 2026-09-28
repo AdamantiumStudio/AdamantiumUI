@@ -24,11 +24,8 @@ public class Control : TemplatedUIComponent, IControl
       typeof(Brush), typeof(Control),
       new PropertyMetadata(Brushes.Transparent, PropertyMetadataOptions.AffectsRender));
 
-   // The chrome every framed control needs. Declared ONCE here rather than re-registered by each control that happens
-   // to draw a frame: a re-registration makes a DIFFERENT property that merely shares a name, so a control that forgot
-   // one had a style setter naming a property it did not have - which throws when the theme is attached, not when the
-   // style is written. A control whose look wants another default overrides the METADATA (see TextBoxBase); it does not
-   // declare the property again. Controls that are not Controls - Border, Decorator, Panel - still carry their own.
+   // Framed-control chrome, declared once: a re-registration is a different property that only shares the name. A control
+   // wanting another default overrides the metadata.
    public static readonly AdamantiumProperty BorderBrushProperty = AdamantiumProperty.Register(nameof(BorderBrush),
       typeof(Brush), typeof(Control),
       new PropertyMetadata(Brushes.Transparent, PropertyMetadataOptions.AffectsRender));

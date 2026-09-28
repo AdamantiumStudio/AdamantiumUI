@@ -12,14 +12,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// TEXTURED rounded-rect batch: draws many rounded-rect fills whose colour is SAMPLED from an image in ONE instanced draw
-// (each fill = one per-instance TextureItem; the pixel shader reconstructs the rounded rect from an SDF and samples).
-// The sibling of the solid/gradient/pattern SDF collectors - an ImageBrush or NineSliceBrush fill routes here.
-//
-// WHICH texture is not in the record: ONE texture is bound per SEGMENT, the way TextBatchCollector binds one atlas per
-// segment. Bindless would let a segment mix textures, but the engine has no bindless path (textures bind as effect
-// parameters) and this driver is documented to fall over on richer texture use - see docs/NINE_SLICE_PLAN.md. Cost: a
-// texture change breaks the batch, which for UI is a handful of times per frame.
+// Textured rounded-rect fills (ImageBrush, NineSliceBrush) in one instanced draw; one texture is bound per segment, so a
+// texture change splits the batch.
 internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
 {
     public static bool Enabled = true;
@@ -83,12 +77,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         {
             TileBrush tile => tile.ContentSource,
             NineSliceBrush nine => nine.Source,
-            // A material with a picture of its own. It is not a textured fill and never goes through this batch - it
-            // only wants the SAME answer to "what texture does this brush name", which is the question this method is.
-            //
-            // MICA ONLY, and stated HERE so it is stated once: acrylic and liquid glass ARE "what is directly beneath
-            // this element", and a picture from elsewhere would not make them a variant of themselves - it would make
-            // them something else wearing their name.
+            // Only mica names a picture of its own; acrylic and glass always read what is beneath them.
             MaterialBrush material => MaterialRectCollector.IsWallpaper(material.Material) ? material.Source : null,
             _ => null
         };
@@ -323,12 +312,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         };
         if (items == null) return false;
 
-        // Stamped HERE rather than inside each producer: a nine-slice makes nine records and a tile one, and every one
-        // of them is cut - and faded - by the same ancestor. -1 = none, for either.
-        // The FADE slot reached this collector as a parameter and was dropped on the floor for a long time, while the
-        // bake had already taken the opacity CHAIN out of the tint (RenderCache calls FadeBySlot for this family): a
-        // faded ancestor left the picture nearly at full strength. Measured on the Opacity stand at 0.86 of its
-        // reference where every well-behaved family sat at 0.58.
+        // Clip and fade slots are stamped on every record here, once for all producers; -1 = none.
         for (var i = 0; i < items.Length; i++) items[i].Clip = new Vector4F(clipSlot, fadeSlot, 0, 0);
         return true;
     }

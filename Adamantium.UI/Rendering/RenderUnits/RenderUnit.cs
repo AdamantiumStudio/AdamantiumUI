@@ -17,11 +17,8 @@ using Adamantium.UI.Rendering.Retained;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
-/// <summary>How many times ANY unit has gained or lost a piece of out-of-pass machinery (a geometry, fringe or stroke
-/// renderer). A cache that keeps a list of the units needing a pre-render rebuilds it when this moves and iterates it
-/// otherwise - so a frame in which no unit changed shape costs the length of that list, not the size of the scene.
-/// <para>Its own non-generic type on purpose: a static on <see cref="RenderUnit{TPayload}"/> would be one counter PER
-/// PAYLOAD TYPE, and readers would each miss every change made through a different one.</para></summary>
+/// <summary>Counts units gaining or losing out-of-pass machinery, so caches rebuild their pre-render lists only then.
+/// Non-generic so there is one counter, not one per payload type.</summary>
 public static class RenderUnitMachinery
 {
     private static long _version;
@@ -60,11 +57,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     protected GpuBufferManager BufferManager => Context.BufferManager;
 
-    // WHY THESE THREE HAVE BODIES. Together they answer NeedsPreRender, and the pre-render sweep used to find that out
-    // by walking every unit of every group, every frame - measured at 0.6 ms on a screen of a few thousand tiles, spent
-    // almost entirely on units that have none of them. A reader can keep the short list instead, but only if it is told
-    // when the list changes: these are assigned and cleared from a dozen places over a unit's life, so the notice has to
-    // live where the value does. One increment on an assignment that actually changes something; nothing on a read.
+    // Backing fields so each real change bumps RenderUnitMachinery for the pre-render list.
     private UIRenderComponent _strokeRenderer, _fillFringeRenderer, _geometryRenderer;
 
     public UIRenderComponent StrokeRenderer
@@ -237,11 +230,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         return contours.Count == 0 ? null : contours;
     }
 
-    // Keep the analytic-AA fringe in sync on a hot update. A geometry change (rebuild) already re-tessellated `geometry`,
-    // so rebuild the fringe from it. A brush/colour change is a CHEAP update (RequiresBufferRebuild excludes the brush):
-    // the existing fringe just repoints its brush (read live at Render - no contour re-upload, and a solid<->non-solid
-    // flip simply stops/starts it drawing); only a fill that never had a fringe yet became solid needs a build (it
-    // tessellates on demand). No-op when nothing relevant changed.
+    // Syncs the fringe on update: rebuilt on geometry changes; a brush change only repoints it, unless a fill with no
+    // fringe became solid.
     protected void UpdateFillFringe(Geometry geometry, Brush brush, bool rebuild, bool brushChanged)
     {
         if (FringeInstanced)
@@ -304,11 +294,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     public virtual void Update(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
-        // Keep ALL of the unit's renderers pointed at the CURRENT RenderData. UpdateWithDrawCommand repoints the body
-        // unconditionally but the fringe/stroke only on a geometry/brush/pen change - so an OPACITY-only change (a
-        // fading container) left the analytic-AA fringe + stroke on their old RenderData, i.e. their old opacity: a
-        // bright ~1px rim lingered around a thumb whose body had already faded out. Re-share the RenderData every frame
-        // (it also carries the viewport zoom the fringe reads in PreRender for its ~1 device-px width).
+        // Share the current RenderData with every renderer each frame, so opacity-only changes reach fringe and stroke.
         var renderData = DrawCommand?.RenderData;
         if (renderData != null)
         {
@@ -621,12 +607,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
 
     public RectangleRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
-        // A batchable rect (solid fill, a pen the SDF draws, corners rounded any which way) is drawn ENTIRELY by the item-background SDF batch, which
-        // self-AAs - so build ZERO per-unit machinery: no tessellation, no geometry/fringe/stroke, no GPU buffers. This
-        // is what makes a big virtualized tile grid cheap: a slider shrink that realizes hundreds of tiles no longer
-        // tessellates + allocates per tile (that was the 1-fps freeze and the resize OOM). The rare rejected case
-        // (rotated/sheared world, or per-frame overflow) builds its body lazily in Render via EnsureMachinery. A gradient
-        // fill routes to the gradient SDF batch, also machinery-free.
+        // Batchable rects (solid or gradient) get no per-unit machinery; a rejected one builds it lazily (EnsureMachinery).
         if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload)) return;
         BuildMachinery(Payload);
     }
@@ -746,16 +727,8 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
     {
         if (drawCommand.Payload is not RectanglePayload inputPayload) return;
 
-        // Fast path: the rect is one the SDF batch draws. Just repoint payload/command - NO tessellation, NO buffers - so
-        // resizing a virtualized grid stays cheap.
-        //
-        // Taken whether or not a body exists. A body is NOT a verdict about the rect: the batch also rejects on a full
-        // instance buffer, which says nothing about the rect and everything about how many were on screen that frame -
-        // and one such frame used to hand the rect a body for the rest of the session, after which every size change
-        // re-tessellated and re-uploaded it. Measured on the tile grid's size slider: single updates of 14-36ms, tens of
-        // them per second, while the thousands of tiles beside them cost microseconds. The body is kept (the retained op
-        // stream may still name it) but marked stale, so EnsureMachinery refreshes it if the batch ever turns the rect
-        // away again.
+        // Batchable rect: just repoint, even if a body exists (a full buffer once forced one); the body is kept but marked
+        // stale for EnsureMachinery.
         if (IsSdfBatchable(inputPayload) || IsGradientBatchable(inputPayload))
         {
             DrawCommand = drawCommand;
@@ -1099,7 +1072,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
 public class TextRenderUnit : RenderUnit<TextPayload>
 {
     // The text batch aggregator (RenderCache) reaches the block's TextLayout / params / foreground / FontRenderer
-    // through this. Null only transiently before the component is built. See docs/TEXT_GLYPH_BATCH_PLAN.md §9.
+    // through this. Null only transiently before the component is built.
     public TextRenderComponent TextComponent => GeometryRenderer as TextRenderComponent;
 
     public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
@@ -1120,14 +1093,8 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         return true;
     }
 
-    /// <summary>Re-dereference the block's brushes before a PAINT patch bakes it.
-    /// <para>A recolour that reaches a block by INHERITANCE never re-records it: the block does not own the brush, so
-    /// nothing hands it a new payload, and <see cref="UpdateWithDrawCommand"/> - the only caller of UpdateColors - never
-    /// runs. The component would then still hold the snapshot it dereferenced when the block was RECORDED, and the patch
-    /// would faithfully re-bake the glyphs in the previous variant's colour. The payload holds the LIVE brush and
-    /// dereferences its current snapshot on every read (see <see cref="Brush.Snapshot"/>), so reading it here is what the
-    /// recolour actually is. Same mechanism as the record path, so the private text target is re-rastered too - not only
-    /// the batched glyphs.</para></summary>
+    /// <summary>Re-reads the block's brushes from the payload before a paint patch, since inherited recolors never
+    /// re-record the block.</summary>
     internal void RefreshColors()
     {
         if (TextComponent is not { } tc) return;
@@ -1243,11 +1210,8 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
     internal ITexture BrushTexture() => TextureBatchCollector.BrushTexture(Payload.Brush, ResourceFactory,
         Payload.DestinationRect.Size, DrawCommand.Component);
 
-    /// <summary>The distance field an AURA or a SHADOW on this polygon reads, baked once per shape and shared by every
-    /// element wearing the same one. The band is the one thing here that wants a mesh - a batched polygon has none, the
-    /// pass reconstructs it from its field - so the shape is tessellated ON DEMAND and only for the polygons that
-    /// actually wear a band. Null when there is no boundary to measure from; the element then wears no band at all
-    /// rather than a wrong one.</summary>
+    /// <summary>The shared distance field an aura or shadow on this polygon reads, tessellated on demand; null when there
+    /// is no boundary.</summary>
     internal ITexture HaloField(out Rect localBounds, out double range)
     {
         localBounds = default;

@@ -10,8 +10,7 @@ namespace Adamantium.UI.Controls;
 /// The effective item list of an <see cref="ItemsControl"/>: either items authored directly in markup
 /// (<c>&lt;ItemsControl&gt;&lt;Button/&gt;…</c>) or a view over an assigned <c>ItemsSource</c>. While a source is set the
 /// collection is read-only (mutate the source instead), mirroring WPF. Raises <see cref="INotifyCollectionChanged"/>
-/// so the control regenerates containers. Live subscription to a source's own change notifications is wired in Phase 2;
-/// for now setting a source materialises a snapshot and raises Reset.
+/// so the control regenerates containers. A source that raises its own change notifications is mirrored live.
 /// </summary>
 public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INotifyCollectionChanged
 {

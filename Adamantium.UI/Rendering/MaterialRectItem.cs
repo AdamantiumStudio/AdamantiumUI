@@ -4,14 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the BACKDROP MATERIAL batch (BrushEffect.fx, technique Material): a shape whose fill is made from
-/// what was already drawn behind it. Matches the shader's <c>MaterialRectData</c> field for field.
-///
-/// <para>Like the textured batch, the SOURCE is not in the record: one image is bound per SEGMENT, and so is the
-/// rectangle that maps fragments into it (the effect's <c>SourceRect</c>). Neither belongs to an instance - a draw binds
-/// one image - and keeping the rectangle out of the record is what lets it be recomputed at DRAW time, which a mica
-/// pane depends on: its rectangle is where the desktop put the wallpaper, and it changes when the WINDOW moves, without
-/// anything in the recorded frame changing at all.</para>
+/// One backdrop material instance (BrushEffect.fx, technique Material), matching <c>MaterialRectData</c>. The source image
+/// and <c>SourceRect</c> are bound per segment, so mica can follow window moves at draw time.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct MaterialRectItem
@@ -48,35 +42,15 @@ public struct MaterialRectItem
     /// components: those are the pen's dash/trim/flags, unused only because this batch bakes solid pens today.</summary>
     public Vector4F Clip;
 
-    /// <summary>SURFACES only (velvet, metal): .rgb what the surface is made of - the cloth's own colour, or the
-    /// metal's reflectance at face-on incidence - and .a the grain's scale in device px.
-    /// <para>Three fields of their own rather than borrowed room in <see cref="Tint"/> and <see cref="Knobs"/>. Those
-    /// hold a tint and a blur, and a field that means one thing for one material and something else for another is the
-    /// shape of bug this batch has already produced once. Shared across the surface BRANCH on purpose, though: velvet
-    /// and steel describe one lit surface and differ only in the BRDF that reads it.</para></summary>
+    /// <summary>Surfaces only (velvet, metal): .rgb the cloth color or metal's face-on reflectance; .a grain scale in
+    /// device px.</summary>
     public Vector4F Surface;
 
     /// <summary>SURFACES only: .rgb what the surface answers the light with - the grazing sheen for cloth, the studio
     /// environment for metal - and .a its roughness.</summary>
     public Vector4F Response;
 
-    /// <summary>SURFACES only: .x grain direction in radians, .y light angle in radians, .z light elevation (0 grazing,
-    /// 1 straight on), .w the FIGURE CODE - which way a board was sawn, plus whether it is varnished.
-    ///
-    /// <para>.w used to hold an anisotropy that nothing read, and that could never have worked on the mesh carrier at
-    /// all: there the fourth component of this field is the rounded clip's slot. So on THIS carrier it was free, and
-    /// the wood took it.</para>
-    ///
-    /// <para>Packed into a spare component rather than given a field of its own, and NOT because that is tidier - a
-    /// thirteenth field was written, measured and works on its own. But adding it while a wood PASS exists loses the
-    /// device every time, and neither alone does. Reusing a component that is already there keeps the record at the
-    /// size that is known to be safe.</para>
-    ///
-    /// <para>THE RULE THIS LEAVES: do not grow this record. The failure is deterministic, arrives within seconds on any
-    /// tab, and the validation layer says nothing at all - so it is the GPU refusing, not the API being misused. Ruled
-    /// out by measurement, one at a time: shader weight (cut below what lives), branching on a value from memory,
-    /// reading the field itself, the bevel, the number of passes, the shader cache, a stale incremental blob, and the
-    /// buffer layout and stride. The mechanism is still not understood, so anything that would make this struct bigger
-    /// has to be proven on a live run rather than on the tests.</para></summary>
+    /// <summary>Surfaces only: .x grain direction and .y light angle (radians), .z light elevation (0 grazing, 1 straight
+    /// on), .w the wood figure code (sawing and varnish).</summary>
     public Vector4F Light;
 }

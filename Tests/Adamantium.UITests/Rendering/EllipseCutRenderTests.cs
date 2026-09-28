@@ -16,16 +16,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A SECTOR and a SEGMENT are not shapes of their own: they are the ellipse this batch already draws, with a straight
-/// boundary added, and the field intersects the two. So they batch - no wedge mesh, no second pass, no collector beside
-/// the one that draws circles.
-/// <para>What each test is for: the cut lands in the right QUADRANT (a sign slip in the angle survives any test that only
-/// counts pixels); the two closings differ where they must (a sector keeps the centre, a segment does not); the batch and
-/// the tessellated fallback cut at the same place; and what the batch cannot express is REFUSED rather than drawn wrong.
-/// The angles are the tessellator's: degrees of the parametric angle, and UI space has y DOWN, so 0..90 sweeps from the
-/// right edge to the BOTTOM.</para>
-/// </summary>
+// Batched ellipse sectors and segments: correct quadrant, closings that differ at the center, agreement with the
+// fallback, refusals. Angles are parametric degrees with y down.
 [TestFixture]
 [Category("Gpu")]
 public class EllipseCutRenderTests

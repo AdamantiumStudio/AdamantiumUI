@@ -59,13 +59,7 @@ public class DataGridHeadersPresenter : Panel
     /// <summary>How far the pointer must travel before a press on a header becomes a REORDER rather than a click.</summary>
     private const double DragThreshold = 4;
 
-    // The CORNER: the same control the number strip is made of, with no number in it. Pressing it takes the whole
-    // table - the one gesture every spreadsheet has, and the reason the corner is a button at all.
-    //
-    // It is the head of the WHOLE left pinned zone, not of the numbers alone. Sized to the numbers, it left the strip of
-    // details toggles beside it with no head at all, and the headers carry their own sideways offset - so a column
-    // sliding off the left edge went on being drawn in that gap: another column's funnel showing through above the
-    // toggles. The zone covers itself for the rows; it has to cover itself here too.
+    // The corner selects the whole table and heads the whole left pinned zone, so no scrolled header shows through above it.
     private void SyncCorner()
     {
         if (Owner == null || Owner.LeftStripsLeading <= 0)
@@ -180,11 +174,7 @@ public class DataGridHeadersPresenter : Panel
         return finalSize;
     }
 
-    // Where a column's header actually stands in the strip. The strip carries the sideways offset itself, so a
-    // LEFT-pinned header is simply not subject to it; a RIGHT-pinned one is slid back from the content's end by the
-    // grid's shift, which already carries the scroll - so the strip's own offset comes off it again. ONE description,
-    // used by the arrange and by both hit-tests: a pointer that worked the placement out differently from the layout
-    // answered for whatever column happened to be that far along the content.
+    // Where a column's header stands in the strip, pinned sides included; one answer shared by arrange and both hit-tests.
     private double ScreenXOf(DataGridColumn column, double offset) =>
         column.IsFrozenLeft ? column.Offset
         : column.IsFrozenRight ? column.Offset + Owner.RightPinShift - offset

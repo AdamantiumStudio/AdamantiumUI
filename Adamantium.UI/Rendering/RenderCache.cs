@@ -30,7 +30,7 @@ public partial class RenderCache
         // while its children do), so it cannot be read off Units[0].
         public IUIComponent Component;
 
-        // The clone set as it was RECORDED with this group's contribution (§4o) - never read live off the component at
+        // The clone set as it was RECORDED with this group's contribution - never read live off the component at
         // draw time, which is layout's to write while the render thread draws.
         public IReadOnlyList<Matrix4x4F> Clones;
 
@@ -80,11 +80,7 @@ public partial class RenderCache
         public BatchArena Arena;
         public bool PatchableBatchedOnly;
 
-        /// <summary>WHY this group is not repairable from one arena, or null while it still is. A single boolean was the
-        /// design mistake: it is set from a dozen unrelated places - a band, a gradient polygon, a pattern fill, a
-        /// per-unit draw, text with no run - and every one of them needs a DIFFERENT fix, so "notOneArena" told a reader
-        /// that a frame was lost and nothing about what to do. Same lesson as "structural" for a full walk and as the
-        /// splice's refusal reasons: the cause has to survive to where somebody reads it.</summary>
+        /// <summary>Why this group cannot be repaired from one arena, or null while it can.</summary>
         public string NotBatchableBecause;
 
         /// <summary>This group cannot be repaired from one arena, and here is why. The ONE way to say it - a bare
@@ -137,18 +133,8 @@ public partial class RenderCache
     private bool HoldsUnits(IUIComponent component) =>
         _recordedUnits.TryGetValue(component, out var entry) && entry.Units > 0;
 
-    // UN-RECORDED on the render thread, applied by the recorder that owns the mirror.
-    //
-    // Leaving the paint order is not free: the departed group's instances are blanked and its arena slots handed back
-    // (BlankOrphanInstances). The units object survives - that is the point of pooling a hidden container - but the
-    // BYTES it drew do not. Nothing said so, so the mirror went on claiming units the arena no longer held, and a return
-    // read as "kept its units": re-inserted into the paint order, never re-recorded, drawing nothing while holding its
-    // slot. That is a row of a recycled virtualizing panel going blank and staying blank until the whole scene was
-    // re-recorded.
-    //
-    // The mirror is the RECORDER's (see _recordedUnits) and the blanking is the render thread's, so the fact crosses
-    // here rather than being written across. Draining it is O(what actually left the order) - nothing per frame, nothing
-    // at rest.
+    // Components whose instances the render thread blanked (BlankOrphanInstances); the recorder drains this so their
+    // return re-records instead of assuming the units still hold bytes.
     private readonly List<IUIComponent> _unrecorded = new();
 
     private void NoteUnrecorded(IUIComponent component)
@@ -171,11 +157,7 @@ public partial class RenderCache
 
             _unrecorded.Clear();
 
-            // Listing them as dirty is NOT enough, and that is the whole shape of this state: the ranks still stand, the
-            // units still exist, and only the bytes underneath them went - so the paint order the retained stream
-            // describes no longer matches the arena it addresses, and no per-component mark can say that. This is the
-            // flag that exists for exactly this ("a state only a full RECORD can fix"), and it is paid once per batch of
-            // departures, not per frame.
+            // Dirty marks are not enough: the stream no longer matches the arena, which only a full record fixes.
             _forceFullNextFrame = true;
             Core.LoopSignal.Request();
         }
@@ -230,11 +212,7 @@ public partial class RenderCache
     // the segment already bound, so a kind that no longer matches has to refuse and let the walk own it.
     private readonly Dictionary<IRenderUnit, int> _fractalKindByUnit = new();
 
-    // ...and the same for a GEOMETRY unit whose fill rides the instanced collector: which key-arena holds it and at
-    // which slot. The arena could already re-bake one record in place (TryStage + UpdateSlotFromStage - the splice uses
-    // exactly that); what was missing was the paint path knowing WHERE a given unit sits, so IsSlotPatchable answered
-    // "no" for every Path and one of them cost the frame a walk of the whole scene. Measured on a faded subtree: 200
-    // refusals in 8 s, all GeometryRenderUnit<Path>, at 38 ms a frame against 0.5 for a patched one.
+    // ...and for geometry units on the instanced collector: which key-arena and slot, so paint patches can reach them.
     private readonly Dictionary<IRenderUnit, (BatchArena Arena, int Slot)> _fillSlotByUnit = new();
 
     // Which halo records a unit occupies. A shape's soft bands used to be written by the WALK alone: a colour change
@@ -332,7 +310,7 @@ public partial class RenderCache
 
     /// <summary>Brings the retained render scene up to date, doing only as much work as changed: clean -> re-draw last
     /// frame's units; non-structural -> re-render just the dirty components in place; structural / first build -> a full
-    /// tree walk. (docs/RENDER_CACHE_REDESIGN.md §4a/§4i)</summary>
+    /// tree walk.</summary>
     public void BuildFromVisualTree(IRootVisualComponent visualRoot)
     {
         RecordFrame(visualRoot);
@@ -450,11 +428,8 @@ public partial class RenderCache
             }
             // a structural change or a new invalidation surfaced during the partial pass -> escalate below
 
-            // ...and everything this pass recorded is DISCARDED by the escalated record (it Resets the packet). But
-            // RecordReRender already ran component.Render, which set IsGeometryValid back to true - so the full walk would
-            // read "was clean", get no commands, and REUSE the units describing the component's PREVIOUS appearance
-            // (a de-selected row keeping its highlight through a fast virtualized scroll, forever). Give the flag back:
-            // the pass that supersedes this one must re-record them for real.
+            // The escalated record discards this pass, but Render already validated the geometry; invalidate it again so
+            // the full walk re-records instead of reusing stale units.
             foreach (var component in _partialConsumed)
             {
                 component.InvalidateRender(false);

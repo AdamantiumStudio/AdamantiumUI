@@ -2,15 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's spin box, built to match this theme's FIELD: a rule under the value, not a box around it. A
-         properties panel puts a spin box directly under a text field, and two different frames for the same job -
-         "type a value here" - is what makes a panel look assembled rather than designed. Whatever the field is, this
-         follows it.
-
-         The PART NAMES and the five-seat grid are Fluent's on purpose. Its six placement multi-triggers decide which
-         seat each button takes for every combination of ButtonsPlacement and AreButtonsSwapped - pure behaviour with
-         nothing to do with the look - and keeping the names means all of it keeps working while this file states only
-         the shape. Its style set stays included for exactly that reason. -->
+    <!-- Editor Pro's spin box, matching its text field (a rule under the value). Part names and the five-seat grid match
+         Fluent's so the placement triggers work unchanged. -->
 
     <Style Selector="NumericUpDown">
         <Setter Property="Background" Value="Transparent"/>
@@ -52,11 +45,8 @@
                                         Margin="{TemplateBinding Padding}"
                                         MinWidth="0" MinHeight="0"
                                         VerticalAlignment="Center">
-                                    <!-- The editor is EMBEDDED and must bring no chrome of its own - the rule below is
-                                         already this control's. Stripping its properties is not enough: the TextBox
-                                         theme's state triggers write to ITS parts, and a trigger outranks what a
-                                         template sets. A template with none of those parts leaves those setters with
-                                         nothing to find, and a setter whose target is missing does nothing. -->
+                                    <!-- The embedded editor gets a bare template, so the TextBox theme's state triggers
+                                         find no parts to restyle. -->
                                     <TextBox.Template>
                                         <ControlTemplate TargetType="TextBox">
                                             <ScrollViewer x:Name="PART_ContentHost"
@@ -91,13 +81,8 @@
         </Setter>
     </Style>
 
-    <!-- WHERE the two buttons sit, for every combination of ButtonsPlacement and AreButtonsSwapped. Pure behaviour -
-         nothing here is about how anything looks - and the seats are the five columns the template above lays out:
-         0 and 1 are the left pair, 3 and 4 the right one. The DEFAULT (Split, not swapped) is stated by the template
-         itself, so only the other five combinations need saying.
-         These live in this theme now rather than being borrowed: a theme that owns a control's template owns the rules
-         that address ITS parts, and leaving them in another theme's file meant this one only worked while that file
-         was also loaded. -->
+    <!-- Button seats (columns 0-1 left, 3-4 right) for each ButtonsPlacement/AreButtonsSwapped combination besides the
+         template's default (Split, not swapped). -->
     <Style Selector="NumericUpDown">
         <MultiTrigger>
             <MultiTrigger.Conditions>
@@ -154,11 +139,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- The states that are not about the pointer. These are the control ANSWERING FOR ITSELF - whether it has its
-         buttons, whether it can be typed into, whether it is enabled at all - and they were being borrowed from
-         Fluent's set along with the part names. When that include was dropped they left with it, silently: the spin
-         box kept its shape and stopped reacting, so AreButtonsVisible="false" did nothing and a disabled one looked
-         exactly like a live one. -->
+    <!-- Non-pointer states: button visibility, read-only and disabled. -->
     <Style Selector="NumericUpDown">
         <PropertyTrigger Property="AreButtonsVisible" Value="false">
             <Setter TargetName="PART_Decrease" Property="Visibility" Value="Collapsed"/>

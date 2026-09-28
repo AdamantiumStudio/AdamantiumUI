@@ -1,15 +1,8 @@
 <ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
         xmlns="http://adamantium/ui">
 
-    <!-- The INFINITE CANVAS's own pictures, and the one icon set in this project that belongs to no theme.
-
-         They are here rather than in Fluent's because that is what they are: the grip a pane is carried by, the
-         tools a canvas offers, the bin that clears it. Every theme showed them by linking Fluent's dictionary, which
-         said - wrongly - that a canvas in the macOS theme is wearing a Fluent icon. A theme that wants its own still
-         overrides a key in its own dictionary; what changes is only where the DEFAULT lives.
-
-         Drawn on a 10x10 field, stroked rather than filled wherever the mark IS a stroke, and colored from the
-         palette so they follow the theme they are shown in. -->
+    <!-- The infinite canvas's default icons, shared by all themes (a theme overrides a key in its own dictionary). Drawn
+         on a 10x10 field, colored from the palette. -->
 
     <!-- Stick to the edge: a wall and something coming to rest against it. Off by default and asked for by this
          button, because a panel that jumps to an edge whenever it passes near one will not stay where it was put. -->

@@ -168,12 +168,7 @@ public class TextBoxTests
         Assert.That(tb.Text, Is.EqualTo(string.Empty));
     }
 
-    /// <summary>The caret has to stand where the LETTERS are, and the letters are anchored to two reference lines the
-    /// glyph pipeline rounds to whole pixels (the ascender line and the baseline) so that same-height glyphs share exact
-    /// rows. A caret on any other band cannot line up with them: cut to the font's ascent..descent it started a pixel
-    /// below the tops of the digits and hung four pixels under their feet - measured on the stand, and the offset reads
-    /// as a caret that slipped down. The surface height is computed by different code (it reserves the line's true ink
-    /// bottom, descent included), so it stays a check rather than a restatement of the formula.</summary>
+    // The caret spans the pixel-rounded ascender line to baseline, where the glyphs sit, not the font's ascent..descent.
     [Test]
     public void Caret_SpansTheGlyphBand_OnWholePixels()
     {

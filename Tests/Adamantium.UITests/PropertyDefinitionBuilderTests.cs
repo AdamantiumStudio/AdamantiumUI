@@ -7,11 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The builder that turns a TYPE into definitions. It is what makes an inspector work on an object nobody
-/// wrote a form for - a component of an entity, say - and it is a class of its own so that an inspector written by hand
-/// never drags reflection in with it.
-/// <para>What it produces are ordinary definitions with ordinary bindings: nothing downstream can tell a generated
-/// inspector from a written one.</para></summary>
+// PropertyDefinitionBuilder turns a type into ordinary definitions with ordinary bindings, by reflection.
 [TestFixture]
 public class PropertyDefinitionBuilderTests
 {

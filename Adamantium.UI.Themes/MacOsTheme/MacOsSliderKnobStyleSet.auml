@@ -2,25 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The knob both sliders take hold of, as ONE style rather than as an inline template in each of them - because it
-         now has a STATE (it glows while it is being dragged), and a state needs a trigger, and a trigger needs a part it
-         can name. An inline Thumb.Template has no name to offer, and duplicating this into the two slider sets would put
-         two styles on one selector, which is its own bug.
-
-         Opted into by class - <Thumb Classes="SliderKnob"/> - so the scrollbar's thumb and the splitter's are untouched.
-
-         WHITE IN BOTH APPEARANCES, like the switch's: it is a physical knob, and a knob does not change colour with the
-         lighting. What changes with the appearance is what SEPARATES it from the background, and that is a colour the
-         variant supplies (see SliderKnobShadowColor - a real shadow in the light appearance, nothing in the dark one,
-         where a white circle on #323232 already stands out).
-
-         HELD = LIT. An aura, not a bigger shadow: a shadow says how high a thing floats, and the knob does not rise
-         when you grab it - it becomes the thing you are working with, which is what light says. It appears only while
-         dragging, so the resting control never glows.
-
-         The 4 of reach is not a taste either: the knob is 20 in a 28 control, so there are exactly four clear on each
-         side, and neither band may ask for more - the engine does not grow layout for a halo, and the excess would be
-         cut by the first ancestor that clips with nothing to say it had happened. -->
+    <!-- The shared slider knob (<Thumb Classes="SliderKnob"/>): white in both variants, separated by the variant's
+         SliderKnobShadowColor, and lit by an aura while dragged. Reach is 4, the clearance of a 20 knob in a 28 control. -->
 
     <Style Selector="Thumb.SliderKnob">
         <Setter Property="Template">
@@ -37,17 +20,8 @@
                             <Shadow OffsetY="1" BlurRadius="3" Opacity="1"
                                     Color="{ObservableResource SliderKnobShadowColor}"/>
                         </Border.Shadow>
-                        <!-- DECLARED HERE, SWITCHED OFF - not handed over by the trigger as a finished object. An Aura
-                             built inside Setter.Value only comes into existence at the moment of the drag, which is why
-                             it arrived late. Living in the template it is there from the start, and the trigger below
-                             has nothing to do but flip the switch - which is exactly what Aura.IsEnabled is for.
-
-                             AND THE COLOUR IS {ObservableResource}, NOT {ResourceReference}. A ResourceReference is a
-                             one-shot lookup performed WHEN THE ELEMENT ATTACHES to the tree; an Aura is a property
-                             VALUE and never attaches, so the lookup never ran and it kept Aura's own default - white.
-                             Every other colour-served key in the themes (the tab strip's edge fades, the shimmer
-                             stops - all of them on GradientStop.Color, which sits exactly where this does) uses
-                             ObservableResource for the same reason. -->
+                        <!-- Declared disabled here so the trigger only flips IsEnabled; the color is {ObservableResource}
+                             because an Aura never attaches to the tree, so a ResourceReference would never resolve. -->
                         <Border.Aura>
                             <!-- A RIM plus a short fade, not a wide soft glow: Spread is the solid part the fade starts
                                  outside of. Four pixels of soft haze around a bright white circle is swallowed by the

@@ -4,11 +4,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
-/// <summary>WHICH TEMPLATE draws a thing the page put on the plane, by the type of that thing - the drawing side's
-/// answer to <see cref="NodeBodySelector"/>.
-/// <para>The page says WHAT is there and the canvas builds the control, so no view-model here ever holds one. A shape
-/// needs nothing of this: the canvas knows how to draw a shape from its description, and only what is NOT a shape
-/// comes past here.</para></summary>
+/// <summary>Picks the template for a non-shape item placed on the plane by its type, like <see cref="NodeBodySelector"/>;
+/// shapes are drawn by the canvas directly.</summary>
 public sealed class PlacedThingSelector : DataTemplateSelector
 {
     /// <summary>Something to press.</summary>

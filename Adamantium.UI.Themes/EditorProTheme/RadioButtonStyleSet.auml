@@ -2,15 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's radio. A RING with an accent dot in it, not a filled accent disc.
-
-         Fluent floods the whole circle with the accent and punches the dot out of it in the on-accent colour. At 14
-         pixels that is a solid coin, and a column of choices becomes a column of coins with one lit. Keeping the ring
-         empty and putting the accent only in the dot means the eye finds the chosen row by a small bright point rather
-         than by the largest blob - which is what a list of alternatives should read like.
-
-         It also keeps the radio and the checkbox honestly different: one fills, one dots. Fluent fills both, so at a
-         glance the only difference between them is the corner radius. -->
+    <!-- Editor Pro's radio: an empty ring with an accent dot, unlike the filled checkbox. -->
 
     <Style Selector="RadioButton">
         <Setter Property="Background" Value="Transparent"/>

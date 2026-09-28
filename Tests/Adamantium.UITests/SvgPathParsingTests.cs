@@ -163,12 +163,8 @@ public class SvgPathParsingTests
         + "M21.838 13.5294L22.6613 12.5882H24.537L23.7136 13.5294H21.838ZM28.5816 8.03294L26.7913 7.88235L27.6147 6.94118"
         + "L27.8392 7.73461L28.5816 8.03294Z";
 
-    // OPEN: the non-zero rule is not applied to contours that genuinely CROSS. This grid's first sub-path crosses its
-    // last, which sends it to the general pipeline, where the fill rule is not consulted at all - the contours are
-    // merely united and every cell disappears. Closing it means finding the FACES of the cut-up contours (walking the
-    // planar graph), which the scanline there does not do. Explicit so it is a standing question and not a silent skip.
-    // First, the body of that same icon ON ITS OWN - no cells, nothing crossing. If this is not filled, the trouble is
-    // in reading or walking the contour itself and not in the rule.
+    // Open: non-zero is not applied to genuinely crossing contours (the general pipeline unites them). This checks the
+    // icon's body alone, with nothing crossing.
     [Test]
     public void TheBodyOfARealIconIsFilled()
     {

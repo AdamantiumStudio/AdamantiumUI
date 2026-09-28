@@ -5,14 +5,8 @@ using Adamantium.UI.Core.TypeParsers;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// A style's match rule (the <c>Selector="…"</c> of a <see cref="Style"/>) - an AND of type / class / class-group / id
-/// facets, CSS/WPF-style. Named StyleSelector (not "Selector") so it does not collide with the
-/// <see cref="Adamantium.UI.Controls"/> selecting-items control base of the same concept name.
-/// <para>May also carry PROPERTY CONDITIONS (<c>"TabControl[TabStripPlacement=Left]"</c>, Avalonia-style): those do NOT
-/// gate attachment (<see cref="Match"/> stays structural) - the style attaches to every type/class/id match and its
-/// setters are then applied only WHILE the conditions hold, re-applied as the properties change. See Style.Attach.</para>
-/// </summary>
+/// <summary>A style's match rule: an AND of type, class and id facets. Property conditions
+/// (<c>"TabControl[TabStripPlacement=Left]"</c>) do not gate <see cref="Match"/>; setters apply only while they hold.</summary>
 [TypeParser(typeof(SelectorParser))]
 public class StyleSelector
 {
@@ -48,14 +42,8 @@ public class StyleSelector
         if (Types.Count == 0 && Classes.Count == 0 && ClassGroups.Count == 0 && Id == null && Conditions.Count == 0)
             return false;
 
-        // AND of every SPECIFIED facet (CSS/WPF semantics): "Button.Accent" = type Button AND class Accent; a
-        // single-facet selector ("Button") still matches purely on that facet.
-        // Type match is IS-A here (a Window selector matches a MainWindow : Window) - it decides only CANDIDACY. The
-        // BOUNDARY that stops a base type's implicit style from bleeding onto a derived one is applied in
-        // Theme.FindStylesForComponent, which keeps only the NEAREST styled ancestor's type styles (DefaultStyleKey
-        // semantics): a control with its own style is a hard boundary (a CheckBox does NOT get the ToggleButton style),
-        // while a subclass with NO style of its own (an AUML x:Class MainWindow) still falls back to its base's. Explicit
-        // cross-type sharing is via Style.BasedOn. IS-A candidacy (not exact) is also what lets Attach apply that fallback.
+        // AND of every specified facet. Type match is is-a and decides only candidacy; Theme.FindStylesForComponent keeps
+        // just the nearest styled ancestor's type styles.
         if (Types.Count > 0 && !Types.Any(t => t.IsAssignableFrom(control.GetType()))) return false;
         if (Id != null && control.Id != Id) return false;
         if (Classes.Count > 0 && !HasAllClasses(control)) return false;

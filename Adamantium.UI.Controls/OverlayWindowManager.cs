@@ -12,13 +12,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// The in-window window manager: one per parent window (a <see cref="IPopupHost"/>). Each <see cref="OverlayWindow"/> is
-/// hosted as its OWN card-sized popup - centred on the window and offset for the cascade/drag - like a menu or tooltip, so
-/// a click outside a window falls through to the content behind (a single full-window host popup would absorb every click).
-/// New windows cascade so they don't open exactly on top of the last, interacting with one raises it to the front, and a
-/// pinned window stays above the unpinned ones. A modal window additionally gets a full-window dim scrim beneath it.
-/// </summary>
+/// <summary>Manages overlay windows for one parent window. Each is its own card-sized popup, so clicks outside fall
+/// through; windows cascade, raise on interaction, and a modal one gets a dim scrim.</summary>
 public sealed class OverlayWindowManager
 {
     private static readonly ConditionalWeakTable<IPopupHost, OverlayWindowManager> Managers = new();
@@ -100,11 +95,7 @@ public sealed class OverlayWindowManager
             _windows.Remove(window);
             var next = _windows.Count > 0 ? _windows[^1] : null;
             SetActive(next);   // the next front-most becomes active
-            // ...and takes the keyboard with it, the way closing the front window on a desktop hands it to the one behind.
-            // NOT the captured return: that is where the focus was before THIS window opened, and a window is opened by
-            // CLICKING something - so the captured place is a button in the parent window, and closing the top overlay
-            // threw the keyboard back there over the heads of every overlay still open. The captured place is right only
-            // when the last one closes and there is nothing left to hand the keyboard to.
+            // ...and focus goes to it; the captured return point is used only when no overlay is left open.
             if (next != null)
             {
                 next.TakeKeyboardBack();

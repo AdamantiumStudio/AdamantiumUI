@@ -35,11 +35,8 @@ public class EllipsePayload(
     // reachable) while the applier reads those very fields to build the stroke. Same fix as GeometryPayload.
     public Pen Pen { get; } = pen?.CloneForRendering();
 
-    /// <summary>How thick a RING to leave, in DIPs, measured inward from the outline. 0 = a solid shape.
-    /// <para>This makes an annulus - and with a sweep, an annular sector - a SHAPE rather than a thick stroke. A ring gauge
-    /// was drawn by stroking a partial ellipse, which put its thickness in the PEN: the pen was then spent, so the ring
-    /// could not carry an outline of its own, and the thickness could not be told apart from a border. As geometry it is
-    /// just the ellipse's field minus its inward offset - the same intersection a sector is - and the pen is free again.</para></summary>
+    /// <summary>Ring thickness in DIPs, inward from the outline (0 = solid); makes an annulus a shape, leaving the pen
+    /// free.</summary>
     public Double RingThickness { get; init; }
 
     public bool HasRing => RingThickness > 0;

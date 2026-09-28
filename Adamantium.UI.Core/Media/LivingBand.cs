@@ -2,13 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>
-/// A LIVING aura as the renderer wants it: the same band as <see cref="HaloBand"/>, plus how far its reach wanders,
-/// how fast that drifts, how fine the tongues are, and the palette the wander travels.
-/// <para>Kept apart from the plain band rather than folded into it: only an aura can live - a shadow cast by an object
-/// does not breathe - and a still band must not carry a palette it never reads, nor pay for a pass it never needs.</para>
-/// <para>An immutable value captured on the RECORD thread, like every other halo value.</para>
-/// </summary>
+/// <summary>A living aura for the renderer: a <see cref="HaloBand"/> plus wander, drift speed, tongue detail and palette.
+/// Immutable, captured at record time.</summary>
 public readonly struct LivingBand
 {
     public LivingBand(float spread, float softness, bool inner, float turbulence, float flow, float detail,

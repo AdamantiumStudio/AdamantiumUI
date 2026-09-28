@@ -2,13 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- ColorPickerButton: a colour WELL - a framed swatch that opens the picker in a floating panel. The control
-         toggles and positions the popup and light-dismisses in code; the picker inside is {Binding}-bound two-way.
-
-         The hover says its piece with the FRAME, not with a fill behind it. This is a bordered control, and on this
-         platform a bordered control does not light up under the pointer - what it does is sharpen its edge, which is
-         also the only thing that can be seen here: the middle of a colour well is the colour, and washing anything over
-         it would be a lie about the value being picked. -->
+    <!-- ColorPickerButton: a color well opening the picker in a floating panel. Hover sharpens the frame, never tints the
+         swatch. -->
 
     <Style Selector="ColorPickerButton">
         <!-- The inset the swatch sits in, read by the template below - see Fluent's set. -->
@@ -35,15 +30,8 @@
 
                         <Popup x:Name="PART_Popup"
                                 Placement="Bottom" FlipToFit="True" VerticalOffset="4">
-                            <!-- The picker is built LAZILY on first open, not eagerly in every swatch's template - a
-                                 whole ColorPicker per swatch is far too much to build for a flyout most of them never
-                                 open. DataContext is set to the ColorPickerButton in code, so this plain {Binding}
-                                 resolves to our SelectedColor two-way.
-                                 THE SURFACE IS GLASS HERE and solid where the picker stands on a page: what decides it
-                                 is not the control but where it is, and this is the one place that knows - a panel that
-                                 appears over the document for the length of a choice is a flyout like a menu is. Every
-                                 other transient surface in this theme is FlyoutSurfaceFill; this one was the last that
-                                 was not. -->
+                            <!-- The picker builds on first open; its DataContext is the button, so {Binding} reaches
+                                 SelectedColor. A transient panel, so it takes FlyoutSurfaceFill. -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
                                     <ColorPicker SelectedColor="{Binding SelectedColor, Mode=TwoWay}"

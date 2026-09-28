@@ -9,14 +9,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// What a retained batch is, said WITHOUT its item type. The patch paths repair a frame segment by segment, and every
-/// batched family - rectangles, ellipses, their gradient forms, glyphs - is drawn from a segment in exactly the same
-/// way. Only the bytes differ, and those never leave the collector: a patch STAGES its items inside the arena that will
-/// hold them and then names the staged range, so nothing generic has to travel through the caller.
-/// <para>Without this the repair could only be written against ONE closed type, and it was: a control that drew an
-/// ellipse where a rectangle was expected cost a walk of the whole window, for no reason but the type parameter.</para>
-/// </summary>
+// A retained batch without its item type, so patch paths can repair any batched family segment by segment; items are
+// staged inside the arena and referred to by range.
 internal abstract class BatchArena
 {
     /// <summary>Which <see cref="RenderOp.Batch"/> draws this arena - how a recorded op is matched back to it. Set per
@@ -80,16 +74,8 @@ internal abstract class BatchArena
     /// <summary>Where the next staged item lands, so a group can name the range it is about to append.</summary>
     public abstract int StagedCount { get; }
 
-    /// <summary>Bake one unit into the stage. False = this family cannot hold it (wrong unit, rotated, gradient it does
-    /// not draw) and the patch must refuse - which is what a family with nothing to stage answers to everything.
-    /// <para><paramref name="ownerTag"/> is the group these bytes belong to, and it travels INSIDE the instance so a slot
-    /// can name its owner however many times the arena has copied it. The walk has always stamped it; staging did not,
-    /// and that is a real hole rather than an omission of tidiness: anything a PATCH put on screen was invisible to the
-    /// orphan sweep, so when it stopped drawing its instances kept being issued inside a live segment's range. That is
-    /// the phantom scrollbar track - the track arrives and leaves by patch, which is why it reproduced every time.</para></summary>
-    /// <para><paramref name="clipSlot"/> is the ROUNDED CLIP the record is cut by, and it is here for exactly the reason
-    /// ownerTag is: a staged record has to come out identical to the one the walk writes, and anything the walk stamps
-    /// that staging does not is a hole. Families that do not carry a clip yet ignore it.</para>
+    /// <summary>Bakes one unit into the stage; false when this family cannot hold it and the patch must refuse.
+    /// <paramref name="ownerTag"/> and <paramref name="clipSlot"/> are stamped exactly as the walk stamps them.</summary>
     public abstract bool TryStage(IRenderUnit unit, Matrix4x4F world, int transformSlot, int ownerTag, int clipSlot = -1);
 
     /// <summary>Replace [at, at+replaced) inside a segment with a staged range, shifting only what follows. False when the

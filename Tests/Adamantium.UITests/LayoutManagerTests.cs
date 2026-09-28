@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Phase 1 of the layout-manager plan: layout is dirty-queue-driven, not a per-frame full-tree walk. These tests assert
+// Layout is dirty-queue-driven, not a per-frame full-tree walk. These tests assert
 // the headline guarantee - a CLEAN frame (nothing invalidated) triggers ZERO Measure/Arrange calls - and that
 // invalidating a node DOES schedule work on the next pass, then settles back to zero.
 public class LayoutManagerTests
@@ -161,13 +161,7 @@ public class LayoutManagerTests
         });
     }
 
-    // Root-cause regression for the "recycled virtualized tiles frozen at a previous cell size" bug: when a child's
-    // measure is invalidated AFTER the parent measured but BEFORE the parent arranges (exactly what a mid-pass content
-    // rebind does to a container's inner ContentPresenter), the parent's arrange cascade reaches that child with an
-    // invalid measure. Arrange used to ABORT there, leaving the child frozen at its old size while the parent - arranged
-    // to the NEW size and now valid - never re-cascaded into it. It must instead re-measure inline and land at the
-    // parent's new slot. (The forced-Measure/Arrange virtualization tests never hit this because they never leave a child
-    // measure-invalid across a parent arrange.)
+    // A child invalidated between its parent's measure and arrange is re-measured inline during the arrange cascade.
     [Test]
     public void Arrange_ChildMeasureInvalidatedAfterParentMeasure_LandsAtParentSlot_NotFrozen()
     {
@@ -189,16 +183,7 @@ public class LayoutManagerTests
         Assert.That(child.RenderSize.Height, Is.EqualTo(200).Within(0.5));
     }
 
-    // Root-cause regression for "a theme swap leaves the window EMPTY until a resize".
-    //
-    // The dirty FLAGS live on the element, but the dirty QUEUES belong to a visual ROOT - and a DETACHED element has no
-    // root, so an invalidation raised while it is detached is enqueued where no layout pass will ever look. Re-attaching
-    // does not by itself undo that, and the loss is invisible whenever the re-attached subtree's own root stays
-    // measure-VALID: the parent's cascade short-circuits at it (same constraint) and never reaches the dirty node below.
-    //
-    // That is precisely a theme swap: re-templating the window detaches its whole content subtree, everything in it is
-    // re-styled (and re-templated) WHILE detached, and every invalidation that follows is dropped. A resize "fixed" it
-    // only because a new constraint fails every Measure gate and brute-forces the whole tree.
+    // Invalidations raised while detached (as during a theme swap) reach the layout queues once the subtree re-attaches.
     [Test]
     public void InvalidatedWhileDetached_IsRelaidOut_WhenReattached()
     {
@@ -250,7 +235,7 @@ public class LayoutManagerTests
         Assert.That(leaf.MeasureOverrideCount, Is.EqualTo(after), "the deferral is one-shot, not sticky across passes");
     }
 
-    // Phase 2: arrange is top-down by saved slot. Invalidating ONLY a child's arrange must re-arrange that child into
+    // Arrange is top-down by saved slot. Invalidating ONLY a child's arrange must re-arrange that child into
     // its own last correct slot (not park it at the parent origin), and touch only its subtree - not re-arrange the
     // whole tree from the root.
     [Test]
@@ -307,7 +292,7 @@ public class LayoutManagerTests
             "a child size change must propagate up and re-measure the parent");
     }
 
-    // Phase 3: the pass must survive invalidation that happens DURING the pass. A control that invalidates its measure
+    // The pass must survive invalidation that happens DURING the pass. A control that invalidates its measure
     // inside ArrangeOverride must not corrupt the pass - it must converge and leave the tree fully valid + correctly
     // laid out (not exit with an unarranged node because the arrange entry was consumed before its re-measure).
     [Test]
@@ -339,7 +324,7 @@ public class LayoutManagerTests
         });
     }
 
-    // Phase 4: LayoutUpdated marks "layout settled this frame" - it fires once per pass that did work, and not at all on
+    // LayoutUpdated marks "layout settled this frame" - it fires once per pass that did work, and not at all on
     // a clean frame (so a consumer can rebuild on it instead of every frame).
     [Test]
     public void LayoutUpdated_FiresOncePerSettledPass_NotOnCleanFrame()
@@ -360,7 +345,7 @@ public class LayoutManagerTests
         Assert.That(fired, Is.EqualTo(2), "LayoutUpdated should fire again after a new invalidation settles");
     }
 
-    // Phase 5: the dirty-queue model must scale - a clean frame and a single-leaf arrange cost the same regardless of
+    // The dirty-queue model must scale - a clean frame and a single-leaf arrange cost the same regardless of
     // tree size (the old full walk visited every node every frame).
     [Test]
     public void LargeTree_CleanFrameAndSingleLeafArrangeDoNotScaleWithSize()

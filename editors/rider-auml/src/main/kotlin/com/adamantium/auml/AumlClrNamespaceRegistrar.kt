@@ -8,13 +8,8 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile
 
 /**
- * Marks a .auml file's `clr-namespace:` xmlns URIs as "ignored" XML resources so the built-in XML
- * support treats them as known (no red "URI is not registered"). This is the same mechanism that
- * registers the static `http://adamantium/ui` namespaces (see [AumlResourceProvider]), applied
- * dynamically per file because `clr-namespace:` URIs vary from file to file and can't be enumerated
- * ahead of time. It resolves the namespace reference upstream, so no error highlight is produced —
- * more reliable than filtering the highlight after the fact. The AUML language server stays the real
- * validator: it flags a `clr-namespace:` that doesn't resolve to any type.
+ * Registers a .auml file's `clr-namespace:` xmlns URIs as ignored XML resources per file (like [AumlResourceProvider]
+ * does for static namespaces); the language server remains the real validator.
  */
 class AumlClrNamespaceRegistrar : FileEditorManagerListener {
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {

@@ -2,12 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A repeat button is a button held down: a spin box's arrows, a scrollbar's page area. Same resting quiet as the
-         plain button - it appears under the pointer and is otherwise a glyph on the panel.
-
-         Its own template rather than the plain button's, because it is the one button in this theme that is often
-         TINY: a spinner arrow is a few pixels tall, and the button's minimum height would make the spin box twice as
-         tall as the field beside it. So this one states no minimum at all and takes the size its host gives it. -->
+    <!-- A repeat button, quiet until hovered like the plain one, but with no minimum size so tiny spinner arrows fit. -->
 
     <Style Selector="RepeatButton">
         <Setter Property="Background" Value="Transparent"/>
@@ -53,13 +48,8 @@
         </Setter>
     </Style>
 
-    <!-- The trough and page areas of a scrollbar and of a slider's track are ScrollBarPageButtons - a RepeatButton
-         SUBTYPE. Style matching is IS-A, so everything above bleeds onto them, and the hover fill turns the empty half
-         of every slider into a lit rectangle the moment the pointer crosses it. They must be INVISIBLE but still
-         hit-testable, since clicking the trough is how paging works - and a component hit-tests its box with a
-         transparent background, so nothing is lost by painting nothing.
-         The STATE brushes have to be cleared too, not just the resting one: the triggers below project them onto the
-         chrome, and a transparent rest with a lit hover is exactly the artefact this prevents. -->
+    <!-- Trough page areas (ScrollBarPageButton, a RepeatButton subtype) stay invisible but hit-testable, with state
+         brushes cleared too so hover does not light them. -->
     <Style Selector="ScrollBarPageButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

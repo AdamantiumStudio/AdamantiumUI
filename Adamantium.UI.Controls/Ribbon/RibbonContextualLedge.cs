@@ -3,12 +3,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>The coloured PLATE a run of contextual tabs stands on, with the context's title along its top. Built and
-/// placed by <see cref="Panels.RibbonTabPanel"/>: which tabs a plate spans is a fact about the STRIP's layout, and
-/// nothing above the strip can know it.
-/// <para>One plate for the whole run, drawn UNDER its tabs, rather than a colour on each tab: analytic anti-aliasing
-/// gives every filled edge half coverage exactly on the edge, so two abutting fills compose to about three quarters
-/// and leave a dark hairline down the join. One fill has no joins to leave.</para></summary>
+/// <summary>The colored plate under a run of contextual tabs, titled with the context; placed by
+/// <see cref="Panels.RibbonTabPanel"/>. One fill for the run, since abutting fills leave a seam.</summary>
 public class RibbonContextualLedge : ContentControl
 {
     /// <summary>Height of the title band at the top of the plate; the rest of it is what the tabs stand on. Zero when

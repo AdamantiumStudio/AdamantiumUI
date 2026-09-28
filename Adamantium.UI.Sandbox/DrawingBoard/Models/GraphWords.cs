@@ -1,14 +1,7 @@
 ﻿namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
-/// <summary>EVERY WORD THIS PAGE'S GRAPH IS BUILT OUT OF, in one place.
-/// <para>None of them is decoration. What a socket CARRIES is what decides whether a wire may go on it and what colour
-/// it wears; what a NODE is, is the word the catalogue is looked up with and the word a saved file names it by; what a
-/// socket is CALLED is the address a saved wire finds its end at. Every one of them is matched against the same word
-/// written somewhere else - so one typed twice is a wire that silently refuses to go on, a node that comes back blank
-/// from a file, or a pin painted the theme's grey for no visible reason.</para>
-/// <para>Grouped rather than laid out flat because the same word means different things in different places: "Color" is
-/// a kind of node, AND a thing that flows, AND the name of a socket. Three constants called Color would be three ways
-/// to reach for the wrong one.</para></summary>
+/// <summary>Every name the page's graph matches on (socket data types, node kinds, socket names), defined once and grouped
+/// by meaning, since the same word appears in several roles.</summary>
 public static class GraphWords
 {
     /// <summary>WHAT FLOWS through a socket. Two sockets join when these agree, and the pin takes its colour from

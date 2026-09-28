@@ -9,14 +9,8 @@ namespace Adamantium.UI.LanguageServer;
 /// <summary>A diagnostic span (0-based line/character) and message for an AUML problem.</summary>
 public sealed record AumlDiagnostic(int Line, int Character, int Length, string Message);
 
-/// <summary>
-/// Walks a well-formed AUML document and validates element names, attribute names, and enum
-/// values against the project's type model. Validates every element whose xmlns is a registered
-/// AUML namespace (default, controls, resources, …) and descends into property-element values
-/// (e.g. <c>&lt;Setter.Value&gt;&lt;ControlTemplate&gt;…</c>), so it covers real themes/templates.
-/// Deliberately conservative — it only flags things that definitely don't exist, and skips
-/// malformed/incomplete buffers (the editor's own XML support covers syntax).
-/// </summary>
+/// <summary>Validates element, attribute and enum names in a well-formed AUML document against the project's types,
+/// including property-element values. Flags only what definitely does not exist.</summary>
 public static class AumlValidator
 {
     public static IReadOnlyList<AumlDiagnostic> Validate(string text, AumlTypeModel model)

@@ -3,14 +3,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// <c>x:DataType</c> declares what a DataTemplate is written against, the way <c>x:ViewModel</c> declares it for a view.
-/// Nothing is generated from it - tooling resolves <c>{Binding}</c> paths inside the template against it. What IS checked
-/// at build time is that the TYPE resolves: a renamed model must not leave a template pointing at nothing.
-/// <para>Deliberately NOT checked: the path members. A view model's bindable members are produced by the MVVM generator,
-/// and Roslyn generators cannot see each other's output - so member checking here would fail every honest binding. The
-/// type is a plain class and always visible; that is the difference.</para>
-/// </summary>
+// x:DataType must resolve at build time; binding path members are not checked, since MVVM-generated members are
+// invisible to this generator.
 [TestFixture]
 public class AumlDataTypeTests
 {

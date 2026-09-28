@@ -1,16 +1,8 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- DataContext is the OpacityViewModel.
-
-         The engine fades a subtree by writing ONE number into a transform-table slot; each shader reads it. A family
-         whose pass cannot read it carries the opacity CHAIN in its baked colour instead - and the two mistakes look
-         nothing like each other on one shape: both applied and it fades twice, neither and it does not fade at all.
-         What makes either visible is a NEIGHBOUR that got it right.
-
-         So the strip is duplicated: the top one lives inside a container this slider fades, the bottom one sits outside
-         it, untouched. Every pair must drift apart together. A swatch that stays brighter than its own reference is
-         reading a different alpha from the rest, and it is named right under it. -->
+    <!-- Two copies of the swatch strip: the top one inside a faded container, the bottom untouched. Every pair must
+         diverge equally; a mismatch names a family reading alpha wrong. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
         <StackPanel Orientation="Vertical" Margin="24">
             <TextBlock Text="Opacity — every family must fade by the same amount" FontSize="18" Margin="0,0,0,6"/>

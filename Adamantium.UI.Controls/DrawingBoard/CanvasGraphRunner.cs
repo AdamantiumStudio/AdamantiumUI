@@ -9,29 +9,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>WORKING A GRAPH OUT, and keeping it worked out while somebody edits it.
-/// <para>Made over an application's own collection of nodes it needs nothing else: it hears the graph change - a value
-/// set, a wire drawn, a socket added, a node dropped - and asks the nodes that are affected for their values again.
-/// What a node computes is the application's and is said through <see cref="ICanvasNodeWork"/>; everything about WHEN
-/// and IN WHAT ORDER is here, because that part is the same in every application and is where the mistakes live.</para>
-/// <para>Four things it does that a plain walk does not, each of them the difference between a demonstration and a
-/// graph somebody can work in:</para>
-/// <para>IN ORDER, NOT BY RECURSION. The nodes are sorted so that everything feeding a node comes before it, and a pass
-/// is then a walk down a list. A chain a thousand deep is a thousand steps and not a thousand stack frames, and a graph
-/// that feeds back into itself - which a file somebody else wrote may well do - leaves the nodes of the loop unworked
-/// instead of going round for ever.</para>
-/// <para>ONLY WHAT CHANGED. Every node keeps the value it last had, and a change marks that node and spreads down the
-/// wires from it. Moving a slider on one node of two hundred works out that node and what it feeds, not the other
-/// hundred and ninety.</para>
-/// <para>ONCE PER BURST. A drag sets a value at every pixel; the pass is put off to the end of the batch, so the graph
-/// runs once for the whole gesture instead of sixty times a second.</para>
-/// <para>AND IT LETS GO. A pass already running is dropped the moment what it was working out stops being what the
-/// graph says - the token every node is handed says so - and a new one starts. That is what makes a node that renders
-/// for half a second usable at all.</para>
-/// <para>ONE THREAD, and the graph's own: a pass waits for a node's work but never leaves the thread it was started on
-/// - it does not let go of the context, so wherever a node did its work, what comes back to the graph comes back here.
-/// A node is free to go wide inside its own <see cref="ICanvasNodeWork.Evaluate"/>; nothing it hands back is read
-/// anywhere but on this thread, so nothing anybody holds needs a lock.</para></summary>
+/// <summary>Keeps a graph evaluated while it is edited; nodes compute through <see cref="ICanvasNodeWork"/>. Passes run in
+/// topological order over changed nodes only, once per burst, are canceled when stale, and stay on the graph's thread.</summary>
 public sealed class CanvasGraphRunner : IDisposable
 {
     private readonly TrackingCollection<ICanvasNode> _nodes;

@@ -7,13 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The slider knob glows while it is dragged, and the glow is switched by a trigger that addresses the Aura
-/// BY NAME. That only works if a named NON-VISUAL object inside a template is registered in the template's name scope -
-/// which is an assumption about the engine, not about the theme, so it is measured here rather than believed.
-/// <para>The first attempt handed the trigger a finished Aura through <c>Setter.Value</c>. That object belongs to no
-/// tree, so its <c>{ResourceReference}</c> had no scope to resolve against and it kept Aura's default colour - white -
-/// and only came into being at the moment of the drag, so it also arrived late.</para>
-/// </summary>
+// The knob's drag glow: a trigger addresses the named Aura, so named non-visual objects must join the template's name
+// scope.
 [TestFixture]
 public class MacOsSliderKnobTests
 {

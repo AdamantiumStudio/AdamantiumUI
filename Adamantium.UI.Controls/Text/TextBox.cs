@@ -4,13 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-/// <summary>
-/// An editable text box. All editing (caret, selection, keyboard navigation, character input, clipboard, mouse
-/// selection, caret blink and rendering) comes from <see cref="TextBoxBase"/>. This control adds the concrete
-/// single-/multi-line policy: with <see cref="AcceptsReturn"/> off (default) Enter is not inserted - it raises
-/// <see cref="EnterPressed"/> so a form can submit; with it on, Enter inserts a newline. Soft wrapping is controlled
-/// independently by <see cref="TextBoxBase.TextWrapping"/>.
-/// </summary>
+/// <summary>An editable text box over <see cref="TextBoxBase"/>. With <see cref="AcceptsReturn"/> off, Enter raises
+/// <see cref="EnterPressed"/> instead of inserting a newline.</summary>
 public class TextBox : TextBoxBase
 {
     public static readonly AdamantiumProperty AcceptsReturnProperty = AdamantiumProperty.Register(nameof(AcceptsReturn),

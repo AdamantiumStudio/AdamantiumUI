@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<!-- The DARK variant of the Fluent theme: the colours its palette resolves to, and the theme values that go with them.
-     Not the brushes - those belong to the theme and are shared by every variant, which is what makes switching cheap.
-
-     Its own file because a variant is four hundred lines of palette and the theme is a list of includes; keeping both
-     in one file meant the includes were three screens below the thing anyone actually opens the file to read. The
-     theme names this class in <Theme.Variants>. -->
+<!-- Fluent's dark variant: palette colors and theme values (the brushes stay the theme's), named in
+     <Theme.Variants>. -->
 
 <ThemeVariantDefinition xmlns="http://adamantium/ui"
                         Key="Dark">

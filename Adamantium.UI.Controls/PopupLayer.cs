@@ -63,11 +63,8 @@ public class PopupLayer
         // fill + border vanish, only re-dirtied text rebuilds). Mark the whole subtree dirty so the next layout re-measures
         // it and the render cache re-records its units.
         if (popup.ChildValue is { } child) InvalidateSubtree(child);
-        // ...and the same reason the registration lives here: the content JOINS the window's visual root here, which is
-        // what gives it the lifecycle every other element gets - a control inside a popup finally hears OnAttached, and
-        // its suspended triggers start again. The LAYOUT of this subtree stays this layer's job (see RemeasureIfDirty):
-        // the manager drains only what registered with it, and an item generated before the popup went on the layer
-        // registered against a root that was not yet this one.
+        // Attaching gives the content the normal lifecycle (OnAttached, triggers); its layout stays this layer's job, see
+        // RemeasureIfDirty.
         AttachToOwner(popup.ChildValue as UIComponent);
     }
 
@@ -134,13 +131,8 @@ public class PopupLayer
                 continue;
             }
 
-            // Measure UNCONSTRAINED so the content reports its intrinsic (fit-to-content) size - measuring against the
-            // window made a stretchy child fill the window, which then built a window-sized text render target and FAULTED
-            // the GPU. Guard every value: a NaN/non-positive size (or position) must NOT reach Arrange + the renderer, or
-            // it produces invalid geometry / an oversized RT and faults the device.
-            // Re-measure ONLY when the subtree is dirty (just opened, or its content changed) - NOT every frame: it's a
-            // DETACHED subtree (logical child only, no LayoutManager), so a content change flags IsMeasureValid=false and
-            // RemeasureIfDirty cascades the re-measure down to the dirty node, so a static tooltip costs ~nothing.
+            // Measure unconstrained for the content's own size, only when dirty; NaN or non-positive sizes must not reach
+            // arrange or the renderer.
             var remeasured = RemeasureIfDirty(child, new Size(double.PositiveInfinity, double.PositiveInfinity));
             var size = child.DesiredSize;
 
@@ -179,11 +171,8 @@ public class PopupLayer
         ArrangeIfNeeded(child, new Rect(x, y, w, h), remeasured);
     }
 
-    // Re-measure a dirty overlay subtree; returns whether it did. The subtree is DETACHED (no LayoutManager drains its
-    // invalidations), and a deep dirty node does NOT mark its ancestors invalid - so force-measuring only the root gates
-    // at the still-valid intermediate nodes and never reaches it, leaving it dirty FOREVER (a nested panel then re-laid
-    // out + the overlay rebuilt every frame). Invalidate the whole subtree first so the forced re-measure cascades down
-    // and validates the deep node; then NeedsLayout stays false until content actually changes again.
+    // Re-measures a dirty overlay subtree and returns whether it did. A deep dirty node does not dirty its ancestors, so
+    // the whole subtree is invalidated first for the measure to reach it.
     private static bool RemeasureIfDirty(MeasurableUIComponent child, Size available)
     {
         if (!NeedsLayout(child)) return false;
@@ -230,11 +219,7 @@ public class PopupLayer
     private static bool NeedsLayout(IUIComponent node)
     {
         if (node == null) return false;
-        // A COLLAPSED subtree is never measured, so it can never come back clean, and asking about it makes the popup
-        // dirty on every pass for ever: InvalidateSubtree marks the whole tree, the forced measure reaches only what the
-        // parents actually measure, and what is left over is found again next pass. Measured on the macOS menu - the
-        // hidden PART_ScrollUp/Down arrows kept the flyout re-measuring at frame rate. Becoming visible again is safe:
-        // OnVisibilityChanged tells the parent (NotifyParentOfContributionChange), which IS measured and IS asked here.
+        // A collapsed subtree is never measured, so it would read dirty forever; becoming visible notifies the parent.
         if (node.Visibility == Visibility.Collapsed) return false;
         if (node is IMeasurableComponent { IsMeasureValid: false }) return true;
 

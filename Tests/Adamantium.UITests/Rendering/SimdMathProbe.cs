@@ -6,16 +6,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Is there anything in SIMD for this engine's math? The engine detects AVX2/SSE4.2 (AcceleratedMathConfig) and then
-/// uses it nowhere; Matrix4x4F.Multiply is 64 scalar multiplies and 48 adds.
-///
-/// Benchmarked HONESTLY, which the first attempt was not: that one called each operation through a lambda with captured
-/// locals, so a 64-byte struct travelled through a display class and System.Numerics came out FIVE TIMES SLOWER than the
-/// hand-rolled scalar version - a number that says more about the harness than about SIMD. Here the timed loop is a
-/// plain loop over an array, the result is accumulated into a sink the JIT cannot discard, and every contender is fed
-/// the same data in the same shape.
-/// </summary>
+// Benchmarks SIMD against the engine's scalar math: plain loops over arrays, results into a sink the JIT cannot drop,
+// the same data for every contender (no lambdas).
 [TestFixture]
 [Explicit("Measurement probe - run it deliberately and read the numbers")]
 public class SimdMathProbe
@@ -259,11 +251,7 @@ public class SimdMathProbe
     private static void Report(string what, long ticks, int ops)
         => TestContext.Out.WriteLine($"  {what,-42} {System.Diagnostics.Stopwatch.GetElapsedTime(0, ticks).TotalMilliseconds * 1000000 / ops,8:F2} ns/op");
 
-    /// <summary>Every contender writes its FULL result into an output array. The first version of this test consumed only
-    /// result.M11 - which let the JIT delete the other fifteen fields from the inlined scalar version (7 flops instead of
-    /// 112) while the big System.Numerics operator kept all of them. That is not a comparison, and it produced two
-    /// contradictory sets of numbers before the impossible one gave it away: 3.4ns for 112 scalar flops would be eight
-    /// operations per cycle.</summary>
+    // Every contender writes its full result, so the JIT cannot drop fields from any of them.
     [Test]
     public void MatrixMultiply()
     {
@@ -432,15 +420,8 @@ public class SimdMathProbe
         return o;
     }
 
-    /// <summary>The same contenders at real volume, with the WALL TIME of the whole loop reported.
-    ///
-    /// This test is also the one that caught the last measurement bug, and it is the subtlest of the lot. At one million
-    /// operations System.Numerics.Matrix4x4 measured 99 ns/op; at ten million, 11; at a hundred million, 9.2 - while our
-    /// own types held steady. The operator lives in CoreLib and ships PRECOMPILED (ReadyToRun) in a conservative form
-    /// with no AVX, because the AOT image cannot assume the CPU it will run on. It is replaced by the fully vectorised
-    /// version only after the call-count threshold trips and the background rejit lands. A short warmup therefore times
-    /// the SLOW image and calls it the truth. Hence: a warmup measured in MILLIONS, a pause to let the rejit finish, and
-    /// a second warmup afterwards - for every contender, so nobody is timed in the wrong tier.</summary>
+    // The same contenders at volume, timing the whole loop. Warmups run millions of calls plus a pause, since CoreLib's
+    // ReadyToRun code is replaced by AVX code only after tiered rejit.
     [Test]
     public void MatrixMillions()
     {
@@ -518,11 +499,7 @@ public class SimdMathProbe
         TestContext.Out.WriteLine($"  (checksum {outOurs[7].M11 + outNum[7].M11 + outWrap[7].M11:E3})");
     }
 
-    /// <summary>The part of the wrapper question that is NOT about speed: does a Matrix4x4F backed by
-    /// System.Numerics.Matrix4x4 still travel to the GPU unchanged? Utilities.Write takes a blittable fast path keyed on
-    /// Unsafe.SizeOf == Marshal.SizeOf, constant buffers are filled by reinterpreting the struct, and the runtime type is
-    /// built internally out of Vector4 rows - which is exactly the kind of thing that can raise alignment and quietly
-    /// change a layout. Asserted, because a wrong answer here corrupts every transform on screen rather than slowing it.</summary>
+    // A Matrix4x4F backed by System.Numerics.Matrix4x4 keeps the same size and layout for GPU uploads.
     [Test]
     public void WrapperStaysBlittable()
     {
@@ -563,19 +540,7 @@ public class SimdMathProbe
         TestContext.Out.WriteLine($"  wrapper: size 64, Marshal 64, stride {stride}, byte image identical");
     }
 
-    /// <summary>AoS vs SoA, the layout question underneath every "should we use SIMD" discussion.
-    ///
-    /// Array of Structures is what the engine has: Vector3F[] laid out X0Y0Z0 X1Y1Z1. One 128-bit load brings three
-    /// components of ONE vector - three lanes used, one wasted - and combining them (a length, a dot) needs horizontal
-    /// shuffles, which is the slow direction.
-    ///
-    /// Structure of Arrays is three float[] laid out X0X1X2.. Y0Y1Y2.. Z0Z1Z2.. One load brings X of FOUR vectors, the
-    /// same instruction serves four bodies, and nothing is shuffled.
-    ///
-    /// The operation is normalisation - three multiplies, two adds, a square root, three divides - because that is the
-    /// shape a solver actually runs, and the sqrt keeps it honest rather than a pure multiply-add showcase. The SoA
-    /// SCALAR row is the control that separates the layout from the vectorisation: if it matches AoS scalar, then the
-    /// win that follows is the vector code and not merely the rearrangement.</summary>
+    // AoS vs SoA on vector normalization; the SoA scalar row separates the layout's effect from vectorization's.
     [Test]
     public void AosVsSoa()
     {
@@ -668,20 +633,7 @@ public class SimdMathProbe
         TestContext.Out.WriteLine("  (обе раскладки дают одинаковый результат)");
     }
 
-    /// <summary>The objection to SoA that has to be answered with memory, not arithmetic: if reading one object costs
-    /// three cache misses instead of one, does the gather not eat the whole win?
-    ///
-    /// AosVsSoa above CANNOT answer it - 4096 vectors is 48 KB, it lives in L1, and memory never enters. So this one uses
-    /// a MILLION bodies (64 MB as AoS) and a body struct of realistic width, and it separates the two access patterns
-    /// that the objection conflates:
-    ///
-    ///   SWEEP - touch every body in order, using only position and velocity. AoS drags the whole 64-byte body through
-    ///   the bus to use 24 bytes of it; SoA reads only the six arrays it needs, every byte of every line used.
-    ///
-    ///   GATHER - touch bodies in random order, one at a time. Here the objection is right: AoS has the body on one line,
-    ///   SoA has to visit three.
-    ///
-    /// Which one dominates decides the layout, and that is a property of the SUBSYSTEM, not of SIMD.</summary>
+    // AoS vs SoA at memory scale (a million 64-byte bodies): an in-order sweep favors SoA, a random gather favors AoS.
     [Test]
     public void AosVsSoaWhenMemoryMatters()
     {

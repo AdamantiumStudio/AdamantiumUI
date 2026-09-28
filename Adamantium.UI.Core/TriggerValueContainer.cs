@@ -2,15 +2,8 @@ using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Per-property stack of trigger contributions, so MULTIPLE triggers can target the SAME property without clobbering
-/// each other: leaving the top trigger restores the one beneath it instead of dropping to default.
-/// <para>Who is on top is decided by where the setters stand in the MARKUP (<see cref="ISetter.DeclarationOrder"/>) -
-/// the rule a theme author writes against and the one WPF uses among the triggers of one collection. Resolving by which
-/// fired last instead made the look depend on the history of events: a drop-down row that was both selected and
-/// keyboard-highlighted came out accent on its first showing and grey on the next, because closing dropped the
-/// highlight and reopening pushed it back on top of the selection.</para>
-/// </summary>
+// Per-property stack of trigger contributions ordered by ISetter.DeclarationOrder, so leaving one trigger restores the one
+// beneath.
 internal class TriggerValueContainer
 {
     private readonly List<(object Token, object Value, long Order)> _values = [];

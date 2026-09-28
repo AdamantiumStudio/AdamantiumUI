@@ -11,13 +11,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Presents a collection as a list of generated, templated containers. Items come either from markup
-/// (<c>&lt;ItemsControl&gt;&lt;Button/&gt;…</c>, the <see cref="Items"/> content property) or from <see cref="ItemsSource"/>.
-/// Each item is projected through <see cref="ItemTemplate"/> into a container (see <see cref="ItemContainerGenerator"/>),
-/// laid out by the panel from <see cref="ItemsPanel"/>. The control's template must contain an
-/// <see cref="ItemsPresenter"/> named <c>PART_ItemsPresenter</c>.
-/// </summary>
+/// <summary>Presents <see cref="Items"/> or <see cref="ItemsSource"/> as templated containers laid out by
+/// <see cref="ItemsPanel"/>. The template must contain an <see cref="ItemsPresenter"/> named <c>PART_ItemsPresenter</c>.</summary>
 public class ItemsControl : Control, IContainer
 {
     private ItemsPresenter _presenter;
@@ -36,11 +31,8 @@ public class ItemsControl : Control, IContainer
     public static readonly AdamantiumProperty ItemSkeletonTemplateProperty = AdamantiumProperty.Register(nameof(ItemSkeletonTemplate),
         typeof(DataTemplate), typeof(ItemsControl), new PropertyMetadata(null));
 
-    /// <summary>True while the items host is showing loading SKELETON cards - i.e. a virtualized fill (or a fast fling) has
-    /// deferred part of the realized window past the per-frame bind budget. Maintained by the panel
-    /// (<see cref="Panels.VirtualizingPanel"/>); read-only to markup. This is the LIST-level loading state a theme keys the
-    /// skeleton shimmer off: one trigger per list runs/stops the pulse on the shared skeleton brush, so a screenful of
-    /// cards costs ONE animation instead of one per card.</summary>
+    /// <summary>True while the panel shows skeleton placeholders for binds deferred past the frame budget; a theme keys
+    /// one shared skeleton shimmer per list off it.</summary>
     public static readonly AdamantiumProperty IsLoadingItemsProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsLoadingItems),
         typeof(bool), typeof(ItemsControl), new PropertyMetadata(false));
 
@@ -63,12 +55,8 @@ public class ItemsControl : Control, IContainer
 
     public ItemContainerGenerator ItemContainerGenerator { get; }
 
-    /// <summary>The realized items host panel (from the template's ItemsPresenter), or null before the template is applied.</summary>
-    /// <summary>The panel that actually lays the item containers out, or null before the template is applied. Public
-    /// because anything positioning against the items - a drag deciding where a drop lands, a dock target offering a
-    /// slot - has to ask it, and while it was internal each of them reached it by walking the visual tree instead.</summary>
-    /// <para>Virtual because a control may lay its items out in MORE THAN ONE list - a tab strip keeps pinned tabs in a
-    /// row of their own - and then "the panel the items are in" is a question only that control can answer.</para>
+    /// <summary>The panel laying out the item containers, or null before the template is applied. Virtual for controls
+    /// that split items across several panels.</summary>
     public virtual Panel ItemsHostPanel => _presenter?.Panel;
 
     public IEnumerable ItemsSource
@@ -138,22 +126,16 @@ public class ItemsControl : Control, IContainer
         _presenter?.Connect(this);
     }
 
-    /// <summary>Destroyed: give the ITEMS SOURCE up. The subscription to it is undone only when the source is REPLACED
-    /// (ItemCollection.SetSource), and nobody replaces the source of a control that has been thrown away - so a view
-    /// model's ObservableCollection, which lives as long as the application, went on holding this control and everything
-    /// under it. Found by walking the object graph from the strong handles: DragDropDemoViewModel -> its collection ->
-    /// CollectionChanged -> a discarded ListBox -> its whole subtree.</summary>
+    /// <summary>Releases the items source, whose collection may outlive this control and would otherwise keep it
+    /// alive.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
         Items?.SetSource(null);
     }
 
-    /// <summary>Let the template's parts go when the template does - see ScrollBar.OnRemoveTemplate.
-    /// <para>THIS control is not rebuilt by a theme swap; its TEMPLATE is. So it survives holding the presenter it was
-    /// given last time - and a presenter is not a leaf: it holds the items panel, every realized container, the
-    /// generator and its recycle pool. Measured on the stand, that one field was the whole of what a theme swap never
-    /// gave back: +14 MB and ~1450 elements a swap, retained for the life of the application.</para></summary>
+    /// <summary>Drops the presenter with its template; it holds the panel, every container and the recycle pool, which a
+    /// theme swap would otherwise leak.</summary>
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();

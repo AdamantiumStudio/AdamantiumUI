@@ -5,12 +5,8 @@ using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Clipping tab: what a container does to content that reaches past it.
-///
-/// <para>A scissor is a RECTANGLE, so a rounded container used to cut its content off squarely - the corner of a card
-/// went sharp exactly where the card is round. The rounded part of the clip is done by the shaders instead, from a shape
-/// carried in a transform-table slot, and this stand is where that is visible: the strip inside deliberately runs past
-/// the container on every side, so every pixel of the cut is on show.</para></summary>
+/// <summary>Clipping tab: content deliberately overflowing rounded containers on every side, to show the shader-side
+/// rounded clip.</summary>
 [ViewModel]
 public partial class ClippingViewModel : TabPageViewModel
 {

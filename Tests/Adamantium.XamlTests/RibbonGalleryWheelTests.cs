@@ -7,14 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// The band shows a WINDOW onto a gallery's rows - two of however many the items make - and until now the arrows beside
-/// it were the only thing that moved it. A wheel over a grid of choices is the first thing a person tries, and one that
-/// does nothing is indistinguishable from a gallery that has no more rows in it.
-/// <para>At the end of the run the wheel must go back UNHANDLED, the same chaining rule ScrollViewer follows: a gallery
-/// that has stopped hands the event on so the strip around it still scrolls, instead of dead-ending under the
-/// pointer.</para>
-/// </summary>
+// The wheel scrolls a ribbon gallery's rows, and at either end leaves the event unhandled so outer scrollers chain.
 [TestFixture]
 public class RibbonGalleryWheelTests
 {

@@ -8,11 +8,8 @@ using Adamantium.Vulkan.Core;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// A window renderer that draws into a window-less <see cref="PresenterType.Headless"/> swapchain instead of
-/// an on-screen one. Reuses the entire <see cref="ForwardWindowRenderer"/> path (render cache, frame loop);
-/// only the presenter kind differs. Plug it in via <c>window.Renderer = new HeadlessWindowRenderer(...)</c>
-/// (the existing renderer-swap hook) to render a visual tree off-screen - e.g. the AUML live designer feeding
-/// pixels to the editor extension.
+/// A <see cref="ForwardWindowRenderer"/> presenting to a window-less <see cref="PresenterType.Headless"/> swapchain, for
+/// off-screen rendering via <c>window.Renderer</c> (e.g. the AUML designer).
 /// </summary>
 public class HeadlessWindowRenderer : ForwardWindowRenderer
 {

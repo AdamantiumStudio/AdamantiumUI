@@ -9,14 +9,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The half that makes filtering usable: an item that changes ITSELF leaves or re-enters the view, without the source
-/// or the predicate having changed. Ordinary filtering re-runs on a new predicate or a new item; a row whose own
-/// property stopped qualifying just stays on screen, and search-as-you-type, facets and "hide the finished ones" are
-/// all that same case.
-/// <para>It is opt-in because it subscribes per item, so the tests also pin that it is genuinely OFF until asked for
-/// and genuinely released when it is not.</para>
-/// </summary>
+// Live shaping: an item whose own properties change leaves or re-enters the filtered view. Opt-in (it subscribes per
+// item), so off by default and released when turned off.
 [TestFixture]
 public class CollectionViewLiveShapingTests
 {

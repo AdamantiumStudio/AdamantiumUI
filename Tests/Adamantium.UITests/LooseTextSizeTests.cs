@@ -5,13 +5,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>What size a plain <see cref="TextBlock"/> in a view actually comes out at, and where that number comes
-/// from - measured because the answer was reasoned out twice and got wrong both times.
-/// <para>Three numbers are in play and they are in three different places: UIComponent's FontSize default (14),
-/// TextBlock's own override of it (12, in C#), and the theme's FontSizeBody (14 in Fluent and macOS, 12 in Editor Pro).
-/// Which of them a label wears is decided by the priority ladder, where INHERITED outranks DEFAULT - so an ancestor's
-/// effective value, even one it holds only by default, beats the element's own default.</para>
-/// </summary>
+// The font size a plain TextBlock ends up with: inherited outranks default, so an ancestor's value (even a default)
+// beats TextBlock's own default of 12.
 [TestFixture]
 public class LooseTextSizeTests
 {

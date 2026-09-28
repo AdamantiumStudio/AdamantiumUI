@@ -1,12 +1,7 @@
 namespace Adamantium.UI.Core.Diagnostics;
 
-/// <summary>
-/// Lightweight live counters for a runtime diagnostics overlay, so the otherwise-invisible work of the layout manager,
-/// the binding batcher and the animation heartbeat can be SEEN at runtime (verification, not just unit tests). All
-/// writes are cheap field updates on the UI thread; a reader (the overlay) samples them once per frame. The last-pass
-/// fields are snapshots of the most recent layout pass; the cumulative counters are meant to be sampled by per-frame
-/// delta.
-/// </summary>
+/// <summary>Live counters for the diagnostics overlay, sampled once per frame. Last-pass fields snapshot the latest pass;
+/// cumulative counters are read as per-frame deltas.</summary>
 public static class RuntimeStats
 {
     /// <summary>Wall-clock duration of the most recent layout pass, in milliseconds (~0 on an idle frame, which is the
@@ -16,8 +11,8 @@ public static class RuntimeStats
     /// <summary>True if the most recent layout pass hit the frame budget and deferred work to a later frame.</summary>
     public static bool LastPassBudgetDeferred;
 
-    // Per-frame render-pipeline phase timings (ms), snapshots of the most recent frame. Phase 0 of the render-cache
-    // redesign (docs/RENDER_CACHE_REDESIGN.md): make the otherwise-invisible per-frame render cost measurable, so the
+    // Per-frame render-pipeline phase timings (ms), snapshots of the most recent frame. They make the
+    // otherwise-invisible per-frame render cost measurable, so the
     // retained rewrite can be aimed at the phase that actually dominates (today the per-frame cache REBUILD, not layout).
     /// <summary>RenderCache.BuildFromVisualTree - the per-frame walk that re-records every component's draw commands.</summary>
     public static double LastRenderBuildMs;
@@ -67,18 +62,12 @@ public static class RuntimeStats
     public static int LastRecordDirty;
     public static int LastRecordClassifySkips;
 
-    /// <summary>WHICH types re-record into zero draw commands, by count. Three quarters of a resize record is spent
-    /// rendering elements that draw nothing; whether that is fixed by a type rule or by a per-element memo depends on
-    /// what they ARE, and only a histogram says. Written on the record thread, read once a second.</summary>
-    /// <summary>Keyed by TYPE, not by its name: this is written once per recorded component, and hashing a string there
-    /// is a cost the thing being measured does not have.</summary>
+    /// <summary>Types that re-recorded into zero draw commands, by count; keyed by type to keep the per-record cost low.
+    /// Written on the record thread.</summary>
     public static readonly System.Collections.Generic.Dictionary<System.Type, int> EmptyDrawsByType = new();
 
-    /// <summary>Guards BOTH histograms below. They are written from the RECORD thread and read + cleared once a second
-    /// from the probe thread, and a Dictionary torn by that race does not report a wrong number - it crashes the reader
-    /// with a NullReferenceException inside the enumerator. It did, on a tab switch. A diagnostic must not be able to
-    /// kill the thing it measures; the writes are a few thousand a second, so an uncontended lock costs nothing that
-    /// matters.</summary>
+    /// <summary>Guards the histograms, which are written on render-side threads and read by the probe; a torn Dictionary
+    /// crashes its reader.</summary>
     public static readonly object HistogramLock = new();
 
     public static void NoteEmptyDraw(System.Type type)
@@ -154,15 +143,13 @@ public static class RuntimeStats
     /// names the root of the tree rather than whoever is doing the allocating.</summary>
     [System.ThreadStatic] private static long _layoutChildBytes;
 
-    /// <summary>Open a layout frame: returns the allocation mark to close it with, and parks the enclosing call's child
-    /// total so this one starts from zero.</summary>
-    /// <summary>Same nesting subtraction, for TIME: measure recurses into children, so timing a call from the outside
-    /// charges every descendant to the ancestor. 6716 measures in 163-278ms is 24-41us a call ONLY if the nesting is
-    /// taken out first - otherwise the deepest ancestor gets the whole tree.</summary>
+    // The same nesting subtraction, for time.
     [System.ThreadStatic] private static double _layoutChildMs;
 
     public static readonly System.Collections.Generic.Dictionary<System.Type, double> LayoutMsByType = new();
 
+    /// <summary>Opens a layout frame: returns the allocation mark to close it with, and parks the enclosing call's child
+    /// totals so this one starts from zero.</summary>
     public static (long Mark, long OuterChildren, long Ticks, double OuterMs) BeginLayoutFrame()
     {
         var outer = _layoutChildBytes;
@@ -253,17 +240,8 @@ public static class RuntimeStats
     public static int LastApplyInserts;
     public static int LastApplyGroups;
 
-    /// <summary>What the apply actually did this frame: units built from scratch, units updated in place, and the draw
-    /// commands it consumed. A structural frame that CREATES its units costs a different thing from one that updates them,
-    /// and the totals alone cannot tell the two apart.</summary>
-    /// <summary>WHY a unit was created: the group GREW (a component that draws more than it did, or a new one), or the
-    /// existing unit did not MATCH the command and had to be replaced. The first is work the scene asked for; the second
-    /// is churn, and only a count says which of them ~900 creations a second are. Plus the time each half costs -
-    /// creating a unit builds GPU buffers, updating one writes into buffers that exist.</summary>
-    /// <summary>WHICH units get created, and for whom. Creating one costs 0.7us during a tab build and 62-90us in a
-    /// second with almost nothing attaching - the same operation, a hundred times apart - and ~910 of the expensive kind
-    /// are built every second on a settled scene. Only a histogram says what they are. Written on the RENDER thread, so
-    /// it shares HistogramLock (a torn Dictionary crashes its reader - it already did once today).</summary>
+    /// <summary>Units created, by kind, with their total time. Written on the render thread under
+    /// <see cref="HistogramLock"/>.</summary>
     public static readonly System.Collections.Generic.Dictionary<string, (int Count, double Ms)> UnitsCreatedByKind = new();
 
     public static void NoteUnitCreated(string kind, double ms)
@@ -275,11 +253,14 @@ public static class RuntimeStats
         }
     }
 
+    /// <summary>Why units were created: the group grew, or the existing unit did not match the command; plus the time
+    /// creating and updating took.</summary>
     public static long UnitsCreatedGrow;
     public static long UnitsCreatedMismatch;
     public static double UnitCreateMs;
     public static double UnitUpdateMs;
 
+    /// <summary>What the apply did this frame: units built, units updated in place, and commands consumed.</summary>
     public static long UnitsCreated;
     public static long UnitsUpdated;
     public static long CommandsApplied;
@@ -292,13 +273,8 @@ public static class RuntimeStats
     /// that matters is a question a number answers, not a guess.</summary>
     public static double LastPreRenderMs;
 
-    /// <summary>WHAT THE DRAW IS MADE OF, in the order RenderCore runs them. A REPLAYED frame re-issues the recorded op
-    /// stream and touches nothing else, so its cost should be proportional to the ops it issues - measured at 77 ops of
-    /// which 3 were units, in a draw of over three milliseconds. Something in the pass is therefore proportional to the
-    /// SCENE and not to what changed, and only a split says which of the five it is.
-    /// <para>Setup = the frame's transform-table copy + the rounded clip slots. Paint = composited animations, the
-    /// arena repaint and the brush repaints. Moved = the motion nodes and movers whose matrices a replay must refresh.
-    /// Ops = re-issuing the recorded stream. The four sum to the draw, less the walk when a frame takes one.</para></summary>
+    /// <summary>The draw split in RenderCore order: setup (transform table, clip slots), paint (animations, repaints),
+    /// moved (motion-node matrices) and ops (replaying the stream).</summary>
     public static double LastDrawSetupMs;
     public static double LastDrawPaintMs;
     public static double LastDrawMovedMs;

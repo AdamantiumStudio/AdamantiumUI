@@ -7,13 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>A PLANE WITH NO EDGES, far from where it started. The camera never moves - it stands at the origin and the
-/// scene is offset past it - and that offset is a double, so travelling is exact however far it goes.
-/// <para>What is NOT exact is handing that distance to the GPU. A float32 a million pixels out has a quarter of a pixel
-/// between one value and the next, sixteen million out it has two: neighbouring fragments resolve to the same world
-/// point, so the dots run into lines and a pan steps the lattice instead of sliding it.</para>
-/// <para>The grid repeats every cell, so it never needed the distance - only the PHASE within a cell. These pin that
-/// the record carries a phase and nothing that grows.</para></summary>
+// Far from the origin the grid record carries only a phase within one cell, never the growing pan distance float32 cannot
+// hold.
 [TestFixture]
 public class CanvasGridFarFromHomeTests
 {

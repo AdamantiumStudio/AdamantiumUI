@@ -6,12 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>The "put this in the quick-access bar" row of a ribbon command's context menu. A type of its own so that an
-/// author writing THEIR OWN menu for a command keeps the entry by placing one - <see cref="Base.InputUIComponent.ContextMenu"/>
-/// holds a single menu, so an author's would otherwise replace the theme's and the entry would quietly vanish. Adding it
-/// to someone else's menu behind their back was the alternative, and a row nobody put there is worse than one they did.
-/// <para>It asks the command it was opened on, and that command's inherited
-/// <see cref="Ribbon.AddToQuickAccessCommandProperty"/> is what answers - so a screen needs no code behind it.</para></summary>
+/// <summary>The "add to quick-access bar" row, placeable in an author's own command menu. Runs the inherited
+/// <see cref="Ribbon.AddToQuickAccessCommandProperty"/> of the command it opened on.</summary>
 public class RibbonQuickAccessMenuItem : MenuItem
 {
     /// <summary>Whether the command this was opened on is in the bar already - what the theme reads to say "remove"

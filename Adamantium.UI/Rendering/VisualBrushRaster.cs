@@ -9,13 +9,8 @@ using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// Keeps a <see cref="VisualBrush"/> supplied with a picture of its source. The rest of the tile family replays its
-/// content; a LIVE subtree cannot be replayed, so it is drawn off-screen and the fill samples the result.
-/// <para>Same two constraints as the drawing bake, and the same answers: the ask arrives on the RENDER thread while
-/// batches are filled, so nothing here draws - it queues, and the frame draws nothing until the picture lands. And the
-/// GPU half runs on the thread that owns the device (see <see cref="IVisualRenderer.RequestSnapshot"/>), never here.</para>
-/// </summary>
+// Supplies a VisualBrush with an off-screen picture of its live source. Asked on the render thread, so it only queues
+// (IVisualRenderer.RequestSnapshot); nothing is drawn until the picture lands.
 internal static class VisualBrushRaster
 {
     // Which sources are worth watching. The invalidation events below fire for EVERY element in the application, so
@@ -31,12 +26,8 @@ internal static class VisualBrushRaster
     // not queue an off-screen render per frame.
     private static readonly HashSet<IUIComponent> _pending = new();
 
-    // The last TWO pictures handed out for a source. Owned HERE because every brush of that source shares the one
-    // instance, so whoever replaces it is the only one that may free the old one.
-    // The extra generation is a margin, not the guarantee: a picture is referenced by the batches until the fills have
-    // been re-ROUTED onto its successor, and holding one back means that has certainly happened. What actually makes it
-    // safe is the deferred queue it is then handed to, which waits for every drawing device to retire the frames it had
-    // in flight (9 runs and a 1040-bake stress are clean WITHOUT this hold). Kept because it costs one picture.
+    // The last two pictures per source, owned here since all brushes of a source share them; the deferred queue is what
+    // makes freeing safe, the extra generation is a margin.
     private static readonly ConditionalWeakTable<IUIComponent, BitmapSource> _current = new();
     private static readonly ConditionalWeakTable<IUIComponent, BitmapSource> _previous = new();
 
@@ -231,14 +222,8 @@ internal static class VisualBrushRaster
                 entry.Brush.NeedsBake = true;
             }
 
-            // The mark alone is not enough: nothing re-asks a fill whose own shape did not change, so the last change
-            // before a source went quiet was never picked up and the picture stood still. Invalidating the OWNER is not
-            // enough either - that re-renders the shape without re-ROUTING its fill, and the texture is only ever asked
-            // for while routing, so the ask never came at all.
-            // The brush's own Changed IS the engine's "everything painting with me must re-record" path. It must not be
-            // raised from here though: this fires from inside a render walk, and raising it per notification is a
-            // feedback loop (wake -> re-record -> announce -> wake) that pinned two threads at 100%. So it is POSTED,
-            // once per source until it runs - which leaves the walk and folds a whole drag into a few wakes.
+            // Fills are re-routed only by the brush's Changed; posted once per source, since raising it inside the render
+            // walk would loop.
             if (_waking.Add(node))
             {
                 UIAppContext.Current?.Dispatcher.Post(() => Wake(node));

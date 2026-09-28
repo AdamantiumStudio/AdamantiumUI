@@ -111,13 +111,7 @@ public class DataGridSearchPanel : Control
 
     private void OnPrevious(object sender, RoutedEventArgs e) => Owner?.FindPrevious();
 
-    // Closing the strip from INSIDE it: the switch that opened it may be anywhere - a page's own settings, a menu -
-    // and a strip that can only be dismissed from wherever it was summoned is a strip that stays. Taking it away calls
-    // the search off with it, so nothing is left painted over the table.
-    // SetCurrentValue, never the plain setter: a CLR setter writes the Local slot, which outranks Binding FOREVER, so
-    // the strip would close once and the switch that opened it could never open it again - its pushes would land in a
-    // slot the local write permanently masks. This writes at the slot the binding itself uses, and the target change
-    // still carries back to the source.
+    // Closes the strip from inside and calls the search off. SetCurrentValue, so the binding that opened it can open it again.
     private void OnClose(object sender, RoutedEventArgs e)
     {
         Owner?.SetCurrentValue(TreeDataGrid.ShowSearchPanelProperty, false);

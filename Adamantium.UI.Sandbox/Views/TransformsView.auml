@@ -1,13 +1,8 @@
 <View xmlns="http://adamantium/ui"
       xmlns:m="clr-namespace:Adamantium.UI.Core.Media;assembly=Adamantium.UI.Core"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- DataContext is the TransformsViewModel. Every tile here is a rounded, STROKED rect - SDF-batch content, the same
-         kind the Layout tab uses - but each is drawn under its own rotation/shear/scale. That combination used to be
-         impossible: the bake folded an element's world into axis-aligned BOUNDS, and no axis-aligned rect can carry a
-         rotation or a shear, so a turned tile was refused by the batch and fell back to a draw of its own. Now the world
-         lives in the transform TABLE and the instance carries local geometry plus a slot index, so the shader applies a
-         full matrix and an arbitrary affine costs the batch nothing. Watch the draw-call count on the diagnostics plate
-         while dragging Spread: it stays put. -->
+    <!-- Stroked SDF tiles, each under its own rotation, shear and scale, all in one instanced batch; the draw count stays
+         put while dragging Spread. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
             <TextBlock Text="240 rounded, stroked rects — each under its OWN rotation and shear, all in one instanced draw."/>

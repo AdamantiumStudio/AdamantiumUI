@@ -5,13 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>What was done to the drawing, so it can be undone.
-/// <para>Held by the APPLICATION, like the scene and for the same reason: undo belongs to whoever owns the drawing. The
-/// canvas only opens and closes the steps - see <see cref="InfiniteCanvas.BeginEdit"/> - because only it knows where a
-/// GESTURE begins and ends, and that is what makes one drag of ten things one step rather than ten thousand.</para>
-/// <para>A step is a BEFORE and an AFTER, taken by comparison: what the scene held and in what order, and where each
-/// thing was. Nothing new is asked of an item, so a third-party <see cref="ICanvasItem"/> is undoable without knowing
-/// this exists.</para></summary>
+/// <summary>The drawing's undo history, held by the application; the canvas opens and closes one step per gesture
+/// (<see cref="InfiniteCanvas.BeginEdit"/>). Steps are before/after snapshots, so any item is undoable.</summary>
 public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 {
     private readonly List<ICanvasStep> _done = new();

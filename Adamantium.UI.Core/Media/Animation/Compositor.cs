@@ -4,35 +4,10 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media.Animation;
 
-/// <summary>
-/// The animations the RENDER thread plays by itself. Not a thread of its own - work moved onto the render thread, which
-/// already runs its own loop and presents at its own pace, and is the only consumer of these values anyway.
-/// </summary>
-/// <remarks>
-/// The point is what happens when the loop thread STALLS - a theme cascade re-templating the tree, a heavy layout. Today every
-/// animation advances inside <c>SetValue</c>, so the loop stalling freezes every spinner on screen: precisely when the user
-/// most needs to see one. A composited animation instead lives here, where the loop thread cannot hold it up.
-///
-/// **One clock.** The render thread owns <c>Elapsed</c>; the loop thread READS it and mirrors the value into the property
-/// system so hit-testing and bindings still agree with the screen (raw UWP Composition skips this, which is why a visual
-/// animating on its compositor hit-tests where it would have stood still). Two clocks would let the two drift, so there is
-/// exactly one, and it is the one that draws.
-///
-/// **What the render thread may touch.** Nothing shared and mutable. It reads an immutable <see cref="Basis"/> published by
-/// the loop thread (reference swap), overrides the members its curve animates, and composes the matrix through the very same
-/// <see cref="TransformValues.ToMatrix"/> the live Transform uses. It never reads a property, so there is nothing to race.
-///
-/// **Why the element must be a motion node.** A world-baked element cannot be moved without re-recording its instances - and
-/// re-recording is the loop thread's job. A motion node's instances reference its transform-table slot, so moving it is ONE
-/// 64-byte matrix write, which is exactly what the render thread can do alone. Taking a transform over therefore promotes its
-/// element (see <see cref="TryTakeOver"/>).
-///
-/// **Two channels.** TRANSFORM (a Transform element) writes one motion-node matrix and IS mirrored to the property system, so
-/// hit-testing agrees with the screen. PAINT (a brush's own Opacity/colour) is NOT mirrored - colour touches neither layout
-/// nor hit-test - so the loop thread stops advancing it entirely; the render thread republishes the brush's snapshot and the
-/// render cache re-bakes the slots that read it. One shared brush drives many elements (the loading-skeleton pulse animates
-/// ONE brush every card paints with), which is exactly the case that cost the most on the loop thread before.
-/// </remarks>
+/// <summary>Animations the render thread plays itself, so they keep running while the loop thread stalls. One clock, owned
+/// by the render thread; transform values are mirrored back for hit-testing, paint values are not.</summary>
+/// <remarks>The render thread reads only an immutable <see cref="Basis"/>; a taken-over element becomes a motion node, so
+/// moving it is one matrix write (see <see cref="TryTakeOver"/>).</remarks>
 public static class Compositor
 {
     /// <summary>Everything the matrix needs that the curve does NOT animate - the element's base transform values, its layout
@@ -141,11 +116,8 @@ public static class Compositor
         /// advances it - and would drift the moment two did.)</summary>
         public double Elapsed => (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
 
-        // When the render thread last APPLIED this transform (drew its animated matrix). The loop's mirror suppression keys
-        // off this: if the render thread is applying (recently), the loop must NOT also re-bake it (double work). But if it is
-        // NOT applying - the owner isn't recorded yet, e.g. a spinner just re-templated by a theme swap - the picture is
-        // frozen, so the loop must step in and force a re-record. Written by the render thread, read by the loop; a torn long
-        // read at worst mis-judges the window by one and is corrected next frame, so no interlock is needed.
+        // When the render thread last applied this transform; if stale, the loop forces a re-record. A torn read is
+        // corrected next frame.
         private long _lastAppliedTs;
         internal void MarkApplied() => _lastAppliedTs = Stopwatch.GetTimestamp();
         public bool AppliedRecently => _lastAppliedTs != 0 && Stopwatch.GetTimestamp() - _lastAppliedTs < Stopwatch.Frequency / 20;   // ~50 ms
@@ -354,11 +326,8 @@ public static class Compositor
         return true;
     }
 
-    /// <summary>Is the render thread currently playing this target? Then the loop thread must NOT re-invalidate the render
-    /// for it: mirroring the value into the property system is bookkeeping for hit-testing and bindings, and the picture is
-    /// already correct - marking it dirty would make the loop thread re-do, once per frame, the very work that was moved off
-    /// it. That double payment is the whole difference between an animation that is composited and one that merely also runs
-    /// somewhere else.</summary>
+    /// <summary>Whether the render thread is playing this target; if so, the loop thread's mirror writes must not
+    /// invalidate its render.</summary>
     public static bool Owns(AdamantiumComponent target)
     {
         lock (Gate)

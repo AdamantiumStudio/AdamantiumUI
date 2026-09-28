@@ -6,13 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// The merged <c>Fluent</c> theme - light and dark as VARIANTS of one theme rather than as two themes.
-/// <para>The two files it replaces declared the same 49 style includes, the same icons and the same metrics, and
-/// differed by a palette and four accent values. The engine was therefore doing a full theme swap - every template in
-/// the application rebuilt, every style re-applied - to change a hundred colours. These tests hold the merged theme to
-/// the properties that make that unnecessary.</para>
-/// </summary>
+// The Fluent theme with light and dark as variants of one theme, so switching recolors instead of a full swap.
 [TestFixture]
 public class MergedFluentThemeTests
 {
@@ -64,12 +58,7 @@ public class MergedFluentThemeTests
     [Test]
     public void AnInitialisedTheme_ALREADYHASAVariant()
     {
-        // Declaring a variant only creates the palette BRUSHES. The accent, the on-accent text colour and the focus
-        // strokes are theme PROPERTIES, and nothing but ApplyVariant sets them - so a theme that came up on no variant
-        // had all of them null, and every {ThemeResource AccentForegroundColor} (31 uses) and
-        // {ThemeResource AccentFillColorDefault} (72) resolved to nothing. The window's title text then had no
-        // Foreground and the render walk threw on it: a blank tab and empty fills, saying nothing about the cause.
-        // Every test here used to call ApplyVariant by hand, which is exactly why none of them noticed.
+        // A new theme applies a variant itself, so accent and focus properties are never null (no manual ApplyVariant).
         var theme = new Fluent();
         theme.Initialize();
 
@@ -126,15 +115,7 @@ public class MergedFluentThemeTests
     {
         var theme = new Fluent();
 
-        // The two palette files had 35 brushes each, under identical keys. Nothing may be lost in the merge: a missing
-        // key does not fail loudly, it paints nothing. Plus four added since: DataGridLineColor - the table's rules
-        // have to be OPAQUE, and every other stroke in the palette is deliberately not - the two washes the search
-        // paints with, one for a cell it found and a denser one for the cell it is on, and the one a cell holding a
-        // rejected value is washed with.
-        // 41 with the canvas grid and its axes: a grid is a RULER the user reads while working, not a hairline meant to
-        // go unnoticed, so it cannot borrow a control stroke - borrowing one left it invisible.
-        // 42 with the canvas selection band, which is the accent at a fraction of its opacity: it is drawn OVER what it
-        // is selecting, and no control fill is translucent enough to be borrowed for that.
+        // No palette brush may be lost (a missing key paints nothing); raise this count deliberately when adding keys.
         Assert.That(theme.Palette.Count, Is.EqualTo(42));
     }
 
@@ -189,24 +170,8 @@ public class MergedFluentThemeTests
     {
         var merged = new Fluent();
 
-        // The styles are the expensive half - the half a theme swap rebuilds and a variant switch must not touch. The
-        // pair this replaced listed 49 style sets each (identical lists); losing one would leave a control unstyled in
-        // a way no colour test would notice.
-        // 50 rather than 49 since the busy indicator was SPLIT: the plain one stayed Fluent's, and the nine classed
-        // effects moved to Shared/BusyEffectsStyleSet, which belongs to no theme. Nothing was lost - one entry became
-        // two - and the count is raised deliberately rather than the guarantee relaxed.
-        // 51 since the DataPager arrived: a NEW control, so a new set. Raised for the same reason and in the same
-        // spirit - this guard is against a set going missing, not against the theme ever gaining one.
-        // 52 with the TreeDataGrid, for exactly that reason again.
-        // 54 with the Expander and the PropertyGrid - two new controls, two new sets.
-        // 55 with the InfiniteCanvas, for the same reason again.
-        // 56 with the CanvasPane - the canvas's chrome became SEVERAL panels rather than one slot, and a panel is a
-        // control with a template of its own. Same spirit once more: a new control, a new set.
-        // 57 with the CanvasNode - the block a graph editor is made of, which is a control like any other and wears the
-        // theme's own palette rather than an editor's.
-        // Back to 55: the pane and the node went back INTO the canvas's set, along with everything else that only
-        // exists inside a canvas. They are not controls anybody uses on their own, and three files for one family
-        // meant hunting through a theme to find where a bar was styled. Nothing was lost - three entries became one.
+        // No style set may go missing (a control would lose its style unnoticed); raise this count deliberately when a
+        // set is added.
         Assert.That(merged.StyleIncludes.Count, Is.EqualTo(55));
     }
 
@@ -215,11 +180,7 @@ public class MergedFluentThemeTests
     {
         var theme = new Fluent();
 
-        // A gradient STOP takes a colour, not a brush. Four palette tokens have always been raw colours, and the first
-        // merge dropped all four - they were declared differently in the file, so the extraction never saw them. The
-        // symptom was surfaces that painted nothing, which says nothing about the cause.
-        // AcrylicFillColorDefault joined them for the same reason: it goes into MaterialBrush.TintColor, which takes a
-        // colour. As a brush it would not resolve and every acrylic surface would paint nothing.
+        // Keys consumed as colors (gradient stops, MaterialBrush.TintColor) must be declared as raw colors, not brushes.
         Assert.That(theme.RawColors.Keys, Is.EquivalentTo(new[]
         {
             "ShimmerPeakColor", "ShimmerTrackColor", "EdgeFadeColor", "EdgeFadeColorTransparent",
@@ -232,11 +193,7 @@ public class MergedFluentThemeTests
     {
         var theme = new Fluent();
 
-        // 35 brushes + 4 colours = the 39 keys each of the two palette files declared, plus every key added since -
-        // AcrylicFillColorDefault, DataGridLineColor, the two search washes and the validation one. Counting only the
-        // brushes is what let four keys go missing unnoticed the first time, so the total is what is guarded; growing
-        // it is a deliberate edit here.
-        // 46 with the canvas grid colour and its axis colour, 47 with the selection band - see the palette count above.
+        // The total of brushes and raw colors is guarded, so no key of either kind goes missing.
         Assert.That(theme.Palette.Count + theme.RawColors.Count, Is.EqualTo(47));
     }
 

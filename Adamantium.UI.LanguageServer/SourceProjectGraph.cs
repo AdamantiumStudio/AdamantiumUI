@@ -4,14 +4,8 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Adamantium.UI.LanguageServer;
 
-/// <summary>
-/// Builds a Roslyn compilation for a project where every in-repo dependency project is compiled from source
-/// and added as a <see cref="CompilationReference"/> — preserving each assembly's identity (so
-/// <c>[XmlnsDefinition(..., assembly=...)]</c> still resolves) while making its types/properties live from
-/// source with no build. Everything outside the repo (NuGet, framework, cross-repo bindings) is referenced as
-/// the dll already sitting in <c>binDir</c>. Incremental: only changed source files are re-parsed (via the
-/// shared <see cref="SyntaxTreeCache"/>), so rebuilding after a save is cheap.
-/// </summary>
+/// <summary>A Roslyn compilation with in-repo dependencies compiled from source as <see cref="CompilationReference"/>s
+/// (identities kept) and the rest from <c>binDir</c>; reparses only changed files.</summary>
 public static class SourceProjectGraph
 {
     // allowUnsafe so the engine's unsafe members (Vulkan interop) compile; without it their declarations fail

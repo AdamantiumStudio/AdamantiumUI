@@ -13,12 +13,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Text glyph batch (docs/TEXT_GLYPH_BATCH_PLAN.md §9 Stage 2): collects same-clip + same-atlas visible text blocks into
-// ONE STORAGE-INSTANCED draw per segment. Each glyph is a per-instance GlyphItem (NODE-LOCAL rect + atlas UV + transform
-// slot + color) in a BDA storage buffer; the glyph VS transforms it to world on the GPU via the transform table at its
-// slot (FontEffect.fx pass RenderMsdfBatchInstanced), so there is NO per-glyph CPU world bake and a scrolling block moves
-// by one table matrix write (node-aware). Foreground is per-instance, so many colors share the draw. Segment/buffer/
-// overlap machinery is in BatchCollector; this adds glyph packing + the atlas-bound draw. Rendered ABOVE the rect batch.
+// Text glyphs of same-clip, same-atlas blocks in one instanced draw per segment; glyphs are node-local and transformed on
+// the GPU by their slot, with per-instance color. Drawn above the rect batch.
 internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
 {
     private FontAtlas _atlas;            // the pending segment's atlas (one bind per draw)
@@ -132,11 +128,8 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
     // Still the pending segment's atlas? (One draw binds one atlas; a change flushes both batches - see RenderCache.)
     public bool SameAtlas(FontAtlas atlas) => !Active || _atlas == atlas;
 
-    // Pack one block's glyphs into the pending segment: each glyph's LOCAL rect folded by the node-RELATIVE scale/translate
-    // (the axis-aligned rect can hold that), its transform SLOT, its atlas UV, and the block's foreground as a per-instance
-    // colour. NO world matrix is applied here - the glyph VS applies the node matrix (from the transform table at the slot)
-    // on the GPU. False (no write) for a rotated/sheared RELATIVE transform (the axis-aligned rect can't hold it) or a
-    // buffer overflow this frame -> the caller renders that block via the per-block direct draw. Mirrors RectBatchCollector.
+    // Packs a block's glyphs with the node-relative scale/translate and slot; false on a rotated relative transform or
+    // overflow, and the caller draws the block directly.
     public bool TryAdd(TextRenderComponent tc, Matrix4x4F relWorld, int transformSlot, int fadeSlot, Rect2D scissor, FontAtlas atlas,
         Rect logicalBounds, int clipSlot = -1)
     {
@@ -153,17 +146,8 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         return true;
     }
 
-    /// <summary>Re-bake an already-flushed block into the run of slots it ALREADY occupies - <see cref="UpdateSlot"/> for
-    /// a unit that owns several slots. The recorded segment still spans this run, so the frame can be replayed instead of
-    /// re-walked: a counter whose glyph count holds steady costs one range upload, not a walk of the scene. The caller
-    /// checks the count and atlas still match (RenderCache.IsSlotPatchable); false here means the block no longer packs
-    /// at all (a rotated relative transform) and the walk must take it.</summary>
-    /// <summary>Rewrite ONLY the colour of a retained run - which is all a recolour is. Geometry, atlas UVs and the
-    /// transform/opacity slots are left exactly as they were, so this needs no bake world, no transform slot and no
-    /// re-record: the same bytes in a different colour, uploaded in place.
-    /// <para>Exists because delivering a recolour through a RE-PACK ties it to a walk, and the content cache almost
-    /// never walks - it replays. A variant switch therefore only recoloured text when something unrelated forced a walk
-    /// in the same frame, which is why scrolling appeared to "fix" it.</para></summary>
+    /// <summary>Rewrites only the color of a retained run in place, so recolors work on replayed frames without a
+    /// re-pack.</summary>
     public bool RecolourRun(IGraphicsDevice device, int first, int count, TextRenderComponent tc)
     {
         if (count <= 0 || tc?.Foreground is not SolidColorBrush solid) return false;
@@ -188,6 +172,8 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         return true;
     }
 
+    /// <summary>Re-bakes a flushed block into the run it already occupies, so the frame can replay; false when it no
+    /// longer packs (a rotated relative transform).</summary>
     public bool UpdateRun(IGraphicsDevice device, int first, TextRenderComponent tc, Matrix4x4F relWorld, int transformSlot, int fadeSlot,
         int clipSlot = -1)
     {

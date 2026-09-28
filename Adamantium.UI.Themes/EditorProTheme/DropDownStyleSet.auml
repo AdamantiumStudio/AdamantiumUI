@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's drop-down, built to match this theme's FIELD: a rule under the value, not a box around it. A
-         settings column mixes fields and drop-downs, and two different shapes for "a value you can change" is what
-         makes such a column look assembled rather than designed. Whatever the field is, this follows it.
-
-         The list card keeps its own border for a different reason: it FLOATS, and a floating surface with no edge has
-         nothing to separate it from what it covers. -->
+    <!-- Editor Pro's drop-down matches its text field (a rule under the value); the floating list card keeps a
+         border. -->
 
     <Style Selector="DropDown" BasedOn="ItemsControl">
         <Setter Property="Background" Value="Transparent"/>

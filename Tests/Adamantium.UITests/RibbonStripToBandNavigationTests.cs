@@ -11,7 +11,7 @@ namespace Adamantium.UITests;
 
 /// <summary>Crossing between the STRIP and the BAND with the arrows. The generic outward walk cannot answer it: the two
 /// live in separate subtrees of the ribbon's template, and the panel between them answers only by the order its own
-/// children stand in - so each side has to say where the other is (docs/TECH_DEBT.md).</summary>
+/// children stand in - so each side has to say where the other is.</summary>
 [TestFixture]
 public class RibbonStripToBandNavigationTests
 {

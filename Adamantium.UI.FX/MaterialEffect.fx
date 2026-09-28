@@ -1,13 +1,5 @@
-// THE BACKDROP MATERIALS - acrylic, mica, liquid glass: fills made from what is ALREADY DRAWN behind the element.
-//
-// A THIRD effect, and the reason is the same one that split the brushes off the shapes, only sharper. Adding these
-// shaders to BrushEffect made vkCreateShadersEXT die with an access violation - and not on the new pass, on the
-// GRADIENT one, which had worked for months. The driver's shader-object compiler has a ceiling on what one effect can
-// carry, this file's own notes have been recording that ceiling for a while, and the brushes had reached it.
-//
-// So materials get their own parameter block and their own set of shader objects. It also happens to be the honest
-// split: their source is not a brush's business at all. A gradient computes its colour, a texture samples an asset,
-// and a material reads the FRAME - produced mid-draw, one region per segment (see BackdropCapture).
+// THE BACKDROP MATERIALS - acrylic, mica, liquid glass, plus lit surfaces (velvet, metal, wood). Backdrop kinds read the
+// frame captured behind the element, one region per segment (see BackdropCapture).
 
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
@@ -17,19 +9,8 @@
 #include "Includes/BrushData.fxh"
 
 // ---- BACKDROP MATERIALS: a fill made from what is ALREADY DRAWN behind the element ---------------------------------
-// The capture arrives in SourceTexture (see BackdropCapture): the region behind this element, copied with a downscaling
-// blit - so it is already blurred once, for free, and a handful of taps here widen that into a proper frosting instead
-// of paying for a full convolution.
-//
-// THE SOURCE MAPPING, as texture coordinates rather than as a rectangle: .xy scales a frame pixel into the image, .zw
-// shifts it. So a fragment's place in the source is one multiply-add - the divide (and the guard against a zero-sized
-// rectangle) happens once on the CPU instead of per fragment, and the blur below reuses the same scale for its taps.
-//
-// One per SEGMENT rather than per instance, which is why it is a parameter and not a field - a draw binds one image, so
-// every instance in it maps the same way. Set at DRAW time, which is what keeps it honest across replays: for a capture
-// it describes the copied region, and for mica where the desktop put the wallpaper, in this window's pixels. The window
-// moving changes the second one without changing anything the frame recorded - so baking it into the instances made the
-// wallpaper travel WITH the window instead of staying on the desktop.
+// Frame pixel to source uv (.xy scale, .zw offset), one per segment and set at draw time, so mica's wallpaper stays put
+// when the window moves.
 float4 SourceUv;
 
 struct MaterialRectData
@@ -57,8 +38,7 @@ struct MaterialRectData
 // not what shows through it.
 //
 /// Value noise with its DERIVATIVE from one evaluation: the four corner hashes that give the height also give the
-/// slope. TAPS ARE A BUDGET, not a preference - the first version sampled simplex four times per fragment and
-/// vkCreateShadersEXT began failing launch after launch.
+/// slope.
 ///
 /// Returns (height, d/dx, d/dy).
 float3 NoiseD(float2 p)
@@ -127,12 +107,8 @@ float3 MetalNormal(float2 p, float scale, float dir)
     return normalize(float3(-g * depth * s, 1.0));
 }
 
-/// The branch's light: an azimuth plus an elevation. Grazing lights a nap and shows a metal's grinding; overhead
-/// flattens both.
-///
-/// <para>NEITHER END MAY BE A POLE. Straight overhead a light has no direction along the surface, so the azimuth knob
-/// would silently stop mattering; exactly grazing lights nothing. The range stops short of both, and elevation is an
-/// ANGLE - mixed linearly it crowds the useful part into the middle of the knob.</para>
+/// The branch's light from azimuth and elevation. Elevation is an angle whose range stops short of overhead and exactly
+/// grazing, where azimuth would stop mattering or nothing would be lit.
 float3 BranchLight(float4 light)
 {
     float theta = lerp(0.08, 1.35, saturate(light.z));   // ~5 to ~77 degrees
@@ -182,13 +158,8 @@ float4 SheenSurface(float2 p, float4 surface, float4 response, float4 light)
 // METAL: the same lit surface with the other half of the answer - a GGX lobe and something to REFLECT. What it reflects
 // is PROCEDURAL: behind a user interface there is no world, so a capture gives a mirror of the window, not of a room.
 
-/// The studio: floor below, sky above, a bright band where they meet, taken by one "how far up is this ray looking"
-/// number from -1 to 1.
-///
-/// <para>WHICH number is the whole difference between metal and paint. The reflected ray's own height is wrong here and
-/// was tried: under a fixed orthographic view a flat plate reflects the same direction everywhere, so the environment
-/// comes back one flat colour. A real plate sweeps the room ACROSS itself, so the caller composes the height from where
-/// the fragment sits, and the relief only shakes it.</para>
+/// The studio environment (floor, horizon band, sky) at height h in -1..1, which the caller derives from the fragment's
+/// position on the plate rather than the reflected ray alone.
 float3 StudioEnvironment(float h, float3 sky)
 {
     // A room, not a two-tone card. The floor is dim but never black - a near-black floor turned the grinding into hard
@@ -291,13 +262,8 @@ float4 MetalSurface(float2 p, float2 halfExtent, float2 bevelTilt, float4 surfac
                 * MetalVisibility(at, ab, dot(t, v), dot(b, v), NoV, dot(t, l), dot(b, l), NoL)
                 * MetalFresnel(f0, VoH) * NoL;
 
-    // THE ROOM, and it is a NEAR one. A flat plate under a fixed orthographic view reflects the same DIRECTION
-    // everywhere, so an environment at infinity gives one flat colour. A room is not at infinity: each ray travels a
-    // finite distance before it lands, so the top of the plate looks at the ceiling and the bottom at the floor. That
-    // sweep is the difference between metal and paint.
-    //
-    // NOT curvature: a curved bar would change the NORMAL and bend the highlight and the scratches with it. Here the
-    // normal stays flat and only the point of the room being looked at moves.
+    // A near room: under an orthographic view a flat plate reflects one direction, so the looked-at point sweeps with the
+    // fragment's position while the normal stays flat.
     float2 uv = p / max(halfExtent, float2(1.0, 1.0));   // -1..1 across the plate
     float3 r = reflect(-v, n);
 
@@ -319,19 +285,10 @@ float4 MetalSurface(float2 p, float2 halfExtent, float2 bevelTilt, float4 surfac
 }
 
 // ---- WOOD ------------------------------------------------------------------------------------------------------
-// The odd one of the branch. Velvet and metal are lighting models over a plain colour; wood is a PATTERN that happens
-// to be lit, and getting the pattern right matters far more here than getting the lobe right.
-//
-// A tree lays down one ring a year - broad pale spring growth closed by a narrow dark summer band - and those rings are
-// concentric cylinders about the trunk. A board is a SLICE through that stack, so its face shows where the cut plane
-// crossed them. That is why timber shows arches and not stripes, and why this is built from a distance to an AXIS: a
-// stripe function is what a plane parallel to the rings would give, and nobody saws boards that way.
-//
-// FOUR taps, and that is a budget: this file has lost launches to vkCreateShadersEXT over tap count before (see NoiseD).
-/// <param name="bevel">The chamfer as TWO things. <c>.xy</c> is the tilt, constant across the facet because a planed
-/// facet is flat. <c>.z</c> is how far ACROSS it the fragment lies, 0 at the break and 1 at the outer edge - the figure
-/// needs it, because cutting removes material progressively. Displace by the tilt alone and the band shifts rigidly:
-/// the rings JUMP at the break and then run parallel to the face's.</param>
+// A lit pattern: annual rings are cylinders about the trunk, so the face shows a plane cut through them, built from the
+// distance to that axis.
+/// <param name="bevel">The chamfer: <c>.xy</c> its constant tilt, <c>.z</c> the position across it (0 at the break, 1 at
+/// the edge), so the figure deepens smoothly across the facet.</param>
 float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, float4 response, float4 light)
 {
     float2 bevelTilt = bevel.xy;
@@ -346,23 +303,14 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
     float2 axis = float2(cos(dir), sin(dir));     // along the grain: the trunk's length
     float2 across = float2(-axis.y, axis.x);
 
-    // THE COAT, taken FIRST: a finish is a film ON TOP of the wood, so everything it does happens before you see grain.
-    //
-    // ORANGE PEEL. A clear coat levels under its own weight but never completely, and that residual swell is why a
-    // varnished board shows a scatter of GLINTS that swim as the light turns rather than one flat sheet - each swell
-    // catches the source at its own angle. A perfectly flat coat reflects the same everywhere and reads as no coat.
-    // Its amount follows ROUGHNESS, that way round: a mirror lacquer has been cut back and buffed, a hand-rubbed satin
-    // one has not. FINE and SHALLOW - coarse and deep it stops being a highlight and becomes pale blotches.
+    // The clear coat first, since it sits on top of the grain. Fine, shallow orange peel scatters glints, more on rougher
+    // finishes.
     float peel = varnished * (0.25 + 0.75 * saturate(response.a));
     float3 swell = NoiseD(p * 0.045);
     float2 coatSlope = swell.yz * 0.045 * peel * 9.0;
 
-    // AND REFRACTION: the coat is a slab of glass with the wood at its bottom, so the figure is seen DISPLACED where
-    // the film is sloped. Small - a film a fraction of a millimetre thick, not a lens.
-    //
-    // The chamfer displaces it too, for another reason: cutting removes material, so the facet shows wood from steadily
-    // deeper. GROWING FROM ZERO at the break, squared so it starts flat there, which keeps the rings CONTINUOUS across
-    // the line while bending their course. A constant displacement shifts the band rigidly and the rings jump.
+    // The figure is displaced slightly by the coat's slope, and on the chamfer by depth growing quadratically from the
+    // break, keeping rings continuous.
     float2 seen = p - coatSlope * 5.5 + bevelTilt * (bevel.z * bevel.z * 34.0);
 
     float u = dot(seen, axis) / s;
@@ -372,11 +320,8 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
     float3 wander = NoiseD(float2(u * 0.11, 0.0));
     float3 rough = NoiseD(float2(u * 0.45, v * 0.45));
 
-    // THE RING'S FOOTPRINT, measured here: before any branch, and from the COORDINATES rather than from the distance
-    // built out of them. Both halves of that matter. Screen derivatives taken inside divergent control flow are
-    // undefined, and on this driver produce a shader that will not create at all; computing every cut instead, to keep
-    // the flow straight, makes it heavy enough that the driver dies creating it anyway. This function has caused both.
-    // It is an ANTI-ALIASING width, so a footprint within a factor of the true one is enough.
+    // The ring footprint for antialiasing, taken before any branch (derivatives in divergent flow are undefined) and from
+    // the coordinates; approximate is enough.
     float w = max(length(fwidth(float2(u, v))), 0.0015);
 
     // WHERE THE CORE IS, WHICH IS THE WHOLE OF THE CUT: all four figures are the same distance-to-the-axis seen from a
@@ -606,17 +551,8 @@ float4 MaterialFrostedPS(MaterialPSInput input) : SV_Target
 
 
 // ---- LIQUID GLASS: the same capture, BENT ---------------------------------------------------------------------
-// Frosting scatters what is behind it; a lens BENDS it, and the bending is what makes a shape read as a solid piece of
-// glass rather than as a hazy panel. Everything below follows from one observation: a thick drop of glass is flat in
-// the middle and steeply curved at its rim, so light passes straight through the centre and is pushed aside near the
-// edge. The signed distance already describes exactly that - it is zero at the rim and grows inward - so the surface's
-// slope comes free, without a normal map or any geometry.
-//
-// Three things arrive together, and none of them reads as glass alone:
-//   - REFRACTION: sampling is displaced along the surface's slope, hardest at the rim.
-//   - DISPERSION: red and blue are displaced by slightly different amounts, so the rim carries a faint colour fringe,
-//     as it does in a real lens.
-//   - THE RIM ITSELF: a bright line where the curvature is steepest, which is what tells the eye the shape has depth.
+// The signed distance gives a drop's slope (flat center, steep rim): refraction along it, per-channel dispersion, and a
+// bright rim.
 
 // How the surface leans, at this fragment. The gradient of a signed distance IS the direction away from the nearest
 // edge, so the derivatives give the slope of a lens whose shape nobody had to model.
@@ -757,11 +693,7 @@ float4 MaterialWoodPS(MaterialPSInput input) : SV_Target
     float4 r4 = lerp(min(input.Radii, float4(lim, lim, lim, lim)), input.Radii, isPolygon);
     float d = BrushShapeDistance(input.Local, input.Half, r4, 2, isEllipse + isPolygon * 2.0);
 
-    // A CHAMFER, not the rounded easing the metal takes. Metal is milled and its edge broken over; a wooden edge is
-    // CUT, one pass of a plane, leaving a flat facet with a crisp line where it meets the face - and that LINE is what
-    // reads as volume. A gradient smeared over the last few pixels has none, which is why the edge looked like nothing.
-    // So the tilt is constant across the facet, with the break softened over a pixel and a half: enough not to
-    // stair-step, not enough to lose the line.
+    // A planed chamfer: constant tilt across a flat facet, the break softened over 1.5 px so the line stays crisp.
     const float bevelWidth = 13.0;   // device px of facet
     float2 outward = GlassSlope(d, input.Local);
     float facet = smoothstep(-bevelWidth, -bevelWidth + 1.5, d);
@@ -777,12 +709,7 @@ float4 MaterialWoodPS(MaterialPSInput input) : SV_Target
 
 
 // ---- THE SAME MATERIALS ON ARBITRARY GEOMETRY -----------------------------------------------------------------
-// An authored outline arrives as triangles, so these passes do LESS than the analytic ones above: no distance field, no
-// radii, no edge to anti-alias - coverage IS the geometry. What remains is the material itself: read the capture, tint,
-// grain.
-//
-// The one thing lost is the lens's SHAPE - the slope came from the distance field. It is taken from the fragment's place
-// within the mesh's local bounds instead, so the bend follows the bounding box rather than the true outline.
+// Triangles give coverage directly; the lens slope comes from the mesh's local bounds rather than a distance field.
 
 struct MaterialMeshPSInput
 {

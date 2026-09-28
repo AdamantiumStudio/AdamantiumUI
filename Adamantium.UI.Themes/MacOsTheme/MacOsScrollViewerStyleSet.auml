@@ -2,19 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The viewer that hosts the overlay scrollers. Two things differ from Fluent's, and both follow from the bars
-         being TRACKLESS (see MacOsScrollBarStyleSet):
-
-         THERE IS NO CORNER PIECE. Where two bars cross, Fluent fills the square with the trough material, because it
-         has trough material. These bars are transparent, so the square is simply content - which is exactly what a Mac
-         shows with overlay scrollers. Both bars still give up a bar's width at their far end when the other one is
-         there, so their capsules do not cross; that inset is the whole of the corner handling here.
-
-         AND IT IS CONDITIONAL. A viewer with only one bar gives up nothing: the bar owns its whole edge. Getting that
-         wrong is what showed as a scroller stopping short of the corner with nothing in the gap.
-
-         The fade is the same as Fluent's and is not borrowed by accident - a Mac's overlay scrollers appear on scroll
-         or on hover and fade out after a moment, which is what this already does. -->
+    <!-- The viewer for the overlay scrollers: no corner piece; each bar gives up a bar's width at its far end only while
+         the other bar is shown. Fades as in Fluent. -->
 
     <Style Selector="ScrollViewer">
         <Setter Property="Template">

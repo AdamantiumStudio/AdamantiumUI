@@ -7,16 +7,8 @@ using Adamantium.UI.Core.Behaviors;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>
-/// The tab context menu, built by the APPLICATION. In a real editor it also holds "Save", source control and "reveal in
-/// explorer" - things a docking control knows nothing about - which is why the menu is assembled out here and not
-/// shipped inside the control.
-/// <para>It works on the PANE and the AREA directly, not through the workspace: this is view-side code standing next to
-/// the control, so it has both in hand. The workspace is for what a VIEW MODEL needs - the arrangement and the questions
-/// it must answer - and routing a menu click through it would only be indirection.</para>
-/// <para>Every item calls the docking area's own API, so a menu close is the same close as the tab's own button:
-/// <see cref="DockingArea.ClosePane"/> and friends, all of which pass through the area's closing policy.</para>
-/// </summary>
+/// <summary>The application-built tab context menu, calling the docking area's own API (e.g.
+/// <see cref="DockingArea.ClosePane"/>) so its policies apply.</summary>
 public class TabContextMenuBehavior : Behavior<DockingArea>
 {
     private DockingArea _area;

@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The standalone repeat button - a stepper's arrows, a spinner. It is a Button in everything but the auto-repeat,
-         so it says what the button says: NO HOVER, and pressing DARKENS it. See MacOsButtonStyleSet for why, at length;
-         the short of it is that a bordered control is already visibly a control, and a Mac keeps the change for the
-         action rather than spending it on the pointer passing by.
-         Its colours and metrics were already macOS's - they come from the palette and the metrics, which are a contract
-         answered per theme - so hover is the whole of what this set exists to change.
-
-         AND IT CARRIES THE PAGE-BUTTON RESET, which is the real reason this file is not two lines. A ScrollBar's trough
-         areas are a RepeatButton SUBTYPE and style matching is IS-A, so the chrome above lands on them unless it is
-         taken back off. Left out, every scrollbar grows a filled, bordered trough - and it would have been left out,
-         because the reset lives in Fluent's repeat-button set and dropping that include drops it too. -->
+    <!-- The standalone repeat button: like Button, no hover and a darkening press. It also resets ScrollBarPageButton,
+         which would otherwise inherit this chrome. -->
 
     <Style Selector="RepeatButton">
         <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>

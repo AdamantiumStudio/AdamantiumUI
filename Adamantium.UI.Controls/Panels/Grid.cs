@@ -147,11 +147,8 @@ public class Grid: Panel
       set => SetValue(ColumnSpacingProperty, value);
    }
 
-   // Real dependency properties (not plain CLR): the AUML string form <Grid RowDefinitions="Auto,*"> is applied inside a
-   // ControlTemplate via a by-name SetValue, which only reaches AdamantiumProperties (a plain CLR property was silently
-   // dropped -> no rows). Default null (no shared mutable collection); the getter lazily creates one so
-   // grid.RowDefinitions.Add(...) works without an explicit assignment. The callback keeps the mirror field in sync and
-   // hooks CollectionChanged / each definition's PropertyChanged so row/column edits re-lay-out.
+   // Real properties so the string form in a template reaches them by name. Default null; the getter creates the
+   // collection lazily.
    public static readonly AdamantiumProperty RowDefinitionsProperty = AdamantiumProperty.Register(nameof(RowDefinitions),
       typeof(RowDefinitions), typeof(Grid), new PropertyMetadata(null, OnRowDefinitionsChanged));
 
@@ -292,17 +289,8 @@ public class Grid: Panel
    private Size childSize;
    Stopwatch measureTimer;
 
-   /*
-   * Algorithm main goal to measure each logical element only once to speedup Measure and Arrange passes and skip unneccessary calculations
-   * It breaks Grid on 3 groups starting from 0 to 2.
-   * Zero group:
-   * AutoPixel, AutoAuto, PixelAuto, PixelPixel will be calculated first, because all these cells could be measured without any additional actions.
-   * First group
-   * AutoStar and StarAuto cells will be measured twice: first - with ignoring of star values because they are undefined yet,
-   * then all star rows and columns must be measured again without ignoring anything.
-   * Second group:
-   * StarPixel, PixelStar, StarStar cells will be measured last, because at that time we could definitely say how much space each cell takes.
-   */
+   // Cells measure in three groups: those without stars first, then Auto/Star mixes (twice, ignoring stars the first
+   // time), then star-only cells once the remaining space is known.
 
 
    private void PrepareInnerData(Size availableSize)
@@ -710,13 +698,8 @@ public class Grid: Panel
          }
       }
 
-      // Spare room is the star tracks' to share; Auto keeps what the measure gave it, and a shortfall overflows.
-      // EVERY star track is written, including to ZERO. The assignment used to happen only while there was room left to
-      // share, so a star that lost ALL of its room kept the width it had at the previous, larger arrange - and every
-      // track after it stayed pushed along by exactly that much. Measured: a docking panel folded against a side left a
-      // 32-wide group laying its tab strip out at x=38 - the share the star still held from when the group was 70 wide -
-      // so the strip drew outside its own panel, at the window's edge.
-      // A plain loop, not Where(): this runs on every arrange of every grid.
+      // Stars share the spare room; Auto keeps its measure. Every star is written, even to zero, or it keeps a stale
+      // width from a larger arrange.
       var availableSize = Math.Max(finalSize - totalTakenSize, 0);
       var share = stars > 0 ? availableSize / stars : 0;   // a "0*" track alone makes stars 0, and the division NaN
       for (int i = 0; i < segments.Length; ++i)

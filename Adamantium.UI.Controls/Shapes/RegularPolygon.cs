@@ -5,12 +5,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Shapes;
 
-/// <summary>A regular polygon inscribed in the shape's box: <see cref="Corners"/> corners spread evenly round it, the
-/// first on the +x axis. Three corners is a triangle, six a hexagon, and enough of them is indistinguishable from a
-/// circle - so one shape covers the family a UI actually needs (ticks, chevrons, diamonds, dice pips, hex tiles).
-/// <para>Drawn by its own SDF pass: one instanced draw for however many of them are on screen, crisp at any zoom, and no
-/// tessellation. <see cref="RingThickness"/> hollows it out as GEOMETRY - a hollow triangle without spending the pen -
-/// so <see cref="Shape.Stroke"/> remains free to outline the result.</para></summary>
+/// <summary>A regular polygon with <see cref="Corners"/> corners inscribed in the box, the first on +x, drawn by an SDF
+/// pass. <see cref="RingThickness"/> hollows it, leaving <see cref="Shape.Stroke"/> free.</summary>
 public class RegularPolygon : Shape
 {
    static RegularPolygon()

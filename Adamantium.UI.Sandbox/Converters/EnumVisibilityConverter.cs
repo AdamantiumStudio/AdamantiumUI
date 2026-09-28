@@ -6,11 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Shows the one element whose ConverterParameter matches the bound enum value, and collapses the rest. Works
-/// for ANY enum, by name: a stand that holds a rectangle, an ellipse and a star reveals the selected figure, and the same
-/// converter reveals the selected brush family's panel. Written once rather than once per enum - the shape-specific
-/// version it replaced was about to be copied for families, which is how two mechanisms for one job start.
-/// <para>View-layer logic in a converter, not in the view-model.</para></summary>
+/// <summary>Shows the element whose ConverterParameter names the bound enum value and collapses the rest; works for any
+/// enum.</summary>
 public class EnumVisibilityConverter : IValueConverter
 {
     /// <inheritdoc/>

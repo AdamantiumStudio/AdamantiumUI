@@ -3,14 +3,8 @@ using System.Xml.Linq;
 
 namespace Adamantium.UI.LanguageServer;
 
-/// <summary>
-/// Resolves and caches an <see cref="AumlTypeModel"/> per project: a .auml file's completion
-/// uses the types of the project that contains it (its build output) rather than a fixed
-/// assembly set. The cached model is dropped automatically when the project's build output
-/// changes (a <see cref="FileSystemWatcher"/> on the output dir), so newly added types/properties
-/// show up after a rebuild without restarting the language server. A project that has not been
-/// built yet is not cached, so completion enables itself once the first build appears.
-/// </summary>
+/// <summary>Caches an <see cref="AumlTypeModel"/> per project from its build output, dropped when the output changes.
+/// Unbuilt projects are not cached, so completion appears after the first build.</summary>
 public sealed class AumlWorkspace : IDisposable
 {
     private readonly object _gate = new();
@@ -204,11 +198,7 @@ public sealed class AumlWorkspace : IDisposable
         var projectDir = Path.GetDirectoryName(csprojPath)!;
         var ownDll = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
 
-        // Candidate output roots, covering every scheme this engine has used:
-        //  - the conventional <projectDir>\bin;
-        //  - a <BaseOutputPath> redirect (older scheme, e.g. ..\..\output\Name\bin);
-        //  - a single solution-wide artifacts\bin root (current scheme — set via <OutputPath> in the root
-        //    Directory.Build.props, so individual csproj files carry no hint of it; found by walking up).
+        // Candidate output roots: <projectDir>\bin, a <BaseOutputPath> redirect, and an artifacts\bin found by walking up.
         List<string> roots = [Path.Combine(projectDir, "bin")];
         var baseOutput = ReadBaseOutputPath(csprojPath);
         if (baseOutput is not null)

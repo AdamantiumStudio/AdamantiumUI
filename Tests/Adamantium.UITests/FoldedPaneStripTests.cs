@@ -5,14 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Folding a docking panel against a side turns its tab labels ninety degrees, and a turned label needs a completely
-/// different amount of room: it stops being as wide as its text and starts being as TALL as it.
-/// <para>Measured on the stand, with a panel folded against the right edge: the strip asked for 179 and its group was
-/// laid out at 78 - which is three tabs at the 26 of an UNTURNED row. The group had been measured before the labels
-/// turned and never measured again, so the strip was clipped to a third of itself. It came right the moment anything
-/// forced another layout pass, which is why clicking a tab appeared to fix it.</para>
-/// </summary>
+// Folding a panel against a side turns its tab labels, and the group re-measures for the turned strip's length.
 [TestFixture]
 public class FoldedPaneStripTests
 {

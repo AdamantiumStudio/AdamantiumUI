@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- TabItem, macOS: a SEGMENT of a segmented control, not a paper tab. The whole difference is where the selection
-         is drawn. Fluent slides an accent bar along the strip and leaves the tab itself nearly flat; a Mac raises the
-         selected segment out of the groove as a capsule and says nothing else - no accent, no bar, no border on the
-         others. So the tab paints its own selected state here, and the strip's sliding indicator is switched off in
-         MacOsTabControlStyleSet rather than restyled: a bar is scaled to the tab's width by its RenderTransform, and a
-         corner radius scaled by the same transform is not a capsule, it is an ellipse. -->
+    <!-- TabItem, macOS: a segment that paints its own raised capsule when selected; the strip's sliding bar is off, since
+         its scale transform would stretch a radius into an ellipse. -->
 
     <Style Selector="TabItem">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
@@ -108,12 +104,8 @@
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
         </PropertyTrigger>
-        <!-- A SIDE strip reads as a list, and a list's labels line up on the left; centring each in its own row leaves the
-             column ragged. The centring this overrides is for a TOP strip, where the tabs stand side by side as capsules.
-             A TRIGGER and not a "TabItem[IsSideTab=true]" style, which is where this started: a second style for the type
-             re-runs the whole set on every tab whose state flipped, Template setter included, so moving the strip from top
-             to left rebuilt hundreds of tab templates - measured at 278 rebuilds and 70,113 layout invalidations in a
-             second, which is the "the panel moves sideways slowly" this was. A trigger writes the one value it names. -->
+        <!-- Side strips left-align labels. A trigger, not a TabItem[IsSideTab=true] style, which would re-run the whole set
+             (Template included) on every tab when the placement changes. -->
         <PropertyTrigger Property="IsSideTab" Value="true">
             <Setter TargetName="PART_ContentPresenter" Property="HorizontalAlignment" Value="Left"/>
         </PropertyTrigger>

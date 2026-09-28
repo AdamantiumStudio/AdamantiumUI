@@ -30,22 +30,14 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
     public int GeometryVersion { get; } = geometry?.Version ?? 0;
 
-    /// <summary>Tessellate HERE, where the payload is built - inside component.Render, on the RECORD thread. It used to
-    /// happen in the render unit instead, which the applier constructs: that put an IN-PLACE rebuild of the live
-    /// <see cref="Geometry.Mesh"/> (and of the unsynchronised <c>IsProcessed</c> flag guarding it) on the render thread,
-    /// while the property system kept invalidating the same flag from the loop thread. Measured: 1728 tessellations on
-    /// the render thread against 315 invalidations from the loop thread in one run. The render thread must only READ.</summary>
+    // Tessellates on the record thread; the render thread must only read the mesh.
     private static Geometry Tessellate(Geometry g)
     {
         g?.ProcessGeometry(GeometryType.Both);
         return g;
     }
 
-    // A COPY, taken here on the record thread. The pen the caller passed stays editable from the loop thread (its caps,
-    // join and dash array are all reachable), and the applier reads exactly those fields when it builds the stroke
-    // contours - so holding the caller's instance put a live, mutable object on the far side of the seam. The brush
-    // INSIDE the pen stays live on purpose: it is read through its own immutable snapshot, so an animated stroke brush
-    // keeps animating.
+    // A copy, since the caller's pen stays editable on the loop thread; its brush stays live and is read via its snapshot.
     public Pen Pen { get; } = pen?.CloneForRendering();
 
     public bool Equals(GeometryPayload other)

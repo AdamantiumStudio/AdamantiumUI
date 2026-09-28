@@ -16,17 +16,9 @@ public enum GeometryKind : byte
 }
 
 /// <summary>
-/// Stable identity of a LOCAL geometry (docs/RENDER_CACHE_REDESIGN.md §4e): same key ⟺ same tessellated vertices in the
-/// element's own coordinate space, so two elements with the same key SHARE one mesh and instance together. Deliberately
-/// excludes the world transform and the colour - those are per-instance (<see cref="GeometryInstance"/>). Corner-radius
-/// STRUCTURE / stroke presence that changes the shape ARE part of the key; the fill colour is not.
+/// Identity of a local geometry: equal keys share one mesh and instance together; world transform and color are
+/// per-instance. Parametric shapes compare exactly; meshes by a 64-bit content fingerprint.
 /// </summary>
-/// <remarks>
-/// Parametric shapes (rounded rect, ellipse) store their exact defining numbers, so equality is exact - no chance of
-/// two different shapes merging into one mesh. Arbitrary geometry (a <see cref="GeometryKind.Mesh"/> from a Path) is
-/// keyed by a 64-bit content fingerprint of its local vertices; a fingerprint collision would wrongly merge two shapes,
-/// so the registry keeps the source mesh and can validate on insert (a rare, cheap check on a structural change).
-/// </remarks>
 public readonly struct GeometryKey : IEquatable<GeometryKey>
 {
     public readonly GeometryKind Kind;

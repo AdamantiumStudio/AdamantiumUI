@@ -462,14 +462,7 @@ namespace Adamantium.UITests
 
       }
       
-      /// <summary>What a SPANNED child is offered when it is MEASURED. CalculatesColSpanCorrectly below covers the
-      /// arrangement, but its children are fixed-size, so it cannot see this: a child whose desired size depends on the
-      /// width it is given - any wrapping panel - is measured with the wrong one and answers for a width it will never
-      /// have.
-      /// <para>Measured in the tab strip: a pinned row spanning three columns of an "Auto,*,Auto" grid was offered the
-      /// FIRST column's width (empty, so 0), wrapped every tab onto its own line and asked for three lines of height;
-      /// the arrange then gave it the full width and laid everything out in one. The difference showed as a band of
-      /// empty strip.</para></summary>
+      // A spanned child is measured with the width of all its columns, not the first one's (matters for wrapping panels).
       [Test]
       public void ASpannedChild_IsMeasuredWithTheWidthOfEveryColumnItCovers()
       {
@@ -526,11 +519,7 @@ namespace Adamantium.UITests
 
       }
 
-      // A '*' + 'Auto' split with a fixed-width child in the Auto column: Auto takes exactly the child's width, '*' takes
-      // the rest, and the Auto child sits flush against the right edge. This is the tab strip's overflow-button row; a
-      // FRESH measure (no stale-cache confound) pins the grid math itself - the reflow-after-a-visibility-toggle case is a
-      // layout-loop concern (a bare re-Measure early-returns; see CalculatesColSpanCorrectly's explicit InvalidateMeasure),
-      // NOT a grid-math bug.
+      // '*' + 'Auto' with a fixed child in Auto: Auto takes the child's width, '*' the rest (a fresh measure pins the math).
       [Test]
       public void StarPlusAutoColumns_SplitByChildWidth()
       {
@@ -2010,17 +1999,8 @@ namespace Adamantium.UITests
          });
       }
 
-      // Guards the INVARIANT a zero-sized pass must keep: no throw, and no non-finite track left behind. It is not a
-      // reproduction of the bug that prompted it - see the note below - so it passes with or without that fix.
-      //
-      // The bug: CalculateFinalGridSize's overflow branch computes totalTakenSize/finalSize, which is 0/0 = NaN when a
-      // grid is arranged into zero space while holding nothing, and divides every Auto track by it. Nothing recomputes
-      // those tracks afterwards (later passes only rewrite STAR tracks), so the NaN reaches the track offset and then a
-      // child's arrange rect - and Arrange REJECTS a non-finite rect by throwing, unwinding the whole layout pass. Every
-      // element after the offending one keeps its default slot, which is why a second window rendered with its content
-      // piled at the origin. Found by driving that window from code and reading its layout trace; reproducing it from a
-      // bare Grid did not work - a standalone grid measured at zero height leaves its rows out of the Auto set, so the
-      // guilty branch is never entered. Reproducing it needs the real template's path into that branch.
+      // A zero-sized pass must not throw or leave non-finite tracks (guards the 0/0 overflow branch in
+      // CalculateFinalGridSize, which a bare Grid cannot reach).
       [Test]
       public void ZeroSizedArrange_DoesNotPoisonAutoTracks()
       {

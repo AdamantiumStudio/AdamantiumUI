@@ -9,32 +9,13 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// GPU-resident transform table: one world <see cref="Matrix4x4F"/> per MOTION NODE - an element whose subtree moves
-/// independently (a scrolled panel, an animating tile). Batch instances carry local-space geometry plus a SLOT INDEX
-/// into this table; the vertex shader fetches the matrix by index (BDA) and transforms. Moving a node then costs ONE
-/// 64-byte slot write (a scroll = the panel's slot) - the instance buffer is untouched until actual GEOMETRY changes,
-/// and rotated/3D nodes stay batched (the shader applies a full matrix, not an axis-aligned bake).
-/// Slots are pooled: at-rest elements share their nearest motion ancestor's slot; an element PROMOTES to its own slot
-/// when it starts moving independently and releases it when done (the tilt/flip tiles).
-/// <para>The table is held as ONE COPY PER FRAME IN FLIGHT, laid end to end in a single buffer. The frame's copy is
-/// chosen by the device's frame index and only that copy is ever written, so a matrix rewrite can never land in memory
-/// a frame still on the GPU is reading - BeginDraw's fence proves only frame N-MaxFramesInFlight is done, and the two
-/// frames after it are still executing. Writing one shared copy is what made a fast scroll flicker across the WHOLE
-/// window: slot indices come from draw order, so a tab crossing the viewport edge shifts every later element's slot,
-/// and the still parts of the window were being rewritten under the frames drawing them. Copies cost 64 bytes per slot
-/// per frame in flight (~48 KB), and a copy is caught up lazily - only slots whose content actually changed since that
-/// copy last saw them are re-sent, so an idle frame still moves zero bytes.</para>
-/// </summary>
+// GPU transform table: one world matrix per motion node, read by slot index in the vertex shader, so moving a node is
+// one 64-byte write. One copy per frame in flight, caught up lazily, so writes never hit memory a frame still reads.
 internal sealed class TransformTable
 {
     private const int InitialCapacity = 256;
 
-    /// <summary>One entry: the node's world matrix and its ALPHA, in ONE record so both travel on ONE device address.
-    /// A second table would need a second address, and adding one more <c>uint64_t</c> parameter to the batch effect
-    /// stopped shader creation outright (measured: the declaration alone, used by nothing, killed startup 3 of 3 while
-    /// the same build without it started 3 of 3 - the parameter block is at its limit). They belong together anyway:
-    /// same node, same slot, same lifetime, same catch-up.</summary>
+    // One entry: the node's world matrix and its alpha, sharing one device address, slot, lifetime and catch-up.
     [StructLayout(LayoutKind.Sequential, Size = SlotStride)]
     internal struct NodeSlot
     {
@@ -91,11 +72,8 @@ internal sealed class TransformTable
     public int SlotCount => _count;
     public int GpuCapacity => _gpuCapacity;
 
-    /// <summary>Makes room for <paramref name="extraSlots"/> more slots BEFORE <see cref="EnsureResources"/> decides the
-    /// buffer size. Growth is otherwise discovered while baking, and a slot past the current GPU capacity is never
-    /// uploaded that frame (see <see cref="SetMatrix"/>) - the shader still indexes by it and reads past the buffer.
-    /// That is harmless when one node appears and the next frame catches up, and ruinous when a clone run asks for
-    /// thousands at once: tiles vanished and jumped about as the set changed, differently every frame.</summary>
+    /// <summary>Reserves <paramref name="extraSlots"/> before <see cref="EnsureResources"/> sizes the buffer, so large
+    /// clone runs never index past it.</summary>
     public void Reserve(int extraSlots)
     {
         var needed = _count + extraSlots;
@@ -165,14 +143,8 @@ internal sealed class TransformTable
         _uploaded[_current][slot] = _version[slot];
     }
 
-    /// <summary>Sets the element's OWN opacity on this slot and re-composes the effective alpha (own x every fade root
-    /// above it) here and on every fade slot below it. Fading a container is then a handful of float writes instead of a
-    /// re-bake of every instance under it.
-    /// <para>The product is folded HERE rather than walked in the shader on purpose: a chain walk costs a loop in every
-    /// pass that reads it, and this driver aborts <c>vkCreateShadersEXT</c> outright once a pass grows - measured, three
-    /// starts out of three, the moment the loop went into all ten passes. The tree walked here is the tree of FADE
-    /// slots, not of elements: a slot exists only for something that actually fades, so it is a handful of nodes even
-    /// under a 22k-element subtree.</para></summary>
+    /// <summary>Sets the element's own opacity and re-composes effective alpha here and on fade slots below, so shaders
+    /// read one composed value.</summary>
     public void SetAlpha(IGraphicsDevice device, int slot, float alpha)
     {
         if (_ownAlpha[slot] == alpha && _cpu[slot].Params.X == Compose(slot, alpha)) return;
@@ -245,11 +217,8 @@ internal sealed class TransformTable
         }
     }
 
-    /// <summary>The OPACITY slot for <paramref name="ownerId"/>, allocating one if needed. Same pool, second purpose: this
-    /// record's <c>Params</c> carry an alpha and a link to the next opacity slot up, and its matrix is never read. Kept
-    /// apart from the transform slot on purpose - a transform slot is SHARED by a motion node's whole subtree, so writing
-    /// one element's alpha into it would fade the subtree, and giving the element its own transform slot instead would
-    /// cost the node the one-write move that slot exists for.</summary>
+    /// <summary>The opacity slot for <paramref name="ownerId"/>, allocated if needed; separate from transform slots,
+    /// which a whole subtree shares.</summary>
     public int AcquireOpacitySlot(Guid ownerId)
     {
         if (_opacitySlotByOwner.TryGetValue(ownerId, out var slot)) return slot;
@@ -334,12 +303,7 @@ internal sealed class TransformTable
 
 
     // ---- CLIP SLOTS ---------------------------------------------------------------------------------------------
-    // A ROUNDED clip cannot be a scissor - scissors are rectangles - so the shape travels to the shaders the same way a
-    // transform and an opacity chain do: in a slot, named by index in the instance record. That also means a clip
-    // survives a replayed frame and follows a scrolling subtree without re-recording anything.
-    //
-    // The slot's matrix is used as STORAGE, not as a transform: row 0 holds the clip rectangle in device pixels, row 1
-    // its four radii. Params.X marks the slot as carrying a clip at all.
+    // Rounded clips travel in slots: matrix row 0 = rect in device px, row 1 = radii; Params.X marks a clip.
     private readonly System.Collections.Generic.Dictionary<Guid, int> _clipSlotByOwner = new();
 
     public int AcquireClipSlot(Guid ownerId)
@@ -416,12 +380,7 @@ internal sealed class TransformTable
 
     public bool TryGetSlot(Guid nodeId, out int slot) => _slotByNode.TryGetValue(nodeId, out slot);
 
-    /// <summary>Writes one node's world matrix into THIS FRAME's copy - the per-move cost (64 bytes). No frame in flight
-    /// reads that copy, so this cannot disturb what is already being drawn.
-    /// <para>An UNCHANGED matrix writes nothing. Nothing is world-baked into an instance any more, so every drawn element
-    /// resolves a slot on every walk and this would otherwise upload 64 bytes per element per frame - the cost the bake
-    /// used to avoid. Skipping the identical write puts it back: a still frame moves zero bytes, and only what actually
-    /// moved pays.</para></summary>
+    /// <summary>Writes a node's world matrix into this frame's copy; unchanged matrices write nothing.</summary>
     public void SetMatrix(IGraphicsDevice device, int slot, in Matrix4x4F world)
     {
         if (!SameBytes(_cpu[slot].World, world))

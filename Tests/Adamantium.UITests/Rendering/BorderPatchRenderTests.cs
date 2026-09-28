@@ -15,15 +15,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A BORDER lives in a retained instance like any other rect, so it inherits that machinery's failure mode: a slot
-/// patched, reused or renumbered by somebody else, after which the shape draws with a neighbour's data until something
-/// forces a full walk. That reads as "the border vanished and stayed vanished, then came back when I touched anything
-/// else" - the exact report this fixture exists for, and the same class as the skeleton pulse recolouring the wrong card.
-/// <para>Each test drives one of the paths that rewrites a retained slot - a paint-only change, a change of the drawn
-/// UNIT COUNT next door, and a resize - and asks the same question: does the picture still equal what a full walk draws?
-/// A border missing from a patched frame is invisible to a pixel test that only looks at the border itself.</para>
-/// </summary>
+// Borders through each slot-rewriting path (paint change, neighbor unit count change, resize): the patched frame must
+// equal a full walk.
 [TestFixture]
 [Category("Gpu")]
 public class BorderPatchRenderTests
@@ -162,16 +155,8 @@ public class BorderPatchRenderTests
         AssertMatchesAFullWalk(scene, patched, "the patched frame must be pixel-identical to a full walk");
     }
 
-    // The neighbour's unit COUNT changes (0 -> 1), which is the splice path: runs are excised, appended and renumbered
-    // around the borders. A slot that ends up belonging to somebody else is how a border silently loses its ring.
-    //
-    // This is the one that found the paint-order defect this fixture was written for, and it was never about borders - the
-    // same scene with plain rects failed identically. A batch SEGMENT glues every control between two flushes while the op
-    // drawing it carries one rank, so a newcomer whose rank lands INSIDE that span had nowhere correct to go: inserted
-    // before the op it painted UNDER the card it must cover (measured: rgb 25,115,0 where a walk gives 0,128,0), and
-    // inserted after it would cover cards that paint later. The segment is now cut at the newcomer's rank.
-    // Until this test the defect was only ever seen as a 1-in-6 flake in ViewportResize_Splices - far too thin a thread
-    // to fix a paint-order bug by.
+    // A neighbor's unit count going 0 -> 1 takes the splice path; a newcomer ranked inside a segment's span needs the
+    // segment cut at its rank.
     [Test]
     public void ANeighbourAppearing_LandsOnTopOfTheCard_NotUnderIt()
     {
@@ -190,12 +175,7 @@ public class BorderPatchRenderTests
         AssertMatchesAFullWalk(scene, patched, "the newcomer must land exactly where a full walk puts it");
     }
 
-    // TWO patches in ONE frame, with a SPLIT between them. The newcomer's placement cuts a recorded segment in two, and
-    // the OTHER patch had already been resolved against a segment before that cut (the frame resolves every patch first,
-    // then mutates - by design, so a refusal costs nothing). While a segment was named by its POSITION in the draw order,
-    // that resolved name meant a different segment after the insert, and the frame re-issued somebody else's layer: the
-    // shift-by-one that used to be held off by three synchronised fix-up loops. Segments carry stable ids now, so there is
-    // nothing to keep in sync - and this is the test that would have caught a loop nobody remembered to write.
+    // Two patches in one frame around a split: patches resolved before the split still name their segment (stable ids).
     [Test]
     public void TwoPatchesInOneFrame_AroundASplit_EachReissuesItsOwnLayer()
     {

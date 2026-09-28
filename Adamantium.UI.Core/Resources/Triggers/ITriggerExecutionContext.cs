@@ -13,11 +13,8 @@ public interface ITriggerExecutionContext
 
 internal static class TriggerTargetResolver
 {
-    /// <summary>Last resort for <see cref="ITriggerExecutionContext.FindTarget"/>: a KEYED RESOURCE (resolved tree-scoped
-    /// from the host: Local -> Theme -> Global). A named part is per-host, but some targets are deliberately SHARED - the
-    /// loading-skeleton pulse runs on ONE theme brush that every skeleton card paints with, so animating it costs one
-    /// animation instead of one per card. Only an AdamantiumComponent resource (a Brush) can be a target; anything else
-    /// (a colour, a double) resolves to null exactly as an unknown name does.</summary>
+    /// <summary>Fallback for <see cref="ITriggerExecutionContext.FindTarget"/>: a keyed resource resolved tree-scoped, for
+    /// shared targets such as a theme brush; non-component resources give null.</summary>
     public static IAdamantiumComponent FindKeyedTarget(this ITriggerExecutionContext context, string key)
         => context.Theme?.GetResource(context.HostComponent, key) as IAdamantiumComponent;
 }

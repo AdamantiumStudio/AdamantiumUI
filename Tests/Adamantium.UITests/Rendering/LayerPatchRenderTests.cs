@@ -16,18 +16,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A control whose batched unit COUNT changes - the hover backdrop that appears under a row - must be repaired without
-/// re-walking the scene, and it must land in ITS OWN paint position (docs/RENDER_CACHE_REDESIGN.md §4q).
-/// <para>The invariant these tests hold the cache to: <b>what a control costs, and where it lands, depend on that control
-/// and its paint rank - never on what else happens to be in the frame.</b> Every regression this path went through was a
-/// breach of it, and each looked like a rendering fault rather than a cache one: a highlight drawn OVER instanced
-/// geometry because it borrowed a neighbour's place; rows blinking out because a layer was rebuilt from bookkeeping that
-/// does not describe every slot; and - invisible in any picture - the patch quietly giving up because an unrelated text
-/// label sat between the neighbours, which cost a plain mouse move a full walk of the scene.</para>
-/// <para>So the frames here are asserted TWICE: the picture must equal what a full walk draws, and the path taken must
-/// still be the patch. A test that only compares pixels passes happily while the frame rate collapses.</para>
-/// </summary>
+// A control whose unit count changes is patched into its own paint position; frames must equal a full walk AND still
+// take the patch path.
 [TestFixture]
 [Category("Gpu")]
 public class LayerPatchRenderTests
@@ -136,14 +126,7 @@ public class LayerPatchRenderTests
         Assert.That(DifferingPixels(patched, Pixels(scene.Renderer)), Is.Zero, because);
     }
 
-    /// <summary>The cheapest invariant of the whole retained path, and the one with no guard until now: a frame in which
-    /// NOTHING changed must REPLAY the recorded op stream, not walk the scene again. It needs a device (the replay branch
-    /// is gated on one), which is why it lives here rather than in a headless fixture, and it needs the idle frame to be
-    /// genuinely idle - so the scene is drawn once to settle, then drawn again with nothing touched at all.
-    ///
-    /// Without this, "the fast path quietly switched itself off" is a regression that only shows up as a slow app: every
-    /// pixel stays correct, and only a hand-held measurement notices. The neighbouring assertions in this fixture all
-    /// cover PARTIAL patches - a control that changed - and none of them would fail if the CLEAN case stopped replaying.</summary>
+    // A frame with no changes replays the recorded op stream instead of walking (needs a device for the replay branch).
     [Test]
     public void AnIdleFrame_Replays_InsteadOfWalkingTheSceneAgain()
     {

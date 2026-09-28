@@ -7,16 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// An <see cref="ItemsControl"/> that tracks a primary selection - <see cref="SelectedItem"/> / <see cref="SelectedIndex"/>
-/// (two-way bindable) plus the <see cref="SelectionChanged"/> event. The selection lives on the control (by item) and is
-/// reflected onto whichever container currently hosts each item via <see cref="ISelectable.IsSelected"/> - including a
-/// recycled container rebound on scroll. Subclasses layer their own semantics on top: <see cref="ListBox"/> widens it to
-/// multi-select, <see cref="TabControl"/> keeps it single (the active tab).
-/// <para/>
-/// Distinct from <see cref="Adamantium.UI.Core.Resources.StyleSelector"/> (a style's match rule), which was renamed so
-/// this control base can carry the conventional WPF name.
-/// </summary>
+/// <summary>An <see cref="ItemsControl"/> with a primary selection (<see cref="SelectedItem"/>,
+/// <see cref="SelectedIndex"/>), kept by item and reflected onto containers via <see cref="ISelectable.IsSelected"/>.</summary>
 public abstract class Selector : ItemsControl
 {
     public static readonly AdamantiumProperty SelectedIndexProperty = AdamantiumProperty.Register(nameof(SelectedIndex),
@@ -139,11 +131,8 @@ public abstract class Selector : ItemsControl
         if (changed) RaiseSelectionChanged();
     }
 
-    /// <summary>Writes SelectedIndex/SelectedItem without re-triggering the external-change callbacks.
-    /// <para>SetCurrentValue, not the CLR setters: those write at Local priority, which OUTRANKS a binding - so the
-    /// control's own housekeeping (auto-selecting the first item when the collection fills) permanently masked a
-    /// <c>SelectedItem="{Binding}"</c>, and the source could never state the selection it wanted. This writes the value
-    /// where the binding writes it, so establishing the binding still overrules the default.</para></summary>
+    /// <summary>Writes SelectedIndex/SelectedItem via SetCurrentValue, without re-triggering the external-change
+    /// callbacks or masking a binding.</summary>
     protected void SetSelectedProperties(int index, object item)
     {
         SyncingSelection = true;

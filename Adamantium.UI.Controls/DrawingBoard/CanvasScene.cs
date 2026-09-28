@@ -5,12 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A scene that keeps its items in a list and rejects by bounds. Everything an application needs until a
-/// drawing outgrows a walk - and the point of <see cref="ICanvasScene"/> is that when it does, an index goes in HERE
-/// and the canvas is not touched.
-/// <para>Linear ON PURPOSE rather than as a placeholder: an index costs memory and a rebuild on every edit, and which
-/// index to build is a question about how a real drawing is shaped. The walk is what says when that question is worth
-/// answering - see the measurement the plan asks for.</para></summary>
+/// <summary>A scene that keeps its items in a list and rejects by bounds. Linear on purpose; a spatial index can replace it
+/// behind <see cref="ICanvasScene"/> without touching the canvas.</summary>
 public class CanvasScene : ICanvasScene
 {
     private readonly List<ICanvasItem> _items = new();
@@ -113,13 +109,8 @@ public class CanvasScene : ICanvasScene
     /// <summary>To the start of the list, which is the back.</summary>
     public bool SendToBack(ICanvasItem item) => MoveTo(item, 0);
 
-    /// <summary>Puts an item straight AFTER another in paint order, or straight before it.
-    /// <para>The two above only ever reach the ends, and everything worth arranging is in the middle: a shape that has
-    /// to sit between two others cannot be put there by a command that can only put it on top of both.</para>
-    /// <para>Said as "next to THIS ONE" rather than as "one place along", because one place along is not a thing a
-    /// person can see. A scene may hold a drawing and a graph at once, and a step that moved an item past something
-    /// the current mode does not show is a press that appears to do nothing. The caller names the neighbour it means,
-    /// which it knows and this does not.</para></summary>
+    /// <summary>Puts an item straight after or before a named neighbor in paint order; named, since "one place along" may
+    /// pass an item the current mode does not show.</summary>
     public bool MoveNextTo(ICanvasItem item, ICanvasItem neighbour, bool after)
     {
         var at = item == null ? -1 : _items.IndexOf(item);
@@ -155,12 +146,8 @@ public class CanvasScene : ICanvasScene
     /// nothing it reports can change the ORDER, which is the only thing a number describes.</remarks>
     public void Touch() => Changed?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Puts an item at a PLACE, counting from the back - what writing a layer number in the panel means.
-    /// <para>The place is counted among items of ITS OWN KIND, which is how <see cref="Settled"/> writes the number
-    /// down: the other kind is not on show, and a place counted through things nobody can see is a place nobody can
-    /// name. Where it lands in the list itself follows from that.</para>
-    /// <para>The number is clamped rather than refused: asked for the hundredth place in a scene of ten, a person means
-    /// the top, and a box that rejects what was typed teaches nothing.</para></summary>
+    /// <summary>Puts an item at a layer number counted from the back among its own kind, as <see cref="Settled"/> numbers
+    /// them; out-of-range numbers are clamped.</summary>
     public bool Reposition(ICanvasItem item, int place)
     {
         if (item == null || !_items.Contains(item)) return false;
@@ -186,14 +173,7 @@ public class CanvasScene : ICanvasScene
         return MoveTo(item, landing < 0 ? last : landing);
     }
 
-    // THE ONE PLACE THE LIST SETTLES. Every change to WHAT IS ON THE PLANE or to the order of it ends here, so the
-    // number each item carries is written down in exactly one place and cannot drift from the order it describes -
-    // which is the whole reason it is a stamp and not a second truth.
-    //
-    // NUMBERED AMONG ITS OWN KIND, not among everything the list holds. A plane may hold a drawing and a graph at once,
-    // and only one of them is on show; counted through both, a drawing of ten things gave its topmost the number
-    // fifteen, because five nodes nobody can see were standing between them. A number a person cannot arrive at by
-    // looking is not a number they can type.
+    // Every change to the plane ends here, restamping each item's layer number among its own kind so it never drifts.
     private void Settled()
     {
         var drawing = 0;

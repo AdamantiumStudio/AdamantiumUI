@@ -2,14 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The bottom-right corner grip of a grip-only-resize window. The whole control box is the hit region (it publishes
-         ResizeGripRect, which the platform hit-test turns into HTBOTTOMRIGHT); the Transparent background keeps it
-         present, and the OS hands back the NWSE cursor because the hit-test reports a sizing corner.
-
-         THREE DIAGONAL RULES rather than Fluent's triangle of dots - the same decision as the drag handle, for the same
-         reason. Dots are a touch-sized affordance; a hairline mark reads at this theme's density and states the AXIS it
-         resizes along, which a dot cluster cannot. Tertiary, because a grip that is always in the corner of every
-         window should be findable without being noticed. -->
+    <!-- The corner resize grip: the whole transparent box is the hit region (ResizeGripRect). Three tertiary diagonal
+         hairlines instead of Fluent's dots. -->
 
     <Style Selector="ResizeGripper">
         <Setter Property="Template">

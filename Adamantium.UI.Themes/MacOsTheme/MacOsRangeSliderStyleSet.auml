@@ -2,27 +2,14 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Two handles on one rail with the chosen span painted between them. The RangeTrack owns the geometry - it sizes
-         both handles' travel against the trough minus BOTH of them, so they can never cross - and this set is the rail
-         and the parts it positions.
-
-         It follows the plain slider exactly, and that is the whole point of it being here: BOTH HANDLES ARE WHITE. With
-         accent handles the pair reads as the two ENDS OF THE BLUE BAND, and a range slider is then a blue bar with
-         nothing on it to take hold of - which is worse here than on a plain slider, because there are two things to
-         take hold of and the user has to tell them apart from the band and from each other.
-
-         The band itself keeps SQUARE ends: it butts against a round handle on either side, and rounding it there would
-         read as a gap rather than as a join. -->
+    <!-- Two white handles on one rail (RangeTrack keeps them from crossing) with a square-ended band between them, like
+         the plain slider. -->
 
     <!-- Cross axis 28, not the compact 22 - the room the knobs' shadows need. See the note in MacOsSliderStyleSet. -->
     <Style Selector="RangeSlider">
         <Setter Property="MinHeight" Value="{ResourceReference ControlHeight}"/>
         <Setter Property="MinWidth" Value="{ResourceReference ControlMinWidth}"/>
-        <!-- The band is the RAIL's thickness, not the control's default 6. That default is a hit-target decision - the
-             band is a handle in its own right, and a fatter one is easier to grab - but on a Mac the chosen span and the
-             empty groove are one continuous track, and a span standing proud of the groove reads as a separate object
-             laid on top of it. It also shows up the joint: a square end butting a ROUND knob leaves a notch either side
-             of the meeting point, and the notch is as tall as the band is thick. -->
+        <!-- The band takes the rail's thickness, not the default 6, so span and groove read as one track. -->
         <Setter Property="BandThickness" Value="{ResourceReference SliderTrackThickness}"/>
     </Style>
 

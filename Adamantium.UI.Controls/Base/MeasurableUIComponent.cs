@@ -345,11 +345,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             height = Math.Max(height, child.DesiredSize.Height);
         }
 
-        // Layout is a VISUAL-tree walk ONLY (above) - it is the complete layout tree; the logical tree is for inheritance/
-        // resources/DataContext/events, never layout (same as WPF). A control that wants a child laid out MUST add it to
-        // its visual children. Do NOT re-add a LogicalChildren loop: it would measure a templated control's Content twice
-        // (once via its ContentPresenter, once here) - the 2x pass over every templated element's subtree. Portalled
-        // children (a Popup's Child) are sized by their overlay host (PopupLayer), not here.
+        // Layout walks the visual tree only; a logical-children loop would measure templated content twice. Popup children
+        // are sized by their overlay host.
 
         if (UseLayoutRounding)
         {
@@ -399,13 +396,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
             DesiredSize = desiredSize;
 
-            // A CHANGED desired size is news for the parent, whoever asked for this measure. The layout pass propagates
-            // this too, but only for a node it dequeued itself - and a node measured any other way (a parent's cascade,
-            // a direct Measure, an inline re-measure from arrange) then goes valid holding a size nobody above it has
-            // seen. The pass afterwards skips it on the validity gate, silently, and every ancestor keeps the number it
-            // had. Measured on a docking panel returning from a window: its tab strip measured 272x36 while the grid one
-            // level up stayed at 0 and "valid", so the strip was drawn empty until something else disturbed the tree.
-            // NOT while the parent is measuring US - that cascade is already computing its own size from this one.
+            // A changed desired size must reach the parent however this measure started, or the parent stays valid with a
+            // stale size; not while the parent is measuring us.
             if (previousDesired != desiredSize)
             {
                 NotifyParentOfContributionChange();
@@ -465,13 +457,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             throw new InvalidOperationException("Invalid Arrange rectangle.");
         }
 
-        // Measure was invalidated after this arrange was scheduled (classically: a virtualized container's content is
-        // rebound mid-pass, invalidating the inner ContentPresenter's measure). Arrange needs a valid measure. ABORTING
-        // here was wrong: the node then gets re-arranged later by the manager into its OWN cached slot, while its parent -
-        // which arranged to a NEW size and is now arrange-valid - never re-cascades into it, freezing the node at a
-        // PREVIOUS size (the recycled tiles stuck at an old cell size). Instead re-measure inline with the cached
-        // constraint and fall through to arrange into the slot the parent is giving NOW. A node that was never measured
-        // (no cached constraint) genuinely can't be arranged yet -> keep aborting.
+        // Measure was invalidated after this arrange was scheduled: re-measure inline with the cached constraint and arrange
+        // into the slot given now. A node never measured cannot be arranged yet.
         if (!IsMeasureValid)
         {
             if (_previousMeasure is not { } cachedConstraint)
@@ -650,11 +637,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             var innerUsed = ArrangeOverride(innerArrange).Constrain(innerArrange);
             var outerUsed = hasLayout ? TransformSize(lt, innerUsed) : innerUsed;
 
-            // A size change must re-run OnRender: a control that first rendered at a STALE size (e.g. 0x0 while still
-            // unarranged - which happens for content built during a measure pass, like a tab body added via a
-            // ContentPresenter/DataTemplate) cached that geometry and, being "geometry-valid", would never redraw at the
-            // new size - its fill rect stays 0x0 = invisible. Invalidate the render geometry so the render pass re-records
-            // it at the arranged size. Measure already does this (MeasureCore); arrange must too when the size changes.
+            // A size change re-runs OnRender, or a control first rendered at a stale size (e.g. 0x0) keeps that geometry.
             var renderSizeChanged = !MathHelper.NearEqual(RenderSize.Width, innerUsed.Width)
                                     || !MathHelper.NearEqual(RenderSize.Height, innerUsed.Height);
 
@@ -800,12 +783,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// children, so a child's size change DOES propagate up. A virtualizing items host overrides this further.</summary>
     public virtual bool IsMeasureBoundary => !Double.IsNaN(Width) && !Double.IsNaN(Height);
 
-    /// <summary>The one place that decides WHEN a parent has to hear that this element's contribution changed - both
-    /// callers (a measure that came out a different size, and a visibility write, which no measure can reveal because a
-    /// collapsed element reports zero from the instant the flag lands) go through here.
-    /// <para>Not while the parent is measuring US: that cascade is already computing its own size from this one. Not a
-    /// measure BOUNDARY (fixed size, or a virtualizing host whose extent is count x cell): propagating in is spurious
-    /// and, running outside the panel's own layout mute, re-dirties it every iteration.</para></summary>
+    /// <summary>Decides when a parent must hear that this element's contribution changed: not while the parent measures us,
+    /// and not at a measure boundary (fixed size or virtualizing host).</summary>
     internal override void NotifyParentOfContributionChange()
     {
         if (VisualParent is MeasurableUIComponent { IsMeasureValid: true, _measuring: false, IsMeasureBoundary: false } parent)
@@ -822,13 +801,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             Core.Diagnostics.LayoutTrace.CountCaller(GetType(), "invalidate-measure", 1);
         }
 
-        // NO early return for an already-invalid node. The flag and the QUEUE are two different things: a node marked
-        // invalid at a moment when it could not be enqueued - detached (the dirty queue belongs to the visual root), or
-        // mid-pass - stays flagged forever, and returning here on the strength of that flag means the request to measure
-        // it is dropped and nobody ever measures it again. Re-stating the request is cheap (the manager's queue is a set),
-        // and it is the difference between a stale size healing on the next pass and never healing at all.
-        // Measured: a folded tab whose label had been turned kept the footprint it had lying flat through every later
-        // pass - its measure count simply stopped growing - while its own header presenter reported the turned size.
+        // No early return for an already-invalid node: one flagged while it could not be queued would never be measured
+        // again. Re-stating the request is cheap.
         IsMeasureValid = false;
         IsArrangeValid = false;
         InvalidateGeometryFromLayout();
@@ -869,11 +843,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
         if (_previousArrange != null)
         {
-            // Arrange is top-down: re-running THIS element's arrange into its own last correct slot re-distributes
-            // correct rects to its children via ArrangeOverride - so an arrange-only change re-lays-out just this
-            // subtree, not the whole tree, and never parks anything at the origin. (E.g. a ScrollBar's Value is
-            // AffectsArrange on the Track, so the Track re-arranges itself into its slot and repositions the thumb -
-            // no walk up to the window. The saved slot is also what stops a 0-desired template part collapsing.)
+            // Re-arrange just this subtree into its own last slot, so nothing is parked at the origin.
             LayoutManager.For(this).InvalidateArrange(this);
         }
         else if (VisualParent is IMeasurableComponent parent)
@@ -888,24 +858,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         }
     }
 
-    /// <summary>Re-registers layout work that was raised while this element was DETACHED, with the manager that now owns
-    /// it.</summary>
-    /// <remarks>
-    /// The dirty FLAGS live on the element and survive a detach, but the dirty QUEUES belong to a visual root, and
-    /// <see cref="LayoutManager.For"/> resolves them through <see cref="UIComponent.RootVisual"/> - which a detached
-    /// element does not have. So an invalidation raised while detached is enqueued nowhere the layout pass will ever
-    /// look, and re-attaching alone does not undo that: the element stays measure/arrange-invalid forever while its
-    /// (clean) new ancestors short-circuit the measure cascade above it and never reach it.
-    ///
-    /// That is exactly a theme swap: re-templating the window detaches its whole content subtree, every element in it is
-    /// then re-styled - and re-templated - while detached, and the invalidations that follow are lost. The window came
-    /// back EMPTY until a resize, whose new constraint fails every Measure gate and so re-walks the tree by brute force.
-    /// (WPF has the same seam and closes it the same way, in PropagateResumeLayout.)
-    ///
-    /// Only an element that owns a cached constraint/slot re-registers ITSELF - the same condition
-    /// <see cref="InvalidateMeasure"/> uses to decide it can re-measure alone. One that has never been laid out has no
-    /// constraint to re-measure with; it is measured by the parent that hosts it, as it always was.
-    /// </remarks>
+    /// <summary>Re-registers layout work raised while detached with the manager that now owns it: detached invalidations
+    /// were queued nowhere, and a re-templated window came back empty.</summary>
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -915,11 +869,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         else if (!IsArrangeValid && _previousArrange != null)
             LayoutManager.For(this).InvalidateArrange(this);
 
-        // A size worked out while DETACHED never reached the parent - the propagation travels the visual root's dirty
-        // queue, and there was no root - so it must be told here, once, by the subtree ROOT only: everyone else's parent
-        // is inside this same subtree and is being invalidated anyway (per node it cost 8.8 ms over 3351). Parked is
-        // excluded: it returns whole and ParkedSubtree.Unpark decides whether its layout still holds.
-        // e.Component is whoever the walk started from, so this is the "am I the root" test.
+        // A size worked out while detached never reached the parent, so the subtree root tells it once. A parked subtree is
+        // left to ParkedSubtree.Unpark.
         if (IsParked || !ReferenceEquals(this, e.Component)) return;
 
         (VisualParent as IMeasurableComponent)?.InvalidateMeasure();

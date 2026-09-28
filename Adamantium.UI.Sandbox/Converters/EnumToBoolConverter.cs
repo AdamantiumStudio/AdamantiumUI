@@ -5,11 +5,8 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Ticks the one toggle whose ConverterParameter matches the bound enum value, and sets that value back when it
-/// is ticked - which is how a ROW OF BUTTONS drives a single choice: every button binds the same property and names its
-/// own value. Works for any enum, by name.
-/// <para>Un-ticking sets nothing. One of the choices is always in force, so a button that turned itself off would leave
-/// the property holding a value no button shows.</para></summary>
+/// <summary>Checks the toggle whose ConverterParameter names the bound enum value and writes it back when checked; lets a
+/// row of buttons drive one choice. Unchecking writes nothing.</summary>
 public class EnumToBoolConverter : IValueConverter
 {
     /// <inheritdoc/>

@@ -7,11 +7,7 @@ using Adamantium.Win32;
 namespace Adamantium.UI.Platforms.Windows;
 
 /// <summary>
-/// Windows <see cref="IDragGhost"/>: a WS_EX_LAYERED top-level window whose pixels are pushed via
-/// <c>UpdateLayeredWindow</c>, so the DWM composites the bitmap with per-pixel alpha - no swapchain, no Vulkan on this
-/// window (that is exactly why the ghost is a static readback bitmap, not a live surface). Transparent + Topmost +
-/// Noactivate + Toolwindow + click-through (WS_EX_TRANSPARENT), so it floats over everything and never steals focus or
-/// eats input.
+/// Windows <see cref="IDragGhost"/>: a topmost, click-through layered window showing a bitmap with per-pixel alpha.
 /// </summary>
 public sealed class Win32DragGhost : IDragGhost
 {

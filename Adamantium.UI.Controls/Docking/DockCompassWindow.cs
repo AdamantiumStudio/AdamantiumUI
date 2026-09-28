@@ -2,14 +2,8 @@
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// The window the compass lives in: above everything, transparent to input, never focused.
-/// <para>A WINDOW rather than something inside the docking area, because during a drag the thing being dragged is
-/// itself a window - and nothing living inside another window can be drawn on top of that. This is the only reason the
-/// compass is not simply a panel in the area it points at.</para>
-/// <para>See-through per pixel: the indicators are rounded and antialiased, and their edges have to blend with whatever
-/// is behind them rather than with a background of their own.</para>
-/// </summary>
+/// <summary>The compass's own window - topmost, input-transparent, never focused, see-through per pixel - so it can draw
+/// over the window being dragged.</summary>
 public class DockCompassWindow : Window
 {
     public DockCompassWindow()

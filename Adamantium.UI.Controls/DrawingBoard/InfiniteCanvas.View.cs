@@ -991,13 +991,8 @@ public partial class InfiniteCanvas
         }
     }
 
-    // ONE ORDER FOR EVERYTHING, and the layers are cut from it: a run of items of the same sort - drawn things, or
-    // controls - becomes one layer, and the next sort starts the next. That is what makes a picture, a stroke over it
-    // and another picture over that three places in paint order rather than two buckets.
-    //
-    // ...across a viewport SAID OUT LOUD, because the one pass that must not read RenderSize is the pass that sets it:
-    // arranging with a new size asked "what can be seen" of the size before it, and everything that had just come into
-    // view was left off the plane until something else re-synced.
+    // Cuts layers from the one paint order, a layer per run of same-sort items, for the viewport passed in (not RenderSize,
+    // which this pass is setting).
     private void SyncElements(Size viewport)
     {
         if (_layers == null) return;

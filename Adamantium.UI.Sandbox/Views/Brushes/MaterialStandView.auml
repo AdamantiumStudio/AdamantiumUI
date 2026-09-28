@@ -8,11 +8,7 @@
     <StackPanel Orientation="Vertical">
         <TextBlock Text="Material brush — the fill is what is behind it" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" MarginBottom="24">
-            <!-- BIG on purpose, and its own box rather than the shared slot: the drag wobble is a shift of a pixel or
-                 two, and on a small pane there is not enough backdrop on screen to see it against.
-                 A BORDER with a child, like every other stand's box - not a bare Grid holding siblings. The plate then
-                 owns the area and the figure sits INSIDE it by construction, instead of both being laid out as peers
-                 and left to agree by accident. -->
+            <!-- Large, so a pixel of backdrop shift during a window drag is visible; a Border holding the figure. -->
             <Border Width="660" Height="440" Margin="10" CornerRadius="12">
                 <Grid>
                 <!-- WHAT IT SITS OVER. All four are here and one is revealed, the same way the figure is chosen. -->

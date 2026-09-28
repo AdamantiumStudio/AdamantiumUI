@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tooltip is a LABEL, not a card. Fluent's is a rounded panel on the card ground - an object that
-         arrives on top of your work. In an editor the tip fires on every toolbar button and every property row, so it
-         appears constantly and must cost nothing to dismiss with the eye.
-
-         So: square, hairline, one line, and the ground goes DARKER than the panel rather than lighter. That last part
-         is the actual structural choice - a card lifts toward the viewer and reads as a surface, while a recess reads
-         as annotation, and annotation is what a tip is. It also separates it from the panel underneath without needing
-         a shadow, which an editor cannot afford to paint on every hover.
-
-         Content is left- and top-aligned rather than centred: a tip that grows to two lines should grow DOWNWARD from
-         the same first line, not re-centre the text the eye has already started reading. -->
+    <!-- Editor Pro's tooltip: a square hairline label on a darker-than-panel ground (no shadow), with top-left content so
+         extra lines grow downward. -->
 
     <Style Selector="ToolTip">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>

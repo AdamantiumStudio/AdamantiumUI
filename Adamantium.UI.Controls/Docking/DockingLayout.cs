@@ -16,15 +16,8 @@ public class DockingLayout
 
     public List<DockingRoot> Roots { get; } = new();
 
-    /// <summary>The MAIN window's DOCUMENT WELL: home of what is being edited. Everything inside it is a document,
-    /// everything outside a tool (rule 1) - which is why it is a PLACE and not a per-pane flag: otherwise the centre
-    /// stops existing the moment its last document is closed. It cannot be collapsed or moved, and survives being
-    /// emptied.
-    /// <para>A NODE, not a group: the area splits WITHIN ITSELF and its parts stay documents (rule 1.6), so after the
-    /// first such split the well is the split that holds them.</para>
-    /// <para>Every root has one of these (<see cref="DockingRoot.DocumentWell"/>) - a floating window documents were
-    /// carried into has its own area, with tools able to sit beside it. This is the main window's, which is what the
-    /// application means when it says "the document area".</para></summary>
+    /// <summary>The main window's document well: everything inside is a document, outside a tool. A place, not a flag, so it
+    /// survives being emptied; a node, since it splits within itself.</summary>
     public PaneNode DocumentWell
     {
         get => Main?.DocumentWell;
@@ -37,11 +30,8 @@ public class DockingLayout
     /// <summary>The document area of the WINDOW this node is in, or null.</summary>
     private PaneNode WellOf(PaneNode node) => RootOf(node)?.DocumentWell;
 
-    /// <summary>Whether a node is a DOCUMENT: inside the document area of its own window - itself or anywhere under it.
-    /// This is the question that decides a group's looks (rule 1.2), what its closing means and whether it may be folded
-    /// away. After rule 1.6 the answer is not "is it THE well" but "is it INSIDE the well", and the well is asked of the
-    /// node's own root - tearing an editor off does not demote it to a tool, and a tool docked beside it out there is
-    /// still a tool.</summary>
+    /// <summary>Whether a node is a document: inside the document well of its own root. Decides a group's look, what closing
+    /// means and whether it may fold away.</summary>
     public bool IsDocument(PaneNode node)
     {
         if (node == null) return false;
@@ -57,12 +47,8 @@ public class DockingLayout
         return false;
     }
 
-    /// <summary>The document group a new document lands in: the one holding <paramref name="activePaneId"/> once the
-    /// area has been split, else the first that exists. Null while the layout has no document area at all.</summary>
-    /// <remarks>The active pane is what says WHICH split the user is working in - splitting the documents in two and
-    /// then opening a file put it in the left half whichever half was being used, because this asked the structure
-    /// ("the first non-empty group") instead of asking what is active. The id is passed in rather than mirrored here:
-    /// the area owns that state, and a copy of it would be a second answer to drift out of step with the first.</remarks>
+    /// <summary>The document group a new document lands in: the one holding <paramref name="activePaneId"/>, else the first.
+    /// Null while there is no document area.</summary>
     public PaneGroupNode ActiveWellGroup(string activePaneId)
     {
         if (DocumentWell == null) return null;
@@ -84,7 +70,7 @@ public class DockingLayout
 
     private bool IsWell(PaneNode node) => node != null && ReferenceEquals(WellOf(node), node);
 
-    /// <summary>The document area must never lose its LAST group. Emptied, it stays as empty space (rule 1.4) - but
+    /// <summary>The document area must never lose its LAST group. Emptied, it stays as empty space - but
     /// once it has been split, its other groups are ordinary: they may be torn off and they die when emptied, exactly
     /// like closing one of two editors side by side.</summary>
     private bool IsLastWellGroup(PaneGroupNode group) => IsLastWellGroup(RootOf(group), group);
@@ -105,12 +91,12 @@ public class DockingLayout
     }
 
     /// <summary>What a panel docking BESIDE the document area is worth when nobody states a size - pushed by
-    /// <see cref="DockingArea"/> from its EdgeDockSize, so a drop makes the band its preview drew (rule 7.6).</summary>
+    /// <see cref="DockingArea"/> from its EdgeDockSize, so a drop makes the band its preview drew.</summary>
     public PaneLength BandLength { get; set; } = PaneLength.Pixels(200);
 
     // What the caller asked for, or an even split. A BAND is what the callers who mean one pass in - an edge anchor,
     // a pane opened from code - and that is now the only way to become the centre's NEIGHBOUR: a drop aimed into the
-    // document area splits the area itself (rule 1.6), and two editors side by side share what one of them had.
+    // document area splits the area itself, and two editors side by side share what one of them had.
     private static PaneLength? BandFor(PaneNode target, PaneLength? stated) => stated;
 
     /// <summary>Docks a group that was NOT in the layout before - a region opening a tool, a pane added by code - taking
@@ -211,10 +197,8 @@ public class DockingLayout
 
     /// <summary>Splits <paramref name="target"/>, putting <paramref name="inserted"/> on the given side of it and
     /// giving the newcomer <paramref name="fraction"/> of the space they now share.</summary>
-    /// <param name="nest">Force a split node OF ITS OWN even when the row already runs the right way. Only the DOCUMENT
-    /// AREA needs it: joining the row instead would put the arrival beside the area's neighbours rather than inside the
-    /// area, and the area - which is that node - would swallow whatever else the row held. Measured: dropping a second
-    /// editor beside the first made the inspector part of the document area, and it stopped folding away.</param>
+    /// <param name="nest">Force a split node of its own even when the row runs the right way, so a split inside the document
+    /// area does not swallow the row's other panels.</param>
     public void Split(PaneNode target, DockZone side, PaneNode inserted, double fraction = 0.5, bool nest = false)
     {
         var vertical = side is DockZone.Top or DockZone.Bottom;
@@ -272,14 +256,12 @@ public class DockingLayout
         }
     }
 
-    /// <summary>Moves a pane to <paramref name="target"/>: another tab in it (<see cref="DockZone.Center"/>) or beside
-    /// it by splitting. THE operation every gesture ends in, so there is one place a move can be got wrong.
-    /// <para>The target is any NODE, which is what makes an edge anchor the same operation rather than a second one:
-    /// aim it at the root instead of at a group. Only a group can be tabbed INTO.</para></summary>
-    /// <param name="index">Where among the target's tabs it lands, or -1 for last. Centre only.</param>
-    /// <param name="size">What the newcomer takes; null means half - an EDGE anchor passes a band instead.</param>
-    /// <param name="beside">Land NEXT TO the target rather than inside it. What an edge anchor means: aimed at a
-    /// document area it must not divide the area, or the tool it carries becomes a document (rule 1.6).</param>
+    /// <summary>Moves a pane into <paramref name="target"/> as a tab (<see cref="DockZone.Center"/>, groups only) or beside it
+    /// by splitting; every gesture ends here.</summary>
+    /// <param name="index">Where among the target's tabs it lands, or -1 for last. Center only.</param>
+    /// <param name="size">What the newcomer takes; null means half.</param>
+    /// <param name="beside">Land next to the target rather than inside it, so an edge anchor does not divide the document
+    /// area.</param>
     public bool MovePane(string paneId, PaneNode target, DockZone zone, int index = -1, PaneLength? size = null,
         bool beside = false)
     {
@@ -311,7 +293,7 @@ public class DockingLayout
             var moved = new PaneGroupNode();
             moved.Add(paneId);
 
-            // A drop INTO the document area splits the area itself (rule 1.6), so it gets a node of its own - see the
+            // A drop INTO the document area splits the area itself, so it gets a node of its own - see the
             // nest parameter. Anything else joins the row it lands in, as before.
             var splittingTheWell = !beside && IsWell(target);
 
@@ -325,11 +307,7 @@ public class DockingLayout
         return true;
     }
 
-    // The document area splits WITHIN ITSELF (rule 1.6): a drop aimed INTO it makes two documents side by side, not a
-    // document with a tool beside it. The split that has just replaced the well IS the well now - so whatever landed
-    // there is inside the area, and is therefore a document wherever it came from.
-    // Nothing to do when the drop was aimed elsewhere: a tool docked against the OUTSIDE of the centre is a tool, and
-    // that is what the edge anchors are for.
+    // A drop into the document area splits within it: the new split becomes the well, so the arrival is a document.
     private void GrowWellAround(bool splittingTheWell, PaneNode arrival)
     {
         if (!splittingTheWell) return;
@@ -385,7 +363,7 @@ public class DockingLayout
         var root = RootOf(group);
         if (root == null) return false;
 
-        // OUT of the tree, INTO the edge's bar - the whole of rule 3b: a panel that is not part of the layout is not
+        // OUT of the tree, INTO the edge's bar: a panel that is not part of the layout is not
         // part of its structure either, so no split, divider or normalise can reach it.
         group.RestoreLength = group.Length;
         group.Length = PaneLength.Auto;
@@ -399,18 +377,14 @@ public class DockingLayout
         return true;
     }
 
-    /// <summary>Shows a put-away group's body WITHOUT pinning it back: the strip stays against the edge with its labels
-    /// still turned, and only the body comes into view. The panel is not docked - it is being looked at - so its tabs stay
-    /// on the edge until it is pinned.
-    /// <para>The body is given the room the panel had (<see cref="PaneGroupNode.RestoreLength"/>), which means the
-    /// neighbours move aside for it. Drawing it OVER them instead - the flyout every editor uses - is a layer above the
-    /// split tree and is not built yet.</para></summary>
+    /// <summary>Shows a put-away group's body without pinning it; the strip stays on the edge and the body takes its
+    /// <see cref="PaneGroupNode.RestoreLength"/>, pushing neighbors aside.</summary>
     public bool RevealGroup(PaneGroupNode group)
     {
         if (group is not { State: PaneGroupState.Collapsed }) return false;
 
         // The LENGTH does not change: in the tree a revealed panel is still just its strip. Its body is shown OVER the
-        // neighbours (a flyout), not by pushing them aside - see rule 3.10. Giving it back its docked length here is what
+        // neighbours (a flyout), not by pushing them aside. Giving it back its docked length here is what
         // made it shove the layout about every time anyone glanced at a tool.
         group.State = PaneGroupState.Revealed;
         return true;
@@ -522,17 +496,14 @@ public class DockingLayout
         }
     }
 
-    /// <summary>Takes a WHOLE group out of its layout and gives it a root of its own - what dragging a tool panel by its
-    /// caption means. The panes travel together, in their order and with their selection, because the thing being moved is
-    /// the panel, not the tabs in it.
-    /// <para>Refused for a group that is already a root's entire content: it is a floating panel, and tearing a window off
-    /// itself means nothing.</para></summary>
+    /// <summary>Takes a whole group, panes and selection intact, into a root of its own; refused for a group that already is a
+    /// root's whole content.</summary>
     public DockingRoot TearOffGroup(PaneGroupNode group)
     {
         if (group is not { IsEmpty: false }) return null;
 
         // A PUT-AWAY panel travels too, and it comes out of its edge's bar rather than out of the tree - it has not
-        // been in the tree since it was put away (rule 3b).
+        // been in the tree since it was put away.
         var from = RootOf(group);
 
         // The MAIN window's document area is a PLACE, and a place may be emptied to nothing: its LAST group leaves like
@@ -567,11 +538,7 @@ public class DockingLayout
         group.State = PaneGroupState.Docked;
         group.Length = group.RestoreLength;
 
-        // The new window's CENTRE is what was carried into it - whatever that was. A window's centre belongs to
-        // documents (rule 1.2), so a tool taken out of the frame is a document while it stands there alone, and becomes
-        // a tool again only when something is docked BESIDE it - here or back at home.
-        // Keeping the old kind instead gave windows a nature of their own: one born of a tool stayed a tool window, and
-        // a document dropped into it turned into a tool - the same drop meaning different things in two windows.
+        // What was carried in becomes the new window's document well, so a drop means the same in every window.
         var root = new DockingRoot(group, isMain: false) { DocumentWell = group };
         Roots.Add(root);
 
@@ -594,20 +561,13 @@ public class DockingLayout
         }
     }
 
-    /// <summary>
-    /// Moves a WHOLE node - what dropping a floating WINDOW onto the compass means. The window may hold a single group
-    /// or a whole split of them by then (things can be docked INTO a floating window), and either way it is that node
-    /// which lands: <see cref="DockZone.Center"/> tabs its panes into the target group, any other zone splits the target
-    /// and puts the node beside it.
-    /// <para>The counterpart of <see cref="MovePane"/>, not a generalisation of it: moving one pane out of a group is a
-    /// different move from moving the group, and merging the two behind an "is it the whole group?" test would make
-    /// which one happened depend on how many tabs happened to be open.</para>
-    /// </summary>
+    /// <summary>Moves a whole node, as when a floating window is dropped on the compass: <see cref="DockZone.Center"/> tabs its
+    /// panes into the target group, other zones split beside it.</summary>
     /// <param name="beside">Land NEXT TO the target rather than inside it - see <see cref="MovePane"/>.</param>
     public bool MoveNode(PaneNode node, PaneNode target, DockZone zone, PaneLength? size = null, bool beside = false)
     {
         if (node == null || target == null || ReferenceEquals(node, target)) return false;
-        // The MAIN window's area stays put: things move around it and inside it, never it (rule 1.6.1). A FLOATING
+        // The MAIN window's area stays put: things move around it and inside it, never it. A FLOATING
         // window's area is a window - docking it back is exactly what it is for, and refusing that left a torn-off
         // editor that had been split unable to return at all.
         if (IsWell(node) && RootOf(node) is { IsMain: true }) return false;
@@ -686,14 +646,8 @@ public class DockingLayout
         return false;
     }
 
-    /// <summary>
-    /// What a TOP or BOTTOM band splits: the centre column, never the whole root. A side panel takes the full height of
-    /// the window and a band belongs under the documents - which is the layout every editor uses, and the same rule
-    /// <see cref="FromZones"/> follows when it builds from markup.
-    /// <para>Aiming a band at the root instead cuts the sides off at the band's edge. Measured on a put-away panel: a
-    /// pane dropped on the bottom edge anchor pushed the right-hand strip up off the bottom of the window, and a strip
-    /// that has left its edge is no longer a strip on an edge at all.</para>
-    /// </summary>
+    /// <summary>What a top or bottom band splits: the center column, never the root, so side panels keep the full height (as
+    /// <see cref="FromZones"/> builds it).</summary>
     public PaneNode BandTarget(DockingRoot root)
     {
         if (root?.Content is not PaneSplitNode split || split.Orientation != Orientation.Horizontal) return root?.Content;
@@ -759,7 +713,7 @@ public class DockingLayout
         }
 
         // The PUT-AWAY panels of that edge count too - they are still the panel on that side, they are just folded
-        // down to their strip, and they live in the edge's bar rather than in the tree (rule 3b). Looking only in the
+        // down to their strip, and they live in the edge's bar rather than in the tree. Looking only in the
         // tree meant that folding the top panel away made "open this at the top" build a second one.
         foreach (var group in root.Bars[edge])
         {
@@ -795,7 +749,7 @@ public class DockingLayout
             if (found != null) return found;
         }
 
-        // The bars too: a put-away panel is not in any tree (rule 3b), but its panes are as findable as anyone's -
+        // The bars too: a put-away panel is not in any tree, but its panes are as findable as anyone's -
         // closing one, navigating to one or dragging one out all start by asking where it is.
         foreach (var group in BarredGroups)
         {
@@ -823,16 +777,8 @@ public class DockingLayout
         }
     }
 
-    /// <summary>
-    /// Tidies every root. WITHOUT this the tree grows depth for nothing and keeps levels that divide a single child:
-    /// - an EMPTY group is dropped (closing the last pane must not leave a hole that still takes space);
-    /// - a split with ONE child collapses into that child (the level divides nothing);
-    /// - a split nested in a split of the SAME orientation is flattened into it, so "drop left, then drop left again"
-    ///   yields one split of three shares instead of two nested splits that merely look like one;
-    /// - shares are rescaled to sum to 1.
-    /// A root left with nothing is removed - unless it is the main one, which stays (an application without its main
-    /// window is not a layout state we want to be able to represent).
-    /// </summary>
+    /// <summary>Tidies every root: drops empty groups, collapses one-child splits, flattens same-direction nesting, rescales
+    /// shares to 1, and removes empty roots except the main one.</summary>
     public void Normalize()
     {
         for (var i = Roots.Count - 1; i >= 0; i--)
@@ -843,7 +789,7 @@ public class DockingLayout
         }
 
         // No "unfold the ones that lost their edge" pass any more: put-away panels are not in these trees at all, so
-        // nothing that happens here can take an edge away from them (rule 3b).
+        // nothing that happens here can take an edge away from them.
     }
 
     private static PaneNode NormalizeNode(DockingRoot root, PaneNode node)
@@ -870,7 +816,7 @@ public class DockingLayout
 
                     // Same orientation -> take its children as our own instead of keeping the level. The DOCUMENT AREA
                     // is the exception: it is a place, not just a level, and flattening it would spill its groups into
-                    // the row beside the tools - which is the same thing as the area swallowing them (rule 1.6).
+                    // the row beside the tools - which is the same thing as the area swallowing them.
                     if (normalized is PaneSplitNode inner && inner.Orientation == split.Orientation
                         && !ReferenceEquals(inner, root?.DocumentWell))
                     {

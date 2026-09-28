@@ -2,13 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- ColorWheel: a hue wheel (conic full spectrum) under a radial white->transparent overlay (saturation), a black
-         value-dimming overlay whose opacity the control drives, and a dragged grip. Angle = hue (0 at top, clockwise, to
-         match the conic gradient); radius = saturation.
-
-         The wheel itself is the same picture on every platform - it is a colour space, not chrome. What is this theme's
-         is the GRIP: the ring gains the shadow the rest of this theme's knobs have, so it is still findable over a pale
-         yellow rim, where a plain white ring on white simply is not. -->
+    <!-- ColorWheel: angle = hue (0 at top, clockwise), radius = saturation, a value overlay the control drives. The grip
+         gets this theme's knob shadow so it stays visible over pale hues. -->
     <Style Selector="ColorWheel">
         <Setter Property="Template">
             <Setter.Value>

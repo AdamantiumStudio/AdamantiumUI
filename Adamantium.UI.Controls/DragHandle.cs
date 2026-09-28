@@ -4,13 +4,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// The drag grip (⣿) you put in a row so only IT starts the drag - the rest of the row stays clickable, selectable,
-/// editable. Drop it into an item template next to the content and the drag engine finds it; nothing else to wire up:
-/// <code>&lt;DragHandle IsActive="{Binding HandleOnlyDrag}"/&gt;</code>
-/// The look (the dot cluster, the hover highlight) is a <c>ControlTemplate</c> from the active theme - restyle it there.
-/// For an element that is NOT this control (a glyph, an icon), the attached <c>DragDrop.IsDragHandle</c> does the same.
-/// </summary>
+/// <summary>A drag grip for an item template: only it starts the drag, so the rest of the row stays interactive. Themed; any
+/// other element can use the attached <c>DragDrop.IsDragHandle</c>.</summary>
 public class DragHandle : Control, IDragHandle
 {
     public DragHandle()

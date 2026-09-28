@@ -7,15 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>Says which columns the table shows: one switch per column, ticked while it is on screen. It lives in a
-/// FLYOUT off the header band, not in a strip of its own - a strip costs vertical room permanently and wraps to several
-/// lines on exactly the wide table the feature exists for.
-/// <para>Hiding is not removing. The column stays in <see cref="TreeDataGrid.Columns"/> with its width, its sort and
-/// its filter intact, so turning it back on restores the table as it was rather than a default of it - and everything
-/// holding a column INDEX keeps finding it where it was.</para>
-/// <para>A column the table is GROUPED BY is off the strip entirely, not shown as an unticked switch: it is not hidden,
-/// it has moved into the group captions, and offering to "show" it would be offering something that cannot happen
-/// while the grouping stands.</para></summary>
+/// <summary>A flyout of switches, one per column, for which columns the table shows. Hiding keeps a column's width, sort and
+/// filter; a grouped column is not listed.</summary>
 public class DataGridColumnChooser : Control
 {
     private TreeDataGrid _owner;
@@ -55,12 +48,7 @@ public class DataGridColumnChooser : Control
     {
         if (_items == null) return;
 
-        // EVERY column the table is showing, including the ones that may not be hidden - those come ticked and
-        // DISABLED rather than being left out. Left out, a column that cannot be hidden simply is not in the list, and
-        // from the outside that reads as a list with something missing rather than as a rule; the first question it
-        // gets is "where is Code?".
-        // A column the table is GROUPED BY is a different matter and really is absent: it is not hidden, it has moved
-        // into the group captions, and offering to show it would be offering something that cannot happen.
+        // Every shown column, the unhideable ones ticked and disabled rather than missing; a grouped column is absent.
         var offered = new List<DataGridColumn>();
         var columns = Owner?.Columns;
         for (var i = 0; i < (columns?.Count ?? 0); i++)

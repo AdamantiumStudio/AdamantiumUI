@@ -159,11 +159,7 @@ public class Slider : RangeBase
 
     private void OnThumbDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        // Commit the FINAL pointer position. DragDelta events can be coalesced/starved during a FAST drag - each step
-        // drives a full layout through an AffectsMeasure binding (e.g. stroke thickness on many shapes), so the UI thread
-        // falls behind and the LAST delta processed lags the release point. The value then sticks short of the endpoint
-        // (a quick flick couldn't reach 0/Max, and how much was left over depended on drag speed). The completed delta is
-        // the true release position, so land the value exactly on it.
+        // Commit the final pointer position: during a fast drag the last DragDelta can lag the release point.
         if (_track != null) SetValueFromInput(SnapToTick(_dragStartValue + _track.ValueFromDistance(e.Change.X, e.Change.Y)));
         HideValueToolTip();
     }
@@ -183,11 +179,8 @@ public class Slider : RangeBase
         else Page(Value - LargeChange, increasing: false);
     }
 
-    /// <summary>A page step stops AT THE CURSOR, the way the scrollbar's does: the repeat runs until the thumb reaches
-    /// the pointer and no further.
-    /// <para>The page button cannot notice that on its own - the pointer does not move, the AREA moves out from under
-    /// it, and enter/leave are raised from pointer movement, so the button never hears that it was left and repeats all
-    /// the way to the end. See Track.PageLimitFromPoint.</para></summary>
+    // A repeating page step stops at the cursor (see Track.PageLimitFromPoint); the page button cannot notice the thumb
+    // arriving under a still pointer.
     private void Page(double stepped, bool increasing)
     {
         if (_track == null)
@@ -232,12 +225,8 @@ public class Slider : RangeBase
         ForceArrangeFill();
     }
 
-    // Drive the thumb IN LOCKSTEP with the fill. The Track positions the thumb from ITS OWN copy of the range and value,
-    // which arrives by {TemplateBinding} - batched, so a frame late - while the fill is recomputed synchronously; that
-    // frame apart IS the visible thumb/fill desync, on a value drag and on anything that moves the bounds. Write those
-    // copies now at Binding priority (the same slot the TemplateBinding writes, so it neither masks the binding nor is
-    // masked by it) and re-arrange the Track this frame. Also run when the parts first arrive, so a template that does
-    // not declare those bindings at all does not start with its thumb pinned at the minimum.
+    // Keep thumb and fill in lockstep: write the Track's range and value now at Binding priority instead of waiting a
+    // frame for the TemplateBinding.
     private void SyncTrack()
     {
         if (_track == null) return;
@@ -293,11 +282,7 @@ public class Slider : RangeBase
             : trackLength ?? _track.ActualHeight;
         if (full <= 0) return;
 
-        // The fill ends AT THE THUMB, so its length is the thumb's own position - asked of the Track, which is what puts
-        // the thumb there. Projecting the fraction onto the full length instead (the obvious second derivation) put the
-        // fill half a thumb short of the handle at the minimum and half a thumb past it at the maximum, drifting one way
-        // then the other as the value crossed the middle. Before the track's first arrange there is no such position yet,
-        // so the fraction still seeds it.
+        // The fill ends at the thumb center, asked of the Track; before its first arrange the fraction seeds it.
         var centre = _track.ThumbCentreFromFraction(fraction);
         var length = double.IsNaN(centre)
             ? fraction * full
@@ -309,11 +294,8 @@ public class Slider : RangeBase
             SetIfChanged(HeightProperty, length, _selectionRange.Height);
     }
 
-    // The fill's length comes from the arrange-time track size, but a part is arranged by its parent at its DESIRED size,
-    // which was measured before that length was known - so base.ArrangeOverride parks the fill at its stale desired size,
-    // and the manager's deferred re-layout doesn't reliably re-arrange a small child whose growth doesn't change its
-    // parent's size (the fill stayed empty until the first drag). So re-measure the fill (force, so the new Width/Height
-    // takes) and re-arrange it into the cell it already occupies - synchronous and guaranteed, this frame.
+    // The fill's length is known only at arrange, after it was measured; re-measure and re-arrange it in place this
+    // frame.
     private void ForceArrangeFill()
     {
         if (_selectionRange is not IMeasurableComponent m || m.PreviousArrangeSlot is not { } slot) return;

@@ -1,18 +1,8 @@
-// STROKE MATHS - how a fill and its outline become one colour, and how a dash/trim pattern masks that outline.
-//
-// The whole family works off ONE signed distance: a solid stroke is `abs(d - align*halfW) - halfW`, and dashes and
-// trims modulate it through a mask computed from arc length. No geometry is built for any of it, which is what lets a
-// dashed, trimmed, capped stroke stay inside an instanced batch.
-//
-// Include AFTER ShapeMath.fxh: the border compositor cuts its inner outline with the same joins.
+// STROKE MATHS - fill and stroke composited from one signed distance (stroke `abs(d - align*halfW) - halfW`), with
+// dash/trim masks from arc length, so strokes stay batched. Include after ShapeMath.fxh.
 
-// `crisp` (0/1) takes the edges HARD instead of fading them over a pixel. An axis-aligned rectangle sitting on whole
-// pixels needs no fade: coverage is exactly a half ON the edge, so two abutting rectangles compose to about three
-// quarters and leave a dark hairline down their join. Off by default - a curve or a slanted edge still needs the fade.
-// Takes the fill's distance and the STROKE's separately, because they are not always the same curve. One case needs it:
-// an ellipse cut edge-to-edge is filled as a SEGMENT (closed by its chord) but stroked as an ARC - an open ribbon, since a
-// ring gauge has two ends and not four edges. Everything else passes the one distance twice, through the wrapper below,
-// and compiles to what it did before.
+// Separate fill and stroke distances (an edge-to-edge ellipse fills a segment but strokes an arc). `crisp` takes edges
+// hard, so pixel-aligned rects abut without a seam.
 float4 CompositeFillStrokeSplit(float dFill, float dStroke, float4 fill, float4 stroke, float width, float align,
     float strokeMask, float crisp)
 {
@@ -45,15 +35,8 @@ float4 CompositeFillStroke(float d, float4 fill, float4 stroke, float width, flo
     return CompositeFillStrokeSplit(d, d, fill, stroke, width, align, strokeMask, crisp);
 }
 
-// A BORDER of its own thickness per side: the ring between the shape's outline and an INNER outline inset by (left, top,
-// right, bottom). Composited in ONE call with the fill, because the two share that inner outline - drawn as two shapes,
-// both would anti-alias it and the two halves would compose into a dark hairline all the way round (which is exactly
-// what the old CombinedGeometry ring did).
-//
-// The inner box is not concentric: insetting different amounts moves the centre by half their difference. Its corners
-// shrink by the THICKER of the two sides meeting there, the same rule the tessellated ring used (Border's
-// DeflateCornerRadius) - a scalar corner cannot stay parallel to the outer one under unequal sides, and taking the
-// thicker of the pair keeps the inner arc from bulging out past the border on the heavier side.
+// A per-side border: the ring between the outline and an inner outline inset by (left, top, right, bottom), composited
+// with the fill in one call; inner corners shrink by the thicker adjacent side.
 float4 CompositeFillBorder(float dOuter, float2 p, float2 half, float4 radii, float4 inset, int joinType,
     float4 fill, float4 border, float crisp)
 {
@@ -94,42 +77,14 @@ float CapReach(int cap, float dPerp, float halfW)
     return 0.0;                                                            // flat: hard cut
 }
 
-// Physical px -> units of centreline arc length at a fragment `dPerp` across the stroke, on a contour whose radius of
-// curvature there is `curvRadius` (1e9 on a straight edge -> 1.0).
-// The fragment's own radius is curvRadius + dPerp, and the correction only means anything while that is a real radius:
-// on the inner side of a bend tighter than the stroke is thick it passes through the centre of curvature and the
-// arc-length field folds over itself. There, correct NOTHING - a big ratio there does not deepen a cap correctly, it
-// just eats pixel-sized holes out of the stroke.
-// Only the OUTER side of a bend is corrected (`max(dPerp, 0)`), which is also the only side that needs it: there one
-// unit of arc covers more pixels, so a cap's reach in arc units must shrink. The inner side is left alone - a bend
-// tighter than the stroke is thick sends the fragment's own radius through zero there, and amplifying by that ratio
-// deepened a concave bite past the whole corner and ate a hole out of it. Written so the ratio cannot exceed 1 by
-// construction: an explicit upper clamp of 1.0 was enough to make the driver's NVVM AV in vkCreateShadersEXT, as was a
-// single ternary. Nothing in here may branch.
+// Physical px to centerline arc units at `dPerp` across a stroke with curvature radius `curvRadius` (1e9 when straight).
+// Only the outer side of a bend is corrected, so the ratio never exceeds 1.
 float ArcCapScale(float curvRadius, float dPerp)
 {
     return curvRadius / max(curvRadius + max(dPerp, 0.0), 0.5);
 }
 
-// Dash + trim coverage (0..1) at arc-length `s` (device px) along a contour of length `perimeter`. Makes dashes/trim
-// ANALYTIC (per-fragment, no cut geometry) so a dashed/trimmed stroke still BATCHES. dashOn<=0 = solid. Piece ends are
-// shaped by their caps (packed base-8 into capFlags: dashStart + 8*dashEnd + 64*start + 512*end). dPerp = signed
-// perpendicular distance from the stroke centreline; halfW = half the stroke width. ~1px AA everywhere.
-// sTrim cuts the trim window; sDash phases the dashes. Both are the fragment's continuous centreline arc-length (callers
-// pass the same value) - corners included, since the corner arc-length is angle-based and thus uniform across the width.
-//
-// A visible PIECE is one dash run clipped to the trim window, and each of its two ends wears exactly ONE cap: the dash
-// cap, or the line cap where the trim window cuts first. Masking dashes and trim separately and multiplying (what this
-// did) stamped BOTH onto the first and last dash - a line cap and a dash cap fighting over one end.
-//
-// capScale converts a cap's PHYSICAL reach into units of `s`. They are not the same unit: `s` is the CENTRELINE arc,
-// deliberately uniform across the stroke width so a dash boundary stays radial through a corner (see RoundRectArc),
-// while a cap reaches a real number of pixels. On a straight edge capScale is 1; on a bend of curvature radius R it is
-// R / (R + dPerp), because one unit of s spans that much more at the outer radius. Adding the two raw made a concave
-// cap bite several times deeper at a corner than on a straight edge - it ate the dash there and left a hair-thin arc
-// along the outer edge, and only at corners.
-// Total length of a dash pattern of `count` runs: the first two ride in Stroke0.zw, the rest (up to four more) in Dash.
-// A pattern is always an alternating ON, OFF, ON, OFF... and always an EVEN number of runs, so it tiles seamlessly.
+// Total length of a dash pattern of `count` alternating runs (an even count): two in Stroke0.zw, up to four more in Dash.
 float DashPatternLength(float dashOn, float dashGap, float4 rest, int count)
 {
     float total = dashOn + dashGap;
@@ -138,11 +93,8 @@ float DashPatternLength(float dashOn, float dashGap, float4 rest, int count)
     return total;
 }
 
-// The dash run this fragment's phase falls in, as (distance from its START, distance to its END) - both positive inside
-// an ON run, and in a GAP the nearer neighbouring run's edge as a NEGATIVE distance with the other left "nowhere near".
-// That asymmetry is what lets a convex cap bulge into the gap it faces while the far side stays off.
-// Returned as a float2 rather than through out-parameters: a second out-parameter in this family is what made the
-// driver's NVVM compiler AV in vkCreateShadersEXT (see the note above DashTrimMaskCapped).
+// The dash run at this phase as (distance from start, distance to end): positive inside a run; in a gap, the nearer run
+// edge is negative and the other "far", so a convex cap bulges one way.
 float2 DashPiece(float ph, float dashOn, float dashGap, float4 rest, int count)
 {
     float dS = 1e9;
@@ -166,11 +118,9 @@ float2 DashPiece(float ph, float dashOn, float dashGap, float4 rest, int count)
     return float2(dS, dE);
 }
 
-// Same as DashTrimMask, but the TRIM window wraps the fragment's signed arc offset to [-P/2, P/2] so a CONVEX cap at the
-// contour seam (trimStart 0 -> start at s=0) bulges into the gap on the OTHER side of s=0 instead of clipping flat. Kept
-// SEPARATE from DashTrimMask on purpose: this wrapped form miscompiled the driver's GRADIENT/pattern/fractal pixel-shader
-// objects (they inline the helper too) into a device-lost, while the SOLID rect/ellipse stroke shaders compile it fine -
-// so ONLY those two call it; the fill shaders stay on the plain DashTrimMask. Do NOT re-merge them.
+// Dash and trim coverage (0..1) at arc length `s`, one cap per piece end (caps packed base-8 in capFlags), with cap reach
+// scaled by capScale at bends. The trim wraps to [-P/2, P/2] so a convex cap at the seam bulges past s=0. Used by the solid
+// rect/ellipse strokes; fills use DashTrimMask.
 float DashTrimMaskCapped(float sTrim, float sDash, float perimeter, float dashOn, float dashGap, float dashOffset,
     float trimStart, float trimEnd, float dPerp, float halfW, float capFlags, float4 dashRest)
 {

@@ -40,11 +40,8 @@ public class SVGParser
         return geometry;
     }
 
-    /// <summary>The geometry said BACK as SVG path data - the other half of <see cref="Parse"/>, and here beside it so
-    /// that reading a path and writing one stay one statement of the same grammar.
-    /// <para>EVERY FIGURE STARTS WITH ITS OWN M. That is what keeps two sub-paths two: run together, the end of one is
-    /// joined to the start of the next by a line nobody drew, which is the web of stray strokes an imported icon comes
-    /// in wearing.</para></summary>
+    /// <summary>Writes the geometry as SVG path data, the inverse of <see cref="Parse"/>; every figure starts with its own
+    /// M.</summary>
     public static string ToPathData(StreamGeometry geometry)
     {
         if (geometry == null) return string.Empty;

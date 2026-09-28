@@ -12,13 +12,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Deferred content: a presenter told to <see cref="ContentPresenter.DeferContent"/> builds its visual away from the loop
-/// thread, shows its loading template meanwhile, and adopts the finished subtree when it lands. What these tests pin is
-/// the three promises that makes it safe to hand a tab body this way - the content ARRIVES and is the one that was asked
-/// for; a build the user has already walked away from never takes the place of the content they chose; and a render that
-/// has no next frame builds inline, because for it "later" never comes.
-/// </summary>
+// ContentPresenter.DeferContent: the requested content arrives, a superseded build never replaces newer content, and a
+// render with no next frame builds inline.
 [TestFixture]
 public class DeferredContentTests
 {

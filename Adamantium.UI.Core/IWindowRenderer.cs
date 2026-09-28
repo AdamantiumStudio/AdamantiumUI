@@ -29,12 +29,12 @@ public interface IWindowRenderer : IDisposable
 
     public void PrepareData();
 
-    /// <summary>DEVICE-FREE record half of PrepareData (Phase 3.2): walk the tree + component.Render into the packet. Safe
+    /// <summary>DEVICE-FREE record half of PrepareData: walk the tree + component.Render into the packet. Safe
     /// to run at loop level after the whole Update phase, off the GPU/BeginDraw fence.</summary>
     public void RecordData();
 
-    /// <summary>GPU apply half of PrepareData (Phase 3.2): realize the recorded packet into units + the per-unit transform
-    /// re-bake. Runs inside BeginDraw (after the fence); moves to the render thread in Phase 3.3.</summary>
+    /// <summary>GPU apply half of PrepareData: realize the recorded packet into units + the per-unit transform
+    /// re-bake. Runs inside BeginDraw (after the fence).</summary>
     public void ApplyData();
 
     /// <summary>Disposes the cached render units (for a fresh tree each frame, e.g. the headless designer). No-op for

@@ -38,11 +38,8 @@ public class Pen : IEquatable<Pen>
 
    public Double TrimEnd { get; }
 
-   /// <summary>Whether the dash pattern is stretched so a WHOLE number of periods fits a closed contour. The array is
-   /// given in pixels, and a closed contour's length almost never divides by the pattern - the remainder is left over
-   /// where the contour closes and shows up as one long dash. Fitting scales the pattern by at most half a period so
-   /// the ring closes on itself at ANY size, which is what a marching-ants ring needs and what a ruler-like dashed
-   /// border must NOT have (its dashes are supposed to measure a fixed length).</summary>
+   /// <summary>Whether the dash pattern is scaled (by at most half a period) so a whole number of periods fits a closed
+   /// contour, with no long dash at the seam.</summary>
    public Boolean FitDashesToContour { get; }
 
    /// <summary>Dash offset expressed in PERIODS instead of pixels, added to <see cref="DashOffset"/>. One period is the

@@ -34,14 +34,8 @@ public interface IThemeManager : IThemeEngine
 
     void SetTheme(ITheme theme);
 
-    /// <summary>Switch the current theme's VARIANT - light to dark, or whatever else it declares. Returns false if the
-    /// theme does not have that variant, so the caller knows rather than being handed something else.
-    /// <para>This is deliberately NOT <see cref="SetTheme"/> with a second theme, and the difference is the whole point
-    /// of variants: the styles and templates are the same objects before and after, so nothing is re-templated, nothing
-    /// is re-styled, and no element is written to. What changes is the COLOUR inside palette brushes that are already
-    /// hanging on the elements - O(palette keys), around a hundred, instead of O(elements), around twenty thousand.</para>
-    /// <para>It also raises no swap events and does not move the theme version: a parked subtree that comes back after a
-    /// variant change is already correct, because it is holding the very brushes whose colour changed.</para></summary>
+    /// <summary>Switches the theme's variant (e.g. light to dark) by recoloring palette brushes in place, without
+    /// restyling; false if the theme lacks it. Raises no swap events.</summary>
     bool SetVariant(ThemeVariant variant);
 
     void ApplyTheme(ITheme theme, IFundamentalUIComponent component);

@@ -9,14 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>"Drag the cell to its minimum and every tile disappears" (Layout tab, reported from the stand). Two very
-/// different mechanisms could produce that and they are fixed in different places, so this measures which:
-/// <list type="number">
-/// <item>the PANEL's arithmetic collapses at a small uniform cell - containers realized with no size, or none at all;</item>
-/// <item>the panel is fine and the tiles are all DEFERRED - a small cell means thousands of slots per pass, the bind
-/// budget cannot keep up, and what is on screen is skeleton cards.</item>
-/// </list>
-/// </summary>
+// Tiles at the minimum cell size: separates the panel collapsing from tiles merely being deferred by the bind budget.
 [TestFixture]
 public class MinimumCellTilesTests
 {

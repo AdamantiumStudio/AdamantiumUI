@@ -151,12 +151,8 @@ public class TabControlTests
         });
     }
 
-    // TabStripPlacement is declarative: each placement selects its OWN control template via a PropertyTrigger on the enum
-    // (in the theme, a Left/Right placement also flips the header panel vertical). This proves the exact mechanism the
-    // theme relies on - a base template from a Style setter, a trigger keyed on TabStripPlacement=Left that swaps in a
-    // different one at Trigger priority (which outranks the Style base), and a clean revert on exit - without the full
-    // theme loaded. Enum trigger values parse from their string form ("Left" -> the enum). Guards the framework fix: a
-    // Template-swapping trigger must not recurse through the template-change trigger reevaluation.
+    // A TabStripPlacement trigger swaps the template at Trigger priority and reverts cleanly, without recursing through
+    // template-change trigger re-evaluation.
     [Test]
     public void TabStripPlacement_SelectsTemplateViaTrigger()
     {

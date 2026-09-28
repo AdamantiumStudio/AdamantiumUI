@@ -7,18 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// Theming happens ONE CONTROL AT A TIME, over and over, as the tree is built and walked - so a failure while theming
-/// one of them decides how far the walk gets. Applying a theme runs markup: it resolves resources, writes setters,
-/// attaches triggers and builds the control's template, and any of that can throw on a single bad attribute (an
-/// unresolvable <c>{TemplateBinding}</c> resolves to a null property and throws while the template is BUILT).
-/// <para>That throw used to travel up through SetParent and the logical-children walk and abandon the rest of the pass,
-/// leaving the application HALF THEMED - some controls in the new theme, the rest still wearing the old one, and
-/// nothing on screen saying why. It reads as "the new theme was never written", which is how it was actually
-/// misdiagnosed for a while.</para>
-/// <para>The boundary therefore sits at <see cref="FundamentalUIComponent.ApplyCurrentTheme"/> - the seam every control
-/// goes through - rather than around any one thing that might throw inside it.</para>
-/// </summary>
+// A throw while theming one control stays at FundamentalUIComponent.ApplyCurrentTheme, so the rest of the tree is still
+// themed.
 [TestFixture]
 public class ThemingBoundaryTests
 {

@@ -7,13 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A theme's VARIANTS. The property under test throughout is the one the whole design rests on: switching a variant
-/// re-colours the brushes the theme already owns instead of handing out new ones. Two dictionaries of separate brush
-/// objects under the same keys would look identical on screen and cost a property write on every element that draws -
-/// measured at ~18000 writes on a swap - so "the brush is the same object afterwards" is not a detail to assert in
-/// passing, it is the feature.
-/// </summary>
+// Switching a variant recolors the theme's existing brush objects instead of handing out new ones.
 [TestFixture]
 public class ThemeVariantTests
 {

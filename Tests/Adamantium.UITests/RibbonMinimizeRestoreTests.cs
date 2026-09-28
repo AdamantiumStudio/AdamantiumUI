@@ -11,14 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Minimizing the ribbon MOVES the open tab's content into the flyout rather than rebuilding it, so the groups keep the
-/// variants and widths they worked out. Restoring has to move it back, and the band that was collapsed has to come
-/// back with it.
-/// <para>Both halves are covered here, and the SECOND is the one worth having: the move is driven by the control and
-/// was easy to believe broken, while hiding the band is done by a trigger in the THEME - which is why the same failure
-/// shows in both themes. A double that leaves the trigger out passes happily while the application is broken.</para>
-/// </summary>
+// Minimize moves the open tab's content into the flyout (keeping group variants); restore moves it back and the theme's
+// trigger shows the band again.
 [TestFixture]
 public class RibbonMinimizeRestoreTests
 {
@@ -167,12 +161,7 @@ public class RibbonMinimizeRestoreTests
         });
     }
 
-    /// <summary>The band SLIDES in, and the slide is armed by parking it off-screen and letting the popup's first layer
-    /// pass start the motion. That pass only comes when the popup is actually (re)opened - and clicking a DIFFERENT tab
-    /// header while the band is already showing asks it to open again, which for an already-open popup is not a change
-    /// at all. So nothing ever brought it back: the popup stayed up and its contents sat a band's height above the top
-    /// of the clip. What that looks like is commands vanishing from a flyout that is plainly still there, after nothing
-    /// more than clicking between tabs.</summary>
+    // Clicking another tab while the minimized band shows must not leave the band parked off-screen for its slide-in.
     [Test]
     public void SwitchingTabsWhileTheBandIsShowingDoesNotParkItOffScreen()
     {
@@ -197,11 +186,7 @@ public class RibbonMinimizeRestoreTests
             + "never came: the flyout stays up with its commands a band's height above the clip");
     }
 
-    /// <summary>Restoring puts the flyout away AT ONCE, not over a transition.
-    /// <para>The slide is for a band being PUT AWAY. On restore the band is not going anywhere - it has just gone back
-    /// into the ribbon - so what would travel down is an empty plate its own height, under the band already showing
-    /// above it. Measured on the stand: band 106 visible, popup still open with a 106-tall child, which on screen is a
-    /// ribbon twice as tall until the ghost finally leaves.</para></summary>
+    // Restoring closes the flyout at once, not over a transition (it would slide an empty plate).
     [Test]
     public void RestoringPutsTheFlyoutAwayAtOnce()
     {

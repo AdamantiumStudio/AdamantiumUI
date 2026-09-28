@@ -5,13 +5,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Places the points of a curve: a click puts one down, moving shows where the line would go, a double click
-/// ends it.
-/// <para>Point by point and never by dragging: all three of these curves are defined BY their points, and a drag would
-/// have to invent them from a path - which is what the pen already does, and what a curve is chosen instead of.</para>
-/// <para>ONE tool for the three kinds, and the kind is a setting: which curve suits a line is decided by looking at it,
-/// so it can be changed afterwards in the panel. An application that wants a button per kind builds three of these.</para>
-/// </summary>
+/// <summary>Places a curve point by point: a click adds one, moving previews, a double click ends. One tool for all curve
+/// kinds, which is a setting.</summary>
 public class CurveTool : ICanvasTool
 {
     private CurveItem _making;

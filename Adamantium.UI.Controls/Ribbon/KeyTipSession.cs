@@ -5,11 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>One run of key-tip mode: which level is showing, what has been typed so far, and the badges on screen.
-/// Levels are a STACK, as in Office - typing a tab's keys descends into it, Escape steps back out one level rather than
-/// leaving altogether.
-/// <para>Knows nothing about windows or input routing: it is driven by <see cref="Press"/> and hands its badges to an
-/// <see cref="AdornerLayer"/> that may be absent. That is what lets the whole state machine be tested without one.</para></summary>
+/// <summary>One run of key-tip mode: a stack of levels, typed keys and badges; Escape steps back one level. Driven only by
+/// <see cref="Press"/>, so it is testable without a window.</summary>
 public class KeyTipSession
 {
     private readonly AdornerLayer _layer;
@@ -72,12 +69,8 @@ public class KeyTipSession
         ClearBadges();
     }
 
-    /// <summary>One keystroke, given as everything it could reasonably mean: the character it TYPED, and the letter the
-    /// same key carries on a Latin keyboard. Both, because the two disagree the moment the layout is not Latin - and a
-    /// band labelled in English would otherwise be unreachable from a Russian keyboard, which is worse than useless.
-    /// The typed character is tried first, so a band labelled in the user's own language wins.
-    /// <para>Returns whether the session consumed it - an unconsumed key must go on to whoever else wants it, or
-    /// key-tip mode would swallow the application's own shortcuts.</para></summary>
+    /// <summary>One keystroke: the typed character, then <paramref name="alternate"/>, the same key's Latin letter, so
+    /// Latin tips work on other layouts. Returns whether it was consumed.</summary>
     public bool Press(char key, char? alternate = null)
     {
         if (!IsActive) return false;
@@ -158,11 +151,7 @@ public class KeyTipSession
 
             _candidates = [];
             ClearBadges();
-            // NOT shown yet. The band still holds the tab that is leaving, so reading the level now badges ITS commands
-            // for exactly one frame before the new ones replace them - a flicker too fast to read and too fast to film.
-            // The owner re-reads once layout has settled and the level is really there (see Refresh). Only a level that
-            // is genuinely about to change may wait like this: with nothing to re-lay-out, no such pass ever comes and
-            // the badges would never appear at all.
+            // Not shown yet: the band still holds the old tab; the owner calls Refresh once layout has settled.
             _pending = true;
             return;
         }

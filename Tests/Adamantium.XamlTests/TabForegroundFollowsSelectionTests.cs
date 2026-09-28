@@ -10,15 +10,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A tab says which one is CURRENT with two marks: the plate behind it and the colour of its label. The plate is a
-/// trigger writing a part's Background and has always worked; the label is the same trigger writing the part's
-/// Foreground and did not - the strip highlighted correctly while every label stayed the resting colour, and the one
-/// tab that happened to be selected when the theme was applied kept the selected colour for good.
-/// <para>What makes the label different from the plate is that nothing paints it directly: the presenter's Foreground
-/// has to reach the TextBlock the presenter GENERATES for a string header, and that hand-off is the thing under
-/// test.</para>
-/// </summary>
+// A selected tab's label color follows the trigger: the presenter's Foreground reaches the TextBlock it generates for a
+// string header.
 [TestFixture]
 public class TabForegroundFollowsSelectionTests
 {

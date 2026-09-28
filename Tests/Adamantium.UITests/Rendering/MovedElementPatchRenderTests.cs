@@ -14,14 +14,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// An element that MOVES and nothing else. Where a thing sits lives in its transform-table slot, so a move is a slot
-/// write - yet the frame carried a single frame-wide "transforms are dirty" flag, and one moved element spoke for the
-/// whole scene: dragging a slider thumb over a 22 064-node tab walked all of it, every frame, at 16 fps.
-/// <para>Both halves are asserted together, and they have to be: the move must cost a PATCH (or the drag is slow) and
-/// the patched picture must equal what a full walk draws (or the move was forgiven without being carried - which is
-/// what the earlier attempt at this did, leaving the drag-and-drop gap shut until a walk arrived and then jumping).</para>
-/// </summary>
+// A pure move costs a patch, and the patched picture equals a full walk.
 [TestFixture]
 [Category("Gpu")]
 public class MovedElementPatchRenderTests
@@ -225,15 +218,8 @@ public class MovedElementPatchRenderTests
         AssertMatchesAFullWalk(scene, patched, "the clipped band must have moved with its viewport");
     }
 
-    // ...and a view that slides is a motion node with the scroll list's own motion node INSIDE it. A node's slot holds
-    // its OWN world, so the inner one has to be written too - nothing else writes it, and its whole subtree would sit
-    // still while everything around it moved.
-    //
-    // This asserts the PICTURE, not the path. Whether such a frame may patch is a separate question and the answer is
-    // currently no: a node with no units of its own has nobody to vouch that writing its matrix carries everything
-    // under it, and both ways of assuming it could were wrong on a live stand - vector icons that never materialised,
-    // and an aura that left its shape for the corner. So the frame is allowed to walk; what it may not do is draw the
-    // inner subtree anywhere but where a walk draws it.
+    // A sliding node containing another motion node: the inner node's slot is written too. Asserts the picture only; such
+    // frames may walk.
     [Test]
     public void MovingAMotionNodeThatContainsAnother_CarriesTheInnerOne()
     {
@@ -263,15 +249,8 @@ public class MovedElementPatchRenderTests
         AssertMatchesAFullWalk(scene, Pixels(renderer), "the inner node's subtree must have moved with the outer one");
     }
 
-    // THE TAB SLIDE, as the sandbox actually builds one. A view worth sliding contains a ROTATED thing somewhere - a
-    // turned label, a collapsed docking tab, a knob - and a rotated unit cannot ride the node's slot: an axis-aligned
-    // instance has nowhere to put the rotation, so it takes a slot of its own holding its FULL world and the node is
-    // recorded as not carrying all of its content. The frame was then refused WHOLESALE, and one turned label made
-    // every frame of every slide a full walk of the scene.
-    //
-    // Measured on the stand (30 switches, tab sweep): "not node-aware ViewboxView <- TextBlock 68, <- Border 17,
-    // RangesView <- Ellipse 24" against "patch refusals: movedNode 83". The straggler does not have to cost the frame -
-    // it only has to be carried, exactly as an ordinary mover's subtree is.
+    // A sliding view containing a rotated unit (own slot, full world): the straggler is re-baked beside the node's slot
+    // write instead of refusing the patch.
     [Test]
     public void MovingAMotionNodeWithRotatedContent_CarriesItInstead_OfRefusingTheFrame()
     {
@@ -306,13 +285,7 @@ public class MovedElementPatchRenderTests
         AssertMatchesAFullWalk(scene, patched, "the turned label must have slid with the view, not stayed behind");
     }
 
-    // A mover that CLIPS carries a viewport past, and a recorded Scissor is a world-space rect. This used to hand the
-    // frame to the walk for that reason, and the reason has since been answered: the scissors are derived again, for all
-    // three carriers of a clip (the Scissor op, the batch segment, the instanced flush).
-    //
-    // The rule it replaces was not free. Anything worth sliding has a scroll area somewhere inside it, so "something
-    // under the mover clips" condemned every one of them - measured on a tab switch into a maximized 3198x1762 window of
-    // 24x24 tiles, one 105-129 ms walk of an 8960-tile scene per switch, named by the probe as movedClips<LayoutView>.
+    // A mover with clips below it patches: scissors are re-derived for Scissor ops, batch segments and instanced flushes.
     [Test]
     public void AMoverThatClips_PatchesAndTakesItsViewportWithIt()
     {
@@ -351,11 +324,7 @@ public class MovedElementPatchRenderTests
         AssertMatchesAFullWalk(scene, patched, "the element must be drawn at its NEW size, not its old one");
     }
 
-    // A MOTION NODE inside the moved subtree. The node is not the mover and its own Bounds do not change - it sits where
-    // it always sat inside its parent - so nothing announces a move for it, and its subtree is baked against a slot only
-    // the applier can write. RefreshMovedNodes writes the nodes that were MARKED moved and the nodes under those; a node
-    // under an ORDINARY mover is in neither set, and its slot kept last frame's world. On the stand that tore the page in
-    // two: one wheel notch at the top of a scroll moved everything re-baked and left everything riding the node behind.
+    // A motion node inside an ordinary mover's subtree announces no move, yet its slot must be rewritten too.
     [Test]
     public void MovingAContainer_CarriesAMotionNodeInsideIt()
     {

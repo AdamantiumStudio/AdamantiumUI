@@ -6,13 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Pulling a WIRE out of a socket and dropping it on another.
-/// <para>A GESTURE and not a tool, because that is what every node editor does: in Unreal, Blender, Substance, Houdini
-/// and the rest there is nothing to switch to - the socket itself is the offer, and you drag off it with whatever is
-/// already in hand. A mode would be one more thing to enter and leave for an act performed twenty times a minute, and
-/// leaving it forgotten is a press that draws a wire when it meant to pick something up.</para>
-/// <para>Held by the tool that offers it the press first. It answers only when the press LANDS ON A SOCKET and says so;
-/// anything else it refuses, and the tool carries on as though nothing had asked.</para></summary>
+/// <summary>Pulling a wire from one socket to another: a gesture under any tool, not a mode. It takes only presses that land
+/// on a socket.</summary>
 public class ConnectGesture
 {
     private readonly WirePainter _painter = new();
@@ -41,13 +36,8 @@ public class ConnectGesture
         if (canvas?.Scene == null) return false;
         if (!Socket(canvas, world, out _fromItem, out _fromPin)) return false;
 
-        // AN INPUT THAT IS ALREADY TAKEN hands its wire over instead of starting a second one: the wire comes off and
-        // the gesture carries on from the far end of it, so the same drag that would have made a wire moves the one
-        // that is there. Dropped on another socket it is re-routed, dropped on nothing it is gone - which is how a wire
-        // is deleted, and why deleting one needs nothing of its own.
-        //
-        // Only an input. An output feeds as many wires as you like, so a press on one means a NEW wire and can mean
-        // nothing else.
+        // A taken input hands its wire over to the drag: re-routed on another socket, deleted on nothing. Outputs always
+        // start a new wire.
         if (_fromPin.IsInput && ConnectionItem.Into(canvas.Scene, _fromPin) is { } taken)
         {
             ConnectionItem.Cut(canvas.Scene, taken);
@@ -213,11 +203,8 @@ public class ConnectGesture
         canvas.InvalidateRender(false);
     }
 
-    /// <summary>Whether a wire may run between these two sockets. Stated here rather than inside the gesture so that a
-    /// list beside the canvas, or a test, can ask the same question without pressing anything.
-    /// <para>Without a SCENE this is what can be told from the two sockets alone: one in and one out, on two different
-    /// nodes, agreeing about what flows. Whether the wire would close a LOOP cannot be told that way - see the overload
-    /// that is given the scene.</para></summary>
+    /// <summary>Whether a wire may join these sockets: one in and one out, on different nodes, agreeing on kind. Loops need
+    /// the overload given the scene.</summary>
     public static bool Joinable(ElementItem fromItem, CanvasNodePin from, ElementItem toItem, CanvasNodePin to)
     {
         if (from == null || to == null || fromItem == null || toItem == null) return false;

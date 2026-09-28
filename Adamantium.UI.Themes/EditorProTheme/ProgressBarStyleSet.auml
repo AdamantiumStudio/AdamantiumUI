@@ -2,14 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's progress bar: a SQUARE rule, not a rounded capsule.
-
-         A progress bar in an editor lives in a status line or at the foot of a panel, edge to edge - and a capsule
-         edge to edge leaves two rounded gaps where the bar does not reach its own container. Fluent's is a floating
-         pill on a page, where the caps are what make it look placed rather than cropped.
-
-         The track and the fill are Grid SIBLINGS, not parent and child: a decorator shrinks to its child, so a
-         zero-width fill nested in the track would collapse the whole bar to nothing. -->
+    <!-- A square progress rule for edge-to-edge placement. Track and fill are Grid siblings, since a nested zero-width
+         fill would collapse the track. -->
 
     <Style Selector="ProgressBar">
         <Setter Property="MinWidth" Value="{ResourceReference ControlMinWidth}"/>

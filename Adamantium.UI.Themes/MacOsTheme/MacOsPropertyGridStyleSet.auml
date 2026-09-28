@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS inspector: a WELL, like the list and the text field, with the same sunken surface - and no rule
-         between the two halves beyond the grip itself. The grip is per ROW but the width is the GRID's, so the line
-         reads as one continuous rule down the whole panel.
-
-         The row's layout is a three-column Grid whose FIRST column the control sets (PART_Layout): binding a column
-         width to an ancestor's property is not something a template can say. -->
+    <!-- The macOS inspector on the well surface; per-row grips share the grid's width, and the control sets each row's
+         first PART_Layout column. -->
 
     <Style Selector="PropertyGrid">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>

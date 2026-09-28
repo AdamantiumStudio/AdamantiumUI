@@ -5,13 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>What is ON the canvas. Held by the APPLICATION, not by the control - the same arrangement the table has with
-/// its rows, and for the same reason: undo, saving and whatever else a drawing is for belong to whoever owns the
-/// drawing, and a control that owned them would have to grow a way to hand them back.
-/// <para>The canvas asks it one thing - what falls inside the piece of world it can see - so the cost of a frame
-/// follows what is VISIBLE rather than what exists. The first implementation walks everything and rejects by bounds;
-/// a spatial index goes behind this same question when walking stops being fast enough, and the control never
-/// learns.</para></summary>
+/// <summary>What is on the canvas, held by the application. The canvas asks only what falls in view, so frame cost follows
+/// what is visible and an index can go behind it.</summary>
 public interface ICanvasScene
 {
     /// <summary>The items whose bounds meet this piece of world. Order is paint order.</summary>
@@ -44,23 +39,14 @@ public interface ICanvasScene
 
     bool SendToBack(ICanvasItem item);
 
-    /// <summary>Puts an item straight after another in paint order, or straight before it - which is how a thing is
-    /// put BETWEEN two others, and the ends above cannot do it.
-    /// <para>Said as "next to THIS ONE" rather than as "one place along" on purpose: one place along is not something
-    /// a person can see. A scene may hold a drawing and a graph at once, and a step that moved an item past something
-    /// the current mode does not show is a press that appears to do nothing. The caller names the neighbour, which it
-    /// knows and the scene does not.</para></summary>
+    /// <summary>Puts an item straight after or before a named neighbor in paint order, so it can go between two others.</summary>
     bool MoveNextTo(ICanvasItem item, ICanvasItem neighbour, bool after);
 
     /// <summary>Puts an item at a PLACE in paint order, counting from the back - what writing a layer number means.
     /// Clamped rather than refused: asked for the hundredth place in a scene of ten, a person means the top.</summary>
     bool Reposition(ICanvasItem item, int place);
 
-    /// <summary>Puts the scene in EXACTLY this state: these items, in this order, and nothing else.
-    /// <para>What undo needs, and the one thing the rest of this contract cannot express. Membership can be rebuilt
-    /// from <see cref="Add"/> and <see cref="Remove"/>, but ORDER cannot - and order here is paint order, so a step put
-    /// back in the wrong order is a different drawing. One call rather than a storm of them, so a scene with fifty
-    /// thousand things in it raises <see cref="Changed"/> once.</para></summary>
+    /// <summary>Puts the scene in exactly this state, order included, for undo; raises <see cref="Changed"/> once.</summary>
     void Reset(IReadOnlyList<ICanvasItem> items);
 
     /// <summary>Says that something already in it has changed - an item moved or resized. The scene cannot notice on its

@@ -10,13 +10,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The property store read from one thread while another writes it. This is not a hypothetical: the engine runs a pump
-/// thread and a loop thread, and both touch the tree - which is why reads used to take the component's lock, and why
-/// holding that lock across a callback deadlocked the two against each other.
-/// <para>Reads are now lock-free, so what has to be shown is that they still never observe a half-written state and
-/// never throw - a reader that tore would trade a deadlock for something far worse.</para>
-/// </summary>
+// Lock-free property store reads concurrent with writes never observe a half-written state and never throw.
 [TestFixture]
 public class PropertyStoreConcurrencyTests
 {

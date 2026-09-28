@@ -3,18 +3,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// Raised by <see cref="DockingArea.PaneDocking"/> just before panes are docked somewhere - the moment the user let go
-/// over an indicator, and BEFORE the layout is touched. Set <see cref="Cancel"/> to refuse the move; what was being
-/// dragged stays exactly where it was.
-/// <para>This is the escape hatch for the rules a set of zones cannot express - "not next to that panel", "not while
-/// this document is running" - and it is the only one: <see cref="Pane.Allowed"/> answers where a pane may go AT ALL,
-/// and answers it in data that serialises and can be read at a glance. A predicate would express anything and none of
-/// that, which is why the vocabulary is split in two.</para>
-/// <para>Raised once, ON THE DROP, not while the pointer moves: the compass shows what the ZONES allow, and asking the
-/// application hundreds of times a second - with whatever an application does in a handler - is not a question that can
-/// be asked per mouse move.</para>
-/// </summary>
+/// <summary>Raised once on the drop, before panes are docked; set <see cref="Cancel"/> to refuse. For rules
+/// <see cref="Pane.Allowed"/> zones cannot express.</summary>
 public class PaneDockingEventArgs : EventArgs
 {
     public PaneDockingEventArgs(IReadOnlyList<string> panes, PaneNode target, DockZone zone)

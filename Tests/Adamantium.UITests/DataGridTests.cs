@@ -20,7 +20,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>TreeDataGrid, phase 1: columns, the shared width pass, and flat rows.</summary>
+/// <summary>TreeDataGrid: columns, the shared width pass, and flat rows.</summary>
 [TestFixture]
 public class DataGridTests
 {
@@ -276,7 +276,7 @@ public class DataGridTests
         Assert.That(bands, Is.All.EqualTo(0), "zero turns striping off rather than leaving the last pattern");
     }
 
-    // ---- Phase 2: the expander, and the fact that it can live in ANY column -------------------------------------
+    // ---- The expander, and the fact that it can live in ANY column ----------------------------------------------
 
     private static (TreeDataGrid grid, Row root) Tree(params DataGridColumn[] columns)
     {
@@ -385,7 +385,7 @@ public class DataGridTests
         });
     }
 
-    // ---- Phase 3: column virtualization and frozen columns ------------------------------------------------------
+    // ---- Column virtualization and frozen columns ---------------------------------------------------------------
 
     private static TreeDataGrid WideGrid(int columnCount, double columnWidth = 100)
     {
@@ -456,7 +456,7 @@ public class DataGridTests
         });
     }
 
-    // ---- Phase 4: selection as a spreadsheet does it ------------------------------------------------------------
+    // ---- Selection as a spreadsheet does it ---------------------------------------------------------------------
 
     private static TreeDataGrid SelectableGrid(int rows = 6)
     {
@@ -1321,12 +1321,7 @@ public class DataGridTests
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     }
 
-    // The search washes are the grid's to name the same way - and giving the name up has to HAND THE COLOUR BACK. The
-    // cells are recycled carriers: a colour written into one and never taken out again would follow it onto every row
-    // it is later reused for, and no theme setter could be seen through it.
-    // Driven through a BINDING, because that is how a page drives it and assigning the property in the test does not go
-    // where the real value goes. The version of this test that assigned it directly passed while the stand could not
-    // hand the colour back at all - the binding was dropping the null on the way, and nothing here could see that.
+    // Clearing the search wash brush hands the color back to recycled cells; driven through a binding, as pages do.
     [Test]
     public void SearchWashes_TakeTheBrushTheGridNames_AndGiveItBack()
     {
@@ -1538,7 +1533,7 @@ public class DataGridTests
         });
     }
 
-    // ---- Phase 5: sorting within siblings, filtering that keeps ancestors ---------------------------------------
+    // ---- Sorting within siblings, filtering that keeps ancestors ------------------------------------------------
 
     private static TreeDataGrid SortableTree()
     {
@@ -1631,7 +1626,7 @@ public class DataGridTests
     private static string[] Names(TreeDataGrid grid) =>
         grid.Rows.Select(r => ((Row)r.Node).Name).ToArray();
 
-    // ---- Phase 6: editing ---------------------------------------------------------------------------------------
+    // ---- Editing ------------------------------------------------------------------------------------------------
 
     private sealed class Editable
     {
@@ -2104,7 +2099,7 @@ public class DataGridTests
         return double.NaN;
     }
 
-    // ---- Phase 7: the header strip's state, and column filters ---------------------------------------------------
+    // ---- The header strip's state, and column filters ------------------------------------------------------------
 
     private static DataGridHeadersPresenter Headers(TreeDataGrid grid)
     {
@@ -3044,12 +3039,8 @@ public class DataGridTests
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     }
 
-    // The strip closes ITSELF, from its own button, so the switch that opened it has to hear about it. A page binds the
-    // switch with a plain {Binding} and never says Mode - that resolves to what the PROPERTY declares, which is why the
-    // property declares TwoWay. Left one-way, the strip went away and the checkbox stayed on.
-    // And the close has to write the way PART_Close writes: SetCurrentValue, at the binding's own slot. The plain CLR
-    // setter writes Local, which outranks Binding for good - the strip then closed once and the switch could never open
-    // it again, because every later push landed in a slot the local write masks.
+    // Closing the strip from its own button reaches the switch (the property is TwoWay by default), written with
+    // SetCurrentValue so later bindings still apply.
     [Test]
     public void TheSearchStripClosingItself_ReachesTheSourceItWasOpenedFrom()
     {
@@ -3654,11 +3645,7 @@ public class DataGridTests
         });
     }
 
-    // A table with panels open has to go QUIET when nobody is touching it. It did not: the panel row built a part on
-    // every measure that it dropped again a few lines later, and a child added and removed invalidates the row that is
-    // measuring - so the row never went valid and the whole realized set re-measured on every pass. Asserted on whether
-    // the layout SETTLES rather than on a measure count, because a count only says "a lot", and a lot is also what a
-    // table someone is actually using looks like.
+    // With detail panels open and no input, layout settles (asserted on settling, not on a measure count).
     [Test]
     public void APanelOpen_LetsTheTableGoQuiet()
     {

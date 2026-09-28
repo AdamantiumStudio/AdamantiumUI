@@ -2,16 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS progress bar. Same two parts as Fluent's - a track with a left-anchored indicator the control sizes -
-         and the differences are the ones that run through this whole theme rather than anything about progress:
-
-         THE TRACK IS THE SHARED UNSET GROOVE, the one the switch and the sliders use. A bar half full is the same
-         statement a slider makes, and the empty half has to be the same material or the window has two kinds of
-         "nothing here yet". It is also the only fill in the palette that is actually visible against the window - a
-         ControlFill is a few per cent of white and the empty half simply would not be there.
-
-         AND IT IS THINNER. 4, the rail's thickness, against Fluent's 6: on a Mac a progress bar and a slider's track
-         are the same line, one with a handle on it and one without. -->
+    <!-- The macOS progress bar: Fluent's parts, with the shared unset groove as track, at the slider rail's thickness. -->
 
     <Style Selector="ProgressBar">
         <Setter Property="MinWidth" Value="{ResourceReference ControlMinWidth}"/>

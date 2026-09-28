@@ -9,15 +9,8 @@ using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-/// <summary>
-/// Our payload seen through OLE eyes: a COM <see cref="ComTypes.IDataObject"/> over an <see cref="IDataPackage"/>, so a
-/// drag that starts in our app can be dropped into Explorer, an editor, a browser. It renders the package's neutral
-/// formats on demand - <c>DataFormats.Text</c> as CF_UNICODETEXT, <c>DataFormats.Files</c> as CF_HDROP.
-/// <para>
-/// It also keeps the LIVE package, so when the gesture comes back over one of our own windows the drop target unwraps
-/// this same instance and gets the real CLR object - the fast in-app path survives a trip through the OS.
-/// </para>
-/// </summary>
+// An OLE IDataObject over an IDataPackage, rendering neutral formats on demand; keeps the live package for drops back
+// onto our own windows.
 internal sealed class Win32DataObject : ComTypes.IDataObject, IDisposable
 {
     // Formats WRITTEN INTO us by someone else: the shell's drag-image helper stores its private blocks here (that is how
@@ -82,11 +75,8 @@ internal sealed class Win32DataObject : ComTypes.IDataObject, IDisposable
         foreach (var name in Package.GetFormats())
         {
             if (name is DataFormats.Text or DataFormats.Files) continue;   // rendered as CF_UNICODETEXT / CF_HDROP above
-            // A picture is offered under the format its BYTES actually are - a PNG as PNG, a GIF as GIF - so it goes out
-            // verbatim. Never re-encoded to fit a name: that is measured in seconds (an animated GIF is a hundred
-            // megapixels of frames), which a drag cannot pay. Encodings the clipboard has no name for still travel, as
-            // CF_DIB or as a file. Answering this needs the bytes, so a promised picture is redeemed here; the costly
-            // parts (the DIB rendering, the file write) stay deferred.
+            // Pictures go out verbatim under their real format, never re-encoded (that takes seconds); others travel as
+            // CF_DIB or a file, both deferred.
             if (name == DataFormats.Image)
             {
                 if (Package.Get(name) is byte[] picture && OleDataBridge.PictureFormat(picture) is var own and not 0)

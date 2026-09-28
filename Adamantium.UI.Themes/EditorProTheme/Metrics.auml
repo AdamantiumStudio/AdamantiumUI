@@ -2,13 +2,8 @@
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns="http://adamantium/ui">
 
-    <!-- Editor Pro's NUMBERS - all of them. Colours live in the variant, shapes in Icons, numbers here, and nothing in
-         this theme's style sets states a size, a radius, an inset or a font size inline.
-
-         That is the whole shape of the theme: an editor skin is defined by its DENSITY, so the numbers are the design.
-         Written as named keys, "make the rows one pixel tighter" is one edit here instead of a hunt through fifty
-         templates - which is exactly what Fluent still is (measured: 461 inline numbers across its 49 style sets), and
-         what it is to be brought to next. -->
+    <!-- All of Editor Pro's numbers as named keys; its style sets state no sizes inline. Colors live in the variants,
+         shapes in Icons. -->
 
     <!-- ── Density ─────────────────────────────────────────────────────────────────────────────────────────────────
          The row is the unit of an editor. 22 against Fluent's 34: a tree, a list and a tab strip all measure
@@ -20,13 +15,7 @@
     <sys:Double x:Key="ControlHeightCompact">18</sys:Double>
 
     <!-- ── Type ───────────────────────────────────────────────────────────────────────────────────────────────────
-         The SAME SIX ROLES every theme answers - a template asks for "chrome text", and each theme says how big that
-         is. The roles are a contract, like the palette's keys: a template that asks for one is included by other
-         themes too.
-
-         This theme's answer is a FLAT scale. An editor with six type sizes reads as a web page, so the middle four
-         collapse onto the body size and only the two titles step up - the density comes from the rows, not from
-         shrinking every fourth label. -->
+         The six type roles every theme answers, on a flat scale: the middle four share the body size, only titles step up. -->
     <sys:Double x:Key="FontSizeTitle">15</sys:Double>
     <sys:Double x:Key="FontSizeSubtitle">13</sys:Double>
     <sys:Double x:Key="FontSizeBody">12</sys:Double>
@@ -171,11 +160,7 @@
     <sys:Double x:Key="IconSize">14</sys:Double>
 
     <!-- ── The pager's line ────────────────────────────────────────────────────────────────────────────────────────
-         Stated here and not borrowed, because this theme does not link Fluent's metrics at all - only its icons. A key
-         that exists in Fluent's file and nowhere else simply has no answer in this theme.
-         Everything on the row takes the same CELL: height fixed, width a floor. A height that followed its content
-         would be one number on an arrow and another on a page button, and the line would step as parts came and went.
-         Denser than Fluent's, like every other control here: 24 tall against 32. -->
+         Every part takes the same cell (fixed height, minimum width), 24 tall; Fluent's metrics are not linked. -->
     <sys:Double x:Key="PagerButtonMinWidth">26</sys:Double>
     <sys:Double x:Key="PagerButtonHeight">24</sys:Double>
     <sys:Double x:Key="PagerGlyphSize">9</sys:Double>

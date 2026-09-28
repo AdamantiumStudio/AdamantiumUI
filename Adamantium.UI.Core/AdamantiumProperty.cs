@@ -12,11 +12,8 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
 
    private Dictionary<Type, PropertyMetadata> defaultValues;
 
-   // Memoises GetDefaultMetadata(concreteType): the raw resolve walks the base-type chain via reflection
-   // (GetTypeInfo().BaseType) until it finds an entry in `defaultValues`, and it ran on EVERY property read + write (the
-   // inherit branch of GetValue, and RunSetValueSequence) - several reflection hops per access for a deeply-derived type
-   // (e.g. Border). Keyed by the concrete type; invalidated whenever defaultValues changes (registration/OverrideMetadata,
-   // both static-init-time only, so this Clear never runs hot).
+   // Memoizes GetDefaultMetadata per concrete type, which otherwise walks the base chain by reflection on every access;
+   // cleared when defaultValues changes.
    private readonly System.Collections.Concurrent.ConcurrentDictionary<Type, PropertyMetadata> metadataCache = new();
 
    private System.Collections.Concurrent.ConcurrentDictionary<Type, bool> registeredTypes;
@@ -41,13 +38,8 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
    /// it with a field read.</summary>
    public bool CanInherit { get; private set; }
 
-   /// <summary>The INHERITANCE EPOCH: bumped whenever anything that can change what a descendant inherits happens - an
-   /// explicit write of an inheriting property anywhere, or a re-parenting. A cached inherited value is good while its
-   /// container carries the current epoch and is re-resolved from the ancestors when it does not.
-   /// <para>Deliberately GLOBAL rather than per property or per subtree: the bump has to be O(1) (it sits on the write
-   /// path), and a stale stamp costs one ancestor walk on the next READ of that one property - measured at ~0.7 us.
-   /// Being coarse makes it re-walk a little more often; being cheap is what lets the write side stop pushing a value
-   /// into every descendant it has.</para></summary>
+   // Bumped on any inheriting write or re-parent; a cached inherited value is valid while its stamp matches. Global so
+   // the bump is O(1); a stale stamp costs one ancestor walk.
    internal static long InheritanceEpoch;
 
    internal static void BumpInheritanceEpoch() => System.Threading.Interlocked.Increment(ref InheritanceEpoch);
@@ -198,16 +190,8 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       return merged;
    }
 
-   /// <summary>
-   /// Global per-property change hook (Avalonia-style class handler). Raised for EVERY change of THIS property on ANY
-   /// component, with <c>sender</c> = the COMPONENT that changed (so a handler knows the source and can filter by
-   /// type/instance) and <c>e</c> carrying the property + old/new value.
-   /// <para>Intended for a BOUNDED set of cross-cutting handlers - subscribe ONCE (typically per control type in a static
-   /// ctor), then filter by sender. NEVER add one handler per live instance: this event fires for ALL instances, so a
-   /// per-instance subscription re-creates an O(live-instances) fan-out on every set - the exact anti-pattern that made a
-   /// templated list's scroll O(N). For reacting to a change on a SPECIFIC object, use that instance's
-   /// <see cref="AdamantiumComponent.PropertyChanged"/> (which <see cref="Data.TemplateBindingExpression"/> now uses).</para>
-   /// </summary>
+   /// <summary>Raised for every change of this property on any component (sender is the component). Subscribe once per
+   /// type, never per instance; for one object use its <see cref="AdamantiumComponent.PropertyChanged"/>.</summary>
    public event EventHandler<AdamantiumPropertyChangedEventArgs> Changed;
 
    /// <param name="source">The component whose property changed - passed as the event <c>sender</c> so handlers have the

@@ -6,13 +6,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// What a tab's context menu is built from. The MENU belongs to the application - it holds saving, source control,
-/// whatever that application has - but the operations do not: without them the application would walk the layout by
-/// hand, and a second way to close a pane is a second set of rules about what closing means.
-/// <para>The rule they all share: one pane at a time, through the same path as the tab's own close button. So a refusal
-/// stops THAT pane and no other, and pinned tabs survive what was aimed at the rest.</para>
-/// </summary>
+// The close commands behind tab context menus: one pane at a time through the tab's own close path, so a refusal stops
+// only that pane and pinned tabs survive.
 [TestFixture]
 public class DockingCloseCommandsTests
 {

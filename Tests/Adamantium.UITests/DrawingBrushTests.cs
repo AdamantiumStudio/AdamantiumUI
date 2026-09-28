@@ -158,11 +158,7 @@ public class DrawingBrushTests
         });
     }
 
-    // A bake for a size not ready yet is served by a STAND-IN from the cache, and BOTH ends of that rule have shipped a
-    // defect. Too loose (any slice would do) and every not-yet-baked viewbox got whichever slice was baked first, which
-    // reads as "the viewbox does nothing". Too strict (only the same slice) and a viewbox that has just changed has
-    // nothing to show at all, so the fill BLINKS empty on every step of the slider. The rule is an ORDER, not a
-    // permission: prefer this slice, fall back to another, and let the exact bake win as soon as it lands.
+    // Stand-in order while a bake is pending: the same slice first, then any other, and the exact bake wins once it lands.
     [Test]
     public void AStandInPrefersThisSliceButNeverLeavesTheFillEmpty()
     {

@@ -20,33 +20,16 @@
          only says "there is more here", smaller than a command's glyph, since four of them sit in one line of text. -->
     <sys:Double x:Key="PagerGlyphSize">10</sys:Double>
 
-    <!-- THE CELL a pager's row is built from - every entry in it, arrow and number alike, is at least this box. Two
-         keys rather than four so the arrows and the numbers cannot be given matching sizes that later drift apart:
-         they line up because they are told the same number, not because two numbers happen to be equal.
-         The width is a FLOOR, not a width. A page number is one to five digits wide and its button follows it, but
-         never goes under this - so a row of single digits is a row of even cells rather than a line of slivers, and the
-         ellipsis, narrower than any number, sits at exactly this instead of setting its own. Padding is zero on these
-         buttons, so this is the whole of what holds them apart. -->
+    <!-- The pager cell every arrow and page entry takes: a fixed height and a minimum width (buttons have no padding). -->
     <sys:Double x:Key="PagerButtonMinWidth">32</sys:Double>
     <sys:Double x:Key="PagerButtonHeight">32</sys:Double>
 
-    <!-- The two FIELDS on a pager's line. Both arrive carrying ControlMinWidth (120) - a floor meant for a field that
-         stands alone in a form, and roughly twice what either needs here: the picker shows "100", the box shows a page
-         number, and PaddingField leaves 20 of the box to the inset.
-         BOTH have to be stated as Width AND MinWidth. A floor beats a width (ApplyLayoutConstraints does Max last), so
-         setting only the width changes nothing at all and the field silently keeps its 120 and shoulders the buttons
-         out of the line - which is exactly how this row first shipped, twice. -->
+    <!-- The pager's two fields, used as both Width and MinWidth, since the ControlMinWidth floor (120) beats a Width. -->
     <sys:Double x:Key="PagerSizePickerWidth">76</sys:Double>
     <sys:Double x:Key="PagerPageBoxWidth">60</sys:Double>
 
     <!-- ── Type scale ─────────────────────────────────────────────────────────────────────────────────────────────
-         Named by ROLE, not by size: what a template asks for is "chrome text" or "a caption", and a theme decides how
-         big that is. The names are a CONTRACT between themes - a template that asks for a key is included by other
-         themes too, and each of them has to answer it, exactly as they all have to answer the palette's keys.
-
-         Six roles, which is what the theme actually uses; the sizes were repeated inline in nineteen files, where
-         "make the chrome one point smaller" meant finding all six of the places that meant chrome among the thirty
-         that mentioned a size. -->
+         Six sizes named by role, a contract every theme answers like the palette keys. -->
     <sys:Double x:Key="FontSizeTitle">18</sys:Double>
     <sys:Double x:Key="FontSizeSubtitle">15</sys:Double>
     <sys:Double x:Key="FontSizeBody">14</sys:Double>
@@ -147,10 +130,7 @@
     <Thickness x:Key="RibbonGalleryItemPadding">2</Thickness>
 
     <!-- ── Busy indicator ─────────────────────────────────────────────────────────────────────────────────────────
-         The spinner's SQUARE, and the pieces each variant is built from. Sizes, not animation: how long a dot takes to
-         travel and how it eases are the animation, and they stay in the templates. These are the same repeated numbers
-         as everywhere else - the 40x40 box was written out six times, once per variant, and the dot's diameter three
-         times, once per dot - which is exactly how a set of indicators drifts into six slightly different sizes. -->
+         The spinner box and piece sizes shared by all variants; timings stay in the templates. -->
     <sys:Double x:Key="BusySize">40</sys:Double>
     <sys:Double x:Key="BusyDotSize">10</sys:Double>
     <Thickness x:Key="BusyDotGap">3,0</Thickness>

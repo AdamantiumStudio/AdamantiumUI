@@ -2,18 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Where a dragged item will land. The drag engine only creates this control, sets Orientation/IsFrame and sizes
-         it to the insertion span - everything it looks like is here.
-
-         A CAPPED HAIRLINE, not Fluent's capsule. A three-pixel rounded bar is easy to see, and in an editor that is the
-         problem: rows are dense, so the bar is thick enough to sit over the rows either side of the gap and the eye has
-         to work out which gap it means. A hairline is unambiguous about the gap but says nothing about how FAR the
-         insertion reaches - so the ends get caps, and the caps are what let the line stay this thin. It is the same
-         reasoning a text caret uses, and a drop point between rows is the same kind of statement.
-
-         FRAME MODE (drop INTO a node, the hybrid tree-drop) drops the translucent wash as well: over a tree node that
-         wash sits on the node's own label, and in an editor the label is how you know which node you are about to drop
-         into. An outline says the same thing and leaves it readable. -->
+    <!-- The drop cue: a capped hairline, unambiguous between dense rows. Frame mode (drop into a node) is an outline
+         without a wash, keeping the node's label readable. -->
 
     <Style Selector="DropInsertionIndicator">
         <Setter Property="Template">

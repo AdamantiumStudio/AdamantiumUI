@@ -2,12 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The Fluent table. A CARD, where the macOS one is a well: this platform lays surfaces on the window rather than
-         sinking them into it, so the grid takes the card fill and the theme's smaller radius.
-
-         The structure is the same in every theme - a header band over a scrolled body, cells that read their width from
-         the grid's one width pass - because that is what the control needs. What is Fluent is what it is made of.
-         The reasoning behind each part is written once, in MacOsDataGridStyleSet. -->
+    <!-- The Fluent table as a card; the structure matches every theme (see MacOsDataGridStyleSet for the reasoning). -->
 
     <Style Selector="TreeDataGrid">
         <Setter Property="Background" Value="{ObservableResource CardBackgroundFillColorDefault}"/>
@@ -46,11 +41,8 @@
                                 <DataGridHeadersPresenter x:Name="PART_Headers" Height="32"/>
                             </Border>
 
-                            <!-- THE RAIL the chooser's handle stands in. A COLUMN of its own, spanning the header band
-                                 and the rows, rather than something laid over the band: laid over, it covered whichever
-                                 column happened to be last, and with it that column's own sort arrow and filter funnel -
-                                 a new affordance eating an existing one. A column costs 22px, and only when the table
-                                 offers the chooser at all. -->
+                            <!-- The column chooser's own 22px rail column, spanning header and rows, so it covers no
+                                 column's sort or filter controls. -->
                             <Border Grid.Row="3" Grid.RowSpan="2" Grid.Column="1" x:Name="PART_ChooserRail"
                                     Visibility="Collapsed" Width="22"
                                     Background="{ObservableResource SolidBackgroundFillColorTertiary}"
@@ -64,11 +56,8 @@
                                 </Border>
                             </Border>
 
-                            <!-- LIGHT DISMISS. KeepOpen defaults to "stays until closed explicitly", which suits a
-                                 flyout with its own Apply and Cancel - the column filter is one. This one has no
-                                 buttons at all: every switch takes effect at once, so the way out is clicking away,
-                                 and without this there is no way out. IgnoreTargetPress so a press on the handle that
-                                 opened it does not close and reopen it in the same gesture. -->
+                            <!-- Light dismiss, since switches apply immediately and there are no buttons; IgnoreTargetPress
+                                 so the opening handle does not reopen it. -->
                             <Popup x:Name="PART_ChooserPopup" Grid.Row="3" Grid.Column="1"
                                    KeepOpen="False" IgnoreTargetPress="True"
                                    Placement="Bottom" FlipToFit="True" VerticalOffset="4">

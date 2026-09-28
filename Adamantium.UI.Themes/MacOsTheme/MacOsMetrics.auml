@@ -31,12 +31,7 @@
     <CornerRadius x:Key="WindowCornerRadius">10</CornerRadius>
 
     <!-- ── Controls ───────────────────────────────────────────────────────────────────────────────────────────────
-         Restated here rather than in each style set, and that is the point of the metrics being a contract: these keys
-         are asked for by every borrowed Fluent set too, so the whole theme gets denser and rounder from four numbers -
-         which is the difference a platform's controls actually have, before any of them is re-templated.
-
-         SHORTER AND ROUNDER. A Mac control is 28 where a Windows one is 32, and its corner is 6 where Windows uses 4 -
-         at these sizes that reads as a capsule rather than as a rounded box, which is the look. -->
+         Shorter and rounder than Fluent (28 high, radius 6); borrowed Fluent sets read these keys too. -->
     <sys:Double x:Key="ControlHeight">28</sys:Double>
     <sys:Double x:Key="ControlHeightCompact">22</sys:Double>
     <CornerRadius x:Key="CornerRadiusDefault">6</CornerRadius>

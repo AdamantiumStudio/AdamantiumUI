@@ -59,12 +59,8 @@ public class DrawingImage : ImageSource
     /// which for a brush means drawing nothing at all, silently.</summary>
     public void Attach(AdamantiumComponent owner)
     {
-        // Called from the point of USE (measure/render), not from a lifecycle event, and this is why: at the moment an
-        // element is attached to the tree its ancestors' inheritance chain is not finished yet - the walk up from the
-        // element stops two panels short and reaches no DataContext at all. There is no later notification either,
-        // because an INHERITED DataContext arriving raises nothing per descendant. By the time anyone measures or draws
-        // the drawing, the tree IS built. Re-attaching only when the owner or its data actually changed keeps that
-        // cheap: after the first successful bind every later call returns immediately.
+        // Bound at use (measure/render), when the inherited DataContext is finally available; rebinds only when owner or
+        // data change.
         var dataContext = (owner as IUIComponent)?.DataContext;
 
         // One inheritance parent, so the FIRST owner that can answer keeps it - a later one would move where every

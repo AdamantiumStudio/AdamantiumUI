@@ -11,13 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// Hover in this theme is OPT-IN PER CLASS. The plain button and the plain toggle carry no IsMouseOver trigger at all -
-/// a deliberate decision, written beside them: a bordered control here does not light up. The consequence is that every
-/// FLAT GLYPH CHIP has to say so for itself, and one that forgets names a BackgroundPointerOver brush nothing ever
-/// reads. Nothing complains: the chip is the right size, it is clickable, it presses - it simply never answers the
-/// pointer, which is the whole of what makes a glyph look like a control rather than an ornament.
-/// </summary>
+// macOS hover is opt-in per class: every flat glyph chip that sets BackgroundPointerOver must also have a hover trigger.
 [TestFixture]
 public class MacOsHoverStatesTests
 {

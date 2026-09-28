@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// Phase 0 of keyboard navigation: Tab and Shift+Tab, with the route ASKED of the panels rather than computed by a
+/// Keyboard navigation: Tab and Shift+Tab, with the route ASKED of the panels rather than computed by a
 /// tree walker. No window and no GPU - the navigator only needs a visual tree and the focus manager.
 /// </summary>
 [TestFixture]

@@ -8,15 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// An inherited change may STEP OVER an element that has nothing to be told - the value is not written, only staled, and
-/// the next read resolves it from the ancestors. That is sound for the value and unsound for everything a WRITE does on
-/// the way past: <c>AffectsRender</c> and its family are side effects of writing, so a stepped-over element ends up
-/// holding the new value and still painting the old one.
-/// <para>Which is exactly how it presented: a tab's label kept the resting colour while every probe - the trigger, the
-/// presenter, the TextBlock's own Foreground - reported the selected one. Reading the value proves nothing here; what
-/// has to be asserted is that the element was INVALIDATED.</para>
-/// </summary>
+// An element stepped over by an inherited change is still invalidated (AffectsRender and family), not only staled.
 [TestFixture]
 public class InheritedChangeInvalidatesTests
 {

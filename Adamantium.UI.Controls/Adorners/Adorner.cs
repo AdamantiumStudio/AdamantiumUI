@@ -5,14 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Adorners;
 
-/// <summary>
-/// A visual drawn ON TOP of an adorned element by the framework adorner stage - NOT part of the content visual tree, so it
-/// never pollutes the user's tree. A full <see cref="TemplatedUIComponent"/> (WPF's Adorner is likewise a FrameworkElement),
-/// so an adorner can either draw itself in <c>OnRender</c> (the designer's selection / hover frames) OR carry a
-/// <c>ControlTemplate</c> from the theme and host a styled subtree (the drag-drop insertion cue - see
-/// <c>DropInsertionIndicator</c>). It renders in the ADORNED element's coordinate space, so its decorations line up on the
-/// target: <see cref="RenderParent"/> is the adorned element, and the adorner stage flattens the whole subtree.
-/// </summary>
+/// <summary>A visual drawn on top of an adorned element by the adorner stage, outside the content tree. It draws itself or
+/// hosts a themed template, in the adorned element's coordinate space.</summary>
 public class Adorner : TemplatedUIComponent
 {
     public Adorner()
@@ -32,12 +26,8 @@ public class Adorner : TemplatedUIComponent
 
     private IUIComponent _adornedElement;
 
-    /// <summary>The element this adorner decorates; the adorner (and its template) draw in its coordinate space. Setting it
-    /// also makes the adorned element the adorner's INHERITANCE parent, so the adorner inherits its DataContext/inherited
-    /// values (a themed adorner can bind {Binding}). We wire InheritanceParent directly - NOT AddLogicalChild - because an
-    /// adorner is framework chrome themed OUT-OF-BAND by the adorner stage (like a template root, see AddTemplateChild): a
-    /// full logical-child join fires SetParent -> ApplyCurrentTheme on every adorner, which rebuilds its template (and
-    /// re-subscribes its {ThemeResource}s to the global Theme) on every hover/selection/drag cue. See docs/TREE_MODEL_DESIGN.md.</summary>
+    /// <summary>The element this adorner decorates and draws in. It becomes the inheritance parent - not a logical parent,
+    /// which would re-theme the adorner on every cue - so a themed adorner can bind.</summary>
     public IUIComponent AdornedElement
     {
         get => _adornedElement;

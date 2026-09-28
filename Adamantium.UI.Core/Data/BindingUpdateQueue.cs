@@ -2,19 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// F2 binding-storm batching. Instead of pushing a source change to its target synchronously (the WPF model, where
-/// thousands of source changes per frame become thousands of inline target writes + layout invalidations on one stack),
-/// a binding expression marks itself dirty here on a source change and is applied once per frame, COALESCED: N changes
-/// to one binding collapse to a single apply of the final value.
-/// </summary>
-/// <remarks>
-/// <see cref="Flush"/> runs once per frame, at the start of the layout pass and BEFORE the layout drain, so the target
-/// writes (and the measure/arrange invalidations they trigger) land in THIS frame's layout queue. A dependent chain
-/// (A→B, where applying A re-dirties B) is drained WITHIN the flush, so layout never runs on a half-propagated graph -
-/// see <see cref="MaxCascadeRounds"/>. Enqueue is thread-safe (a source can change on a background thread); the apply
-/// happens on the flushing (layout/UI) thread.
-/// </remarks>
+/// <summary>Coalesces source-to-target binding pushes to one apply per binding per frame. <see cref="Flush"/> runs before
+/// layout and drains dependent chains; Enqueue is thread-safe.</summary>
 public static class BindingUpdateQueue
 {
     private static readonly object Sync = new();
@@ -49,12 +38,7 @@ public static class BindingUpdateQueue
     /// graph is settled before layout reads it.</summary>
     public static void Flush()
     {
-        // Draining the cascade here, rather than leaving it to the next frame, is what keeps a control whose geometry
-        // depends on TWO bound properties from being laid out with one of them still stale. A RangeSlider bound to a
-        // shared view-model got its new Maximum in this flush but the matching UpperValue - which another control's
-        // coercion had just written back to that view-model - only in the next one, so every step of the drag arranged
-        // one frame with the thumb short of the rail's end and the next frame back on it: a thumb visibly shivering at
-        // the edge. The budget still applies ACROSS the rounds, so the storm cap is unchanged.
+        // Drain the cascade now so layout never sees one of two dependent bindings stale; the budget spans all rounds.
         var remaining = MaxAppliesPerFlush > 0 ? MaxAppliesPerFlush : int.MaxValue;
         for (var round = 0; round < MaxCascadeRounds && remaining > 0; round++)
         {

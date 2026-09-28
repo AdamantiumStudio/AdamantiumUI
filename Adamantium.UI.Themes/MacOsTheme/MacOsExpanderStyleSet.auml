@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS disclosure group: NO BOX around it. On this platform a foldable section is a triangle and a bold
-         caption sitting on the page, with its content indented under them - not a bordered card. That is the whole
-         difference from Fluent's set, and it is why this file exists rather than a BasedOn.
-
-         The triangle sits BEFORE the caption and turns down when open, exactly as it does in Finder and in the
-         inspectors of every Apple application. -->
+    <!-- The macOS disclosure group: no box, a triangle before a bold caption that turns down when open, content
+         indented. -->
 
     <Style Selector="Expander">
         <Setter Property="Background" Value="Transparent"/>

@@ -13,12 +13,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>A context menu's card lives in the popup's ChildTemplate, built on FIRST OPEN. This is the deferral that pays
-/// across the whole application rather than inside one control: ANY element may carry a context menu, and a right-click
-/// menu is by nature something most elements never show - the ribbon alone hands one to every command. What it puts at
-/// risk is everything the menu needs from that card: the items host it hangs the rows on, the click root that closes the
-/// menu after a row runs, and the scroller it caps to the window. None of them are in the menu's own namescope any
-/// more.</summary>
+// A context menu's card is built on first open (popup ChildTemplate); the menu must still find its items host, click
+// root and scroller outside its own namescope.
 [TestFixture]
 public class ContextMenuDeferredCardTests
 {

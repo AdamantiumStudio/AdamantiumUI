@@ -8,11 +8,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A trail of ink: a run of points with a width and a color.
-/// <para>The points are FLOATS, and they are offsets from the stroke's own origin rather than places in the world. A
-/// stroke is a tight cluster a few hundred units across, so a float holds it to far better than a pixel - while the
-/// same numbers written absolutely would lose precision the further the drawing went from zero, and take twice the
-/// memory to do it. Moving a stroke is then one field, not a walk over its points.</para></summary>
+/// <summary>A trail of ink with a width and a color. Points are float offsets from the stroke's origin, precise at any
+/// distance and moved by one field.</summary>
 public class StrokeItem : ICanvasItem
 {
     private readonly List<StrokePoint> _points = new();
@@ -165,24 +162,14 @@ public class StrokeItem : ICanvasItem
         Rebuild();
     }
 
-    /// <summary>Rubs a round hole in the stroke and hands back what is LEFT - none, one piece, or two when the hole was
-    /// punched through the middle.
-    /// <para>By POINT and not by stroke, the way an ink surface has always erased: a line drawn across a page is rubbed
-    /// where the eraser went, not deleted because it was touched. Which is why this returns pieces - a stroke cut in the
-    /// middle is two strokes, and there is no other honest answer.</para>
-    /// <para>Cut at the CROSSINGS rather than by dropping points inside the circle: the points of a finished stroke are
-    /// far apart (they were thinned when the pen lifted), so dropping whole points would take out far more than the
-    /// eraser covered and leave the cut ends wherever the thinning happened to have put them.</para>
-    /// <returns>Whether anything was rubbed out at all.</returns></summary>
+    /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
+    /// two).</summary>
+    /// <returns>Whether anything was rubbed out at all.</returns>
     public bool Erase(Vector2 center, double radius, List<StrokeItem> pieces)
     {
         if (_points.Count == 0 || radius <= 0) return false;
 
-        // The radius asked for is the hole in the PAINTED stroke, and the cut is made in its centerline - so the cut has
-        // to go back by half the ink's width as well. The pieces left behind are drawn with ROUND ENDS, and each of
-        // those reaches half a thickness back toward the middle: cutting at the bare radius let the two caps close the
-        // hole again, and once the eraser was thinner than the line they closed it completely - the thinner the eraser,
-        // the less it appeared to do, until it did nothing at all.
+        // Cut half the ink width further, so the pieces' round caps do not close the hole again.
         var reach = radius + Thickness / 2;
 
         var runs = new List<List<Vector2>>();
@@ -306,17 +293,8 @@ public class StrokeItem : ICanvasItem
     }
 
 
-    /// <summary>Called when the pen is LIFTED: the recorded points are replaced by a smooth run through them.
-    /// <para>Why then and not as they arrive: a hand is still moving, so a stroke can only be smoothed once it is known
-    /// where it went. This is what an ink surface has always done - rough while it is being drawn, soft the moment it is
-    /// finished - and it is honest about it, because the two really are different amounts of information.</para>
-    /// <para>The curve goes THROUGH the recorded points (Catmull-Rom), it does not merely approach them: ink that
-    /// drifted off where the pen actually went would be a different stroke drawn softly rather than the same one.</para>
-    /// </summary>
-    /// <summary>Called when the pen is LIFTED. <paramref name="tolerance"/> is how far the line may be moved without
-    /// anyone seeing it, and <paramref name="step"/> how far apart the points of the finished stroke are - both in WORLD
-    /// units, worked out by the canvas from screen ones, because both are questions about what the eye can resolve.
-    /// </summary>
+    /// <summary>On pen lift, replaces the points with a Catmull-Rom curve through them. <paramref name="tolerance"/> and
+    /// <paramref name="step"/> are world units derived from what the eye resolves on screen.</summary>
     public void Smooth(double tolerance, double step)
     {
         if (_points.Count < 3) return;

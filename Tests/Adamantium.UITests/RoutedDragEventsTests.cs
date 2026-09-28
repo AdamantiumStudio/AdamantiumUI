@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// The routed drag-drop events (docs/DRAG_DROP_PLAN.md): the control-side half of the drop API, so a control can react
+/// The routed drag-drop events: the control-side half of the drop API, so a control can react
 /// to a drag flying over it without a view-model. The gesture itself needs real windows and a mouse capture, so what is
 /// covered here is the contract the engine relies on: the route, what stops it, and that a handler's Effects is what
 /// the engine reads back.

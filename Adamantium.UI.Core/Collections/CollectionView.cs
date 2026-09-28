@@ -10,26 +10,8 @@ using System.Threading.Tasks;
 
 namespace Adamantium.UI.Core.Collections;
 
-/// <summary>
-/// A live view over a collection: what an items control is bound to when the items shown are not simply the items in the
-/// source. The stages run in ONE fixed order - filter, then sort, then page - because that order is the only one that
-/// means anything: paging a set you then sort gives "sorted within the page", which looks right until you turn to the
-/// next one. Baking the order into the type is what stops that being an author's mistake to make.
-///
-/// <para>Changes are reported as narrowly as they can be. An item that stops passing the filter leaves as a
-/// <see cref="NotifyCollectionChangedAction.Remove"/> at ITS OWN index in this view, not as a Reset - hiding a row on
-/// the fly has to be a row leaving a list, not a list being rebuilt, or nothing downstream can animate it and every
-/// realized container is thrown away. The view therefore keeps a map from its own positions back to the source's, and
-/// maintains it incrementally.</para>
-///
-/// <para>Reset is kept for the changes where nothing finer exists: a new filter or ordering, a re-ordered source, or the
-/// source being replaced outright.</para>
-///
-/// <para>Ordering costs the map its shape. Unsorted, a view position and a source position rise together, so both are
-/// found by binary search. SORTED, they do not, and the same lookups become a search by COMPARER for where an arrival
-/// belongs and a scan for where a departure sat. That is the price of ordering on a long list, and it is paid per edit
-/// rather than per frame.</para>
-/// </summary>
+/// <summary>A live filtered, sorted and paged view over a collection, always in that order. Item changes are reported as
+/// narrow Add/Remove at view indices; Reset only for a new filter, ordering or source.</summary>
 public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollectionChanged, IPagedSource
 {
     private readonly List<object> _snapshot = [];
@@ -80,11 +62,8 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         }
     }
 
-    /// <summary>Which items are shown; null shows all of them. Setting it re-evaluates the whole set and raises a Reset -
-    /// a new predicate says nothing about which items it agrees with the old one about, so there is nothing finer to
-    /// report.
-    /// <para>Changing an ITEM so that it starts or stops passing is a different matter: see the live-shaping properties,
-    /// which report those one at a time.</para></summary>
+    /// <summary>Which items are shown; null shows all. Setting it raises a Reset; item changes are tracked by
+    /// <see cref="IsLiveFiltering"/>.</summary>
     public Predicate<object> Filter
     {
         get => _filter;
@@ -119,11 +98,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     /// <summary>True while anything is ordering the view - which is also when its order stops matching the source's.</summary>
     public bool IsSorted => _customSort != null || SortDescriptions.Count > 0;
 
-    /// <summary>Re-evaluate the filter when an ITEM changes, not only when the source or the predicate does. Without it
-    /// a row that stops qualifying stays on screen until something else disturbs the list, which is what makes
-    /// search-as-you-type and "hide the finished ones" impossible to write honestly.
-    /// <para>OFF by default, and deliberately: this subscribes to every item, and the panel below happily holds tens of
-    /// thousands. Turning it on is a decision about a particular list, not a default anyone should inherit.</para></summary>
+    /// <summary>Re-evaluates the filter when an item changes. Off by default, since it subscribes to every item.</summary>
     public bool IsLiveFiltering
     {
         get => _isLiveFiltering;
@@ -152,11 +127,8 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     /// which on a long list is the expensive answer - name them.</summary>
     public ObservableCollection<string> LiveFilteringProperties { get; }
 
-    /// <summary>Which property changes the ORDER cares about. Left empty it is answered by
-    /// <see cref="SortDescriptions"/> - sorting by <c>Title</c> is exactly saying that <c>Title</c> matters.
-    /// <para>With a <see cref="CustomSort"/> there is nothing to answer with: a comparer cannot be asked what it reads,
-    /// so an empty list means EVERY change re-places the item. That is correct and slow; naming them here narrows it,
-    /// and is the only reason to.</para></summary>
+    /// <summary>Properties whose change re-places an item; empty means those in <see cref="SortDescriptions"/>, or every
+    /// change with a <see cref="CustomSort"/>.</summary>
     public ObservableCollection<string> LiveSortingProperties { get; }
 
     /// <summary>How many items a page holds; 0 - the default - shows the whole shaped set and pages nothing.

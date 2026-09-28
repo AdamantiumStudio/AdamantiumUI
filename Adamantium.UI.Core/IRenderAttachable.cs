@@ -1,10 +1,7 @@
 namespace Adamantium.UI.Core;
 
-/// <summary>A value that needs to KNOW which element draws with it. Implemented by the value; asked by the property
-/// system when an <c>AffectsRender</c> property takes one or gives one up.
-/// <para>An interface rather than type checks: that spot runs on EVERY render-property write, and a chain of "is it a
-/// brush, is it a this" there only grows. A new kind of value implements this instead of editing the property
-/// system.</para></summary>
+/// <summary>A value that needs to know which elements draw with it; notified when an <c>AffectsRender</c> property takes
+/// or releases it.</summary>
 public interface IRenderAttachable
 {
     /// <summary>An element just took this value for a render property.</summary>

@@ -11,22 +11,14 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Pattern rounded-rect batch: draws MANY rounded-rect fills whose fill is a PROCEDURAL two-colour pattern (checkerboard/
-// stripes/dots/grid) in ONE instanced draw (each fill = one per-instance PatternRectItem; the pixel shader reconstructs the
-// rounded rect from an SDF AND evaluates the pattern per fragment). A sibling of the solid/gradient SDF collectors - a
-// PatternBrush fill routes here. Segment/buffer/overlap/retain machinery comes from SdfBatchCollector; this adds the
-// pattern bake + the Pattern draw pass. Up to PatternType's four patterns; the second colour + cell size ride the record.
+// Procedural pattern and noise rounded-rect fills in one instanced draw, for PatternBrush and NoiseBrush.
 internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
 {
     public static bool Enabled = true;
 
     public PatternRectCollector() : base(512) { }
 
-    // ONE KIND PER SEGMENT. Each kind is its own pass now (BrushEffect.fx: technique Pattern / technique Noise), because
-    // one pixel shader branching over fourteen fields was what kept the driver on the edge of refusing to create it. So
-    // a segment must be uniform in kind, exactly as the textured batch's segment is uniform in texture - same three
-    // hooks, same question asked by the caller before adding. Cost: two kinds in one clip group are two draws instead of
-    // one, and a screen holds a handful of kinds at a time.
+    // One kind per segment: each kind is its own pass (BrushEffect.fx, techniques Pattern and Noise).
     private int _kind;
     private readonly List<int> _segKinds = new();
 
@@ -206,11 +198,7 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
         return true;
     }
 
-    // Bake a procedural fill (PatternBrush or NoiseBrush) into an instance record - shared by the rect AND ellipse pattern
-    // collectors. Position -> world; the pattern is fill-relative, so one brush paints any size. False on a rotated/sheared
-    // world (the axis-aligned instance can not hold it). Cell scales by the world device scale (sx). The four corner radii
-    // ride in Radii; Params.x carries the LARGEST of them, or -1 as the ELLIPSE shape flag (PatternPS branches SdEllipse
-    // for it).
+    // Bakes a PatternBrush/NoiseBrush fill for the rect and ellipse collectors; false on a rotated or sheared world.
     public static bool BakeItemCore(Brush brush, Rect destinationRect, ProceduralGeometry.CornerRadius corners, BrushShape shape, Pen pen, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot, int clipSlot, out PatternRectItem item)
     {
         item = default;

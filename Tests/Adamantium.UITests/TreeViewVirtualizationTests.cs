@@ -11,11 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// The flattened-tree virtualization core: TreeFlattener projects a tree (roots + a children getter + expand state) into a
-// flat, display-ordered row list a VirtualizingPanel consumes. These are pure-CPU tests of that projection - flatten,
-// splice on expand, drop-subtree on collapse, live reconciliation of a node's children collection - plus the wiring that
-// points TreeView.Items at the flat rows. End-to-end viewport realization is the shared ItemsControl pipeline, covered by
-// VirtualizingStackPanelRealizesOnlyVisibleWindow.
+// TreeFlattener's flat row projection (flatten, expand splice, collapse, live child changes) and TreeView.Items wiring;
+// realization is covered by VirtualizingStackPanelRealizesOnlyVisibleWindow.
 [TestFixture]
 public class TreeViewVirtualizationTests
 {

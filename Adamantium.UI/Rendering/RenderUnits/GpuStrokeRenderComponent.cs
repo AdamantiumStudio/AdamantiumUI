@@ -10,19 +10,10 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
-// GPU stroke path (Phase B/C). A compute shader (StrokeExpand) turns the source polyline + half-thickness into a
-// triangle-LIST ribbon written via a BDA device address, the same frame draws it (StrokeDraw). No CPU re-tessellation
-// of the 2D geometry - the CPU only uploads the raw contour once and sets uniforms per frame, so animation-heavy
-// scenes don't pay CPU per stroke. Two modes:
-//   - continuous: one thread per point -> miter ribbon + round-join/round-cap disc fans; fixed count, plain Draw.
-//   - dash/trim:  a single thread walks the contour by arc length, cuts dash/trim pieces, writes the vertex count into
-//                 a VkDrawIndirectCommand; DrawIndirect reads that GPU-decided count (zero per-frame CPU for dashes).
-// A geometry can have SEVERAL contours (combined/group geometry, shapes with holes); each is expanded and drawn on its
-// own - the pen (colour, thickness, dashes, caps, join) is shared, only the points/closedness differ per contour.
-//
-// Points + the expanded vertex ribbon are RENTED from the buffer manager (ReusableBuffer), not allocated per frame: a
-// same-topology geometry change (a resize) rewrites the points in place and re-expands into the existing ring slot via
-// TryUpdateGeometry, with no Vulkan allocation. See GPU_BUFFER_REUSE_PLAN.
+/// <summary>
+/// GPU strokes: a compute pass expands each contour into a ribbon (continuous, or dashes/trims with an indirect draw
+/// count) that the same frame draws. Buffers are rented, so same-topology changes rewrite in place.
+/// </summary>
 public sealed class GpuStrokeRenderComponent : UIRenderComponent
 {
     // Disc-fan subdivision for round joins (a smooth-enough circle); 0 when the contour has no round geometry.

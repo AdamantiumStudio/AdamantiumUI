@@ -6,16 +6,8 @@ using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// The immutable-once-published handoff from the RECORDER (device-free: walks the visual tree, calls
-/// <c>component.Render</c> to produce frozen draw commands, classifies the frame) to the APPLIER (owns the GPU:
-/// realizes units, bakes/upload batches, submits, presents). It is a DELTA, not the whole scene - a Clean frame
-/// carries nothing (the applier replays its retained op-stream), a Partial carries only the dirty components, a Full
-/// carries the whole paint-order sequence. This preserves the O(dirty) retained-cache win. The retained GPU cache
-/// itself (units/batches/transform table) stays SINGLE and applier-resident - only this packet crosses the seam.
-/// Phase 3 of docs/RENDER_THREAD_PLAN.md; in 3.0 the recorder and applier still run inline on one thread, with the
-/// packet as the explicit seam (so 3.2 can move the applier to its own thread + double-buffer the packet).
-/// </summary>
+// The immutable handoff from the device-free recorder to the GPU-owning applier: a delta (Clean carries nothing, Partial
+// the dirty components, Full the whole paint order). The retained GPU cache stays with the applier.
 internal sealed class RenderPacket
 {
     /// <summary>Clean = replay retained ops; Partial = re-render only <see cref="Draws"/>; Full = rebuild from the
@@ -56,11 +48,8 @@ internal sealed class RenderPacket
     /// whole story and nothing about movement can be forgiven.</summary>
     public bool TransformUnknown;
 
-    /// <summary>Something MOVED (or the whole paint order was rebuilt), so the applier's derived per-frame memos - the
-    /// composed world/clip/node transforms - are stale and must be dropped before it draws. Carried HERE, on the packet,
-    /// rather than cleared by the recorder: those memos are APPLIER-owned state, and the recorder (the loop thread in the
-    /// decoupled path) must not write into it while the applier reads it. Recorder-owned state (the frozen layout snapshot)
-    /// is still cleared by the recorder itself.</summary>
+    /// <summary>Something moved, so the applier drops its composed transform memos before drawing (they are applier-owned,
+    /// so the recorder cannot clear them).</summary>
     public bool ClearMemos;
 
     /// <summary>Frame projection captured at record (from the root visual).</summary>
@@ -81,11 +70,7 @@ internal sealed class RenderPacket
     /// its rank on its <see cref="ComponentDraw"/> instead; this list is for the ones with nothing new to draw.</summary>
     public readonly List<KeyValuePair<IUIComponent, long>> Reranks = new();
 
-    /// <summary>Structural only: the reranks above are a RENUMBER - the whole order re-derived with fresh gaps, which
-    /// changes every number and no relative position. Worth saying apart from an ordinary rerank, because a reorder is
-    /// a different frame: one re-sorts groups that already draw in that sequence, the other says the sequence changed.
-    /// <para>Inserting a big subtree exhausts the gap it goes into (each insert divides it), so a renumber arrives every
-    /// few tab switches - and counting it as a reorder cost a maximized 8960-tile scene a 105-117 ms walk each time.</para></summary>
+    /// <summary>Structural only: the reranks are a renumber (fresh gaps, same relative order), not a reorder.</summary>
     public bool Renumbered;
 
     /// <summary>Reset for reuse (the packet is pooled per cache; a Clean frame produces an empty one).</summary>
@@ -119,7 +104,7 @@ internal readonly struct ComponentDraw(IUIComponent component, IReadOnlyList<IDr
     public IReadOnlyList<IDrawCommand> Commands { get; } = commands;
     public bool WasGeometryValid { get; } = wasGeometryValid;
 
-    /// <summary>The component's clone set (§4o), SNAPSHOT with the rest of its contribution. Read live off the component
+    /// <summary>The component's clone set, SNAPSHOT with the rest of its contribution. Read live off the component
     /// at draw time instead, it is written by layout on the loop thread while the render thread is drawing: the frame
     /// then paints a set that no longer matches the tiles recorded beside it, which showed up as skeletons trailing the
     /// scroll by a frame or two (measured: 154 frames of 357 emitted a different count than was declared).</summary>

@@ -37,11 +37,8 @@ public class StackPanel : VirtualizingPanel
    /// </summary>
    private double Pitch => _itemExtent + Math.Max(0, Spacing);
 
-   /// <summary>Items that do NOT take the uniform extent, as (index, how much taller than the rest), in ascending index
-   /// order. Null - the usual answer - means every item takes the same slot and all the arithmetic below is a
-   /// multiplication. A host with a handful of odd ones out (a table showing a record's details panel under three of ten
-   /// thousand rows) answers with those three, and the cost of knowing where the n-th item sits stays a binary search
-   /// over the exceptions rather than a walk over the items.</summary>
+   /// <summary>Items taller than the uniform extent, as (index, extra), ascending; null when all are uniform. Positions
+   /// stay a binary search over these.</summary>
    protected virtual IReadOnlyList<(int Index, double Extra)> ItemExtentExceptions => null;
 
    // How much taller everything BEFORE this slot is than the uniform stack would make it. The exceptions are few and
@@ -281,14 +278,8 @@ public class StackPanel : VirtualizingPanel
          return vertical ? new Size(crossMaxAll, runningMain) : new Size(runningMain, crossMaxAll);
       }
 
-      // Probe a representative item for the (uniform) main-axis extent. Reuse the last window start as the probe so the
-      // estimate tracks the items actually on screen. KEEP the last good size if the probe momentarily measures to nothing
-      // (a recycled container mid-rebind can report a stale/zero DesiredSize): collapsing _itemExtent to 1 shrinks the whole
-      // extent (count*1), which then mis-clamps the scroll offset. Offset-baked arrange tolerated that (arrange + reported
-      // offset stay same-pass consistent); transform-only scroll does NOT (the presenter's translation desyncs from the
-      // reported offset across a flip). Re-probe freely on any POSITIVE measure so a real size change still tracks.
-      // NEVER an exception: the probe stands for what EVERY item takes, and one of the odd ones out would make the whole
-      // stack as tall as itself - ten thousand rows at a details panel's height.
+      // Probe the item at the last window start for the uniform extent, never an exception item. Keep the last good size
+      // if the probe measures zero mid-rebind, or the extent collapses and mis-clamps the offset.
       var probeIndex = Math.Clamp(_lastFirst, 0, count - 1);
       while (ExtraAt(probeIndex) != 0 && probeIndex + 1 < count) probeIndex++;
       var probe = (IMeasurableComponent)RealizeInWindow(probeIndex);
@@ -296,11 +287,8 @@ public class StackPanel : VirtualizingPanel
       var probeExtent = vertical ? probe.DesiredSize.Height : probe.DesiredSize.Width;
       if (probeExtent > 0 && ExtraAt(probeIndex) == 0) _itemExtent = probeExtent;
 
-      // A ScrollViewer measures its content UNCONSTRAINED on the scroll axis to learn the extent, so we get an infinite
-      // mainViewport on the first measure after (re)entering a view - before arrange sets the real viewport. Realizing all
-      // `count` items then (the old OnNoViewport path) rebuilt the whole list every tab-entry (the freeze). Instead realize
-      // a window sized to the last real viewport (or a default screenful) and still return the full extent below - the next
-      // measure with the real viewport corrects it. O(count) freeze -> O(viewport).
+      // An infinite viewport is the ScrollViewer's extent probe: realize a window sized to the last real viewport (or a
+      // default screenful), not every item, and still return the full extent.
       double effectiveViewport;
       if (double.IsInfinity(mainViewport))
       {

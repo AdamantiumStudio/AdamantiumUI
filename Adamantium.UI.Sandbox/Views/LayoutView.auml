@@ -15,13 +15,8 @@
                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="3"/>
         </DataTemplate>
     </ResourceContext.Resources>
-    <!-- DataContext is the LayoutViewModel. A big virtualized, wrapping, scrolling grid of filled tiles whose cell WIDTH and
-         HEIGHT are driven by two independent sliders (bound to the WrapPanel), so the aspect ratio is adjustable. The
-         "Ellipses" toggle flips ShowEllipses; a DataTrigger then swaps ItemTemplate between the two templates that live in
-         LayoutResources (AUML) - a rounded RECTANGLE (RectBatch SDF) or an ELLIPSE (EllipseBatch SDF). Both are SDF, so this
-         is the live check that the ellipse SDF renders a real ellipse (rx != ry) crisply at any aspect. The resource
-         dictionary is linked into the Local scope above, so it lives only while this tab is open. (Stroke/Pen playground
-         moved to the Shapes tab - here we keep just size + template.) -->
+    <!-- A virtualized wrap grid with cell width/height sliders; "Ellipses" swaps the item template (from the Local-scoped
+         LayoutResources) between rounded rects and ellipses. -->
     <Grid RowDefinitions="Auto,*,Auto" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Horizontal">
             <TextBlock Text="Width:" VerticalAlignment="Center"/>
@@ -96,13 +91,8 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <!-- ScrollBindBudget is how many milliseconds ONE pass may spend (re)binding containers while the
-                         list is scrolling; whatever does not fit is deferred and shows a skeleton. 0 means no budget -
-                         bind the whole window in one pass. It is a dial here on purpose: measured on this very tab, 6 ms
-                         binds ~357 slots a pass and defers ~4487, so on a big window the panel never catches up, while on
-                         a small one binding everything at once is simply better. Drag the slider above to the minimum
-                         cell, then move this one, and the difference between a smooth dribble and one honest pass is
-                         visible without any instrument. -->
+                    <!-- ScrollBindBudget: ms per pass for binding while scrolling (0 = bind all); a slider, since the best
+                         value depends on window size. -->
                     <WrapPanel Orientation="Horizontal"
                                ItemWidth="{Binding CellWidth}"
                                ItemHeight="{Binding CellHeight}"
@@ -111,15 +101,7 @@
             </ListBox.ItemsPanel>
         </ListBox>
 
-        <!-- THE OTHER ANSWER TO THE SAME PROBLEM, on the same 60 000 tiles. Virtualization keeps the whole collection
-             and realizes a window of it; paging hands the grid a shorter collection and lets it realize the lot. The
-             tab opens VIRTUALIZED because that is what it exists to measure - the switch is here so the two can be
-             compared on identical data rather than on two stands with different rows.
-             The pager is always present: with paging off it has one page of everything and says so, which is a truer
-             picture than a control that appears and disappears. -->
-        <!-- A GRID, not a horizontal StackPanel. A stack offers its children UNBOUNDED width along its orientation, and
-             an unbounded width is not a width: the pager would take whatever it wanted and never learn what it has, so
-             it could neither shed a part nor be told it had overflowed the tab. The star column gives it a real one. -->
+        <!-- Paging instead of virtualizing, on the same 60 000 tiles. A Grid, so the pager gets a bounded width to fit. -->
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*" Margin="0,12,0,0">
             <CheckBox Grid.Column="0" Content="Page the tiles instead of virtualizing them"
                       IsChecked="{Binding IsPaged, Mode=TwoWay}"

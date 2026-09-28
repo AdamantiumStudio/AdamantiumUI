@@ -6,14 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Shows a hover tooltip for any element that has a <see cref="ToolTipProperty"/> set (a string, or any content). One
-/// tooltip is visible at a time: on mouse-enter a shared timer starts, and after <see cref="InitialShowDelayProperty"/>
-/// (if the pointer is still over the element) a shared <see cref="Popup"/> opens a small themed card next to it; the
-/// pointer leaving the element hides it. Set it via the attached property (<c>ToolTipService.ToolTip="…"</c>) or the
-/// WPF-style shorthand <see cref="Base.InputUIComponent.ToolTip"/> (<c>&lt;Button ToolTip="…"/&gt;</c>) - both drive
-/// this same service on any element that receives pointer input.
-/// </summary>
+/// <summary>Shows one hover tooltip at a time for elements with <see cref="ToolTipProperty"/> set, after
+/// <see cref="InitialShowDelayProperty"/>; leaving the element hides it.</summary>
 public static class ToolTipService
 {
     public static readonly AdamantiumProperty ToolTipProperty = AdamantiumProperty.RegisterAttached(

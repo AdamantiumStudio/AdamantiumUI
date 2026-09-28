@@ -9,11 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>A collapsed group shows its commands in a flyout, and that flyout's card lives in the popup's ChildTemplate -
-/// built on FIRST OPEN, not with every group's template. A band carries a couple of dozen groups and hardly any are ever
-/// collapsed, let alone opened, so the card is pure cost until then. What the deferral puts at risk is the part that makes
-/// the flyout work at all: the group MOVES its content into PART_PopupHost, and that host is not in the template's
-/// namescope any more - it arrives with the content. Miss that and a collapsed group opens onto an empty card.</summary>
+// A collapsed group's flyout card is built on first open; the group must still find PART_PopupHost and move its content in.
 [TestFixture]
 public class RibbonGroupDeferredFlyoutTests
 {

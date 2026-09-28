@@ -5,17 +5,8 @@ using Adamantium.UI.Rendering.RenderUnits;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// The analytic-AA fringe's geometry, independent of who draws it: which way each fill contour must feather (its
-/// <c>Winding</c>) and the ring of triangles around it. Both the per-unit fringe (<c>GpuFillRenderComponent</c>) and the
-/// instanced one (<c>InstancedFillCollector</c>, one ring shared per <c>GeometryKey</c>) build from here, so a hole's
-/// inward feather is decided in ONE place.
-/// </summary>
-/// <remarks>
-/// The ring carries no width: a vertex holds the contour point plus, for the outer edge, the two adjacent edge
-/// DIRECTIONS, and the vertex shader turns those into a screen-space miter one device pixel long (FillFringeEffect.fx /
-/// BatchEffect.fx). That is what makes the ring scale-free, hence shareable across every instance of a mesh.
-/// </remarks>
+// The AA fringe geometry shared by the per-unit and instanced paths: each contour's feather winding and its triangle
+// ring. The ring stores edge directions, not width; the vertex shader builds a 1px miter, so rings are scale-free.
 internal static class FringeGeometry
 {
     /// <summary>Each drawable contour (>= 3 points) with the sign that makes its fringe feather AWAY from the fill.</summary>

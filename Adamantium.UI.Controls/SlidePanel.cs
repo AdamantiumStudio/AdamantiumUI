@@ -12,14 +12,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A panel that slides in from an edge of the WINDOW and overlays all content (the MahApps "Flyout" idea). It hosts its
-/// chrome in the window's popup/overlay layer via an edge-docked <see cref="Popup"/>, so it is always on top wherever it
-/// is declared and takes no layout space in place. <see cref="Placement"/> chooses the edge; along that edge it either
-/// stretches to the window (drawer alignment = Stretch on the cross axis) or is content-sized and aligned. Toggle
-/// <see cref="IsOpen"/> to animate it in/out; the built-in close button (opt out via <see cref="ShowCloseButton"/>)
-/// closes it. Set <see cref="MeasurableUIComponent.Width"/> (Left/Right) or Height (Top/Bottom) for its thickness.
-/// </summary>
+/// <summary>A panel that slides in over all content from the window edge chosen by <see cref="Placement"/>, hosted in the
+/// overlay so it takes no layout space. <see cref="IsOpen"/> animates it.</summary>
 public class SlidePanel : ContentControl
 {
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),

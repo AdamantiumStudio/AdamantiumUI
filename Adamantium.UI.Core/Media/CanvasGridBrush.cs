@@ -10,15 +10,8 @@ public enum CanvasGridMarks
     Lines
 }
 
-/// <summary>A PROCEDURAL grid: the fragment shader decides from the world coordinate under each pixel whether it is on a
-/// mark. Nothing is generated for it - one rectangle is drawn, and an unbounded grid never exists as geometry.
-/// <para>It is a fill, and so a brush - not an effect laid over what a control drew. The camera rides in it because the
-/// grid IS the camera made visible: <see cref="Offset"/> is where the world's origin sits on screen and
-/// <see cref="Scale"/> is screen pixels per world unit, which is all the shader needs to place every mark.</para>
-/// <para>The step shown is <see cref="Spacing"/> taken up or down by whole powers of <see cref="Coarsening"/> until the
-/// marks are at least <see cref="MinPitch"/> apart on screen - and the two neighbouring levels are CROSS-FADED, so
-/// pulling the camera back dissolves one into the other instead of the whole grid jumping from tens to hundreds.</para>
-/// </summary>
+/// <summary>A procedural grid drawn per pixel from <see cref="Offset"/> and <see cref="Scale"/>. <see cref="Spacing"/>
+/// scales by powers of <see cref="Coarsening"/> to stay above <see cref="MinPitch"/>, cross-fading adjacent levels.</summary>
 public sealed class CanvasGridBrush : Brush
 {
     public static readonly AdamantiumProperty MarksProperty = AdamantiumProperty.Register(nameof(Marks),

@@ -4,11 +4,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A command split in two: pressing the body runs <see cref="Primitives.ButtonBase.Command"/>, pressing the
-/// arrow drops the menu. Paste-and-paste-special, undo-and-undo-history - the common case is one click away and the
-/// rarer ones stay reachable.
-/// <para>Which half was pressed is a fact about the POINTER, so it is settled on the press, before the click that
-/// follows can ask. The keyboard has no halves: Space and Enter run the action.</para></summary>
+/// <summary>A split command: the body runs <see cref="Primitives.ButtonBase.Command"/>, the arrow drops the menu. The half
+/// is decided on press; Space and Enter run the action.</summary>
 public class RibbonSplitButton : RibbonDropDownButton
 {
     /// <summary>Whether the pointer is over the ARROW half. A split button that highlights as one piece cannot say

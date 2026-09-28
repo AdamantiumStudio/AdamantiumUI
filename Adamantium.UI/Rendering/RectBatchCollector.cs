@@ -26,14 +26,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
 
     protected override IEffectPass DrawPass => Effect.BatchRectPass;
 
-    // Batchable = a visible solid fill + a batchable pen (none, or a SOLID stroke the SDF shader draws analytically).
-    // The four corners are INDEPENDENT - each rides in the instance and the shader picks the one belonging to the
-    // fragment's own corner - so a tab head rounded only at the top batches like any other rect. Gradient/image fill,
-    // a non-solid pen or Enabled=off still fall back to the per-unit draw. Must stay in lock-step with
-    // EllipseRenderUnit/RectangleRenderUnit.IsSdfBatchable.
-    /// <summary>THE one statement of what this batch draws. Static because the render UNIT has to ask the same question
-    /// before it builds anything - a unit that answered it on its own copy of the rules is how they drift apart, and a
-    /// drifted answer means either wasted per-unit machinery or a shape drawn twice.</summary>
+    /// <summary>The single rule for what this batch draws (a visible solid fill, no pen or a solid one, any four corners);
+    /// render units ask it too, so the two never drift.</summary>
     public static bool WantsBatch(RectanglePayload p)
     {
         if (!Enabled) return false;
@@ -64,21 +58,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         if (dash is not { Count: > 0 }) return true;
         if (!IsDashPatternBatchable(dash)) return false;
 
-        // The analytic mask asks "is the arc length of the NEAREST contour point inside a dash". `d` is continuous, but
-        // that arc length is NOT: at a corner the nearest point jumps from one edge to the other across the bisector,
-        // and the arc jumps with it by up to a whole thickness. A mask is a function of that arc, so it inherits the
-        // jump - as a dash boundary crossed for no reason, which is a phantom dash END, which draws a CAP across the
-        // ribbon in the middle of a corner. Every artifact we chased there (seam, hole, phantom scrap, transverse
-        // bite) is that one discontinuity. It is not a tuning problem: the honest question is a DISTANCE to the dashed
-        // path, which no single sample of the arc can answer.
-        // So the batch declines what it cannot represent, and the compute expander (which builds the dash pieces as
-        // real geometry, with cap frames and joins) takes it.
-        // The bound is deliberately NOT "the corner is as round as the stroke is thick", even though that is where the
-        // model actually stops being exact: two different renderers cannot agree pixel for pixel, so wherever the
-        // switch sits it SHOWS - and a threshold in the middle of the useful range flips the whole picture on a hair of
-        // thickness (7.7 vs 8.0 at corner 4 was exactly that). It sits instead where the difference is smaller than a
-        // pixel: a stroke thin enough that no cap or corner detail resolves. That is also the case batching exists for
-        // - a whole virtualized grid of one-pixel dashed borders, drawn without a GPU buffer per tile.
+        // The analytic dash mask jumps at corners (the nearest-point arc length is discontinuous), so only strokes too
+        // thin for caps to resolve batch; the rest go to the compute expander.
         return pen.Thickness * 0.5 <= 1.5;
     }
 
@@ -231,12 +212,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     public static bool BakeItem(RectanglePayload p, Matrix4x4F world, double opacity, out RectItem item)
         => BakeItem(p, world, opacity, 0, -1, out item);
 
-    /// <summary><paramref name="transformSlot"/> = the instance's transform-table slot (0 = identity for a world-space
-    /// bake; a motion node's slot for a NODE-LOCAL bake - <paramref name="world"/> is then the transform RELATIVE to
-    /// that node and the vertex shader applies the node's matrix on top - the O(1)-scroll path).
-    /// <para><paramref name="fadeSlot"/> = the opacity slot the element's alpha is read from at DRAW time (-1 = opaque).
-    /// Element Opacity is deliberately NOT folded into the colour here: it multiplies down the whole tree, so baking it
-    /// in means one fading container re-bakes every instance under it.</para></summary>
+    /// <summary><paramref name="transformSlot"/>: 0 for world space, or a motion node's slot with <paramref name="world"/>
+    /// relative to it. <paramref name="fadeSlot"/>: the opacity slot read at draw time (-1 = opaque).</summary>
     public static bool BakeItem(RectanglePayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot, out RectItem item)
     {
         item = default;
@@ -287,12 +264,6 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         return true;
     }
 
-    // Bake one solid rounded-rect fill into the pending segment. False only if it can't be baked (rotated/sheared world
-    // or a GPU-buffer overflow this frame) - the caller then draws that rect via the per-unit path.
-    /// <summary>Blanks every instance whose owner tag is in <paramref name="gone"/> - the controls that have left the
-    /// paint order - without touching the segments they sit in. Done here rather than slot-by-slot from the cache
-    /// because that meant one upload per slot; a run of dead neighbours (a whole scrollbar, a whole recycled row) is one
-    /// upload, and the scan reads each instance's tag by reference instead of copying it.</summary>
     /// <summary>A blank instance is one nobody owns: blanking zeroes the record, and the owner tag with it.</summary>
     protected override bool IsBlank(int first, int count)
     {
@@ -321,25 +292,15 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         return true;
     }
 
-    /// <summary>Blanks every ISSUED instance owned by one of <paramref name="tags"/>, wherever it now sits. The
-    /// positional form below can only look where the group last remembered being, and by the time a sweep runs the arena
-    /// may have been re-recorded many times over - the group's runs then name slots that belong to somebody else, so the
-    /// instances that are actually still painting are never reached. Ownership rides in the instance precisely so it can
-    /// be found without trusting a remembered address; this asks the arena rather than the bookkeeping.
-    /// <para>One pass, and only on a frame where something left the paint order - which is rare (single digits over a
-    /// session), unlike the per-frame scan the positional form was introduced to avoid.</para></summary>
+    /// <summary>Blanks every instance owned by one of <paramref name="tags"/>, found by owner tag rather than by
+    /// remembered slots, which may since belong to others.</summary>
     public int BlankOwnedAnywhere(IGraphicsDevice device, HashSet<int> tags)
     {
         if (tags.Count == 0) return 0;
 
         var blanked = 0;
         var runStart = -1;
-        // The WHOLE array, and no "is it issued right now" test. Both were wrong for the same reason, measured: the
-        // control's instances were written at one frame, the departure noticed hundreds of frames later, and by then the
-        // scene around it had shrunk - Count named a dozen slots and the segments covered none of its ground. The bytes
-        // sat there untouched until the scene grew back over them and issued them again. Ownership is what makes this
-        // safe: the tag belongs to one group by construction, so a slot carrying it is that group's whether anything
-        // draws it this instant or not.
+        // The whole array, issued or not: stale owned bytes past Count are issued again when the scene grows back.
         var extent = Items?.Length ?? 0;
         for (var slot = 0; slot <= extent; slot++)
         {
@@ -399,6 +360,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     public bool SlotOwnedBy(int slot, int ownerTag) =>
         ownerTag == 0 || (slot >= 0 && slot < Count && Items[slot].OwnerTag == ownerTag);
 
+    /// <summary>Bakes one solid rounded-rect fill into the pending segment; false on a rotated world or buffer overflow,
+    /// and the caller falls back to the per-unit path.</summary>
     public bool TryAdd(RectanglePayload p, Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot = 0,
         int fadeSlot = -1, int ownerTag = 0, int clipSlot = -1)
     {

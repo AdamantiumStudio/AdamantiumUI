@@ -5,16 +5,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Adorners;
 
-/// <summary>
-/// The focus ring: what the keyboard puts around the control it reached. It draws NOTHING of its own - its whole look is
-/// a <c>ControlTemplate</c> from the theme (<c>FocusAdornerStyleSet</c>), or the focused control's own
-/// <see cref="InputUIComponent.FocusVisualStyle"/> where one control wants a different ring. Colour, thickness, corner
-/// and how far out it sits are all set THERE, so restyling the focus visual of an application never means touching code.
-/// <para>An adorner rather than a piece of every control template, because a template is a thing that can be forgotten -
-/// and a control whose template forgot it would silently have no focus visual at all. One ring on the layer covers every
-/// control, needs no template edits, and is drawn ABOVE the content, so a control that clips its own children still
-/// shows it.</para>
-/// </summary>
+/// <summary>The focus ring. Its whole look comes from a theme template or the control's
+/// <see cref="InputUIComponent.FocusVisualStyle"/>; one ring on the adorner layer covers every control, above clipping.</summary>
 public class FocusAdorner : Adorner
 {
     public FocusAdorner(UIComponent adornedElement) : base(adornedElement)
@@ -39,13 +31,8 @@ public class FocusAdorner : Adorner
     /// <summary>The ring stands off by exactly <see cref="Outset"/>, so that is what a viewport must let past its edge.</summary>
     public override double ClipStandoff => Outset;
 
-    /// <summary>The rounding for the ring: the adorned control's own, GROWN by the outset so the ring stays parallel to
-    /// the edge it follows - a square ring around a rounded button reads as a second, badly aligned control. A ring
-    /// template <c>{TemplateBinding}</c>s this instead of restating a radius that would then fight the control's own.
-    /// <para>UNIFORM, taken from the control's largest corner: a mixed radius (a tab, rounded on top and square below)
-    /// puts the border on the geometry path built for thick, uneven frames, whose anti-aliasing fringe is as wide as a
-    /// 2px ring is thick - the ring then comes out ragged along the rounded side. One radius keeps it on the analytic
-    /// path, where the whole ring is reconstructed in a single instanced draw.</para></summary>
+    /// <summary>The ring's rounding: the control's largest corner grown by the outset, so the ring stays parallel to the edge;
+    /// uniform, which keeps it on the analytic path.</summary>
     public static readonly AdamantiumProperty AdornedCornerRadiusProperty = AdamantiumProperty.Register(
         nameof(AdornedCornerRadius), typeof(CornerRadius), typeof(FocusAdorner), new PropertyMetadata(default(CornerRadius)));
 

@@ -4,12 +4,8 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A picture used as a FRAME that survives being resized: the source is cut by <see cref="Slice"/> into nine
-/// pieces, the four corners are drawn at their own size and never distort, the four edges stretch or repeat along their
-/// own axis, and the centre fills what is left. This is CSS <c>border-image</c> / the 9-patch of every game UI, and it
-/// is how a button or panel skin is drawn at any size from one small image.
-/// <para>WPF has no such brush - there people build a 3x3 <c>Grid</c> of <c>ImageBrush</c>es by hand. Here it is one
-/// brush that bakes into nine instances of one batch, so the whole frame is still a single draw.</para></summary>
+/// <summary>A nine-slice frame (CSS <c>border-image</c>): <see cref="Slice"/> cuts the picture into fixed corners,
+/// stretching or repeating edges, and a center; drawn as one batch.</summary>
 public sealed class NineSliceBrush : Brush
 {
     public NineSliceBrush() { }
@@ -46,11 +42,8 @@ public sealed class NineSliceBrush : Brush
         typeof(NineSliceEdgeMode), typeof(NineSliceBrush),
         new PropertyMetadata(NineSliceEdgeMode.Stretch, PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>Whether the MIDDLE piece tiles too, or is stretched like a picture. Off by default, and deliberately
-    /// separate from <see cref="EdgeMode"/>: an edge has a rhythm to preserve, while a middle tiled at the same pitch
-    /// turns into a grid - the smaller the <see cref="Slice"/>, the denser. CSS <c>border-image</c> and the classic
-    /// 9-patch both repeat the EDGES only and scale the middle; this is that, with the other option kept for a game
-    /// panel whose inside is a repeating texture.</summary>
+    /// <summary>Whether the center tiles instead of stretching; off by default, like CSS <c>border-image</c>, and separate
+    /// from <see cref="EdgeMode"/>.</summary>
     public static readonly AdamantiumProperty TileCenterProperty = AdamantiumProperty.Register(nameof(TileCenter),
         typeof(bool), typeof(NineSliceBrush), new PropertyMetadata(false, PropertyMetadataOptions.AffectsPaint));
 

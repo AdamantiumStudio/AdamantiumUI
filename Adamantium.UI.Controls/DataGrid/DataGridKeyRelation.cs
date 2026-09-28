@@ -3,12 +3,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>A tree worked out from a FLAT list and two members: the key a record is known by, and the key of the record
-/// it belongs to. That is the shape data arrives in from a database or a service - rows with an id and a parent id -
-/// and it was the one shape of tree this table could not be told about in markup, only in code.
-/// <para>Built ONCE per rebuild and asked afterwards. Working a record's children out by scanning the list would be a
-/// scan per branch opened, which on ten thousand rows is the table stopping every time someone opens one.</para>
-/// </summary>
+/// <summary>A tree built from a flat list by id and parent id, as data arrives from a database; built once per rebuild, so
+/// opening a branch does not scan the list.</summary>
 internal sealed class DataGridKeyRelation
 {
     private static readonly object[] None = System.Array.Empty<object>();

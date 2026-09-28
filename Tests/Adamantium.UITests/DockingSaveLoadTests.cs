@@ -78,7 +78,7 @@ public class DockingSaveLoadTests
         {
             Assert.That(restored.State, Is.EqualTo(PaneGroupState.Collapsed));
             Assert.That(root.EdgeOfBarred(restored), Is.EqualTo(DockZone.Right), "on the edge it was folded against");
-            Assert.That(restored.Parent, Is.Null, "and out of the tree, where a put-away panel belongs (rule 3b)");
+            Assert.That(restored.Parent, Is.Null, "and out of the tree, where a put-away panel belongs");
             Assert.That(restored.RestoreLength, Is.EqualTo(PaneLength.Pixels(240)), "still worth what it was docked at");
         });
     }

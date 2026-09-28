@@ -13,15 +13,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A hierarchical list, FLATTENED for virtualization: the tree (roots + a <see cref="HierarchicalDataTemplate"/> that
-/// draws each node and points at its children) is projected into a single flat list of rows - one per visible node,
-/// indented by depth - which a virtualizing panel realizes a viewport at a time. So a branch of thousands of siblings
-/// (an editor entity tree, a drive's System32) costs thousands of cheap row wrappers, not thousands of nested
-/// containers, and only the on-screen rows become <see cref="TreeViewItem"/> controls. Expanding a node splices its
-/// children into the flat list in place (children resolve by reflecting the template's ItemsSource path, no container
-/// needed); clicking a row selects it, with the <see cref="SelectionMode"/> deciding one / many / list-box (Ctrl/Shift).
-/// </summary>
+/// <summary>A hierarchical list flattened into one virtualized list of rows, one per visible node, so only on-screen rows
+/// become <see cref="TreeViewItem"/>s. <see cref="SelectionMode"/> sets single or multiple selection.</summary>
 public class TreeView : ItemsControl
 {
     static TreeView()
@@ -50,14 +43,8 @@ public class TreeView : ItemsControl
     public static readonly AdamantiumProperty ExpandOnDoubleClickProperty = AdamantiumProperty.Register(nameof(ExpandOnDoubleClick),
         typeof(bool), typeof(TreeView), new PropertyMetadata(true));
 
-    /// <summary>WHAT A DOUBLE CLICK ON A LEAF MEANS - open it, go to it, put it in view. The item is handed over as the
-    /// parameter.
-    /// <para>A branch keeps its own answer: a double click opens and folds it (see <see cref="ExpandOnDoubleClick"/>),
-    /// which is what the gesture has always meant on a tree. A leaf has nothing to open, and that is the room this
-    /// fills - it used to do nothing at all, so anything an application wanted from it had to be written as a press
-    /// handler counting clicks, exactly as a list's did before <see cref="ListBox.ItemActivatedCommand"/>.</para>
-    /// <para>A branch WITH folding switched off is activated too: with nothing to open, a double click on it means the
-    /// same thing it means anywhere else in the tree.</para></summary>
+    /// <summary>Runs on a double click on a leaf (or on a branch when <see cref="ExpandOnDoubleClick"/> is off), with the
+    /// item as the parameter.</summary>
     public static readonly AdamantiumProperty ItemActivatedCommandProperty = AdamantiumProperty.Register(
         nameof(ItemActivatedCommand), typeof(ICommand), typeof(TreeView), new PropertyMetadata(null));
 
@@ -306,12 +293,8 @@ public class TreeView : ItemsControl
             }
             else if (node.IsFocused)
             {
-                // ...and the other half, for the same reason BindRow drops the hover: this container WAS the keyboard's
-                // visual and now shows somebody else's row. Left holding the focus it re-draws the ring on each row the
-                // scroll recycles it through. The place itself is unharmed - it is the row, which simply has no visual
-                // while it is off-screen - so the tree holds the focus meanwhile (its keys keep working) and hands it
-                // back the moment that row is bound again. Unspecified, not Directional: a mouse scroll must not paint
-                // a ring around the whole tree.
+                // The focused container now shows another row: the tree holds focus until that row is bound again.
+                // Unspecified, so no ring is drawn around the tree.
                 FocusManager.Focus(this, NavigationMethod.Unspecified);
             }
         }
@@ -364,11 +347,8 @@ public class TreeView : ItemsControl
         }
     }
 
-    /// <summary>The tree owns its arrows, the way a list owns its own: they move the SELECTION down and up the flat list
-    /// of visible rows, and Left/Right fold a branch shut or open it. A tree that let navigation have these keys would
-    /// send the focus off to whatever sits beside it on the first press.
-    /// <para>Left on a leaf (or an already-closed branch) goes to its PARENT, and Right on an open branch steps into its
-    /// first child - so one key both folds and climbs, which is how every tree is driven.</para></summary>
+    /// <summary>Up/Down move the selection; Left folds a branch or goes to the parent, Right opens a branch or steps into
+    /// its first child.</summary>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -414,11 +394,7 @@ public class TreeView : ItemsControl
         e.Handled = true;
     }
 
-    /// <summary>Open or fold a row THROUGH ITS CONTAINER where there is one. The expander glyph is drawn from the
-    /// container's <see cref="TreeViewItem.IsExpanded"/>, so a keyboard that spliced the flat list directly left the
-    /// branch open with an arrow still pointing sideways. Going through the container drives the one path everything
-    /// else uses (the expander, a view-model binding, a double-click). A row nobody has realized has no glyph to keep
-    /// honest, so there the splice IS the whole job.</summary>
+    // Expands or folds through the container when realized, so its glyph follows; an unrealized row is spliced directly.
     private void Expand(int index, TreeRow row, bool expanded)
     {
         if (ItemContainerGenerator.ContainerFromIndex(index) is TreeViewItem container)
@@ -486,12 +462,8 @@ public class TreeView : ItemsControl
             FocusManager.Focus(focusable, NavigationMethod.Directional);
         }
 
-        // Scroll by the row's place in the PANEL, not by the container's current world position. The panel answers from
-        // the item's index, which is the same number before and after a scroll; a container answers with where it is
-        // drawn right now, which still carries the PREVIOUS offset until layout has run. Holding an arrow key issues a
-        // step per frame, so that lag made every step aim a little wrong and the next frame correct it - the list
-        // shivered by a couple of pixels instead of scrolling. The container path stays for panels that cannot place an
-        // item by index (non-uniform rows).
+        // Ask the panel by index: a container's position lags one layout behind, which makes held arrow keys jitter.
+        // The container path is for panels that cannot place by index.
         if (ItemsHostPanel is VirtualizingPanel panel && panel.TryGetItemRect(index, out var rect))
         {
             EnclosingScrollViewer()?.BringIntoView(rect);
@@ -693,11 +665,7 @@ public class TreeView : ItemsControl
         {
             if (child is not TreeViewItem tvi || tvi.Row is not { } row) continue;
 
-            // _selectedRows is the ONE truth, and a row that disagrees with it is put right here. A row can be left
-            // marked without us: the item container style may bind IsSelected two-way to the node, so a container being
-            // recycled onto another row writes through that binding - and the row it marked is not in the set, which is
-            // exactly what ClearSelection walks. The rows would then stay lit with nothing able to clear them (seen
-            // while holding an arrow key: the list scrolls fast, containers recycle, and highlights pile up behind).
+            // _selectedRows is the truth: a recycled container's two-way IsSelected binding can mark a row outside it.
             tvi.IsSelected = row.IsSelected;
         }
     }

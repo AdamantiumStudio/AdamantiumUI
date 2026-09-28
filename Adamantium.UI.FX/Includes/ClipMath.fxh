@@ -1,35 +1,9 @@
 // ---- ROUNDED CLIPPING -------------------------------------------------------------------------------------------
-// A scissor is a RECTANGLE, so a rounded container cut the corners off its content squarely - a card's shimmer reached
-// the corner and the corner went sharp. The shape travels in a transform-table slot instead (TransformTable.SetClip):
-// row 0 of the slot's matrix is the clip rectangle in DEVICE pixels, row 1 its four radii, Params.x marks it as carrying
-// one. Device pixels because that is the space a fragment's own position is already in - no matrix, no interpolation.
-//
-// COVERAGE, not discard. Discarding gives a stair-stepped corner exactly where the point was to look tidy, and throws
-// away the early depth test; the distance field is what every shape here computes anyway, so the clip is one more of
-// them and its edge is anti-aliased like any other.
-//
-// The table is read in the VERTEX stage and the SHAPE travels to the fragment stage as varyings. The shape is
-// per-INSTANCE, so one fetch a vertex replaces one a fragment - and BrushEffect already reaches for the node table from
-// the vertex stage for the same kind of value ("reaching the node table from the PIXEL stage blanks the window on this
-// driver", on the gradient's Fade), so this is the established shape of the answer here rather than a new one.
-//
-// It also walks away from something not understood. Reading the table in the ELLIPSE pass's fragment stage lost the
-// device (2 starts of 2) at slot 46, while slot 0 and not reading at all were both fine. Two explanations were then
-// DISPROVED by measurement, and neither should be repeated: the reflected $Globals layout is identical in both stages
-// (same buffer, same size, TransformsAddress at the same offset), and both stages read the SAME address (each stage's
-// value painted into its own colour channel and compared per pixel - they matched). The failure does not reproduce on
-// this design (4 starts of 4, no loss), so the cause is unknown and nothing in the framework is known to be broken.
-//
-// The UI's effects include it; text in the engine's FontEffect clips by the same slot with its own code.
-//
-// It deliberately declares no globals of its own - it uses NodeSlot and TransformsAddress, which every effect that
-// includes it already declares, so it adds nothing to a parameter block that has been shown to be at its limit.
+// The clip lives in a transform-table slot (row 0 rect in device px, row 1 radii), read in the vertex stage via the
+// includer's NodeSlot/TransformsAddress and applied as antialiased coverage.
 
-// The corner this fragment belongs to, out of the four (x = TL, y = TR, z = BR, w = BL - the CPU CornerRadius order).
-// SDF space has y DOWN (the quad's corner 0 is the TOP-left), so a negative Local.y is the top half. Every rounded-rect
-// helper picks its radius through this one function, which is what keeps the four corners INDEPENDENT: the field stays
-// continuous across the axes because the +r/-r of the offset cancels on a straight edge, so neighbouring corners never
-// have to agree.
+// The radius of the corner this point belongs to (x TL, y TR, z BR, w BL, as CornerRadius; y is down). Every rounded-rect
+// helper uses it, keeping the corners independent.
 float CornerRadiusAt(float2 p, float4 radii)
 {
     return p.x < 0.0 ? (p.y < 0.0 ? radii.x : radii.w)
@@ -59,8 +33,6 @@ float4 ClipShapeBox(float slotIndex)
 {
     if (slotIndex < 0.0) return float4(0.0, 0.0, 0.0, 0.0);
 
-    // The address is taken HERE rather than passed in: a pointer-to-struct parameter is what this driver's shader
-    // compiler falls over on, and every working shader in this tree casts the address locally.
     NodeSlot* nodes = (NodeSlot*)TransformsAddress;
     NodeSlot clip = nodes[(uint)slotIndex];
     if (clip.Params.x < 0.5) return float4(0.0, 0.0, 0.0, 0.0);
@@ -80,10 +52,7 @@ float4 ClipShapeRadii(float slotIndex)
     return clip.World[1];
 }
 
-// Both halves of the clip shape in ONE table read, for a vertex stage that wants to hand them to its pixel shader.
-// Calling ClipShapeBox and ClipShapeRadii instead costs TWO reads, and a stage that already read the table for its own
-// matrix is then on its third - which is where this driver stops coping. Measured on the pattern vertex shader: the two
-// calls fault the GPU with a read the device-fault probe reports as ReadInvalid, and this one does not.
+// Both halves of the clip shape in ONE table read, for a vertex stage that hands them to its pixel shader.
 void ClipShapeBoxAndRadii(float slotIndex, out float4 box, out float4 radii)
 {
     box = float4(0.0, 0.0, 0.0, 0.0);
@@ -98,13 +67,8 @@ void ClipShapeBoxAndRadii(float slotIndex, out float4 box, out float4 radii)
     radii = clip.World[1];
 }
 
-// The whole thing in ONE table read, for a pass that cannot do the fetch in its vertex stage. TEXT is that pass: the
-// glyph vertex shader already reads the table for its matrix, and this driver AVs inside vkCreateShadersEXT on a SECOND
-// read from that shader - measured again here, 4 starts of 4, exactly as the note on GlyphItem.Params said. Its PIXEL
-// shader reads the table nowhere, so there the fetch is the first one and compiles.
-//
-// One read, not the two ClipShapeBox + ClipShapeRadii would make: the same reason the pair exists at all is that the
-// vertex stage can afford them per instance, and a fragment stage cannot.
+// Clip coverage from a single table read in the fragment stage, for passes that do not fetch the clip in their vertex
+// stage (text).
 float ClipCoverageBySlot(float2 fragment, float slotIndex)
 {
     if (slotIndex < 0.0) return 1.0;

@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- ScrollViewer: a content host with two OVERLAY scrollbars (Fluent-style, no arrow buttons). The content
-         presenter fills the whole area and scrolls UNDER the bars; the bars float on the right / bottom edges and the
-         control shows/Collapses each one by overflow (Auto). The THEME owns the hide/reveal feel: here the bars start
-         invisible AND non-interactive (Opacity=0 + IsHitTestVisible=False), and fade in + become grabbable only while
-         the pointer is over the viewer - so a different theme could choose always-on bars instead. The control just
-         exposes IsMouseOver + the named parts. Split per the small-styles convention: template, then triggers. -->
+    <!-- ScrollViewer: content scrolls under two overlay scrollbars that stay hidden and non-interactive until the pointer
+         is over the viewer. Template, then triggers. -->
 
     <!-- Template (its own style). Bars start hidden: Opacity 0 so they're invisible, and IsHitTestVisible False so an
          invisible bar can't be grabbed by accident at the edge (Opacity alone stays hit-testable). The trigger reveals
@@ -39,11 +35,8 @@
                             HorizontalAlignment="Stretch"
                             Opacity="0"
                             IsHitTestVisible="False"/>
-                        <!-- The square where they cross, and it is a PART rather than one bar being allowed to run over
-                             it: letting the vertical bar own the corner also let its THUMB travel into it, so the thumb
-                             could sit beside the horizontal bar instead of stopping above it. Hidden unless both bars
-                             are showing, and it fades with them - a square left standing while the bars are hidden
-                             would be a stray mark on the content. -->
+                        <!-- The corner is its own part, so the vertical thumb stops above the horizontal bar; shown only
+                             with both bars and fading with them. -->
                         <Border
                             x:Name="ScrollBarCorner"
                             Width="12" Height="12"

@@ -467,7 +467,7 @@ public class RibbonAdaptiveLayoutTests
     }
 
     // A tab narrower than even the collapsed buttons still lays out and still answers - it runs out of variants, not out
-    // of answers, and then the band scrolls (§3.4).
+    // of answers, and then the band scrolls.
     [Test]
     public void ATabTooNarrowForEvenTheButtons_StopsAtCollapsed()
     {

@@ -6,13 +6,8 @@ using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Several things on the plane treated as one.
-/// <para>An item like any other, and that is the whole design: everything around it - the scene, the selection frame,
-/// the paint order, the inspector - already knows how to deal with an item, so a group needs nothing new from any of
-/// them. It is also what makes groups nest without a word: a group holding a group is a group holding an item.</para>
-/// <para>What it does NOT do is own its children's place in paint order. The children leave the scene when the group is
-/// made and come back when it is broken, which is what keeps "what is drawn" a single flat list that the renderer can
-/// walk without asking anything about groups.</para></summary>
+/// <summary>Several items treated as one item, so groups nest. The children leave the scene while grouped, keeping the drawn
+/// list flat.</summary>
 public class GroupItem : ICanvasItem
 {
     private readonly List<ICanvasItem> _children = new();

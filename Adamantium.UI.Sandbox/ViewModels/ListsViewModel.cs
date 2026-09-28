@@ -9,12 +9,8 @@ using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Lists tab: one collection shown by a single-select and a multiple-select ListBox. The selection is bound
-/// two-way, and Add/Remove commands mutate the collection live - so every list view stays in sync through the
-/// view-model.
-/// <para>Plus the LARGE list, which is a different demonstration entirely: 20 000 rows behind a CollectionView that
-/// filters as you type and pages the result. Typing is where live filtering earns its keep - the predicate changes on
-/// every keystroke, and rows leave one at a time rather than the list being rebuilt.</para></summary>
+/// <summary>Lists tab: one collection in single- and multi-select ListBoxes with two-way selection and live Add/Remove,
+/// plus 20 000 rows behind a filtering, paging CollectionView.</summary>
 [ViewModel]
 public partial class ListsViewModel : TabPageViewModel
 {
@@ -60,11 +56,7 @@ public partial class ListsViewModel : TabPageViewModel
     [Bindable] private string _search = string.Empty;
 
     // ── A SERVER THAT HANDS OUT ONE PAGE AT A TIME ─────────────────────────────────────────────────────────────────
-    //
-    // The half of the contract an in-memory view can never show: a page that ARRIVES rather than being sliced, a total
-    // nobody knows until the end is walked into, a request superseded by the next one, and a failure that has to leave
-    // the reader looking at something. Everything here is a stand-in for a network - the delay and the failure are
-    // switches so the behaviour can be produced on demand instead of waited for.
+    // A simulated network source with switchable delay and failure: unknown totals, superseded requests, failed fetches.
 
     /// <summary>How long the fake server takes to answer, in milliseconds. Long enough to SEE the in-flight state.</summary>
     [Bindable] private int _serverDelay = 600;

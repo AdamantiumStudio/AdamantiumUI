@@ -473,11 +473,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
         if (result == AdamantiumProperty.UnsetValue)
         {
-            // No value at any source priority - read the default. The metadata answers BOTH questions in ONE cached
-            // lookup: a property declared nowhere in this type's chain is the only case that still has to ask the
-            // registry (which runs the static constructors and throws). Asking the registry first cost 64ns on top of
-            // the 60ns for the metadata, on EVERY read of an unset property - which, since containers became lazy
-            // (nothing is seeded at construction any more), is most reads in the engine rather than a cold path.
+            // No value at any priority: read the default from cached metadata; only an undeclared property asks the
+            // registry. This is the common read path.
             var metadata = property.GetDefaultMetadata(GetType());
             if (metadata == null)
             {
@@ -504,11 +501,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     // already read as this value, it just had not been written down yet.
     private void ResolveInherited(AdamantiumProperty property)
     {
-        // ENSURE, not merely look up: this cache is the whole reason an inherited read is one stamp comparison instead of
-        // a walk to the root, and it lives in the container. With containers created only on write, an element that
-        // never SETS its DataContext would have had nowhere to remember what it inherits and would have walked the chain
-        // on every read - which is exactly the O(depth)-per-read this was written to replace. Only the handful of
-        // properties that can inherit reach here, so it is three containers per element, not sixty-five.
+        // Ensure the container: it holds the inherited-value cache that keeps inherited reads O(1). Only inheritable
+        // properties get here.
         if (EnsureSlots(property) is not { } container) return;
         if (container.InheritedStamp == AdamantiumProperty.InheritanceEpoch) return;
         if (!container.IsDefaultOnly && container.GetValue(ValuePriority.Inherited) == AdamantiumProperty.UnsetValue)
@@ -567,11 +561,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return false;
     }
 
-    // The priority slot currently supplying this property's base value (skipping the Animation mask and the Effective
-    // cache). A re-coercion (e.g. RangeBase re-clamping Value when Minimum/Maximum change) must rewrite the value IN
-    // PLACE at this priority rather than promoting it to Local: Local (1) outranks Binding (2), so a Local re-coerce
-    // would permanently mask a {Binding} on that property - which is what pinned a data-bound Slider.Value at its
-    // coerced Minimum and stopped the binding from ever applying.
+    // The priority slot supplying the base value, so a re-coercion rewrites it in place instead of promoting it to Local
+    // and masking a binding.
     protected ValuePriority GetBaseValuePriority(AdamantiumProperty property)
     {
         if (Slots(property) is { } container)
@@ -948,11 +939,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
                 element.InvalidateRender(false);
             }
 
-            // The value belongs to the PARENT's layout, not to this element's own size: a Grid cell index, a figure's
-            // segments. Invalidating only this element leaves it exactly where the parent last put it - the parent's
-            // measure is measure-valid at an unchanged constraint, so it early-returns and never re-reads the value.
-            // Until now these two options were declared in metadata and acted on NOWHERE, so anything relying on them
-            // silently did nothing (see the note in PaneHost, which worked around it by hand).
+            // The value belongs to the parent's layout (a Grid cell index), so the parent must be invalidated too.
             if (element.VisualParent is IMeasurableComponent parent)
             {
                 if (metadata.AffectsParentMeasure)

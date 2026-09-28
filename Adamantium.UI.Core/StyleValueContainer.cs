@@ -19,11 +19,7 @@ internal class StyleValueContainer
     /// specificity keeps insertion order, as the web does.</summary>
     public void AddValue(Style style, object value)
     {
-        // A style writes the SAME property more than once when it has a BasedOn: the base's setters are applied first
-        // and its own after, both under this style as the owner. The second write is the one that must stand - it is
-        // what BasedOn means - so a repeat REPLACES the recorded value instead of being dropped. Dropping it gave
-        // MenuScrollViewer the plain ScrollViewer template it is BasedOn, so every menu grew a scrollbar where its own
-        // template draws step arrows.
+        // With BasedOn a style writes a property twice (base first); the later write replaces the recorded value.
         foreach (var recorded in _values)
         {
             if (recorded.Style != style) continue;
@@ -48,13 +44,8 @@ internal class StyleValueContainer
 
     public Resources.Style EffectiveStyle => _values.Count > 0 ? _values[^1].Style : null;
 
-    /// <summary>Takes one style's contribution out and answers with the value in force AFTER it is gone - the most
-    /// specific of the contributions still standing (the list is kept in specificity order, see AddValue).
-    /// <para>It used to answer with the entry sitting immediately BEFORE the removed one, which is the same thing only
-    /// while styles are taken off in exact reverse order of application. A theme swap does not oblige: it applies the
-    /// incoming set and then drops the outgoing one, so the entry removed is the one at the BOTTOM - and "the entry
-    /// before it" is nothing at all. That nothing was then written into the property, wiping the incoming theme's
-    /// Template and Background: the window rendered blank white.</para></summary>
+    /// <summary>Removes one style's contribution and returns the most specific remaining one, whatever the removal
+    /// order.</summary>
     public object RemoveAndGetEffectiveValue(Style style)
     {
         var entry = _values.FirstOrDefault(x => x.Style == style);

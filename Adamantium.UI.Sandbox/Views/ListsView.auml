@@ -27,12 +27,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- THE LARGE LIST. Twenty thousand rows through a CollectionView: filtered as you type, sorted, then cut into
-             pages - in that order, which is the only one that means anything. The list and the pager are bound to the
-             SAME view, so they are turning the same pages.
-             What to watch: type into the box and the count moves while you type, not when you stop; the page you are on
-             re-fills rather than going short; and with a filter that leaves less than a page, the pager falls back to
-             the last page that exists instead of showing nothing. -->
+        <!-- 20 000 rows through one CollectionView (filter, sort, page) shared by the list and the pager. -->
         <TextBlock Text="Large list — 20 000 rows, filtered live and paged" FontSize="18" Margin="0,24,0,8"/>
 
         <!-- Only the search stays out here: it belongs to the LIST. How big a page is belongs to the pager, and it now
@@ -80,12 +75,7 @@
         </StackPanel>
 
         <!-- ── A SERVER THAT HANDS OUT ONE PAGE AT A TIME ────────────────────────────────────────────────────────────
-             The other half of the contract, and the half an in-memory view can never show. Watch for four things:
-             the total is "?" until the LAST page comes back short - it is discovered, not announced;
-             a page ARRIVES, so there is a moment of loading and the buttons go quiet while it is in flight;
-             clicking through fast SUPERSEDES - the answer to a request nobody is waiting for any more is thrown away;
-             and a failure leaves the page you were on ON SCREEN. A source that emptied the list on a failure would be
-             punishing the reader for the server's mistake. -->
+             Shows an unknown total found at the last page, loading, superseded requests, and failures keeping the page. -->
         <TextBlock Text="A server that hands out one page at a time — 237 rows it will not count for you"
                    FontSize="18" Margin="0,28,0,8"/>
 

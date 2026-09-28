@@ -5,13 +5,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Text;
 
-/// <summary>
-/// The text-rendering surface of a <see cref="TextBoxBase"/> - the <c>PART_TextPresenter</c> in the control template. It
-/// is deliberately thin: measuring, rendering (text + caret + selection + placeholder) and mouse hit-testing all defer to
-/// its <see cref="Owner"/>, which owns the text/caret/selection state and the caret-following scroll offset. It clips to
-/// its bounds so long text scrolls under the border instead of spilling out, and it is NOT focusable (a click focuses the
-/// owning text box, not this internal part).
-/// </summary>
+/// <summary>The <c>PART_TextPresenter</c> of a <see cref="TextBoxBase"/>: a thin, clipped, non-focusable surface that
+/// defers measure, render and hit-testing to its <see cref="Owner"/>.</summary>
 public sealed class TextPresenter : InputUIComponent
 {
     internal TextBoxBase Owner { get; set; }

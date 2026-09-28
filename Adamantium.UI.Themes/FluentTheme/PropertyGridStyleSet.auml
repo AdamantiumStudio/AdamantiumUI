@@ -2,12 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The inspector. Two halves and a grip between them; the grip is per ROW but the width is the GRID's, so the line
-         reads as one continuous rule down the whole panel.
-
-         The row's layout is a three-column Grid whose FIRST column the control sets (PART_Layout): binding a column
-         width to an ancestor's property is not something a template can say, and one number written into every row is
-         both simpler and impossible to get out of step. -->
+    <!-- The inspector: name and value halves with a per-row grip sharing the grid's width. The control sets each row's
+         first PART_Layout column. -->
 
     <Style Selector="PropertyGrid">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
@@ -24,12 +20,8 @@
                             BorderThickness="{ResourceReference StrokeControl}"
                             ClipToBounds="True">
                         <Grid RowDefinitions="Auto,*">
-                            <!-- The search field stands OUTSIDE the viewer, so it stays put while the rows scroll
-                                 under it. Auto: off, it costs the rows nothing.
-
-                                 The cross sits ON the field rather than beside it - beside it, the field would end
-                                 short of the panel and read as two controls. Hence the field's right padding: typed
-                                 text must not run under it. -->
+                            <!-- The search field outside the viewer, so it stays put; the clear cross sits on the field,
+                                 whose right padding keeps text from running under it. -->
                             <Grid Grid.Row="0" Margin="6 6 6 4">
                                 <TextBox x:Name="PART_Search"
                                          Height="26" Padding="6 0 24 0"
@@ -137,26 +129,11 @@
                                     Foreground="{TemplateBinding Foreground}"
                                     FontSize="{TemplateBinding FontSize}"/>
 
-                            <!-- SQUARE, and the same height as every editor in the column (EditorHeight above), so a
-                                 line that offers the button is no taller than the lines around it. MinWidth/MinHeight
-                                 are zeroed on purpose: the theme's Button carries MinHeight="ControlHeight", and a
-                                 minimum beats an explicit Height - leaving it would stretch this one into a rectangle
-                                 and push the whole row past its MinHeight. Collapsed unless the definition asks. -->
+                            <!-- Square buttons at the editors' height (MinWidth/MinHeight zeroed, since a minimum beats
+                                 Height). The action "..." is collapsed unless the definition asks. -->
                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Put the default back. Only on a row holding something else - a revert arrow on an
-                                     untouched row offers to undo nothing, and a column of them would say the whole
-                                     object had been edited. Square and the editors' height, like the button beside
-                                     it. -->
-                                <!-- ALWAYS THERE, and DISABLED until there is something to put back. Collapsed, the
-                                     button's column grew the moment a value stopped being the default, the editor
-                                     beside it narrowed by that much, and everything in the editor slid - so the second
-                                     press of a stepper landed on the reset that had just appeared under the hand. A
-                                     line must not change shape because somebody typed in it.
-                                     Greyed rather than invisible: a button that is there and dim says what it would do
-                                     and why it cannot yet, where a blank gap says nothing at all. -->
-                                <!-- THE RESET IS THE LAST THING IN THE ROW, so it stands the same distance from the
-                                     edge on every line. Put first, it slid left on the few lines that also offer "..."
-                                     and the column of buttons read as ragged. -->
+                                <!-- The reset comes last so it aligns on every line; always present and disabled until
+                                     there is something to reset, so the row never changes shape. -->
                                 <Button x:Name="PART_Action"
                                         Content="..." Visibility="Collapsed"
                                         Width="24" Height="24" MinWidth="0" MinHeight="0"

@@ -3,13 +3,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>A named timber, as the numbers that actually distinguish one from another - the same arrangement the metals
-/// use, and for the same reason: oak, walnut and pine are ONE material in the engine, differing in the two colours of
-/// their growth, in how far apart the rings sit and in what they are finished with.
-///
-/// <para>What separates the species is mostly CONTRAST, not hue: pine is pale wood with almost black summer bands, while
-/// walnut is dark wood whose bands barely show. A single "wood colour" cannot say that, which is why there are two.</para>
-/// </summary>
+/// <summary>A named timber: its two growth colors (species differ mostly by their contrast), ring spacing and
+/// finish.</summary>
 public sealed class WoodPreset
 {
     private WoodPreset(string name, Color early, Color late, double ringScale, double gloss)

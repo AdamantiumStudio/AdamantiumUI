@@ -373,11 +373,8 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- SECTOR stand. A partial ellipse is not a shape of its own: the batch draws the same ellipse and intersects it
-             with a straight boundary, so everything these sliders reach is one instanced pass - a wedge, a chord, a ring
-             gauge. The two closings differ in two ways worth seeing, and the Sector switch puts them on the SAME shape: a
-             SECTOR closes through the centre and strokes both radii; EDGE-TO-EDGE closes by the chord, and stroked it is
-             an OPEN arc - two ends, nothing drawn across it. Turn Fill off to see exactly that. -->
+        <!-- SECTOR stand: a sector closes through the center and strokes both radii; edge-to-edge closes by the chord and
+             strokes an open arc (turn Fill off). -->
         <TextBlock Text="Sectors — the same ellipse cut by a straight boundary:" Margin="0,20,0,6"/>
         <StackPanel Orientation="Horizontal">
             <!-- ONE ellipse in a fixed cell, its BOX on two sliders: squash it and the cut has to follow the ellipse's own
@@ -473,11 +470,8 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- BORDER stand. A border is not a stroke: each SIDE has its own thickness and each CORNER its own radius, and
-             both now ride in the SDF instance - so every combination these eight sliders reach is drawn by the same
-             instanced pass that draws a plain fill, with no tessellated ring and no seam where the fill meets it.
-             The middle keeps the fill's colour, the ring the border's, which is what makes a wrong side or a swapped
-             corner visible at a glance. -->
+        <!-- BORDER stand: per-side thickness and per-corner radius, all drawn by the SDF fill pass; contrasting colors
+             expose a wrong side or corner. -->
         <TextBlock Text="Border — a thickness per side, a radius per corner, all drawn by one SDF instance:" Margin="0,20,0,6"/>
         <StackPanel Orientation="Horizontal">
             <!-- The border sits over a two-tone backdrop so a TRANSLUCENT ring shows what is behind the element - which is

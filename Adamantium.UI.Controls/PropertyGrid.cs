@@ -31,11 +31,8 @@ public class PropertyValuesChangedEventArgs : EventArgs
     public IReadOnlyList<object> Targets { get; }
 }
 
-/// <summary>An inspector: names on the left, values on the right, one draggable grip between them, rows grouped into
-/// folding sections. The TYPE belongs to the PROPERTY, not to a column, which is what makes this a different control
-/// from <see cref="TreeDataGrid"/> rather than a mode of it.
-/// <para>What is declared are <see cref="PropertyDefinition"/>s; the rows drawn from them are
-/// <see cref="PropertyRow"/>s, made and remade by the grid. One definition serves every selected object at once.</para></summary>
+/// <summary>An inspector: names and values split by a draggable grip, in folding sections. Declared as
+/// <see cref="PropertyDefinition"/>s, drawn as <see cref="PropertyRow"/>s; one definition serves every selected object.</summary>
 public class PropertyGrid : Control
 {
     public static readonly AdamantiumProperty SelectedObjectProperty = AdamantiumProperty.Register(
@@ -77,20 +74,14 @@ public class PropertyGrid : Control
     public static readonly AdamantiumProperty MixedTextProperty = AdamantiumProperty.Register(nameof(MixedText),
         typeof(String), typeof(PropertyGrid), new PropertyMetadata("multiple values"));
 
-    /// <summary>When the lines offer their reset button. ALWAYS by default, dim until there is something to put back:
-    /// a button that comes and goes takes its room with it, and a line that changes shape the moment a value stops
-    /// being the default moves out from under the hand using it.
-    /// <para>On the GRID and not on each line: it is one panel's manner, and a panel where some lines keep the room
-    /// and others do not is the ragged column this exists to prevent.</para></summary>
+    /// <summary>When lines show their reset button; Always by default (dimmed when nothing to reset), so lines do not
+    /// change shape.</summary>
     public static readonly AdamantiumProperty ResetButtonProperty = AdamantiumProperty.Register(nameof(ResetButton),
         typeof(ResetButtonState), typeof(PropertyGrid),
         new PropertyMetadata(ResetButtonState.Always, OnResetButtonChanged));
 
-    /// <summary>Sections from somewhere ELSE - what <see cref="PropertyDefinitionBuilder"/> made from a type, what an
-    /// editor assembled per component. Set, it replaces <see cref="Sections"/> entirely: an inspector is either written
-    /// out or generated, and mixing the two silently would be a puzzle for whoever reads the markup.
-    /// <para>Any other item is an object to inspect: the grid builds its own section for it, so a view-model hands over
-    /// data and two grids never share a section.</para></summary>
+    /// <summary>Generated sections; when set, replaces <see cref="Sections"/>. An item that is not a section is an object
+    /// to inspect, and the grid builds its own section for it.</summary>
     public static readonly AdamantiumProperty SectionsSourceProperty = AdamantiumProperty.Register(
         nameof(SectionsSource), typeof(IEnumerable), typeof(PropertyGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSectionsSourceChanged));
@@ -101,11 +92,8 @@ public class PropertyGrid : Control
         nameof(AutoGenerateSections), typeof(Boolean), typeof(PropertyGrid),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
 
-    /// <summary>Narrows the inspector to the properties whose name carries this, ignoring case. A section whose own
-    /// name carries it keeps all of its properties - asking for "Transform" means the whole of it.
-    /// <para>While it is set, a composite opens whether or not it was folded and so does a section holding a match:
-    /// a search that hides its own results behind something folded is worse than no search. Both go back to how the
-    /// user left them once it is cleared.</para></summary>
+    /// <summary>Shows only properties whose name contains this, ignoring case; a matching section keeps all its lines.
+    /// Folded parts holding matches open while searching.</summary>
     public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
         typeof(String), typeof(PropertyGrid), new PropertyMetadata(null, OnSearchTextChanged));
 
@@ -290,13 +278,8 @@ public class PropertyGrid : Control
     {
         Rebuilds++;
 
-        // ONE pass at a time. A rebuild clears the host and fills it again, and a definition that changes its mind while
-        // that is happening - an IsVisible binding settling, say - asks for another one from inside this one: the inner
-        // pass then fills the host completely and the outer pass, still holding its place in the loop, adds the rest of
-        // the sections A SECOND TIME. A panel with the same child twice makes the paint order's "next sibling" chain
-        // point at itself, and the record thread walks that chain forever - an application frozen solid with nothing in
-        // the stack to blame it on. Asked again from inside, this runs the pass again AFTER, which is what the caller
-        // actually wanted.
+        // One pass at a time: a nested rebuild would add sections twice, and a duplicate child loops the paint order.
+        // A request from inside reruns afterwards.
         if (_rebuilding)
         {
             _rebuildAgain = true;
@@ -345,17 +328,8 @@ public class PropertyGrid : Control
             // the whole of it, not the one row that happens to repeat the word.
             var whole = searching && Carries(section.Header as String, wanted);
 
-            // THE SAME PANEL AND THE SAME ROWS as last time, wherever the shape has not changed.
-            //
-            // This used to build a panel and a row per line on every pass, and a pass happens whenever the selection
-            // changes - so ONE CLICK made about two hundred and fifty controls and built two hundred and thirty
-            // templates, and everything that follows from that: a property write per part of each, and thousands of
-            // layout invalidations behind them. That is what a click that felt slow was made of, measured rather than
-            // guessed at.
-            //
-            // A row is a shape, not a value: the same line pointed at a different object is the same row re-aimed, and
-            // Attach already knows the difference - same definition and same targets is a re-read, anything else a
-            // rebind. Left in place it also keeps its template, which is the expensive half.
+            // Reuse the panel and rows where the shape is unchanged; a row is re-aimed at new targets and keeps its
+            // template, the expensive part.
             var rows = section.Content as StackPanel;
             if (rows == null)
             {
@@ -391,13 +365,8 @@ public class PropertyGrid : Control
             }
         }
 
-        // ...AND NOW ASK EVERY LINE'S OWN BINDINGS AGAIN, with the sections finally standing in the tree.
-        //
-        // A definition can be written anywhere - in a control's template, or in a resource an application hands in -
-        // and the ones from a resource are built long before they are anywhere near the panel that will show them. An
-        // {Ancestor} on such a line has nothing to resolve against at that moment and would keep the nothing. The rows
-        // are built BEFORE their section is put on screen (the panel is filled and then added), so this cannot be done
-        // as each row is made: it has to be here, once, when the whole pass has landed.
+        // Refresh every line's bindings now that the sections are in the tree: definitions from resources could not
+        // resolve {Ancestor} earlier.
         foreach (var row in _rows)
         {
             if (row.Definition is { } line && BindingEngine.HasBindings(line)) BindingEngine.RefreshBindings(line);
@@ -658,12 +627,8 @@ public class PropertyGrid : Control
         grid.Rebuild();
     }
 
-    /// <summary>The sections this is actually showing - what was written into <see cref="Sections"/>, or what
-    /// <see cref="SectionsSource"/> hands over when an inspector is assembled rather than written out.
-    /// <para>ONE question with one answer, for anything outside that needs to know what the panel holds. Asking
-    /// <see cref="Sections"/> gets the written ones and nothing else, which is an empty list for every generated
-    /// inspector - and an empty list reads as "the panel has nothing in it" rather than "you asked the wrong
-    /// half".</para></summary>
+    /// <summary>The sections actually shown: <see cref="Sections"/>, or those from <see cref="SectionsSource"/> when
+    /// set.</summary>
     public IEnumerable<PropertySection> Displayed => DisplayedSections();
 
     private IEnumerable<PropertySection> DisplayedSections()

@@ -12,11 +12,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Headless reproduction of the Sandbox Layout-tab freeze: dragging the size slider shrinks the tiles, so a virtualizing
-// WrapPanel realizes MORE tiles per frame and re-measures the whole visible grid. Driven through the REAL layout path
-// (LayoutManager via WindowExtension.UpdateTree, i.e. MeasureDirty measures the invalidated panel directly) so it matches
-// the app, not a top-down Measure the validity gates would short-circuit. Guards on measure/arrange counts (deterministic)
-// and prints wall-time for reference, so the layout optimisation can be iterated + regression-guarded without the GPU.
+// Virtualizing tile-grid layout cost, driven through the real layout manager (UpdateTree); asserts measure/arrange
+// counts and prints wall time for reference.
 [TestFixture]
 public class LayoutPerfTests
 {
@@ -151,21 +148,13 @@ public class LayoutPerfTests
         for (var i = 0; i < 5; i++) { ScrollStep(root, ic, panel, y += ViewportH); Settle(root, ic); }
     }
 
-    // The mature-virtualizer contract, asserted on CONTINUOUS scroll (one row per step, NO settle between steps - the app
-    // scrolls continuously, which is exactly what my earlier Settle()-per-step bench masked). A correct recycling ring:
-    //  - realized container count is CONSTANT (a fixed ring, not a growing/oscillating window);
-    //  - ZERO structural marks per scroll step (containers are rebound in place - no attach/detach, no Visibility toggle);
-    //  - measure calls per step are O(one row), not O(whole window) (rebind is data-only; stable tiles don't re-measure).
-    // This test is expected to FAIL on the pre-fix code (it oscillates + churns) - it defines "correct" so drift can't hide.
+    // Recycling ring under continuous scroll: a constant realized count, no structural marks per step, and O(one row)
+    // measures per step.
     [Test]
     public void Scroll_RecyclingRingInvariants()
     {
-        // This is about the RING (does a scroll step reuse containers in place?), not about the per-frame bind budget. With
-        // the real time budget in play a loaded machine can spend its 6 ms mid-window and DEFER the rest of the slots - the
-        // ring then reads short by exactly the deferred slots, and the test fails on how busy the box was rather than on
-        // anything the panel did wrong. Bind the whole window every pass so what is asserted below is the ring itself; the
-        // budget's own slicing behaviour is covered by VirtualizingWrapPanel_HugeWindow_RealizesInCappedSlices...
-        // "No budget" is spelled 0 now (ScrollBindBudget / FillBindBudget on the panel), not double.MaxValue on a static.
+        // No bind budget, so a busy machine cannot defer slots; budget slicing is covered by
+        // VirtualizingWrapPanel_HugeWindow_RealizesInCappedSlices.
         RunRecyclingRingInvariants(noBindBudget: true);
     }
 
@@ -178,12 +167,8 @@ public class LayoutPerfTests
             panel.FillBindBudget = 0;
         }
         Settle(root, ic);
-        // Warm up with FRACTIONAL (sub-cell) scroll steps: real inertia scrolls by fractional pixels, so the offset sits
-        // mid-cell where floor(top)/ceil(bottom) diverge - the exact condition my earlier whole-cell (y+=24) steps land ON
-        // the boundary and hid. A mid-cell offset also reveals one more PARTIAL row than a whole-cell one, so the working
-        // set legitimately expands ONCE, with the attach marks that go with it, before it reaches its steady size. The
-        // contract below is about the STEADY state, so warm up until the ring stops growing rather than for a fixed number
-        // of steps (a fixed count locked the baseline mid-expansion and then flagged the expansion itself as a violation).
+        // Fractional steps, and warm up until the ring stops growing: a mid-cell offset reveals one more partial row, so
+        // the working set legitimately expands once before it settles.
         double y = 500;
         var stable = 0;
         var previous = -1;
@@ -223,20 +208,8 @@ public class LayoutPerfTests
         Assert.That(failures, Is.Empty, "recycling-ring invariants violated:\n" + string.Join("\n", failures.Take(8)));
     }
 
-    // The transform-only-scroll invariant: a tile that KEEPS its index across a scroll step must NOT re-run ArrangeCore.
-    // With the offset baked into each slot (slot = line*cell - offset) every realized tile got a new rect every step ->
-    // ArrangeCore recursed into every ContentPresenter (the freeze). With the offset applied as a single translation of the
-    // panel (tiles at ABSOLUTE slots), a staying tile's rect is constant -> Arrange short-circuits, and only the rebound
-    // row runs ArrangeCore. Steady-state ArrangeCore work is O(one row), NOT O(whole window). Asserted via TotalArrangeCores
-    // (real ArrangeCore runs, not short-circuited calls).
-    /// <summary>The invariant a steady scroll must keep: a container that stays on screen is REBOUND in place, never
-    /// hidden and fetched again. Breaking it is invisible and expensive - `ParkContainer` collapses the container AND
-    /// walks its whole subtree deactivating bindings, so a churning scroll pays that per tile per frame while looking
-    /// exactly like a working one (the regression that already happened once, in ee90ab3).
-    ///
-    /// Asserted on `ParkCalls` because that is where the cost actually is, and with NO bind budget: a budget legitimately
-    /// leaves the window under-filled and refilling, which parks and unparks by design. The invariant is about the STEADY
-    /// state, so the setup has to reach one - hence the warm-up that runs until the realized count stops moving.</summary>
+    // A steady scroll rebinds on-screen containers in place and never parks them (ParkCalls); no bind budget, so the
+    // window stays full.
     [Test]
     public void Scroll_SteadyState_DoesNotChurnVisibility()
     {
@@ -287,6 +260,8 @@ public class LayoutPerfTests
             "steady scroll churned visibility:\n" + string.Join("\n", failures.Take(8)));
     }
 
+    // Tiles keeping their index across a scroll step do not re-run ArrangeCore: the panel translates as a whole, so only
+    // the rebound row arranges (TotalArrangeCores).
     [Test]
     public void Scroll_StableTilesDoNotReArrange()
     {

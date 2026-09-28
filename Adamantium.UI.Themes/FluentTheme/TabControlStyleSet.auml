@@ -95,11 +95,8 @@
         </Setter>
     </Style>
 
-    <!-- The overflow flyout's list: a ScrollViewer capped by MaxHeight that scrolls the CONTENT, so the list virtualizes -
-         it may hold every tab of a browser-sized session, and realizing them all would cost exactly what the strip already
-         costs at startup. The scroll stays pixel-smooth either way (the panel lays its rows out at absolute slots and the
-         presenter translates it). The bar is HIDDEN, not disabled - it overlays the rows' close button, and the wheel is
-         how this list is scrolled anyway. Applied BY CLASS so this template lives ONCE for every placement's overflow list. -->
+    <!-- The overflow flyout's list, shared by every placement: content-scrolled under MaxHeight so it virtualizes; the bar
+         is hidden since it would cover the close buttons. -->
     <Style Selector="ListBox.TabOverflowList">
         <Setter Property="Template">
             <Setter.Value>
@@ -155,20 +152,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
                     <Grid RowDefinitions="Auto,*">
-                        <!-- Strip row: the scroller (headers overflow + wheel-pan) in the * column, a ▾ overflow button in an
-                             Auto column beside it - so the button RESERVES space (the last tab ends before it, never hidden
-                             behind it). Its visibility is set POST-layout (TabControl.OnLayoutSettled), not mid-arrange, so the
-                             * / Auto reflow actually re-runs - a mid-pass visibility flip loses its invalidation and the button
-                             then sat off-screen until a resize. Shown only when the strip overflows + ShowTabOverflowMenu;
-                             toggles PART_TabOverflowPopup - a ListBox of every tab; picking a row selects it + scrolls it in. -->
-                        <!-- TWO lists, not one strip kept in sorted order: pinned tabs above, the ones that come and go
-                             below. The pinned row is OUTSIDE the scroller on purpose - that is what makes a pinned tab
-                             impossible to scroll out of sight - and it WRAPS, so many pinned tabs cost further lines
-                             instead of squeezing the rest. Both are TabItemsControl, which asks the strip itself for
-                             containers, so a data item still becomes a real TabItem.
-                             The overflow button sits in the BOTTOM row's column, not beside both rows: it belongs to the
-                             scrolling strip, and spanning the pinned row made it a tall bar next to tabs it has nothing
-                             to do with. PinnedTabsPlacement=SameRow moves the pinned list down beside the others. -->
+                        <!-- Pinned tabs wrap in a row outside the scroller; the rest scroll below with the overflow button
+                             in its own Auto column (shown after layout by TabControl.OnLayoutSettled). -->
+                        <!-- PinnedTabsPlacement=SameRow moves the pinned list beside the others. -->
                         <Grid x:Name="StripRow" Grid.Row="0" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
                                 <!-- The pinned row carries a bar of its own. Only ever ONE of the two is visible - the one
                                      in the row holding the selected tab - so on screen it reads as a single indicator

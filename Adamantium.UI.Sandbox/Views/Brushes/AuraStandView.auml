@@ -1,11 +1,8 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- Navigated into the brushes tab's region under the key "Aura"; the DataContext is the tab's own view-model.
-         Not a fill at all: the soft band around a shape. Two properties rather than one with the offset zeroed - a
-         shadow has a DIRECTION and an aura does not. Both are the shape's own signed distance read further out, so they
-         batch with everything else: no offscreen target, no blur pass.
-         This stand keeps its OWN figure and box: the subject is the band and the room left for it, not the fill. -->
+    <!-- The "Aura" stand in the brushes region: aura and shadow bands, drawn from the shape's own distance field and
+         batched. Keeps its own figure and box. -->
     <StackPanel Orientation="Vertical">
         <TextBlock Text="Aura / Shadow — live (the band is drawn OUTSIDE the element; the margin is yours to leave)" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" MarginBottom="20">

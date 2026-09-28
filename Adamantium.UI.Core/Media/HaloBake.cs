@@ -3,18 +3,11 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>
-/// Turns an element's <see cref="Aura"/> and <see cref="Shadow"/> into the bands the renderer draws. THE one place the
-/// two public vocabularies meet the single internal one.
-/// <para>Deliberately a LIST, though today it never holds more than two: what the renderer draws is "N bands", not "an
-/// aura and a shadow". That is what leaves room for an elevation preset - one number expanding into the several bands a
-/// real penumbra needs - without the public API ever growing a list for authors to hand-tune.</para>
-/// </summary>
+/// <summary>Turns an element's <see cref="Aura"/> and <see cref="Shadow"/> into the list of bands the renderer
+/// draws.</summary>
 public static class HaloBake
 {
-    /// <summary>The LIVING aura for one element, or null. Separate from the plain bands because a living band is drawn
-    /// by its own pass: a still glow must not pay for noise it does not use, and on this driver a heavier shader is a
-    /// risk worth not taking where it buys nothing.</summary>
+    /// <summary>The living aura for one element, or null; drawn by its own pass so still glows skip the noise.</summary>
     public static LivingBand? Living(Aura aura, PackPalette packPalette)
     {
         if (aura is not { IsLiving: true }) return null;
@@ -49,13 +42,8 @@ public static class HaloBake
     /// among them - see <see cref="Living"/>.</summary>
     public static HaloBand[] From(Aura aura, Shadow shadow)
     {
-        // A switched-off band is baked TRANSPARENT rather than dropped, so the record it owns survives being switched
-        // off and back on. Dropping it made IsEnabled a change in how many records the element holds - which a patch
-        // cannot make - so a glow coming on cost a walk of the scene, or, on an element that wore no other band, was
-        // silently never drawn. See HaloBand.IsEmpty for the rule and its cost.
-        //
-        // A LIVING aura is the exception and is still dropped here: it is drawn by its own pass (see Living), so a still
-        // record for it would be a second drawing of the same glow.
+        // A disabled band is baked transparent, not dropped, so toggling keeps the record count (see HaloBand.IsEmpty).
+        // A living aura has its own pass and is dropped here.
         if (aura is { IsLiving: true }) aura = null;
         if (aura == null && shadow == null) return null;
 

@@ -11,11 +11,8 @@ using Adamantium.UI.Rendering.RenderUnits;
 
 namespace Adamantium.UI.Rendering.Retained;
 
-/// <summary>An immutable snapshot of an arbitrary geometry's tessellated mesh, taken on the record/update thread so the
-/// instanced-fill applier bakes/uploads WITHOUT reading the live <see cref="Mesh"/> (which a later re-tessellation
-/// overwrites in place). Built-in shape units already snapshot their mesh into the render component's vertices; this is
-/// the equivalent freeze for the instanced Path/Polygon path (docs/RENDER_THREAD_PLAN.md). The per-key content
-/// fingerprint (<see cref="Key"/>) is computed here, so identical shapes still merge into one instanced draw.</summary>
+// An immutable mesh snapshot taken on the record thread, so the instanced fill never reads the live Mesh; also computes
+// the content fingerprint Key, so identical shapes merge.
 internal sealed class FrozenMesh
 {
     public UIVertex[] Vertices { get; }

@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The pager, at this theme's density: a 24-pixel line rather than a 32-pixel one, and the gaps between its parts
-         cut to match. An editor puts a pager under a results pane, where every row it costs is a row of results it
-         takes away - so the difference from the other two themes is spacing, not shape.
-
-         The arrows are plain Buttons, not RepeatButtons. Auto-repeat looks right - hold one and walk the pages - but a
-         page turn re-fills the list under the pointer, and repeating at the button's rate is a flicker rather than a
-         walk. One click, one page; anything further off is typed into the box.
-
-         "LAST" IS BOUND TO CanGoForward LIKE THE OTHERS: over a source with an unknown total the control refuses the
-         jump anyway, so the button is live and does nothing until a short page reveals the end - which is also why the
-         text beside it says "of ?" rather than "of 0". -->
+    <!-- The pager at this theme's density (a 24 px line). Arrows are plain Buttons, one page per click. "Last" binds to
+         CanGoForward; with an unknown total it waits for the end ("of ?"). -->
 
     <Style Selector="DataPager">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -95,12 +86,8 @@
                                 </Button>
                             </StackPanel>
 
-                            <!-- How big a page is, and which one you are on: statements about the whole collection
-                                 rather than steps through it, so they sit apart from the buttons.
-                                 Both FIELDS state their width as Width AND MinWidth. Each arrives carrying
-                                 ControlMinWidth - a floor meant for a field standing alone in a form - and a floor
-                                 beats a width, so stating only the width leaves the field at its 96 and shoulders the
-                                 buttons out of the line. -->
+                            <!-- Page size and current page, apart from the buttons. Fields set Width and MinWidth, since
+                                 the theme's ControlMinWidth floor beats a Width. -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" MarginLeft="12"
                                         VerticalAlignment="Center">
                                 <StackPanel x:Name="PageSizeGroup" Orientation="Horizontal" MarginRight="12"

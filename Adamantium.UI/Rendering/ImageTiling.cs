@@ -5,16 +5,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>Turns a <see cref="TileBrush"/>'s four mechanisms into what the textured passes draw with. They compose in
-/// one fixed order and each is meaningless alone, which is why this is one function rather than four:
-/// <list type="number">
-/// <item>VIEWBOX picks the part of the source a tile shows.</item>
-/// <item>VIEWPORT places one tile in the shape, and so states its size.</item>
-/// <item>STRETCH + alignment fit that content inside its tile.</item>
-/// <item>TILEMODE decides whether the tile repeats, mirrored or not.</item>
-/// </list>
-/// Pure arithmetic, kept apart from the collector so it can be tested without a device - the same reason
-/// <see cref="NineSlice"/> is.</summary>
+// Composes a TileBrush's Viewbox, Viewport, Stretch/alignment and TileMode, in that order, into the textured passes'
+// parameters. Pure arithmetic, testable without a device.
 internal static class ImageTiling
 {
     private static readonly Vector4F WholeTile = new(0, 0, 1, 1);
@@ -93,13 +85,8 @@ internal static class ImageTiling
 
     private static readonly Vector4F NoRotation = new(1, 0, 0, 1);
 
-    // The whole turn, resolved to ONE 2x2 the shader multiplies a fragment by. Three things are folded in here rather
-    // than in the pixel shader, which this driver's compiler is measurably sensitive to the size of:
-    //   * the INVERSE (a fragment is mapped back into the grid), which for a rotation is the transpose;
-    //   * the shape's ASPECT - turning normalised coordinates of a non-square shape shears it, so the matrix is
-    //     conjugated by the size;
-    //   * the CENTRE, which becomes a shift of the grid's origin: turning about c and then scaling by the grid is the
-    //     same as turning about zero and starting the grid somewhere else.
+    // The rotation as one 2x2 for the shader: inverted (transposed), conjugated by the shape's aspect, and with the
+    // center folded into the grid origin.
     private static Vector4F Rotation(TileBrush brush, Rect bounds, Rect viewport, ref Vector4F tile)
     {
         var radians = brush.RotationAngle * Math.PI / 180.0;

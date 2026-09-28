@@ -2,20 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Docking, macOS. Style matching is by EXACT type, so a derived control inherits nothing by default - which is why
-         each of these says BasedOn explicitly rather than quietly relying on its base. A pane group IS a tab control and
-         a pane IS a tab item, so they take this theme's segmented tab look whole; the splitter needs its own, because a
-         Thumb has no look at all, and a control with no template renders nothing and cannot be hit.
-
-         WHAT MOVES FROM FLUENT: a tool panel's caption. Fluent fills it with the ACCENT, which is a Windows convention -
-         the accent there says "this is the active thing". On a Mac the accent belongs to a selection or a control that
-         is on, never to chrome: a panel header is part of the window's surface and is quiet. So the header takes the
-         window colour with a hairline under it, and its two buttons become the small discs this theme uses everywhere
-         else for chrome.
-
-         The accent does keep ONE job here, and it is not decoration: the border of the group being worked in. With every
-         panel bordered alike, nothing on screen says where the next keystroke or newly opened pane will go. That is the
-         focus telling you where it is - a colour change, not a heavier frame. -->
+    <!-- Docking, macOS: pane groups and panes are BasedOn the tab look; the splitter gets its own template. Panel
+         captions take the window color, and the accent marks only the active group's border. -->
 
     <!-- A floating panel's window looks like any other window. Stated explicitly because matching is by EXACT type:
          without this line a DockingWindow gets no template at all. -->
@@ -188,11 +176,8 @@
                             </Grid>
                         </TabStripScroller>
 
-                        <!-- The FLYOUT of a revealed panel. Only the panel's BODY travels here - its tabs stay on the
-                             edge, because that is what a revealed panel is: a strip you are glancing behind. A popup, so
-                             it draws OVER the neighbours instead of pushing them aside. Placed against the GROUP, not
-                             the tab strip inside it: the strip sits at whatever inset the chrome gives it, and a flyout
-                             lined up with the strip carried that inset along. -->
+                        <!-- A revealed panel's body in a popup over the neighbors, placed against the group, not the
+                             inset tab strip; its tabs stay on the edge. -->
                         <Popup x:Name="PART_RevealFlyout" Grid.Row="2" Grid.Column="1"
                                 PlacementTarget="{Binding ElementName=Chrome}"
                                 Placement="Top" KeepOpen="False">
@@ -276,12 +261,8 @@
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
-                        <!-- REVEALED: in the tree this panel is still just its strip - the same as put away - and its
-                             body is shown in the flyout OVER the neighbours. Emptying the docked presenter is not
-                             cosmetic: one piece of content belongs to one tree, and a presenter goes on holding its
-                             child even when the body around it is hidden, so the flyout would be handed an element
-                             that already has a parent. IsOpen is driven by the control, not from here: a trigger has to
-                             be UNDONE to close the popup, and undoing it left the property Unset. -->
+                        <!-- Revealed: the docked presenter is emptied so the content can move to the flyout; the control
+                             drives IsOpen, since undoing a trigger would leave it Unset. -->
                         <PropertyTrigger Property="State" Value="Revealed">
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
@@ -319,11 +300,8 @@
                             <Setter TargetName="FlyoutRoot" Property="Height" Value="{TemplateBinding RevealExtent}"/>
                             <Setter TargetName="FlyoutRoot" Property="Width" Value="{TemplateBinding RevealLength}"/>
                         </PropertyTrigger>
-                        <!-- Only a PUT-AWAY strip is a row of buttons rather than a strip you rearrange in: there is no
-                             panel open here to rearrange. A REVEALED panel IS open - its body is showing in the flyout -
-                             so its tabs reorder and tear off like any other. Keyed on Collapsed rather than on IsFolded,
-                             which covers both states and so switched dragging off for a panel that was open in front of
-                             the user. -->
+                        <!-- Only a collapsed strip disables tab dragging; a revealed panel is open and rearranges normally
+                             (hence Collapsed, not IsFolded). -->
                         <PropertyTrigger Property="State" Value="Collapsed">
                             <Setter Property="AllowTabDrag" Value="false"/>
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>

@@ -9,18 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A button per tool of an <see cref="InfiniteCanvas"/>, built from the canvas's own
-/// <see cref="InfiniteCanvas.Tools"/>: the picture, the name and the key all come off the tool, and the button that is
-/// marked is the one holding <see cref="InfiniteCanvas.Tool"/>.
-/// <para>Built here rather than written out in markup, and that is the whole saving. Every fact a button needs is a
-/// fact about the TOOL, so a hand-written row of buttons is a second copy of the tool list that has to be kept in step
-/// by hand - which is how adding one tool turned into six edits, five of them about showing it.</para>
-/// <para>An application that wants something else puts its own content in the pane: this is what a rail does when
-/// nobody says otherwise, not the only thing a rail may be.</para></summary>
-/// <para>A WRAPPING panel and not a stack: how many tools there are is the application's business, and a rail taller
-/// than the viewport is one whose last tools cannot be reached. Too many for one column become a second, which is what
-/// the hand-written panel did by splitting the buttons into rows - except that this one does it at whatever size the
-/// canvas happens to be.</para>
+/// <summary>A wrapping rail with a button per tool, built from <see cref="InfiniteCanvas.Tools"/>, marking
+/// <see cref="InfiniteCanvas.Tool"/>; an application can put its own content in the pane instead.</summary>
 public class CanvasToolRail : WrapPanel, ICanvasPart
 {
     private readonly List<ToggleButton> _buttons = new();

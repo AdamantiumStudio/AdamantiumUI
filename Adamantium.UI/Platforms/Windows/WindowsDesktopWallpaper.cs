@@ -7,15 +7,7 @@ using Adamantium.Win32.Shell;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-/// <summary>Windows' answer to <see cref="DesktopWallpaper"/>, through the shell's wallpaper service.
-///
-/// <para>Per monitor, because that service is: the picture, its layout and the screen rectangle all come back keyed by
-/// a monitor id, so the question "what is behind THIS window" is answered by finding the monitor whose rectangle holds
-/// the point and asking about that one.</para>
-///
-/// <para>The COM object is created once and kept. It is cheap to hold, and re-creating it per query would put a COM
-/// activation on a path a material may take whenever the wallpaper changes.</para>
-/// </summary>
+// DesktopWallpaper via the shell's per-monitor wallpaper service; the COM object is created once and kept.
 internal sealed class WindowsDesktopWallpaper : IDesktopWallpaperPlatform
 {
     private IDesktopWallpaper _shell;

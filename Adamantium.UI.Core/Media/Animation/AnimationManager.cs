@@ -88,36 +88,23 @@ public static class AnimationManager
             // cleared, and - being gone from Active - nothing would clear it again (a stuck offset). O(1) via the set
             // mirror: this ran on EVERY animation of every frame, so a linear scan made the tick quadratic.
             if (!ActiveSet.Contains(animation)) continue;
-            // A property animation re-renders every tick. Its property write usually marks precisely on its own
-            // (AffectsRender -> MarkGeometry on that one component; a Transform's inner value self-marks the Transform
-            // path; a layout-affecting property re-arranges and the moved components' Bounds setters mark). The heartbeat
-            // keeps ONE safety net - the animation's TARGET re-renders this tick - but marks it PER COMPONENT (geometry),
-            // NOT the global Transform flag: the global flag disabled every O(dirty) partial render path (in-place replay
-            // + spliced patch) for the whole duration of ANY animation, so e.g. an auto-hide scrollbar's fade-out
-            // full-walked + re-baked a 60k-unit scene every frame (~25 FPS for seconds). A DelegateTicker (scroll
-            // inertia, the diagnostics overlay) has no target and dirties the scene only through its effects.
+            // Safety net: mark the animation's target per component, never a global flag, which would disable partial
+            // renders. Delegate tickers have no target.
             if (animation.DirtyTarget is { } dirtyTarget) RenderDirty.MarkGeometry(dirtyTarget);
             if (animation.Advance(deltaSeconds))
                 Remove(animation);
         }
     }
 
-    // An element OUTSIDE the live tree does not animate: there is nothing on screen to move, so every tick would be work
-    // spent on nobody - and it would mark a scene the element is not in. It is out either because it is PARKED
-    // (x:KeepAlive, which exists to keep it quiet) or because it has not gone up yet - a view still being built, possibly
-    // on another thread, where touching the heartbeat lists would race the thread that ticks them. Both are one question,
-    // and the ELEMENT answers it: no ambient flag to set and to remember.
+    // Elements outside the live tree (parked, or still being built, maybe off-thread) do not animate.
     private static bool CanAnimate(AdamantiumComponent target)
         => target is not IUIComponent visual || (visual.IsAttachedToVisualTree && !visual.IsParked);
 
     // A target that is not a visual (a Transform, a gradient stop) has no attachment of its own, so it can only be judged
     // by the element that owns it - see DeferIfOutOfTree.
 
-    // What was asked for while the target was out of the tree. WAITING, not dropped: the enter action of a trigger runs
-    // ONCE, as the condition becomes true - a spinner inside a view built off the loop thread starts there and nowhere
-    // else, and Resume only re-runs what a DETACH suspended, which never happened to a view that was never attached. So
-    // the request is kept and made when the element goes up. Weak keys: a build the user walked away from is collected
-    // with everything it asked for.
+    // Starts requested while out of the tree, run when the element goes up (a trigger's enter action fires only once);
+    // weak keys.
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AdamantiumComponent, List<Action>> Deferred = new();
 
     private static void Defer(AdamantiumComponent target, Action start)
@@ -126,14 +113,8 @@ public static class AnimationManager
         lock (pending) pending.Add(start);
     }
 
-    /// <summary>Is this out of the live tree - parked, or still being materialized off the loop thread? Then
-    /// <paramref name="start"/> is KEPT and made when it goes up, and the caller must do nothing now. This is what a
-    /// trigger's enter action asks, so the claim it makes and the phase it reads happen on the thread that owns them and
-    /// in the order it wrote them.
-    /// <para><paramref name="wakeOn"/> is WHO the request waits on, and it is not always the target: what a loader
-    /// animates is a Transform, a gradient stop, a brush - things that never enter the visual tree and are therefore
-    /// never told that they have. The element that OWNS them is; waiting on the target instead means waiting for an
-    /// event that cannot happen, which is a spinner that never spins.</para></summary>
+    /// <summary>If the target is out of the live tree, keeps <paramref name="start"/> until <paramref name="wakeOn"/> (the
+    /// owning element, for non-visual targets) goes up, and returns true.</summary>
     public static bool DeferIfOutOfTree(AdamantiumComponent target, AdamantiumComponent wakeOn, Action start)
     {
         if (target == null) return false;
@@ -247,14 +228,8 @@ public static class AnimationManager
     }
 
     // --- Shared-target ownership -------------------------------------------------------------------------------------
-    // An animation TARGET can be shared by many trigger hosts: the loading-skeleton pulse runs on ONE theme brush
-    // ({ResourceReference SkeletonPulseFill}) that EVERY loading list animates, so a naive Stop from the first list to
-    // finish would freeze the pulse of the others still loading. RunAnimationAction retains its host on the target and
-    // StopAnimationAction releases it; the target's animations are cancelled only when the LAST host lets go. The holder
-    // is the trigger's HOST (not the action, which is shared by every host of one style) and the set makes a repeated
-    // Retain by the same host idempotent - a theme is free to re-Run on a target it already animates (the auto-hide
-    // scrollbar re-Runs a fade-out from its ExitActions) without inflating a count. A single-host target - the norm -
-    // goes {host} -> {} -> cancel, exactly as before.
+    // A target (a shared theme brush) may be animated by many trigger hosts; it stops only when the last host releases it.
+    // Retain is idempotent per host.
     private static readonly Dictionary<AdamantiumComponent, HashSet<object>> Holders = new();
 
     // TEMP (leak hunt): a strong map keyed by component - and, because a size that never moves says nothing about what

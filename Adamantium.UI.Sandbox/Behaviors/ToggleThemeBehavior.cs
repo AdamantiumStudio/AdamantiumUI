@@ -5,17 +5,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>
-/// View-layer behavior: on click, toggles the application's appearance between light and dark. Kept out of the
-/// view-model (this is app-level UI, wired declaratively in markup):
-/// <code>&lt;Button&gt;&lt;Button.Behaviors&gt;&lt;local:ToggleThemeBehavior/&gt;&lt;/Button.Behaviors&gt;&lt;/Button&gt;</code>
-/// </summary>
-/// <remarks>
-/// It switches a VARIANT, not a theme, and that is the whole point: light and dark are two variants of one Fluent
-/// theme, so the styles and templates on either side of this click are the same objects. Nothing is re-templated,
-/// nothing is re-styled, and no element is written to - what changes is the colour inside about a hundred brushes the
-/// elements are already holding. As two separate themes the same click rebuilt every template in the application.
-/// </remarks>
+/// <summary>On click, switches the theme variant between light and dark, recoloring palette brushes without
+/// restyling.</summary>
 public class ToggleThemeBehavior : Behavior<Button>
 {
     private Button _button;

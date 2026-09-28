@@ -70,29 +70,11 @@ public class ThemeResourceExpression : BindingExpressionBase
     private void OnTargetUnloaded(object sender, RoutedEventArgs e) => CloseConnection();
 
     // ---- Routing ---------------------------------------------------------------------------------------------------
-    // ONE subscription per theme, and each consumer woken only for the property it actually reads.
-    //
-    // Every consumer used to sit on the theme's PropertyChanged itself and decide inside the handler whether the change
-    // was its own. Since an accent edit assigns half a dozen theme properties, five of every six wake-ups did nothing at
-    // all - and there is a consumer for every {ThemeResource} in every LIVE view, parked tabs included. Measured while
-    // dragging the picker: 308 453 handler calls in one second, of which 61 723 applied, with the window frozen for
-    // 0.6-0.8 s at a time. No binding and no layout counter saw any of it: this is a plain event.
-    //
-    // Keyed by property, that same drag wakes exactly the consumers that read what changed.
+    // One subscription per theme; each consumer is woken only for the property it reads.
     private sealed class Router
     {
-        // A SET, not a list: a consumer leaves when its view does, and a tab holds thousands of them - removing each by
-        // scan would make leaving a tab quadratic, which is the trap this fix would otherwise walk straight into.
-        //
-        // WEAK, because a router lives as long as its THEME - that is, as long as the application - so anything it holds
-        // strongly can never be collected. It only ever unsubscribes what calls CloseConnection, and two ordinary cases
-        // never do: a target that is not an IInputComponent has no Unloaded event to hook (a brush, a GradientStop, any
-        // non-visual an AUML template names), and a component discarded without a detach notification never gets the
-        // chance. Measured on the stand: every theme swap left +13 consumers behind, permanently, each holding its target
-        // and through it a whole subtree - ~15 MB a swap that a forced full collection could not reclaim.
-        //
-        // Removal stays O(1) because each expression carries the very handle that was put in here (see _handle), and a
-        // HashSet of references compares by reference - so leaving a tab is still linear in what leaves, not quadratic.
+        // Sets for O(1) removal via each expression's own _handle; weak because the router lives as long as the theme,
+        // and some consumers never close their connection.
         public readonly Dictionary<AdamantiumProperty, HashSet<WeakReference<ThemeResourceExpression>>> ByProperty = new();
     }
 

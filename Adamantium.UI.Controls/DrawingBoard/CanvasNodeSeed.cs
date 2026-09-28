@@ -4,14 +4,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>What the application has to provide for a node to come back as itself.
-/// <para>The engine writes and reads the SHAPE of a graph - which nodes there are, where they sit, what their sockets
-/// are called and which of them are joined. What a node MEANS is not its business and never can be: "Multiply" is a
-/// word in somebody's application.</para>
-/// <para>So a node carries a <see cref="Kind"/> and a <see cref="Payload"/> that the engine round-trips without once
-/// looking inside, and on loading it asks the application to make the node. An application that does not answer gets
-/// the plain node the file describes - which is why a graph saved by a program you do not have still opens and is still
-/// legible.</para></summary>
+/// <summary>What a loaded node needs to come back as itself: the <see cref="Kind"/> and <see cref="Payload"/> the engine
+/// round-trips unread. Without an application answer, a plain node is made.</summary>
 public sealed class CanvasNodeSeed
 {
     /// <summary>What the application calls this sort of node. Empty for a node nobody claimed.</summary>

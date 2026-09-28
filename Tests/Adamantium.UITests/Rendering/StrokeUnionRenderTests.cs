@@ -7,13 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A TRANSLUCENT stroke that crosses itself must blend with the background ONCE - the crossing carries the coverage of
-/// the UNION, not the sum of two blends. Nothing about this is visible from CPU state: both cases draw the same
-/// triangles, and only the pixel that comes back says whether it was paid for once or twice.
-/// The second test is the guard that stops the first from being "fixed" too far: two SEPARATE strokes on top of each
-/// other are two elements, and their crossing is SUPPOSED to darken.
-/// </summary>
+// A translucent self-crossing stroke blends once at the crossing; two separate strokes crossing still darken.
 [TestFixture]
 [Category("Gpu")]
 public class StrokeUnionRenderTests

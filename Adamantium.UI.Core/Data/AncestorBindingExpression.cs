@@ -260,7 +260,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         if (_def.Logical)
         {
             // Logical walk BRIDGES template boundaries via TemplatedParent (GetLogicalParentOrBridge) - otherwise it
-            // dead-ends at each container's template part and never reaches the ItemsControl. See docs/TREE_MODEL_DESIGN.md.
+            // dead-ends at each container's template part and never reaches the ItemsControl.
             for (var cur = anchor.GetLogicalParentOrBridge(); cur != null; cur = cur.GetLogicalParentOrBridge())
             {
                 if (_def.Stop != null && _def.Stop.IsInstanceOfType(cur)) return null;
@@ -269,14 +269,8 @@ public class AncestorBindingExpression : BindingExpressionBase
         }
         else
         {
-            // Default (visual) walk. For a visual target start at its VisualParent; for a NON-visual target (a Behavior)
-            // start at its host - the element it's attached to (its logical parent) - and walk that host's VISUAL tree.
-            // The visual tree crosses template boundaries, so this reaches an ItemsControl / Window ancestor that a
-            // logical walk (which stops at each container's template parts) never could.
-            //
-            // The host may be SEVERAL logical steps away: an inspector's row is a PropertyDefinition whose logical
-            // parent is its section, which is not an element either - so taking one step and casting gave null, the
-            // walk never started, and every {Ancestor} written on a row silently did nothing.
+            // Visual walk from the VisualParent, or for a non-visual target from its nearest logical element host, which
+            // may be several steps up.
             var start = anchor is IUIComponent visual ? visual.VisualParent : NearestElement(anchor);
             for (var cur = start; cur != null; cur = cur.VisualParent)
             {

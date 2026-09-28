@@ -685,11 +685,8 @@ public partial class InfiniteCanvas
         set => SetValue(AlignGapProperty, value);
     }
 
-    /// <summary>Lines the selection up on one edge - or through one middle - of the box round all of it, and OPENS THE
-    /// LINE OUT so that nothing ends up on top of anything else.
-    /// <para>Against the whole selection's box: "align left" has one obvious meaning, and picking a member to align to
-    /// is a second question nobody asked. The opening out is what makes it usable on a GRAPH - a pile of nodes says
-    /// less than the row did - and what was already clear of its neighbour is not moved at all.</para></summary>
+    /// <summary>Aligns the selection to an edge or middle of its combined box, spreading items so none ends up on another;
+    /// items already clear are not moved.</summary>
     public bool Align(CanvasAlignment edge)
     {
         // ONLY WHAT HAS A PLACE. A wire is wherever its two sockets are - it cannot be lined up, and the room it covers

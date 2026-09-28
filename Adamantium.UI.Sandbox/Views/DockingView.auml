@@ -8,11 +8,8 @@
                    Text="An editor-shaped arrangement written as ZONES only. Nothing here says what share of what a group takes - the author writes WHERE (centre, right, bottom) and the split tree is derived from that. Drag the grips between the areas: they rewrite the layout's own shares, which is the number a save would read."
                    Foreground="{ResourceReference TextFillColorSecondary}"/>
 
-        <!-- The application answering the two questions the area asks, out loud - it allows everything and says what it
-             allowed. Where a pane may go AT ALL is data instead: see Pane.Allowed on Errors below, which the compass
-             reads BEFORE the drag, so forbidden indicators are never drawn. A pane allowed ONLY to float (Telerik's
-             FloatingOnly) is not written here at all: it cannot start out docked, or it would be standing where its own
-             rules forbid. Open one with "Create in: Floating" above. -->
+        <!-- The application's docking answers (always yes), logged; static limits are Pane.Allowed data (see Errors below).
+             Float-only panes are opened with "Create in: Floating". -->
         <Border Grid.Row="1" MarginBottom="12" Padding="10 6 10 6"
                 Background="{ResourceReference ControlFillColorDefault}"
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1">
@@ -70,11 +67,8 @@
                     <behaviors:TabContextMenuBehavior/>
                 </docking:DockingArea.Behaviors>
 
-                <!-- Declared first, so it is innermost: the documents.
-                     The "Unsaved changes" box tells the VIEW MODEL that this document has unsaved work, and the view
-                     model is what refuses the close (DockingWorkspace.PaneClosing): the control ASKS, the application
-                     ANSWERS, out of its own state. Tick it in Scene, then use "Close all tabs" from the tab's menu and
-                     watch everything else go while Scene stays. -->
+                <!-- The documents, declared first so innermost. "Unsaved changes" makes the view-model refuse the close
+                     (DockingWorkspace.PaneClosing); try "Close all tabs". -->
                 <docking:PaneGroup Name="documents" Zone="Center">
                     <docking:Pane Header="Scene">
                         <StackPanel Margin="16">

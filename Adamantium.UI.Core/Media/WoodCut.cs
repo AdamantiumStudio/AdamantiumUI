@@ -1,12 +1,7 @@
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>How the board was SAWN out of the log - which is the whole of why one piece of timber shows arches and the
-/// next shows dead straight lines, even when both are oak.
-///
-/// <para>A tree's rings are concentric cylinders about its core, and a board is a plane cut through them. The figure on
-/// its face is therefore not a property of the wood at all: it is where that plane crossed the cylinders. So these are
-/// not four patterns - they are one pattern seen from four places, which is why the shader draws them all from the same
-/// distance-to-the-core and differs only in where the core is.</para></summary>
+/// <summary>How the board was sawn from the log, which sets where the ring core lies relative to its face and so the
+/// figure it shows.</summary>
 public enum WoodCut
 {
     /// <summary>PLAIN SAWN, the cheap cut and the common one: the plane runs beside the core without meeting it, so it

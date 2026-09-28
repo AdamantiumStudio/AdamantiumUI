@@ -16,13 +16,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>One line of a <see cref="PropertyGrid"/>: a name on the left and a value on the right. The TYPE lives on
-/// the PROPERTY rather than on a column - one line is a number, the next a check box - which is what separates an
-/// inspector from a table.
-/// <para>A definition DESCRIBES a line; <see cref="PropertyRow"/> draws it. One definition serves several targets at
-/// once (that is multi-selection) and outlives every row made from it.</para>
-/// <para>A <see cref="FundamentalUIComponent"/> that JOINS the logical tree of its section, so <c>{Binding}</c> and
-/// <c>{RelativeSource}</c> resolve here as on any element.</para></summary>
+/// <summary>Describes one line of a <see cref="PropertyGrid"/>; <see cref="PropertyRow"/> draws it. Serves several targets
+/// at once and joins its section's logical tree, so bindings resolve as on any element.</summary>
 public abstract class PropertyDefinition : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
@@ -63,16 +58,8 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     public static readonly AdamantiumProperty ActionCommandProperty = AdamantiumProperty.Register(nameof(ActionCommand),
         typeof(ICommand), typeof(PropertyDefinition), new PropertyMetadata(null));
 
-    /// <summary>What the command is given. Null means the objects the line is pointed at - which is what the command
-    /// almost always wants, and what it would otherwise have to be handed by hand on every line.</summary>
-    /// <summary>What this property is worth when nothing has been done to it. A row holding anything else says so and
-    /// offers to put this back.
-    /// <para>Set it and the property HAS a default, null included - which is why <see cref="HasDefault"/> is a flag of
-    /// its own rather than a null check: null is a perfectly good default for a reference, and reading "no default" out
-    /// of it would leave those rows unable to reset.</para></summary>
-    // Starts UNSET, not null: null is a value a property can legitimately default to, and a slot starting at null
-    // cannot tell being ASSIGNED null from never having been touched. AdamantiumProperty.UnsetValue is what the
-    // property system already means by "nothing here", so assigning it back removes the default again.
+    /// <summary>The property's untouched value; a row holding anything else offers to reset to it. Null is a valid
+    /// default, so the slot starts unset and <see cref="HasDefault"/> tracks whether one was given.</summary>
     public static readonly AdamantiumProperty DefaultValueProperty = AdamantiumProperty.Register(nameof(DefaultValue),
         typeof(object), typeof(PropertyDefinition),
         new PropertyMetadata(AdamantiumProperty.UnsetValue, OnDefaultValueChanged));
@@ -82,14 +69,12 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     public static readonly AdamantiumProperty HasDefaultProperty = AdamantiumProperty.Register(nameof(HasDefault),
         typeof(bool), typeof(PropertyDefinition), new PropertyMetadata(false));
 
+    /// <summary>What the command is given; null means the objects the line is pointed at.</summary>
     public static readonly AdamantiumProperty ActionCommandParameterProperty = AdamantiumProperty.Register(
         nameof(ActionCommandParameter), typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null));
 
-    /// <summary>The KEY of the picture on the action button, resolved live against the theme. Empty leaves the three
-    /// dots the button wears by default.
-    /// <para>Three dots mean "there is more" - a file to pick, a longer form to open. A button that DOES something on
-    /// the spot has to look like the thing it does, or the first press is the way you find out: a dotted button that
-    /// silently dropped a socket is not an inspector row, it is a trap.</para></summary>
+    /// <summary>Theme key of the action button's icon; empty keeps the "..." used for "there is more". An immediate
+    /// action should show what it does.</summary>
     public static readonly AdamantiumProperty ActionIconProperty = AdamantiumProperty.Register(nameof(ActionIcon),
         typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
 
@@ -130,16 +115,8 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         set => SetValue(BindingProperty, value);
     }
 
-    /// <summary>WHAT THIS LINE IS ABOUT RIGHT NOW - the object the grid has pointed it at, put here by the grid before
-    /// the row is built. Nothing while several objects are selected: the line then stands for all of them and no single
-    /// one of them is the answer.
-    /// <para>Here so that a line can be written to depend on the STATE of the thing it describes, with an ordinary
-    /// binding and no machinery of its own: <c>IsVisible="{Self Inspected.HasLabel}"</c>. Without it the only way was a
-    /// property on whatever control hosts the panel, reached by a template binding - which means the lines can only be
-    /// written inside that control's template, and a set of lines handed in from outside could say nothing at
-    /// all.</para>
-    /// <para>Why not simply the DataContext: that one already means the panel's own view-model, and lines use it to
-    /// reach a list of choices the application holds. Two meanings on one slot would take that away.</para></summary>
+    /// <summary>The single object this line describes, or null with several selected; lets a line bind to its target's
+    /// state, e.g. <c>IsVisible="{Self Inspected.HasLabel}"</c>. DataContext stays the panel's view-model.</summary>
     public static readonly AdamantiumProperty InspectedProperty = AdamantiumProperty.Register(nameof(Inspected),
         typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null));
 
@@ -259,13 +236,8 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     protected internal virtual bool TryConvert(object edited, Type target, out object value) =>
         BoundValue.TryConvert(edited, target, out value);
 
-    /// <summary>Whether two of the selected objects hold the SAME value, which is what decides that a row of a multiple
-    /// selection shows a value rather than reporting that the objects disagree.
-    /// <para><see cref="object.Equals(object, object)"/> by default, which is right for a number, a string or an enum.
-    /// A value that is an OBJECT is a different matter: two brushes of the same colour are not the same instance, and
-    /// comparing them by reference makes a row report a difference nobody can see. A definition whose value is an object
-    /// says here what "the same" means for it - and does so WITHOUT the type itself gaining an equality, which the
-    /// render cache's change detection depends on staying by reference.</para></summary>
+    /// <summary>Whether two selected objects hold the same value, so a multi-selection row shows it. Override for object
+    /// values (brushes) without giving the type an equality the render cache relies on not having.</summary>
     protected internal virtual bool SameValue(object left, object right) => Equals(left, right);
 
     /// <summary>The value as a person would read it, which is what <see cref="ValueAsTip"/> shows. A number or a string
@@ -273,18 +245,12 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     /// own wording is not it.</summary>
     protected internal virtual String TextOf(object value) => value?.ToString();
 
-    /// <summary>Whether this property's editor can stand EMPTY - showing no value while staying usable, which is what a
-    /// row of disagreeing objects needs: setting one value on all of them is the point of selecting several.
-    /// <para>A field, a number and a list all have an empty state. A colour swatch does not - it is a colour or it is
-    /// nothing - so a definition whose editor cannot show "no value" says so here, and its row stays blank instead of
-    /// standing there showing a colour neither object holds.</para></summary>
+    /// <summary>Whether the editor can show no value while staying usable, for rows of disagreeing objects; a color
+    /// swatch cannot, so its row stays blank.</summary>
     protected internal virtual bool EditorCanShowNothing => true;
 
-    /// <summary>Writes what the editor produced INTO the value the property already holds, and says whether it did.
-    /// <para>A property normally means "the value is replaced", and that is what happens when this says no. The
-    /// exception is a value that is an OBJECT WITH PARTS and is shared: the object keeps the same brush and the brush
-    /// changes colour, so everything else painting with that brush follows. Replacing it would leave them all on the
-    /// old one.</para></summary>
+    /// <summary>Writes the edit into the current value in place (e.g. recolors a shared brush) and returns true; false
+    /// means the value is replaced.</summary>
     protected internal virtual bool WriteInto(object current, object edited) => false;
 
     private static void OnIsVisibleChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
@@ -357,13 +323,8 @@ public class NumericProperty : PropertyDefinition
     public static readonly AdamantiumProperty ShowButtonsProperty = AdamantiumProperty.Register(nameof(ShowButtons),
         typeof(Boolean), typeof(NumericProperty), new PropertyMetadata(true));
 
-    /// <summary>Which side of the number they sit on. LEFT here, against the control's own default of one at each end:
-    /// the RIGHT end of an inspector line is where the line's own buttons live - reset, and the "...". A stepper put
-    /// there is a stepper that shares an edge with them, and nudging a number is the one thing in a panel a person does
-    /// several times without looking.
-    /// <para>The row's buttons are also the ones that COME AND GO - the reset appears the moment a value stops being
-    /// the default - so a stepper at that end moves out from under the hand between one press and the next. Against the
-    /// left edge, nothing that appears on the right can shift it.</para></summary>
+    /// <summary>Which side of the number the steppers sit on; left by default, since the row's reset and "..." buttons
+    /// come and go on the right and would shift them.</summary>
     public static readonly AdamantiumProperty ButtonsPlacementProperty = AdamantiumProperty.Register(
         nameof(ButtonsPlacement), typeof(NumericButtonsPlacement), typeof(NumericProperty),
         new PropertyMetadata(NumericButtonsPlacement.Left));
@@ -420,12 +381,7 @@ public class NumericProperty : PropertyDefinition
         numeric.AreButtonsVisible = ShowButtons;
         numeric.ButtonsPlacement = ButtonsPlacement;
 
-        // HOW MANY DECIMALS - which this line has carried and nobody read, so every number came out at whatever
-        // precision a double prints at: a width dragged by hand read "182.99999999999997". A line of an inspector is
-        // read at a glance, and thirteen digits of noise are not an answer to "how wide is it".
-        //
-        // "0.###" rather than "N3": a round number stays round. Trailing zeros ("182.000") say a precision was
-        // measured that was not, and turn every whole number into four characters of nothing.
+        // "0.###" rather than "N3": limits noise like 182.99999999999997 while a round number stays round.
         numeric.StringFormat = Decimals > 0 ? "0." + new String('#', Decimals) : "0";
         // NULL, not zero, when there is nothing to show - the objects disagree. A zero here would be a number neither
         // of them holds, which is worse than an empty field: it reads as an answer.
@@ -563,14 +519,8 @@ public class ColorProperty : PropertyDefinition
     protected internal override object ReadEditor(IUIComponent editor) => (editor as ColorPickerButton)?.SelectedColor;
 }
 
-/// <summary>A <see cref="SolidColorBrush"/>, edited by the same swatch a <see cref="ColorProperty"/> uses. A property
-/// that carries ONE colour is a solid brush and nothing else - a gradient has no single colour to show or to set - so
-/// this line does not offer a choice of brush; the day a property may hold any brush, that is a different line with a
-/// chooser in it.
-/// <para>The colour is painted INTO the brush the property already holds. A brush is usually shared - a theme colour
-/// stands behind a dozen elements - and replacing it would leave every one of them on the old one. Where the brush
-/// refuses to be painted, being frozen, a new one is put in its place instead: frozen means immutable, and the property
-/// can still be pointed at something else.</para></summary>
+/// <summary>A <see cref="SolidColorBrush"/> edited with the color swatch. The color is written into the object's own
+/// brush; a frozen or shared one is replaced instead.</summary>
 public class SolidColorBrushProperty : PropertyDefinition
 {
     private DataTemplate _editor;
@@ -604,11 +554,7 @@ public class SolidColorBrushProperty : PropertyDefinition
 
     protected internal override bool WriteInto(object current, object edited)
     {
-        // NOT into a brush the object is only holding. A theme's brush is handed to everything that asks for that
-        // colour, so writing into it recoloured the whole application from one node's title strip - and the two lines
-        // of a node that both start at the accent looked like one line, because they were pointed at one object. An
-        // edit there means "this object overrides the theme", which is a NEW brush on the object and nothing else
-        // touched.
+        // Never into a shared (theme) brush, which would recolor everything using it; that edit gets a new brush.
         if (current is not SolidColorBrush { IsFrozen: false, IsShared: false } brush ||
             edited is not Color colour)
         {
@@ -633,11 +579,8 @@ public class SolidColorBrushProperty : PropertyDefinition
     }
 }
 
-/// <summary>A PICTURE: the line shows the file it comes from and takes a typed or pasted path, and its own "..." asks
-/// for one through whatever the operating system puts in front of the user.
-/// <para>The picture ITSELF - an <see cref="ImageSource"/> - and not a brush painted from it. A control that shows a
-/// picture has a property for the picture, and writing a brush over that property instead would put the picture
-/// wherever the colour goes, where the next colour written wipes it out.</para></summary>
+/// <summary>An <see cref="ImageSource"/>: shows the file path, accepts a typed one, and "..." opens the system file
+/// picker.</summary>
 public class ImageSourceProperty : PropertyDefinition
 {
     private DataTemplate _editor;
@@ -797,16 +740,8 @@ public class CompositeProperty : PropertyDefinition
     }
 }
 
-/// <summary>A group of rows PER ELEMENT of a collection: the lines written inside it are repeated for every item, each
-/// one pointed at that item rather than at what is selected.
-/// <para>What an inspector has no other way of showing. Everything else here is one line about one property of one
-/// object, so a list of things that each have properties of their own - the sockets of a node, the stops of a gradient,
-/// the columns of a table - could only be written out by hand, which means writing out a number of lines nobody knows
-/// in advance. The count is data; the lines have to be data too.</para>
-/// <para>Its own <see cref="PropertyDefinition.Binding"/> is what it reads the collection through, against whatever the
-/// section is pointed at; its <see cref="Children"/> are the lines to repeat. The child lines bind against the ITEM -
-/// <c>{Binding Name}</c> on a socket is the socket's name - which is the whole trick, and it costs the grid nothing
-/// but a different set of targets.</para></summary>
+/// <summary>Repeats its <see cref="Children"/> lines for every item of the collection its
+/// <see cref="PropertyDefinition.Binding"/> reads; child lines bind against the item.</summary>
 public class ItemsProperty : CompositeProperty
 {
     public static readonly AdamantiumProperty ItemHeaderProperty = AdamantiumProperty.Register(nameof(ItemHeader),
@@ -893,14 +828,7 @@ internal static class PropertyEditors
         MinHeight = 0,
         BorderThickness = new Thickness(0),
 
-        // ...and its own PADDING, for the same reason the floor above is dropped. A theme's drop-down padding is cut for
-        // a drop-down of the theme's own height; in a row that is a good deal shorter it eats more than the line of text
-        // needs - eleven pixels of a twenty-four-pixel box, leaving thirteen for a line that wants nineteen - and the
-        // letters are then drawn past the bottom of their own box, which is what "the text sits low" was.
-        // ...and its own PADDING, for the same reason the floor above is dropped. A theme's drop-down padding is cut for
-        // a drop-down of the theme's own height; in a row that is a good deal shorter it eats more than the line of text
-        // needs - eleven pixels of a twenty-four-pixel box, leaving thirteen for a line that wants nineteen - and the
-        // letters are then drawn past the bottom of their own box, which is what "the text sits low" was.
+        // Own padding too: the theme's is cut for a taller drop-down and would push the text below a row-height box.
         Padding = new Thickness(8, 0, 8, 0),
         VerticalAlignment = VerticalAlignment.Stretch,
         HorizontalAlignment = HorizontalAlignment.Stretch

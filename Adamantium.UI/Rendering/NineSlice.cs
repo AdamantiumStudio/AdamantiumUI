@@ -26,14 +26,8 @@ internal static class NineSlice
     // of the frame costing 16MB of render target, which is the trade a raster brush is entitled to make.
     private const double MaxBakeLength = 2048;
 
-    /// <summary>The size a VECTOR source has to be baked at to dress this shape - in LOGICAL units, the device scale
-    /// being the raster cache's business. The sibling of <see cref="ImageTiling.BakeSize"/>, and needed for the same
-    /// reason: the picture a fill samples is made to order, so somebody has to say how big to make it.
-    /// <para>What makes a FRAME different from a fill is that its pieces are not drawn at the shape's scale. A corner is
-    /// drawn at <see cref="NineSliceBrush.Border"/> however large the panel is, so baking at the shape's size - which is
-    /// what a fill wants, and what this used to do - spends the resolution on the middle and leaves the corners as
-    /// whatever is left over. So each band is asked what it needs and the largest answer wins: a band drawn N units long
-    /// out of a fraction F of the source needs N/F of source to be 1:1.</para></summary>
+    /// <summary>The logical size to bake a vector source at for this shape: the largest N/F over bands drawn N units
+    /// long from a source fraction F, so corners stay 1:1.</summary>
     public static Size BakeSize(NineSliceBrush brush, Size shape)
     {
         var source = brush?.Source;
@@ -76,16 +70,10 @@ internal static class NineSlice
         return needed <= 0 ? sourceLength : Math.Min(needed, MaxBakeLength);
     }
 
-    /// <summary>Cut <paramref name="bounds"/> (already in WORLD/device space) into the nine pieces.
-    /// <para>The corners are drawn at <see cref="NineSliceBrush.Border"/>, or - unset - at the size the slice fractions
-    /// give against the source's own pixels, which is the 1:1 case. When the shape is too small for its own corners the
-    /// border is scaled DOWN proportionally rather than letting opposite corners overlap and draw each other's pixels;
-    /// this is what CSS border-image does too, and it is the difference between a skin that degrades and one that
-    /// smears.</para></summary>
-    /// <param name="texels">The size of the texture actually bound for this fill, for the half-texel inset below; unset
-    /// means the source states its own. For a BITMAP the two are the same number; for a VECTOR the source has no texels
-    /// at all and the texture is a bake, so they part company - one count used to answer both "how big is a corner"
-    /// (source units) and "how wide is a texel" (texture), and only the first of those is the source's to answer.</param>
+    /// <summary>Cuts world-space <paramref name="bounds"/> into nine pieces; corners use <see cref="NineSliceBrush.Border"/>
+    /// (or 1:1) and scale down proportionally when the shape is too small, as CSS border-image does.</summary>
+    /// <param name="texels">The bound texture's size, for the half-texel inset; unset means the source's own (differs for a
+    /// baked vector source).</param>
     public static TextureItem[] Bake(NineSliceBrush brush, Rect bounds, double opacity, int transformSlot, int fadeSlot,
         double scaleX = 1.0, double scaleY = 1.0, Size texels = default)
     {

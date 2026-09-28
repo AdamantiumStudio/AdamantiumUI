@@ -3,12 +3,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>Fills a shape with a LIVE ELEMENT - a reflection, a thumbnail, a magnifier. WPF's <c>VisualBrush</c>, and
-/// the one member of the family that cannot be replayed: a drawing is a recording and can simply be drawn again, but a
-/// live subtree has layout, state and children of its own. So it is DRAWN OFF-SCREEN into a picture, and that picture
-/// is what the fill samples - see the plan's §1.4, where this is the one case a bake is not a shortcut.
-/// <para>The picture is re-made when the source says its content changed, which the element announces anyway
-/// (<see cref="VisualTreeNotifications"/>); nothing polls it.</para></summary>
+/// <summary>Fills with a live element rendered off-screen into a picture, re-made when the element reports a change via
+/// <see cref="VisualTreeNotifications"/>.</summary>
 public sealed class VisualBrush : TileBrush
 {
     // PAINT: the picture fills the shape it is given, so a different source re-colours the same pixels.
@@ -79,11 +75,7 @@ public sealed class VisualBrush : TileBrush
 
     private static void OnVisualChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
     {
-        // Only a DIFFERENT element on the ORIGINAL is worth a new picture. A binding re-pushes the same source whenever
-        // the brush's expressions are refreshed (on attach, and again when the DataContext arrives), and a frozen CLONE
-        // is handed the source at creation - which reads as null -> source. Either taken as a change costs an off-screen
-        // render with its own render target, and the clone case is endless: delivering a picture publishes a snapshot,
-        // which clones, which marks the original stale again.
+        // Only a different element on the original brush needs a new picture; re-pushes and snapshot clones would loop.
         if (sender is VisualBrush brush && ReferenceEquals(brush.Origin, brush) && !ReferenceEquals(e.OldValue, e.NewValue))
         {
             brush.NeedsBake = true;

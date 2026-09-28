@@ -7,13 +7,8 @@ using Adamantium.UI.Core.Diagnostics;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Owns the per-frame layout pass for one visual-tree root (a window / top-level): the single driver of style-application
-/// + measure + arrange. Invalidation registers the affected node in this manager's dirty queues;
-/// <see cref="ExecuteLayoutPass"/> drains only those, so a clean frame (nothing invalid) walks nothing. One manager per
-/// root, kept persistently so invalidations BETWEEN passes accumulate; a node finds its manager by its top-most visual
-/// ancestor (<see cref="For"/>). See docs/LAYOUT_MANAGER_PLAN.md.
-/// </summary>
+/// <summary>Runs style, measure and arrange for one visual root, draining only nodes in its dirty queues. A node finds its
+/// manager through <see cref="For"/>.</summary>
 public sealed class LayoutManager
 {
     // Persistent per-root managers, keyed (weakly) by the top-most visual node so they are GC'd with their tree.
@@ -25,21 +20,11 @@ public sealed class LayoutManager
     // No per-frame TIME budget: a pass always drains FULLY, so the drawn frame is internally consistent. An earlier budget
     // that cut a pass mid-way and re-queued the tail published TORN frames (a grid with tiles of two sizes). What replaced it:
     // the compositor presents at its own pace, and heavy INTAKE is bounded at the source (a virtualizing panel realizes only
-    // viewport+margin, slicing big realizes over frames via InvalidateMeasureNextPass). See docs/TECH_DEBT.md.
+    // viewport+margin, slicing big realizes over frames via InvalidateMeasureNextPass).
 
     private readonly IUIComponent _root;
 
-    // Every one of these is built ON DEMAND, because most managers never use most of them - and a surprising number of
-    // managers are never used at all. `LayoutManager.For` MAKES one keyed on the element itself for a component that has
-    // no root, no layout owner and no parent, which is precisely what an element being built from a template is: measured
-    // on a bare Border, writing one AffectsMeasure property cost 1745 bytes against 592 for an AffectsRender one, and the
-    // ~1100 of difference was a manager - three queues, a set, two lists and a stopwatch - allocated per element and dead
-    // the moment that element was attached to a real tree.
-    //
-    // Skipping the invalidation instead was tried and REVERTED: it dropped a request that a hosted DataTemplate needed
-    // (PanelRenderTests.HostedInDataTemplate_PanelChild_IsLaidOutAndVisible arranged its border to 0x0). Making the
-    // manager cheap changes no behaviour at all - every request is still recorded, it just stops paying for six objects
-    // to record nothing in five of them.
+    // Built on demand: For() creates a manager per parentless template element, and most of those are never used.
     private DirtyQueue _toStyle;
     private DirtyQueue _toMeasure;
     private DirtyQueue _toArrange;
@@ -154,12 +139,8 @@ public sealed class LayoutManager
     /// <summary>Resolves the manager responsible for <paramref name="node"/> via its top-most visual ancestor.</summary>
     public static LayoutManager For(IUIComponent node)
     {
-        // RootVisual is cached + kept current by the attach/detach walk, so read it directly (O(1)) - For() is on the
-        // invalidation hot path. A not-yet-attached / plain test tree has RootVisual == null; fall back to the walk to its
-        // local top (the same key the pass is driven from, so the resolved manager is identical either way).
-        // Overlay content is DRAWN by the window but laid out by the popup layer, which alone knows its constraint and
-        // its slot. Its invalidations must therefore resolve here, to a manager of its own - joining the window's queue
-        // put two owners on one virtualizing panel and re-entered its generator mid-enumeration.
+        // Overlay content resolves to its layout owner's manager. Otherwise read the cached RootVisual, or walk to the
+        // local top when detached.
         if (node.LayoutRoot is { } owner)
         {
             return GetOrCreate(owner);
@@ -206,12 +187,7 @@ public sealed class LayoutManager
         ToArrange.Enqueue(node);
     }
 
-    // The DirtyQueue is a plain HashSet + heap, and the parallel-rebind flag guarded only ONE way onto it. There is a
-    // second: a tab's content is built on a worker (ContentPresenter.StartDeferredBuild), styles apply as it is built,
-    // triggers fire, and a trigger's SetValue reaches here - resolving, for anything already parented to the live
-    // presenter, to the WINDOW's queue. Two threads in one HashSet.Add is an IndexOutOfRangeException, which is exactly
-    // what a tab entry threw. The code there states the opposite ("it reaches nothing that is not thread-safe"); it does.
-    // Judged by the thread rather than by a flag, because the second source has no fork/join window to wrap.
+    // True off the loop thread: deferred tab builds on a worker can reach these non-thread-safe queues.
     private static bool OffPassThread => _loopThreadId != 0 && Environment.CurrentManagedThreadId != _loopThreadId;
 
     private static volatile int _loopThreadId;
@@ -312,11 +288,8 @@ public sealed class LayoutManager
             }
             didWork = true;
 
-            // Drain each queue as a SNAPSHOT (only what's queued now), ordered style -> measure -> arrange. Work re-dirtied
-            // DURING a phase lands back in the queues and is handled on the NEXT iteration, letting re-entrancy converge.
-            // Timed apart. The pass costs 300-490ms on a tab switch and the loop IS that pass; MeasureCore's own body is
-            // ~17 property reads (under a microsecond), so 46-91us per call has to be coming from somewhere else - and
-            // the STYLE phase is the one nobody has ever looked at.
+            // Drain snapshots in style, measure, arrange order, each timed; work re-dirtied meanwhile waits for the next
+            // iteration.
             var phase = System.Diagnostics.Stopwatch.GetTimestamp();
             DrainPhase(ToStyle, ApplyTheme);
             var afterStyle = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -429,21 +402,14 @@ public sealed class LayoutManager
 
         if (!control.IsMeasureValid)
         {
-            // Its measure was re-dirtied after this arrange was queued; defer to a later iteration (re-enqueue, don't drop)
-            // - but ONLY while the node is still ours. A node that LEFT this tree (a rebuilt template, a closed popup, a
-            // recycled container) keeps its stale arrange entry here while its measure invalidation goes to whatever root
-            // owns it now, so this manager can never make it measure-valid: re-queueing it spins the pass to its iteration
-            // cap every frame and the root NEVER settles. Whoever re-attaches it re-registers it (see
-            // MeasurableUIComponent.OnAttachedToVisualTree), so dropping it here loses nothing.
+            // Measure re-dirtied: re-queue, but only if the node is still ours; one that left would spin the pass, and
+            // re-attaching re-registers it.
             if (ReferenceEquals(For(node), this)) ToArrange.Enqueue(node);
             return;
         }
 
-        // Arrange into the node's OWN last correct slot (preserved across invalidation), NOT parent.DesiredSize (the old
-        // fallback piled dirty children at the parent origin). A never-arranged node (the root, first layout) fills its
-        // measured area. The root visual is special: its slot is the LIVE client rect, never a saved slot - on a resize the
-        // client grows and the root re-measures to it, but PreviousArrangeSlot still holds the OLD rect, which would pin the
-        // window's clip (and root hit-testing) to the old size. Feed the live client rect so measure/arrange agree.
+        // Arrange into the node's own last slot; a never-arranged node fills its measured area, and the root uses the live
+        // client rect.
         var slot = node is IRootVisualComponent { ClientWidth: > 0, ClientHeight: > 0 } root
             ? new Rect(0, 0, root.ClientWidth, root.ClientHeight)
             : control.PreviousArrangeSlot ?? new Rect(control.DesiredSize);

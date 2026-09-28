@@ -22,21 +22,11 @@ public class StrokeDashCutTests
     [TearDown]
     public void ReleaseDevices() => GpuFixture.ReleaseRenderDevices();
 
-    /// <summary>Floats per emitted vertex, as StrokeEffect.fx's WriteVert lays them out:
-    /// (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | pieceId). This was hard-coded as 10 here, which was true
-    /// until pieceId was added to the vertex - after which the test read every field but the first two from the
-    /// wrong place and reported a geometry failure that was really an arithmetic one. Named, so the next field to
-    /// arrive breaks one line instead of silently shifting the whole comparison.</summary>
+    // Floats per vertex as WriteVert lays them out: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | pieceId).
     private const int VertexFloats = 11;
 
-    // BUG 1: a dashed stroke crossing a SHARP corner used to emit BOTH corner triangles in EmitJoin - the inner one
-    // has no adjacent dash quad to hide it, so it showed as an inward chevron. The wedge is now filled on BOTH sides
-    // deliberately (the inner triangle lands inside the two quads' overlap, harmless for an opaque stroke) - which
-    // beats having to pick, and sometimes mis-pick, the outer side on a curve.
-    // Geometry: open L (0,0)->(100,0)->(100,100), one dash covering the whole contour (pattern [1000,1000] so the
-    // first "on" run spans both 100-long segments and crosses the corner), bevel join, flat caps, no round fan,
-    // Fringe 0. Layout: quad seg0 (6) + wedge (6) + quad seg1 (6) = 18 verts, and NO cap geometry at either end -
-    // caps are a per-fragment mask now, so they can never add a triangle here.
+    // A dash across a sharp corner fills the join wedge on both sides. Open L, one dash over the whole contour, bevel
+    // join: quad + wedge + quad = 18 verts, no cap geometry (caps are a fragment mask).
     [Test]
     public void DashJoin_SharpCorner_EmitsWedgeCarryingThePiecesEndDistances()
     {
@@ -94,12 +84,8 @@ public class StrokeDashCutTests
             Assert.That(y, Is.EqualTo(expectedWedge[v * 3 + 1]).Within(0.01f), $"wedge vert {v} y");
             Assert.That(verts[o + 2], Is.EqualTo(expectedWedge[v * 3 + 2]).Within(0.01f), $"wedge vert {v} perp");
 
-            // The load-bearing part: the wedge belongs to the dash PIECE crossing the corner, so it carries that
-            // piece's two END FRAMES (the cap's shape) AND its arc distance to both ends (the cap's reach). Without
-            // the frames a concave cap carves a join as a CIRCLE around the corner - a hole punched through the
-            // dash; without the arc, a cap shaves ribbon that is far away along the path but happens to lie behind
-            // its axis. The piece spans the whole L: it starts at (0,0) heading +x and ends at (100,100) heading
-            // +y, and the corner sits at arc 100 of 200 - so uA = x, vA = y, uB = 100 - y, vB = 100 - x, arcs 100.
+            // The wedge carries its piece's end frames and arc distances: uA = x, vA = y, uB = 100 - y, vB = 100 - x,
+            // arcs 100.
             Assert.That(verts[o + 3], Is.EqualTo(x).Within(0.01f), $"wedge vert {v} uA");
             Assert.That(verts[o + 4], Is.EqualTo(y).Within(0.01f), $"wedge vert {v} vA");
             Assert.That(verts[o + 5], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} arcA");
@@ -111,11 +97,7 @@ public class StrokeDashCutTests
 
     }
 
-    // BUG 1 follow-up: a dash toggle landing EXACTLY on a corner must NOT draw the join wedge. Open L
-    // (0,0)->(100,0)->(100,100), each segment 100 long, pattern [50 on, 50 off] offset 0: the gap on segment 0 ends
-    // right at the corner (arc 100) where the pattern flips back on, so the incoming side is empty - a lone wedge
-    // there juts out as a triangular tab. With the fix (lastSpanOn && on) no wedge is emitted: quad(6, seg0 [0,50])
-    // + quad(6, seg1 [100,150]) = 12 verts, NOT 15.
+    // A dash toggling on exactly at the corner draws no wedge: pattern [50, 50] on the L gives two quads, 12 verts.
     [Test]
     public void DashJoin_ToggleExactlyOnCorner_EmitsNoWedge()
     {
@@ -202,11 +184,8 @@ public class StrokeDashCutTests
 
     }
 
-    // BUG 2: the stray cap-dots at the trim EXTREMES ([0,0]/[1,1]/any start==end) are NOT a shader emit - the cut
-    // kernel correctly writes vertexCount 0 for an empty window (asserted below). The real cause is C#-side: a
-    // DrawIndirect with a 0 count still rasterizes the vertex buffer's STALE previous-frame geometry, so
-    // GpuStrokeRenderComponent.Render now skips the draw when the trim window is empty. These tests lock the shader
-    // half (empty window -> 0 vertices); a partial window still emits a real (capped) piece.
+    // An empty trim window writes a vertex count of 0 (GpuStrokeRenderComponent skips that draw); a partial window still
+    // emits a capped piece.
     [Test]
     public void Trim_ExactEqualWindow_RoundCaps_EmitsNothing()
     {

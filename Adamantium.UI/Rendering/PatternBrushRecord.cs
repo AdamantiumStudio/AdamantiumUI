@@ -4,13 +4,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// THE one translation of a <see cref="PatternBrush"/> / <see cref="NoiseBrush"/> into the fields the pattern shader
-/// reads. Both bakes go through it - the SDF rect/ellipse batch and the instanced fill for arbitrary geometry - because
-/// they used to state it TWICE and the copies drifted: the geometry one never packed the hatch normal, so a hatch on a
-/// Polygon came out with a direction of (0,0) and drew nothing, while the same brush on a rectangle was fine. The same
-/// shape of bug had already cost hours in the gradient family.
-/// </summary>
+// The single translation of PatternBrush/NoiseBrush into pattern shader fields, shared by the SDF batch and the instanced
+// geometry fill so the two cannot drift.
 internal readonly struct PatternBrushRecord
 {
     /// <summary>The kind code the shader keys its pass on: a <see cref="PatternType"/> as-is, or a
@@ -56,13 +51,7 @@ internal readonly struct PatternBrushRecord
     }
 
 
-    // BOTH families ride ONE field of the record (Params.y) through ONE collector, so their codes must not collide -
-    // and THIS is the only place that knows it. The public enums stay naturally numbered from zero: PatternType has no
-    // holes punched in it for noise, NoiseType none for patterns, and adding a kind to either never renumbers the other.
-    //
-    // Noise sits in its own hundred. Not a clever bit-packing: a reader who sees 103 in a capture can tell instantly
-    // which family it belongs to, and the shader's pass table splits into two obvious ranges instead of one interleaved
-    // list where 4 was noise and 5 was a pattern.
+    // Patterns and noise share Params.y, so noise codes are offset by 100; the public enums both stay zero-based.
     public const int NoiseBase = 100;
 
     private static int PatternCode(PatternType pattern) => (int)pattern;
@@ -75,7 +64,7 @@ internal readonly struct PatternBrushRecord
 
         if (brush is PatternBrush pat)
         {
-            // Bake the hatch line normal (cos/sin) here so the shader needs NO trig (its pattern PS is at the NVVM limit).
+            // Bake the hatch line normal (cos/sin) here so the shader needs no trig.
             var ha = pat.HatchAngle * Math.PI / 180.0;
             record = new PatternBrushRecord(PatternCode(pat.Pattern), pat.Color1, pat.Color2, new Color(0, 0, 0, 0),
                 pat.CellSize, pat.Opacity, new Vector4F((float)Math.Cos(ha), (float)Math.Sin(ha), 0, 0), 0.0, 0.0);

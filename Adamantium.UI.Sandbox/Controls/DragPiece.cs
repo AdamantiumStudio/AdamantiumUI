@@ -6,15 +6,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Sandbox.Controls;
 
-/// <summary>A piece of the clipping stand, dragged around its Canvas by the mouse.
-///
-/// <para>Exists so a clip can be tested the only way that is not tedious: put one shape of every FAMILY in a container
-/// and push each of them into a corner by hand. A stand built per family only ever shows the corners its author aimed
-/// at.</para>
-///
-/// <para>The CONTENT is taken out of hit testing: a press is delivered to whatever the hit test lands on and does not
-/// travel up, so a press on the shape would end at the shape and the piece would never be grabbed. Hit testing goes by
-/// BOUNDS, not by whether anything is painted, so nothing needs to be filled underneath for this to work.</para></summary>
+/// <summary>A clipping-stand piece dragged around its Canvas. Its content is excluded from hit testing so presses reach
+/// the piece itself.</summary>
 public class DragPiece : ContentControl
 {
     private bool _dragging;

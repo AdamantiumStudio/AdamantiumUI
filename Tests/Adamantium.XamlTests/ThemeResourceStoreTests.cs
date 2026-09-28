@@ -11,19 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A theme answers from TWO stores under one flat key space: the palette dictionary, and the theme object's own
-/// properties - the accent and focus brushes, which are runtime-mutable and therefore not palette entries. Each marker
-/// reads exactly one of them: <c>{ThemeResource}</c> the properties, <c>{ObservableResource}</c> and
-/// <c>{ResourceReference}</c> the dictionary.
-/// <para>Asking the wrong store is SILENT. The setter receives null and the brush simply never appears - no exception,
-/// no warning, and a miss is indistinguishable from the transient one a theme swap causes, which is why the live
-/// expression deliberately keeps the last good value instead of complaining. One such line left the canvas's snap mark
-/// unpainted in all three themes for as long as it existed, unnoticed because the page that showed it bound over the
-/// top.</para>
-/// <para>Textual, like the other theme tests here, because what a marker resolves to is decided while the template runs
-/// and the miss leaves nothing behind to assert on afterwards.</para>
-/// </summary>
+// Each marker names a key in its own store: {ThemeResource} theme properties (accent, focus), {ObservableResource} and
+// {ResourceReference} the palette. A miss is silent, so it is checked textually.
 [TestFixture]
 public class ThemeResourceStoreTests
 {

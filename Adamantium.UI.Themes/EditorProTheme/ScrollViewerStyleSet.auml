@@ -2,14 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A content host with two overlay scrollbars - and here they are ALWAYS THERE.
-         Fluent fades them in on hover, and says in its own note that another theme is free to choose otherwise. An
-         editor is that other theme: a scrollbar is read far more often than it is grabbed. Its length says how much
-         file there is and its position says where in it you are, and both answers have to be available at a GLANCE -
-         while looking somewhere else entirely. A bar that only exists once the pointer is over the panel cannot answer
-         a question the pointer is not asking.
-         It costs nothing here because this theme's bar is a thin channel rather than Fluent's pill (see
-         ScrollBarStyleSet), so leaving it on does not put a heavy rail down the side of every panel. -->
+    <!-- Overlay scrollbars that are always visible, unlike Fluent's hover fade: position is read at a glance, and this
+         theme's thin channel keeps that cheap. -->
 
     <Style Selector="ScrollViewer">
         <Setter Property="Template">
@@ -20,11 +14,8 @@
                                 x:Name="PART_ScrollContentPresenter"
                                 Content="{TemplateBinding Content}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                        <!-- Each bar owns its WHOLE edge and steps back only when the other one is actually showing -
-                             see the trigger below. The inset used to be written here, unconditionally, so a panel with
-                             only a horizontal bar stopped it short of the right to clear a vertical bar that was not
-                             there. Always-on bars make that gap permanent rather than momentary, which is why it shows
-                             up in an editor before it shows up anywhere else. -->
+                        <!-- Each bar spans its whole edge and insets only while the other bar shows (see the trigger
+                             below). -->
                         <ScrollBar
                                 x:Name="PART_VerticalScrollBar"
                                 Orientation="Vertical"

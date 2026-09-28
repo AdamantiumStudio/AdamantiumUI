@@ -2,18 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// Where a render mark GOES. The marks themselves are described by <see cref="RenderDirtyScope"/>; this says whose they
-/// are.
-/// <para>They used to be one process-wide set, which made two things impossible. Two windows shared it, so it could not
-/// be cleared after the first of them recorded - the second would then re-record nothing (the comment in
-/// RenderCache.ApplyFrame is that compromise). And within one window the three STAGES - the content, the popup/overlay
-/// layer, the adorners - shared it too, so a hovered menu item marked the content dirty and the content stage went
-/// looking for what changed; the "from a foreign tree, skip it" branch in ClassifyReRender is that same fact, handled
-/// one symptom at a time.</para>
-/// <para>A component belongs to exactly one stage, so the routing is unambiguous. Until a stage claims a subtree, marks
-/// land in <see cref="Default"/>, which is what the single shared set was.</para>
-/// </summary>
+/// <summary>Routes a render mark to the scope of the stage (content, overlay, adorners) drawing its component; unclaimed
+/// subtrees use <see cref="Default"/>.</summary>
 public static class RenderDirtyRouter
 {
     /// <summary>The scope everything belongs to until a stage says otherwise - the window content.</summary>

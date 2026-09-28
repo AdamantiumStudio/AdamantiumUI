@@ -9,8 +9,8 @@ namespace Adamantium.UI.Controls;
 /// <summary>
 /// Bridge inside an <see cref="ItemsControl"/>'s template (named <c>PART_ItemsPresenter</c>): instantiates the
 /// control's <c>ItemsPanel</c>, hosts it, and fills it with item containers. A non-virtualizing panel gets ALL
-/// containers added to its <see cref="Panel.Children"/>; a <c>VirtualizingPanel</c> (later phase) self-realizes only the
-/// visible window. For now this is the non-virtualizing path.
+/// containers added to its <see cref="Panel.Children"/>; a <c>VirtualizingPanel</c> self-realizes only the
+/// visible window.
 /// </summary>
 public class ItemsPresenter : InputUIComponent
 {
@@ -61,7 +61,7 @@ public class ItemsPresenter : InputUIComponent
         // parent to re-read the rest. Repeating that here was one mechanism written twice.
     }
 
-    /// <summary>Regenerates the item containers into the panel. Phase 1: full, non-virtualizing realization.</summary>
+    /// <summary>Regenerates the item containers into the panel: full, non-virtualizing realization.</summary>
     internal void Refresh()
     {
         if (_owner == null || _panel == null) return;

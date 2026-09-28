@@ -1,11 +1,8 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- Navigated into the brushes tab's region under the key "Drawing"; the DataContext is the tab's own view-model.
-         The SAME four mechanisms as the ImageBrush stand, on content that has no pixels at all. Worth poking in this
-         order - viewport sizes the tile, viewbox picks what a tile shows, stretch fits the content in it and alignment
-         says where, tile mode repeats it. Stretch and alignment stay meaningful while tiling: a Uniform fit letterboxes
-         EVERY copy, not the lot. -->
+    <!-- The "Drawing" stand: the ImageBrush stand's viewport, viewbox, stretch, alignment and tile mode, on vector
+         content. -->
     <StackPanel Orientation="Vertical">
         <TextBlock Text="DrawingBrush — live (a drawing as a fill: viewbox, viewport, stretch, tiling)" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">

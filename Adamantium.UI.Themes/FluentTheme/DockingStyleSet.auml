@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Docking. Style matching is by EXACT type here, so a derived control inherits nothing by default - that is why
-         each of these says BasedOn explicitly instead of quietly relying on its base. A pane group IS a tab control and
-         a pane IS a tab item, so they take those looks whole; the splitter needs its own, because a Thumb has no look
-         at all - and a control with no template renders nothing and cannot be hit, which is exactly what makes a grip
-         that refuses to be dragged. -->
+    <!-- Docking. Matching is by exact type, so each style says BasedOn; the splitter needs its own template, since a
+         Thumb has none. -->
 
     <!-- A floating panel's window looks like any other window. Stated explicitly because matching here is by EXACT type:
          without this line a DockingWindow gets no template at all - and a window with no template is a frame with
@@ -34,12 +31,8 @@
 
     <Style Selector="Pane" BasedOn="TabItem"/>
 
-    <!-- A tab whose panel has folded down against a SIDE: the label lies on its side, because the strip that is left is
-         a narrow column. BOTH sides turn the same way - top to bottom - so a glance down one edge reads the same as a
-         glance down the other; every editor does it this way. Facing the text out of its own panel (up on the left,
-         down on the right) sounded symmetrical and reads as two different conventions in one window.
-         Two styles with a literal angle each rather than one with a bound angle - a Transform is not a component and
-         cannot be a binding target at all. -->
+    <!-- A tab folded against a side turns its label to read top to bottom on both sides; one literal angle per style,
+         since a Transform cannot be a binding target. -->
     <Style Selector="Pane[LabelRotation=Left]">
         <Setter Property="HeaderTemplate">
             <Setter.Value>
@@ -96,11 +89,8 @@
                          middle cell is the body; the outer tracks are Auto, so the one the strip is not in costs
                          nothing. -->
                     <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
-                        <!-- The header. Its buttons are PARTS, so the group wires them once and a restyle cannot lose
-                             them silently: a missing part is a button that does nothing, which is worse than none.
-                             ACCENT-filled: a tool's caption is the one piece of chrome that says which panel you are in,
-                             and its text colour is DERIVED from the accent for contrast (Theme.AccentForegroundColor),
-                             so it stays readable whatever accent is set at runtime. -->
+                        <!-- The accent-filled tool header, text in Theme.AccentForegroundColor; its buttons are parts the
+                             group wires. -->
                         <Border x:Name="PART_Header" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
                                 Background="{ThemeResource AccentFillColorDefault}"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
@@ -111,11 +101,7 @@
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding Title}"
                                         Foreground="{ThemeResource AccentForegroundColor}"/>
-                                <!-- Both header buttons are 28x28 and their glyphs centred in that square. Sized for a
-                                     FINGER, not for a mouse: a 14px glyph with a couple of pixels of padding is an
-                                     accurate-pointing-device-only target, and a header is exactly where someone on a
-                                     tablet reaches to put a panel away. The square also makes them line up with each
-                                     other and sit centred in the header without anyone counting paddings. -->
+                                <!-- Both header buttons are 28x28 touch-sized squares with centered glyphs. -->
                                 <Button x:Name="PART_AutoHideButton" Grid.Column="1"
                                         Width="28" Height="28" MinWidth="0" MinHeight="0" Padding="0"
                                         Classes="CaptionButton"
@@ -184,16 +170,8 @@
                             </Grid>
                         </TabStripScroller>
 
-                        <!-- The FLYOUT of a revealed panel. Only the panel's BODY travels here - its tabs stay on the
-                             edge, because that is what a revealed panel is: a strip you are glancing behind. It is a
-                             popup so that it draws OVER the neighbours instead of pushing them aside (rule 3.10); the
-                             strip is what it is placed against, so it opens exactly where the panel would have been.
-                             Its own caption, because the docked one is not on screen in this state - and a flyout you
-                             cannot dock back is a panel you can only look at. -->
-                        <!-- Placed against the GROUP, not the tab strip inside it: the strip sits at whatever inset the
-                             chrome gives it, and a flyout lined up with the strip carried that inset along - so it
-                             started left of the panel and ran off the far end. The group is what the docking area puts
-                             on the edge, so it is what the area's offsets are measured against. -->
+                        <!-- A revealed panel's body in a popup over the neighbors, with its own caption; tabs stay on the
+                             edge. Placed against the group, not the strip, to avoid its inset. -->
                         <Popup x:Name="PART_RevealFlyout" Grid.Row="2" Grid.Column="1"
                                 PlacementTarget="{Binding ElementName=Chrome}"
                                 Placement="Top" KeepOpen="False">
@@ -290,11 +268,8 @@
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
-                        <!-- REVEALED: in the tree this panel is still just its strip - the same as put away - and its
-                             body is shown in the flyout OVER the neighbours. Emptying the docked presenter is not
-                             cosmetic: one piece of content belongs to one tree, and a presenter goes on holding its
-                             child even when the body around it is hidden, so the flyout would be handed an element
-                             that already has a parent. -->
+                        <!-- Revealed: only the strip stays docked and the body moves to the flyout, so the docked
+                             presenter is emptied (content has one parent). -->
                         <PropertyTrigger Property="State" Value="Revealed">
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
@@ -333,11 +308,8 @@
                             <Setter TargetName="FlyoutRoot" Property="Width" Value="{TemplateBinding RevealLength}"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="State" Value="Collapsed">
-                            <!-- Only a PUT-AWAY strip is a row of buttons rather than a strip you rearrange in: there is
-                                 no panel open here to rearrange. A REVEALED panel IS open - its body is showing in the
-                                 flyout - so its tabs reorder and tear off like any other. Keyed on Collapsed rather than
-                                 on IsFolded, which covers both states and so switched dragging off for a panel that was
-                                 open in front of the user. -->
+                            <!-- Tab dragging is off only when Collapsed (put away), not when revealed, whose tabs still
+                                 reorder and tear off. -->
                             <Setter Property="AllowTabDrag" Value="false"/>
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
@@ -400,11 +372,7 @@
 
     <!-- The grip between two areas. Same shape as GridSplitter's: a thin subtle bar that lights up accent under the
          pointer, so it is visible ENOUGH to aim at without drawing attention when it is not wanted. -->
-    <!-- INVISIBLE at rest, like every editor's. A drawn line here has nothing to say: the panels already have their own
-         edges, and a stroke laid between two of them lands right next to those edges and reads as a double border, with
-         a lump wherever three splitters meet. What the gap is for is GRABBING, and that is what Transparent gives -
-         a hit-testable band of DividerThickness with nothing drawn in it. It shows itself when it matters: under the
-         pointer, and while it is being dragged. -->
+    <!-- The splitter: a transparent, hit-testable band of DividerThickness, shown only on hover and while dragged. -->
     <Style Selector="PaneSplitter">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">

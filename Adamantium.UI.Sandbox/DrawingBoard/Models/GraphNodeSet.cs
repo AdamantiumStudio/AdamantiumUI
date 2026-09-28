@@ -3,13 +3,8 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
-/// <summary>A WHOLE CATALOGUE of kinds, under a name - what a graph is made with.
-/// <para>An application doing two different jobs has two of these, and switches by binding the one it wants to the
-/// canvas: the canvas knows nothing about sets, it is handed a list of kinds like any other. Sections inside a set are
-/// the kinds' own <see cref="ICanvasNodeKind.Group"/> - a section organises one catalogue, a set IS the catalogue.
-/// </para>
-/// <para>The NAME is what a saved graph records, so a file made with one set is not opened with another's kinds - which
-/// would find nothing by those words and come back as a plane of blank nodes.</para></summary>
+/// <summary>A named catalog of node kinds, bound to the canvas as its kind list; sections come from
+/// <see cref="ICanvasNodeKind.Group"/>. A saved graph records the name to reopen with the same set.</summary>
 public sealed class GraphNodeSet
 {
     public GraphNodeSet(string name, IReadOnlyList<ICanvasNodeKind> kinds)

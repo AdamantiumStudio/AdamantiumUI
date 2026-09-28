@@ -9,11 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>THE GRID A LONG WAY FROM HOME, in pixels. The lattice repeats every coarse cell, so a camera moved by a
-/// whole number of cells must draw the SAME picture - that is the property the phase exists to keep, and the only one
-/// that says the dots did not smear.
-/// <para>A GPU test because the defect lives in what a float can still resolve once it is on the card: nothing on the
-/// CPU can tell a dot from the line it ran into.</para></summary>
+// On the GPU: a camera moved by whole coarse cells, however far, draws the same grid picture.
 [TestFixture]
 [Category("Gpu")]
 public class CanvasGridFarRenderTests

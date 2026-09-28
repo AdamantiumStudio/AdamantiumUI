@@ -2,13 +2,8 @@
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
       xmlns:ctl="clr-namespace:Adamantium.UI.Sandbox.Controls">
-    <!-- DataContext is the ClippingViewModel. A scissor is a RECTANGLE, so a rounded container used to cut its content
-         off with square corners.
-
-         ONE container, and the pieces are DRAGGABLE. Every family is represented once - an analytic rectangle, an
-         ellipse, a regular polygon, a mesh (the star), text - and each is pushed into whichever corner is of interest by
-         hand. A stand per family shows only the corners its author aimed at; this one shows any of them in seconds, and
-         side by side, which is the only way to see a family behaving differently from its neighbours. -->
+    <!-- One rounded container with a draggable piece of every family (rect, ellipse, polygon, mesh, text) to push into
+         any corner. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="24">
             <TextBlock Text="Rounded clipping — drag the pieces into the corners" FontSize="18" Margin="0,0,0,6"/>

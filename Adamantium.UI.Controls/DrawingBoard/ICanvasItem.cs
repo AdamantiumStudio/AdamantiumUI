@@ -24,31 +24,15 @@ public interface ICanvasItem
     /// wants; something reshaped another way - by its own points, or by whatever it is attached to - says so.</summary>
     CanvasHandles Handles => CanvasHandles.All;
 
-    /// <summary>WHERE IT STANDS IN PAINT ORDER, counting from the back: 0 is under everything, and the last number is
-    /// on top of everything. The plane has one order and everything is in it, controls included.
-    /// <para>NOT a second way of saying what the scene already knows. The scene's order IS the order; this is that
-    /// position written down, stamped by the scene whenever anything moves. What makes it worth having is the other
-    /// direction: written, it is a request to stand at that place - which is how a person says "this one goes
-    /// seventh" instead of pressing a step button and counting.</para>
-    /// <para>Kept in step by the scene, so nothing that holds an item has to maintain it - and a number nobody
-    /// maintained would be a second truth, which is the thing to avoid here.</para></summary>
+    /// <summary>Paint-order position from the back (0 is under everything), stamped by the scene; writing it asks to move
+    /// the item there.</summary>
     int Order { get; set; }
 
-    /// <summary>WHAT THIS IS, by name, at its NARROWEST - "Rectangle" for a rectangle, "Image" for a placed picture,
-    /// "Bezier" for a bezier. Whatever is not narrower than its class says the class: a stroke is a "StrokeItem".
-    /// <para>Here so a panel can say which of its lines belong to which kind of thing WITHOUT knowing the kinds: a
-    /// picture's Source line means nothing on a button, corners mean nothing on an ellipse. The panel matches a set of
-    /// lines against this and against the class name - the class is where what a whole family shares lives, this is
-    /// where what only one of them has does.</para>
-    /// <para>Read-only: what a thing IS is not something a panel gets to change.</para></summary>
+    /// <summary>The narrowest name of this item ("Rectangle", "Bezier"), else the class name; the inspector matches its
+    /// sections against it.</summary>
     string Sort => GetType().Name;
 
-    /// <summary>Whether it has a PLACE OF ITS OWN - true for almost everything, because a stroke, a shape or a control
-    /// is exactly where somebody put it.
-    /// <para>A WIRE does not: it is drawn between two sockets and goes where they go. Lining one up or spacing it out
-    /// means nothing, and counting the room it covers as occupied pushes everything else aside to make room for
-    /// something that was never there - which is how "line these up in a row" spread a graph across a hundred thousand
-    /// units.</para></summary>
+    /// <summary>Whether it has a place of its own; false for a wire, which follows its sockets and is skipped by alignment.</summary>
     bool IsPlaced => true;
 
     /// <summary>Which kind of work this belongs to. A DRAWING by default, because that is what almost everything on a
@@ -56,18 +40,11 @@ public interface ICanvasItem
     /// belongs to the mode it is in - see <see cref="CanvasMode"/>.</summary>
     CanvasMode Mode => CanvasMode.Drawing;
 
-    /// <summary>A NEW item just like this one, at the same place - what copying, pasting and duplicating are made of.
-    /// <para>NULL means "this kind of thing cannot be copied", and that is a real answer rather than a gap: a wire is
-    /// held by two sockets and copying one on its own means nothing, and a control on the plane is whatever the
-    /// application put there - an engine cannot make a second one of something it has never seen. Whoever copies asks
-    /// and leaves behind what says no, rather than producing a broken half.</para></summary>
+    /// <summary>A new item like this one at the same place, for copy and duplicate; null when it cannot be copied (a wire, an
+    /// application control).</summary>
     ICanvasItem Copy() => null;
 
-    /// <summary>The ONE colour that this item reads as, or nothing when it has none.
-    /// <para>Asked here rather than worked out by whoever is showing it: every kind of item keeps its colour under a
-    /// name of its own - a stroke has a brush, a shape has a stroke and a fill, a wire has neither - so anyone outside
-    /// answering this question would be taking the engine's own types apart, and would have to be extended again for
-    /// every item somebody else adds.</para></summary>
+    /// <summary>The one color this item reads as, or null; each item knows where its own color lives.</summary>
     Color? Paint => null;
 
     /// <summary>...and paints it that colour. Does nothing for an item that has no colour to set, which is the honest
@@ -86,12 +63,8 @@ public interface ICanvasItem
     /// can always do exactly - a stroke moves by one field, not by a walk over its points.</summary>
     void Move(Vector2 worldDelta);
 
-    /// <summary>The LEAST it can be, in world units, and nothing by default - which is the honest answer for ink and
-    /// for a shape: a stroke scaled to a hair is still a stroke, and there is nothing inside it to run out of room.
-    /// <para>A control is the other case. What is in it has a size of its own - a title, a row of sockets, a label - and
-    /// pulled below that it does not shrink, it SPILLS: the grips end up inside the thing they are meant to hold and the
-    /// text runs out the side. So whatever hosts something with its own size says how small it may be, and the frame
-    /// stops there.</para></summary>
+    /// <summary>The least it can be resized to, in world units; zero for ink and shapes, the content's own size for a
+    /// control.</summary>
     Size Smallest => new();
 
     /// <summary>Puts it inside a new box, in WORLD units - what a resize grip does. Afterwards <see cref="Bounds"/> is

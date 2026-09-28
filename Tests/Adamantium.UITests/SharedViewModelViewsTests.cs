@@ -6,11 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests
 {
-    /// <summary>One view-model read through SEVERAL views. A long page split into readable files is still one object with
-    /// one set of bindings; what changes between the pieces is only which markup is shown.
-    /// <para>Before this, a region tracked view-model TYPES alone, so two views of one model were indistinguishable to
-    /// it - and the only way to switch between them was an empty wrapper type per view, which is a workaround for the
-    /// mechanism rather than the mechanism.</para></summary>
+    // One view model shown through several views by key; regions no longer track view-model types alone.
     [TestFixture]
     public class SharedViewModelViewsTests
     {

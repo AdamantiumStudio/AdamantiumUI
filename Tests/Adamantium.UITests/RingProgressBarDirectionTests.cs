@@ -7,14 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Which way the ring winds. The arc it is built from has ONE native direction and cannot render a negative sweep, so the
-/// other direction is a vertical flip - and the whole question is which of the two settings gets the flip.
-/// <para>The native direction is a measured fact, not a matter of taste: an Ellipse swept 0..90 fills from its right edge
-/// to the BOTTOM, because UI space has y down (see EllipseCutRenderTests). So the native winding is CLOCKWISE, and
-/// CounterClockwise is the one that must be mirrored. The control had it the other way round, which quietly swapped both
-/// settings - the arc still looked like an arc, so nothing but a person comparing it against the label would notice.</para>
-/// </summary>
+// The ring's native sweep is clockwise (y down), so CounterClockwise is the direction that gets the vertical flip.
 [TestFixture]
 public class RingProgressBarDirectionTests
 {

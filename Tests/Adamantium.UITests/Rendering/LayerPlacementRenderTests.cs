@@ -15,14 +15,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Where a newcomer's draw goes in an already-recorded frame (§5a). A recorded batch segment glues every control that fell
-/// between two flushes, and what makes that legal is that none of them overlaps another: inside such a set the paint order
-/// simply does not matter. So a control that starts drawing needs a place of its OWN only when it overlaps what the set
-/// draws - then order decides what covers what. When it does not overlap, it joins the set and the set stays whole.
-/// <para>Both halves are pinned here, and both by the same question - does the patched frame equal what a full walk draws -
-/// because a cut avoided by mistake and a cut taken by mistake look identical in a segment count and opposite on screen.</para>
-/// </summary>
+// A newcomer joins a recorded segment unless it overlaps what the segment draws, then gets its own place; both checked
+// against a full walk.
 [TestFixture]
 [Category("Gpu")]
 public class LayerPlacementRenderTests
@@ -180,11 +174,7 @@ public class LayerPlacementRenderTests
         }
     }
 
-    // A control that STOPS drawing - hidden, but still in the tree, which is what a scrollbar does when the window grows
-    // enough not to need it - keeps its units on purpose: a re-show must not rebuild them. What it must NOT keep is a place
-    // in the picture. Its instances stay inside the layer's retained range, and a later patch re-issues that range as
-    // BYTES, which puts the hidden control back on screen where it last drew. Reported from the live app: maximise the
-    // window, then hover the list, and the scroll TRACK reappears down the middle of it.
+    // A hidden control keeps its units but not its pixels: a later patch re-issuing its layer must not redraw it.
     [Test]
     public void AControlThatStoppedDrawing_DoesNotComeBackWhenItsLayerIsReissued()
     {
@@ -240,11 +230,7 @@ public class LayerPlacementRenderTests
             "a control that left the tree must not be drawn by a later patch");
     }
 
-    // The live shape of the same thing, and the one that stayed broken: a whole VIEW leaves the tree, and what draws is
-    // not the view but the parts INSIDE it. The removal names the view; its children are reached by walking the subtree,
-    // and each is kept only if the recorder still remembers holding units for it or it still has a paint rank. A part that
-    // has neither is skipped - and the applier goes on drawing it from the retained range, frozen at the size it had when
-    // its tab was left.
+    // A whole view leaving the tree: every drawing part inside it is withdrawn, not only the ones the recorder remembers.
     [Test]
     public void ASubtreeRemovedFromTheTree_TakesWhatItsPartsDrawWithIt()
     {
@@ -270,11 +256,7 @@ public class LayerPlacementRenderTests
             "what a removed view's parts drew must go with the view");
     }
 
-    // The live one, and the reason removing a view is not enough on its own: RECORD and APPLY are separate halves that run
-    // a frame apart. A packet recorded while the view was still in the tree lands AFTER it left, and realizing its draws
-    // puts the view back into the paint order - behind the back of everything that withdraws what left. The retained op
-    // stream then re-issues it for as long as the frame stays clean: the tab that was left, drawn over the tab that
-    // replaced it, frozen at the size it had when it went.
+    // A packet recorded before a view left, applied after, must not put the departed view back into the paint order.
     [Test]
     public void APacketRecordedBeforeAViewLeft_DoesNotPutItBackWhenItLands()
     {
@@ -307,11 +289,7 @@ public class LayerPlacementRenderTests
             "a packet that landed late must not put a departed view back on screen");
     }
 
-    // The live one, caught in the app: a control stops drawing (its ScrollBar collapses when the window grows enough not
-    // to need it) and the frames that follow are pure REPLAYS - no patch, nothing dirty, the retained op stream re-issued
-    // as it stands. Its instances sit INSIDE a segment other controls still use, and a segment is issued as a RANGE, so
-    // the range carries them along: the bar goes on being drawn, frozen at the size it had when it was last needed.
-    // Patching a neighbour rewrites that range and hides the fault - which is why the sibling test above passes.
+    // A control that stops drawing stays gone on pure replays too, though its instances sit inside a shared segment range.
     [Test]
     public void AControlThatStoppedDrawing_IsGoneFromAPlainREPLAY()
     {
@@ -363,11 +341,8 @@ public class LayerPlacementRenderTests
             "a collapsed parent must take what its children draw with it");
     }
 
-    // What the app does that none of the tests above do: the control goes on NOT being re-recorded while the arena around
-    // it is re-laid many times over. Measured live, its instances moved from slot 11 to 29 to 63 to 302 while the group
-    // itself was last written thousands of frames earlier - so by the time it stops drawing, everything the cache
-    // REMEMBERS about where its slots are (its runs) names somebody else's. A withdrawal that goes by those remembered
-    // addresses then blanks the wrong place and reports success, and the control keeps painting.
+    // After many re-layouts of the arena, a long-unrecorded control's remembered slots name others; withdrawal must find
+    // its instances by owner tag.
     [Test]
     public void AControlThatStoppedDrawing_IsGone_EvenAfterTheArenaMovedItsSlotsAround()
     {
@@ -444,7 +419,7 @@ public class LayerPlacementRenderTests
     }
 
     // The layers are the structure of a recorded frame - which draws may be reordered among themselves and which may not
-    // (§5a) - and the stream is what a replay walks. They have to stay the same sequence: a layer list that has drifted
+    // - and the stream is what a replay walks. They have to stay the same sequence: a layer list that has drifted
     // from the stream would answer "your order here does not matter" about a set the frame does not actually draw
     // together, and that is a wrong picture rather than a slow frame. Asked after each kind of edit a frame can take.
     [Test]
@@ -475,11 +450,7 @@ public class LayerPlacementRenderTests
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "and the frame still equals what a walk draws");
     }
 
-    // The case the first version of the layer bookkeeping got wrong, and it is the COMMON one: a newcomer's place is
-    // found by rank and then backed up over the scissor ops that set up the draw after it, which lands the insert exactly
-    // BETWEEN two layers. Claimed by neither, the op still sits in the stream - so every later layer's window into it is
-    // one op short, and the frame is assembled out of pieces of its neighbours. Live, on a theme swap (dozens of splices
-    // in a row), that showed as one tab's content painted across the tab strip.
+    // An insert landing exactly between two layers must still be claimed by one, or later layer windows slide.
     [Test]
     public void ManySplicesInARow_LeaveEveryLayerDescribingItsOwnOps()
     {
@@ -513,13 +484,8 @@ public class LayerPlacementRenderTests
         }
     }
 
-    // A CLIPPED control draws in a segment of its own (a batch is flushed when the next draw needs another scissor), so
-    // when it stops drawing that segment has nobody left in it. What is pinned here is what a test CAN pin: the frame
-    // that follows still equals a walk, and the layers still tile the stream exactly.
-    // <para>What it deliberately does NOT claim is that the draw call itself disappeared. It does - the sweep drops a
-    // segment that draws nothing - but hiding a control also marks the frame structural, and the rebuild that follows
-    // re-lays the stream without it anyway. The two are indistinguishable from here: the sweep earns its keep only where
-    // no rebuild follows at all, which is the live replayed frame this harness cannot produce.</para>
+    // A clipped control's own segment empties when it stops drawing: the next frame equals a walk and layers still tile
+    // the stream (dropping the draw call itself is not observable here).
     [Test]
     public void AClippedControlThatStopsDrawing_LeavesTheFrameEqualToAWalk()
     {
@@ -600,12 +566,7 @@ public class LayerPlacementRenderTests
         Assert.That(CountLime(Pixels(scene.Renderer)), Is.Zero, "a hidden parent must take what its children draw with it");
     }
 
-    // A control whose fill is arbitrary GEOMETRY - a Path, which is what a close button's glyph is - must be spliced in
-    // like any other batched family. It is not: that fill lives in InstancedFillCollector, which is not a BatchArena at
-    // all (per-KEY storage with its own ring, four parallel instance families, and a flush record on top), so the splice
-    // has nothing to name and the frame walks. Measured live: hovering one close button costs 389 walks in eight seconds
-    // of flipping, every one of them `notOneArena<Path>` / `noArena<Path>`.
-    // RED ON PURPOSE - it is the specification for making that collector an arena.
+    // A control with a geometry fill (a Path glyph) must be spliced like other batched families, not force a walk.
     [Test]
     public void AVectorFillThatStartsDrawing_IsSplicedInLikeARectangle()
     {

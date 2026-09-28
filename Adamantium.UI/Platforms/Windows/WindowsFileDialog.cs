@@ -101,12 +101,8 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         if (types.Length > 0) dialog.SetFileTypes((uint)types.Length, types);
     }
 
-    // WHOSE DIALOG THIS IS. A dialog is placed over its owner and opens on the screen the owner is on; with no owner it
-    // opens on the main one, which on a second monitor puts it away from the work it is about.
-    //
-    // What was asked for first, then the window in front, and the application's main window last. The active window is
-    // not enough on its own: it is the active window OF THIS THREAD, and a dialog opened from anywhere but the pump
-    // thread - a command run off a timer, say - would find none at all.
+    // The owner decides the dialog's monitor: the requested window, else the active one (per-thread, so possibly none),
+    // else the main window.
     private static IntPtr Owner(IntPtr asked)
     {
         if (asked != IntPtr.Zero) return asked;

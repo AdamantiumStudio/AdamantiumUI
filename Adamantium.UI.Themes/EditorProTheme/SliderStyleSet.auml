@@ -2,14 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's slider. The handle is a BAR, not a disc.
-
-         A round handle has to be as tall as it is wide, so a 20-pixel circle forces the whole control to 20 pixels
-         however thin the rail is - and in a properties panel, where a slider sits in a row beside a label and a number
-         field, that circle is the tallest thing in the row and sets its height. An upright bar is wide enough to grab
-         and short enough to leave the row alone; it also points AT the rail, which a circle does not.
-
-         Square, like everything else here: at three pixels a rounded rail is two semicircles with nothing between. -->
+    <!-- Editor Pro's slider: an upright bar handle that does not dictate the row height, on a square rail. -->
 
     <Style Selector="Slider">
         <Setter Property="MinHeight" Value="{ResourceReference ControlHeightCompact}"/>

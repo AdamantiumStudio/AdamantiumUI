@@ -14,7 +14,7 @@ namespace Adamantium.UI.Controls;
 /// <summary>
 /// The window's command band: a strip of tabs over an area of groups. Items are <see cref="RibbonTab"/>s; the strip
 /// shows one <see cref="RibbonTabHeader"/> per item and <c>PART_SelectedContentHost</c> shows the selected tab itself,
-/// which presents its own groups. A <see cref="Selector"/> and not a <see cref="TabControl"/> - see docs/RIBBON_PLAN.md §2.1.
+/// which presents its own groups. A <see cref="Selector"/> and not a <see cref="TabControl"/>.
 /// </summary>
 public class Ribbon : Selector
 {
@@ -51,11 +51,8 @@ public class Ribbon : Selector
     public static void SetIconTemplate(IAdamantiumComponent element, DataTemplate value) =>
         element.SetValue(IconTemplateProperty, value);
 
-    /// <summary>How this command draws itself SMALL, in the quick-access bar. Unset means the bar's default: an icon
-    /// button. A command that is not a button - a slider, a drop-down - states its own compact form here, which is what
-    /// lets the bar hold it without the ribbon knowing a thing about its kind.
-    /// <para>The visual is not moved and not shared: the bar builds its own from this template, so the command keeps
-    /// standing in the ribbon at the same time.</para></summary>
+    /// <summary>The command's compact form in the quick-access bar, built fresh from this template; unset means an icon
+    /// button.</summary>
     public static readonly AdamantiumProperty QuickAccessTemplateProperty = AdamantiumProperty.RegisterAttached(
         "QuickAccessTemplate", typeof(DataTemplate), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
@@ -65,12 +62,8 @@ public class Ribbon : Selector
     public static void SetQuickAccessTemplate(IAdamantiumComponent element, DataTemplate value) =>
         element.SetValue(QuickAccessTemplateProperty, value);
 
-    /// <summary>What the APPLICATION calls this command. The bar is handed a description, never the control, so an
-    /// application that has to recognise the command it was asked about - to point its own item at the same state, say -
-    /// needs a name for it that outlives the visual. Reaches the application as
-    /// <see cref="RibbonQuickAccessEventArgs.Key"/>.
-    /// <para>INHERITS, so the bar can stamp it once on the container it builds for an item and every visual inside that
-    /// container - the button the user actually right-clicks - answers with the same key.</para></summary>
+    /// <summary>The application's name for this command, reported as <see cref="RibbonQuickAccessEventArgs.Key"/>.
+    /// Inherited, so every visual inside an item's container answers with it.</summary>
     public static readonly AdamantiumProperty QuickAccessKeyProperty = AdamantiumProperty.RegisterAttached(
         "QuickAccessKey", typeof(object), typeof(AdamantiumComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits));
@@ -113,27 +106,16 @@ public class Ribbon : Selector
         element.SetValue(CollapseToSmallProperty, value);
 
     // --- Putting a command in the quick-access bar -------------------------------------------------------------------
-    //
-    // The bar's collection belongs to the APPLICATION and holds whatever type it chose, so the ribbon never writes into
-    // it. It only reports the request and states what the command looks like; the application builds its own kind of
-    // item and answers.
-    //
-    // What is in the bar already, the ribbon READS: point it at the same collection the bar shows (QuickAccessItems) and
-    // it recognises its own commands there by their key. The application is left holding no record of the ribbon at all -
-    // which matters, because the only record it could keep is a reference to a control, and a view model that holds a
-    // control has stopped being a view model.
+    // The bar's collection belongs to the application: the ribbon only reports requests and reads QuickAccessItems,
+    // recognizing its commands by key.
 
     /// <summary>Whether this command may be offered to the bar at all. A separator, or a control that would be
     /// meaningless as one small button, says no.</summary>
     public static readonly AdamantiumProperty CanAddToQuickAccessProperty = AdamantiumProperty.RegisterAttached(
         "CanAddToQuickAccess", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(true));
 
-    /// <summary>The right-click menu a command in a group is given when it wrote none of its own. A TEMPLATE and not a
-    /// menu: a <see cref="ContextMenu"/> is a logical child with a single <see cref="ContextMenu.PlacementTarget"/>, so
-    /// every command needs its OWN - and a style setter hands them all the same object. A template builds a fresh one per
-    /// command, which is what puts the menu's contents back in the theme instead of in code.
-    /// <para>INHERITED, so it is stated once on the ribbon (the theme does) and every group finds it. Unset means a
-    /// command is given no menu at all.</para></summary>
+    /// <summary>Template for the context menu of a group command that has none; a template since each command needs its
+    /// own menu. Inherited; unset means no menu.</summary>
     public static readonly AdamantiumProperty CommandContextMenuTemplateProperty = AdamantiumProperty.RegisterAttached(
         "CommandContextMenuTemplate", typeof(DataTemplate), typeof(AdamantiumComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits));
@@ -229,12 +211,8 @@ public class Ribbon : Selector
     public static void SetRemoveFromQuickAccessCommand(IAdamantiumComponent element, ICommand value) =>
         element.SetValue(RemoveFromQuickAccessCommandProperty, value);
 
-    /// <summary>Every command in the band that may go in the bar, tab by tab and group by group. Walked over the ITEMS
-    /// rather than the visual tree: only the open tab is ever realized, and a list that showed one tab's commands would
-    /// be no use for choosing.
-    /// <para>There is exactly one place to move commands from, and this is what furnishes it - a per-command context
-    /// menu cannot be it, because <see cref="Base.InputUIComponent.ContextMenu"/> holds ONE menu and the author's would
-    /// replace ours (or ours theirs).</para></summary>
+    /// <summary>Every command that may go in the quick-access bar, walked over the items so unrealized tabs are
+    /// included.</summary>
     public IEnumerable<IUIComponent> QuickAccessCandidates
     {
         get
@@ -341,7 +319,7 @@ public class Ribbon : Selector
     }
 
     /// <summary>Only the strip is shown; the open tab's groups move to a flyout a click on a header opens. Does NOT
-    /// change which tab is open - see docs/RIBBON_PLAN.md §5.</summary>
+    /// change which tab is open.</summary>
     public static readonly AdamantiumProperty IsMinimizedProperty = AdamantiumProperty.Register(nameof(IsMinimized),
         typeof(bool), typeof(Ribbon), new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure, OnIsMinimizedChanged));
 
@@ -592,12 +570,8 @@ public class Ribbon : Selector
             return;
         }
 
-        // ALREADY SHOWING - this is a tab being switched, not a band being opened. Parking it off-screen here would be
-        // fatal: the motion back is started by the popup's FIRST LAYER PASS, and a popup that is already open gets no
-        // such pass (IsOpen = true over true is not a change, so it never re-opens). Nothing would ever bring it back,
-        // and the flyout would stay up with its commands a band's height above the clip - commands vanishing from a
-        // panel that is plainly still there, after nothing more than clicking between tabs.
-        // Animate instead: from 0 it is a no-op, and it is also the thing that catches a band caught mid-close.
+        // Already open means a tab switch: parking it off-screen would never be undone, since an open popup gets no first
+        // layer pass. Animate instead, which also catches a mid-close band.
         if (_flyout.IsOpen)
         {
             _flyout.LayerPass -= OnFlyoutFirstPass;
@@ -618,12 +592,8 @@ public class Ribbon : Selector
         Animate(0);
     }
 
-    /// <summary>Puts the minimized band away. <paramref name="animate"/> is false when the band is not going anywhere -
-    /// it is going HOME, back into the ribbon, which the restore has already done.
-    /// <para>Sliding it out then animates a plate that is empty: the content moved back to the band first, so what
-    /// travels down is a ghost of the band the same height as the band now showing above it. On screen that is a
-    /// ribbon twice as tall for the length of the transition, settling back when the ghost finally leaves - measured:
-    /// band 106 visible AND popup still open with a 106-tall child.</para></summary>
+    // Puts the minimized band away; animate is false on restore, where the content is already back in the ribbon and
+    // sliding would show an empty ghost.
     private void CloseFlyout(bool animate = true)
     {
         if (_flyout is not { IsOpen: true }) return;
@@ -738,11 +708,7 @@ public class Ribbon : Selector
     {
         if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text)) return;
 
-        // While Alt is still HELD a letter is half of a shortcut (Alt+H), not a key tip - Office acts on the letters
-        // only once Alt is off. Holding it and typing let every repeat of the pair walk a level deeper and then wipe
-        // the badges, which read as the ribbon running through them by itself.
-        // AUTOREPEAT is not a second keystroke either, for the same reason. Both are still swallowed: they were aimed
-        // at the mode.
+        // With Alt held a letter is a shortcut, not a key tip, and autorepeat is not a new keystroke; both are swallowed.
         if (_altDown || _lastKeyRepeated)
         {
             e.Handled = true;
@@ -780,18 +746,11 @@ public class Ribbon : Selector
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {
-        // What counts as a REPEAT is worked out here rather than taken from the event: measured, the platform's own
-        // flag misses the first repetition entirely - a second KeyDown arrives 500ms after the press (the system's
-        // autorepeat delay) still claiming IsRepeated=false, and that one descended into a tab and then ran a command
-        // inside it off a single held key. A key that was never released cannot be a new keystroke, whatever the flag
-        // says. Set BEFORE any branch: an early return left it stale from the keystroke before.
+        // The platform flag misses the first autorepeat, so an unreleased key also counts as a repeat. Set before any
+        // early return.
         _lastKeyRepeated = e.IsRepeated || e.Key == _heldKey;
         _heldKey = e.Key;
-        // Alt does NOT act on the way down. Holding it repeats KeyDown at the system's autorepeat rate, and toggling on
-        // each one flicked the badges on and off many times a second - which read as "it chose something for me".
-        // The mode turns over when the key is RELEASED, and only if nothing was pressed in between: Alt+F4 is a
-        // shortcut, not a request for key tips. Key.Alt is what actually arrives (the virtual key, 0x12); the sided
-        // ones are listed so a platform that distinguishes them still works.
+        // Alt toggles the mode on release, and only if nothing was pressed in between (Alt+F4 is a shortcut).
         if (e.Key is Key.Alt or Key.LeftAlt or Key.RightAlt)
         {
             _altDown = true;
@@ -946,7 +905,7 @@ public class Ribbon : Selector
         header.IsSelected = false;
     }
 
-    // --- Contextual groups (docs/RIBBON_PLAN.md §4) --------------------------------------------------------------------
+    // --- Contextual groups ---------------------------------------------------------------------------------------------
     //
     // A group is a DESCRIPTION several tabs point at, so the ribbon does not own a list of them: it learns which groups
     // exist from the tabs themselves and watches each one it meets. Activation is the group's own business - the ribbon

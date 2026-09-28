@@ -2,15 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Input;
 
-/// <summary>
-/// What a platform's native drop target calls back into - implemented by the drag-drop engine, so an OS-driven drag
-/// (files from Explorer/Finder, text from another app) drives exactly the same targeting, highlight, insertion cue and
-/// <c>DropCommand</c> delivery as an in-app drag (docs/DRAG_DROP_PLAN.md phase 5).
-/// <para>
-/// THREADING: these run on the platform's window/message thread, INSIDE the drag source's modal loop, and must return
-/// promptly - the engine posts the tree work onto the UI loop thread and answers with the effect it settled on last move.
-/// </para>
-/// </summary>
+/// <summary>What a native drop target calls, so OS drags behave like in-app ones. Runs on the platform thread inside the
+/// source's modal loop and must return promptly.</summary>
 public interface INativeDropSink
 {
     /// <summary>The pointer entered <paramref name="window"/> carrying <paramref name="data"/> (already read out of the

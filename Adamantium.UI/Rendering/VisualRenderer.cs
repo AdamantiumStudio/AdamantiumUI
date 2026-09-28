@@ -16,15 +16,8 @@ using Serilog;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// Renders a visual into a texture off-screen - the engine's analog of UWP's <c>RenderTargetBitmap</c>. Feed it a live
-/// (detached / AUML-loaded) visual, or a LIVE on-screen element, and it drives the PRODUCTION <see cref="RenderCache"/>
-/// into a window-less render target, reads the result back on the CPU and hands back a device-independent bitmap an
-/// <c>Image</c>/<c>DrawImage</c> can draw. The shared foundation for the drag-drop ghost, VisualBrush/DrawingBrush bakes,
-/// and previews/thumbnails (docs/DRAG_DROP_PLAN.md). One-shot: the GPU resources are freed before returning.
-///
-/// Each call builds its OWN <see cref="RenderCache"/> (parallel to any window's). That is SAFE: the parallel cache only
-/// READS the global <c>RenderDirty</c> (its <c>Clear()</c> is the window loop's, never a build's), and its unit/snapshot
-/// state are instance fields - so a bake never disturbs a live window's render.
+/// Renders a detached or live visual off-screen through its own <see cref="RenderCache"/> and returns a
+/// device-independent bitmap, like UWP's <c>RenderTargetBitmap</c>. GPU resources are freed before returning.
 /// </summary>
 public sealed class VisualRenderer : IVisualRenderer
 {
@@ -129,24 +122,8 @@ public sealed class VisualRenderer : IVisualRenderer
     }
 
     // ------------------------------------------------------------------------------------------------------------------
-    // LIVE snapshot: a two-stage producer/consumer split across the loop and render threads.
-    //
-    // A live element is SHARED with the window's render, and the two render devices SHARE ONE VkDevice, so the snapshot has
-    // two constraints that pull in opposite directions:
-    //   * READING the live tree (RenderReadOnly, world transforms) must happen where nothing mutates it - the LOOP thread,
-    //     quiescent after Update (the render thread only ever reads the recorded packets, never the live components).
-    //   * The GPU DRAW (submit / readback on the shared VkDevice) must be serialised with the window's render - the RENDER
-    //     thread, which alone owns the device. Submitting from the loop thread, or a device-wide DeviceWaitIdle, races the
-    //     render thread's submits and LOSES the device (TDR).
-    //
-    // So it mirrors the window's own record/apply split:
-    //   1. RECORD  (loop thread, RecordPendingSnapshots): read the live subtree and build a parallel RenderCache. This is
-    //      device-free - exactly like the window's RecordFrame - so it is safe off the render thread.
-    //   2. DRAW    (render thread, DrawPendingSnapshots): the GPU half - draw the built cache into an off-screen RT, read it
-    //      back, deliver the bitmap on the UI thread.
-    //
-    // Both queues drain every frame from the app loop (RecordPendingSnapshots on the loop thread, DrawPendingSnapshots on the
-    // render thread), so a no-op drain on an empty queue is the idle cost - a single TryDequeue miss, no device touched.
+    // Live snapshots mirror the window's record/apply split: RecordPendingSnapshots reads the live tree on the loop thread
+    // (device-free), DrawPendingSnapshots draws and reads back on the render thread, which owns the shared VkDevice.
     // ------------------------------------------------------------------------------------------------------------------
     private readonly ConcurrentQueue<(IUIComponent visual, Action<ImageSource> onReady)> _recordQueue = new();
     private readonly ConcurrentQueue<(IUIComponent visual, Size size, double scale, Color clear, Action<ImageSource> onReady)> _detachedQueue = new();
@@ -176,7 +153,7 @@ public sealed class VisualRenderer : IVisualRenderer
         LoopSignal.Request();
     }
 
-    /// <summary>LOOP-thread stage 1: read each queued live subtree and build its render cache (device-free), then hand the
+    /// <summary>LOOP-thread half of a snapshot: read each queued live subtree and build its render cache (device-free), then hand the
     /// built cache to the render thread's draw queue. Called by the app loop every frame at a quiescent boundary; a no-op
     /// when nothing is queued.</summary>
     public void RecordPendingSnapshots()
@@ -240,7 +217,7 @@ public sealed class VisualRenderer : IVisualRenderer
         }
     }
 
-    /// <summary>RENDER-thread stage 2: draw each recorded cache into an off-screen RT, read it back and deliver the bitmap on
+    /// <summary>RENDER-thread half of a snapshot: draw each recorded cache into an off-screen RT, read it back and deliver the bitmap on
     /// the UI thread. Called by the render thread (which alone owns the shared VkDevice) at a frame boundary.</summary>
     public void DrawPendingSnapshots()
     {
@@ -266,13 +243,8 @@ public sealed class VisualRenderer : IVisualRenderer
         }
     }
 
-    /// <summary>
-    /// Stage-1 record: builds a parallel <see cref="RenderCache"/> for a LIVE, on-screen element WITHOUT reparenting it or
-    /// disturbing the window. It flattens the element's subtree into a flat component list and records it through the
-    /// adorner-stage path (read-only over the live tree): each component keeps its own live world transform (composed up the
-    /// real <c>RenderParent</c> chain), and the projection is offset by the element's world origin so the subtree lands at
-    /// the render-target origin. DEVICE-FREE (no GPU work) - safe on the loop thread. Null if the element has no visible size.
-    /// </summary>
+    // Records a parallel cache for a live element without reparenting it (flat adorner-style build, projection offset to
+    // the element's origin). Device-free; null when it has no visible size.
     private (RenderCache cache, uint width, uint height, double scale)? BuildLiveCache(IUIComponent element)
     {
         if (element == null) return null;
@@ -326,13 +298,8 @@ public sealed class VisualRenderer : IVisualRenderer
         foreach (var child in component.VisualChildren) FlattenSubtree(child, list);
     }
 
-    // Draws an already-built cache into a fresh off-screen RT and reads it back to a CPU bitmap (device-INDEPENDENT: the
-    // dedicated render device's GPU texture can't be sampled by a window's device). One-shot - frees the GPU resources here.
-    // scale = the device-pixel density the cache was RECORDED at. The bitmap is that many physical pixels across, and it
-    // has to say so: a BitmapSource's logical size is PixelWidth * DpiXScale, so a snapshot taken at 1.5x and handed over
-    // as 1:1 measures 1.5x the element it copied - on a 4K monitor the "1:1" snapshot stood half again as large as the
-    // live tree beside it. The density belongs on the picture, not in the size: dropping the 1.5 from the RASTER instead
-    // would match the size by throwing away exactly the pixels the monitor has.
+    // Draws a built cache off-screen and reads it back to a CPU bitmap, tagged with the recording density so its logical
+    // size matches the element.
     private ImageSource DrawToBitmap(RenderCache cache, uint width, uint height, Color clear, double scale)
     {
         EnsureDevice();

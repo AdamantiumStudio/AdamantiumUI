@@ -4,11 +4,7 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the ellipse SDF batch (see BatchEffect.fx, pass Ellipse): a solid ellipse/circle fill with its
-/// bounding box baked to WORLD space. Packed into a BDA STORAGE buffer and read in the vertex shader by SV_InstanceID
-/// (the shader's <c>EllipseData</c>); the quad comes from SV_VertexID and the pixel shader evaluates the ellipse implicit
-/// (length(local/half) - 1), self-anti-aliasing via fwidth - resolution-independent, no tessellation, no AA fringe. No
-/// per-instance vertex buffer - the layout here is the SSBO record layout.
+/// One ellipse SDF batch instance (BatchEffect.fx, pass Ellipse), world-space, matching the shader's <c>EllipseData</c>.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct EllipseItem
@@ -38,13 +34,7 @@ public struct EllipseItem
     /// packed into <see cref="Stroke1"/>.w. A pattern longer than one ON/GAP period lives here.</summary>
     public Vector4F Dash;
 
-    /// <summary>The angular CUT: x = start, y = end, both in RADIANS of the ellipse's own parametric angle (the one the
-    /// tessellator sweeps: x = rx·cos t, y = ry·sin t - which is NOT the geometric angle unless rx == ry); z = how the
-    /// cut closes (0 = no cut, a whole ellipse; 1 = <c>Sector</c>, through the centre; 2 = <c>EdgeToEdge</c>, by the
-    /// chord); w = RING thickness in device px, measured inward from the outline (0 = solid).
-    /// <para>A sector and a segment are the same ellipse with a STRAIGHT boundary added, so they need no shape of their
-    /// own: the field is intersected with that boundary and the stroke follows the combined outline for free. A RING is
-    /// the same trick inward - the field minus its own offset - which turns a ring gauge from a thick stroke into a
-    /// shape, thickness and all, and hands the pen back for a real outline.</para></summary>
+    /// <summary>x/y = start/end in radians of the parametric angle; z = closing (0 none, 1 <c>Sector</c>,
+    /// 2 <c>EdgeToEdge</c>); w = inward ring thickness in device px (0 = solid).</summary>
     public Vector4F Arc;
 }

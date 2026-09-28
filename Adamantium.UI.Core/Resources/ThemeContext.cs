@@ -2,26 +2,9 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// The theme in force AT a place in the tree. <c>ThemeContext.Theme</c> and <c>ThemeContext.Variant</c> are attached
-/// properties, so any element can become the root of a scope without the markup being wrapped in anything, and both
-/// CASCADE the way <c>DataContext</c> does - set once, and everything below is under them until some deeper element
-/// says otherwise.
-/// <code>&lt;Border ThemeContext.Theme="{StaticResource Fluent}" ThemeContext.Variant="Dark"&gt; … &lt;/Border&gt;</code>
-/// </summary>
-/// <remarks>
-/// Named to continue <see cref="ResourceContext"/>, which is the same shape for the same kind of question - a static
-/// class of attached properties that bind something to a subtree. A reader who has met <c>ResourceContext.Scope</c>
-/// already knows what <c>ThemeContext.Variant</c> is. (<see cref="IThemeEngine"/>, which APPLIES styles, was renamed
-/// out of the way so the two could not be confused.)
-/// <para>A scope REPLACES the application's theme for its subtree rather than layering over it: a key the scope's
-/// theme does not define is not found, exactly as it would not be found if the whole application ran on that theme.
-/// A subtree can therefore never come out a mixture of two themes.</para>
-/// <para>Cascade by PROPERTY INHERITANCE, not by a walk of our own: the value system already answers "the nearest
-/// ancestor that set this" and does it incrementally as the tree changes. A second mechanism would be one more thing
-/// to keep in step with re-parenting, and its walk would run per element per re-theme on trees of tens of thousands
-/// of nodes.</para>
-/// </remarks>
+/// <summary>The theme in force at a place in the tree: attached, inherited <c>ThemeContext.Theme</c> and
+/// <c>ThemeContext.Variant</c>, e.g. <c>&lt;Border ThemeContext.Variant="Dark"&gt;</c>.</summary>
+/// <remarks>A scope replaces the application's theme for its subtree rather than layering over it.</remarks>
 public static class ThemeContext
 {
     /// <summary>The theme this element and everything under it wears. Unset: whatever the nearest ancestor that names
@@ -71,24 +54,11 @@ public static class ThemeContext
         }
     }
 
-    /// <summary>The theme <paramref name="component"/> should be styled and resolved against - the single answer to
-    /// "which theme applies here". Everything that used to read <c>ThemeManager.CurrentTheme</c> asks this instead;
-    /// that is what makes a scope work everywhere rather than only where somebody remembered to check.
-    /// <para>The variant is part of the answer, not a separate question: a variant this theme is not currently showing
-    /// resolves to the sibling that is (see <see cref="Theme.SiblingForVariant"/>), because one palette cannot hold
-    /// two variants at once and a preview pane beside the thing it previews needs exactly that.</para></summary>
-    // How many elements have ever been given a scope. Nearly every application has NONE, and this is asked on every
-    // single resource lookup - two reads of an INHERITED property per ask, on a tree of tens of thousands of nodes,
-    // during a startup that resolves a resource for practically every element. Measured as a ten-second freeze before
-    // anything appeared. When nobody has declared a scope there is nothing to resolve, and one integer says so.
+    // How many elements ever got a scope; zero lets every resource lookup skip the inherited-property reads.
     private static int _scopeCount;
 
-    /// <summary>Which element's scope answers for <paramref name="component"/>. Normally itself - but a TEMPLATE PART
-    /// belongs to the control it was built for, and its own inheritance chain need not reach the scope the control sits
-    /// in: parts are wired as visual children, and only the template ROOT is given an inheritance parent. A part that
-    /// declares nothing of its own therefore asks its templated parent, which is in the ordinary tree and does see the
-    /// scope. Measured on the stand: the CheckBox resolved Light and its own PART_ContentPresenter resolved the
-    /// application's Dark, so the label came out white on a light panel.</summary>
+    // Whose scope answers for a component: itself, or for a template part without its own, its templated parent, since
+    // parts may not inherit the scope.
     private static AdamantiumComponent ScopeAnchor(IFundamentalUIComponent component)
     {
         var element = component as AdamantiumComponent;
@@ -105,6 +75,8 @@ public static class ThemeContext
         return component as AdamantiumComponent;
     }
 
+    /// <summary>The theme, variant included (a sibling via <see cref="Theme.SiblingForVariant"/>), that
+    /// <paramref name="component"/> is styled and resolved against.</summary>
     public static ITheme For(IFundamentalUIComponent component)
     {
         if (_scopeCount == 0) return UIAppContext.Current?.ThemeManager?.CurrentTheme;
@@ -146,18 +118,11 @@ public static class ThemeContext
         // when the element attached, so without this a scope could be SET before anything was shown but never SWITCHED.
         if (element is IUIComponent visual) ResourceResolver.ReResolveSubtree(visual);
 
-        // ...and the LIVE ones, which re-resolve on this event and on nothing else. A scope switch changes which theme
-        // answers a key inside the subtree, which is a change of the resource set by any reading - it just never said
-        // so, so an {ObservableResource} inside a scope went on showing the theme the scope started under. Announced
-        // application-wide rather than per subtree because a re-resolve is a lookup: an expression outside this scope
-        // asks and gets the same answer it had. A scope switch is an explicit, rare act.
+        // ...and live {ObservableResource}s, which re-resolve only on this app-wide event; outside the scope they get the
+        // same answer.
         UIAppContext.Current?.ResourceManager?.NotifyResourcesChanged();
 
-        // ...and AGAIN when the scope's subtree actually enters the tree. A scope is declared in markup, so it is set
-        // while the elements under it are still being built: a template part that resolves a key at that moment walks an
-        // ancestor chain that does not reach the scope yet, gets the application's theme, and is never asked again.
-        // Measured on the stand - the presenter's chain ended two levels short of the pane, so a checkbox label stayed
-        // white on a light panel while the plain text beside it was black.
+        // ...and again when the subtree enters the tree, since parts resolved during the build could not see the scope yet.
         if (element is IUIComponent tracked) HookScopeAttach(tracked);
     }
 

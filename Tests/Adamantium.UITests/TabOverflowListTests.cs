@@ -6,14 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The overflow flyout - the ▾ list of every tab, shown when the strip is too narrow to hold them - must show what the
-/// tabs SAY, never the tabs themselves. An authored TabItem is a live control, and a list given it as an item hosts it
-/// as a row's content: that takes the tab out of the strip, the strip gives it up, and the whole strip empties the
-/// moment the flyout is opened.
-/// <para>Found on the docking control, which is a TabControl whose panes are authored TabItems - squeeze a pane group
-/// until the ▾ appears, open it, and every tab disappears.</para>
-/// </summary>
+// The overflow list shows what the tabs say, never the authored TabItems themselves (which would leave the strip).
 [TestFixture]
 public class TabOverflowListTests
 {

@@ -3,14 +3,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Clicking a slider's track pages toward the click - and must stop THERE, not sail past it. The page button cannot
-/// notice on its own: the pointer does not move, the AREA moves out from under it, and enter/leave are raised from
-/// pointer movement, so the button never hears that it was left and repeats all the way to the end. The scrollbar was
-/// fixed the same way; the slider was left behind, and it has one complication the scrollbar does not - TICKS.
-/// <para>These test the decision, not the pointer: reading the mouse is the one part that cannot be handed a value, so
-/// the limit is passed in exactly as Track.PageLimitFromPoint would return it (that mapping has its own tests).</para>
-/// </summary>
+// Track paging stops at the click point, ticks included; the limit is passed in as Track.PageLimitFromPoint returns it.
 [TestFixture]
 public class SliderPagingTests
 {

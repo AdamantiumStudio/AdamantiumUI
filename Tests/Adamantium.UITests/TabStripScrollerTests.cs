@@ -215,13 +215,8 @@ public class TabStripScrollerTests
             Assert.That(tc.Items.IndexOf(tabs[3]), Is.EqualTo(3), "the far tab did not move");
         });
 
-        // The tabs must LAND where the new order puts them (the moved tab in slot 1, NOT appended to the end): this is
-        // where the "flew to the end" bug lived - Children.Insert appended the moved tab. Asked of the arranged
-        // positions rather than of the panel's Children: the strip virtualizes, so containers belong to the generator
-        // and Children is empty - position is what the reorder actually has to get right, and what the eye sees.
-        // Invalidate from the top before re-laying out: the panel marked ITSELF dirty when the items moved, but it is a
-        // measure BOUNDARY, so that mark does not travel up - in the app the layout manager drains the panel directly,
-        // and here there is no manager, so a plain tc.Measure would short-circuit and read the pre-reorder positions.
+        // The moved tab lands in slot 1, checked by arranged position (the strip virtualizes). Invalidate up the tree
+        // first: the panel is a measure boundary and there is no layout manager here.
         for (IUIComponent n = tc.ItemsHostPanel; n != null; n = n.VisualParent)
             (n as IMeasurableComponent)?.InvalidateMeasure();
         tc.Measure(new Size(1000, 100));
@@ -298,12 +293,8 @@ public class TabStripScrollerTests
         Assert.That(scroller.CanScrollBack, Is.True, "panned off the start -> content is now hidden before the viewport");
     }
 
-    // The off-screen-until-resize bug: the ▾ overflow button is now OVERLAID on the strip (a single-cell grid, right-
-    // aligned) and starts Collapsed; when shown it must re-lay-out flush inside the right edge, never past it. This drives
-    // the real LayoutManager loop (ExecuteLayoutPass) - NOT a bare grid.Measure, which early-returns on the unchanged root
-    // constraint: a child's InvalidateMeasure enqueues the child in the manager, and only the loop drains it and propagates
-    // the re-measure up to the grid (MeasureDirty -> parent.InvalidateMeasure on a size change). A resize "fixed" the button
-    // only because it fed the root a NEW constraint, forcing a fresh pass; the loop makes it reflow with no resize.
+    // The overlaid overflow button, shown after starting Collapsed, lays out flush inside the right edge; driven through
+    // the real LayoutManager loop (ExecuteLayoutPass).
     [Test]
     public void OverflowButton_RelaysOutInBounds_AfterBecomingVisible_ViaLayoutPass()
     {

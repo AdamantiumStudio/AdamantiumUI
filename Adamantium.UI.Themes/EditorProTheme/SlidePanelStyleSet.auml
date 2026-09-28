@@ -2,13 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A panel that slides in from a window edge and lies over everything. The slide itself is the control's; what is
-         here is the drawer it slides.
-
-         A DRAWER, not a card. Fluent floats it on the card ground with a rounded frame, which reads as an object
-         arriving on top of the work. Here it takes the panel ground and is closed by a hairline on the edge it slid
-         from - it reads as part of the window that was folded away, which is what it is. Square, so it lines up with
-         the panels it slides over instead of announcing itself as a different kind of surface. -->
+    <!-- The slide panel as a square drawer on the panel ground, closed by a hairline on the edge it slides from. -->
 
     <Style Selector="SlidePanel">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>

@@ -6,14 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A WIRE between two sockets of two nodes - the thing a graph is actually made of.
-/// <para>It is held by what it JOINS and not by where it is. There is nothing here to move and nothing to resize: both
-/// ends are sockets, and a socket is somewhere because its node is somewhere. Drag either node and the wire follows
-/// without being told, because it never knew a position to begin with - it asks, every frame, where those two sockets
-/// are now.</para>
-/// <para>Which is also why the nodes are asked rather than the pins: where a socket sits is a fact about the node's
-/// TEMPLATE, and each theme answers it differently. A wire that worked it out for itself would be a copy of every
-/// template's arithmetic, wrong the moment a theme changed a margin.</para></summary>
+/// <summary>A wire between sockets of two nodes. It holds no position: every frame it asks the nodes where their sockets are,
+/// so it follows any move or restyle.</summary>
 public class ConnectionItem : ICanvasItem
 {
     private readonly ElementItem _from;
@@ -203,11 +197,7 @@ public class ConnectionItem : ICanvasItem
         }
     }
 
-    /// <summary>Takes a wire out of the scene and says so on the sockets it was fastened to.
-    /// <para>ASKED OF THE SCENE and not remembered on the socket: a socket is "connected" when something is joined to
-    /// it, and the only thing that knows is the list of wires. A flag kept by hand went stale the first time a wire was
-    /// removed some other way - by deleting the node at its far end - and left a socket drawn as taken with nothing in
-    /// it.</para></summary>
+    /// <summary>Takes a wire out of the scene and updates its sockets, whose connected state is derived from the scene's wires.</summary>
     public static void Cut(ICanvasScene scene, ConnectionItem wire)
     {
         if (scene == null || wire == null) return;
@@ -249,12 +239,7 @@ public class ConnectionItem : ICanvasItem
     private Vector2 _second;
     private bool _routed;
 
-    // THE BEND, pushed clear of whatever is standing in the way.
-    //
-    // Not a path-finder. A wire is a curve between two sockets and the thing in its way is almost always one node, so
-    // the answer is the cheap one: take the plain bend, and if it crosses something, lift the belly of the curve until
-    // it does not - up or down, whichever clears first. Two nodes deep it gives up and draws straight through, which is
-    // honest and is what every editor does all the time anyway.
+    // The bend, lifted up or down until it clears the node in its way; not a path-finder, and two deep it draws through.
     private void Route(InfiniteCanvas canvas, Vector2 from, Vector2 to, out Vector2 first, out Vector2 second)
     {
         Bend(from, to, out first, out second);

@@ -2,13 +2,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core.Media.Animation;
 
-/// <summary>
-/// Design-time heartbeat for frame-based media (animated images). At runtime an animated <c>Image</c> advances itself
-/// off a real <see cref="System.Timers.Timer"/>; in the headless designer there is no real clock, so animated media
-/// register here and the live previewer ticks them once per captured frame - the same way <see cref="AnimationManager"/>
-/// drives property animations. Mirrors that class: a fresh preview tree calls <see cref="Reset"/> so media bound to the
-/// discarded tree don't linger in this shared static and get advanced against dead controls.
-/// </summary>
+/// <summary>Design-time heartbeat for animated images: the headless previewer ticks registered media once per frame. A
+/// fresh preview tree calls <see cref="Reset"/>.</summary>
 public static class DesignTimeMediaClock
 {
     private static readonly List<IDesignTimeAnimatedMedia> Active = new();

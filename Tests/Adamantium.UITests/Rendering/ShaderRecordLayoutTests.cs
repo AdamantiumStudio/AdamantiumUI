@@ -11,11 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// Every batch record is read by the shader through a raw pointer (BDA), so the two sides agree on the layout or the
-// draw reads the wrong bytes - with no link error and nothing from the validation layer. Nothing checked that
-// agreement until now: while both sides are solid float4 they match TRIVIALLY, and the first scalar field is what
-// splits them. So this compares the C# record against the offsets the SHIPPED shader binary declares, not against a
-// hand-copied opinion of what the shader ought to say.
+// C# batch records match the field offsets declared by the shipped shader binaries (read through BDA pointers).
 [TestFixture]
 public class ShaderRecordLayoutTests
 {

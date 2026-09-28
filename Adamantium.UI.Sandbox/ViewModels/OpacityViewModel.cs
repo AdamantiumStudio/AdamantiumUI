@@ -5,18 +5,8 @@ using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Opacity tab: does EVERY drawing family fade by the same amount?
-///
-/// <para>The engine fades a subtree by writing ONE number into a transform-table slot and letting each shader read it,
-/// instead of re-baking every element's colour. A family whose pass does not read that slot has to carry the opacity
-/// CHAIN in its baked colour instead, and the two are easy to get wrong in opposite directions: apply both and the
-/// element fades twice, apply neither and it does not fade at all. Neither shows up on a single shape - only against a
-/// neighbour that got it right.</para>
-///
-/// <para>Hence the instrument: the SAME strip of swatches twice, one inside a container this slider fades and one
-/// beside it at full opacity. Every pair must move apart together; the family that fades too little (or too much) is
-/// the one that reads its alpha differently from the rest. The clipping tab has an opacity slider too, but its pieces
-/// are scattered and draggable - fine for corners, useless for comparing brightness.</para></summary>
+/// <summary>Opacity tab: checks every drawing family fades equally, with one swatch strip in a faded container beside an
+/// unfaded copy; a family that fades twice or not at all stands out.</summary>
 [ViewModel]
 public partial class OpacityViewModel : TabPageViewModel
 {

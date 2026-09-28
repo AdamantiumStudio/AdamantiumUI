@@ -2,18 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The pager: a row of steps through a collection, and a statement of where in it you are. One line, because that
-         is what it is - a caption for the list above it, not a panel in its own right.
-
-         The arrows are plain Buttons, not RepeatButtons. Auto-repeat looks like the right answer - hold one and walk the
-         pages - but a page turn re-fills the list under the pointer, and repeating at the button's rate turns that into
-         a flicker rather than a walk. One click, one page; a page further off is typed into the box, which is the whole
-         reason the box is there.
-
-         "LAST" IS BOUND TO CanGoForward LIKE THE OTHERS, and that is not a shortcut: over a source with an unknown total
-         the control refuses the jump anyway (there is no last page to jump to yet), so the button is live and does
-         nothing. It comes right the moment a short page reveals the end - which is why the text says "of ?" and not
-         "of 0". -->
+    <!-- The pager on one line. Arrows are plain Buttons, one page per click; "Last" binds to CanGoForward and waits for
+         an unknown total to be found ("of ?"). -->
 
     <Style Selector="DataPager">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -60,20 +50,11 @@
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
 
-                                <!-- The numbers are a RADIO GROUP wearing the toggle look, which is what the row
-                                     actually is: one choice out of several, and clicking the page you are already on
-                                     does nothing by construction. The ellipsis is an entry of the same shape and just
-                                     as LIVE - it steps one page its way; see PagerPageItem.
-                                     ALWAYS THE SAME NUMBER OF ENTRIES - see PageButtonCount. The row neither grows with
-                                     the page count nor loses a place at the ends, so no button under the pointer moves
-                                     out from under it. -->
+                                <!-- Page numbers as a radio group styled as toggles, with live ellipsis entries (see
+                                     PagerPageItem); always PageButtonCount entries, so buttons do not shift. -->
                                 <ItemsControl x:Name="NumbersGroup" ItemsSource="{TemplateBinding PageItems}"
                                               MarginRight="8" VerticalAlignment="Center">
-                                    <!-- NOT VIRTUALIZED, deliberately. As an items host this panel places its children
-                                         on a UNIFORM pitch - one measured extent for all of them - which is right for a
-                                         list of equal rows and wrong here: a page button is as wide as its number, so
-                                         "999" and "1000" are different sizes and the wide ones run into their
-                                         neighbours. There are five buttons; there is nothing to virtualize. -->
+                                    <!-- Not virtualized: uniform pitch would overlap page buttons of different widths. -->
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
@@ -108,13 +89,8 @@
                                 </Button>
                             </StackPanel>
 
-                            <!-- The right-hand side: how big a page is, and which one you are on. Both are STATEMENTS
-                                 about the whole collection rather than steps through it, which is why they sit apart
-                                 from the buttons instead of extending that row.
-                                 The two FIELDS take their width from metrics as BOTH Width and MinWidth: each is a
-                                 drop-down or a text field and arrives carrying ControlMinWidth, a floor meant for one
-                                 standing alone in a form - and a floor beats a width, so stating only the width would
-                                 leave the field at its 120 and shoulder the buttons out of the line. -->
+                            <!-- Page size and current page, apart from the buttons. Fields set Width and MinWidth, since
+                                 the theme's ControlMinWidth floor beats a Width. -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" MarginLeft="16"
                                         VerticalAlignment="Center">
                                 <StackPanel x:Name="PageSizeGroup" Orientation="Horizontal" MarginRight="16"
@@ -161,11 +137,8 @@
         </Setter>
     </Style>
 
-    <!-- DisplayMode, part by part. Everything is VISIBLE in the template and a trigger takes it away, rather than the
-         other way round: the default pager shows the lot, so the common case runs no triggers at all, and a part
-         someone forgets to wire is visible-and-obvious instead of missing-and-silent.
-         The flags are read one boolean at a time because that is all a trigger can read - a PropertyTrigger matches a
-         WHOLE value, so a combination could never be tested here. See DataPager. -->
+    <!-- DisplayMode: everything is visible by default and triggers hide parts, one boolean flag each (a trigger matches
+         whole values). See DataPager. -->
     <Style Selector="DataPager">
         <!-- DISABLED, said ONCE for the whole row. IsEnabled is not an inheriting property here, so the buttons and
              fields inside never learn they are off and go on looking live - while input is dead, because hit-testing

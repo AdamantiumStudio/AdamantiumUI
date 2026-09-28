@@ -198,12 +198,7 @@ public class DataGridRow : Panel
         var expander = Owner?.ExpanderColumn;
         var depth = Row?.Depth ?? 0;
 
-        // WHAT this row stands for, decided BEFORE any of it is built. Building a backdrop here for SyncDetails to drop
-        // below is a child ADDED AND REMOVED on every measure, and each of those invalidates the row that is measuring:
-        // the row never goes valid, so the whole realized set re-measures on every pass of a table nobody is touching.
-        // Measured at seven measures a frame per panel and sixty milliseconds of layout AT REST. The strip carrying the
-        // toggle counts as pinned leading, so a table with panels always had a pinned zone to build - the feature paid
-        // this from the moment it was switched on, with no frozen column anywhere.
+        // Decide what this row is before building anything: a child added and removed per measure keeps the row invalid.
         var panel = Row?.Node is DataGridRowDetails;
 
         // The ZONES FIRST: a backdrop is painted BETWEEN two sets of siblings, and the retained paint order ranks a
@@ -294,12 +289,7 @@ public class DataGridRow : Panel
     // is the same step a branch of the tree takes and there is one description of it.
     private double GroupIndent => (Group?.Level ?? 0) * (Owner?.Indent ?? 0);
 
-    // The run of the row the caption gets. It begins where the PINNED ZONE ends: that zone is a column's lane, and a
-    // caption drawn across it reads as that column's text. It stops at the first TOTAL,
-    // because a caption and a number drawn in the same place are two things and one of them is unreadable. A total in
-    // a column at the caption's own start pushes the caption past it instead: the number belongs to that column and
-    // the caption to no column at all. Columns are walked in their layout order, which is the order the caption has to
-    // give way in.
+    // The caption's run: from the end of the pinned zone to the first total; a total at its very start pushes it past.
     private Rect CaptionRun(DataGridColumns columns, double offset, double right)
     {
         var start = offset + (Owner?.FrozenWidth ?? 0) + GroupIndent;
@@ -322,11 +312,8 @@ public class DataGridRow : Panel
         return new Rect(start, 0, Math.Max(0, end - start), 0);
     }
 
-    // Returns whether this row IS a group. Everything a group row shows lives here: the header, and one total per
-    // column that asked for one, placed at that column's offset so a sum stands under the numbers it is a sum of.
-    // The panel row: one presenter over the whole row, built from the table's template against the record the panel
-    // belongs to. Everything a record's row wears - its cells, its number, the pinned backdrop - goes away with it:
-    // this row shows one thing, and a pinned band running under a free-form panel would cut it in two.
+    // A details row shows one presenter over the whole row, built from the table's template; the record row's cells,
+    // number and pinned backdrop go away.
     private bool SyncDetails()
     {
         if (Row?.Node is not DataGridRowDetails details)

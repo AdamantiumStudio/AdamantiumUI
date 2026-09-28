@@ -18,16 +18,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A re-rendered TEXT block must be patched into the glyph slots it already owns, not cost the frame a walk of the whole
-/// scene. Measured before this existed: 340 frames replaying at 0.09 ms against single frames walking at 37 ms, and the
-/// trace named the trigger - a diagnostics overlay rewriting its own text four times a second made an unrelated tab of
-/// 600 tiles redraw entirely. See docs/RENDER_CACHE_REDESIGN.md §4q.
-/// <para>The dangerous failure is not a missing patch - that only costs speed - but a WRONG one: a run written at the
-/// wrong offset silently overwrites a neighbour's glyphs, and a run accepted when the block no longer matches it draws
-/// stale text. So each test pins the patched frame against the SAME scene drawn by a full walk, pixel for pixel, and the
-/// negative ones state what must NOT be patched.</para>
-/// </summary>
+// A re-rendered text block is patched into its own glyph slots instead of walking; patched frames must equal a full walk,
+// and negative tests state what must not be patched.
 [TestFixture]
 [Category("Gpu")]
 public class TextPatchRenderTests
@@ -174,12 +166,7 @@ public class TextPatchRenderTests
     [Test]
     public void GlyphCountChange_ReIssuesTheRun_InsteadOfWalkingTheScene()
     {
-        // The run is a FIXED span, so more (or fewer) glyphs cannot be written INTO it - but that is an argument about
-        // WHERE they go, not about redrawing the window. The block's run is re-issued inside the segment it lives in, the
-        // same repair every batched family gets. Measured live before this: one fps plate ticking cost a 25 ms walk of the
-        // whole scene, four times a second, on top of whatever the app was actually doing.
-        // Both directions, because they fail differently: a longer run has to fit somewhere, and a SHORTER one has to take
-        // the tail of the old text off the screen with it.
+        // A glyph count change re-issues the block's run inside its segment; both longer and shorter text are checked.
         using var scene = NewScene("600 fps");
 
         scene.Blocks[0].Text = "1200 fps";

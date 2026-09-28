@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<!-- Editor Pro's only variant so far: a muted blue-grey, darker and flatter than Fluent's neutral dark. An editor is
-     looked at for eight hours, so the chrome recedes and the accent is the only thing that carries saturation.
-
-     The KEY NAMES are Fluent's on purpose. A theme has to answer for every control in the application, and the style
-     sets Editor Pro has not redesigned yet are INCLUDED from Fluent (see EditorPro.auml) - they ask for these names.
-     The colours behind them are this theme's own. -->
+<!-- Editor Pro dark: muted blue-grey chrome where only the accent carries saturation. Keys match Fluent's, since
+     Fluent style sets are included for controls not yet redesigned. -->
 
 <ThemeVariantDefinition xmlns="http://adamantium/ui"
                         Key="Dark">

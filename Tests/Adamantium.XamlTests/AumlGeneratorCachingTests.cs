@@ -7,7 +7,7 @@ namespace Adamantium.XamlTests;
 
 /// <summary>
 /// An edit that touches no markup must not make the generator re-read the markup. 182 .auml files, about 2 MB, are
-/// parsed on every run that misses - which is where the minute-long builds come from (docs/TECH_DEBT.md, "Сборка").
+/// parsed on every run that misses - which is where the minute-long builds come from.
 ///
 /// This has to be asserted here rather than timed from a build: the cache lives in the GeneratorDriver, and every csc
 /// invocation builds a fresh one, so a command-line build cannot show a hit even when the pipeline is perfect.

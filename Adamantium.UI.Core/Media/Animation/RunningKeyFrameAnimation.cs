@@ -57,11 +57,8 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
         // this animation must agree with what the user is looking at, not lag it.
         _elapsedSeconds = _composited?.Elapsed ?? _elapsedSeconds + deltaSeconds;
 
-        // Write the value into the property system UNLESS the render thread owns it AND applying it needs no property write.
-        // A TRANSFORM is mirrored so hit-testing reads the animated matrix. A PAINT brush is not: colour touches neither
-        // layout nor hit-test, and the whole point of compositing the skeleton pulse was to stop the loop thread republishing
-        // one shared brush's snapshot and marking every card that paints with it dirty, every tick. So paint stays off the
-        // loop thread entirely - the render thread applies it.
+        // Mirror the value into the property system except for composited paint, which the render thread applies alone;
+        // transforms are mirrored for hit-testing.
         if (_composited is not { Channel: CompositorChannel.Paint })
             foreach (var track in _curve.Tracks)
                 _target.SetValue(track.Property, _curve.Evaluate(track, _elapsedSeconds), ValuePriority.Animation);

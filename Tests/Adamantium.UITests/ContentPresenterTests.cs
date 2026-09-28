@@ -270,13 +270,7 @@ public class ContentPresenterTests
         Assert.That(tb.Text, Is.EqualTo("Zed"), "a {Binding} set via element.SetBinding inside a template must still resolve");
     }
 
-    /// <summary>
-    /// An ELEMENT content handed to another presenter belongs to that one. The presenter it left is told afterwards -
-    /// its Content goes null - and it must not detach the element out of its new home on the way out.
-    /// <para>Measured on docking: merging two floating windows moved a tab's body to the surviving window's presenter,
-    /// the emptied one was notified a moment later and pulled the same element back out, and the tab was blank with its
-    /// content parented nowhere - and it never came back.</para>
-    /// </summary>
+    // Element content moved to another presenter stays there when the old presenter's Content goes null afterwards.
     [Test]
     public void ElementContentTakenByAnotherPresenter_IsNotDetachedByTheOldOne()
     {
@@ -298,13 +292,7 @@ public class ContentPresenterTests
         Assert.That(body.VisualParent, Is.SameAs(second), "the presenter that no longer owns it must leave it alone");
     }
 
-    /// <summary>
-    /// TEMPLATED content moved to another presenter: the view model is shown by a template, so each presenter builds its
-    /// OWN visual from it. The presenter that lost the content tears its copy down - and that teardown must not leave the
-    /// new one empty.
-    /// <para>Measured on docking: merging two floating windows blanked exactly the tabs whose body is a view model shown
-    /// through the region's view locator, while tabs holding a plain element survived.</para>
-    /// </summary>
+    // Templated content moved to another presenter: the old presenter's teardown must not empty the new one.
     [Test]
     public void TemplatedContentMovedToAnotherPresenter_LeavesTheNewOneShowingIt()
     {
@@ -338,13 +326,7 @@ public class ContentPresenterTests
         });
     }
 
-    /// <summary>
-    /// A presenter restyles only the text IT generated from a string. An AUTHORED TextBlock given as content keeps its
-    /// own colour: writing into it would be an explicit value, and an explicit value outranks inheritance for good.
-    /// <para>Measured on docking: merging two floating windows let the emptied presenter - holding the Transparent
-    /// default by then - stamp that onto the tab's body, so the text stayed invisible in its new home no matter what
-    /// the live presenter's colour was.</para>
-    /// </summary>
+    // A presenter restyles only text it generated; an authored TextBlock content keeps its own color.
     [Test]
     public void AnAuthoredTextContent_TakesItsColourFromWhicheverPresenterHoldsIt()
     {

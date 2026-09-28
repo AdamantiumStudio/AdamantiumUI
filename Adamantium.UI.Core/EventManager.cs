@@ -79,11 +79,8 @@ public static class EventManager
       }
    }
 
-   /// <summary>Resolves a routed event by its markup name, so an AUML attribute can name one (e.g. an
-   /// <c>EventTrigger Event="Loaded"</c>). Accepts a bare event name (first owner that declares it wins - names like
-   /// Loaded/MouseDown are effectively unique) or an <c>Owner.Event</c> qualified form to disambiguate. Returns null if
-   /// no registered event matches (the owner type's static ctor may not have run yet - but by template-build time every
-   /// base control that declares the common events is initialised).</summary>
+   /// <summary>Resolves a routed event by markup name, bare (first owner wins) or <c>Owner.Event</c>; null if none is
+   /// registered.</summary>
    public static RoutedEvent FindRoutedEvent(String name)
    {
       if (String.IsNullOrEmpty(name)) return null;

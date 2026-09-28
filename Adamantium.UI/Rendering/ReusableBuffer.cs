@@ -6,12 +6,10 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering;
 
-// A reusable GPU allocation with a capacity that grows with headroom and NEVER shrinks (high-water-mark). It starts as a
-// SINGLE buffer - enough for static geometry, which is written once and only read afterwards - and lazily promotes to a
-// ring of N (frames-in-flight) buffers the first time its geometry changes after being drawn, i.e. when it starts
-// animating and the one buffer could be read by an in-flight frame while a new frame rewrites it. The owner calls
-// Acquire each frame for the current slot plus a "stale, must (re)write" flag, so a static payload settles to zero work
-// and an animated one rewrites only the current frame's slot - no per-frame allocation. See GPU_BUFFER_REUSE_PLAN §1-3.
+/// <summary>
+/// A high-water GPU allocation: one buffer for static geometry, promoted to a frames-in-flight ring once it changes after
+/// being drawn. <c>Acquire</c> returns the current slot and whether it must be rewritten.
+/// </summary>
 public sealed class ReusableBuffer : IDisposable
 {
     // Round capacity up to a power-of-two bucket (min 256 B). Small geometry wobble (a few vertices, a CornerRadius
@@ -21,11 +19,7 @@ public sealed class ReusableBuffer : IDisposable
     private readonly GpuBufferManager _manager;
     private readonly BufferUsageFlags _usage;
     private readonly MemoryPropertyFlags _memory;
-    // RENDER-THREAD state. Everything below is written only inside Acquire, which is the draw path - so the buffers are
-    // allocated and read by one thread. The record thread used to allocate here too (Reserve/Invalidate->Promote), and
-    // since none of it is ordered against the reader, the render thread could see `_promoted` already true while the ring
-    // slots it then indexes were still null: Acquire handed back nothing and the address fetch faulted the process. It
-    // took a fast render loop to catch that window at all, which is why it hid for as long as it did.
+    // Render-thread state, written only inside Acquire, so allocation and reads never race.
     private readonly Buffer[] _ring;       // [0] only while single; all slots once promoted to a ring
     private readonly int[] _slotVersion;   // data version last written to each slot; -1 = stale (must rewrite)
     private ulong _capacity;               // bytes; high-water-mark, only grows

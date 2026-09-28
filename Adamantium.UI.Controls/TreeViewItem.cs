@@ -7,14 +7,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A realized row of a <see cref="TreeView"/>: the container for one visible node of the FLATTENED tree. It draws the
-/// node's <see cref="Header"/> (via the tree's HierarchicalDataTemplate), indented by <see cref="Indent"/> for its depth,
-/// with an expander when the node has children. It hosts NO child nodes of its own - the tree is flattened, so a node's
-/// children are sibling rows in the same virtualized list, not nested inside this control. Clicking the header selects the
-/// node; the expander (or a double-click) toggles the node's branch in the flat list. The expander glyph is
-/// <see cref="ExpanderTemplate"/> - swap it to restyle the arrow without touching the item template.
-/// </summary>
+/// <summary>A realized <see cref="TreeView"/> row: the node's <see cref="Header"/> indented by <see cref="Indent"/>, with
+/// an expander (<see cref="ExpanderTemplate"/>) for branches. Children are sibling rows, not nested items.</summary>
 public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
 {
     // The step (px) each depth level insets the row - Indent = Depth * this.
@@ -133,11 +127,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     /// (the flattener already holds the row's state) - it does NOT re-drive expansion, which routes through the owner.</summary>
     internal void BindRow(TreeRow row, DataTemplate headerTemplate)
     {
-        // Whatever the pointer was over, it was over the row this container USED to show. Hover is state about the
-        // pointer and THIS row, and a recycled container knows nothing about it any more: the mouse has not moved, so
-        // no Leave will ever arrive to put it out. Left standing, the rows a fast keyboard scroll recycles through
-        // carry the highlight away with them and it never clears. If the pointer really is over this row, the next
-        // mouse move lights it again.
+        // Hover belonged to the previous row and no Leave will come; the next mouse move relights it if needed.
         IsPointerOverHeader = false;
 
         Row = row;

@@ -4,11 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the fractal rounded-rect batch (see BatchEffect.fx, pass Fractal): a rounded rect whose fill is an
-/// escape-time fractal (Julia/Mandelbrot) iterated per fragment, position baked to WORLD space. Packed into a BDA STORAGE
-/// buffer, read by SV_InstanceID (the shader's <c>FractalRectData</c>); the quad comes from SV_VertexID and the pixel
-/// shader reconstructs the rounded corners analytically (self-AA) AND iterates the fractal. Mirrors the pattern batch's
-/// stroke fields so the shared CompositeFillStroke draws the shape edge (and any stroke) identically.
+/// One fractal rounded-rect instance (BatchEffect.fx, pass Fractal), matching <c>FractalRectData</c>; stroke fields mirror
+/// the pattern batch's.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct FractalRectItem

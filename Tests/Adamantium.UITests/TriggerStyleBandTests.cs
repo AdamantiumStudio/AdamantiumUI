@@ -4,14 +4,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Two trigger setters fighting over ONE property of ONE element are resolved by how LOCAL the rule is first, and by
-/// where it stands in the markup second.
-/// <para>A CheckBox is BasedOn a ToggleButton, and the ToggleButton paints its label with the colour that belongs on an
-/// accent-filled button. The CheckBox says otherwise - its accent fills the box, not the row - but both setters were
-/// numbered within their own style, so the winner came down to which trigger happened to sit lower in ITS file. The
-/// checkbox label came out white on a light panel.</para>
-/// </summary>
+// Competing trigger setters resolve by how local the rule is first, then by markup order (a CheckBox beats its
+// ToggleButton base).
 [TestFixture]
 public class TriggerStyleBandTests
 {

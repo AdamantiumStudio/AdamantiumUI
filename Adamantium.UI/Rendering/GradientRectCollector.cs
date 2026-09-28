@@ -10,12 +10,8 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Gradient rounded-rect batch: draws MANY rounded-rect fills whose fill is a LINEAR or RADIAL gradient in ONE instanced
-// draw (each fill = one per-instance GradientRectItem; the pixel shader reconstructs the rounded rect from an SDF AND
-// evaluates the gradient per fragment). Sibling of the solid RectBatchCollector - a gradient fill routes here, a solid
-// fill stays in the cheaper RectBatch. Segment/buffer/overlap/retain machinery comes from SdfBatchCollector; this adds
-// the gradient bake + the GradientRect draw pass. Up to GradientRectItem.MaxStops colour stops. The bake is shared with
-// the gradient ELLIPSE batch (GradientEllipseCollector) via BakeGradientItem - the two differ only in the pixel SDF.
+// Linear/radial gradient rounded-rect fills in one instanced draw (up to GradientRectItem.MaxStops stops); solid fills
+// stay in RectBatch. BakeGradientItem is shared with GradientEllipseCollector.
 internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem>
 {
     public static bool Enabled = true;
@@ -133,11 +129,8 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         // spread + 8*mode. The shader unpacks (packed & 7) for spread and (packed >> 3) for the mode - no extra record field.
         var rectRadii = RectBatchCollector.BakeRadii(corners, dest, sx);
         item.Radii = shape.RadiiFor(rectRadii);
-        // ...and the OPACITY SLOT rides above them (biased by 1, so 0 means nothing above this element fades). Packed
-        // rather than given a field of its own, which at the time was because growing this record aborted shader creation
-        // on this driver (measured, seven starts of seven). That is no longer true: the Clip field below was added and
-        // measured at seven starts of seven with no failure. Left packed because unpacking it now would change nothing.
-        // The vertex stage unpacks it and hands the alpha to the pixel stage.
+        // ...and the opacity slot packed above them (biased by 1, so 0 means no fading ancestor); the vertex stage
+        // unpacks it.
         item.Params = new Vector4F(shape.RadiusFlag(rectRadii), type, count,
             (float)g.SpreadMethod + 8f * (float)g.ColorInterpolationMode + 16f * (fadeSlot + 1));
         // -1, never 0: zero is a valid clip slot belonging to somebody else. Stamped by TryAdd/TryStage/the patch.

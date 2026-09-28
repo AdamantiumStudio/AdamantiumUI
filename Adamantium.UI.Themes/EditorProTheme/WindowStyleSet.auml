@@ -2,22 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The window frame.
-
-         THE CAPTION DOES NOT GO ACCENT WHEN ACTIVE. This is the one real decision here, and it is the opposite of
-         Fluent's. Fluent paints the caption and the outline with the accent while the window is focused, which is the
-         native title-bar convention and reads well on a document window you switch away from. An editor is the window
-         you have focused all day - so that convention puts the loudest colour on screen, full width, permanently, and
-         says nothing while it is there. Worse, it spends the accent: this theme uses the accent for the field you are
-         typing in, the node you selected, the tab you are on, and a caption wearing the same colour competes with every
-         one of them.
-
-         So active/inactive moves to a channel that costs nothing: the caption's TEXT dims when the window loses focus,
-         and the frame's hairline steps down with it. Same information, none of the shouting.
-
-         The window still exposes TitleBarBackground and the rest, so an application that WANTS an accent caption sets
-         it on its own window and that local value wins. What no longer follows the caption colour is the frame outline:
-         in this theme the outline is chrome and stays chrome. -->
+    <!-- The window frame. The caption is not accented when active; losing focus dims its text and the frame hairline.
+         Apps can still set TitleBarBackground locally. -->
 
     <Style Selector="Window">
         <!-- Default window background so any window (incl. a code-created custom shell) is themed, not the black clear
@@ -70,23 +56,15 @@
                                     Width="{ResourceReference ResizeGripSize}"
                                     Height="{ResourceReference ResizeGripSize}"
                                     Visibility="Collapsed"/>
-                            <!-- Theme-swap busy overlay. The ENGINE owns the state (Window.IsThemeChanging, mirrored
-                                 from the ThemeManager); the THEME decides what to show. A translucent SCRIM (not
-                                 opaque) - the tree re-styling underneath shows through dimmed, so the swap reads as
-                                 "working" rather than a frozen blank; the spinner keeps its own full alpha (the scrim is
-                                 a translucent BACKGROUND, not element Opacity, so it does not fade the child). The Ring
-                                 animates a RenderTransform, which the compositor plays on the RENDER thread - so it
-                                 keeps turning even while the loop thread is in the cascade. -->
+                            <!-- Theme-swap overlay on Window.IsThemeChanging: a translucent scrim background over the
+                                 restyling tree, with a compositor-driven spinner that keeps turning. -->
                             <Border x:Name="PART_ThemeOverlay" Grid.Row="1"
                                     Background="{ObservableResource SmokeFillColorDefault}"
                                     Visibility="Collapsed">
                                 <StackPanel Orientation="Vertical"
                                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <!-- Template set INLINE (Local), so the theme's BusyIndicator Template setter can't
-                                         re-template it during the swap it covers. A re-templated spinner gets a
-                                         brand-new RingSpin owner the busy loop can't re-record while the cascade runs,
-                                         so the compositor has nothing to drive and it freezes. Fixed template = a
-                                         stable, recorded owner the render thread keeps spinning. -->
+                                    <!-- Template set inline (Local) so the swap cannot re-template the spinner and
+                                         freeze it. -->
                                     <BusyIndicator x:Name="PART_ThemeSpinner" IsActive="False"
                                             Width="{ResourceReference ThemeSpinnerSize}"
                                             Height="{ResourceReference ThemeSpinnerSize}"

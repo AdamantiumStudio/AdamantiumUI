@@ -6,14 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Items host for a 3D flip-tile board (the Windows-8-start-screen control family): owns the pointer TILT FIELD
-/// (every tile leans toward the cursor, the angle growing with distance), the board-wide FLIP WAVE
-/// (<see cref="IsFlipped"/> sweeps the board diagonally) and the shared <see cref="Photo"/> whose fragments the tiles
-/// reveal. ONE image property - loaded asynchronously once for the whole board - and each tile's UV fragment is
-/// computed from its ACTUAL arranged bounds, so the mosaic lines run straight across the inter-tile gaps for any tile
-/// size/margin. Replaces the per-view TiltField/FlipAll behaviors with a reusable control.
-/// </summary>
+/// <summary>Items host for a 3D flip-tile board: tiles tilt toward the pointer, <see cref="IsFlipped"/> sweeps a flip wave,
+/// and each tile reveals its fragment of the shared <see cref="Photo"/>.</summary>
 public class TilesHost : ItemsControl
 {
     /// <summary>The one photo the whole board reveals; decoded once, its texture shared by every tile.</summary>
@@ -72,11 +66,8 @@ public class TilesHost : ItemsControl
         MouseLeave += OnHostMouseLeave;
     }
 
-    // Re-assign photo fragments after each settled layout pass, so tiles realized while SCROLLING an already-flipped board
-    // get their index-based UV. A virtualizing panel realizes a slice per frame and (being a measure boundary)
-    // its measure does NOT re-invalidate this host, so a scroll-realized tile wouldn't otherwise be re-fragmented until the
-    // next flip. (Flip-all itself is covered by FlipWave assigning first; this covers scroll.) AssignFragments is O(realized)
-    // and its writes are AffectsRender, not AffectsMeasure, so it can't loop the pass.
+    // Re-assign fragments after each layout pass so tiles realized while scrolling get their UVs; render-only writes, so
+    // no layout loop.
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -121,25 +112,16 @@ public class TilesHost : ItemsControl
         if (_tiles.Count == 0) return;
         var photo = Photo;
 
-        // Prefer INDEX-BASED UVs on a uniform grid: each tile's photo slice is a function of its ABSOLUTE item index +
-        // the grid metrics, NOT of the realized-tile bounds union. So virtualization can realize only the visible window
-        // and every realized tile still samples its correct slice of the ONE shared photo. The union approach below only
-        // sees the realized tiles, so with virtualization it would map the whole photo over each visible page (the image
-        // tiling per screenful). Falls back to the union when the panel is not a uniform grid at all.
+        // Prefer index-based UVs on a uniform grid, correct under virtualization; the realized-bounds union below is the
+        // fallback for other panels.
         if (DescribeGrid() is { } grid)
             AssignFragmentsByIndex(photo, grid);
         else
             AssignFragmentsByUnion(photo);
     }
 
-    /// <summary>The grid the photo is mapped over: how many columns, the cell PITCH on each axis (cell + gap), and the
-    /// TILE inside that cell. Null when the board was never told its shape.</summary>
-    /// <remarks>Built from THIS control's <see cref="Columns"/>/<see cref="Rows"/>/<see cref="Spacing"/> and the space
-    /// the items panel was given - never from the panel's own type or settings. Reading the shape back off the panel
-    /// worked exactly as long as the panel stayed the one this was written against; the moment a different one is
-    /// templated in, the same question has no answer and every tile falls back to a slice cut from the realized ones.
-    /// The SIZE still has to come from the panel, because only the panel knows what was left after the template's
-    /// chrome and scrollbars - but a size is a size whatever lays it out.</remarks>
+    // The grid the photo maps over, from Columns/Rows/Spacing and the panel's size, never the panel's type; null when no
+    // shape was set.
     private TileGrid? DescribeGrid()
     {
         var count = Items.Count;

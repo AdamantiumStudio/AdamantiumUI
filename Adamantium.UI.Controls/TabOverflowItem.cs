@@ -5,15 +5,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// One row of a tab strip's overflow flyout - a VIEW of a tab, never the tab.
-/// <para>A <see cref="TabItem"/> is a live control and belongs to exactly one parent, so a list handed the tab itself
-/// hosts it as a row's content and thereby takes it out of the strip: opening the flyout emptied the whole strip. A row
-/// therefore carries what a tab SAYS - its icon, its header, whether it may be closed - each as data plus the template
-/// that draws it, so the strip and the flyout can show the same tab at the same time, each building its own visual.</para>
-/// <para>The look is entirely the theme's (<c>ListBox.TabOverflowList</c>'s ItemTemplate): icons, text and a close
-/// button are laid out there, bound to the properties here.</para>
-/// </summary>
+/// <summary>One row of the overflow flyout: a data view of a tab (icon, header, closability), since the tab control itself
+/// can have only one parent. Drawn by the theme's <c>ListBox.TabOverflowList</c> template.</summary>
 public sealed class TabOverflowItem
 {
     private readonly TabControl _owner;

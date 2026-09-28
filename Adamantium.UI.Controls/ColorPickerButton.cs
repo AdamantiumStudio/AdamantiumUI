@@ -7,15 +7,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A swatch button that opens a full <see cref="ColorPicker"/> in a FLOATING, light-dismissing popup, so the
-/// editor takes no layout space when closed and never pushes siblings. <see cref="SelectedColor"/> is two-way.
-///
-/// Fully templated (ColorPickerButtonStyleSet): PART_Header = the swatch (bind its fill to <see cref="SelectedBrush"/>),
-/// PART_Popup = the flyout hosting a ColorPicker whose SelectedColor two-way {Binding}s to ours - we set the popup's
-/// DataContext to this control (Popup.Open propagates it to the child), because {Ancestor} can't reach us from popup
-/// content: it walks the visual tree, which is detached onto the overlay, and template parts aren't logical children either.
-/// Dragging inside the popup relies on the overlay-aware mouse GetPosition (a detached overlay child falls back to the
-/// window the pointer was measured against).</summary>
+/// <summary>A swatch button that opens a <see cref="ColorPicker"/> in a light-dismissing popup; <see cref="SelectedColor"/> is
+/// two-way. The popup's DataContext is this control, since {Ancestor} cannot reach it from overlay content.</summary>
 public class ColorPickerButton : Control
 {
     public static readonly AdamantiumProperty SelectedColorProperty = AdamantiumProperty.Register(nameof(SelectedColor),

@@ -9,13 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A TextBlock takes the WHOLE SLOT it is arranged into, as WPF's does - it does not shrink back to its ink.
-/// <para>Returning the text's own size instead quietly disabled both text alignments: a block arranged at its ink sits
-/// against the top-left of the slot, so "centre the text" centred it inside a box that was itself against the edge.
-/// What that looked like was every label in every list row sitting a few pixels high - reported by eye, and impossible
-/// to correct from any theme, because alignment can only place text WITHIN the box the block was given.</para>
-/// </summary>
+// A TextBlock takes its whole arranged slot (as in WPF), so its text alignments act within the slot.
 [TestFixture]
 public class TextBlockFillsItsSlotTests
 {

@@ -9,19 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// A live <c>{Binding}</c> connection between a target <see cref="AdamantiumProperty"/> and a source object reached
-/// through the binding's <see cref="Binding.Path"/>. The source is the binding's explicit <see cref="Binding.Source"/>,
-/// otherwise the target's (inherited) <c>DataContext</c>. On connect — and whenever the source raises
-/// <see cref="INotifyPropertyChanged"/> — the source value is pushed to the target (one-way); two-way also writes the
-/// target back. Dotted paths (<c>A.B.C</c>) are walked by reflection and the leaf object is observed.
-/// <see cref="EstablishConnection"/> is idempotent, so it is re-run when the target's DataContext changes (the tree is
-/// usually built before its DataContext is assigned).
-/// <para>When created with a null <see cref="BindingExpressionBase.TargetProperty"/> the expression runs in
-/// <em>producer</em> mode: instead of writing to a target it exposes the converted value via
-/// <see cref="BindingExpressionBase.ProducedValue"/> and raises <see cref="BindingExpressionBase.ValueChanged"/> — this
-/// is how a child of a <see cref="MultiBinding"/> feeds the parent converter.</para>
-/// </summary>
+/// <summary>A live <c>{Binding}</c> from <see cref="Binding.Source"/> or the DataContext through a dotted path to a target
+/// property. With no target property it runs as a producer for a <see cref="MultiBinding"/>.</summary>
 public class BindingExpression : BindingExpressionBase
 {
    public object ResolvedSource { get; private set; }
@@ -177,20 +166,11 @@ public class BindingExpression : BindingExpressionBase
       ResolveSource();
       var newObserved = ResolvedSource as INotifyPropertyChanged;
 
-      // Fast path: the resolved SOURCE OBJECT is unchanged. This is the norm for a virtualized-list rebind whose bound
-      // path points at a shared sub-view-model every item exposes (e.g. item.Stroke): the DataContext changed, but
-      // item.Stroke is the SAME object for every item. The existing PropertyChanged subscription is therefore still
-      // correct - so do NOT unsubscribe + re-subscribe. On a source with many subscribers (one per such binding per
-      // realized tile), each -=/+= rebuilds the whole multicast invocation list (O(subscribers)); doing that for every
-      // tile every scroll frame is O(N^2) and was the ~118 KB-per-binding rebind allocation storm (gen2 GC freeze).
+      // Same source object (a shared sub-view-model): keep the subscription, since re-subscribing on a busy source is
+      // O(subscribers) per rebind.
       if (ReferenceEquals(newObserved, previousObserved) && previousObserved != null)
       {
-         // The source object AND our subscription are unchanged, so the value cannot have moved since it was last
-         // pushed (a real change arrives via OnSourcePropertyChanged -> batched apply). The recycled target already
-         // holds exactly this value - the item it previously showed bound to this SAME shared source. So skip the
-         // re-push entirely: for a shared sub-VM (the 12 Stroke.* bindings per tile) this was re-computing + re-writing
-         // an identical value on every rebind of every tile every scroll frame - the dominant per-rebind cost
-         // (updTarget ~33 ms/frame, incl. the brush-string re-parse). Producer mode must still republish for its parent.
+         // The target already holds this value, so skip the re-push; a producer still republishes for its parent.
          if (IsProducer) Refresh();
          return;
       }
@@ -342,11 +322,7 @@ public class BindingExpression : BindingExpressionBase
       return null;
    }
 
-   // True WHILE UpdateSource writes the source (a TwoWay write-back from the target). The write raises the source's
-   // PropertyChanged synchronously; without this guard OnSourcePropertyChanged would schedule a source->target push that
-   // echoes our OWN write back onto the target one frame later - fighting an active drag so a TwoWay-bound slider never
-   // converges on the endpoint (stuck ~0.1 short of Minimum). Other bindings to the same source still update; only THIS
-   // expression skips echoing its own write.
+   // True while UpdateSource writes the source, so this expression does not echo its own write back a frame later.
    private bool _writingSource;
 
    // THE SOURCE SPOKE WHILE WE WERE WRITING IT. Not the echo of our own value - that one is thrown away - but the fact
@@ -412,12 +388,8 @@ public class BindingExpression : BindingExpressionBase
       }
    }
 
-   // Reads the source value through the (optional) converter. targetType drives the converter's requested type.
-   // FallbackValue is used when the binding can't resolve a source/path (WPF semantics); TargetNullValue when the
-   // resolved value is null (falling back to FallbackValue if no TargetNullValue is set).
-   // Returns the engine's UNSET token - never a bare null - when there is nothing to say: no source, no such property,
-   // and no fallback either. A null that came from a source that DID resolve is a VALUE and is returned as one; the two
-   // used to arrive as the same null, and the caller could only guess, so it dropped both.
+   // Reads the source through the converter, applying FallbackValue/TargetNullValue. Returns UNSET, not null, when
+   // nothing resolved; a resolved null is a value.
    private object ComputeValue(Type targetType) => Formatted(ReadValue(targetType), targetType);
 
    // StringFormat lived on every binding, travelled into every expression, and was read by NOBODY except MultiBinding:
@@ -459,13 +431,8 @@ public class BindingExpression : BindingExpressionBase
       return value;
    }
 
-   // Per-SOURCE-OBJECT converted-value cache. A value-converter (e.g. a colour string -> Brush) is otherwise re-run for
-   // every realized tile every scroll frame - the dominant per-rebind cost. Keyed by the SOURCE OBJECT (the item), so
-   // each item gets ONE converted instance: reused across rebinds and across whichever recycled container currently shows
-   // the item, yet DISTINCT per item (mutating one item's brush never bleeds into another item that happens to share a
-   // colour string). Weak keys -> an item's cached conversions die with the item, no manual eviction. The stored RAW
-   // input guards staleness: if the source property changed (item.Color mutated -> re-convert), the raw differs and we
-   // rebuild. A boxed value-type source can't key a weak table (identity-less), so it falls back to a direct convert.
+   // Converted-value cache weakly keyed by source object: one instance per item across rebinds, re-converted when the
+   // raw input changes. Value-type sources convert directly.
    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object,
       Dictionary<(IValueConverter, Type, string), (object Raw, object Converted)>> _convertCache = new();
 
@@ -584,31 +551,16 @@ public class BindingExpression : BindingExpressionBase
          _writingSource = false;
       }
 
-      // The Binding slot is this expression's copy of what the SOURCE holds, and the write above just moved the source.
-      // The echo guard suppresses the push that would normally refresh that copy, so without this the target keeps a
-      // request the source no longer has anywhere: a value that had to be CLAMPED was published to the source as the
-      // clamped one, yet the target still remembered the number from before the clamp - and a later re-coercion (the
-      // ceiling moving back up) resurrected it and overwrote the source with it. A range slider whose end had been
-      // squeezed by a shrinking Maximum therefore rode the edge all the way back up instead of staying where the
-      // view-model said it was. Re-entrancy is bounded by the write below leaving the effective value alone (it IS the
-      // effective value), which raises nothing.
+      // Sync the Binding slot to what was written, since the echo guard skips that refresh; otherwise a later
+      // re-coercion resurrects a pre-clamp value.
       if (Mode != BindingMode.TwoWay || _syncingSlot)
          return;
 
       _syncingSlot = true;
       try
       {
-         // WHAT THE SOURCE ANSWERED WITH, when it answered at all. A source is free to take a write and put something
-         // else there - a value it clamped, or a request it has already acted on and taken back: a list of kinds
-         // answers "put one of these on the plane" by making the node and letting the choice go, and a target left
-         // holding the old pick cannot be picked from again, because picking the same row is then no change at all.
-         // The echo guard above hides that second change from us, so it is asked for here.
-         //
-         // ONLY when the source actually SAID something, though. A source that silently ignores a write has not
-         // answered anything, and re-reading it would undo the click that caused the write: one of a pair of radio
-         // buttons clears the other, the view-model behind it ignores "you are not the choice" (it hears only the
-         // positive half), and pushing that back re-checked the button the click had just cleared - both halves of one
-         // choice lit, and the pair stopped switching at all.
+         // If the source raised a change and holds something else (clamped, or reset), take its answer; a source that
+         // silently ignored the write is not re-read.
          if (_sourceSpoke && !Equals(ReadSource(), written))
          {
             UpdateTarget();

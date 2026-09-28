@@ -9,14 +9,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Keeps the NODES on a canvas in step with the application's collection of them, in both directions.
-/// <para>One container per model, made and owned here: the application hands over its own objects and never a control.
-/// What the person does on the plane comes back the same way - a node dragged writes its new place into the model, a
-/// node deleted leaves the collection.</para>
-/// <para>The WIRES are not a collection at all: they live on the sockets they join, so what is drawn here is a walk
-/// over the graph rather than a second account of it.</para>
-/// <para>Held by the canvas rather than written into it, because this is bookkeeping of a kind the canvas has none of
-/// otherwise: a map from an application's object to the control standing for it.</para></summary>
+/// <summary>Keeps a canvas's nodes and the application's collection in step both ways, one container per model; wires live on
+/// their sockets.</summary>
 internal sealed class CanvasGraphHost
 {
     private readonly Dictionary<ICanvasNode, ElementItem> _placed = new();

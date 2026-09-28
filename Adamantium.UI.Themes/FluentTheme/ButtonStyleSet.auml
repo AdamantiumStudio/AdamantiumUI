@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- ONE template serves every variant: the rest/hover/pressed/disabled brushes live as properties on the control
-         (Background + Background/Foreground PointerOver/Pressed/Disabled), and the triggers project them onto the chrome
-         via {TemplateBinding}. A variant (e.g. Accent below) only overrides those brushes - no second template. Per the
-         small-styles convention each concern is its own <Style Selector="Button">: simple properties, then the template,
-         then the triggers. -->
+    <!-- One template for every variant: state brushes are control properties projected by triggers, and variants such as
+         Accent only override them. Properties, then template, then triggers. -->
 
     <!-- Simple properties: static palette via {ResourceReference}. -->
     <Style Selector="Button">
@@ -96,13 +93,8 @@
         <Setter Property="ForegroundPressed" Value="{ThemeResource AccentForegroundColor}"/>
     </Style>
 
-    <!-- A PAGER'S STEP ARROW (Button.PagerArrow): the same template with its chrome taken away, so what is left is the
-         glyph and the plate the pointer brings. The hover and pressed brushes are inherited untouched - this theme
-         answers the pointer on every button, and an arrow is no exception.
-         THE HEIGHT IS FIXED AND THE WIDTH IS A FLOOR, the same pair every entry on that line takes, so the row lines up
-         by construction rather than by two numbers that happen to agree.
-         Dimming its glyph when it is off is no longer this style's business: every button does it now - see the base
-         style's disabled trigger, where it belongs. -->
+    <!-- A pager's step arrow: the button template without resting chrome, fixed height and minimum width like every
+         pager entry; disabled dimming comes from the base style. -->
     <Style Selector="Button.PagerArrow">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

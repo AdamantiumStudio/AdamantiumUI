@@ -8,14 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A presenter handed a STRING builds a TextBlock for it, and that label has to keep following the presenter's brush -
-/// not the one it happened to hold when the content was built.
-/// <para>It used to be copied once. A copy is only as current as the notification that refreshes it, and an INHERITED
-/// change does not always reach a descendant: the inheritance walk has a cheap path that steps over an element without
-/// notifying it. Inside a theme scope that showed as a label wearing the application's colour while the authored text
-/// beside it wore the scope's.</para>
-/// </summary>
+// A label generated from a string keeps following the presenter's current brush, including inherited changes.
 [TestFixture]
 public class GeneratedLabelFollowsPresenterTests
 {

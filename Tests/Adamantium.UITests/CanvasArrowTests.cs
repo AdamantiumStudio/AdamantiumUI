@@ -325,13 +325,7 @@ public class CanvasArrowTests
     private static CanvasPointerEventArgs Press(Vector2 world) =>
         new() { World = world, Pointer = world, Button = MouseButtons.Left };
 
-    // A box round a line offers grips on corners that are not on the shape at all, and dragging one moves both ends -
-    // the gesture that fights the one that means something.
-    //
-    // Asked of the CANVAS with the line SELECTED, which is the only form of the question worth asking. Asked of the
-    // item - line.Handles - it passed while the frame was still drawn round every line on screen: the canvas reads that
-    // property through ICanvasItem, which carries a default of its own, and a test that calls it on the concrete type
-    // proves the concrete type and nothing about what the canvas sees.
+    // A selected line gets end handles, not a bounding box; asked of the canvas, which reads Handles through ICanvasItem.
     [TestCase(CanvasShape.Line)]
     [TestCase(CanvasShape.Arrow)]
     public void ARunSelectedOnTheCanvasOffersItsEndsAndNotABox(CanvasShape shape)

@@ -8,15 +8,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Converters;
 
-/// <summary>What a socket CARRIES into what it looks like, read off the catalogue of socket kinds the application gave
-/// the canvas.
-/// <para>A graph is read by colour, so the colour belongs to the kind and not to the socket: every socket carrying a
-/// number looks the same, and nobody can pick the wrong shade for one of them. A kind the catalogue says nothing about
-/// - and "anything", which is what an empty kind means - leaves the pin wearing the theme's.</para>
-/// <para>INTERNAL, and that is the point. What an application says is the TABLE - which word means which colour, bound
-/// to <see cref="InfiniteCanvas.SocketKinds"/> - and the canvas does the rest. Handing out the converter instead would
-/// hand out a way to break every pin on the plane in exchange for nothing an application actually wants to say.</para>
-/// </summary>
+/// <summary>A socket's kind into its color, from the application's <see cref="InfiniteCanvas.SocketKinds"/> table; an unknown
+/// or empty kind keeps the theme's.</summary>
 internal class SocketKindToBrushConverter : IValueConverter
 {
     private readonly IEnumerable _kinds;

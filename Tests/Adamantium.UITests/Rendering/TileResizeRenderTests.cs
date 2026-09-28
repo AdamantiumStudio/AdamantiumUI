@@ -13,16 +13,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// The tile-resize artefacts (gaps + overlapping tiles while the size slider is dragged, healed by scrolling new cells in).
-/// Reproduced HEADLESS, through the real layout pass and the real RenderCache, so the mechanism can be named instead of
-/// guessed at from a screenshot.
-///
-/// The picture is drawn from the applier's FROZEN layout replica, never from the live tree - so the tiles are drawn where and
-/// at the size that replica says. Gaps and overlaps therefore mean exactly one thing: an entry in it is STALE - a tile that
-/// resized or moved, and whose new geometry never reached the draw side. That is the invariant asserted here, per component,
-/// and it is asserted on the SAME frames the app is broken on: while the resize is still in flight.
-/// </summary>
+// While tiles resize, the applier's frozen layout replica matches the live tree per component, on the in-flight frames.
 [TestFixture]
 public class TileResizeRenderTests
 {
@@ -159,12 +150,7 @@ public class TileResizeRenderTests
         }
     }
 
-    // The VIEWPORT resize (a drag-resize / maximize): the heaviest thing the app does - the visible grid changes shape and
-    // thousands of tiles are realized over the following frames. It used to force a whole-tree re-record on EVERY frame until
-    // the layout settled (WindowBase: "parts of that settle never mark the render dirty"), which is exactly when the splice
-    // would pay most. Those unmarked settle writes were the mark holes - a container hidden without naming itself, an auto-hide
-    // scrollbar collapsing from its never-assigned default. With the marks honest, a resize is just structure changing, and it
-    // must splice: no full walk, and nothing drawn from stale layout.
+    // A viewport resize splices rather than walking, and nothing is drawn from stale layout.
     [Test]
     public void ViewportResize_Splices_AndKeepsDrawnGeometryFresh()
     {

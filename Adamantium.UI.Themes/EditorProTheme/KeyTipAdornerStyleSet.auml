@@ -2,18 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The badge naming the key that reaches a command while key-tip mode is on. Deliberately the ONE loud thing in
-         this theme, and squarely against its own hairline habit: a badge has to be legible over an icon, a label, or an
-         active tab's accent, and a hairline plate over a glyph is unreadable. The rule this theme spends elsewhere -
-         quiet chrome - does not apply to something that exists only while the user is asking "which key".
-
-         Square, like everything here. Opaque throughout: a see-through badge over a glyph cannot be read at this size.
-         Its three colours are the palette's own tokens rather than the ordinary ramp, because a badge is read over
-         whatever it lands on - each variant states a plate that contrasts with its OWN surface, which is the only way
-         it does not go missing against the thing it covers.
-
-         One SIZE for every badge, not one per glyph: a plate that hugs its letter comes out a different width for F, H
-         and M, and a row of them reads as noise. -->
+    <!-- The key-tip badge: deliberately loud, square, opaque and one fixed size, with dedicated palette tokens so it reads
+         over anything. -->
 
     <Style Selector="KeyTipAdorner">
         <Setter Property="Template">

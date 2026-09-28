@@ -30,11 +30,7 @@ public interface IWindowWorkerService
     /// window and to focus an already-open single-instance window on a repeat request.</summary>
     public void Activate();
 
-    /// <summary>Raise the window above the others WITHOUT giving it focus.
-    /// <para>The distinction matters during a drag: taking the foreground makes the OS revoke the mouse capture the
-    /// drag runs on (Win32 answers with WM_CAPTURECHANGED), which cancels the gesture the user is in the middle of.
-    /// Raising the z-order alone leaves the capture - and the drag - intact, which is how dragging onto a window that
-    /// sits behind is supposed to work.</para></summary>
+    /// <summary>Raises the window without activating it, so a drag's mouse capture survives.</summary>
     public void RaiseWithoutActivation();
 
     /// <summary>Acquire (true) or release (false) the OS-level mouse capture for this window, so a press-drag keeps
@@ -43,11 +39,8 @@ public interface IWindowWorkerService
     /// the same behaviour.</summary>
     public void SetMouseCapture(bool capture);
 
-    /// <summary>Enter (true) or leave (false) RELATIVE mouse mode: the OS cursor is hidden and held centred, and each
-    /// physical move is turned into a synthesized <c>RawMouseMove</c> delta (unbounded even at the window edge) for a
-    /// hosted universe's mouse-look. Replaces OS raw input. On leave, <paramref name="restoreScreen"/> is where the caller
-    /// (the panel) wants the cursor to reappear, in SCREEN coordinates - so it comes back where it vanished, not at the
-    /// re-centre. Driven by <c>RenderTargetPanel</c> per its <c>MouseLookMode</c>; no-op on platforms without it.</summary>
+    /// <summary>Enters or leaves relative mouse mode (hidden, centered cursor producing raw deltas); on leave the cursor
+    /// reappears at <paramref name="restoreScreen"/>.</summary>
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen);
 
     /// <summary>Start an OS-driven move of the window from the current cursor (custom-chrome caption drag). Runs the

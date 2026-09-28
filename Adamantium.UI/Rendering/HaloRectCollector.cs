@@ -11,12 +11,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering;
 
-// Halo batch: the soft bands drawn UNDER shapes - an aura, a shadow, or both - in ONE instanced draw. The sibling of the
-// fill collectors, and deliberately the same shape as them: the band is the shape's own signed distance read further
-// out, so it costs no offscreen target, no blur pass, and it batches with everything else.
-//
-// It knows nothing about "an aura and a shadow": it draws N bands. That is what leaves room for an elevation preset -
-// one number expanding into the several bands a real penumbra needs - without the public API growing a list.
+// Soft bands under shapes (auras, shadows) in one instanced draw, read from the shape's own signed distance: no
+// offscreen target or blur pass. It just draws N bands.
 internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
 {
     public static bool Enabled = true;
@@ -147,11 +143,8 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
         ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world, double opacity,
         int transformSlot, double fieldRange, int clipSlot = -1, int fadeSlot = -1)
     {
-        // The bake goes INTO the instance and the slot is applied on top - the same two-part address every fill family
-        // uses. It used to be dropped here, and the band's ONLY address was its slot: correct while that slot held the
-        // full world, wrong the moment it held a motion NODE's, because the shape's own place inside the node went
-        // nowhere. That is the aura landing in the top-left corner during a slide.
-        // Slot units, not device px: the band fields are in slot units too and the vertex stage scales them together.
+        // The bake goes into the instance and the slot applies on top, like every fill family; in slot units, as the
+        // band fields are.
         var sx = world.M11; var sy = world.M22; var tx = world.M41; var ty = world.M42;
         var iso = System.Math.Min(sx, sy);   // the shader reads radii and band isotropically - bake them the same way
         var radii = RectBatchCollector.BakeRadii(corners, destinationRect, iso);
@@ -162,11 +155,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
 
             var color = band.Color;
             color.W *= (float)opacity;
-            // A TRANSPARENT band is still WRITTEN. It owns a record - see HaloBand.IsEmpty - and skipping it here made
-            // this bake disagree with the two places that count records (CountBands, and TryAdd's own arithmetic): the
-            // count said two, the bake wrote one, and the record the bake passed over kept whatever it held last. That
-            // is a glow switched off staying lit, through a PATCH and through a full WALK alike, until something else
-            // rewrote the arena. Nothing is drawn for it either way; the shader is handed alpha zero.
+            // Transparent bands are still written, matching CountBands; skipping one would leave a stale record lit.
             if (written >= dst.Length) break;
 
             dst[written++] = new HaloRectItem

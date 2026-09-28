@@ -6,25 +6,11 @@ using Adamantium.UI.Core.Input;
 namespace Adamantium.UI.Input;
 
 /// <summary>
-/// The OS half of the drag-drop engine (docs/DRAG_DROP_PLAN.md phases 5-6) - payloads crossing between our app and
-/// OTHER applications. Two directions, one engine:
-/// <list type="bullet">
-/// <item>DROP-IN: every window carries a native drop target from the moment it is created. Files from Explorer, text
-/// from an editor - the payload is read into an <see cref="IDataPackage"/> and then travels the SAME path as an in-app
-/// drag: <c>AllowDrop</c> targeting, <c>IsDragOver</c> highlight, the insertion caret, spring-loading, auto-scroll and
-/// finally <c>DropCommand</c>. A view-model reads <c>data.Get(DataFormats.Files)</c> and never learns which app it
-/// came from.</item>
-/// <item>DRAG-OUT: a source with <c>DragDrop.AllowExternalDrag="True"</c> hands the whole gesture to the platform drag
-/// loop, so it can be dropped into other applications - and dropped back onto our own windows through the same
-/// always-registered drop target, where the LIVE CLR payload is unwrapped again (no serialization round trip).</item>
-/// </list>
-/// <para>
-/// THREADING: the platform calls the sink on its window/message thread, inside the drag source's modal loop. Nothing
-/// here touches the visual tree there: each callback records the drag point and POSTS the work onto the UI loop thread,
-/// answering the OS with the effect the last update settled on. That is one frame of lag on the cursor feedback and a
-/// deadlock-free bridge - the alternative, blocking the OS drag loop on our render loop, would hang both apps.
-/// </para>
+/// Drag-drop with other applications: native drops enter the in-app path as an <see cref="IDataPackage"/>, and sources
+/// with <c>DragDrop.AllowExternalDrag="True"</c> use the platform drag loop.
 /// </summary>
+// Native callbacks post their work to the UI loop thread and answer with the last settled effect, so the OS drag loop
+// never blocks on ours.
 public static partial class DragDrop
 {
     private static readonly NativeDropSink Sink = new();

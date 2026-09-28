@@ -43,20 +43,8 @@ public enum PagerDisplayMode
     All = FirstLast | PreviousNext | Numeric | PageSizeSelector | PageInput
 }
 
-/// <summary>
-/// Turns the pages of a collection. It does not page anything itself: it drives an <see cref="IPagedSource"/> and shows
-/// where that has got to, which is why the same control works over an in-memory view and over a server that hands out
-/// one page at a time.
-///
-/// <para>WHO OWNS THE VIEW is the question this control's shape answers. Bind a plain collection to
-/// <see cref="Source"/> and the pager wraps it; bind the LIST to <see cref="PagedSource"/> and the two are looking at
-/// the same object. Had each made its own, they would have been turning different pages of the same data.</para>
-///
-/// <code>
-/// &lt;DataPager x:Name="Pager" Source="{Binding Orders}" PageSize="25"/&gt;
-/// &lt;ListBox ItemsSource="{Binding PagedSource, ElementName=Pager}"/&gt;
-/// </code>
-/// </summary>
+/// <summary>Turns the pages of an <see cref="IPagedSource"/>, in memory or on a server. Bind the list to
+/// <see cref="PagedSource"/> so pager and list share one view.</summary>
 public class DataPager : Control
 {
     private Button _first;
@@ -75,20 +63,11 @@ public class DataPager : Control
 
     private static readonly string FitLog = Environment.GetEnvironmentVariable("ADAM_PAGER_FIT");
 
-    // THE DEFAULT PROGRESSION, and it lives in the property's METADATA rather than in the constructor. A plain setter in
-    // a constructor writes the Local slot, which outranks a binding for the life of the object - so `PageSizes="{Binding
-    // Steps}"` was accepted, reported no error, and changed nothing: the pager kept 10/25/50/100 and an application's
-    // own progression never reached the picker. A metadata default sits at Default priority, where anything can replace
-    // it. Read-only because one instance is shared by every pager that has not been given its own: a default nobody can
-    // edit in place is the only kind that can be shared, and an application that wants a LIVE progression supplies one.
+    // The default progression as a metadata default, so a binding can replace it; read-only because every pager shares it.
     private static readonly IList<int> DefaultPageSizes = new ReadOnlyCollection<int>([10, 25, 50, 100]);
 
-    /// <summary>The collection to page. ANY collection: an array, a list, an observable collection, a lazy query - all
-    /// of them are enumerable, and an enumerable one is wrapped in a <see cref="CollectionView"/> so it can be paged.
-    /// An <see cref="IPagedSource"/> is driven as it is, wrapped in nothing.
-    /// <para>Typed as <c>object</c> rather than as a collection on purpose: a source that pages need not be enumerable
-    /// at all - a server handing out one page at a time is a perfectly good one. Anything that is neither is a mistake
-    /// and says so, rather than leaving an empty pager for someone to puzzle over.</para></summary>
+    /// <summary>The collection to page: an enumerable is wrapped in a <see cref="CollectionView"/>, an
+    /// <see cref="IPagedSource"/> is driven as is. Anything else is reported as an error.</summary>
     public static readonly AdamantiumProperty SourceProperty = AdamantiumProperty.Register(nameof(Source),
         typeof(object), typeof(DataPager), new PropertyMetadata(null, OnSourceChanged));
 
@@ -161,11 +140,8 @@ public class DataPager : Control
     public static readonly AdamantiumProperty ShowsPageInputProperty = AdamantiumProperty.Register(
         nameof(ShowsPageInput), typeof(bool), typeof(DataPager), new PropertyMetadata(true));
 
-    /// <summary>The PROGRESSION of page sizes on offer - 10, 25, 50, 100 unless an application says otherwise, and the
-    /// set <see cref="PageSize"/> is chosen from.
-    /// <para>Bind it or assign it: <c>PageSizes="{Binding Steps}"</c>. Replacing it re-offers the choices, and a
-    /// <see cref="PageSize"/> that is not among them moves to the nearest one that is - a picker showing a value it
-    /// cannot offer is a picker lying about its choices.</para></summary>
+    /// <summary>The page sizes on offer (10, 25, 50, 100 by default); a <see cref="PageSize"/> not among them moves to the
+    /// nearest one.</summary>
     public static readonly AdamantiumProperty PageSizesProperty = AdamantiumProperty.Register(nameof(PageSizes),
         typeof(IList<int>), typeof(DataPager), new PropertyMetadata(DefaultPageSizes, OnPageSizesChanged));
 
@@ -197,12 +173,8 @@ public class DataPager : Control
     public static readonly AdamantiumProperty PageItemsProperty = AdamantiumProperty.Register(nameof(PageItems),
         typeof(IReadOnlyList<PagerPageItem>), typeof(DataPager), new PropertyMetadata(null));
 
-    /// <summary>How many entries the row holds - GAPS INCLUDED, because the count is the row's length and an ellipsis
-    /// takes a place in it like any other.
-    /// <para>The row is exactly this long at every page and every page count. A gap that came and went as the reader
-    /// moved would shift every button beside it, so where there is nothing to leave out the freed place is spent on one
-    /// more page rather than left empty: at the start the row reads "1 2 3 4 …", and the ellipsis only appears when
-    /// there is genuinely a page hidden behind it. Anything further off is reached by typing the number.</para></summary>
+    /// <summary>How many entries the button row holds, ellipses included; the row keeps this length on every page so buttons
+    /// do not shift.</summary>
     public static readonly AdamantiumProperty PageButtonCountProperty = AdamantiumProperty.Register(
         nameof(PageButtonCount), typeof(int), typeof(DataPager), new PropertyMetadata(5, OnPageButtonCountChanged));
 
@@ -609,12 +581,8 @@ public class DataPager : Control
         var wanted = base.MeasureOverride(unbounded).Width;
         RecordPartWidths();
 
-        // DECIDED ON PAPER, then applied ONCE. The obvious version tries each arrangement by turning a part on or off
-        // and measuring again - and every one of those writes changes a Visibility, which invalidates layout from inside
-        // the layout pass. In a steady state it still wrote (turn everything on, measure, shed again), so the pager
-        // never came to rest and the row flickered as it was pulled between two answers. Priced from what each part
-        // measured while it was last visible, the arithmetic costs no writes at all, and a state that is already right
-        // produces none.
+        // Decide which parts to shed from their last measured sizes, then apply once: toggling Visibility to try each
+        // arrangement invalidated layout and flickered.
         var target = _shed;
 
         foreach (var part in ShedOrder)

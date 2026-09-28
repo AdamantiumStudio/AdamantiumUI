@@ -7,12 +7,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDirectory
 
 /**
- * Adds "AUML File" to the project view's New/Add context menu. Picking a kind (Window, View, Theme,
- * StyleSet, ResourceDictionary) creates a `.auml` file from the matching bundled template under
- * resources fileTemplates/internal, registered via the internalFileTemplate extension in plugin.xml.
- *
- * The kinds are exactly the AUML root entity types that have a working concrete form in the engine -
- * UIApplication/Page are intentionally absent until they have a real AUML shape to template from.
+ * Adds "AUML File" to New/Add: creates a `.auml` file of the chosen kind (Window, View, Theme, StyleSet,
+ * ResourceDictionary) from the bundled fileTemplates/internal templates.
  */
 class CreateAumlFileAction : CreateFileFromTemplateAction(
     "AUML File",

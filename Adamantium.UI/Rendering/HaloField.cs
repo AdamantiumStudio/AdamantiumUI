@@ -5,17 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// Bakes a SIGNED DISTANCE FIELD for an arbitrary shape's boundary, so a halo on tessellated geometry is drawn by the
-/// same pass as one on a rect or an ellipse - those compute the distance, this one reads it.
-/// <para>Widening the analytic-AA ring instead would not work: offsetting a contour by a large distance is a Minkowski
-/// sum, not a ring expansion. Its correct result changes topology - a star's notches close up once the offset passes the
-/// local curvature radius - and a vertex-expanded ring cannot represent that. It also self-overlaps at every concave
-/// corner, which double-blends a translucent band.</para>
-/// <para>Baked in LOCAL space, so it survives resize and zoom, and cached per <c>GeometryKey</c> - meshes are shared, so
-/// the cost is paid once per distinct shape. Quantisation only ever softens the BAND: the shape itself is still drawn
-/// analytically, and a halo is blurry by definition.</para>
-/// </summary>
+// Bakes a local-space signed distance field per GeometryKey so halos on arbitrary geometry use the rect/ellipse pass. A
+// widened AA ring cannot do it: large offsets change topology and self-overlap at concave corners.
 internal static class HaloField
 {
     /// <summary>Texels per side. Fixed rather than scaled to the shape: the field is sampled in normalised space, so a

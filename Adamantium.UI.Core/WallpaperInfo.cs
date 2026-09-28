@@ -3,13 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>What the desktop is showing behind our window on one monitor: the picture, how it is laid out, and the
-/// colour behind it. <see cref="File"/> is null when the desktop is a plain colour - which is a real answer, not a
-/// failure, and a material then tints <see cref="Background"/>.
-///
-/// <para>A RECORD, so "did the wallpaper change" is one comparison of two answers rather than a pile of remembered
-/// fields. <see cref="Revision"/> is what makes that comparison honest under a slideshow: Windows Spotlight rewrites
-/// the SAME cache path with a new picture, so a change detected by path alone would be missed every time.</para></summary>
+/// <summary>A monitor's wallpaper: picture, fit and background color; <see cref="File"/> is null for a plain color. A
+/// record compared as a whole; <see cref="Revision"/> catches a rewritten file at the same path.</summary>
 public sealed record WallpaperInfo(Uri File, WallpaperFit Fit, Color Background, Rect MonitorBounds, DateTime Revision)
 {
     /// <summary>What a platform returns when it cannot answer at all - no picture, no monitor. Distinguished from a

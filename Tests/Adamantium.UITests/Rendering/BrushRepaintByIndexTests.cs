@@ -12,17 +12,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A brush REWRITTEN IN PLACE has to reach the pixels of everything painting with it, whether or not those elements are
-/// re-recorded that frame.
-/// <para>It used to reach only the ones that happened to be in the frame's dirty set, because that set is what the paint
-/// patch walks. An in-place recolour writes no property, adds no unit and moves no slot, so an element the change did not
-/// re-record was left in the previous colour until something unrelated forced a walk. On a palette repaint that showed as
-/// icons following the theme on one switch and not on the next, and coming right as soon as anything was scrolled.
-/// See <c>RenderCache.ApplyBrushRepaints</c>.</para>
-/// <para>The scene here is exactly that case: the brush is captured by the draw action rather than assigned to a
-/// brush-valued property, so recolouring it marks NOTHING - the second frame has no dirty element to find.</para>
-/// </summary>
+// A brush rewritten in place reaches everything painting with it (RenderCache.ApplyBrushRepaints). The brush is captured
+// by the draw action, so recoloring marks nothing dirty.
 [TestFixture]
 [Category("Gpu")]
 public class BrushRepaintByIndexTests

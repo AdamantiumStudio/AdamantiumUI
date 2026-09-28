@@ -12,13 +12,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A non-editable single-select drop-down (WPF's ComboBox, minus the editable text box). Its header shows the selected
-/// item; clicking it opens a popup list of the items, from which one is picked. The popup is edge-aware (opens upward
-/// when there's not enough room below - see <see cref="Popup.FlipToFit"/>), light-dismisses on an outside click, and binds
-/// painlessly to an enum via <see cref="EnumType"/> (no ObjectDataProvider dance). Items host in the popup as
-/// <see cref="DropDownItem"/> containers.
-/// </summary>
+/// <summary>A non-editable single-select drop-down: the header shows the selection, a light-dismissing popup lists
+/// <see cref="DropDownItem"/>s, and <see cref="EnumType"/> binds an enum directly.</summary>
 public class DropDown : Selector
 {
     public static readonly AdamantiumProperty IsDropDownOpenProperty = AdamantiumProperty.Register(nameof(IsDropDownOpen),
@@ -52,18 +47,7 @@ public class DropDown : Selector
         FocusableProperty.OverrideMetadata(typeof(DropDown), new PropertyMetadata(true));
     }
 
-    /// <summary>The whole keyboard contract of a drop-down, answered HERE, on the header, which keeps the focus the
-    /// entire time: Enter/Space opens, the arrows move the highlighted row while it is open, Enter/Space then closes on
-    /// that row, and Escape closes putting back what was chosen before.
-    /// <para>The focus deliberately never goes INTO the list. The popup's contents hang on the overlay with no visual
-    /// path back, so a key pressed with the focus down there never travels through this control - which is exactly how
-    /// an earlier attempt left both Escape and the arrows dead once the list was open.</para></summary>
-    /// <summary>The list closes when the keyboard leaves: an open popup is a modal-ish thing that belongs to the control
-    /// being worked in, and tabbing away used to leave it hanging over the page with nothing driving it - the header no
-    /// longer had the focus, so neither the arrows nor Escape reached it any more.</summary>
-    /// <remarks>A click on a ROW also takes the focus off the header, and that is not leaving: closing there would pull
-    /// the list out from under the click before the choice was made. So the row's owner is checked - only focus that
-    /// went somewhere else counts as away.</remarks>
+    /// <summary>Closes the list when focus leaves the drop-down; a click on one of its rows does not count as leaving.</summary>
     protected override void OnLostFocus(RoutedEventArgs e)
     {
         base.OnLostFocus(e);
@@ -168,12 +152,8 @@ public class DropDown : Selector
         e.Handled = true;
     }
 
-    /// <summary>Whether the wheel over the CLOSED list steps the selection. OFF by default, and deliberately so: a
-    /// drop-down that changes what it holds merely because the wheel passed over it changes a VALUE, not a view, and it
-    /// does so while the hand was doing something else entirely - scrolling the panel the drop-down sits in. A panel of
-    /// settings scrolled from top to bottom would rewrite every drop-down it went past.
-    /// <para>Turn it on where the drop-down IS the thing being worked - a lone field a hand is on - and leave it off
-    /// wherever one sits among others.</para></summary>
+    /// <summary>Whether the wheel over the closed list steps the selection; off by default, so scrolling a settings panel does
+    /// not rewrite every drop-down it passes.</summary>
     public static readonly AdamantiumProperty StepsWithMouseWheelProperty = AdamantiumProperty.Register(
         nameof(StepsWithMouseWheel), typeof(bool), typeof(DropDown), new PropertyMetadata(false));
 
@@ -277,13 +257,7 @@ public class DropDown : Selector
         IsDropDownOpen = !IsDropDownOpen;
     }
 
-    // The pointer moved onto a row: the highlight goes WITH it.
-    //
-    // There is ONE highlight, and it belongs to whichever hand is steering. Before this the arrows had it and the mouse
-    // had a separate hover state of its own, so a menu opened with the arrows on its current value and the pointer over
-    // some other row showed TWO rows marked - and a theme cannot resolve that, because neither row knows the other
-    // exists. Every menu on every platform behaves this way: moving the mouse moves the keyboard's place too, so that
-    // pressing Enter after wandering with the pointer commits what is under it rather than something forgotten.
+    // One highlight shared by mouse and keyboard: the pointer moving onto a row moves it, so Enter commits that row.
     internal void HighlightFromContainer(DropDownItem container)
     {
         var index = ItemContainerGenerator.IndexFromContainer(container);

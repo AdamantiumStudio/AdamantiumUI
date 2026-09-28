@@ -4,12 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering.Retained;
 
 /// <summary>
-/// One instance of a shared local mesh whose FILL is a PROCEDURAL pattern/noise brush (the pattern sibling of
-/// <see cref="GradientGeometryInstance"/>; see <see cref="InstancedFillCollector"/>). Carries the per-element world
-/// transform + the pattern fields + the shape's LOCAL bounds, so the pixel shader maps a fragment's local mesh position to
-/// the shape origin and evaluates the SAME <c>PatternMix</c>/noise the SDF rect pattern pass uses - giving pattern/noise
-/// brushes on ARBITRARY geometry (Path/Polygon/glyphs), not just rects. Packed dense in a per-key BDA storage buffer, read
-/// by the pattern-fill shader by <c>SV_InstanceID</c>.
+/// A pattern/noise-filled instance of a shared mesh: world transform, pattern fields and local bounds, evaluated with the
+/// same <c>PatternMix</c> as the SDF pattern pass.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct PatternGeometryInstance
@@ -27,11 +23,8 @@ public struct PatternGeometryInstance
     /// <summary>The shape's local-space bounds (minX, minY, sizeX, sizeY): the pattern origin is minXY; combustible centres on it.</summary>
     public Vector4F LocalBounds;
 
-    /// <summary>Primary colour, straight RGBA, opacity folded.
-    /// <para>These three stay float4 while every other fill's colours are four bytes, and it is not an oversight: the
-    /// MESH material rides this same record, and there the identically named fields carry a SURFACE and the blur and
-    /// refraction knobs - lengths and factors outside 0..1, which eight bits per channel cannot hold. Packing them is
-    /// only possible once the mesh material has a record of its own.</para></summary>
+    /// <summary>Primary color, straight RGBA, opacity folded. Float4 because the mesh material reuses this record for
+    /// values outside 0..1.</summary>
     public Vector4F Color1;
 
     /// <summary>Secondary colour, straight RGBA, opacity folded. Carries the mesh material's response - see

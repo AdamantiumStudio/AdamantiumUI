@@ -23,11 +23,8 @@ public enum ExpandDirection
     Right
 }
 
-/// <summary>A header with content that folds away under it. The unit a settings page, a tool panel and a property
-/// inspector are all built out of.
-/// <para>Collapsed, the content is not measured at all - the theme collapses the host rather than hiding it - so a page
-/// of thirty folded sections costs thirty headers, not thirty pages.</para>
-/// <para>Fully templated: PART_Header (pressed to toggle - the whole header, not just the glyph) and PART_Content.</para></summary>
+/// <summary>A header with content that folds away under it; collapsed content is not measured. Templated: PART_Header
+/// toggles, PART_Content holds the content.</summary>
 public class Expander : ContentControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),

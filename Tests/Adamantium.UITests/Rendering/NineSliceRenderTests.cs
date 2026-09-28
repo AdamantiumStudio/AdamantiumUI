@@ -32,11 +32,8 @@ public class NineSliceRenderTests
     private const int Cut = 4;       // corner block = Slice 0.25 of it
     private const int Border = 30;   // how big the corners are DRAWN, so a pixel can be read well inside one
 
-    // A 16x16 source whose four 4x4 corner blocks are four distinct colours and whose middle is mid-grey. Big enough
-    // that a sample taken inside a drawn corner is unambiguously that corner's colour, and not a linear blend with its
-    // neighbour.
-    // ONE renderer and ONE source for the whole fixture: the graphics device is shared by the entire suite and its
-    // allocator never gives blocks back, so a renderer per test is what tipped the run into ErrorOutOfDeviceMemory.
+    // A 16x16 source with four distinct 4x4 corners and a grey middle. One renderer and source for the fixture, since the
+    // shared device's allocator never returns blocks.
     private static OffscreenTestRenderer _renderer;
     private static OffscreenTestRenderer _renderer2;   // wider target for the demo-shaped seam test
     private static BitmapSource _source;
@@ -263,12 +260,8 @@ public class NineSliceRenderTests
         });
     }
 
-    // It has to keep drawing, on the rebuilding frame AND on the clean ones an idle window spends its life on.
-    // HONEST NOTE: this did NOT reproduce the bug it was written for - the collector is built on the first textured fill
-    // and was left out of the per-frame reset, so in the real app it drew for exactly ONE frame and vanished. Sabotaging
-    // the fix leaves this test green: the offscreen harness drives the cache differently enough that a collector with no
-    // frame reset still draws here. Kept as a guard against the coarser regression (later frames go blank), not as
-    // cover for that one.
+    // Keeps drawing on rebuilding and clean frames. Note: it does not catch a collector missing its per-frame reset; it
+    // guards only against later frames going blank.
     [Test]
     public void ItStillDrawsOnLaterFrames()
     {

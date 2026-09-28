@@ -16,15 +16,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A BORDER is its own primitive: a fill plus a ring of its own thickness on each side, composited from two outlines in
-/// ONE SDF pass. A pen cannot express it - a pen is one width offset from a contour - so unequal sides used to leave the
-/// batch for a per-unit CombinedGeometry ring, which is a different class of cost for the commonest chrome in a theme
-/// AND over-blended the outline it shares with the fill.
-/// <para>Asserted where each half can fail on its own: the sides are honoured INDEPENDENTLY (a mix-up of left for top
-/// survives any single-side test), the ring is the border's colour while the middle stays the fill's, and the batched
-/// picture agrees with the tessellated fallback about where the ring is.</para>
-/// </summary>
+// Per-side borders in one SDF pass: sides are independent, the ring has the border color and the middle the fill's, and
+// the batch agrees with the tessellated fallback.
 [TestFixture]
 [Category("Gpu")]
 public class BorderFrameRenderTests

@@ -3,12 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>An item reshaped by its OWN POINTS rather than by a box round it - a curve, a polyline, a connection with
-/// a bend in it.
-/// <para>Separate from <see cref="ICanvasItem"/> because most things on a plane are not like this, and a contract every
-/// item had to answer would be a list of empty implementations. An item that offers points usually offers no resize
-/// grips either (<see cref="ICanvasItem.Handles"/>): two ways to reshape one thing fight each other, and the box is
-/// the one that means less.</para></summary>
+/// <summary>An item reshaped by its own points (a curve, a polyline) rather than a box; such items usually offer no resize
+/// grips (<see cref="ICanvasItem.Handles"/>).</summary>
 public interface ICanvasPoints
 {
     /// <summary>The points, in WORLD units, in the order they are joined.</summary>

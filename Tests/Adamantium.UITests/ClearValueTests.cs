@@ -4,13 +4,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// What a property-changed callback sees when the LAST value of a property is cleared. It was once handed the raw
-/// <c>UnsetValue</c> - and a callback casts what it is given, so clearing threw an InvalidCastException that took the
-/// rest of the calling method with it. It no longer can: the value container keeps a seeded Default slot, so clearing
-/// the local value falls back to it and the callback is told what the property now reads as. Pinned here because the
-/// symptom was silent and expensive to find.
-/// </summary>
+// Clearing a property's last value hands callbacks the Default slot's value, never the raw UnsetValue.
 [TestFixture]
 public class ClearValueTests
 {

@@ -10,12 +10,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering;
 
-// LIVING aura batch: the band whose reach wanders along the outline and drifts over time. The sibling of
-// HaloRectCollector and deliberately its own collector rather than a flag on it - the pixel shader evaluates noise, and
-// a still band (which is most of what this family draws) must neither pay for that nor ride a heavier shader.
-//
-// Like the plain one it can draw three kinds of shape: a rounded rect and an ellipse compute their distance, arbitrary
-// geometry reads a field bound per SEGMENT.
+// Living aura bands, whose reach wanders along the outline over time; separate from HaloRectCollector so still bands
+// skip the noise shader. Rects and ellipses compute distance, other geometry reads a per-segment field.
 internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
 {
     public static bool Enabled = true;

@@ -96,17 +96,8 @@ public class Border : Decorator
 
       var hasThickness = borderThickness.Left != 0 || borderThickness.Top != 0 || borderThickness.Right != 0 || borderThickness.Bottom != 0;
 
-      // ONE draw for the whole border, whatever its sides and corners are: DrawBorder is a fill plus a ring of its own
-      // thickness per side, composited from two outlines in one SDF pass. Its own primitive rather than a pen, because a
-      // pen is ONE width offset from a contour and four widths are not an offset of anything - which is why unequal
-      // sides used to leave for a per-unit CombinedGeometry ring, a different class of cost for the commonest chrome in
-      // a theme. That ring also OVER-BLENDED the outline it shares with the fill (both anti-alias it, and two halves of
-      // one edge compose to a dark hairline) - unavoidable while they are two shapes, gone now that they are one.
-      //
-      // Onto whole PIXELS - the box and the thickness alike. Off the grid, a 1-DIP line at a fractional scale is drawn at
-      // half coverage on each side and reads as no line at all (see DevicePixels). The two must round TOGETHER: snapping
-      // one of them leaves the ring and the fill under it disagreeing by a fraction of a pixel, a visible kink along the
-      // edge where they meet.
+      // One SDF draw for fill and ring whatever the sides and corners, snapped to whole pixels together so they never
+      // disagree along the edge.
       var box = new Rect(new Size(ActualWidth, ActualHeight));
       this.Snap(ref box);
 

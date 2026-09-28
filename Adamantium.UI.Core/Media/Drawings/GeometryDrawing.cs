@@ -38,12 +38,8 @@ public class GeometryDrawing : Drawing
         set => SetValue(PenProperty, value);
     }
 
-    /// <summary>The stroke brush, for markup. A <see cref="Media.Pen"/> is immutable by design - every field set once,
-    /// a new pen built on any change - so it cannot be authored property-by-property in AUML. A shape does not ask for
-    /// one either: <c>Path</c> takes Stroke + StrokeThickness and builds the pen itself, and a drawing does the same
-    /// here. Without this a vector icon could only ever be a FILL, which rules out half of any icon set - a cross, a
-    /// checkmark, an arrow are strokes.
-    /// <para>Setting <see cref="Pen"/> directly still wins: it is the explicit, full form.</para></summary>
+    /// <summary>The stroke brush for markup, built into a pen with StrokeThickness since <see cref="Media.Pen"/> is
+    /// immutable. An explicit <see cref="Pen"/> wins.</summary>
     public static readonly AdamantiumProperty StrokeProperty = AdamantiumProperty.Register(nameof(Stroke),
         typeof(Brush), typeof(GeometryDrawing), new PropertyMetadata(null, StrokeBrushChangedCallback));
 

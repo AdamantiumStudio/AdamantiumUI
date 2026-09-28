@@ -2,15 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A draggable window INSIDE the window. The overlay, the scrim, the cascade, the z-order and dismissal are the
-         manager's; the chrome is here.
-
-         Its caption is NOT accent-filled, for the third time in this theme and the same reason each time: an editor
-         stacks these - a find, a rename, a settings sheet - and an accent bar on every one of them makes the loudest
-         colour on screen mean nothing. Which one is in FRONT is said by its caption's text coming up to full strength
-         while the others' step back, exactly as the main window says it.
-         Square and hairline, on the panel ground rather than the card one: this is a window, and windows in this theme
-         look like the one it sits in. -->
+    <!-- An in-window overlay window's chrome: square, hairline, panel ground; no accent caption, the front window is shown
+         by full-strength caption text. -->
 
     <Style Selector="OverlayWindow">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>

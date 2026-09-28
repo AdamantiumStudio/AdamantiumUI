@@ -94,11 +94,7 @@ public static class FocusManager
       if (element == null)
          return;
 
-      // THREE places remember the focus, and this used to clear one. The keyboard device keeps a pointer of its own,
-      // assigned in SetFocusedElement and never once assigned null, on a SINGLETON that lives as long as the
-      // application - so an element that left the tree stayed reachable for good, and with it every element its subtree
-      // could reach through shared theme brushes and view models. Measured on the stand: one such DropDown retained
-      // 128 MB of a 150 MB heap, which is the whole of the +20 MB a theme swap never gave back.
+      // Clear the keyboard device's pointer too: it is an app-lifetime singleton and would keep a removed element alive.
       var keyboard = KeyboardDevice.CurrentDevice;
       if (keyboard != null && ReferenceEquals(keyboard.FocusedComponent, element))
       {
@@ -135,11 +131,7 @@ public static class FocusManager
    {
       if (component != null)
       {
-         // Focusable is a REFUSAL, and it has to hold on every path into here - not just the mouse one, which was the
-         // only caller that asked. Keyboard navigation, a control focusing itself and any programmatic Focus() could all
-         // put the focus on an element that says it cannot take it; the element then reports IsFocused, and a template
-         // that draws its focus ring on IsFocused drew one around, say, a caption button - a frame left sitting in the
-         // window chrome after a click, on a control that is not a keyboard destination at all.
+         // Focusable=false is honored on every path, not just mouse clicks.
          if (!CanFocus(component)) return false;
 
          if (ReferenceEquals(Focused, component)) return true;
@@ -197,12 +189,7 @@ public static class FocusManager
          evt => new RoutedEventArgs(evt));
    }
 
-   /// <summary>Where the focus was in each window. There is ONE focused element in the application - the same thing the
-   /// OS means by focus - but "where it was" is a question each window answers for itself, and the answer has to survive
-   /// the window being switched away from. A single global "last focused" answered it for the whole application, so
-   /// activating a second window restored the FIRST window's element: the new window came up with the keyboard pointing
-   /// somewhere else entirely, and navigation, which checks that the key arrived in the tree the focus is in, then
-   /// ignored every keystroke in it. Weak keys: remembering a place must not keep a closed window's tree alive.</summary>
+   // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();
 
    private static IUIComponent RootOf(IUIComponent node)

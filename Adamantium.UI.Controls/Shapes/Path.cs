@@ -17,11 +17,7 @@ public class Path : Shape
         AdamantiumProperty.Register(nameof(FillRule), typeof(FillRule), typeof(Path),
             new PropertyMetadata(FillRule.EvenOdd, PropertyMetadataOptions.AffectsRender, FillRuleChangedCallback));
 
-    // Whether FillRule was set explicitly (vs. left at the default). Set from the CLR setter, which both markup
-    // (reflection PropertyInfo.SetValue) and the code-behind generator go through; the property system's own
-    // default initialization writes the value container directly, bypassing the setter, so it stays false there.
-    // Only an explicit value overrides the rule the geometry already carries (a GeometryGroup's own FillRule, or
-    // an SVG Data string's F0/F1 token).
+    // Whether FillRule was set explicitly (via the CLR setter); only then does it override the geometry's own rule.
     private bool _fillRuleSet;
 
     private static void DataChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

@@ -1,13 +1,7 @@
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The panel a row opens UNDER itself - a record's long form, shown with a template of the page's own making.
-/// <para>It is a NODE of the same tree the rows live in, exactly as a group header is: the flattener splices it in after
-/// the row that owns it, the virtualizer realizes it as it realizes any row, and a table of ten thousand records with
-/// three of them opened still builds only what is on screen. Anything else - a panel parented to the row, a second
-/// overlaid list - would have to be positioned, scrolled and recycled by hand, in parallel with the machinery that
-/// already does all three.</para>
-/// <para>It is spliced INDEPENDENTLY of the row's tree expansion: a row can show its details with its branch shut, and
-/// open its branch with its details shut. They are two different questions and each has its own answer.</para></summary>
+/// <summary>The panel a row opens under itself, from the page's template. A node of the rows' tree, so virtualization handles
+/// it; opened independently of the row's branch.</summary>
 public sealed class DataGridRowDetails
 {
     internal DataGridRowDetails(object item)

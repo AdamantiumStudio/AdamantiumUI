@@ -1,10 +1,6 @@
 namespace Adamantium.UI.Controls;
 
-/// <summary>One row of the flattened, virtualization-ready view of a tree: a data <see cref="Node"/> at a given
-/// <see cref="Depth"/> (indent level), visible because all its ancestors are expanded. A realized row container mirrors
-/// this row's state (indent, expander glyph, selection) - the row is the model, the container the view, so the state
-/// survives recycling. Cheap by design (a plain wrapper, not a container), so a level of thousands of siblings costs
-/// thousands of these, not thousands of controls.</summary>
+// One visible row of a flattened tree: a node at a depth. The row holds the state its recycled container mirrors.
 internal sealed class TreeRow
 {
     public TreeRow(object node, int depth, bool hasChildren)

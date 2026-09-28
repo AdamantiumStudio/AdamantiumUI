@@ -7,32 +7,11 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// The MICA source: the desktop picture behind the window, prepared once and kept.
-///
-/// <para>The counterpart to <see cref="BackdropCapture"/>, and deliberately its opposite in every way that matters.
-/// Acrylic copies the live frame under an element, so it pays a blit per frame and follows whatever moves underneath.
-/// Mica shows the WALLPAPER, which is a file: it never changes on its own, so it is decoded, shrunk and blurred ONCE,
-/// and after that a material costs nothing but sampling a texture. That is why mica can sit behind a whole window
-/// while acrylic is reserved for panes.</para>
-///
-/// <para>Shrunk hard on purpose. A wallpaper is 4K and a material shows it blurred past recognition - keeping the
-/// picture at full size would cost tens of megabytes to say something a thumbnail already says. The scale here is the
-/// blur: averaging into a small image IS a box filter, and the sampler's own filtering finishes the job.</para>
-/// </summary>
+// The mica source: the desktop wallpaper decoded, shrunk (the shrink is the blur) and kept, so mica costs only a texture
+// sample, unlike acrylic's per-frame capture.
 internal sealed class WallpaperBackdrop : IDisposable
 {
-    // Long edge of the prepared copy. Small on purpose, and the blur it produces is LOad-BEARING.
-    //
-    // Mica maps the wallpaper through the window's place on the desktop, so it must appear to stand still while the
-    // window moves over it. It cannot, quite: the frame is built for where the window is at that instant and reaches the
-    // screen after the OS has already moved it on, and no amount of asking the OS more often closes that gap - the
-    // system's own mica does not have it only because the compositor moves the window and paints its backdrop in one
-    // step. Which is why the backdrop is FROZEN for the duration of a drag - see MaterialType.Mica.
-    //
-    // Raising this to 480 was tried and made the wobble THREE TIMES more visible - not worse, just no longer hidden:
-    // a sharper picture shows the same displacement better. At 160 the copy is soft enough that the eye has nothing to
-    // track. So the blur is not only how mica looks, it is also what makes it sit still.
+    // Long edge of the prepared copy; kept small, since the resulting blur also hides the frame lag while the window moves.
     private const int PreparedLongEdge = 160;
 
     // How long a quiet desktop is trusted before the shell is asked again. Only a safety net: a change normally arrives
@@ -56,12 +35,8 @@ internal sealed class WallpaperBackdrop : IDisposable
     // the reload here would run it on whatever thread the OS message arrived on.
     private void OnDesktopChanged() => _announced = true;
 
-    /// <summary>The blurred picture as a GPU texture, re-reading the desktop first if it changed. Null when there is
-    /// nothing to show - a plain-colour desktop, an undecodable file, or a platform that does not answer - and a caller
-    /// then tints <see cref="Background"/>, which is a visible fallback rather than a silently disabled material.
-    ///
-    /// <para>Asked per draw and nearly free: the platform call returns a path and a timestamp, and everything past the
-    /// comparison happens only when the desktop actually changed.</para></summary>
+    /// <summary>The blurred wallpaper texture, refreshed if the desktop changed; null when there is none, and callers
+    /// tint <see cref="Background"/> instead.</summary>
     public ITexture Texture(IGraphicsDevice device, PixelPoint point)
     {
         _device = device;
@@ -114,16 +89,8 @@ internal sealed class WallpaperBackdrop : IDisposable
     /// repeating sampler, and the reason <see cref="Placement"/> returns a single tile for it.</summary>
     public bool Tiles => _prepared.Fit == WallpaperFit.Tile;
 
-    /// <summary>Where the WHOLE picture lands on the desktop, in DESKTOP pixels - the rectangle the desktop itself
-    /// stretched it into. A material maps its fragments through this, which is what keeps the picture still while the
-    /// window travels across it: the rectangle is stated on the desktop, not on the window.
-    ///
-    /// <para>For <see cref="WallpaperFit.Tile"/> it is ONE tile at its natural size, anchored to the monitor's corner -
-    /// the repetition is the sampler's job.</para>
-    ///
-    /// <para><paramref name="virtualScreen"/> matters only for <see cref="WallpaperFit.Span"/>, where one picture is
-    /// stretched across every monitor rather than placed on each. Empty (a platform that does not report it) falls back
-    /// to this monitor, which is what Span degrades into on a single-screen desktop anyway.</para></summary>
+    /// <summary>The picture's rectangle in desktop pixels (one tile for <see cref="WallpaperFit.Tile"/>);
+    /// <paramref name="virtualScreen"/> is used only for <see cref="WallpaperFit.Span"/>.</summary>
     public Rect Placement(Rect virtualScreen)
     {
         var monitor = _prepared.MonitorBounds;
@@ -162,21 +129,11 @@ internal sealed class WallpaperBackdrop : IDisposable
     private static Rect Centred(Rect monitor, double width, double height)
         => new(monitor.X + (monitor.Width - width) / 2, monitor.Y + (monitor.Height - height) / 2, width, height);
 
-    /// <summary>Make sure the copy matches what the desktop shows on the monitor under <paramref name="point"/>.
-    /// Returns true when something usable is ready.
-    ///
-    /// <para>Cheap to call often: asking the platform is a COM call returning a path and a timestamp, and the answer is
-    /// compared as a whole - it is a record. Everything expensive happens only when that comparison differs, which is
-    /// when the user changed the wallpaper, the slideshow turned the page, or the window moved to another screen.
-    /// The timestamp is what catches Spotlight, which rewrites the same path with a new picture.</para></summary>
+    /// <summary>Syncs the copy with the wallpaper of the monitor under <paramref name="point"/> (path and timestamp
+    /// compared); true when something usable is ready.</summary>
     public bool Ensure(PixelPoint point)
     {
-        // ASKED RARELY, on purpose. The wallpaper service is an OUT-OF-PROCESS COM server, so every question is a
-        // marshalled round trip to another process - and this is called per draw. Asking it at frame rate was thousands
-        // of cross-process calls a second.
-        //
-        // So the shell is only asked when something could have changed: the announcement fired, the window moved to
-        // another monitor, or enough time passed that a slideshow could have turned the page without announcing it.
+        // The out-of-process shell is asked only on a change notice, a monitor change, or after a slideshow-length pause.
         var movedOff = !_prepared.IsKnown
                        || point.X < _prepared.MonitorBounds.X
                        || point.X >= _prepared.MonitorBounds.Right
@@ -210,13 +167,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         _pixels = null;
         _picture = default;
 
-        // DECODED OFF THE RENDER THREAD. A wallpaper is a 4K photograph, and averaging eight million pixels into a
-        // thumbnail is tens of milliseconds at best - done inline it froze the window for SECONDS every time it was
-        // dragged to another monitor, because that is exactly when the picture changes.
-        //
-        // Until it arrives the material has no texture and tints the desktop's background colour instead, which is the
-        // same visible fallback as a desktop with no picture at all. One load at a time: a drag across three monitors
-        // must not leave three decodes racing to publish.
+        // Decoded off the render thread, one load at a time; the material tints the background color until it lands.
         if (current.File != null && !_loading)
         {
             _loading = true;
@@ -356,17 +307,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         }
     }
 
-    /// <summary>
-    /// The wallpaper at the smallest size that still answers the question - an eighth-scale preview where the JPEG
-    /// decoder can produce one, the whole picture otherwise.
-    ///
-    /// <para>This material shrinks the picture to a thumbnail and blurs it anyway, so decoding four thousand pixels
-    /// across to throw away all but a hundred and sixty is work nobody sees. A JPEG carries each block's average as one
-    /// coefficient, and reading only those gives the picture at 1/8 directly - which is still far more than needed.</para>
-    ///
-    /// <para>PNG and everything else fall through to the full decode: only JPEG stores the picture in a form that can
-    /// be read at reduced scale.</para>
-    /// </summary>
+    // Decodes JPEG at 1/8 scale (DC coefficients only); other formats fully.
     private static IRawBitmap LoadSmallestUsable(string path, out int downscale)
     {
         downscale = 1;
@@ -400,13 +341,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         return BitmapLoader.Load(full);
     }
 
-    /// <summary>Average the source into the small copy. Averaged, not sampled: dropping pixels would leave the picture
-    /// sharp and aliased, and a material built on it would shimmer as the window moves.
-    ///
-    /// <para>The averaging STRIDES rather than touching every pixel. A 4K photograph is eight million of them and this
-    /// runs on a background thread while the material shows its tint - but "eventually" is still a wait, and averaging
-    /// sixteen samples of a cell instead of a thousand is indistinguishable once the result is 160 px wide. Enough
-    /// samples that no cell is decided by a single pixel; few enough that the work is bounded by the OUTPUT size.</para></summary>
+    // Averages (not samples, which would shimmer) a strided subset of each cell, so work scales with the output size.
     private static byte[] Shrink(byte[] src, uint srcWidth, uint srcHeight, int stride, int bytesPerPixel,
         uint width, uint height, bool bgr)
     {

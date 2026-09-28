@@ -2,11 +2,8 @@
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>One line of an inspector, written. What it holds is the OLD value and the NEW one for every object the line
-/// was pointed at, and it puts them back through the very binding the line writes through.
-/// <para>Its own kind of step because a comparison of the drawing cannot see it: a colour, a thickness, the words on a
-/// label - none of them move anything, so the canvas's before-and-after of where things are would record a change of
-/// nothing at all. What DOES know is the grid that wrote it, at the moment it wrote it.</para></summary>
+/// <summary>An undo step for one inspector line: old and new values per object, restored through the line's binding. A
+/// property change moves nothing, so the drawing comparison cannot see it.</summary>
 public sealed class CanvasPropertyStep : ICanvasStep
 {
     private readonly PropertyGrid _grid;
@@ -43,14 +40,8 @@ public sealed class CanvasPropertyStep : ICanvasStep
     {
         foreach (var (target, was, now) in _values) _grid.WriteTo(target, _definition, forward ? now : was);
 
-        // The objects on the plane are DATA and say nothing when they change - that is the whole arrangement - so both
-        // the drawing and the PANEL are told here, once, rather than by each of them. Without the second, the shape
-        // goes back and the line above it still shows the number that was undone.
-        //
-        // REBUILT and not merely re-read: a row holds a live binding to a plain property that raises nothing, so what
-        // it has is what the binding pushed when it was made. Re-reading asks the row, and the row answers with the
-        // stale number it is holding; only pointing the binding at the object again goes back to the object. Once per
-        // undo, which is not a cost worth avoiding.
+        // Plane objects raise no change events, so tell both the drawing and the panel; the rows are rebuilt, since
+        // re-reading returns their stale values.
         scene?.Touch();
         _grid.Rebuild();
     }

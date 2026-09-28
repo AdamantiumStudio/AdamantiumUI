@@ -4,11 +4,7 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering.Retained;
 
 /// <summary>
-/// One instance of a TEXTURED fill on a shared tessellated mesh - the textured sibling of
-/// <see cref="PatternGeometryInstance"/>. Matches <c>TextureGeomData</c> in BrushEffect.fx field for field; read by the
-/// vertex/pixel shader through a buffer device address, indexed by SV_InstanceID.
-/// <para>The TEXTURE is not in the record: one is bound per draw, the way the SDF textured batch binds one per segment.
-/// The engine has no bindless path, so a texture change simply splits the draw.</para>
+/// A textured-fill instance of a shared mesh, matching <c>TextureGeomData</c>; the texture is bound per draw.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct TextureGeometryInstance

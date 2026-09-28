@@ -182,12 +182,7 @@ public class CanvasCurveTests
         Assert.That(session.Rectangles, Has.Count.EqualTo(1));
     }
 
-    // WHAT MAKES IT A BEZIER: only the first point and the last are ON the line. Every other one pulls it without
-    // being touched by it.
-    //
-    // A chain of spans of a chosen degree stood here, and it broke exactly this: the place where one span ends and the
-    // next begins lies on the curve, so a curve of several spans had interior points sitting on the line with a corner
-    // at each of them. A line anchored at points along its length is a spline, not a Bezier.
+    // A Bezier passes only through its first and last points; interior points pull without touching.
     [TestCase(3)]
     [TestCase(4)]
     [TestCase(5)]

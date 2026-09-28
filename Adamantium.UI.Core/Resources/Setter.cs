@@ -75,12 +75,8 @@ public class Setter : ISetter, IEquatable<Setter>
         return property is { CanInherit: true } ? ValuePriority.TypeDefault : ValuePriority.Style;
     }
 
-    // A {ResourceReference} resolves TREE-SCOPED from the styled component (Local dictionaries on this element or an
-    // ancestor, then Theme, then Global). But a style is applied the moment it is attached - which happens WHILE the tree
-    // is still being built, before the element has any parent - so a Local resource declared on an ancestor isn't
-    // reachable yet and the immediate lookup misses. In that case defer: resolve again when the element attaches to the
-    // (rooted) visual tree. That attach cascades through the whole subtree, so by then the full ancestor chain - including
-    // the resource's owner - is present. Theme/Global references resolve immediately and never defer.
+    // Resolves tree-scoped; a Local miss before the element has ancestors is deferred to attach. Theme/Global resolve
+    // immediately.
     private void ApplyResourceReference(IFundamentalUIComponent component, Style style, ITheme theme,
         ResourceReference reference)
     {

@@ -12,15 +12,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>
-/// An unbounded plane to draw and design on: pan it and it never reaches an edge, zoom it and the step of the grid
-/// coarsens instead of turning to mush.
-/// <para>There is no scroll viewer here and no scrollable extent, which is what "unbounded" costs: panning moves the
-/// CAMERA (<see cref="Offset"/>) and has nothing to run into. The scene lives in world coordinates - doubles, so that a
-/// canvas the size of a country still has sub-micron steps - and the screen is <c>world * Scale + Offset</c>.</para>
-/// <para>The grid is not objects. Only the lines that fall inside the viewport are drawn, and their coordinates come
-/// out of the camera: an unbounded grid never exists as data for a moment.</para>
-/// </summary>
+/// <summary>An unbounded plane to draw and design on: panning moves the camera (<see cref="Offset"/>), the scene is in double
+/// world coordinates (screen = world * Scale + Offset), and only visible grid lines are drawn.</summary>
 public partial class InfiniteCanvas : Control
 {
     private bool _zoomActive;
@@ -100,13 +93,8 @@ public partial class InfiniteCanvas : Control
         new PropertyMetadata(Vector2.Zero,
             PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged));
 
-    /// <summary>How far out and in the camera may go. A practical limit, not a technical one - raise it and nothing
-    /// breaks.
-    /// <para>What would break at a big zoom is precision, and the camera is built so that it does not: the world is in
-    /// doubles, and what reaches the drawing is already SCREEN coordinates computed against the camera. So the numbers
-    /// that matter stay small however far the origin is, and how far in the camera is zoomed costs nothing. These
-    /// defaults are only what a person is likely to want - an application that needs a thousand times says so.</para>
-    /// </summary>
+    /// <summary>How far the camera may zoom out and in: a practical default, not a precision limit, since drawing receives
+    /// screen coordinates.</summary>
     public static readonly AdamantiumProperty MinScaleProperty = AdamantiumProperty.Register(nameof(MinScale),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.01));
 
@@ -312,20 +300,14 @@ public partial class InfiniteCanvas : Control
     public static readonly AdamantiumProperty ZoomSmoothRateProperty = AdamantiumProperty.Register(
         nameof(ZoomSmoothRate), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(10.0));
 
-    /// <summary>What stands ON THE GLASS: a floating tool panel, a legend, a minimap. Anything put here is laid over the
-    /// plane and does NOT move or scale with the camera - that is what makes it the overlay rather than content.
-    /// <para>The canvas carries the layer so nobody has to build one around it, and the CONTENT comes from outside so
-    /// nobody is stuck with ours. Same division the table makes with its header: the control owns the place, the
-    /// application owns what is in it.</para></summary>
+    /// <summary>Content laid over the plane that does not move or scale with the camera (a floating panel, a legend); the
+    /// canvas owns the place, the application the content.</summary>
     public static readonly AdamantiumProperty OverlayProperty = AdamantiumProperty.Register(nameof(Overlay),
         typeof(object), typeof(InfiniteCanvas),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnOverlayChanged));
 
-    /// <summary>The tools this canvas offers, in the order a rail should show them. Putting a tool here is what makes
-    /// it pickable by a button and by its own shortcut; <see cref="Tool"/> is which of them is in hand.
-    /// <para>A list on the canvas rather than buttons in markup, because everything a button needs - the name, the
-    /// picture, the key - is a fact about the tool, and mirroring those into commands and flags is work that goes out
-    /// of step the first time somebody adds a tool.</para></summary>
+    /// <summary>The tools this canvas offers, in rail order, each pickable by button and shortcut; <see cref="Tool"/> is the
+    /// one in hand.</summary>
     public static readonly AdamantiumProperty ToolsProperty = AdamantiumProperty.Register(nameof(Tools),
         typeof(CanvasTools), typeof(InfiniteCanvas), new PropertyMetadata(null, OnToolsChanged));
 
@@ -367,22 +349,13 @@ public partial class InfiniteCanvas : Control
     public static readonly AdamantiumProperty ShowsNodePaletteProperty = AdamantiumProperty.Register(
         nameof(ShowsNodePalette), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
 
-    /// <summary>Whether the number rows of the inspector carry their up and down buttons. ON, because a number a hand
-    /// nudges is what a panel like this is mostly used for - and because a panel that offers them on one row and not
-    /// on the next is two panels in one place.
-    /// <para>A switch rather than a decision taken in a theme: the buttons cost width, and how much width a panel has
-    /// to spare is the application's to say - not something to be argued about again each time a row is added.</para>
-    /// </summary>
+    /// <summary>Whether the inspector's number rows carry up/down buttons (on by default); a switch, since the buttons cost
+    /// width.</summary>
     public static readonly AdamantiumProperty ShowsNumberButtonsProperty = AdamantiumProperty.Register(
         nameof(ShowsNumberButtons), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
 
-    /// <summary>Which side of the number those buttons sit on. LEFT by default, against the control's own "one at each
-    /// end": the RIGHT end of an inspector line is where the LINE's buttons are - the reset, and the "..." - and the
-    /// reset comes and goes, since it is offered only while a value is not the default. A stepper sharing that end
-    /// moves out from under the hand between one press and the next, which is felt most by the one thing in a panel
-    /// people do several times without looking.
-    /// <para>Outward, like the switch above, because it is a matter of taste and of how much room a panel has: both of
-    /// those are the application's to say.</para></summary>
+    /// <summary>Which side of the number those buttons sit on; left by default, since the line's reset button comes and goes
+    /// on the right.</summary>
     public static readonly AdamantiumProperty NumberButtonsPlacementProperty = AdamantiumProperty.Register(
         nameof(NumberButtonsPlacement), typeof(NumericButtonsPlacement), typeof(InfiniteCanvas),
         new PropertyMetadata(NumericButtonsPlacement.Left));
@@ -437,11 +410,8 @@ public partial class InfiniteCanvas : Control
         if (component is InfiniteCanvas canvas) canvas._graph.SetNodes(e.NewValue as IEnumerable);
     }
 
-    /// <summary>WHAT IS ON THE PLANE besides the graph - the application's own objects for the drawing, the way
-    /// <see cref="Nodes"/> is for the graph.
-    /// <para>The canvas makes what draws them: a shape described becomes the canvas's own drawing of it, anything else
-    /// becomes a control built here from <see cref="ObjectTemplateSelector"/>. An application never constructs a scene
-    /// item and never a control of its own to put on a plane.</para></summary>
+    /// <summary>The application's drawing objects, as <see cref="Nodes"/> is for the graph; shapes become canvas drawings,
+    /// anything else a control from <see cref="ObjectTemplateSelector"/>.</summary>
     public static readonly AdamantiumProperty ObjectsProperty = AdamantiumProperty.Register(nameof(Objects),
         typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(null, OnObjectsChanged));
 
@@ -474,13 +444,8 @@ public partial class InfiniteCanvas : Control
         if (component is InfiniteCanvas canvas) canvas._drawing.SetTemplateSelector(e.NewValue as DataTemplateSelector);
     }
 
-    /// <summary>WHAT THE PANEL SHOWS FOR THINGS THIS APPLICATION PUTS ON THE PLANE - its own sets of inspector lines,
-    /// laid OVER the ones the theme ships.
-    /// <para>A set naming a kind the default already covers replaces it; a set naming a new kind is added. So a new
-    /// kind of thing costs the lines it is set by and nothing else - no flag on the panel, no edit to a theme. To
-    /// replace the lot, declare a resource under the default's own key instead.</para>
-    /// <para>The same door for the TOOL page - see <see cref="ToolSections"/>: a new tool that brings settings of its
-    /// own has somewhere to put them.</para></summary>
+    /// <summary>The application's inspector sections, laid over the theme's: a known kind is replaced, a new kind added. See
+    /// <see cref="ToolSections"/> for tools.</summary>
     public static readonly AdamantiumProperty InspectorSectionsProperty = AdamantiumProperty.Register(
         nameof(InspectorSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
         new PropertyMetadata(null));
@@ -503,14 +468,8 @@ public partial class InfiniteCanvas : Control
         set => SetValue(ToolSectionsProperty, value);
     }
 
-    /// <summary>The KINDS of node this application has, said by the application itself - a collection of
-    /// <see cref="ICanvasNodeKind"/>, each of which knows its word and can make the inside of a node of that sort.
-    /// <para>Given to the canvas rather than gathered from what is already on the plane: a list collected that way is
-    /// never complete - it holds what somebody happened to make and nothing else - and the palette, the inspector and
-    /// the loader would each be offering a different one. This is the one list, and all three read it.</para>
-    /// <para>It is also what a factory handed to the control would have been: the shell of a node is the engine's own
-    /// and the canvas makes it, and what that node IS comes from the kind picked out of here. So there is no delegate
-    /// on this surface - the kinds are data, which is what a drop-down and a palette need them to be.</para></summary>
+    /// <summary>The application's node kinds (<see cref="ICanvasNodeKind"/>): the one list the palette, inspector and loader
+    /// all read, and how the canvas makes nodes.</summary>
     public static readonly AdamantiumProperty NodeKindsProperty = AdamantiumProperty.Register(nameof(NodeKinds),
         typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(null, OnNodeKindsChanged));
 
@@ -646,17 +605,8 @@ public partial class InfiniteCanvas : Control
     /// <summary>Raised after <see cref="Mode"/> changes, so a rail can offer the tools that mode admits.</summary>
     public event EventHandler ModeChanged;
 
-    /// <summary>AN INSPECTOR OVER THIS PLANE. Given one, a line written in it repaints the drawing and becomes a step
-    /// that can be taken back; given none, nothing here changes.
-    /// <para>What a canvas draws is DATA - no property store, no notification - which is exactly what lets a drawing
-    /// hold tens of thousands of items. So a value written straight into one is heard by nobody: the model changes and
-    /// the picture does not, until something else happens to redraw the plane. And a colour leaves no trace in a
-    /// comparison of where things are, so it cannot be undone by the ordinary gesture step either.</para>
-    /// <para>THIS WAY ROUND on purpose. The inspector is a general-purpose control and must not learn what a canvas,
-    /// a scene or a history are - putting those on it would put them on EVERY inspector in the application. It already
-    /// says everything needed, as any control should: it announces a write before and after
-    /// (<see cref="PropertyGrid.ValueChanging"/>, <see cref="PropertyGrid.ValueChanged"/>) and will read a value back
-    /// when asked. The canvas is the specialised one, so the canvas does the listening.</para></summary>
+    /// <summary>An inspector over this plane: the canvas listens to its <see cref="PropertyGrid.ValueChanging"/> and
+    /// <see cref="PropertyGrid.ValueChanged"/> to repaint and record an undo step, since plane items raise no events.</summary>
     public static readonly AdamantiumProperty InspectorProperty = AdamantiumProperty.Register(nameof(Inspector),
         typeof(PropertyGrid), typeof(InfiniteCanvas), new PropertyMetadata(null, OnInspectorChanged));
 
@@ -698,14 +648,7 @@ public partial class InfiniteCanvas : Control
 
     private void OnInspectorWritten(object sender, PropertyValuesChangedEventArgs about)
     {
-        // TOLD WHATEVER WAS EDITED, without asking whether it was an item of this plane. The inspector reaches THROUGH
-        // an item to the control inside it, and through a node to one of its sockets - and a socket is not an item, so
-        // asking left a recoloured socket's wire the old colour. Nothing is saved by asking: this inspector is pointed
-        // at this canvas, and being told twice costs one repaint of what is visible.
-        //
-        // A LAYER NUMBER WRITTEN IN THE PANEL is a request to stand at that place, and this is where it is granted.
-        // Asked here rather than by watching one particular row: the panel writes through a binding like any other, and
-        // a canvas that had to know which line carried the number would be a canvas a theme could not restate.
+        // Repaint for any edit, even of a socket that is not an item, and grant a layer number written in the panel.
         SettleOrder();
 
         Scene?.Touch();
@@ -754,12 +697,8 @@ public partial class InfiniteCanvas : Control
         Repaint();
     }
 
-    /// <summary>Whether what the pointer is doing snaps to the grid - to its crossings, which are the points a drawing
-    /// is measured against.
-    /// <para>This also changes what drawing IS. Snapped, the left button places vertices and the line runs straight from
-    /// one to the next, following the pointer between clicks until a double click ends it; nothing is smoothed, because
-    /// every vertex is somewhere that was aimed at. Free, the button draws a freehand stroke that is smoothed when it is
-    /// lifted.</para></summary>
+    /// <summary>Whether the pointer snaps to grid crossings. Snapped, the pen places straight-line vertices until a double
+    /// click; free, it draws a smoothed freehand stroke.</summary>
     public static readonly AdamantiumProperty SnapToGridProperty = AdamantiumProperty.Register(nameof(SnapToGrid),
         typeof(Boolean), typeof(InfiniteCanvas),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender, OnSnapToGridChanged));
@@ -784,21 +723,12 @@ public partial class InfiniteCanvas : Control
     public static readonly AdamantiumProperty InkProperty = AdamantiumProperty.Register(nameof(Ink),
         typeof(Brush), typeof(InfiniteCanvas), new PropertyMetadata(null));
 
-    /// <summary>How wide the pen draws, in SCREEN pixels - the nib is a size on the glass, like every other tolerance
-    /// this control states.
-    /// <para>The MARK it leaves belongs to the plane: the width is turned into world units the moment a stroke starts,
-    /// and from then on that stroke grows and shrinks with the zoom the way ink on paper does. Which is the same
-    /// division a stylus makes - the nib is a physical size, the line it leaves is part of the drawing. Stated in world
-    /// units the pen would be right at exactly one zoom and useless at the others: at 256x the thinnest setting drew a
-    /// band half the viewport wide.</para></summary>
+    /// <summary>The pen width in screen pixels, converted to world units when a stroke starts, so the stroke then scales
+    /// with the zoom.</summary>
     public static readonly AdamantiumProperty InkThicknessProperty = AdamantiumProperty.Register(nameof(InkThickness),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(2.0));
 
-    /// <summary>What the RIGHT button puts the canvas back to - the tool a gesture ends in. Nothing by default, which
-    /// leaves the right button alone; set it and one click anywhere drops whatever was picked up.
-    /// <para>The right button and not a key, because the hand is already on the mouse and because it is the one press
-    /// no tool here wants for itself. And a property rather than a hard-wired "select", because which tool is the
-    /// resting one is the application's to say.</para></summary>
+    /// <summary>The tool a right click returns to; none by default, which leaves the right button alone.</summary>
     public static readonly AdamantiumProperty DefaultToolProperty = AdamantiumProperty.Register(nameof(DefaultTool),
         typeof(ICanvasTool), typeof(InfiniteCanvas), new PropertyMetadata(null));
 
@@ -848,21 +778,14 @@ public partial class InfiniteCanvas : Control
     public static readonly AdamantiumProperty HandleSizeProperty = AdamantiumProperty.Register(nameof(HandleSize),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(9.0, PropertyMetadataOptions.AffectsRender));
 
-    /// <summary>Whether the controls on the plane are being EDITED rather than used. Editing, a press on one selects and
-    /// drags it like anything else here; using, it goes to the control and the button is pressed.
-    /// <para>Both are needed and neither can be guessed: a board being laid out and the same board being worked with are
-    /// the same objects, and the only difference is which of the two a press means. Design is the default, because a
-    /// canvas that holds controls is one somebody is arranging.</para></summary>
+    /// <summary>Whether plane controls are edited (a press selects and drags) rather than used (the press goes to the
+    /// control); editing by default.</summary>
     public static readonly AdamantiumProperty IsDesignModeProperty = AdamantiumProperty.Register(nameof(IsDesignMode),
         typeof(Boolean), typeof(InfiniteCanvas),
         new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnDesignModeChanged));
 
-    /// <summary>Whether the overlay is there AT ALL - grip included. Off, the canvas carries nothing of its own and is
-    /// driven entirely from outside: a binding, a panel in another window, a view model.
-    /// <para>Different from <see cref="IsOverlayOpen"/>, and the difference matters: folding leaves the grip, because a
-    /// panel you cannot get back is a panel you have lost. Hiding takes the grip too, and that is only safe when
-    /// something else is steering - which is exactly the case this exists for, a mark-up layer over somebody else's
-    /// screen.</para></summary>
+    /// <summary>Whether the overlay exists at all, grip included; off when the canvas is driven from outside. Unlike
+    /// <see cref="IsOverlayOpen"/>, folding keeps the grip.</summary>
     public static readonly AdamantiumProperty IsOverlayVisibleProperty = AdamantiumProperty.Register(
         nameof(IsOverlayVisible), typeof(Boolean), typeof(InfiniteCanvas),
         new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnOverlayChanged));
@@ -917,11 +840,7 @@ public partial class InfiniteCanvas : Control
         _graph = new CanvasGraphHost(this);
         _drawing = new CanvasDrawingHost();
 
-        // An empty one to start with, so that code can add to these without making the collection first - and written
-        // at DEFAULT priority, which is the whole point. Local(1) outranks Binding(2) permanently here, so a collection
-        // made the ordinary way - in the constructor, or lazily from the getter - masks {Binding} on that property for
-        // good. Measured exactly that: the view model held eleven tools and the canvas a different, empty list, and no
-        // binding could ever reach it again.
+        // Empty collections at Default priority, so a {Binding} can still replace them; a Local write would mask it.
         SetValue(ToolsProperty, new CanvasTools(), ValuePriority.Default);
 
         // ITS OWN MEMORY, and not something an application has to bring. A canvas is an editor: taking the last thing
@@ -1218,11 +1137,7 @@ public partial class InfiniteCanvas : Control
     }
 
     // ------------------------------------------------------------------ what it can do, as commands
-    //
-    // ON THE CANVAS because the canvas is what does them. A button in an application binds straight to one of these and
-    // needs nothing else: no click handler, no behaviour, no view-model method that forwards. And each says when it can
-    // be pressed, so a bound button switches itself off with nothing left to undo - which is the difference between a
-    // control and a kit of parts.
+    // Buttons bind straight to these; each reports when it can run.
     private CanvasCommand _undo;
     private CanvasCommand _redo;
     private CanvasCommand _zoomIn;
@@ -1295,16 +1210,8 @@ public partial class InfiniteCanvas : Control
     public CanvasCommand SendToBackCommand =>
         _toBack ??= new CanvasCommand(_ => Reorder(false), _ => _selection.Count > 0 && Scene != null);
 
-    /// <summary>Moves what is selected past the next thing IN ITS WAY - the nearest one along paint order whose box
-    /// meets it - forward or back.
-    /// <para>The pair above only reaches the ends, and everything worth arranging is in the middle: a shape that has
-    /// to sit BETWEEN two others cannot be put there by a command that can only put it on top of both.</para>
-    /// <para>Past what OVERLAPS and not one place along the list, which is the difference between one press and three
-    /// hundred: on a plane of five hundred things the two that cover each other may be the two hundredth and the five
-    /// hundredth, and everything between them is somewhere else on the screen. How deep a thing sits is not something
-    /// a drawing shows, so a count of presses is not something a person can know.</para>
-    /// <para>Off when nothing on that side meets it - which says "there is nothing in front of this", not "this did
-    /// not work".</para></summary>
+    /// <summary>Moves the selection forward past the next item in paint order whose box overlaps it; disabled when nothing in
+    /// front overlaps.</summary>
     public CanvasCommand BringForwardCommand =>
         _forward ??= new CanvasCommand(_ => Step(true), _ => Steppable(true));
 
@@ -1343,18 +1250,7 @@ public partial class InfiniteCanvas : Control
         return false;
     }
 
-    // The next thing that is ACTUALLY IN THE WAY on that side - the nearest one along the order whose box meets this
-    // one's.
-    //
-    // NOT the next one in the list, which is the trap this exists to avoid. On a plane of five hundred things, the two
-    // that overlap each other may be the two hundredth and the five hundredth, and a step defined by the list would be
-    // three hundred presses to put one over the other - three hundred presses whose count nobody can know in advance,
-    // since how deep a thing sits is not something the drawing shows. Every one of those presses would move it past
-    // something on the other side of the screen that it never touched.
-    //
-    // Defined by what OVERLAPS, one press does what the person meant, whatever lies between. And when nothing on that
-    // side meets it there is nothing to get past: the button greys, which is the truth - not "this did not work", but
-    // "there is nothing in front of this to get above".
+    // The nearest item on that side of the paint order whose box overlaps this one - not simply the next in the list.
     private static ICanvasItem Neighbour(List<ICanvasItem> shown, ICanvasItem item, bool forward)
     {
         var at = shown.IndexOf(item);
@@ -1377,11 +1273,8 @@ public partial class InfiniteCanvas : Control
         one.X <= other.X + other.Width && other.X <= one.X + one.Width &&
         one.Y <= other.Y + other.Height && other.Y <= one.Y + one.Height;
 
-    /// <summary>Puts the selected items where their own <see cref="ICanvasItem.Order"/> says they should be.
-    /// <para>The number an item carries is normally a stamp the scene writes: where it stands, written down. WRITING to
-    /// it turns the stamp into a request, and this is what grants it - the disagreement between the number and the
-    /// place IS the request. Called for you when the panel writes; public because an application that moves things by
-    /// setting numbers rather than by calling the commands needs the same door.</para></summary>
+    /// <summary>Moves the selected items to where their written <see cref="ICanvasItem.Order"/> says; called after inspector
+    /// writes, public for applications that set numbers.</summary>
     public void SettleOrder()
     {
         if (Scene is not { } scene || _selection.Count == 0) return;
@@ -1471,14 +1364,7 @@ public partial class InfiniteCanvas : Control
     /// element. The canvas says nothing on its own: what to tell the user, and how, is the application's.</summary>
     public event EventHandler<CanvasSvgReadEventArgs> SvgRead;
 
-    /// <summary>Puts a freshly made item on the plane - what a TOOL calls when a gesture is finished.
-    /// <para>ON TOP, because the plane has ONE order and a new thing goes at the top of it. Everything already there
-    /// keeps its place; what has just been drawn is over it, including over the controls, which is what drawing on a
-    /// picture means. Anything can be moved afterwards - "bring to front" and "send to back" move a control and a
-    /// stroke through the same order, so a picture can be raised above a drawing as easily as a drawing over a
-    /// picture.</para>
-    /// <para>One door rather than six calls to the scene: a tool says what it made, and where that goes is one
-    /// decision in one place.</para></summary>
+    /// <summary>Puts a new item on top of the one paint order, controls included; tools call it when a gesture finishes.</summary>
     public void Place(ICanvasItem item)
     {
         if (item == null || Scene == null) return;
@@ -1891,12 +1777,7 @@ public partial class InfiniteCanvas : Control
         Repaint();
     }
 
-    // WHAT IS SELECTED BUT NO LONGER THERE, let go of. Anything can take an item off the plane - a clear, an undo, an
-    // application writing its own collection - and none of them knows what is selected. Left holding it, the frame is
-    // drawn round something that is not drawn, its grips resize a thing nobody can see, and Delete works on it.
-    //
-    // Only when something IS selected, which is the case that costs anything: an empty selection is the common one and
-    // it answers in a branch.
+    // Drops selected items that have left the plane by any route, so the frame and Delete never act on them.
     private void Forget()
     {
         if (_selection.Count == 0 || Scene is not { } scene) return;
@@ -1918,11 +1799,7 @@ public partial class InfiniteCanvas : Control
         if (gone) Selected();
     }
 
-    // A GROUP'S CHILDREN ARE STILL ON THE PLANE even though the scene does not list them - making a group takes them
-    // out of the scene and puts the group in their place. Asking the scene alone whether a selected thing is still
-    // there therefore says no about something plainly visible, and the selection would evaporate the moment anything
-    // touched the drawing: a colour written in the inspector would stop taking effect until the thing was clicked
-    // again, which is exactly what it did.
+    // Collects items including group children, which are on the plane though the scene does not list them.
     private static void Gather(ICanvasItem item, HashSet<ICanvasItem> into)
     {
         if (!into.Add(item) || item is not GroupItem group) return;
@@ -2003,12 +1880,8 @@ public partial class InfiniteCanvas : Control
         if (component is InfiniteCanvas canvas) canvas.ApplyDesignMode();
     }
 
-    // Editing, a control on the plane is INVISIBLE TO THE POINTER, so a press on it lands on the plane and the select
-    // tool picks it up. Using, the press is the control's. For a button or a field there is no third answer: a press
-    // cannot both operate one and drag it.
-    //
-    // A NODE is the exception, and the layer knows it. What is in a node is a field, a switch, a list - a node whose
-    // contents cannot be clicked is a picture of a node - so it stays live and is dragged by its title strip instead.
+    // While editing, plane controls ignore the pointer so the select tool gets the press; nodes stay live and drag by their
+    // title strip.
     private void ApplyDesignMode()
     {
         Hosts(host => host.ApplyDesignMode());

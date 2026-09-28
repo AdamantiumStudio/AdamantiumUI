@@ -12,13 +12,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A colour picker is two different things depending on where it stands: a solid panel on a page, and a FLYOUT when a
-/// colour well opens it over the document. Only the second is a transient surface, and a transient surface in a theme
-/// that has a material wears it - the menus, the drop-downs and the slide panel all do. This one did not, in either
-/// theme: it kept a flat card while everything else around it was glass or acrylic.
-/// <para>Editor Pro is deliberately absent: it has no materials at all, and its menus are flat by design.</para>
-/// </summary>
+// A color picker opened as a flyout wears the theme's flyout material (Editor Pro has no materials, so it is excluded).
 [TestFixture]
 public class ColourPickerFlyoutSurfaceTests
 {

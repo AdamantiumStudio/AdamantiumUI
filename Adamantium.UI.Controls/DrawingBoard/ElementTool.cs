@@ -98,12 +98,7 @@ public class ElementTool : ICanvasTool
         var least = canvas.ScreenToWorldLength(3);
         if (box.Width < least || box.Height < least)
         {
-            // IN WORLD UNITS, whatever the camera is at. Taken in screen pixels instead, the same control came out
-            // nearly three times as large in the world when it was put down zoomed out - while what is INSIDE it, the
-            // box and its label, stayed the size it always is. That is the checkbox adrift in the top-left corner of a
-            // frame far bigger than itself, and it is why one put down away from 1:1 never looked right again.
-            //
-            // It does mean a control put down zoomed out is small on screen - like everything else on the plane.
+            // The natural size in world units whatever the zoom, so the box matches the control inside it.
             box = new Rect(_from.X, _from.Y, Natural.Width, Natural.Height);
 
             item.World = box;

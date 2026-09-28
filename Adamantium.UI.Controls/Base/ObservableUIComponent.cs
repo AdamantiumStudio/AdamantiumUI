@@ -173,11 +173,8 @@ public class ObservableUIComponent : UIComponent, IObservableComponent
         }
     }
 
-    /// <summary>Would raising <paramref name="routedEvent"/> from here reach ANYONE - a class handler, a handler on this
-    /// element, or one on an ancestor it would bubble through?
-    /// <para>Allocation-free and lock-free in the common case: a per-element handler count answers most levels with a
-    /// field read. The caller uses it to decide whether to build the event args at all - and at 4K a resize storm raising
-    /// SizeChanged that nothing listens to was a third of the drag, entirely in args nobody read.</para></summary>
+    /// <summary>Whether raising <paramref name="routedEvent"/> here would reach any handler, so callers can skip building
+    /// args nobody reads. Allocation-free in the common case.</summary>
     protected bool WouldBeHeard(RoutedEvent routedEvent)
     {
         if (routedEvent == null) return false;

@@ -312,11 +312,8 @@ public class RangeSlider : RangeLimitsBase
         }
     }
 
-    // A click on the EMPTY trough moves the nearer bound to it - the reading of "click there" that never crosses the
-    // other thumb, so a stray click cannot invert the selection.
-    // A press that lands ON a thumb - either end, or the band between them - moves nothing: that press is the start of a
-    // DRAG, and the thumb must follow the pointer from wherever it was grabbed. Jumping it to the pointer first is what
-    // makes a handle twitch under the cursor before every drag.
+    // A click on the empty trough moves the nearer bound to it; a press on a thumb or the band starts a drag without
+    // moving anything.
     protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(sender, e);
@@ -326,13 +323,8 @@ public class RangeSlider : RangeLimitsBase
         var vertical = Orientation == Orientation.Vertical;
         var pos = vertical ? point.Y : point.X;
 
-        // Occupancy is judged ALONG the track only, and a press that lands on a handle's span GRABS that handle - from
-        // wherever it landed across the rail. The band is a few pixels thick on a rail several times taller, so aiming at
-        // it lands beside it about as often as on it; measured, the misses were one to three pixels below a six-pixel
-        // band. Judging along the track and then merely returning is what made those presses do nothing at all, and
-        // moving the nearest bound to them instead - what this did before - made a handle jump out from under the
-        // pointer. Forwarding is a no-op when the thumb took the press itself (BeginDrag is idempotent while it holds
-        // capture), which it does whenever the aim was true.
+        // Judged along the track only: a press within a handle's span grabs it even if it missed the thin band across the
+        // rail. BeginDrag is idempotent, so a direct hit is unaffected.
         var handle = CoveringHandle(pos, vertical);
         if (handle != null)
         {
@@ -363,13 +355,8 @@ public class RangeSlider : RangeLimitsBase
         return vertical ? bounds.Y + bounds.Height / 2 : bounds.X + bounds.Width / 2;
     }
 
-    // Which handle owns this position along the track. They DO overlap: the band runs from one thumb's centre to the
-    // other's, under both of them (see RangeTrack), so a press on an end thumb lands on the band as well - and the order
-    // of these three lines is the whole of what decides between them.
-    //
-    // END THUMBS FIRST, and it is the same order the eye is given: they are painted OVER the band, so the thing under
-    // the pointer is the thumb. Asked the other way round - which is how this read while the three could not overlap -
-    // a press aimed at a handle started dragging the whole span instead, and the handle it was aimed at never moved.
+    // Which handle owns this position along the track. The band runs under both thumbs, so end thumbs are checked
+    // first, matching paint order.
     internal Thumb CoveringHandle(double pos, bool vertical)
     {
         if (CoversAlong(_track.LowerThumb, pos, vertical)) return _track.LowerThumb;

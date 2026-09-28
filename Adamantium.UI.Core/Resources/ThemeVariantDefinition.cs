@@ -3,22 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// One variant of a theme: the COLOURS its palette resolves to, plus the theme values that go with them. Not the
-/// brushes - those belong to the theme and are shared by every variant, which is the whole reason switching a variant
-/// is cheap (see <see cref="Theme.ApplyVariant"/>).
-/// </summary>
-/// <remarks>
-/// Two channels, because the theme answers by two:
-/// <list type="bullet">
-/// <item><see cref="Colors"/> feeds the palette - what <c>{ResourceReference SolidBackgroundFillColorBase}</c> finds.</item>
-/// <item><see cref="Values"/> feeds the theme's own PROPERTIES - what <c>{ThemeResource AccentColor}</c> finds, which
-/// resolves against the theme object rather than any dictionary. Accent and focus live there, so a variant that could
-/// only set colours would leave a light theme wearing the dark theme's accent.</item>
-/// </list>
-/// </remarks>
-/// <para>Open for inheritance so a variant can live in its OWN markup file: a file whose root is this type generates a
-/// class deriving from it, and the theme then names that class instead of restating four hundred lines of palette.</para>
+/// <summary>One theme variant: palette <see cref="Colors"/> and theme-property <see cref="Values"/> (accent, focus); the
+/// brushes stay the theme's. Derivable, so a variant can live in its own markup file.</summary>
 public class ThemeVariantDefinition : IThemeVariant
 {
     public ThemeVariantDefinition() { }

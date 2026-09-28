@@ -26,11 +26,8 @@ public sealed class DataGridColumnState
     public DataGridFrozenSide FrozenSide { get; set; } = DataGridFrozenSide.None;
 }
 
-/// <summary>The whole arrangement of a table's columns - what is shown, in what order, how wide, what is pinned and
-/// what it is sorted by - as ONE value the application can persist.
-/// <para>Saving it is what makes choosing columns worth anything: without it the user hides the same columns on every
-/// run. WHERE it is saved is the application's business - a file, a profile, a server - so this carries no format and
-/// no serializer of its own; every member is a plain value that any of them can write.</para></summary>
+/// <summary>The whole column arrangement - shown, order, width, pinning, sort - as one plain value the application can
+/// persist however it likes.</summary>
 public sealed class DataGridColumnsState
 {
     public List<DataGridColumnState> Columns { get; set; } = new();

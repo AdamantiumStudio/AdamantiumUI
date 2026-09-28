@@ -3,15 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>The ten numbers a <see cref="Transform"/> is made of, as plain data - and the matrix they compose to.</summary>
-/// <remarks>
-/// A <see cref="Transform"/> is an AdamantiumComponent: reading its properties means reading the property system, which the
-/// render thread must not do (see <see cref="Animation.AnimationChannels"/>). So the values are lifted OUT of it here. The
-/// compositor captures this struct once on the loop thread, overrides only the members its curve animates, and composes the
-/// matrix itself - the same arithmetic, on the render thread, touching nothing shared.
-///
-/// <see cref="Transform"/> composes its own matrix through this too, so the two can never drift apart.
-/// </remarks>
+/// <summary>A <see cref="Transform"/>'s ten values as plain data plus the matrix they compose to, so the render thread can
+/// compose without reading properties. <see cref="Transform"/> uses the same code.</summary>
 public struct TransformValues
 {
     public double ScaleX;

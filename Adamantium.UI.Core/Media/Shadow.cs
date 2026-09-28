@@ -3,15 +3,8 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>
-/// A shape's shadow cast on what lies behind it - what makes a control look LIFTED. It has a DIRECTION, which is the
-/// whole difference from an <see cref="Aura"/>: the offset says where the light is, and the spread says how high the
-/// element floats. Same vocabulary as CSS <c>box-shadow</c>, so a design handed over in those terms transfers as is.
-/// <para>Drawn OUTSIDE the element's <see cref="Adamantium.UI.Core.IUIComponent.Bounds"/> (or inside it, with
-/// <see cref="Inner"/>). The engine does NOT grow the layout to fit it: bounds drive draw order and the repaint region,
-/// and widening them from here would mean rewriting the shared render path. Leave the room yourself with
-/// <c>Margin</c> - a shadow with no margin is clipped by the first ancestor that clips, and nothing will say so.</para>
-/// </summary>
+/// <summary>A directional shadow, as CSS <c>box-shadow</c>, drawn outside the bounds (inside with <see cref="Inner"/>).
+/// Layout does not grow to fit it; leave room with <c>Margin</c> or a clipping ancestor cuts it.</summary>
 public sealed class Shadow : AdamantiumComponent
 {
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),

@@ -124,16 +124,8 @@ public class ParserContext
                     var names = propName.Split('.');
                     propName = names[1];
 
-                    // The owner is named by the ATTRIBUTE's prefix, not the element's: nav:RegionManager.RegionName on a
-                    // docking:DockingArea means the RegionManager of the nav namespace. Taking the element's namespace
-                    // made an attached property resolvable only on elements that happened to live in the same namespace
-                    // as its owner.
-                    //
-                    // UNPREFIXED (Canvas.Left="40") resolves in the DEFAULT xmlns, not in the element's. In XML an
-                    // unqualified attribute carries no namespace at all and certainly does not inherit its element's, and
-                    // standing the element's in only appeared to work because elements usually come from the same default
-                    // xmlns as the owner. It breaks the moment they do not: Canvas.Left on a control declared with its own
-                    // prefix went looking for a Canvas in THAT assembly, which has none.
+                    // An attached property's owner comes from the attribute's prefix, or the default xmlns when unprefixed,
+                    // never from the element's namespace.
                     var ownerNamespace = string.IsNullOrEmpty(ns) ? DefaultNamespace() ?? targetType.Namespace : ns;
                     ownerType = new AumlAstXmlTypeReference(element.ToLineInfo(), ownerNamespace, names[0]);
                 }

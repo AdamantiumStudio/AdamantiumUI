@@ -1,33 +1,18 @@
-// BRUSH-ONLY maths: what a computed or sampled fill needs and a solid one never asks for.
-//
-// Small on purpose. Measured rather than guessed: of everything the two effects share, only these three are used by
-// BrushEffect alone - the shape distance a brush picks per instance, the scaling of those shape numbers to device
-// pixels, and the uncapped dash mask. The rest (the SDFs themselves, the stroke compositing, the fringe expansion) is
-// used by BOTH, so it stays in ShapeMath/StrokeMath rather than being renamed into a brush file it does not belong to.
-//
-// Include LAST, after CommonData + ShapeMath + StrokeMath: every function here is built from those.
+// Maths used by BrushEffect alone: per-instance shape distance, shape numbers to device pixels, the uncapped dash mask.
+// Include last, after CommonData, ShapeMath and StrokeMath.
 
-// THE shape a BRUSH pass paints on. Three passes (gradient, pattern, texture) each draw a rounded rect, an ellipse or a
-// regular polygon and differ only in where the COLOUR comes from - so which shape that is gets stated once, here, rather
-// than three times in three pixel shaders.
-//
-// A polygon carries no corner radii, so its own numbers ride in exactly that field: .x corners, .y start angle in
-// radians, .z ring thickness in device px. The shape selector is the pass's own (a negative baked radius for the pattern
-// and texture passes, Geom1.z for the gradient one), resolved to 0 rect / 1 ellipse / 2 polygon before the call.
-// The shape numbers, taken to device pixels. A rect's four are RADII and all scale; a POLYGON's are not radii at all -
-// .x is a corner COUNT, .y an ANGLE in radians, and only .z (the ring) is a length. Scaling the whole vector turned
-// three corners into four and a half and swung the start angle with the DPI, which is why a tiled brush drew nonsense
-// on a polygon while the very same shape with a solid fill was right: only the three brush passes share this field.
+// Shape numbers to device pixels: a rect's four radii all scale; a polygon's field holds corner count, start angle and
+// ring thickness, and only the ring scales.
 float4 ScaleShapeNumbers(float4 radii, float iso, float isPolygon)
 {
     return lerp(radii * iso, float4(radii.x, radii.y, radii.z * iso, radii.w), isPolygon);
 }
 
+// The shape a brush pass paints on, stated once for the gradient, pattern and texture passes: `shape` is 0 rect,
+// 1 ellipse, 2 polygon.
 float BrushShapeDistance(float2 p, float2 half, float4 radii, int joinType, float shape)
 {
-    // Branch-FREE, and not as a matter of taste: a ?: in the textured pass has device-lost form on this driver (see
-    // TexRectPS), and this function is now shared by that pass. Both other distances are cheap; the polygon's trig is
-    // the only real cost, and only shapes that ask for it reach this function at all.
+    // Branch-free: all three distances are computed and selected with step/lerp.
     float dPoly = SdRegularPolygon(p, half, max(radii.x, 3.0), radii.y);
     dPoly = lerp(dPoly, max(dPoly, -(dPoly + radii.z)), step(0.0001, radii.z));   // a RING, exactly as in pass Polygon
 

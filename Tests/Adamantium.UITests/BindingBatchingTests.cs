@@ -140,13 +140,7 @@ public class BindingBatchingTests
         private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    /// <summary>
-    /// A dependent chain has to settle INSIDE one flush, because layout runs immediately after it. Two controls share one
-    /// view-model property here: the first clamps the value it is handed and writes the result back, which is a source
-    /// change for the second. Applying that only on the next frame laid the second control out with its new ceiling and
-    /// its old value - one frame short of the end of the rail, the next frame back on it, which is a thumb that visibly
-    /// shivers at the edge for as long as the ceiling is being dragged.
-    /// </summary>
+    // A dependent chain (one control clamps and writes back what another reads) settles within one flush, before layout.
     [Test]
     public void ADependentChain_SettlesWithinOneFlush()
     {

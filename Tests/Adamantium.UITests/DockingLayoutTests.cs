@@ -306,13 +306,7 @@ public class DockingLayoutTests
         });
     }
 
-    /// <summary>
-    /// Dropping beside a group SPLITS THAT GROUP: the two of them share what the one of them had, and nobody else moves.
-    /// The share is halved twice over - the target keeps half of its own, and the arrival takes the other half of its
-    /// own - which is not the same as the arrival taking half of the whole row.
-    /// <para>The editor case: a wide centre next to a narrow inspector. Drop a pane on the centre's right and the centre
-    /// splits down the middle; the inspector is not involved and does not change width.</para>
-    /// </summary>
+    // Dropping beside a group splits that group's share in half; siblings keep their widths.
     [Test]
     public void MovePane_BesideAGroupInAnAlreadySplitRow_HalvesThatGroupAndLeavesTheOthers()
     {

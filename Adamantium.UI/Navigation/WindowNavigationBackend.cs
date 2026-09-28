@@ -44,12 +44,8 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
                 if (aware.Height > 0) shell.ClientHeight = aware.Height;
             }
 
-            // Initialize the window FIRST (builds its tree, creates the OS window + render service via WindowCreatedEvent,
-            // applies the theme), THEN load the content so it joins a LIVE, themed, context-attached window - exactly how
-            // a dynamic tab body attaches in the main window. Setting Content before init leaves the content subtree
-            // detached: it misses the theme pass and its layout invalidations are orphaned (unthemed, never laid out).
-            // No AddWindow here: SetWindow (inside init) publishes WindowCreatedEvent, and the app creates the render
-            // service + tracks the window off that. Calling AddWindow too would create the render service twice.
+            // Initialize before setting content, or the content misses the theme pass and layout. No AddWindow: init's
+            // WindowCreatedEvent already creates the render service.
             window.Show();   // attaches + initializes if needed, and activates itself on first display (Window.Show)
             if (shell != null)
             {

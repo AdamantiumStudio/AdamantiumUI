@@ -151,11 +151,8 @@ public class RangeTrack : Panel
         var thumbAlong = vertical ? thumbDesired.Height : thumbDesired.Width;
         var thumbCross = Math.Min(vertical ? thumbDesired.Width : thumbDesired.Height, thickness);
 
-        // What each thumb can travel: the trough minus BOTH thumbs (sizing it for one would let the pair drift past the
-        // ends by half a thumb each) minus the band that always stands between them. Reserving the band here, once, is
-        // what keeps a thumb under the pointer: the alternative - laying the thumbs out by value and prising them apart
-        // when they get too close - makes the drag start with dead travel, because the pointer first has to undo that
-        // prising before the thumb appears to move at all.
+        // Thumb travel: the trough minus both thumbs and the minimum band, reserved up front so a thumb stays under the
+        // pointer.
         var travel = Math.Max(0, trackLength - thumbAlong * 2 - MinimumBandLength);
         _density = travel > 0 && range > 0 ? range / travel : 0;
         _remaining = travel;
@@ -171,15 +168,8 @@ public class RangeTrack : Panel
         var lowerStart = lowerOffset;
         var upperStart = upperOffset + thumbAlong + MinimumBandLength;
 
-        // The band runs from one thumb's CENTRE to the other's - under both of them, not between them.
-        //
-        // Between them was the obvious thing and it looks wrong. A thumb is ROUND: at the row where its box ends the
-        // circle has narrowed to a point, so a band that stops exactly there ends against nothing and reads as falling a
-        // pixel short of the handle. Nor is that an artefact of anti-aliasing - a thumb's shadow is translucent, and a
-        // band running under it would show THROUGH it, which is the observation that settled this.
-        //
-        // Grabbing it still cannot mean grabbing an end thumb: the parts go into Children as band, lower, upper (see
-        // OnPartChanged), so both thumbs sit ABOVE the band and take the press first.
+        // The band runs center to center, under both round thumbs, so it never ends short of one; the thumbs sit above
+        // it and take the press first.
         var half = Math.Round(thumbAlong / 2, MidpointRounding.AwayFromZero);
         var bandStart = lowerStart + half;
         var bandLength = Math.Max(0, upperStart - lowerStart);
@@ -194,16 +184,8 @@ public class RangeTrack : Panel
             bandStart = trackLength - bandStart - bandLength;
         }
 
-        // WHOLE UNITS, and the band re-derived from the rounded thumbs rather than rounded on its own - so it still ends
-        // exactly where a thumb begins, which is the one relationship here that must survive.
-        //
-        // Why round at all: these three come out of a fraction of the travel, so they land wherever the arithmetic puts
-        // them. An edge on a HALF unit is drawn as one blended row - correct compositing, and invisible between two
-        // rectangles, because each covers half of it. The band's neighbour is not a rectangle: it is a ROUND handle,
-        // which at the row it shares with the band has narrowed to nothing and covers almost none of it. So the blend is
-        // with the rail BEHIND, and the span reads as stopping a pixel or two short of the handle.
-        // Measured, not reasoned: the same demo lands on whole units horizontally (offsets 38 and 134, crisp) and on
-        // halves vertically (21.5 and 100.5, short) - see MacOsRangeBandTests and AbuttingEdgeSeamRenderTests.
+        // Whole units, with the band derived from the rounded thumbs: a half-unit edge against a round thumb blends with
+        // the rail and looks short.
         var lowerRounded = Math.Round(lowerStart, MidpointRounding.AwayFromZero);
         var upperRounded = Math.Round(upperStart, MidpointRounding.AwayFromZero);
         var thumbRounded = Math.Round(thumbAlong, MidpointRounding.AwayFromZero);

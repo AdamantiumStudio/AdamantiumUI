@@ -6,15 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>THE INSPECTOR of an <see cref="InfiniteCanvas"/>, and it has two faces in one place. With nothing selected
-/// it shows what you are working WITH - the tool in hand and its settings; with something selected, what you are
-/// working ON. A third face lists everything on the plane, topmost first.
-/// <para>ONE panel and not several: a second panel beside the first is a second panel to move, to fold and to find
-/// room for - and folded it is a pair of buttons over the drawing that say nothing about what is behind them.</para>
-/// <para>WHICH SECTION FITS WHAT IS SELECTED is answered here rather than by an application, because the kinds of
-/// thing on a plane are the canvas's own - a stroke, a shape, a piece of text, a curve, a group, a control, a node.
-/// Answered outside, every application would be taking the engine's types apart, and each would have to learn the next
-/// kind somebody adds.</para></summary>
+/// <summary>The inspector of an <see cref="InfiniteCanvas"/>: the tool's settings with nothing selected, the selection's
+/// properties otherwise, and a list of everything on the plane. It picks sections for the canvas's own item kinds.</summary>
 public class CanvasInspector : Control, ICanvasPart
 {
     public static readonly AdamantiumProperty CanvasProperty = AdamantiumProperty.Register(nameof(Canvas),
@@ -491,11 +484,7 @@ public class CanvasInspector : Control, ICanvasPart
         SetCurrentValue(DrawingActionsProperty, Shown(drawing));
     }
 
-    // WHICH TOOL'S settings belong in the panel. Asked of the tool itself: the canvas holds the tools, and what a pen
-    // has to say about itself is that it is a pen.
-    // WHAT THE TOOL IN HAND IS SET BY. A tool used to be answered by a flag apiece - pen, eraser, text, shape - so a
-    // tool an application added had nowhere at all to put its settings, however easily it got itself a button on the
-    // rail. Now the sets say which tool they are for, matched against the tool's own name.
+    // The settings sections for the tool in hand, matched by the tool's own name, so an added tool can have settings.
     private void ReadTool() =>
         Fill(_tools, Sections(ToolSetsKey, Canvas?.ToolSections, ref _toolSections), Names(Canvas?.Tool));
 
@@ -545,12 +534,8 @@ public class CanvasInspector : Control, ICanvasPart
         ReadSections();
     }
 
-    // WHICH SECTIONS APPLY, and nothing else. Split out because an EDIT can change the answer without changing what is
-    // selected: painting a picture onto a surface is what makes a texture's lines mean something, and a panel that
-    // worked this out once when the thing was picked up would go on offering nothing about the picture just put on it.
-    //
-    // The selection itself is deliberately NOT republished here. It is handed over as a fresh list - that is what makes
-    // the rows re-read - and doing that on every keystroke would rebuild the rows under the hand typing into them.
+    // Which sections apply, re-asked after edits that change the answer; the selection is not republished, which would
+    // rebuild rows under the typing hand.
     private void ReadSections()
     {
         var chosen = Canvas?.Selection;
@@ -564,11 +549,7 @@ public class CanvasInspector : Control, ICanvasPart
 
         Fill(_tools, Sections(ToolSetsKey, Canvas?.ToolSections, ref _toolSections), Names(Canvas?.Tool));
 
-        // WHICHEVER WAS REACHED FOR LAST. Picking up a tool is a person saying what they are about to do, and the
-        // answer to "what is this tool set to" must not be "let go of what you are holding first": settings are chosen
-        // BEFORE the stroke, and dropping the selection to see them means drawing with whatever the last settings were.
-        // Touching the selection says the opposite - it is the thing that is being worked on - and the panel follows
-        // back.
+        // Show whichever was reached for last, the tool or the selection.
         var anything = many > 0;
         var tool = _toolWanted || !anything;
 
@@ -584,13 +565,8 @@ public class CanvasInspector : Control, ICanvasPart
     /// <summary>...and the same for the page shown while nothing is selected - what the TOOL in hand is set by.</summary>
     public const string ToolSetsKey = "CanvasToolSections";
 
-    // WHAT THIS PANEL SHOWS, which is content and not a theme's business: the default set is a resource the themes
-    // ship, and whatever the canvas was given is laid over it.
-    //
-    // KEPT, not asked for again. The resource is declared x:Shared="False" - it must be, since a section is a live
-    // control and two canvases cannot be handed the same one - so every ask builds a fresh set. Used directly that
-    // means every repaint of the panel hands the grid different objects, and everything the person had done to the
-    // ones before is gone with them: a block they opened closes itself the moment anything is written.
+    // The theme's default sections with the canvas's own laid over, kept once built: the resource is not shared, and a
+    // fresh set per repaint would reset what the user opened.
     private CanvasInspectorSections Sections(string key, CanvasInspectorSections mine, ref CanvasInspectorSections kept)
     {
         kept ??= UIAppContext.Current?.ResourceManager?.FindResource(this, key) as CanvasInspectorSections;
@@ -609,13 +585,7 @@ public class CanvasInspector : Control, ICanvasPart
     private CanvasInspectorSections _selectionSections;
     private CanvasInspectorSections _toolSections;
 
-    // WHAT A THING ANSWERS TO: its class, where a family's lines live, and its own narrowest name, where one kind's do.
-    //
-    // WHAT THEY ALL ANSWER TO, when several are selected. A name only counts where EVERY one of them carries it: a
-    // line written for a rectangle has no meaning for the ellipse beside it, and shown for both it would write corners
-    // into something that has none. What is left when they agree about nothing is the empty list - which still matches
-    // the sets written for everything, so a mixed selection keeps the lines every kind has (where it stands, how big
-    // it is) instead of the panel going blank and looking broken.
+    // The names every selected item answers to (class and narrowest kind); an empty list still matches the common sections.
     private static IReadOnlyList<string> Names(IReadOnlyList<ICanvasItem> chosen)
     {
         if (chosen == null || chosen.Count == 0) return null;

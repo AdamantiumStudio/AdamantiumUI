@@ -1,30 +1,9 @@
 <ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
         xmlns="http://adamantium/ui">
 
-    <!-- WHAT THE CANVAS'S INSPECTOR SHOWS - the panel's CONTENT, and the one thing in this project that is content and
-         still ships with the themes.
-
-         It is here rather than in a theme's control template because it is not a look. A template says what a control
-         is made of - a border, a pair of face buttons, a scroller, the grids - and it belongs to whoever is dressing
-         the control. The list of what a canvas can hold and what each kind is set by belongs to the canvas, changes
-         when the canvas gains a kind, and has nothing to do with Fluent or macOS. Written into the template, it was
-         carried three times over, no application could add a line to it without rewriting a theme, and every new kind
-         of thing cost a flag on the panel and an edit to all three files.
-
-         SHARED, and outside all three themes for the same reason CanvasIcons is: a theme that wants a different panel
-         still declares this key of its own; what lives here is only where the DEFAULT is.
-
-         x:Shared="False" ON BOTH: a section is a live control and stands in one place at a time, so two canvases on one
-         page must not be handed the same objects. Every ask builds its own.
-
-         HOW A SET IS CHOSEN. Each CanvasSectionSet says what it is For; a thing gets every set that matches it, in the
-         order written here. Empty matches everything. Otherwise it is either the item's CLASS - where a whole family's
-         lines live - or its narrowest name, ICanvasItem.Sort: "Rectangle", "Image", "Bezier". That is what replaces the
-         flags this panel used to keep: corners are a rectangle's, so they are written under Rectangle and nowhere else,
-         and a picture's Source is under Image, where a button can never meet it.
-
-         AN APPLICATION ADDS ITS OWN through InfiniteCanvas.InspectorSections: a set naming something here replaces it,
-         a set naming something new is added. Nobody has to copy this file to add a line. -->
+    <!-- The canvas inspector's default content, shared by all themes. x:Shared="False", since sections are live controls.
+         Each CanvasSectionSet applies by For: empty matches all, else the item's class or ICanvasItem.Sort ("Rectangle").
+         Applications add or replace sets through InfiniteCanvas.InspectorSections. -->
 
     <CanvasInspectorSections x:Key="CanvasSelectionSections" x:Shared="False">
 
@@ -303,12 +282,7 @@
             </PropertySection>
         </CanvasSectionSet>
 
-        <!-- A PICTURE's own lines. Everything here is a property of the BRUSH and reached straight through it: the
-             engine can already fit, repeat, mirror, turn and tint a picture, and a plane should not be a poorer place
-             to use a texture than a window is.
-
-             This is the set that answers the question the panel used to get wrong: Source is a picture's, so it is
-             written here, and a button - which is an ElementItem too - never meets it. -->
+        <!-- A picture's lines, all reached through its brush (fit, tile, mirror, rotate, tint). -->
         <CanvasSectionSet For="Image">
             <PropertySection Header="Picture" IsExpanded="True">
                 <!-- THE FILE, in plain sight rather than folded away: for a texture it is the whole point of the
@@ -439,12 +413,8 @@
         </CanvasSectionSet>
     </CanvasInspectorSections>
 
-    <!-- WHAT THE TOOL IN HAND IS SET BY - the page shown while nothing is selected. Matched against the tool's own
-         Name, so a tool an application adds brings its settings with it: the rail already builds a button out of any
-         tool in the canvas's Tools, and this is the other half of that.
-
-         The lines are about the CANVAS - a pen's colour is the canvas's Ink - because a tool is a piece of behaviour
-         and the settings outlive it: put the pen down, pick it up again, and it is still the colour it was. -->
+    <!-- The current tool's settings, shown while nothing is selected and matched by tool Name. They bind to the canvas
+         (e.g. Ink), so they outlive the tool. -->
     <CanvasInspectorSections x:Key="CanvasToolSections" x:Shared="False">
 
         <CanvasSectionSet For="PenTool">

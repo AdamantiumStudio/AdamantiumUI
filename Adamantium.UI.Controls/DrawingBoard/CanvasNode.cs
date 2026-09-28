@@ -10,18 +10,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A NODE of a graph: a titled block with sockets down its sides - the thing a blueprint editor is made of.
-/// <para>A real control and not something drawn on the plane, which is the decision this whole editor rests on: what a
-/// node is FOR is the editable things inside it - fields, switches, lists - and a control has those already. Put on an
-/// <see cref="InfiniteCanvas"/> through an <see cref="ElementItem"/>, it moves, scales and is selected like anything
-/// else there, and nothing about the canvas has to learn what a node is.</para>
-/// <para>How many sockets it has is a NUMBER here, because that is what an application usually knows: three inputs and
-/// one output. Anything more - what they are called, what colour each is - is said on the pins themselves, which stay
-/// put when the count does not change.</para>
-/// <para>A CONTENT CONTROL, so what is inside a node is whatever the application puts there - a number field, a colour
-/// swatch, a picture, a list. That is what a node is for, and it is why this is a control at all; the sockets and the
-/// strip are the frame around it. The content sits BETWEEN the two socket columns, where every editor puts it.</para>
-/// </summary>
+/// <summary>A graph node: a titled content control with socket counts on each side and the application's content between
+/// them. A real control on the plane (via <see cref="ElementItem"/>), so its content stays editable.</summary>
 public class CanvasNode : ContentControl
 {
     private readonly ObservableCollection<CanvasNodePin> _inputs = new();
@@ -49,14 +39,8 @@ public class CanvasNode : ContentControl
         typeof(Int32), typeof(CanvasNode),
         new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure, OnPinCountChanged));
 
-    /// <summary>WHAT SORT of node this is, in the application's own words - "Multiply", "Texture". Empty for a node
-    /// nobody claimed.
-    /// <para>Not the same thing as <see cref="Title"/>, and the difference is the whole point: a title is a LABEL, which
-    /// a person edits and renames, and a graph that recognised its nodes by their titles would lose one the first time
-    /// somebody renamed it. This is never shown and never edited - it is what the application looks up to know what the
-    /// node DOES.</para>
-    /// <para>On the node rather than in a table beside it, so it travels with the node through copying, undo and the
-    /// file without anybody having to remember to carry it.</para></summary>
+    /// <summary>What sort of node this is in the application's words ("Multiply"); never shown, unlike the renameable
+    /// <see cref="Title"/>. Travels with the node through copy, undo and file.</summary>
     public static readonly AdamantiumProperty KindProperty = AdamantiumProperty.Register(nameof(Kind),
         typeof(String), typeof(CanvasNode), new PropertyMetadata(String.Empty));
 
@@ -128,12 +112,8 @@ public class CanvasNode : ContentControl
 
     private const double SlideSeconds = 0.12;
 
-    /// <summary>The press that starts a MOVE - on the grip and nowhere else. The pin itself is where a wire is pulled
-    /// from, and one target cannot mean two things; the grip is the second target, and it is the only one that moves a
-    /// socket.
-    /// <para>Taken on MouseDown, which BUBBLES: the canvas drags a node by a press on it, and a press this one keeps
-    /// has to be a press the canvas never sees. MouseLeftButtonDown is Direct - the canvas is handed its own args and
-    /// nothing marked handled here reaches them, which is how the grip dragged the whole node.</para></summary>
+    /// <summary>A press on a socket's grip starts moving the socket (the pin itself pulls wires). Taken on bubbling
+    /// MouseDown so the canvas never sees it and does not drag the node.</summary>
     private void OnGripPressed(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButtons.Left) return;
@@ -513,11 +493,8 @@ public class CanvasNode : ContentControl
     /// <summary>The sockets down the right.</summary>
     public ObservableCollection<CanvasNodePin> OutputPins => _outputs;
 
-    /// <summary>Takes ONE socket off, wherever it sits.
-    /// <para>Not the same thing as asking for fewer, which is the only other way there is: a count can only take things
-    /// off the END, so "drop the second of three" said as a count drops the third and leaves the second where it was.
-    /// Everything said about the sockets that stay - their names, their colours, one day what is wired to them - stays
-    /// with them.</para></summary>
+    /// <summary>Removes one socket wherever it sits, unlike lowering the count, which drops from the end; the others keep
+    /// their settings.</summary>
     public Boolean Remove(CanvasNodePin pin)
     {
         if (pin == null) return false;
@@ -541,16 +518,8 @@ public class CanvasNode : ContentControl
     /// pin and nothing else - a button in an inspector row, which knows the socket it sits on and no more.</summary>
     public Boolean Holds(CanvasNodePin pin) => pin != null && (_inputs.Contains(pin) || _outputs.Contains(pin));
 
-    /// <summary>WHERE a socket is, in this node's own coordinates. Null before the node has been laid out, and for a
-    /// pin that is not on it.
-    /// <para>Asked of the node because the node is what knows: where a socket sits is a fact about the TEMPLATE - which
-    /// side, how far down, how far it hangs over the edge - and each theme answers it differently. A connection that
-    /// worked it out for itself would be a second copy of every template's arithmetic, wrong the moment a theme changed
-    /// a margin.</para>
-    /// <para>Answered from a record taken ONCE PER LAYOUT rather than by looking each time. What looking costs is a
-    /// walk of the node's whole visual tree and a walk back up it per socket, and this is asked on every mouse move
-    /// (for the cursor), on every press, and twice per wire per pass of the scene. Sockets do not move between
-    /// arrangements, so asking again between them can only produce the same answer more slowly.</para></summary>
+    /// <summary>Where a socket is in this node's coordinates, as the template placed it; null before layout or for a foreign
+    /// pin. Recorded once per layout, since it is asked constantly.</summary>
     public Vector2? Where(CanvasNodePin pin)
     {
         if (pin == null) return null;
@@ -605,12 +574,8 @@ public class CanvasNode : ContentControl
         _foldedOut = null;
     }
 
-    /// <summary>Whether a press here means "pick the node up" rather than "use what is in the node".
-    /// <para>THE STRIP IS THE HANDLE. A node has to be both - dragged about the plane and operated, because what is in
-    /// one is a field, a switch, a list, and a node whose contents cannot be clicked is a picture of a node. Every graph
-    /// editor answers this the same way: the title bar moves it, everything under the title is live.</para>
-    /// <para>The node's own chrome counts as the strip: the frame round the body, the gap between the rows, the
-    /// sockets. What does NOT count is anything the application put inside.</para></summary>
+    /// <summary>Whether a press here picks the node up rather than operating its content: the strip and the node's own chrome
+    /// are handles, the application's content is not.</summary>
     public Boolean IsHandle(Object source)
     {
         if (source is not IUIComponent at) return true;
@@ -802,11 +767,8 @@ public class CanvasNode : ContentControl
         {
             var pin = new CanvasNodePin { IsInput = input };
 
-            // A DEFAULT AND NOT A DECISION, so it is written BELOW where a binding writes. A plain set lands at Local,
-            // which outranks a binding and masks it for good - the name a socket is called would never reach the pin
-            // standing for it. A current value is no better here: it lands in the binding's own slot, and a two-way
-            // binding hands what is there BACK to the socket - a node whose sockets are A, B, Amount came back from a
-            // socket being moved called In 1, In 2, In 3.
+            // A default, written at Style priority below the binding: Local would mask it, and a current value would be
+            // pushed back to the socket by a two-way binding.
             pin.SetValue(CanvasNodePin.NameProperty, Free(pins, input ? "In " : "Out "), ValuePriority.Style);
 
             Wear(pin, PinColor);

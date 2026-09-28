@@ -4,13 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering.Retained;
 
 /// <summary>
-/// One instance of a shared local mesh whose FILL is a LINEAR/RADIAL gradient (the gradient sibling of
-/// <see cref="GeometryInstance"/>; see <see cref="InstancedFillCollector"/>). Carries the per-element world transform +
-/// the whole gradient (geometry + up to 8 stops) + the shape's LOCAL bounding box (so the pixel shader maps a fragment's
-/// local mesh position to a 0..1 uv over the shape and evaluates the gradient there). Packed dense in a per-key BDA
-/// storage buffer, read by the gradient-fill vertex shader by <c>SV_InstanceID</c>; the VS passes the gradient down to the
-/// PS via (flat) interpolators, so the PIXEL shader never dereferences the buffer - one BDA-reading gradient PS already
-/// tripped the driver's shader-object flake, and this keeps the fragment stage buffer-free.
+/// A gradient-filled instance of a shared mesh: world transform, gradient (up to 8 stops) and local bounds for uv
+/// mapping. The vertex shader passes the gradient to the pixel shader through flat interpolators.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct GradientGeometryInstance
@@ -33,11 +28,8 @@ public struct GradientGeometryInstance
     /// <summary>The shape's local-space bounds (minX, minY, sizeX, sizeY): a fragment's uv = (localPos - min) / size.</summary>
     public Vector4F LocalBounds;
 
-    /// <summary>Straight stop colours (opacity folded into the alpha); only the first Params.z are valid. Four BYTES
-    /// each, as <see cref="GradientRectItem"/> carries them.
-    /// <para>Its stages must read this record FIELD BY FIELD, never as a whole struct: both vertex shaders want four
-    /// float4s out of it and no stop at all, and pulling it in wholesale dragged these eight through the vertex stage,
-    /// which that driver answers by not drawing the body at all (255 -&gt; 0) and then losing the device.</para></summary>
+    /// <summary>Straight stop colors (opacity folded into alpha), four bytes each as in <see cref="GradientRectItem"/>;
+    /// only the first Params.z are valid.</summary>
     public Color Stop0, Stop1, Stop2, Stop3, Stop4, Stop5, Stop6, Stop7;
 
     /// <summary>Stop offsets 0..3.</summary>

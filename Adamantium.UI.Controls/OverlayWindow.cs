@@ -10,16 +10,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// A window that lives INSIDE its parent window (never a separate OS window) - the analog of MahApps' SimpleChildWindow.
-/// It is a themed, rounded card with a title bar (title + close button) and content. It is NOT declared in the layout
-/// tree: it is created and shown through an <see cref="OverlayWindowManager"/> (see the ShowOverlayWindow* extensions),
-/// which places it on the parent window's overlay, cascades multiple windows, and raises the front one on interaction -
-/// so several can overlap and be dragged over each other like normal desktop windows. Drag the title bar to move it
-/// (<see cref="AllowMove"/>); it closes via the x button, Escape (<see cref="CloseByEscape"/>) or, when modal, a click on
-/// the dim overlay (<see cref="CloseOnOverlay"/>). <see cref="Close(object)"/> sets <see cref="Result"/> - what the
-/// awaited Show call returns - and raises <see cref="Closing"/> (cancelable) then <see cref="Closed"/>.
-/// </summary>
+/// <summary>A titled card window inside its parent window, shown through an <see cref="OverlayWindowManager"/>.
+/// <see cref="Close(object)"/> sets <see cref="Result"/>, which the awaited Show call returns.</summary>
 public class OverlayWindow : ContentControl
 {
     // The manager owns the show/close lifecycle, so IsOpen is read-only state a consumer can bind to.
@@ -406,13 +398,8 @@ public class OverlayWindow : ContentControl
             pop.BeginAnimation(Transform.ScaleYProperty, new DoubleAnimation { From = 0.85, To = 1, Duration = duration, FillBehavior = FillBehavior.Stop });
         }
 
-        // An opening window takes the keyboard with it - that is what opening a window means, modal or not. Without it
-        // the focus stayed on the page BEHIND, still holding the ring, so the first Tab walked the background and this
-        // window's own buttons could only be reached with the mouse. It also decides whether ESCAPE works on the first
-        // press: a key routes up from the focused element, so while the focus is still behind us the press reaches the
-        // parent window's own Escape - which gives the focus back and marks the key handled - and we never hear it. The
-        // content may not be built yet (the host is filling it as we speak), so the attempt repeats over the next few
-        // layout passes and stops as soon as it lands.
+        // An opening window takes focus, so Tab and Escape reach it. Content may not be built yet, so retry over the next
+        // few layout passes.
         _focusTries = FocusAttempts;
 
         Opened?.Invoke(this, EventArgs.Empty);

@@ -27,16 +27,8 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         }
     }
 
-    // The metadata callback fires on EVERY write to the property (any priority slot), not only when the EFFECTIVE value
-    // changes. So a trigger that swaps Template at Trigger priority - over a Style-priority base - must (re)build off the
-    // effective template, not off the raw written value: otherwise a masked lower-priority write would wrongly rebuild,
-    // and swap-back would tear the template down without restoring the base. Rebuild only when the effective template
-    // actually differs from the one currently applied.
-    // While a theme is being applied (ApplyCurrentTheme below), Template can be written MULTIPLE times - a base style's
-    // Template setter (e.g. ItemsControl's Border+ScrollViewer default) then a more-specific one (MenuItem's own). Building
-    // each in turn constructs a whole template subtree only to tear it down for the next - dozens of wasted elements per
-    // control, across every ContentControl/ItemsControl-derived type. So defer the build until the theme SETTLES: writes
-    // just mark it pending, and the single build (off the final, effective Template) runs once when ApplyCurrentTheme returns.
+    // The callback fires on every write, so rebuild only when the effective template differs. While a theme is applied,
+    // Template may be written several times, so the build waits until the theme settles.
     private bool _suspendTemplateBuild;
     private bool _pendingTemplateBuild;
 
@@ -176,26 +168,18 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
     }
 
 
-    // The template boundary is the crux of the two-tree model (docs/TREE_MODEL_DESIGN.md): parts are attached VISUAL-only,
+    // The template boundary is the crux of the two-tree model: parts are attached VISUAL-only,
     // so the logical tree stays shallow and dead-ends here. Inheritance is bridged by InheritanceParent (below); an UP
     // logical walk is bridged by TemplatedParent (UIExtensions.GetLogicalParentOrBridge), set on every part in ControlTemplate.Build.
     protected void AddTemplateChild(IUIComponent child)
     {
-        // Template content inherits the templated control's inherited values (DataContext, FontFamily, ...) so a
-        // {Binding} inside a ControlTemplate resolves against the control's DataContext, as in WPF. A template root is
-        // attached as a VISUAL child only, and visual-child wiring does NOT set the inheritance parent (only the logical
-        // tree does, see FundamentalUIComponent.SetParent) - so without this an ItemsPanel's ItemWidth={Binding RectSize}
-        // (or any template-part {Binding}) silently binds to a null DataContext. A container that assigns DataContext
-        // explicitly (e.g. ContentPresenter -> item) still wins: an explicit local value overrides the inherited one.
+        // A visual-only template root gets no inheritance parent otherwise, so template bindings would see no DataContext. An
+        // explicit local value still wins.
         if (child is AdamantiumComponent component)
             component.InheritanceParent = this;
         AddVisualChild(child);
 
-        // A template ROOT is attached visual-only (no logical SetParent), so - unlike every logical child, which SetParent
-        // themes on attach - it never gets its theme applied. That is invisible for a plain Border/Grid root (renders
-        // directly), but a TEMPLATED control used as a template root (e.g. a ScrollViewer) would then never build its OWN
-        // template. Apply the theme here, mirroring SetParent. Its descendants are logical children built by Template.Build
-        // and are already themed through their own SetParent, so the IsStyleApplied guard keeps this to the root only.
+        // A visual-only template root is not themed by SetParent, so a templated root (e.g. a ScrollViewer) is themed here.
         if (child is FundamentalUIComponent { IsStyleApplied: false } themedRoot)
             themedRoot.ApplyCurrentTheme();
     }
@@ -217,27 +201,14 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
             observableUiComponent.RaiseEvent(new RoutedEventArgs(UnloadedEvent, component));
         }
 
-        // MY OWN parts are going down with the template - say so, so a pass already holding them in its drain buffer
-        // skips them. Skipping matters: theming a control swaps its Template, which builds a whole template subtree, and
-        // one swap built 723 templates against 282 templated controls in the tree - every extra build a part that had
-        // just been destroyed.
-        //
-        // The TEMPLATE'S OWN ID says "mine", not the visual walk and not TemplatedParent. The walk reaches the CONTENT
-        // presented inside this template, which is not being destroyed at all - it moves into the new one; marking that
-        // left 791 of 894 elements in the tree with their style never applied, wearing the previous theme. And
-        // TemplatedParent is no better: an ItemsPanelTemplate stamps the same templated parent on the presenter's live
-        // items panel, so that got marked too. Only the id of the result that BUILT the part is exact.
+        // Mark my own parts discarded, by the id of the template result that built them: the visual walk also reaches moved
+        // content, and TemplatedParent is shared with a live items panel.
         if (component is FundamentalUIComponent part && templateResult != null &&
             part.OwningTemplateId == templateResult.Id)
         {
             part.MarkDiscarded();
 
-            // A part that is ITSELF a templated control takes its own template down with it. Without this the nesting
-            // stopped here: a ScrollViewer part was marked, but the ScrollContentPresenter and Grid ITS template built
-            // carry a different template id, so nothing marked them - and every sweep that asks "was this discarded"
-            // then answered no for the whole inner tree. Tearing it down is also what it MEANS to destroy the control:
-            // its bindings close, its trigger activators deactivate, its parts are released, all through the path that
-            // already does that. The recursion terminates - each level tears down a strictly smaller tree.
+            // A templated part tears down its own template too, so its inner tree is marked and its bindings close.
             if (part is TemplatedUIComponent nested) nested.RemoveTemplate();
         }
     }

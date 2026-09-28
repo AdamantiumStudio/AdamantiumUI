@@ -2,16 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The circular gauge. Structure is the control's - a dim full ring under an accent arc swept to the percentage -
-         and two things are macOS:
-
-         THE TRACK IS THE SHARED UNSET GROOVE, as it is for the linear bar and the sliders. Three controls saying
-         "nothing here yet" have to say it in one material, and it is the only fill in the palette that is visible
-         against the window at all.
-
-         AND THE RING IS THIN. A Mac's circular indicator is a hairline hoop, not a doughnut: what carries the reading is
-         the ARC's length round the circle, and a thick band makes the same sweep look like a pie chart. 3 against the
-         theme-wide default. -->
+    <!-- The circular gauge: the shared unset groove as track, and a thin (3) ring. -->
 
     <Style Selector="RingProgressBar">
         <Setter Property="MinWidth" Value="{ResourceReference RingSize}"/>

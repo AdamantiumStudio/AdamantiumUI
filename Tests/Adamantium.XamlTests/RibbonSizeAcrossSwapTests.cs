@@ -92,11 +92,7 @@ public class RibbonSizeAcrossSwapTests
                 "everything but Small shows its label, before the swap and after it");
     }
 
-    // A swap changes what everything DRAWS - new fills, new strokes, new radii - and the recorder re-records only what
-    // says its recorded geometry is stale. A part that never says so is one nothing will ever ask to draw again: it
-    // keeps the picture it had, which on screen is a control you can still hover and still press, showing nothing.
-    // Asked through the invalidation NOTIFICATION rather than the flag, because the flag is cleared by a record pass
-    // and there is no recorder here - what matters is whether the swap raised the event at all.
+    // A swap raises a geometry invalidation for every part, checked via the notification since no recorder clears flags.
     [Test]
     public void ARestyledPartAsksToBeDrawnAgain()
     {

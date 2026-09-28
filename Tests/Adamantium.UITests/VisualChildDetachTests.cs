@@ -6,14 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// Taking a child out of a panel has to DETACH it: drop the parent link and stop it being laid out. Anything less
-/// leaves an orphan that the layout pass keeps visiting - it goes on measuring and arranging at the size it had, while
-/// whatever replaced it may never be visited at all.
-/// <para>Written on bare panels on purpose. This was found through docking, which is simply the first thing in the
-/// engine that MOVES live controls between parents - everything else builds its tree once and leaves it alone, so the
-/// removal path was never really exercised.</para>
-/// </summary>
+// Removing a child from a panel detaches it: the parent link drops and layout stops visiting it.
 [TestFixture]
 public class VisualChildDetachTests
 {

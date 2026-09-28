@@ -1,11 +1,7 @@
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>What a material's shader DOES - the second of the two axes a <see cref="MaterialType"/> chooses on (the
-/// first being where its picture comes from). Two materials share a treatment when they differ only in what is handed
-/// to it: acrylic and mica are both frosted.
-/// <para>A value rather than a flag because there are three of these now. It was a bool - "glass, or else frosted" -
-/// which reads fine while there are exactly two and silently mis-sorts the third: everything that is not glass is not
-/// therefore frosted.</para></summary>
+/// <summary>What a material's shader does with its source, the second axis of <see cref="MaterialType"/>; acrylic and
+/// mica share the frosted treatment.</summary>
 public enum MaterialTreatment
 {
     /// <summary>Blur, tint, grain over whatever picture the material brought - acrylic and mica.</summary>

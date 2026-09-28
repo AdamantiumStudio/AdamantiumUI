@@ -2,11 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The drag-drop insertion cue: a slim accent capsule showing where a dragged item will land. A real templated control,
-         so the drop cue restyles PURELY here - the drag engine only creates it, sets its Orientation/IsFrame, and sizes it to
-         the insertion span. Default = a HORIZONTAL bar (caret between stacked rows). Orientation=Vertical -> a VERTICAL bar
-         (between side-by-side items, a WrapPanel). IsFrame -> a rounded OUTLINE around the target (the "drop INTO this node"
-         cue of the hybrid tree-drop). -->
+    <!-- The drop cue: a slim accent capsule, horizontal between rows or vertical between side-by-side items; IsFrame draws
+         a rounded outline for dropping into a node. -->
     <Style Selector="DropInsertionIndicator">
         <Setter Property="Template">
             <Setter.Value>

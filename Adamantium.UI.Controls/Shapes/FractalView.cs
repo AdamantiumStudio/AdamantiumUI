@@ -5,12 +5,8 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Controls.Shapes;
 
-/// <summary>A <see cref="Rectangle"/> filled with a fractal brush that pans and zooms on mouse input, so fractal
-/// exploration works out of the box: drag to pan, wheel to zoom toward the cursor. Both scale their step by the current
-/// zoom, so they stay precise at any depth (a fixed pixel drag is a smaller complex-plane step the deeper you are).
-/// Pan/zoom drive the two-way <see cref="CenterX"/>/<see cref="CenterY"/>/<see cref="ZoomExp"/> (ZoomExp = log10 of zoom),
-/// so bound sliders and read-outs stay in sync. The 1.5 span factor mirrors the fractal shader's fragment-to-complex
-/// mapping (the smaller half-axis spans 1.5/zoom around the centre).</summary>
+/// <summary>A fractal-filled <see cref="Rectangle"/>: drag pans, the wheel zooms toward the cursor, both scaled to the
+/// zoom. Drives the two-way <see cref="CenterX"/>, <see cref="CenterY"/> and <see cref="ZoomExp"/> (log10 of zoom).</summary>
 public class FractalView : Rectangle
 {
     private const double Span = 1.5;      // matches BatchEffect.fx: cp = center + (local / minHalf) * (1.5 / zoom)
@@ -68,11 +64,8 @@ public class FractalView : Rectangle
         set => SetValue(CenterYProperty, value);
     }
 
-    /// <summary>The rest of the centre's X, carried apart from <see cref="CenterX"/> so panning survives a deep zoom: the
-    /// point shown is CenterX + this. A centre of order 1 steps by ~1e-16, and past zoom ~1e13 the whole visible span is
-    /// narrower than that - a one-pixel drag then lands below the step of the number holding it and moves nothing at all.
-    /// Mouse pan and the zoom's re-anchoring both write HERE, leaving the coarse part alone (two-way, so a bound slider
-    /// still tracks the coarse centre).</summary>
+    /// <summary>The fine part of the center's X (shown point = CenterX + this), so panning stays precise past double
+    /// resolution at deep zoom. Pan and zoom write here.</summary>
     public double CenterXFine
     {
         get => GetValue<double>(CenterXFineProperty);
@@ -93,12 +86,7 @@ public class FractalView : Rectangle
         set => SetValue(ZoomExpProperty, value);
     }
 
-    // Re-split a coarse/fine pair so the coarse part carries the bulk and the fine part is only what the coarse one could
-    // not hold. EXACT - Knuth's two-sum: s is the rounded sum and the residue is recovered from it, so nothing is lost.
-    //
-    // Without this the pair is pointless: every pan lands in the fine part and never leaves, so the fine part grows to
-    // order 1 and its own step grows with it, until a deep pan step falls under that - which is the very failure the
-    // split exists to remove, moved one field sideways.
+    // Re-split a coarse/fine pair exactly (Knuth's two-sum), so the fine part stays small and keeps its precision.
     private static void Renormalise(ref double hi, ref double lo)
     {
         var s = hi + lo;

@@ -36,11 +36,8 @@ public class Program
 
         var sandboxApp = new SandboxApplication();
 
-        // ADAM_START_TAB=<header>: open ON that tab instead of the first one. A measurement of a particular tab starts
-        // by getting to it, and getting to it by hand is a click, a build and a settle that are part of neither the
-        // before nor the after - so two readings of "the same" tab are taken from two different places. By HEADER, not
-        // by index: the strip is reordered whenever a tab is added, and an index would then quietly measure a
-        // different tab than the one the last run measured.
+        // ADAM_START_TAB=<header>: open on that tab, so measurements start in the same place; by header, since indices
+        // shift when tabs are added.
         var startTab = Environment.GetEnvironmentVariable("ADAM_START_TAB");
         if (!string.IsNullOrEmpty(startTab)
             || Environment.GetEnvironmentVariable("ADAM_START_MAXIMIZED") == "1"
@@ -122,14 +119,8 @@ public class Program
             watcher.Start();
         }
 
-        // ADAM_CANVAS_PICTURE=<file>: put a texture down, give it that file, draw a stroke over it, and gather the two -
-        // the sequence a picture is reported to vanish from. Every step is the one a hand takes, through the tools and
-        // through the panel's own write.
-        //
-        // A STEP PER PASS, each in its own turn of the dispatcher with a wait between: done in ONE turn the whole
-        // sequence costs a single frame, and a frame that draws the finished state writes it from nothing. What a hand
-        // does is spread over frames, so every step is drawn, and the frame after a change is PATCHED from the one
-        // before it - which is the only path on which anything here could go dark.
+        // ADAM_CANVAS_PICTURE=<file>: place a texture with that file, stroke over it and group them, one step per frame
+        // so each change goes through the patch path.
         if (Environment.GetEnvironmentVariable("ADAM_CANVAS_PICTURE") is { } picture)
         {
             var hand = new System.Threading.Thread(() =>
@@ -900,13 +891,8 @@ public class Program
             reader.Start();
         }
 
-        // ADAM_CANVAS_SELECT=<n>: select the nth thing on the canvas, counting from the back, and write what the canvas
-        // holds - in order, with the number each item carries - beside the screenshot.
-        // The panel's second page, the one that shows what is SELECTED, cannot be reached from here any other way: a
-        // selection is made with a mouse, and this harness does not touch one. So a shot taken without it shows the
-        // first page only, and every question about a row on the second page is unanswerable. Its own thread rather
-        // than a step of the frame probe, because it is about what is on the plane and not about what a frame costs -
-        // and the probe measures for twenty seconds before it would get here.
+        // ADAM_CANVAS_SELECT=<n>: select the nth item from the back without a mouse and log the canvas contents beside
+        // the screenshot. Its own thread, independent of the frame probe.
         if (Environment.GetEnvironmentVariable("ADAM_CANVAS_SELECT") is { } which)
         {
             var picker = new System.Threading.Thread(() =>
@@ -1185,11 +1171,8 @@ public class Program
                             var unhooks = Adamantium.UI.Core.Data.BindingExpressionBase.SourceUnhooks;
                             var before = GC.GetTotalMemory(true) / 1048576;
 
-                            // TEMP experiment, NOT a fix: the live census says the layout queues list thousands more
-                            // departed controls after every swap. Listing is not HOLDING - so empty them and collect. A
-                            // number that falls says the queues hold; a number that does not says they only list, and
-                            // the holder is elsewhere. (The same experiment on the static focus fields moved nothing,
-                            // which is why the root every gcroot path pointed at was NOT the root.)
+                            // TEMP experiment: empty the layout queues and collect, to see whether they actually hold
+                            // departed controls.
                             var layoutBefore = Adamantium.UI.Core.LayoutManager.LayoutHeld;
                             Adamantium.UI.Core.LayoutManager.DropAllQueuesForTheExperiment();
 
@@ -1393,11 +1376,8 @@ public class Program
                 var secondFrames = Adamantium.UI.Core.Diagnostics.RuntimeStats.PresentedFrames;
                 var worstSecond = long.MaxValue;
 
-                // LOOP responsiveness, measured from OUTSIDE the loop: post a no-op and time how long it takes to come
-                // back. Frames-per-second cannot see this - the RENDER thread goes on presenting a replayed stream while
-                // the loop is stuck, so a window that answers nothing for ten seconds still reports hundreds of frames a
-                // second. That is exactly the report "the colour picker hangs the app", and it is why the first probe
-                // found nothing: it was watching the wrong thread.
+                // Loop responsiveness from outside: time a posted no-op. FPS cannot show a stuck loop, since the render
+                // thread keeps presenting.
                 var loopDispatcher = Adamantium.UI.Threading.Dispatcher.CurrentDispatcher;
                 var loopSentAt = 0L;         // when the outstanding no-op was posted; 0 = none in flight
                 double loopWorstMs = 0;      // the longest the loop took to answer during this second
@@ -1513,11 +1493,8 @@ public class Program
                         var measuresNow = Adamantium.UI.Controls.Base.MeasurableUIComponent.TotalMeasureCores;
                         var arrangesNow = Adamantium.UI.Controls.Base.MeasurableUIComponent.TotalArrangeCores;
 
-                        // Formatted UNDER THE LOCK the writers take: these two are Dictionaries filled from the record
-                        // thread, and enumerating one while it is being written crashed the probe (a NullReferenceException
-                        // inside the enumerator, on a tab switch). Snapshot to strings here, then log without holding it.
-                        // Finalizers run on their own thread AFTER a collection, so a live count read in the same breath
-                        // as the collection is still counting the dead. Give them the queue, then read.
+                        // Snapshot the histograms under their writers' lock; after collecting, let finalizers run before
+                        // reading live counts.
                         if (secondIndex % 8 == 0)
                         {
                             GC.Collect();
@@ -1563,12 +1540,8 @@ public class Program
                             $"gcPause={(GC.GetTotalPauseDuration() - lastGcPause).TotalMilliseconds,7:0.0} " +
                             $"g0={GC.CollectionCount(0) - lastG0,5} g1={GC.CollectionCount(1) - lastG1,5} g2={GC.CollectionCount(2) - lastG2,4} " +
                             $"heapMB={GC.GetTotalMemory(false) / 1048576,6} " +
-                            // RETAINED, not merely allocated: GetTotalMemory(true) forces a full collection first, so
-                            // this is what the heap still HOLDS. heapMB beside it counts uncollected garbage too, and the
-                            // process working set (what Task Manager shows) counts pages the runtime has not returned to
-                            // the OS - three different numbers that a "memory grew and never came back" report can mean.
-                            // Only a leak moves this one. Forced every 8th second: a gen2 collection is far too expensive
-                            // to do per second, and this whole line only exists under ADAM_PROBE_LOG anyway.
+                            // Retained heap after a forced full collection (only a leak moves it), unlike heapMB or the
+                            // working set; every 8th second.
                             $"retainMB={(secondIndex++ % 8 == 0 ? lastRetained = GC.GetTotalMemory(true) / 1048576 : lastRetained),6} " +
                             $"consumers={themeConsumers.Entries,6}/{themeConsumers.Alive,6} holders={Adamantium.UI.Core.Media.Animation.AnimationManager.HolderTargets,7} parked={Adamantium.UI.Controls.ParkedVisuals.Count,4} " +
                             // Sampled right after retainMB's forced collection, so finalizers have had their chance and
@@ -1724,11 +1697,8 @@ public class Program
                             System.Threading.Thread.Sleep(1500);   // let it build, lay out and DRAW at least once
                             visited.Append(index).Append(':')
                                    .Append(Adamantium.UI.Core.Diagnostics.RuntimeStats.PresentedFrames);
-                            // Found again each time, not once before the loop: leaving a tab can drop its content for
-                            // good, and a reference kept from the start would then report on a dead object for the
-                            // rest of the sweep - including on the Scene tab, where the answer matters most.
-                            // Visibility says nothing about being on screen, and that is what this shows: off its own
-                            // tab the panel still reads Visible while it is no longer in the tree at all.
+                            // Looked up afresh each time, since leaving a tab can drop its content; Visibility alone does
+                            // not say it is in the tree.
                             var live = win?.Content is Adamantium.UI.Core.IUIComponent lc
                                 ? Find<Adamantium.UI.Controls.Panels.RenderTargetPanel>(lc)
                                 : null;
@@ -1761,12 +1731,8 @@ public class Program
                         System.Threading.Thread.Sleep(300);
                         Adamantium.UI.Core.Diagnostics.LayoutTrace.Counting = true;
 
-                        // TWO costs, measured apart, because they answer different questions and only one of them is the
-                        // strip's own. MOVING: a small oscillation that stays inside the range - nothing crosses the clip,
-                        // no chevron flips, so what it costs is the move itself. TRAVELLING: full sweeps that reach both
-                        // ends - headers cross the clip and the chevrons appear and disappear, each of which is a
-                        // structural change. Mixed into one number they hid each other, and the mix swung run to run with
-                        // however long the strip happened to be.
+                        // Measured apart: moving (small pans, no structural change) and travelling (full sweeps where
+                        // headers cross the clip and chevrons toggle).
                         var moveFrames = Run(4, () => strip.Pan(_pan = -_pan));
                         var moveFps = moveFrames / 4.0;
                         var movePans = _panned;
@@ -1791,7 +1757,7 @@ public class Program
                 }
 
                 // TEMP (ADAM_LIST_SCROLL=1): scroll the heavy tab's own list, which is the workload the per-layer arena
-                // (§5a phase 3) was argued from - slot renumbering, segment cuts, layers relocated out of their room.
+                // was argued from - slot renumbering, segment cuts, layers relocated out of their room.
                 // Panning the tab strip barely touches any of that, so it cannot answer whether that rewrite is worth it.
                 if (Environment.GetEnvironmentVariable("ADAM_LIST_SCROLL") == "1")
                 {
@@ -1881,11 +1847,8 @@ public class Program
                     }
                 }
 
-                // TEMP (ADAM_OPACITY_FADE=1): fade the DEEPEST-rooted container on this tab and report what one Opacity
-                // change costs against the size of the subtree under it. This is the case element Opacity is actually
-                // about: the value multiplies down the whole chain and is baked into every descendant's colour, so one
-                // write re-bakes N units. Measuring it on flat leaf spinners - as the first attempt did - measures the
-                // one shape where the cost cannot appear.
+                // TEMP (ADAM_OPACITY_FADE=1): fade the deepest container on this tab and report one Opacity change's cost
+                // against its subtree size.
                 if (Environment.GetEnvironmentVariable("ADAM_OPACITY_FADE") == "1")
                 {
                     var win = Adamantium.UI.UIApplication.Current?.MainWindow;
@@ -2100,15 +2063,8 @@ public class Program
         return Adamantium.UI.Core.Diagnostics.RuntimeStats.PresentedFrames - from;
     }
 
-    // TEMP: the first control of a kind under a root - the harnesses need to reach a viewer or a strip by type.
-    // ADAM_START_AT=<x>,<y> and ADAM_START_MAXIMIZED=1: put the window where the measurement is taken and open it at the
-    // size it is taken at.
-    //
-    // WHY THIS IS PART OF THE INSTRUMENT and not a convenience: this tab's cost scales with the number of tiles on
-    // screen, so the window's SIZE is an input to every number the run reports - and the size a run happens to open at
-    // is not the size anybody measures. Two readings taken on two different monitors are two different experiments, and
-    // comparing them is how a shrug becomes a regression and back again. Moving the window by hand before each run makes
-    // the placement part of the protocol; stating it here makes it part of the run.
+    // ADAM_START_AT=<x>,<y> and ADAM_START_MAXIMIZED=1 fix the window's place and size, which every measured number
+    // depends on.
     private static void PlaceForMeasurement()
     {
         if (Adamantium.UI.UIApplication.Current?.MainWindow is not Adamantium.UI.Controls.WindowBase window) return;
@@ -2128,6 +2084,7 @@ public class Program
         if (Environment.GetEnvironmentVariable("ADAM_START_MAXIMIZED") == "1") window.Maximize();
     }
 
+    // TEMP: the first control of a type under a root, for the harnesses.
     private static T Find<T>(Adamantium.UI.Core.IUIComponent root) where T : class
     {
         var stack = new System.Collections.Generic.Stack<Adamantium.UI.Core.IUIComponent>();

@@ -3,13 +3,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Generators;
 
-/// <summary>
-/// Maps an <see cref="ItemsControl"/>'s items to their UI containers, by index (no WPF-style cursor/GeneratorPosition).
-/// A panel asks <see cref="Realize"/>/<see cref="Recycle"/> for the indices it needs; a virtualizing panel realizes only
-/// the visible window. An item that already is a UI component is its own container; otherwise a recycled (or new)
-/// <see cref="ContentPresenter"/> projects it via the control's ItemTemplate. Contract: the container is a pure
-/// projection of the item — state that must survive recycling lives on the item/view-model, never on the container.
-/// </summary>
+/// <summary>Maps an <see cref="ItemsControl"/>'s items to UI containers by index. A container is a pure projection of its
+/// item: state that must survive recycling lives on the item, never on the container.</summary>
 public class ItemContainerGenerator
 {
     private readonly ItemsControl _owner;
@@ -66,17 +61,8 @@ public class ItemContainerGenerator
         return container;
     }
 
-    /// <summary>Re-opens every binding in a container coming back out of the pool. The panel CLOSED them when it parked
-    /// it (VirtualizingPanel.ParkContainer drops the tile out of any shared source's fan-out), and the only thing that
-    /// used to re-open them was the DataContext change a rebind makes.
-    /// <para>Which is not a change when the container is handed back THE SAME ITEM it already held - a same-value write
-    /// notifies nobody - so the row came back on screen with dead bindings: no text, no brush from a resource, and only
-    /// the parts of the template that depend on neither still drawn. On a list with a drag grip that is a bare handle
-    /// floating in an empty row, which is what it looked like. A window that shrinks and regrows by one is all it takes,
-    /// and opening a drop gap does exactly that.</para>
-    /// <para>Unconditional, and cheap where it is not needed: a pool pop happens when the window GROWS, not on the
-    /// steady-scroll path (which reuses donors in place, never parked), and re-establishing a connection that is already
-    /// established is what every DataContext change already does.</para></summary>
+    // Parking closed this container's bindings; a rebind to the SAME item is a no-op DataContext write that would leave
+    // them dead, so reopen them unconditionally.
     private static void ReactivateBindings(IUIComponent node)
     {
         Core.Data.BindingEngine.RefreshBindings(node);
@@ -178,14 +164,8 @@ public class ItemContainerGenerator
         return container;
     }
 
-    /// <summary>
-    /// Reconciles the realized set to EXACTLY the indices [<paramref name="first"/>, <paramref name="last"/>] for a
-    /// virtualizing panel. Containers whose index left the window are REBOUND in place to indices that entered (the
-    /// fixed working set of a static viewport): no Visibility churn, no DataContext clearing, and - crucially - each
-    /// container ends up under exactly ONE index (so a container can never be drawn for two slots). Idempotent: calling
-    /// it again with the same range is a no-op. Returns the surplus containers (only when the window is now smaller than
-    /// before - i.e. at a list edge where fewer items exist than the window) so the panel can hide just those.
-    /// </summary>
+    /// <summary>Reconciles the realized set to exactly [<paramref name="first"/>, <paramref name="last"/>], rebinding
+    /// containers that left the window in place. Idempotent; returns the surplus containers when the window shrank.</summary>
     public IReadOnlyList<IUIComponent> SetWindow(int first, int last, double budgetMs = double.MaxValue, int minBinds = 0,
         Action<IUIComponent> onBound = null)
     {
@@ -209,29 +189,16 @@ public class ItemContainerGenerator
             _indexByContainer.Remove(container);
             if (_generated.Contains(container)) donors.Add(container);
         }
-        // Containers parked by a previous shrink are ALSO available - but they are taken one at a time, below, as slots
-        // actually need them. Draining the whole pool into `donors` here meant step 3 pushed every untaken one back and
-        // reported it as surplus AGAIN, so the panel re-parked a pool it had already parked - once per measure, forever.
-        // After a fill at the minimum cell that pool is twelve thousand tiles: ~53ms of re-parking on every single pass,
-        // which is what made the size slider stutter long after the tiles it was moving had stopped changing.
+        // Parked containers are taken one at a time below, as slots need them; draining the pool into `donors` would
+        // report it as surplus again and re-park it on every measure.
 
-        // 2. Give every in-window index that lacks a container a donor (rebound in place) or a fresh one. A rebind (new
-        //    DataContext -> re-resolve the item template's bindings + re-measure) is the real per-tile cost, so at most
-        //    maxRebinds of them run this pass: an aggressive fling that turns the whole window over in one frame would
-        //    otherwise do O(window) rebinds/frame. Slots past the budget are DEFERRED (collected in _pendingBuf); the
-        //    panel shows a skeleton there and the next pass rebinds them (unused donors were pooled in step 3, so they're
-        //    drained back as donors next time). A normal/slow scroll rebinds far fewer than the budget, so nothing defers.
+        // 2. Give every in-window index without a container a donor or a fresh one. Rebinds are budgeted; slots past the
+        //    budget are deferred to _pendingBuf and shown as skeletons until the next pass.
         _pendingBuf.Clear();
         var next = 0;
         var rebinds = 0;
-        // Bind missing slots NEAREST-TO-REALIZED-FIRST: grow the realized region contiguously OUTWARD from the content
-        // already on screen, whichever side the window extends. A plain first->last loop opened a second island at the
-        // window's far edge when scrolling UP (kept block at the bottom, binding started at the top) with a skeleton band
-        // between them - and a scroll-DIRECTION heuristic still mis-ordered the CONTINUATION passes that drain the
-        // budget-deferred backlog with a STATIC window (delta=0 read as "forward" -> top-down again after an up-scroll).
-        // Nearest-first is direction-agnostic: a layered expansion from every realized slot orders the missing ones by
-        // distance to the kept content in O(window), so the budget always defers the FAR edge - where a skeleton band
-        // looks natural - never a mid-viewport strip. A far jump (nothing kept in-window) falls back to scroll direction.
+        // Bind missing slots nearest to realized content first, so the budget always defers the far edge rather than a
+        // mid-viewport strip. With nothing kept in-window (a far jump), fall back to scroll direction.
         _bindOrderBuf.Clear();
         var winSize = last - first + 1;
         if (winSize > 0)
@@ -276,11 +243,8 @@ public class ItemContainerGenerator
             else if (rebinds >= minBinds &&
                      System.Diagnostics.Stopwatch.GetElapsedTime(budgetStart).TotalMilliseconds >= budgetMs)
             {
-                // TIME budget spent (checked AFTER a minimum of minBinds so we always make progress): defer this slot -
-                // skeleton this frame, real (re)bind next pass. Time-based, not count-based, so an EXPENSIVE burst
-                // (creating containers from empty, or after a DPI/resize regime change) stops after budgetMs instead of
-                // running a whole stale count and freezing the frame; a CHEAP burst (scroll rebinds) fits many in the
-                // same budget.
+                // Time budget spent (after at least minBinds, to guarantee progress): defer this slot to the next pass.
+                // Time-based so an expensive burst stops early while cheap rebinds still fit many per frame.
                 Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*deferred*");
                 _pendingBuf.Add(i);
                 continue;

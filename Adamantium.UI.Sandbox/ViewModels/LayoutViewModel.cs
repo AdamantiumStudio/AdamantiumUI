@@ -5,11 +5,8 @@ using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Layout tab: a large virtualized grid of tiles inside a scrolling, wrapping panel. Two sliders drive the cell
-/// WIDTH and HEIGHT independently (bound to the WrapPanel cell), so the tile aspect ratio is adjustable - and a toggle
-/// swaps the item DataTemplate between rounded RECTANGLES and ELLIPSES. Both are drawn by their SDF batch (rounded-rect /
-/// ellipse), so this is the live visual test that the ellipse SDF renders a real ellipse (rx != ry) crisply at any aspect
-/// and resolution. Only the on-screen tiles are realized (virtualization), so it stays smooth at hundreds of items.</summary>
+/// <summary>Layout tab: a large virtualized wrap grid with adjustable cell width and height and a toggle between rounded
+/// rect and ellipse tiles, both SDF-batched.</summary>
 [ViewModel]
 public partial class LayoutViewModel : TabPageViewModel
 {
@@ -25,11 +22,7 @@ public partial class LayoutViewModel : TabPageViewModel
     }
 
     // ── VIRTUALIZED, OR PAGED - the same 60 000 tiles either way ───────────────────────────────────────────────────
-    //
-    // Two answers to the same problem, side by side on the data that makes the problem real. Virtualization keeps the
-    // whole collection and realizes a window of it; paging hands the list a SHORTER COLLECTION and lets it realize the
-    // lot. This tab exists to measure the first, so the first is what it opens on - the switch is here so the second
-    // can be measured against it on identical data rather than on a stand of its own with different rows.
+    // Opens virtualized; the switch pages the same data for comparison.
 
     /// <summary>The paged view of the same tiles. Five hundred to a page: enough that a page is still a screenful of
     /// work, few enough that the difference from 60 000 is the point.</summary>

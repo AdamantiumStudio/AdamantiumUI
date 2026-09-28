@@ -6,11 +6,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>The items host of the ribbon's STRIP: tab headers in a row, and over any run of them belonging to one
-/// contextual group, that group's ledge (docs/RIBBON_PLAN.md §4.2).
-/// <para>Not a <see cref="TabPanel"/>, which was only ever standing in until the ledges arrived. The ledges are part of
-/// the PANEL rather than a layer above it for the same reason a focus ring lives in the layer of what it decorates:
-/// they have to travel and to be clipped with the tabs they describe, and a layer on top can do neither.</para></summary>
+/// <summary>The ribbon strip's items host: tab headers in a row, with a contextual group's ledge over its tabs. Ledges live
+/// in the panel so they move and clip with those tabs.</summary>
 public class RibbonTabPanel : Panel
 {
     /// <summary>Height of the ledge row. ZERO while no group is active: an ordinary ribbon must not stand taller

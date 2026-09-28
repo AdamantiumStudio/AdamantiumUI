@@ -8,12 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>A batch is handed TWO halves of where its instance goes: a transform SLOT, and the bake matrix for whatever
-/// the slot does not carry. Every other family folds that matrix in; the material batch accepted it and dropped it.
-/// <para>World-baked, that was invisible - ResolveBake hands such a unit an IDENTITY matrix and puts the whole world in
-/// its own slot, so the slot alone is right. Under a render MOTION NODE it hands back the NODE-RELATIVE part while the
-/// slot holds the NODE's world, and the dropped half is the element's offset inside the moving view: an acrylic pane
-/// drew at the node's origin instead of its own place, and was off-screen for the whole entrance.</para></summary>
+// The material batch folds in the bake matrix like every family, so a pane under a motion node keeps its offset.
 [TestFixture]
 public class MaterialBakeMatrixTests
 {

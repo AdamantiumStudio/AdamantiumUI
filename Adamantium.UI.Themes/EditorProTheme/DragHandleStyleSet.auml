@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The grip that makes a row draggable by it alone.
-
-         TWO VERTICAL RULES, not Fluent's 2x3 dot cluster. The cluster is the touch idiom - it is deliberately large
-         because a finger has to find it - and this theme's rows are half that height, so the dots either shrink until
-         they read as dirt or crowd the row. Rules take the row's full height at a hairline's width, which is the grip
-         an editor has always used on a toolbar or a docked panel, and they say "drag along this axis" while a dot
-         cluster only says "drag".
-
-         The Transparent background is load-bearing: it makes the WHOLE box the grab area, so a press in the gap between
-         the rules still counts (the drag engine tests the control's bounds, not the glyph). -->
+    <!-- A row's drag grip: two vertical hairline rules suited to dense rows. The transparent background makes the whole
+         box grabbable. -->
 
     <Style Selector="DragHandle">
         <Setter Property="Width" Value="{ResourceReference DragHandleWidth}"/>

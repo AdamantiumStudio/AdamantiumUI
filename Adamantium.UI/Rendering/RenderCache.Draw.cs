@@ -30,7 +30,7 @@ public partial class RenderCache
     // its instances - and rotated/3D instances stay batched. Owned per cache; initialised in the Render device block.
     private TransformTable _transformTable;
 
-    // Set only while a clone run is being drawn (§4o); null on every ordinary group, which is what keeps the hot loop
+    // Set only while a clone run is being drawn; null on every ordinary group, which is what keeps the hot loop
     // paying one null check instead of a matrix multiply.
     private Matrix4x4F? _cloneMatrix;
 
@@ -94,11 +94,8 @@ public partial class RenderCache
     private InstancedFillCollector _instancedFill;
 
     // --- Retained draw (clean-frame op replay) ---
-    // A Clean frame would re-bake byte-identical items and re-issue identical draws for thousands of units (~15 ms idle
-    // floor on the 60k-tile view -> ~0.8 ms replayed). Instead every NON-clean frame RECORDS the ordered GPU op stream the
-    // walk emits (scissor changes, per-unit draws, batch segments, instanced flushes), and the next Clean frame REPLAYS it:
-    // the retained batch/instance buffers still hold last frame's bytes (BeginFrame skipped, uploads skipped by SceneClean).
-    // _opsReplayable is the escape hatch for a draw type the flat stream can't reproduce (there is none today).
+    // Non-clean frames record the ordered GPU op stream; clean frames replay it over the retained buffers instead of
+    // re-baking. _opsReplayable is the escape hatch for draws the stream cannot reproduce.
     private struct RenderOp
     {
         public RenderOpKind Kind;
@@ -121,11 +118,8 @@ public partial class RenderCache
         // whether hovering a tile cost 0.9 ms or a full walk.
         public long Order;
 
-        // A SEGMENT is not one rank - it glues the rects of EVERY control that fell between two flushes, so it covers the
-        // SPAN [OrderFirst, Order]. Insertion needs both ends: a newcomer whose rank lands strictly inside the span cannot
-        // be placed before or after that op at all (either way it jumps over somebody), and the frame has to say so
-        // instead of drawing it in the wrong layer. Recorded as Order until proven otherwise, so a non-segment op's span
-        // is just its own rank.
+        // A segment spans ranks [OrderFirst, Order]; a newcomer ranked strictly inside cannot be placed around it. Equals
+        // Order for other ops.
         public long OrderFirst;
     }
     private readonly List<RenderOp> _ops = new();
@@ -181,16 +175,7 @@ public partial class RenderCache
         return group.Tag;
     }
 
-    /// <summary>Blanks the instances of controls that have left the paint order but whose bytes a live segment still
-    /// issues. A segment is drawn as a RANGE, so a control that stopped drawing is re-issued along with the neighbours it
-    /// sits between - which is a scrollbar a grown window no longer needs, still painting its track at the size it had
-    /// when it was last required, on every replayed frame.
-    /// <para>Ownership is read out of the instance itself, so no path that shuffles the arena can lose it. Reclaiming the
-    /// slots stays the next recording walk's job - this only makes what nobody draws draw nothing.</para></summary>
-    // Groups that left the paint order since the last sweep. Named rather than searched for: scanning the whole arena on
-    // every frame that hid something put a pass over thousands of slots into the middle of ordinary hover frames, and
-    // that shows up as exactly the thing a smooth window cannot have - some frames costing much more than their
-    // neighbours for no visible reason.
+    // Groups that left the paint order since the last sweep, listed so the arena is not scanned on every hiding frame.
     private readonly List<ControlGroup> _leftTheOrder = new();
     private bool _orderJoined;   // a group arrived since the recorded walk - see ApplyStructural / TryPartialReplay
 
@@ -248,17 +233,16 @@ public partial class RenderCache
         }
     }
 
+    // Blanks instances of departed controls that live segments still issue as part of their range; the next recording
+    // walk reclaims the slots.
     private void BlankOrphanInstances(IGraphicsDevice device)
     {
         if (_rectBatch == null || device == null) return;
 
         _emptiedSegments.Clear();
 
-        // WHOSE, before WHERE. The run list says where a group was when it was last recorded, and a group can leave the
-        // paint order many re-recordings later - by then its runs name other groups' slots and its own instances sit
-        // somewhere else entirely, still being issued. That is the scrollbar a grown window no longer needs, painting its
-        // track at the size it had, on every replayed frame. So blank by tag first, wherever they are; the run walk below
-        // is left to do what only it can - hand slots back at a segment edge.
+        // Blank by owner tag first (recorded runs may name other groups' slots by now); the run walk then hands slots
+        // back at segment edges.
         _departedTags.Clear();
         foreach (var group in _leftTheOrder)
         {
@@ -302,12 +286,7 @@ public partial class RenderCache
             // Runs it no longer owns anywhere: keeping them would let a later patch address space that is now free.
             if (reclaimedAll) group.Runs.Clear();
 
-            // ...and THIS is where a group stops being recorded: its instances are blanked and its slots are back in the
-            // arena. The units object survives - that is what makes a pooled container cheap to bring back - but the
-            // bytes it drew are gone, and nothing said so. The recorder went on believing the mirror, so a return read
-            // as "kept its units": re-inserted into the paint order, never re-recorded, holding its slot and drawing
-            // nothing. Told across the thread boundary because the mirror is the recorder's (see NoteUnrecorded).
-            //
+            // Its bytes are gone though its units survive, so the recorder must re-record it on return (NoteUnrecorded).
             group.Unrecorded = true;
         }
 
@@ -372,14 +351,8 @@ public partial class RenderCache
     /// <summary>The layer an op index now belongs to, after an insert moved everything behind it along.</summary>
     private void NoteOpInserted(int index)
     {
-        // WHICH layer grew by this op. Every insert must land in exactly one of them: the layers tile the stream, and a
-        // layer's range is what a replay reads through, so an op no layer claims does not simply go undrawn - it slides
-        // every later layer's window by one, and the frame is then assembled out of pieces of its neighbours. That is
-        // what a theme swap showed as another tab's content painted across the tab strip.
-        //
-        // The subtle case is the BOUNDARY: a new op's place is found by rank and then backed up over the scissor ops that
-        // set up the draw after it, which lands it exactly BETWEEN two layers. "Strictly inside" claims neither of them.
-        // It belongs to the layer that ENDS there - it paints with what came before, not with what the next flush begins.
+        // Every insert must grow exactly one layer, or later layers' windows slide; an op on a boundary belongs to the
+        // layer ending there.
         var taken = -1;
         for (var i = 0; i < _layers.Count; i++)
         {
@@ -403,13 +376,8 @@ public partial class RenderCache
     // places a newcomer needs the span's START, not just where it ended (see PlaceNewSegment).
     private long _rectSegStart;
 
-    // The transform-table version the op stream was recorded against, and whether it still holds. A recorded stream bakes
-    // THREE things against the transforms of its own frame: each Scissor op (a world-space rect), each per-unit draw (its
-    // full world, baked into RenderData - see ExecuteOps) and the batch segments (which follow their slot matrix LIVE).
-    // Once a matrix moves, those three no longer agree: the batched fill follows, the per-unit outline and the clip do
-    // not. Replaying then draws a frame that never existed - a clip one frame stale, a fill sliding out from under its
-    // own outline - which is exactly the flicker, and why it only shows with a render thread: that is when frames are
-    // replayed many times between records (measured: the flicker disappears the moment clean replay is disabled).
+    // The transform-table version the stream was recorded against: scissors and per-unit worlds are baked, while batch
+    // segments follow slots live, so a moved matrix makes them disagree on replay.
     private ulong _opsMatrixVersion;
 
     // Set by the applier when a packet folds a new layout snapshot in; cleared when a walk re-records the stream against
@@ -426,11 +394,7 @@ public partial class RenderCache
             if (_transformTable == null) return true;
             if (_transformTable.MatrixVersion == _opsMatrixVersion) return true;   // nothing moved at all
 
-            // Something moved - but a COMPOSITOR move does not invalidate the stream by itself: the batches read their
-            // slot matrix live, and the composited per-unit draws are re-pointed as they replay (see ExecuteOps). Only a
-            // LAYOUT move is baked into the ops. Without this distinction one spinning loader made the whole window
-            // re-record every frame - measured on the Loaders tab: 4538 records in 10 s, and its draw phase three times
-            // the Layout tab's.
+            // Only layout moves are baked into the ops; compositor moves are re-pointed at replay (ExecuteOps).
             if (_transformTable.LayoutMatrixVersion != _opsLayoutVersion) return false;
 
             return CompositedMovesKeepOpsValid();
@@ -477,11 +441,8 @@ public partial class RenderCache
     private int _cloneReserve;   // clone slots this frame reserved - counted once, read by the trace
     private readonly List<RectItem> _rebakeBuf = new();
 
-    // Picks the transform-table copy this frame writes and draws from, and hands its address to every collector that
-    // exists. Called at the very top of Render AND again once the walk has (re)created the collectors, because the
-    // address moves with the copy: the shader reads the table through a constant pushed on every draw, so a replay -
-    // which re-records its draws but never reaches the walk's setup - must be given this frame's address too, or it
-    // would draw last frame's matrices while the moves were being written into the current copy.
+    // Picks this frame's transform-table copy and gives its address to every collector; called again after the walk
+    // creates collectors, since replays skip the walk's setup.
     private void BeginTransformFrame(IGraphicsDevice device)
     {
         if (device == null) return;
@@ -525,13 +486,8 @@ public partial class RenderCache
 
             _materialBatch.WindowBoundsProvider = WindowOnDesktop;
 
-            // THE FRAME'S OWN ORIGIN, taken here and nowhere else. Here, because this runs on EVERY frame - a drag
-            // changes what mica shows while changing nothing the frame recorded, so a latch anywhere in the walk simply
-            // stops moving the moment the scene goes quiet, which is exactly what a drag is.
-            //
-            // Once, because a frame has to describe ONE instant: read per draw, as it used to be, two panes could be
-            // placed against two different positions, and each against a value written by the message thread at some
-            // arbitrary point in the recording.
+            // The window origin, latched once per frame (replays included) so mica follows drags and all panes share one
+            // instant.
             _materialBatch.LatchWindow();
         }
         if (_haloUnder != null) _haloUnder.TransformsAddress = address;
@@ -542,11 +498,8 @@ public partial class RenderCache
         if (_instancedFill != null) _instancedFill.TransformsAddress = address;
     }
 
-    /// <summary>Out-of-render-pass pass: recorded before BeginRendering (shared-surface latch copies).</summary>
-    /// <summary>The out-of-pass sweep, run once per frame. It used to walk every unit of every group to find the few
-    /// with anything to do - measured at 0.6 ms on a screen of a few thousand tiles, almost all of it spent on units
-    /// that had none. The short list is kept instead and rebuilt only when the scene's units change (a walk re-groups
-    /// them) or when a unit gains or loses its machinery (see RenderUnit.MachineryVersion).</summary>
+    /// <summary>The out-of-render-pass sweep (shared-surface latch copies), run once per frame before BeginRendering over
+    /// a short list of units that need it (see RenderUnit.MachineryVersion).</summary>
     public void PreRender()
     {
         var machinery = RenderUnits.RenderUnitMachinery.Version;
@@ -588,11 +541,7 @@ public partial class RenderCache
         {
             DrawReplayed = LastFrameReplayed;
 
-            // The sweep belongs HERE, not inside the recording path, for two reasons the measurements made plain. It has
-            // to see the arena as the FINISHED frame leaves it - mid-record the segment list describes only what has been
-            // flushed so far, so the sweep scanned a dozen slots and reported success having looked at nothing. And it
-            // has to run on REPLAYED frames too: RenderCore returns early on those, which is exactly when a departed
-            // control's instances go on being issued with their segment's range.
+            // Swept here, after the frame is finished, and on replayed frames too, which RenderCore returns early from.
             if (_leftTheOrder.Count > 0 && device != null)
             {
                 BlankOrphanInstances(device);
@@ -624,13 +573,8 @@ public partial class RenderCache
         }
     }
 
-    /// <summary>What THIS cache's last draw was made of, in the order RenderCore runs them: the transform-table copy and
-    /// clip slots (Setup), the composited animations and repaints (Paint), the movers a replay must refresh (Moved),
-    /// re-issuing the recorded stream (Ops), and the O(scene) walk taken when none of the fast paths qualified (Walk).
-    /// <para>PER CACHE, not static. A frame draws through several of these - the window, its adorner layer, its popup
-    /// layer - and while the numbers were statics each overwrote the last, so the phases reported alongside a draw could
-    /// belong to a different cache than the draw did. The sums then did not add up, which is exactly how an instrument
-    /// stops being evidence. Whoever times a cache's Render reads that cache's own numbers.</para></summary>
+    /// <summary>This cache's last draw phases, in RenderCore order: Setup, Paint, Moved, Ops, Walk. Per cache, since a
+    /// frame draws through several caches.</summary>
     public double DrawSetupMs { get; private set; }
     public double DrawPaintMs { get; private set; }
     public double DrawMovedMs { get; private set; }
@@ -689,12 +633,8 @@ public partial class RenderCache
     private readonly int _traceCacheId = System.Threading.Interlocked.Increment(ref _traceNextCacheId);
     private int _traceComposited;
 
-    // SCRATCH (§5a phase 1 verification): force every frame through the WALK. ADAM_NO_PATCH=1 kills the partial/spliced
-    // patch paths, ADAM_NO_REPLAY=1 kills the clean-frame op replay. A visual defect that survives both is not in the
-    // retained machinery at all - which is the one question a single run can answer.
-    // Settable, not readonly: a test that has to prove something about the WALK cannot get there any other way - a
-    // synthetic scene is small enough that the patch always succeeds, which is exactly how a defect that only ever
-    // showed up on walking frames survived a green suite.
+    // Diagnostics: ADAM_NO_PATCH=1 disables patching, ADAM_NO_REPLAY=1 disables replay. Settable so tests can force the
+    // walk.
     internal static bool PatchDisabled = Environment.GetEnvironmentVariable("ADAM_NO_PATCH") == "1";
     internal static bool ReplayDisabled = Environment.GetEnvironmentVariable("ADAM_NO_REPLAY") == "1";
 
@@ -735,13 +675,7 @@ public partial class RenderCache
         DrawAnimMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
         var paint0 = System.Diagnostics.Stopwatch.GetTimestamp();
 
-        // A recolour reaches the arena HERE, before this frame decides between replaying, patching and walking - because
-        // it must reach it on ALL THREE. Every other family bakes from a payload that holds the live brush, so a re-bake
-        // picks the new colour up wherever it happens; text bakes from a frozen component, so it only followed when
-        // something re-packed it, and re-packing means a walk. The content cache almost never walks - it replays - so a
-        // variant switch recoloured the text only when an unrelated change happened to force a walk in the same frame.
-        // From outside: the first switch worked, the next one did not, and scrolling put it right.
-        // No slot moves and no op changes, so a replay of the recorded stream now draws it in the new colour.
+        // Recolors reach the arena before choosing replay, patch or walk, so text recolors on replayed frames too.
         ApplyPaintToArenas(device);
         DrawArenaPaintMs = System.Diagnostics.Stopwatch.GetElapsedTime(paint0).TotalMilliseconds;
         paint0 = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -828,11 +762,7 @@ public partial class RenderCache
             _movedNodesBuf.Clear();   // a full walk re-bakes fresh node matrices - pending node moves are subsumed
             _movedOwnersBuf.Clear();  // ...and every mover's subtree along with them
             _movedOwners.Clear();
-            // ...but "subsumed" holds only if this walk composes CURRENT transforms. When the fast path BAILS on a moved
-            // node (non-aware content - e.g. a tile that just face-swapped to an image) it bails BEFORE its own memo flush,
-            // so this fall-through walk would re-bake the moving subtree at LAST frame's memoized position (a flip froze at
-            // the 90-degree swap angle until a scroll flushed the memo). Clear the WORLD memos - NOT the clip memo:
-            // recomputing it from live ancestor Bounds mid-relayout culled on-screen tiles for a frame (the hover "empty cell").
+            // A bailed fast path skipped its memo flush, so clear the world memos (not the clip memo) before walking.
             _worldCache.Clear();
             _relWorldCache.Clear();
             _opacityChain.Clear();
@@ -895,7 +825,7 @@ public partial class RenderCache
             _batchOpen = false;
         }
 
-        // CLONES (§4o): a prototype's subtree is drawn once per matrix instead of once at its own place. The subtree is a
+        // CLONES: a prototype's subtree is drawn once per matrix instead of once at its own place. The subtree is a
         // CONTIGUOUS run of groups (paint rank is DFS order), so a clone run is "replay groups [start, end) under another
         // matrix" - the per-unit body below is untouched except for the one line that composes the clone into the world.
         IReadOnlyList<Matrix4x4F> cloneRun = null;
@@ -919,12 +849,7 @@ public partial class RenderCache
                 cloneEnd = CloneSubtreeEnd(groupIndex);
                 cloneIndex = 0;
                 _cloneMatrix = clones[0];
-                // A clone run IS recorded - the stream has to describe the whole frame, clones included, or a replay
-                // re-issues everything except them. What it must NOT do is offer this group to the per-unit patch paths:
-                // they key a batch slot by UNIT, one to one, and a cloned unit owns N of them. Marking the group
-                // unpatchable says exactly that, and costs nothing else.
-                // (Refusing to replay instead was the first attempt, and it cost the whole window its fast path for as
-                // long as any skeleton was on screen: 600 fps -> 180.)
+                // Clone runs are recorded but not patchable: patches map one slot per unit, a cloned unit owns many.
                 group.NotBatchable("clones");
             }
 
@@ -946,12 +871,7 @@ public partial class RenderCache
                 group.WalkVersion = _walkVersion;
             }
 
-            // A block's brushes, re-dereferenced before it is baked. The other families bake from their payload, which
-            // holds the LIVE brush and hands out its current snapshot - which is why every background followed a theme
-            // variant while the text did not: a text unit bakes from its COMPONENT, and the component dereferenced the
-            // snapshot once, when the block was recorded. Refreshed here rather than at each bake site because the walk
-            // reaches a block through several of them (batched glyphs, the private render target, the direct draw), and
-            // one that forgot would put that block back in the previous variant's colour.
+            // Text bakes from its component's brush snapshot, so refresh it once here for every bake path below.
             if (unit is TextRenderUnit walkText) walkText.RefreshColors();
 
             // World transform read ONCE (frame-memoized): the bounds-cull below and the GPU re-bake use the SAME value, so
@@ -976,11 +896,7 @@ public partial class RenderCache
                     if (_recording && NodeOf(unit.Component) is { } culledNode)
                         _nodeAllAware.TryAdd(culledNode.RenderId, true);
 
-                    // ...and REMEMBERED, for exactly as long as this op stream lives: it has no op in it, so nothing can
-                    // ever re-point it into view. A later frame that moves it back inside must WALK, not patch - see
-                    // CollectMovedSubtree, which refuses on this. Without it, a picture at the bottom of a scrolled
-                    // column that was below the fold when the stream was built stayed a blank square for good: scrolling
-                    // it into view patched a draw that had never been written.
+                    // Remembered for this stream's lifetime: bringing it into view needs a walk (CollectMovedSubtree).
                     if (_recording) _culledWhenRecorded.Add(unit);
                     continue;
                 }
@@ -1199,11 +1115,7 @@ public partial class RenderCache
                 {
                     if (_recording)
                     {
-                        // WHERE its record sits. Without this the unit answered HoldsInstances = false, which the move
-                        // path reads as "a per-unit draw - the replay re-points it" (RefreshMovedComponents) - but this
-                        // is a BATCHED segment, and RepointIfItMoved only ever sees per-unit ops. Neither half carried
-                        // it: a dragged polygon stayed where it was until an unrelated full walk (alt-tabbing away from
-                        // the window was enough) moved it in one jump.
+                        // Recorded so the move path treats it as batched (HoldsInstances), not as a per-unit draw.
                         _sdfSlotByUnit[unit] = (SdfSlotKind.Polygon, _polygonBatch.LastSlot);
                         group.NotBatchable("polygonBatch");   // non-rect-batch draw -> not rect-splice-patchable
                         IndexUnitBrush(unit.Component, unit, pru2.PolygonPayload.LiveBrush);
@@ -1578,12 +1490,8 @@ public partial class RenderCache
             {
                 if (ClipGroupChanged(scissor, unit.Component) || !_textBatch.SameAtlas(atlas))
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
-                // Node-aware, same as the rect batch: glyphs pack NODE-LOCAL with the node's transform-table slot, so a block
-                // under a motion node (a scroll list) rides the O(1) slot-write fast path. ResolveBake returns the
-                // node-relative transform + slot (world + slot 0 off any node).
-                // The unit's own placement on top of the bake - a Drawing's text run sits at its own spot inside the
-                // element. Folded here because this batch takes the COMPONENT, which cannot reach the payload; the
-                // per-unit path composes the same value through Update.
+                // Glyphs pack node-local like rects, plus the unit's own placement (a Drawing's text run), which the
+                // component-based batch cannot reach itself.
                 var textBake = tru.Place(ResolveBake(device, unit.Component, wt, out var slot4Text));
                 var textFirst = _textBatch.RetainedCount;
                 FadeBySlot(unit);   // this pass reads the alpha from the slot now - keep the chain out of the colour
@@ -1638,11 +1546,8 @@ public partial class RenderCache
                     if (_instancedFill.LastArena is { } fillArenaSlot)
                         _fillSlotByUnit[unit] = (fillArenaSlot, _instancedFill.LastSlot);
 
-                    // The fill AND its analytic-AA fringe both ride the slot (one shared ring per mesh, drawn from the same
-                    // instance buffer). A unit that still draws a per-unit overlay - a stroke, or a fringe the instanced
-                    // path doesn't cover - bakes THAT from RenderData at record time, and it is re-pointed at the flush
-                    // (PrepareOverlay) on any frame that moved it. So the node keeps its slot-write fast path either way.
-                    // Its run is noted like any other family's: the KEY is an arena and this instance is a slot in it.
+                    // Fill and fringe ride the slot; per-unit overlays are re-pointed at the flush (PrepareOverlay). The run
+                    // is noted like any family's.
                     if (_recording && _instancedFill.LastArena is { } fillArena)
                     {
                         NoteBatched(group, fillArena, _instancedFill.LastSlot);
@@ -1839,12 +1744,8 @@ public partial class RenderCache
         }
     }
 
-    // The batches flush bottom-up (rect < ellipse < gradient-rect < gradient-ellipse < pattern < fractal < textured < instanced < text), so a
-    // HIGHER-layer batch draws ON TOP. A unit going into `layer` that OVERLAPS a pending higher-layer batch would be drawn
-    // UNDER it - yet that batch holds units EARLIER in paint order, so this (later) unit belongs on top (a solid thumb
-    // sitting on a gradient bar, a solid overlay over gradient content). Returning true here flushes the pending batches
-    // first, dropping this unit into a fresh cycle that draws after them = correct paint order. Same-or-lower layers keep
-    // their insertion order and are fine as-is; disjoint content never overlaps, so same-material tiles pay only O(1) checks.
+    // Batches flush bottom-up by layer, so a unit overlapping a pending higher-layer batch must flush it first to keep
+    // paint order.
     private bool OverlapsHigherLayer(int layer, Rect lb, IUIComponent owner = null)
     {
         // Layer -1 is the halo band: it sits under EVERY fill, so a pending rect that overlaps it was painted earlier and
@@ -1908,11 +1809,7 @@ public partial class RenderCache
             return true;
         }
 
-        // THE CANVAS GROUND. It flushes after every other fill, so anything batched alongside that was painted EARLIER
-        // has to be flushed out first or the grid covers it - which is exactly what happened when this was flushed
-        // first instead: the page's own background, painted long before the canvas, landed on top of the grid and the
-        // canvas came out empty. Where a batch flushes has nothing to do with what it draws UNDER; paint order inside
-        // a clip group is kept by this check, not by the flush position.
+        // The canvas grid flushes after every other fill, so earlier overlapping fills must flush first.
         if (layer < 8 && (_canvasGridBatch?.OverlapsPending(lb) ?? false))
         {
             return true;
@@ -1931,13 +1828,7 @@ public partial class RenderCache
             return true;
         }
 
-        // BACKDROP MATERIALS flush after every other fill (see FlushBatches), which is what lets them copy a finished
-        // frame - and it is also what puts them ON TOP of anything batched alongside. So a fill that overlaps a pending
-        // material was painted EARLIER and has to be flushed out first, or the material covers it.
-        //
-        // Invisible until a material was given CONTENT. Every earlier use was a bare shape on the stand, where there is
-        // nothing to cover; the first menu with an acrylic background lost its own rows, and the material then copied
-        // them out of the frame it had just drawn them into - the panel showing a blurred ghost of its own text.
+        // Materials also flush last (to copy a finished frame), so fills overlapping a pending material flush first.
         if (layer < 8 && (_materialBatch?.OverlapsPending(lb) ?? false))
         {
             return true;
@@ -2113,27 +2004,12 @@ public partial class RenderCache
 
 
 
-    // Draw a fast-path partial by patching only the dirty tiles' batch slots, then replaying last frame's op stream. False
-    // (-> full walk) if ANY dirty unit isn't a still-batchable rect we recorded a slot for (its bytes live elsewhere - a
-    // per-unit / text / instanced unit, or a tile that just switched to a gradient). Validate fully BEFORE patching.
-    /// <summary>Carry a PAINT change into the retained arenas for every paint-dirty component. O(paint-dirty), it
-    /// changes no op and moves no slot, and it is FAMILY-AGNOSTIC: the re-bake is <see cref="PatchSlot"/>, which
-    /// dispatches per family and bakes from each unit's payload, so a brush kind added later is carried by it without a
-    /// line of its own.
-    /// <para>Two things bound it, both learned the hard way. Only units <see cref="IsSlotPatchable"/> accepts - reaching
-    /// past that writes slots the frame's own path has not settled yet. And not during a SPLICE, whose whole business is
-    /// moving the slots this would be writing. Without either guard every splice test fails (11 of them).</para></summary>
-    /// <summary>How many brush repaints this cache has served through <see cref="ApplyBrushRepaints"/> - the counter a
-    /// test reads to prove the recolour travelled by the brush index and not by something else re-recording the element.</summary>
+    /// <summary>Brush repaints served through <see cref="ApplyBrushRepaints"/>, for tests.</summary>
     internal int BrushRepaintTotal => _brushRepaintTotal;
     private int _brushRepaintTotal;
 
-    /// <summary>Re-bake every retained slot painted by a brush that has been REWRITTEN IN PLACE since the walk baked it
-    /// (a palette repaint, a brush edited from code). Asked of the brush, not of a dirty set: an in-place recolour adds
-    /// no unit, moves no slot and writes no property, so the element painting with it is not necessarily re-recorded -
-    /// and whether it happens to be decides, today, whether it follows the theme. Driven from the brush index it costs
-    /// one comparison per brush in the scene and repaints exactly the units that wear the new colour, on every frame
-    /// path - replay, patch and walk alike.</summary>
+    // Re-bakes the slots of brushes rewritten in place since baking (palette repaints), via the brush index, on every
+    // frame path.
     private void ApplyBrushRepaints(IGraphicsDevice device)
     {
         // Not during a SPLICE, for the same reason the paint patch stands aside: its whole business is moving the very
@@ -2141,11 +2017,7 @@ public partial class RenderCache
         // lost - only this pass is.
         if (device == null || _partialSpliced || _brushPaintBaked.Count == 0) return;
 
-        // ASK ONCE BEFORE WALKING. The scan below is O(brushes in the scene) and its answer is almost always "none" - on
-        // a screen of a few thousand tiles it was measured at ~1 ms per frame, about half the whole draw, spent to
-        // discover there was nothing to do. The epoch is bumped by any brush anywhere rewriting itself, so a frame in
-        // which nothing repainted costs one comparison; a frame in which something did still pays the full scan, which
-        // is the frame that can afford it.
+        // The global paint epoch skips the O(brushes) scan on frames where nothing repainted.
         var epoch = Core.Media.Brush.PaintEpoch;
         if (epoch == _brushEpochSeen) return;
         _brushEpochSeen = epoch;
@@ -2178,6 +2050,8 @@ public partial class RenderCache
         }
     }
 
+    // Carries paint changes of dirty components into the arenas through PatchSlot, for units IsSlotPatchable accepts and
+    // never during a splice.
     private void ApplyPaintToArenas(IGraphicsDevice device)
     {
         if (device == null || _partialDirty.Count == 0 || !_built) return;
@@ -2188,11 +2062,7 @@ public partial class RenderCache
 
             foreach (var u in g.Units)
             {
-                // TEXT first, and UNCONDITIONALLY. Its colour is a straight rewrite of the run's colour bytes: it moves
-                // no slot, changes no count and needs no bake, so nothing about it can be refused. That matters because
-                // the patch below refuses text for reasons that have nothing to do with colour - a block with no
-                // recorded run, a splice in flight - and every such refusal used to leave that block in the previous
-                // variant's colour until an unrelated re-record.
+                // Text first and unconditionally: a color rewrite of its run cannot be refused, unlike the patch below.
                 if (u is TextRenderUnit tru)
                 {
                     tru.RefreshColors();
@@ -2201,11 +2071,7 @@ public partial class RenderCache
                     continue;
                 }
 
-                // Everything else re-bakes through the patch - family-agnostic, and only for units it accepts: reaching
-                // past that writes slots the frame's own path has not settled. Not during a SPLICE, whose whole business
-                // is moving the very slots this would write. A refusal here is NOT fatal to the frame any more: one unit
-                // the patch cannot reach used to cost every other unit its repaint, because the refusal handed the whole
-                // frame to the walk - and the walk reuses the units of everything that is not geometry-dirty.
+                // Everything else re-bakes through the patch when accepted and not splicing; a refusal skips only that unit.
                 if (_partialSpliced || !IsSlotPatchable(u)) continue;
 
                 u.SetFadeSlot(OpacitySlotOf(device, u.Component));
@@ -2217,6 +2083,8 @@ public partial class RenderCache
         }
     }
 
+    // Patches the dirty units' batch slots and replays last frame's ops; false (full walk) if any dirty unit has no
+    // patchable slot. Validates fully before patching.
     private bool TryPartialReplay(IGraphicsDevice device, Rect2D fullScissor)
     {
         // A patch repairs a frame whose PAINT ORDER is the one that was recorded: it writes remembered slot addresses
@@ -2262,11 +2130,7 @@ public partial class RenderCache
         // (just-updated) payload into its retained slot. (No-units components patched nothing above.)
         foreach (var comp in _partialDirty)
         {
-            // THE FADE ITSELF, and it belongs to the COMPONENT, not to its units: this writes the element's alpha into
-            // its opacity slot, which is the one thing a fade changes. Done before - and independently of - the group
-            // lookup, because the element whose Opacity moved is usually a CONTAINER: it owns no units of its own, so
-            // hanging this off them wrote the alpha nowhere and the subtree only caught up when something else forced a
-            // walk (the tiles "gasnut odin raz v konce").
+            // Write the element's alpha into its opacity slot before the group lookup: fading containers own no units.
             OpacitySlotOf(device, comp);
 
             if (!_groupById.TryGetValue(comp.RenderId, out var g)) continue;
@@ -2274,14 +2138,8 @@ public partial class RenderCache
             {
                 u.SetFadeSlot(OpacitySlotOf(device, u.Component));
 
-                // A unit whose shader READS that slot needs nothing else here. This path only runs when nothing MOVED
-                // (see the caller's !LastBuildTransformDirty), so its geometry and its baked colour are both still
-                // right - re-baking it would write back the same bytes. Skipping it is what makes fading a container
-                // cost O(fading elements) instead of O(subtree): 22k instances re-baked per frame was 42 ms.
-                // NOT skipped by family here. A dirty component reaches this loop for ANY paint change - a recolour as
-                // much as a fade - and skipping the slot readers left a re-brushed element painted in its old colour
-                // (measured: 882 pixels against a full walk, five tests). A FADE avoids this loop entirely instead, by
-                // riding the compositor's Opacity channel - see ApplyCompositedOpacity.
+                // Not skipped by family: any paint change arrives here, so slot readers are re-baked too. Pure fades
+                // bypass this loop via ApplyCompositedOpacity.
 
                 // TEMP: WHICH families the patch still re-bakes once the slot readers are skipped.
                 Core.Diagnostics.FrameTrace.NotePatched($"{u.GetType().Name}<{u.Component?.GetType().Name}>");
@@ -2313,20 +2171,14 @@ public partial class RenderCache
         return false;
     }
 
-    // A patch WRITES node matrices - that is how a scrolled or re-baked element moves without re-recording. The op stream
-    // is checked against the table version to catch transforms that changed UNDER it, but the patch just validated the ones
-    // it wrote (RefreshMovedNodes proves the moved subtrees are node-aware), so those must not count as a mismatch. Left
-    // counting, the first patch made every following frame walk - one hover cost every other frame the whole scene.
-    // The LAYOUT version rides along: a node move is a layout write, and left counting it the very first pan made every
-    // following frame walk - the stream would be declared stale by the write that was made to keep it current.
+    // Matrices a patch wrote were validated by it, so the stream adopts the new table and layout versions instead of
+    // counting them as stale.
     private void AcceptPatchedTransforms()
     {
         _opsMatrixVersion = _transformTable?.MatrixVersion ?? 0;
         _opsLayoutVersion = _transformTable?.LayoutMatrixVersion ?? 0;
     }
 
-    // Does this unit's GPU data live in ONE retained SDF-batch slot we can rewrite in place? The whole precondition for
-    // repainting without re-walking. Anything else (text, per-unit geometry, an instanced fill) keeps its bytes elsewhere.
     // Does this unit still occupy records in some arena? The slot maps are exactly that ledger.
     private bool HoldsInstances(IRenderUnit u) =>
         _rectSlotByUnit.ContainsKey(u) || _sdfSlotByUnit.ContainsKey(u)
@@ -2344,8 +2196,8 @@ public partial class RenderCache
         || _textRunByUnit.ContainsKey(u)
         || _sdfSlotByUnit.ContainsKey(u);
 
-    // Does this arena's shader pass read the element's alpha from the opacity slot? Only these four do; the rest could
-    // not take the extra work on this driver and still fold the opacity CHAIN into their colour (see GlyphItem).
+    // Does this arena's shader pass read the element's alpha from the opacity slot? Only these do; the rest still fold
+    // the opacity chain into their color (see GlyphItem).
     private bool ReadsFadeSlot(BatchArena arena) =>
         ReferenceEquals(arena, _rectBatch) || ReferenceEquals(arena, _ellipseBatch)
         || ReferenceEquals(arena, _gradientRectBatch) || ReferenceEquals(arena, _gradientEllipseBatch)
@@ -2356,23 +2208,14 @@ public partial class RenderCache
     private bool Drawing(IRenderUnit u) =>
         u.Component == null || (_groupById.TryGetValue(u.Component.RenderId, out var owner) && owner.InOrder);
 
+    // Whether a unit can be repainted by rewriting its retained slot in place, without a walk.
     private bool IsSlotPatchable(IRenderUnit u)
     {
-        // NOT DRAWING and holding NO instances = nothing to repaint and nothing to erase, so the patch serves it by
-        // doing nothing. Asked here and not only in PatchSlot because this is the question put first: a dirty unit
-        // outside the paint order (an opacity change reaching a hidden subtree) answered "not patchable" and cost the
-        // frame a walk of the whole scene for a repaint with no pixels in it - ~170 walks in 8 s on a 22k-node tab.
-        //
-        // A unit that stopped drawing but is STILL IN THE ARENA is the opposite case: its instances have to be BLANKED,
-        // which only the splice (or a walk) does. Answering "done" for it leaves the departed subtree on screen -
-        // measured as 882 stale pixels against a full walk.
+        // Not drawing and holding nothing: trivially done. Not drawing but still in an arena: needs blanking, which only
+        // the splice or a walk does.
         if (!Drawing(u)) return !HoldsInstances(u);
 
-        // A CLONED unit fills one slot PER CLONE, and the maps below hold ONE slot per unit - the last the walk wrote.
-        // Patching through it repaints a single card, and once the clone set shrinks (a list finishing its fill) the
-        // walk renumbers the arena behind that run, so the remembered slot belongs to whatever moved into its place:
-        // the pulse was recolouring the first star in step with the last skeleton. A cloned unit is repainted by the
-        // next walk, in full, rather than by one slot write that may not even be its own.
+        // Cloned units own a slot per clone, but the maps remember only one, so the next walk repaints them.
         if (u.Component?.RenderClones is { Count: > 0 }) return false;
 
         // A band that APPEARED or went dark is a change of record count in the halo arena, and a patch can only rewrite
@@ -2454,11 +2297,7 @@ public partial class RenderCache
     // Re-bake one unit from its (live) payload straight into the slot it already occupies. Validated by IsSlotPatchable.
     private bool PatchSlot(IGraphicsDevice device, IRenderUnit u, Matrix4x4F bakeWorld, int transformSlot)
     {
-        // NOT IN THE PAINT ORDER = not drawing, so there is nothing here to repaint. Every caller has to obey this, which
-        // is why it lives in the one place they all pass through rather than in each of them: a repaint re-bakes the unit
-        // into the arena from a snapshot frozen when it last drew - nobody measures or arranges a control that is not
-        // drawing - so the bar the window outgrew comes back at the size and place it had, once per animation tick.
-        // Answering "done" rather than "cannot": the frame is correct, and refusing would cost it a full walk.
+        // Not in the paint order: nothing to repaint (a re-bake would resurrect a stale snapshot). Answer done, not refuse.
         ControlGroup owner = null;
         if (u.Component != null
             && (!_groupById.TryGetValue(u.Component.RenderId, out owner) || !owner.InOrder))
@@ -2652,15 +2491,7 @@ public partial class RenderCache
         var bands = u.RenderData.Halo;
         var opacity = u.RenderData.Opacity;
 
-        // NO RUN AT ALL is not the same as "nothing changed". A unit that wears no band is never put in the map (see
-        // NoteHaloRun), so a unit lighting its FIRST band looked up nothing and this answered "still describes" - the
-        // patch was allowed, PatchHalo returned at its own first line for want of a run, and the frame was repainted
-        // faithfully WITHOUT the band. Nothing refused, nothing walked, nothing drawn.
-        //
-        // Found on a slider knob that glows while it is dragged: in the light appearance the knob already wore a
-        // shadow, so a run existed, the count went 1 -> 2 and the refusal below did its job; in the dark appearance the
-        // shadow is transparent and dropped, so there was no run and the glow never appeared at all. Same markup, same
-        // trigger, opposite behaviour - which is what "it works sometimes" turned out to mean.
+        // No run is not "unchanged": a unit gaining its first band has no run yet (NoteHaloRun), so it must not patch.
         if (_haloRunsByUnit.Count == 0 || !_haloRunsByUnit.TryGetValue(u, out var runs))
         {
             if (CountBands(bands, inner: false, opacity) != 0) return false;
@@ -2681,11 +2512,7 @@ public partial class RenderCache
         return true;
     }
 
-    // How many records this side's bands would take - the same test the bake makes, so the two cannot disagree.
-    // ALPHA IS NOT ASKED, and that is the whole of the fix: a band holds its record whether or not it is currently
-    // painting (see HaloBand.IsEmpty), so a glow switching on or a shadow fading to nothing leaves the count alone and
-    // the patch can simply rewrite it. Asking here what the bake no longer asks would put the two back out of step -
-    // the unit would refuse its patch for good, which is the failure this replaces.
+    // Records this side's bands take, by the bake's own test; alpha is ignored, since transparent bands keep their record.
     private static int CountBands(Core.Media.HaloBand[] bands, bool inner, double opacity)
     {
         if (bands == null) return 0;
@@ -2770,23 +2597,12 @@ public partial class RenderCache
         public IUIComponent Component;// whose it is - a blanked group has no units left to ask
         public int Layer;             // the layer this group's items belong to, resolved ONCE before anything is mutated
         public Rect Bounds;           // what it covers, in logical coordinates - the ONLY thing that decides whether its
-                                      // order inside a layer matters at all (see §5a: overlap is the merge rule)
+                                      // order inside a layer matters at all (overlap is the merge rule)
     }
 
-    // Draw a partial whose dirty controls changed their unit COUNT (a hover backdrop appearing, a live chart) by editing
-    // the LAYER each belongs to, then replaying - O(dirty layer) instead of O(scene). A layer is one recorded batch run
-    // drawn by one op; the edit happens inside it and the op is left where it stands, so paint order relative to text,
-    // per-unit draws and instanced geometry holds by construction. A control that has no run of its own gets its own
-    // layer, placed by its paint RANK - never by what happens to sit next to it (see PlaceNewSegment).
-    // Requirements per dirty group (checked BEFORE anything is mutated -> full walk): every unit rect-batchable NOW; a
-    // group described by the last walk must have been rect-only; its clip must be the layer's. Re-baked runs are appended
-    // and not reclaimed until a full walk resets Count, so a sustained burst still yields to the walk on a full arena.
-    /// <summary>Wraps the patch so its staging buffer is let go on EVERY exit, refusals included. The buffer is cleared
-    /// on the way in, which is all correctness needs; it is not all memory needs. A refusal returns early and leaves the
-    /// last set of patches sitting there, each naming a group and through it a component and everything below it - and
-    /// after a theme swap the frames that follow are refusals and full rebuilds, so nothing comes along to clear it.
-    /// Found by walking the object graph from the strong handles: RenderCache -> List&lt;GroupPatch&gt; -> a discarded
-    /// TextBlock -> its whole parent chain.</summary>
+    // Draws a partial whose dirty controls changed their unit count by editing each one's layer in place and replaying:
+    // O(dirty layer). Newcomers get their own layer by paint rank (PlaceNewSegment); all checks run before mutating.
+    // The staging buffer is cleared on every exit, so refusals do not keep discarded controls alive.
     private bool TrySplicedPatch(IGraphicsDevice device, Rect2D fullScissor)
     {
         try
@@ -2812,7 +2628,7 @@ public partial class RenderCache
         _opacityChain.Clear();   // recompose from the (possibly re-frozen) snapshot, as in TryPartialReplay
         _opacitySlotCache.Clear();
 
-        // ---- Phase 1: validate + bake (no mutation) ----
+        // ---- Validate + bake (no mutation) ----
         _patchBuf.Clear();
         _stagedArenas.Clear();
         var appendTotal = 0;
@@ -2827,19 +2643,11 @@ public partial class RenderCache
             // however faithfully the sweep blanks it. Two entrances into the arena, one rule about who may use them.
             if (LeftTheTree(group)) return SpliceRefused("departed");
 
-            // ...and the OTHER way to stop drawing: still in the tree, but out of the paint order - hidden, or faded to
-            // nothing. The rule above only speaks for a subtree that left the tree, so such a group was re-baked and
-            // appended back into the arena however faithfully the sweep had just blanked it. Measured, not reasoned:
-            // the buried tag arrived through AllocateSegmentFromStage and UpdateSlotFromStage, both from here. It is
-            // skipped rather than refused - a group that is not drawing has nothing to contribute, and one hidden
-            // control must not cost the frame a walk of the window.
+            // ...or still in the tree but out of the paint order: skipped (not refused), or it would be re-baked back in.
             if (!group.InOrder) continue;
 
-            // A group's RectRuns are valid only against the arena the LAST recording walk (or a splice under it) built. A
-            // stale WalkVersion means that walk did NOT visit it (recycled / scrolled off / re-appeared since) and its slots
-            // were REASSIGNED to whatever the walk recorded there, so its runs now point at OTHER groups' slots - excising
-            // them would blank a live neighbour for a frame (the hover "blink"). A stale group has nothing of its own to
-            // excise: drop its runs and re-append fresh. (A splice re-append below re-stamps WalkVersion.)
+            // Runs are valid only for the last walk's arena; a group that walk skipped drops its runs (they may name other
+            // groups' slots now) and re-appends.
             var walked = group.WalkVersion == _walkVersion;
             if (!walked) group.Runs.Clear();
             var runTotal = 0;
@@ -2904,12 +2712,8 @@ public partial class RenderCache
             });
         }
 
-        // ---- Phase 1b: which LAYER does each surgery group belong to (no mutation) ----
-        // The unit of repair is the SEGMENT, not the item. A group whose unit count changed is put right by re-baking the
-        // whole segment it lives in, with its new items in their paint position inside it, and pointing the SAME recorded
-        // op at the result. Nothing is excised, nothing is inserted into the op stream, so paint order relative to text,
-        // per-unit draws and instanced flushes is unchanged BY CONSTRUCTION - which is why there is no instanced-flush
-        // question here at all. Cost is O(items in that segment) instead of O(scene).
+        // ---- Which LAYER does each surgery group belong to (no mutation) ----
+        // The segment is re-baked whole and the same recorded op points at it, so op-stream order is untouched.
         _patchLayers.Clear();
         for (var n = 0; n < _patchBuf.Count; n++)
         {
@@ -2947,7 +2751,7 @@ public partial class RenderCache
             _patchLayers.Add(layer);
         }
 
-        // ---- Phase 2: mutate (can no longer fail) ----
+        // ---- Mutate (can no longer fail) ----
         foreach (var p in _patchBuf)
         {
             if (!p.InPlace) continue;   // count-stable recolour: the slots are already the right ones
@@ -2979,11 +2783,7 @@ public partial class RenderCache
         AcceptPatchedTransforms();
         ExecuteOps(device, fullScissor);
 
-        // Let the staging buffer go. It is cleared on the way IN, which is enough for correctness and not enough for
-        // memory: the last patch set stays in it until the NEXT patch, and after a theme swap the frames that follow are
-        // full rebuilds rather than patches - so "the next patch" can be a long time coming. Each entry names a group
-        // and, through it, a component and everything below it. Found by walking the object graph from the strong
-        // handles: RenderCache -> List<GroupPatch> -> a discarded TextBlock -> its whole parent chain.
+        // Release the staging buffer now; its entries keep whole component subtrees alive until the next patch.
         _patchBuf.Clear();
         return true;
     }
@@ -3075,27 +2875,11 @@ public partial class RenderCache
         return -1;
     }
 
-    // A LAYER is one recorded batch run drawn by one op - the backdrops of a list.s rows, say. A group that already draws
-    // in one is repaired inside it; a group that does not gets its own (see PlaceNewSegment), so this only ever answers
-    // for the former. It used to hunt for a neighbour.s layer to join, which is how the placement came to depend on what
-    // else the frame happened to contain.
     // Arenas whose stage this patch has already emptied (see TrySplicedPatch).
     private readonly HashSet<BatchArena> _stagedArenas = new();
 
-    /// <summary>The arena a recorded Segment op draws from - the way back from what the stream SAYS to the thing that
-    /// holds the bytes. The same table ExecuteOps switches on; a family whose collector this cache never created has no
-    /// arena and its ops are simply left alone.</summary>
-    /// <summary>
-    /// Make the material batch ready to take one more instance, flushing first if this one cannot join what is pending.
-    ///
-    /// <para>Shared by all three shapes, because none of this depends on the shape: a rectangle, an ellipse and a
-    /// polygon differ only in the record they bake, not in when a segment has to end.</para>
-    ///
-    /// <para>The batch is made LAZILY, on the first frame that meets a material, and the transform table's address is
-    /// handed over AT CONSTRUCTION - by then the frame has already given it to everything that existed. Without it the
-    /// vertex shader dereferences NULL for a whole frame, and a bad address is not something any validation layer sees:
-    /// it is simply a lost device.</para>
-    /// </summary>
+    // Readies the material batch for one more instance of any shape, flushing first if it cannot join. The batch is
+    // created lazily and gets the transform table's address at construction, or its first frame reads a null address.
     private bool OpenMaterialSegment(IGraphicsDevice device, Core.Media.Brush brush, ITexture source, Rect bounds,
         IUIComponent component, Rect2D scissor, Rect2D fullScissor, ref bool scissorNarrowed)
     {
@@ -3167,6 +2951,7 @@ public partial class RenderCache
         _batchOpen = true;
     }
 
+    // The arena a recorded Segment op draws from (the table ExecuteOps switches on); null for collectors never created.
     private BatchArena ArenaOf(byte batch) => batch switch
     {
         0 => _rectBatch,
@@ -3247,11 +3032,8 @@ public partial class RenderCache
         var replaced = 0;
         foreach (var run in group.Runs) replaced += run.Count;
 
-        // Its run is not inside this layer after all - the layer was cut under it by another patch in this same frame (a
-        // newcomer whose rank landed inside its span). This patch cannot be honoured, and "leave the frame be" was the
-        // wrong answer to that: the frame went out claiming to be patched while this card kept the pixels it had before,
-        // which a full walk does not draw (BorderPatchRenderTests.TwoPatchesInOneFrame_AroundASplit). Refuse, and the walk
-        // draws the truth - being patchable through a cut is what an arena per layer buys, not something to fake here.
+        // Another patch this frame split the layer under this run, so refuse and let the walk draw it
+        // (BorderPatchRenderTests.TwoPatchesInOneFrame_AroundASplit).
         if (at < 0 || at + replaced > count) return SpliceRefused("runOutsideLayerAfterSplit");
 
         // The cheap path: edit inside the room the layer already owns, moving only what follows the edit. Only when the
@@ -3325,7 +3107,7 @@ public partial class RenderCache
             return true;   // drew nothing, still draws nothing
         }
 
-        // A recorded segment that paints ACROSS this rank is a LAYER in the sense of §5a: a set of draws whose mutual order
+        // A recorded segment that paints ACROSS this rank is a LAYER: a set of draws whose mutual order
         // does not matter, because nothing in it overlaps anything else in it. So the newcomer only needs a place of its own
         // when it OVERLAPS what that layer draws - then order decides what covers what, and the layer has to be cut at its
         // rank. When it does not overlap, there is nothing to decide: it joins the layer and the segment stays whole.
@@ -3354,16 +3136,8 @@ public partial class RenderCache
         return true;
     }
 
-    // Where an op of this rank belongs in the stream: before the first op recorded for a LATER rank. Never immediately
-    // after a Scissor op - that op sets a clip for the draw that follows it, and a segment slipped in between would
-    // restore the full clip and leave that draw unclipped.
-    //
-    // KNOWN LIMIT, reproduced by BorderPatchRenderTests.ANeighbourAppearing_DoesNotCostABorderItsRing: a SEGMENT covers
-    // the whole paint SPAN between two flushes (its OrderFirst..Order), and a newcomer whose rank lands inside that span
-    // has no correct place in a flat stream - before the op it paints under controls it must cover, after it over controls
-    // it must not. Comparing against the span's START instead only moves which half is wrong (it was tried: the backdrop
-    // tests, which need the other half, fail immediately). The fix is to SPLIT the segment at the newcomer's rank, which
-    // is why the span is recorded at all.
+    // Before the first op of a later rank, never right after a Scissor op (it clips the draw that follows). A rank inside
+    // a segment's span has no correct place until the segment is split (SplitSegmentSpanningRank).
     private int OpIndexForRank(long order)
     {
         // Ask the LAYERS first: they are the frame's structure, ordered and non-overlapping, so the rank picks one of
@@ -3397,13 +3171,8 @@ public partial class RenderCache
         return at;
     }
 
-    /// <summary>Cut the recorded rect segment that paints ACROSS <paramref name="order"/> into the part that paints before
-    /// it and the part that paints after, so the op stream has a place to put a newcomer of that rank. Nothing is re-baked
-    /// and no bytes move - the two halves keep drawing the items they already held.
-    /// <para>The cut point comes from the GROUPS: their runs record which slots belong to whom, and a walk fills a segment
-    /// in rank order, so the first slot owned by a later-ranked group is where the two halves part. Without this the
-    /// newcomer went in whole segments early or whole segments late, and stayed wrong until a full walk - seen as a rect
-    /// that had to sit ON a card drawn underneath it, and as the flake in ViewportResize_Splices.</para></summary>
+    // Splits the rect segment spanning `order` at the first slot owned by a later-ranked group, so a newcomer of that rank
+    // has a place in the stream; no bytes move.
     private void SplitSegmentSpanningRank(long order, Rect newcomer)
     {
         for (var i = 0; i < _ops.Count; i++)

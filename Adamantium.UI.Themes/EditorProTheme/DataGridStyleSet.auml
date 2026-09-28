@@ -2,17 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's table. The same parts as everywhere - the control drives them BY NAME - in this theme's language:
-
-         FLAT AND DENSE. No rounded well, no card: an editor's table sits inside a pane that already has a frame, and a
-         second frame around it reads as a widget dropped on the page. Rows are the theme's RowHeight, which is what
-         every other list here stands at, so a table beside a file list lines up with it.
-
-         THE HEADER IS A BAR, separated by one hairline. Sorting shows as a small chevron, filtering as a funnel that
-         lights up when it is narrowing something.
-
-         SELECTION IS A WASH and the content keeps its colours - see ListBoxItemStyleSet for why this theme spends the
-         accent on what is CURRENT rather than on what is merely selected. -->
+    <!-- Editor Pro's table: flat, no frame, rows at RowHeight; a header bar with sort chevron and funnel; selection is a
+         wash (see ListBoxItemStyleSet). -->
 
     <Style Selector="TreeDataGrid">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>

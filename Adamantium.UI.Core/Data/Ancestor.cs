@@ -3,17 +3,8 @@ using Adamantium.UI.Core.MarkupExtensions;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// Terse ancestor binding: <c>{Ancestor TitleBar, Foreground}</c> reads a property off the nearest ancestor of a given
-/// type and pushes it to the target property. The modern replacement for WPF's verbose
-/// <c>{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=...}}</c>. Positional args are the ancestor
-/// TYPE then the source PATH; the rest are named. Matching is is-a (a base type / interface matches any subtype),
-/// consistent with the style selectors. The lookup walks the VISUAL tree by default (template parts and item content
-/// are visual — not logical — children of their control, so that's where the owning control actually lives); set
-/// <see cref="Logical"/> to walk the logical tree instead. The connection is LIVE: it re-resolves whenever the target
-/// (re)attaches to the tree — a template rebuild, a re-parent, a virtualization recycle — so it never goes stale the
-/// way WPF's did.
-/// </summary>
+/// <summary><c>{Ancestor TitleBar, Foreground}</c>: binds to a property of the nearest ancestor of a type (is-a), walking
+/// the visual tree unless <see cref="Logical"/>. Re-resolves whenever the target re-attaches.</summary>
 public class Ancestor : MarkupExtension
 {
     /// <summary>The ancestor type to search for (first positional). is-a: a base type / interface matches subtypes.</summary>

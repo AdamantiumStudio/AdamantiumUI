@@ -75,11 +75,8 @@ public class GlyphRunDrawing : Drawing
         set => SetValue(OriginProperty, value);
     }
 
-    /// <summary>A box in the drawing's own coordinates to ALIGN the run inside, instead of pinning its corner with
-    /// <see cref="Origin"/>. This is the only way to centre a run: a glyph run is anchored by its corner, so a fixed
-    /// origin is exact for exactly one string and drifts the moment the text changes length. Empty (the default) keeps
-    /// the origin behaviour. The box also becomes the run's <see cref="Bounds"/>, so a drawing built around one keeps
-    /// the same extent whatever the text says.</summary>
+    /// <summary>A box to align the run inside instead of pinning it at <see cref="Origin"/>, and its
+    /// <see cref="Bounds"/>; empty uses the origin.</summary>
     public Rect Box
     {
         get => GetValue<Rect>(BoxProperty);

@@ -65,7 +65,7 @@ public class RibbonGroupsPanel : Panel
             var width = WidthOf(child);
             _slots.Add((child, x, width));
             // Full band height, so every caption sits on one line. Shifted by the scroll, which is the LAST resort -
-            // everything above has already been shrunk and collapsed (see docs/RIBBON_PLAN.md §3.3-3.4).
+            // everything above has already been shrunk and collapsed.
             child.Arrange(new Rect(x - Offset, 0, width, finalSize.Height));
             x += width;
         }
@@ -76,7 +76,7 @@ public class RibbonGroupsPanel : Panel
         return new Size(finalSize.Width, finalSize.Height);
     }
 
-    // --- Scrolling the row (§3.4) ------------------------------------------------------------------------------------
+    // --- Scrolling the row -------------------------------------------------------------------------------------------
     //
     // Not a ScrollViewer: a bar under the band would eat height from a strip that has none to spare, and it is chrome
     // nobody asked for. The row moves by WHOLE GROUPS behind two repeat buttons that overlay its edges - a half-shown

@@ -3,14 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A wire let go over EMPTY PLANE, offered to the application before it is thrown away.
-/// <para>This is the gesture every node editor is known by: you pull a wire out of a socket, drop it where there is
-/// nothing, and a list of nodes opens under the pointer - pick one and it arrives already wired. It is the fastest way
-/// to build a graph there is, because the two things you were going to do anyway - make a node, join it - are one
-/// motion.</para>
-/// <para>WHAT nodes there are is the application's and can be nothing else: the engine has never heard of "Multiply".
-/// So the canvas offers the moment and the application answers it - or does not, and the wire simply vanishes the way
-/// an abandoned gesture should.</para></summary>
+/// <summary>A wire dropped on empty plane, offered to the application (typically to open a node list and wire the pick);
+/// unanswered, the wire vanishes.</summary>
 public sealed class CanvasWireDroppedEventArgs : EventArgs
 {
     /// <summary>The node the wire came out of.</summary>

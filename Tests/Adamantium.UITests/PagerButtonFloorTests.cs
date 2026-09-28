@@ -9,14 +9,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// The pager's row is meant to be built from cells that never go under a floor, so that a one-digit page and an
-/// ellipsis occupy the same box and nothing beside them shifts as the reader pages. On the stand they kept hugging
-/// their content instead, and the two possible reasons look identical from the outside: either the floor never reaches
-/// the button, or layout does not honour it once it is there.
-/// <para>This fixture separates them. The floor is written DIRECTLY here - no style, no resource - so a failure can only
-/// be the layout pass. Whether a style setter delivers the value is a different question, asked below.</para>
-/// </summary>
+// Pager cells honor their MinWidth floor. Set directly here, so a failure is the layout pass; style delivery is tested
+// separately below.
 [TestFixture]
 public class PagerButtonFloorTests
 {
@@ -87,13 +81,7 @@ public class PagerButtonFloorTests
             "the literal setter in the same block - if this arrives, the setter path itself works");
     }
 
-    /// <summary>THE DEFECT THIS FIXTURE WAS WRITTEN FOR, and it is not the pager's. A control that reports its CONTENT
-    /// size rather than the slot - a radio, a check box, a switch, whose glyph cannot stretch - was dropping its own
-    /// Width/Height/Min* on the way, so it desired one size in measure and then drew at another. Anything restyled onto
-    /// such a control (a radio wearing a toggle template, which is what a pager's page buttons are) collapsed back onto
-    /// its text however wide the theme said it should be.
-    /// <para>Desired was always right, which is why this took a probe in the running app to see: the wrong number is the
-    /// ARRANGED one.</para></summary>
+    // Content-sized controls (radio, check box, switch) keep their own Width/Height/Min* in arrange, not only in measure.
     [Test]
     public void AControlThatReportsItsContentSize_StillKeepsItsOwnFloor()
     {

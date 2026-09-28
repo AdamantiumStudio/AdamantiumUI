@@ -24,11 +24,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private bool osMouseCaptured;
     private Win32NativeWindowWrapper source;
 
-    // RELATIVE mouse mode (mouse-look). SetRelativeMouseMode posts RelativeModeMessage (enable in wParam, the restore
-    // screen point packed in lParam) so the cursor hide/show + capture - HWND-thread-affine - run on the PUMP thread. While
-    // active, HandleMouseMove reads the physical cursor, feeds a RawMouseMove delta and re-centres to _recenterScreen so the
-    // delta never runs out at the window edge. The cursor's SAVED position is NOT held here - the panel owns it (in its own
-    // coords) and hands the screen point back on release. See RenderTargetPanel.
+    // Relative mouse mode: toggled on the pump thread via RelativeModeMessage; moves feed deltas and re-center the cursor.
+    // RenderTargetPanel owns the saved cursor position.
     private bool _relativeActive;
     private NativePoint _recenterScreen;
 
@@ -46,7 +43,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         // Declare the process Per-Monitor-DPI-Aware V2 before any window exists (this static ctor runs once, before the
         // first worker instance = before the first HWND). PMv2 => the OS stops bitmap-stretching our frames and sends
-        // WM_DPICHANGED when the window crosses monitors; we scale the render ourselves (docs/PER_MONITOR_DPI_PLAN.md).
+        // WM_DPICHANGED when the window crosses monitors; we scale the render ourselves.
         try { Win32Interop.SetProcessDpiAwarenessContext(Win32Interop.DpiAwarenessContextPerMonitorAwareV2); }
         catch { /* pre-1703 OS without the API, or awareness already pinned by a manifest - ignore */ }
     }
@@ -103,11 +100,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[RelativeModeMessage] = HandleRelativeModeMessage;
     }
 
-    // App-private message (WM_APP range) the loop thread posts to hand a caption drag BACK to the HWND-owning thread.
-    // The classic ReleaseCapture + WM_NCLBUTTONDOWN/HTCAPTION trick MUST run on the thread that owns the window's input
-    // queue, else the native move loop reads no held button and returns instantly. Input routing (where a drag is decided)
-    // runs on the loop thread, so BeginMoveDrag PostMessages this; CustomWndProc then runs HandleBeginMoveDrag on the
-    // owner thread. lParam carries the packed screen cursor position (LOWORD x, HIWORD y).
+    // Posted by BeginMoveDrag so the caption-drag handoff runs on the HWND's thread; lParam packs the screen cursor.
     private const uint BeginMoveDragMessage = (uint)WindowMessages.App + 1;
 
     // App-private message the loop thread posts (SetRelativeMouseMode) so the enter/exit of relative mouse mode - which
@@ -187,14 +180,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
                 SetWindowPosFlags.Nomove | SetWindowPosFlags.Nosize | SetWindowPosFlags.Nozorder |
                 SetWindowPosFlags.Noactivate | SetWindowPosFlags.Framechanged);
 
-            // The shadow and the accent outline are what a WINDOW looks like, and not every window wants to look like
-            // one. Asked of the property that MEANS this, not inferred from how the window happens to be composed:
-            // see-through and framed, or opaque and frameless, are both things somebody may want.
-            //
-            // ONE place sets the frame - ApplyBorder - and creation goes through it like everything else. It used to be
-            // stated twice: here for a real window and in ApplyBorder for an overlay, and the copies were not equal.
-            // Only ApplyBorder was ever called again, so the accent-follows-theme part worked for overlays and was
-            // frozen at creation for every ordinary window, which is exactly what "the border does not update" was.
+            // ApplyBorder is the single place that sets shadow and accent outline, at creation and on accent changes.
             ApplyBorder();
             WatchAccent();
             ProvideLivePosition();
@@ -202,11 +188,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         this.window.DpiScale = ReadDpiScale(source.Handle);   // initial per-monitor DPI (PMv2)
 
-        // The window was created with the requested geometry handed straight to Win32 - which reads it as PHYSICAL
-        // pixels, while a window's position and size are LOGICAL. On a scaled display that made every window come out
-        // 1/scale too small and too close to the origin, and the line below then quietly rewrote ClientWidth to match, so
-        // the number the caller asked for simply vanished. The real scale is known only now (it belongs to the monitor
-        // the window landed on), so ask again with it. A no-op at 100%, where the two units are the same number.
+        // Creation took the logical geometry as physical; re-apply it now that the monitor's scale is known.
         SetPosition(requestedLeft, requestedTop);
         SetSize(requestedClientWidth, requestedClientHeight);
 
@@ -251,15 +233,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Win32Interop.SetWindowText(window.Handle, title);
     }
 
-    // Where the OS has this window at the instant of asking. GetWindowRect is thread-safe and cheap - one call into
-    // user32 - which is what makes this usable from the render thread once a frame.
-    //
-    // Asking beats remembering here because move notifications arrive with the MOUSE (about 220 a second) while frames
-    // are built two to three times as often: a remembered position is stale for most frames, and a backdrop drawn from
-    // it shudders while the window is dragged.
-    // Where the window is HEADED while a move is under way, as the client area's corner. ONE 64-bit word, not a nullable
-    // pair of ints: written by the message thread, read by the render thread, and three separate fields let a reader see
-    // the new X beside the old Y.
+    // The client corner a move in progress is heading to, packed in one 64-bit word so the render thread never reads a
+    // torn X/Y pair.
     private long _pendingMovePacked = NoPendingMove;
 
     private const long NoPendingMove = long.MinValue;   // no real client corner can be this
@@ -283,6 +258,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             windowRect.Top + (origin.Y - current.Top));
     }
 
+    // Queried each frame rather than cached: move messages arrive less often than frames, so a cached position lags.
     private void ProvideLivePosition()
     {
         if (window is not Controls.WindowBase target) return;
@@ -294,16 +270,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         // truth about where the window is - which is why the remaining wobble is not something a better position fixes.
         target.LivePositionProvider = () =>
         {
-            // WHILE A MOVE IS IN PROGRESS, answer with where the window is GOING, not where it is.
-            //
-            // WM_MOVING arrives BEFORE the window has moved and carries the rectangle the OS is about to put it at. So
-            // during a drag there are two answers available, and ClientToScreen gives the older one: it reports the
-            // position the window still has. A frame built from it is behind by exactly one step before it is even
-            // drawn - and then shown later still.
-            //
-            // The pending rectangle is not a guess about the future; it is a number the system has already decided on.
-            // Seeded on WM_ENTERSIZEMOVE so a gesture never alternates between this and ClientToScreen below - the two
-            // describe different instants, and switching between them is a step of movement appearing and vanishing.
+            // During a move, answer with WM_MOVING's target rect, which is one step ahead of ClientToScreen; seeded on
+            // WM_ENTERSIZEMOVE so a gesture never alternates between the two.
             var pending = System.Threading.Volatile.Read(ref _pendingMovePacked);
             if (pending != NoPendingMove) return UnpackPoint(pending);
 
@@ -321,13 +289,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         if (window == null) return;
 
-        // Nosize keeps the current size, Nozorder the current stacking, Noactivate the current focus - a move is only a
-        // move. CreateWindowExW placed this window by the same origin (the WINDOW rect, non-client included), so the
-        // coordinates mean here exactly what they meant there.
-        // PHYSICAL desktop pixels, deliberately - unlike the size, which is logical. A window's position has no scale of
-        // its own to be logical in: the scale belongs to the monitor the point falls on, and which monitor that is can
-        // only be known once the point is physical. Measured: a torn-off window placed in logical units was born at the
-        // origin (primary monitor, 100%), took ITS scale, and landed at cursor/1.5 on a 4K display - far to the left.
+        // Window-rect origin in physical desktop pixels: which monitor's scale applies is only known once the point is
+        // physical.
         Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, (int)Math.Round(left), (int)Math.Round(top), 0, 0,
             SetWindowPosFlags.Nosize | SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate);
     }
@@ -354,11 +317,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Win32Interop.GetClientRect(window.Handle, out var client);
         if (client.Width == width && client.Height == height) return;
 
-        // SetWindowPos speaks WINDOW rects, so the client size has to be grown by whatever sits around it. MEASURED off
-        // this very window (window rect minus client rect), never computed from its styles: a window with custom chrome
-        // answers WM_NCCALCSIZE so that its client area IS the whole window, while AdjustWindowRect - which only knows
-        // the styles - still swears there is a caption and a border. Adding that phantom frame made the window a few
-        // pixels bigger, the OS reported the new size back, and it grew again on the next frame, every frame.
+        // Frame size measured from this window, not AdjustWindowRect: custom chrome makes the whole window client, and a
+        // phantom frame would grow the window every frame.
         Win32Interop.GetWindowRect(window.Handle, out var outer);
         var frameWidth = outer.Width - client.Width;
         var frameHeight = outer.Height - client.Height;
@@ -395,11 +355,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         WatchAccent();
     }
 
-    // The native border is DWM's, not ours: it is set once with DwmSetWindowAttribute and then STAYS whatever it was
-    // told, no matter what happens to the theme afterwards. Nothing about a colour changing on our side reaches it -
-    // which is why picking a new accent recoloured the whole application and left the window outlined in the old one.
-    // So the frame has to be told: watch the accent and re-apply on every change, and re-attach when the theme itself
-    // is swapped, because the accent then belongs to a different Theme object.
+    // DWM keeps the border color it was given, so the accent is watched and re-applied, re-attaching on theme swaps.
     private ITheme watchedTheme;
 
     private void WatchAccent()
@@ -520,11 +476,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private void WindowOnStateChanged(object sender, StateChangedEventArgs e)
     {
-        // Minimizing via the custom title-bar button drives this managed path (Window.State = Minimized), NOT the
-        // SC_MINIMIZE SysCommand path - so remember what we're minimizing FROM here too. Otherwise lastWindowState keeps
-        // its stale default (Normal) and a later SC_RESTORE (un-minimize from the taskbar) restores to Normal, losing a
-        // Maximized window's state (the "always comes back default" bug). Guard on the real transition so a redundant
-        // Minimized->Minimized re-raise can't overwrite the saved pre-minimize state with Minimized itself.
+        // The title-bar minimize comes through here, not SC_MINIMIZE, so record the state to restore to; only on a real
+        // transition, so a repeated Minimized cannot overwrite it.
         if (e.State == WindowState.Minimized && chromeState != WindowState.Minimized)
             lastWindowState = chromeState;
         chromeState = e.State;   // keep the WndProc snapshot current (this fires on every State change)
@@ -612,11 +565,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private static PixelPoint ToPixel(Vector2 screen) => new(screen.X, screen.Y);
 
 
-    // The OS move loop (a caption drag, ours included via BeginMoveDrag) runs INSIDE the window procedure and swallows
-    // the mouse - no managed move/up arrives while it lasts. These two messages are the only view we get of a gesture
-    // that is otherwise invisible to us: WM_MOVING on every step, WM_EXITSIZEMOVE when the button comes up. That is what
-    // lets a torn-off window be dropped back onto a tab strip - the drop is decided from where the window is, not from
-    // input we cannot see. Marshalled to the loop thread like every other handler here: they reach the visual tree.
+    // The OS move loop swallows mouse input, so WM_MOVING and WM_EXITSIZEMOVE are the only view of a caption drag (e.g.
+    // dropping a torn-off window onto a tab strip). Marshalled to the loop thread.
     private IntPtr HandleMoving(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         // lParam is the rectangle the OS is about to put the window at, so the position can be kept CURRENT through the
@@ -725,11 +675,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private IntPtr HandleNcHittest(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
-        // A window that declared itself TRANSPARENT TO INPUT must say so here, whatever chrome it has. WS_EX_TRANSPARENT
-        // alone is not enough: the OS asks the window where the point landed, and a window that answers "my client area"
-        // has claimed it - the style only decides what happens when nobody claims it.
-        // Measured on the docking compass, an overlay that is nothing but a read-out: custom chrome made it answer
-        // HTCLIENT everywhere, so it swallowed every click over the area it floats above and over any window under it.
+        // Input-transparent windows must answer HTTRANSPARENT here; WS_EX_TRANSPARENT alone loses to an HTCLIENT answer.
         if (window.TransparentToInput)
         {
             handled = true;
@@ -784,11 +730,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             if (window.ResizeGripRect.Contains(gripDip)) result = NcHitTest.Bottomright;
         }
 
-        // The caption strip stays HTCLIENT: the drag is MANAGED. A geometric HTCAPTION here couldn't know the z-order, so
-        // any interactive content floating over the title bar (a popup, a SlidePanel, an overlay button) had its clicks
-        // stolen by the OS caption move-loop. Instead the TitleBar's PART_DragArea handles MouseLeftButtonDown and calls
-        // DragMove() (ReleaseCapture + WM_NCLBUTTONDOWN/HTCAPTION -> the SAME native drag + Aero Snap). Managed hit-testing
-        // already respects overlays, so a drag only starts when the drag area is genuinely the topmost element.
+        // The caption stays HTCLIENT: TitleBar starts the native drag itself, so content over the title bar keeps clicks.
 
         isOverSizeFrame = result == NcHitTest.Left || result == NcHitTest.Right || result == NcHitTest.Top ||
                           result == NcHitTest.Bottom || result == NcHitTest.Topleft || result == NcHitTest.Topright ||
@@ -806,12 +748,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             return Win32Interop.DefWindowProc(window.Handle, windowMessage, wParam, lParam);
         }
 
-        // Custom chrome: return the proposed window rect UNCHANGED as the client rect -> the whole window is client, so
-        // the OS draws no visible frame. WS_THICKFRAME is still set, so native resize / Aero Snap / the drop shadow /
-        // maximize-to-work-area keep working; the resize borders come back via WM_NCHITTEST.
-        // Query the LIVE maximized state, not the cached chromeState: a native caption drag restores a maximized window
-        // mid-loop and fires WM_NCCALCSIZE before our chromeState catches up. Trusting the stale "Maximized" then inset a
-        // now-normal window, leaving a ~2px frame strip poking through the top. IsZoomed is always correct at this instant.
+        // Custom chrome: the whole window is client while WS_THICKFRAME keeps resize, snap and shadow. IsZoomed, not the
+        // cached chromeState, which lags when a caption drag restores a maximized window.
         if (Win32Interop.IsZoomed(window.Handle))
         {
             // A maximized WS_THICKFRAME window is oversized by the frame on every edge (positioned at -frame), so a full
@@ -911,11 +849,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             return IntPtr.Zero;
         }
 
-        // Read the new size synchronously (the message's transient state), but APPLY it on the UI loop thread via the
-        // same dispatch input uses. The Width/ClientWidth setters fire ClientSizeChanged, which mutates the renderer's
-        // viewport/scissor/projection + IsRendererUpToDate + re-runs layout - doing that straight off the OS message
-        // thread races the render/layout loop (a non-volatile flag it may never see, a torn viewport vs swapchain), so
-        // the picture stops tracking the window. Marshalled through the queue it runs in order at the next Update start.
+        // Read here, applied on the loop thread: the size setters reach the renderer and layout, which must not race it.
         Win32Interop.GetWindowRect(window.Handle, out var rect);
         Win32Interop.GetClientRect(window.Handle, out var client);
         var w = rect.Width;
@@ -961,13 +895,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         return IntPtr.Zero;
     }
 
-    // The window moved to a monitor with a different scale (or the scale changed). wParam packs the new DPI (LOWORD X /
-    // HIWORD Y); lParam is the RECT the OS wants the window at, already sized for the new DPI. Apply that rect
-    // synchronously here (a Win32 op that must run on the owning thread), but marshal the managed DpiScale update onto
-    // the loop thread - it fires DpiChanged, which re-scales the renderer + re-lays-out, and must not race the loop.
-    // Windows announces a personalisation change - the user flipping light/dark, or the scheduled switch at sunset -
-    // by broadcasting WM_SETTINGCHANGE with "ImmersiveColorSet" in lParam. Announced, not polled: nothing here asks
-    // the OS repeatedly, it is told.
+    // Light/dark switches arrive as a WM_SETTINGCHANGE broadcast with "ImmersiveColorSet" in lParam.
     private IntPtr HandleSettingChange(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         handled = false;   // a broadcast: other windows and the default handler still want it
@@ -991,6 +919,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         return IntPtr.Zero;
     }
 
+    // wParam packs the new DPI and lParam the suggested rect; the rect is applied here on the owning thread, the scale on
+    // the loop thread.
     private IntPtr HandleDpiChanged(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         handled = true;
@@ -1127,13 +1057,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             modifiers, MouseDevice.CurrentDevice, GetTimeStamp());
         DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(eventArgs));
 
-        // Hold the OS mouse capture on the WINDOW while ANY mouse button is down (button state read from wParam, which
-        // the OS sets per message). This guarantees the window receives the button-UP even when the release happens
-        // OUTSIDE it, so a drag past the window edge (a scrollbar thumb dragged out and released) still gets its release
-        // and stops - instead of sticking and then "following" the pointer with no button held. Runs on THIS message-pump
-        // thread that owns the window (SetCapture is thread-affine). The app-level routing capture (MouseDevice.Captured)
-        // is separate and set on the loop thread by the marshalled ProcessEvent above - which is exactly why mirroring
-        // THAT here was unreliable: Captured is not set yet when this line runs.
+        // OS capture while any button is down (from wParam), so a release outside the window still arrives; set here on
+        // the pump thread, independent of MouseDevice.Captured, which the loop thread sets later.
         var anyButton = InputModifiers.LeftMouseButton | InputModifiers.RightMouseButton |
             InputModifiers.MiddleMouseButton | InputModifiers.X1MouseButton | InputModifiers.X2MouseButton;
         var buttonDown = (modifiers & anyButton) != 0;
@@ -1201,11 +1126,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         return centre;
     }
 
-    // Caption drag: hand the window to the OS modal move loop (which also does Aero Snap + maximized restore-drag). This
-    // is called on the LOOP thread (input routing), but the native WM_NCLBUTTONDOWN/HTCAPTION handoff must run on the
-    // thread that OWNS the HWND's input queue - otherwise the move loop reads no held button and returns instantly. So we
-    // just PostMessage the request to the window; CustomWndProc runs HandleBeginMoveDrag on the owner thread and does the
-    // in-thread trick there. lParam = packed screen cursor pos so the native loop starts from the right point.
+    // Hands a caption drag to the OS move loop; posted, because the handoff must run on the HWND-owning thread.
     public void BeginMoveDrag()
     {
         if (window == null || window.Handle == IntPtr.Zero) return;
@@ -1229,14 +1150,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private IntPtr HandleCaptureChanged(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
-        // WM_CAPTURECHANGED also arrives when WE take the capture ourselves - lParam names the window that GAINED it,
-        // and on a button press that is this very window (see HandleMouseLeftButtonDown, which calls SetCapture). Taking
-        // our own capture is not losing it, so only a capture that went ELSEWHERE (another window, another app, alt-tab)
-        // is worth reacting to.
-        //
-        // DEFENSIVE, not a fix for anything seen: it was written for a drag that stopped following the mouse, and the
-        // probe then showed this branch never fired - that defect was elsewhere entirely (Canvas.Left marked the wrong
-        // element). Kept because the rule stands on its own; delete it if it ever gets in the way.
+        // lParam names the window that gained capture; taking our own capture is not losing it.
         if (lParam == window.Handle)
         {
             handled = true;

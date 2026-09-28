@@ -32,11 +32,8 @@ public sealed class NineSliceSkin
     /// stand asked to be baked rather than one that was decoded.</summary>
     public ImageSource Source { get; }
 
-    /// <summary>A VECTOR skin, cut the same 0.25 as every bitmap one. It exists to be looked at: the brush is raster by
-    /// design, so a drawing is rasterised before it is cut, and what has to be checked by eye is whether the corners
-    /// come out at the density they are DRAWN at rather than at whatever the panel's size left over. The ornaments are
-    /// CIRCLES on purpose - an axis-aligned square stays crisp however badly it is resampled, and would hide exactly the
-    /// defect this skin is here to show.</summary>
+    /// <summary>A vector skin cut at 0.25, to check that rasterized corners keep their drawn density; circles, since
+    /// squares would hide resampling blur.</summary>
     public static NineSliceSkin Vector()
     {
         var edge = new SolidColorBrush(Colors.SteelBlue);

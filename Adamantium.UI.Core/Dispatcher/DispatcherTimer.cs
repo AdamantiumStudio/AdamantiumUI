@@ -3,15 +3,8 @@ using System.Threading;
 
 namespace Adamantium.UI.Core.Dispatcher;
 
-/// <summary>
-/// A timer whose <see cref="Tick"/> is raised back on the thread that created it (the UI thread), like WPF's
-/// DispatcherTimer. It wraps a thread-pool <see cref="System.Threading.Timer"/> and marshals each tick through the
-/// <see cref="SynchronizationContext"/> captured at construction (the UI thread installs a dispatcher-backed context,
-/// whose Post queues onto the dispatcher), so handlers may safely touch thread-affine UI state.
-///
-/// Lives in Core (not the UI assembly) so controls - e.g. <c>RepeatButton</c> and the ScrollBar parts built on it -
-/// can use it. With no captured context (a headless test), the tick is raised inline on the timer thread.
-/// </summary>
+/// <summary>A timer whose <see cref="Tick"/> is raised through the <see cref="SynchronizationContext"/> captured at
+/// construction; with none (headless), it ticks on the timer thread.</summary>
 public sealed class DispatcherTimer : IDisposable
 {
     private readonly SynchronizationContext _syncContext;

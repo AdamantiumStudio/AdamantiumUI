@@ -7,12 +7,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>The "File" button at the head of the strip and the BACKSTAGE it opens: the whole window given over to a rail
-/// of commands down the left and the chosen page beside it. Not a drop-down - Office stopped making it one in 2013, and
-/// the reason holds here: what belongs behind "File" is pages (recent files, export, options), and a page does not fit
-/// in a menu.
-/// <para>A <see cref="Selector"/> because that is what the rail does: a row either OPENS A PAGE - and the selection is
-/// which page - or it is a plain command that runs and closes. See docs/RIBBON_PLAN.md §7.</para></summary>
+/// <summary>The "File" button and the full-window backstage it opens: a rail of rows that either select a page or run a
+/// command and close.</summary>
 public class RibbonApplicationMenu : Selector
 {
     /// <summary>What the button says - "File".</summary>
@@ -320,11 +316,7 @@ public class RibbonApplicationMenu : Selector
 
     private void OnPopupClosed(object sender, EventArgs e) => IsOpen = false;
 
-    /// <summary>Opened, the backstage takes the window - so the keyboard has to come with it, or it is left standing on
-    /// the button behind a page that now covers everything.
-    /// <para>Not straight away: the rows are built when the overlay is first measured, and only the popup layer's pass
-    /// can say that they exist - the window's own layout never touches this subtree. So listen to that pass and step in
-    /// on the first tick where there is something to step into. Same seam a context menu needs.</para></summary>
+    // Moves focus into the opened backstage on the first popup-layer pass that has built its rows.
     private void MoveKeyboardInside()
     {
         if (_popup == null) return;

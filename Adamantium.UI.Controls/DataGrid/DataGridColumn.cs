@@ -10,11 +10,8 @@ using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>One column of a <see cref="TreeDataGrid"/>: what its header says, how wide it is, and how its cells are
-/// drawn and edited. A column DESCRIBES cells - declared once, consulted by every row - so it holds no per-row state.
-/// <para>A <see cref="FundamentalUIComponent"/> that JOINS the grid's logical tree, so <c>{Binding}</c> and
-/// <c>{Ancestor}</c> resolve on it as on any element. Everything it reads off a ROW is a real
-/// <see cref="BindingBase"/>, never a member name: a name carries no converter, format, mode or validation.</para></summary>
+/// <summary>One column of a <see cref="TreeDataGrid"/>: header, width, and how its cells draw and edit; no per-row state.
+/// It joins the grid's logical tree and reads rows through real bindings.</summary>
 public abstract class DataGridColumn : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
@@ -37,11 +34,8 @@ public abstract class DataGridColumn : FundamentalUIComponent
         nameof(IsReadOnlyBinding), typeof(BindingBase), typeof(DataGridColumn),
         new PropertyMetadata(null, OnRowBindingChanged));
 
-    /// <summary>What this column will accept. Asked of every row, not only of an edit: data arrives wrong as readily
-    /// as it is typed wrong, and a table that only marks what was typed in front of it is no use on a loaded page.
-    /// <para>A record that reports its OWN errors (<see cref="System.ComponentModel.INotifyDataErrorInfo"/>) is
-    /// honoured with or without this - the two are asked together, and the rule is what a page without a validating
-    /// view-model uses.</para></summary>
+    /// <summary>What this column accepts, asked of every row and not only of edits; a record's own
+    /// <see cref="System.ComponentModel.INotifyDataErrorInfo"/> errors count too.</summary>
     public static readonly AdamantiumProperty ValidationRuleProperty = AdamantiumProperty.Register(
         nameof(ValidationRule), typeof(DataGridValidationRule), typeof(DataGridColumn),
         new PropertyMetadata(null, OnValidationRuleChanged));
@@ -417,12 +411,8 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// <summary>The grid this column was added to, or null while it stands alone.</summary>
     protected internal TreeDataGrid Owner => LogicalParent as TreeDataGrid;
 
-    /// <summary>Whether this column's value can be read WITHOUT the interface: a plain <c>{Binding Path}</c> with
-    /// nothing that could transform it IS the property, so a cached getter off the item gives the same answer the
-    /// binding would - measured at tens of nanoseconds against some three microseconds through a binding.
-    /// <para>Anything that could make the cell show something ELSE - a converter, a StringFormat, a source of its own,
-    /// an element or a multi-binding - is NOT this, and must be read through the binding: a search that reads a value
-    /// the cell does not show points at text nobody can see.</para></summary>
+    /// <summary>Whether a cached getter can read the value instead of the binding: only a plain {Binding Path} with no
+    /// converter, format or source of its own.</summary>
     protected internal bool ReadsWithoutTheUI =>
         SortMemberPath is { Length: > 0 }
         || (Binding is Binding
@@ -462,12 +452,8 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// the table - pointing at text nobody can see.</summary>
     protected internal virtual bool IsSearchable => true;
 
-    /// <summary>Whether this column stands in the table at all - the ONE answer the layout, the headers, the footers
-    /// and the cells all ask. Two different things can say no, and they are not the same question:
-    /// <see cref="IsVisible"/> is the user's choice, and being GROUPED BY is the table's - a column's value is the same
-    /// on every row of its group and already written in that group's caption, so leaving it in repeats one value down
-    /// the whole table and takes the room the caption needs.
-    /// <para>Derived, never stored: a flag mirroring the grouping is a flag that goes stale.</para></summary>
+    /// <summary>Whether the column is in the table: <see cref="IsVisible"/> and not grouped by, since a grouped value already
+    /// sits in the group caption. Derived, never stored.</summary>
     public bool IsShown => IsVisible && Owner?.GroupDescriptions.Contains(this) != true;
 
     /// <summary>Writes an edited value into one item through this column's binding, converting on the way. False when

@@ -13,11 +13,7 @@ namespace Adamantium.UI.Controls.DataGrid;
 /// column and which item it stands for and reads both from there, so it survives being recycled onto another row.</summary>
 public class DataGridCell : ContentControl
 {
-    // A cell CLIPS ONLY WHILE IT IS BEING EDITED (see OnIsEditingChanged): a clip is a GPU scissor and a scissor change
-    // ends the batch, so a clipping cell cannot share a draw call - measured at 467 draws a frame against 191. The
-    // editor is the one case it was ever for; ordinary content is kept inside the column by TextTrimming.
-    // "Clip when the content overflows" is NOT AVAILABLE: Measure and Arrange both constrain what a child reports, so
-    // neither pass can tell a cell that its content wanted more room.
+    // A cell clips only while editing, since a scissor ends the draw batch; ordinary content is kept in by TextTrimming.
 
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
         typeof(bool), typeof(DataGridCell), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
@@ -110,11 +106,8 @@ public class DataGridCell : ContentControl
         nameof(ShowsHorizontalLine), typeof(bool), typeof(DataGridCell),
         new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender, OnGridLineChanged));
 
-    /// <summary>The two rules as ONE thickness for the cell's own border to carry - right for the column rule, bottom
-    /// for the row rule. Elements of their own cost 147 draw segments a frame on a 90-cell table; the active cell's
-    /// outline simply overrides the rule, and there is only ever one of it.</summary>
-    /// <remarks>The default MATCHES the two flags' defaults: both are true, so a cell never CHANGES them and the
-    /// callback never runs - a zero default would leave every cell ruleless.</remarks>
+    /// <summary>Both grid rules as one border thickness (right: column, bottom: row), cheaper than separate elements. The
+    /// default matches the flags' defaults, so the callback need not run.</summary>
     public static readonly AdamantiumProperty GridLineThicknessProperty = AdamantiumProperty.Register(
         nameof(GridLineThickness), typeof(Thickness), typeof(DataGridCell),
         new PropertyMetadata(new Thickness(0, 0, 1, 1), PropertyMetadataOptions.AffectsRender));
@@ -433,12 +426,7 @@ public class DataGridCell : ContentControl
         ColumnIndex = columnIndex;
         Item = item;
 
-        // The EDITING template has to survive this. Attach runs on every measure pass, not only on a rebind, so handing
-        // the cell its plain template back here wiped the editor before it was ever built - editing looked implemented
-        // and did nothing at all.
-        // A PLACEHOLDER shows none of it until it is opened: a display template over a record that does not exist draws
-        // a live-looking control - the stand's tick box came out bright and half-set - that reads to the user as part
-        // of the table and answers to nothing.
+        // Keep the editing template, since this runs on every measure pass; a placeholder row shows nothing until opened.
         ContentTemplate = IsEditing ? column?.EditingTemplate ?? column?.DisplayTemplate
             : IsPlaceholder ? null
             : column?.DisplayTemplate;
@@ -466,11 +454,8 @@ public class DataGridCell : ContentControl
         IsSearchMatch = grid?.IsSearchMatch(item, columnIndex) ?? false;
         IsCurrentSearchMatch = grid?.IsCurrentSearchMatch(item, columnIndex) ?? false;
 
-        // A brush the grid names wins over the theme's, and one it stops naming HANDS THE COLOUR BACK. Writing null
-        // would not do that: null is a local value like any other, and a local value outranks the theme - the cell
-        // would be left painted in nothing. Clearing the local slot is what lets the theme's own setter be seen again,
-        // and it has to be done on the way out too: these carriers are recycled, so a cell that once took the grid's
-        // colour would otherwise keep it for every row it is ever reused for.
+        // A brush the grid names wins over the theme's; one it stops naming clears the local slot so the theme shows again,
+        // which recycled cells need.
         Adopt(GridLineBrushProperty, grid?.GridLinesBrush);
         Adopt(SearchMatchBrushProperty, grid?.SearchMatchBrush);
         Adopt(SearchCurrentBrushProperty, grid?.SearchCurrentMatchBrush);

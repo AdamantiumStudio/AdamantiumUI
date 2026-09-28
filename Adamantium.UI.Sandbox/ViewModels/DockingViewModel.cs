@@ -208,11 +208,8 @@ public partial class DockingViewModel : TabPageViewModel
     }
 
     // --- Asking the USER, which is where the synchronous refusal above runs out ---------------------------------------
-    // A flat "no" needs no conversation, so PaneClosing can answer it on the spot. "Do you want to close it anyway?"
-    // cannot: the answer arrives later, and an event that must return Cancel immediately has nowhere to wait.
-    // So the DIALOG path runs before the close is ever asked for: whoever wants to close (here the tab menu) asks the
-    // application first, awaits the answer, and only then calls the area. The area stays synchronous and knows nothing
-    // about dialogs.
+    // PaneClosing must answer synchronously, so confirmation dialogs run before the close: the caller awaits the answer,
+    // then calls the area.
 
     private readonly System.Collections.Generic.HashSet<string> _asks = [];
 

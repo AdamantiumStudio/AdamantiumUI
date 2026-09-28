@@ -18,7 +18,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 // Pure-CPU (no GPU) tests for the ItemsControl core: item -> container generation through the ItemContainerGenerator,
-// and that the ItemTemplate's bindings resolve against each item. Non-virtualizing path (Phase 1).
+// and that the ItemTemplate's bindings resolve against each item. Non-virtualizing path.
 [TestFixture]
 public class ItemsControlTests
 {
@@ -273,17 +273,8 @@ public class ItemsControlTests
     [Test]
     public void VirtualizingWrapPanel_HugeWindow_RealizesInCappedSlicesButReportsFullExtent()
     {
-        // 600 tiles, tiny 10px cells, 300x300 viewport => 30 cols x 20 lines: the ENTIRE set is on-screen at once, so the
-        // natural window is all 600. Realizing 600 containers in one measure is the resize-freeze burst; the panel must
-        // instead SLICE the fill across passes - while reporting the FULL extent immediately (so the scrollbar is correct
-        // and the not-yet-realized tail fills in).
-        //
-        // The slice is a TIME budget, NOT a count (ScrollBindBudget / FillBindBudget): a fixed count is fine for cheap
-        // scroll rebinds but spends >100 ms in one frame when every slot has to CREATE a container. So "at most N per pass"
-        // is not a contract the panel makes, and asserting it would only measure how fast this machine is. Pin the budget
-        // to the smallest POSITIVE value instead: it is spent before the first bind returns, so the loop binds exactly its
-        // guaranteed MinBindsPerPass floor and the slicing is exact. Not zero - zero now means "no budget at all", which
-        // is the opposite of what this test needs.
+        // All 600 tiles are on screen, so the fill must slice across passes while reporting the full extent at once. A
+        // minimal positive time budget makes each pass bind exactly MinBindsPerPass (0 would mean no budget).
         const double TinySlice = 1e-6;
         {
             var slice = VirtualizingPanel.MinBindsPerPassDefault;
@@ -340,11 +331,7 @@ public class ItemsControlTests
     [Test]
     public void VirtualizingWrapPanel_CellGrowsAfterRealize_ContainerAndContentResizeToNewCell()
     {
-        // Repro of the STATIC "container resize" bug (LayoutView tiles): a tile is a Stretch Border with NO intrinsic
-        // size, so it must FILL its cell. Realize at a SMALL cell, then GROW the cell (slider up). Because both-pinned
-        // cells are measured with a CONSTANT CellConstraint (so a cell change doesn't re-measure every tile), the grown
-        // cell reaches the tiles only via ARRANGE. If the container's content isn't re-arranged to the new cell, it stays
-        // frozen at the old smaller size inside a now-larger cell - the garble the user sees.
+        // Stretch tiles without intrinsic size must fill a grown cell; the new size reaches them only through arrange.
         var items = Enumerable.Range(0, 300).Cast<object>().ToList();
         var ic = new ItemsControl
         {
@@ -820,13 +807,8 @@ public class ItemsControlTests
         });
     }
 
-    // Repro of the Layout tab hang: a tiled WrapPanel items host whose ItemWidth/ItemHeight bind to the CONTROL's
-    // DataContext (LayoutViewModel.RectSize), not to the item. The items-host panel only ever receives a DataContext by
-    // INHERITANCE from the ItemsControl (unlike an ItemTemplate, where the container sets DataContext=item explicitly).
-    // If that inheritance doesn't reach the panel, ItemWidth stays NaN -> SeedCell probes a size-less Border -> the cell
-    // collapses to ~0 -> the panel decides EVERY one of the 600 items is "visible" and realizes them all synchronously
-    // (the multi-second tab-switch freeze), while the ~0px tiles show nothing. Guard both: the binding resolves AND only
-    // a bounded window is realized.
+    // The items host inherits the control's DataContext, so ItemWidth/ItemHeight bindings resolve and only a bounded
+    // window is realized (a collapsed cell would realize all 600).
     [Test]
     public void ItemsHostPanelBindingResolvesAgainstControlDataContext_AndVirtualizes()
     {
@@ -855,11 +837,7 @@ public class ItemsControlTests
         var panel = (WrapPanel)ic.ItemsHostPanel;
         var gen = ic.ItemContainerGenerator;
 
-        // The WINDOW, not a stopwatch. 800x400 with a 64px cell is 12 columns and eleven realized lines (the visible
-        // 6.25 rounded up, the partially-visible one, and a line of lead each side) = 132. The bound was 120, which this
-        // only ever cleared because the per-pass bind budget had managed just MinBinds=8 of them by the time it was
-        // asked - so the assertion was measuring how fast the machine was, and any speed-up in binding "broke" it. What
-        // the test is actually for is the collapsed-cell hang, where a zero-sized cell realizes ALL 600.
+        // Bounded by the realized window: 12 columns x 11 lines (visible, partial, and a lead line each side).
         var window = panel.Columns * 11;
 
         Assert.Multiple(() =>
@@ -1030,11 +1008,8 @@ public class ItemsControlTests
         });
     }
 
-    // Same continuous-scroll correctness contract, but on the 2D WrapPanel - the panel the DENSE grid (Layout tab) actually
-    // uses. The StackPanel test above exercises the 1D path; this one locks the WrapPanel path under transform-only scroll:
-    // a scroll is ONE translation of the (viewport-sized) panel + clip, tiles at ABSOLUTE grid slots. Every realized tile
-    // must stay at its own (col, row-offset) world position after every fractional step. Explicit 20x20 cells in a 100-wide
-    // viewport => exactly 5 columns, so index i sits at world (col*20, row*20 - offset).
+    // The WrapPanel under transform-only scroll: 5 columns of 20x20 cells, index i at world (col*20, row*20 - offset)
+    // after every fractional step.
     [Test]
     public void VirtualizedWrapGridStaysCorrectUnderContinuousScroll()
     {

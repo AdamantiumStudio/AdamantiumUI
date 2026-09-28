@@ -3,13 +3,8 @@ using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Core.Templates;
 
-/// <summary>
-/// A <see cref="DataTemplate"/> for TREE-shaped data. On top of rendering an item (the template body draws its HEADER) it
-/// declares where that item's CHILDREN live via <see cref="ItemsSource"/>. An <see cref="ItemsControl"/> whose containers
-/// are headered (MenuItem / TreeViewItem) uses it so each generated container gets its header drawn by this template AND
-/// its own items bound through <see cref="ItemsSource"/>, re-applying the SAME template to those children - which is what
-/// unrolls a tree of arbitrary depth from one template. See ItemsControl.PrepareContainer for the wiring.
-/// </summary>
+/// <summary>A <see cref="DataTemplate"/> for trees: the body draws an item's header and <see cref="ItemsSource"/> names
+/// its children, which reuse the same template at any depth.</summary>
 public class HierarchicalDataTemplate : DataTemplate
 {
     public HierarchicalDataTemplate()

@@ -5,17 +5,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Navigation;
 
-/// <summary>
-/// Region on a <see cref="DockingArea"/>: a view model navigated to becomes a <see cref="Pane"/>, and the region's
-/// current view is whichever pane is active.
-/// <para>Without this the docking area is an island - the main part of an editor's UI, reachable only by hand, while
-/// the whole navigation layer (<see cref="INavigationService"/>, <see cref="IViewLocator"/>) goes past it. A
-/// <see cref="Selector"/> adapter already covers ONE group of tabs; what an area adds is the choice of PLACE, which a
-/// tab strip does not have.</para>
-/// <para>Where a view model lands: the DOCUMENT WELL, because that is what opening a document means - unless the view
-/// model says otherwise via <see cref="IDockablePane"/>, which is how a tool gets opened against an edge. A pane that is
-/// already open is ACTIVATED rather than opened a second time, wherever the user has since moved it.</para>
-/// </summary>
+/// <summary>Region on a <see cref="DockingArea"/>: a navigated view model becomes a <see cref="Pane"/> in the document well
+/// (or where <see cref="IDockablePane"/> says); an already open pane is activated where it is.</summary>
 public sealed class DockingAreaRegionAdapter : IRegionAdapter
 {
     private readonly IViewLocator _viewLocator;
@@ -72,13 +63,8 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
                 opened = true;
             }
 
-            // Putting the region's current view on top is for a sync that OPENED NOTHING - a re-entry, a restore, a
-            // region rebuilt around panes that already exist. When this sync has just opened one, the opening already
-            // decided what is on top, and the region's "current" is still the view it was on a moment ago: the list of
-            // active views changes BEFORE CurrentViewModel does, so activating it here reaches into whatever panel that
-            // older view lives in and turns it to that tab. Measured: opening a document in one zone moved a zone
-            // nobody had touched, and the change of CurrentViewModel then arrived and put the new document on top
-            // anyway - so the line achieved nothing except disturbing the other panel.
+            // Only a sync that opened nothing activates the current view: after an open, CurrentViewModel is still the
+            // previous view and activating it would switch tabs in an untouched panel.
             if (!opened
                 && region.CurrentViewModel != null
                 && panesByViewModel.TryGetValue(region.CurrentViewModel, out var current))
@@ -89,11 +75,8 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             syncing = false;
         }
 
-        // NAMED handlers, every one of them, so that all of this can be taken off again. It used to be five lambdas and
-        // no way to remove any: a view rebuilt on re-entry hands the region a NEW area while the old one - detached from
-        // the tree, but still subscribed - goes on syncing into its own layout. Measured on the stand: two areas alive,
-        // and every document opened after that arrived in BOTH, so a zone nobody touched moved to the tab it had just
-        // been given.
+        // Named handlers so they can be removed: a view rebuilt on re-entry hands over a new area, and the old one must
+        // stop syncing.
         void OnActiveViewsChanged(object s, EventArgs e) => Sync();
 
         void OnRegionPropertyChanged(object s, System.ComponentModel.PropertyChangedEventArgs e)

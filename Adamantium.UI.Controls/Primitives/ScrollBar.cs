@@ -17,11 +17,8 @@ public class ScrollBar : RangeBase
     // The cross-axis thickness a bar has when no theme says otherwise. A DEFAULT, not the answer: see BarThickness.
     private const double DefaultThickness = 12.0;
 
-    /// <summary>How thick the bar is across its short axis - its Width when vertical, its Height when horizontal.
-    /// <para>A PROPERTY rather than a constant because it is a THEME's number: a dense editor skin wants a thinner bar
-    /// than a touch-friendly one. The control still writes the cross axis itself (that is what fixes one axis and lets
-    /// the other stretch), and it writes it at Local priority - so while this was a const, a style setter for Width was
-    /// simply overwritten and no theme could change it at all. Setting THIS is what a theme does now.</para></summary>
+    /// <summary>The bar's cross-axis thickness. Themes set this rather than Width/Height, which the control writes
+    /// itself.</summary>
     public static readonly AdamantiumProperty BarThicknessProperty = AdamantiumProperty.Register(nameof(BarThickness),
         typeof(double), typeof(ScrollBar),
         new PropertyMetadata(DefaultThickness, PropertyMetadataOptions.AffectsMeasure, OnBarThicknessChanged));
@@ -89,11 +86,7 @@ public class ScrollBar : RangeBase
 
     private void ApplyOrientation()
     {
-        // Fix the CROSS axis and leave the long one alone. It used to clear the long axis to NaN as well, which was
-        // harmless only while this ran once from the constructor - before any markup. As soon as a theme's BarThickness
-        // setter could re-run it, it landed AFTER the markup and wiped an author's Width="320": the bar took its length
-        // from whatever the parent panel happened to be, and a sibling label that changed width during a drag resized
-        // the thumb on every frame.
+        // Fix only the cross axis: this re-runs after markup, and clearing the long axis would wipe an author's size.
         if (_stampedAxis is { } stamped && stamped != Orientation)
             ClearValue(stamped == Orientation.Vertical ? WidthProperty : HeightProperty);
 
@@ -191,11 +184,8 @@ public class ScrollBar : RangeBase
     private void OnLineDecrease(object sender, RoutedEventArgs e)
         => SetValueAndNotify(Value - SmallChange, ScrollEventType.SmallDecrement);
 
-    // Sets Value (RangeBase coerces it into range) and raises Scroll with the coerced value. SetCurrentValue, NOT a plain
-    // Value= : a thumb drag / page / line is USER INPUT, and writing Value at Local priority would permanently mask a
-    // {Binding} on Value (a bar bound TwoWay to a shared offset stopped following the source once the user touched it -
-    // two bars on one value desynced after the first drag). SetCurrentValue writes into the binding slot, so the two-way
-    // write-back still pushes to the source and the next source change refreshes this bar cleanly.
+    // Sets Value (coerced) and raises Scroll. SetCurrentValue, since user input at Local priority would mask a binding
+    // on Value.
     private void SetValueAndNotify(double newValue, ScrollEventType type)
     {
         SetCurrentValue(ValueProperty, newValue);

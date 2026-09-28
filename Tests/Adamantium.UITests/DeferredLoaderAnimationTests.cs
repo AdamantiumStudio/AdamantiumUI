@@ -16,14 +16,8 @@ using Setter = Adamantium.UI.Core.Resources.Setter;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// What every loader in the theme actually is: a style trigger whose enter action spins a NAMED PART - and that part is a
-/// <see cref="Transform"/>, not an element. Two things follow, and the Loaders page showed both when they were missed.
-/// The action runs while the view is still being BUILT (a style is applied as the element is constructed, and an enter
-/// action runs once, as its condition becomes true), so for content built off the loop thread it runs there - where the
-/// tables it writes are not its to touch. And it cannot simply wait for "its target to attach", because a transform never
-/// enters the visual tree at all: it has to wait on the element that OWNS it.
-/// </summary>
+// Loader triggers animate a named Transform while the view may still be built off the loop thread; the animation must
+// wait for the transform's owning element to attach.
 [TestFixture]
 public class DeferredLoaderAnimationTests
 {

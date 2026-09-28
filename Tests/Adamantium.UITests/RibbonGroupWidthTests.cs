@@ -118,12 +118,8 @@ public class RibbonGroupWidthTests
         Assert.That(panel.Children.Select(Ribbon.GetSize), Is.All.EqualTo(RibbonSize.Small));
     }
 
-    // A probe must leave no trace in the LAYOUT either, not just in the sizes: MeasurePacked also derives the columns
-    // and their widths.
-    //
-    // WEAK: it passes with the restoring re-measure removed as well, because arranging a measure-invalid panel
-    // re-measures it and repairs the columns before anything can see them. Kept as a guard against the ordering
-    // changing, NOT as evidence - the real symptom was found in a log from the running window.
+    // A probe leaves no trace in the columns MeasurePacked derives. Weak: arrange's re-measure also repairs them, so this
+    // only guards the ordering.
     [Test]
     public void ProbingAWidth_LeavesTheAppliedVariantLaidOutCorrectly()
     {

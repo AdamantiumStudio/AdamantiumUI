@@ -8,19 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>
-/// A control that hides a ScrollViewer inside its template still has to let the outside say how that viewer behaves.
-/// WPF does it with ScrollViewer's ATTACHED properties written on the control
-/// (<c>&lt;ListBox ScrollViewer.VerticalScrollBarVisibility="Hidden"/&gt;</c>), and the template reaches them with an
-/// owner-qualified <c>{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}</c>.
-/// <para>All of the machinery was already here - the properties are RegisterAttached, and
-/// AdamantiumPropertyMap.ResolveProperty already understood a dotted, parenthesised path - but no template ever used
-/// it. Both list templates bound the BARE name, which is looked up as a property OF THE LIST; a ListBox has none, so it
-/// resolved to null and threw while the template was being built. From outside that looks like a control with no
-/// template at all, which is exactly how it was found.</para>
-/// <para>The template is taken from the THEME rather than hand-built here, because the thing under test is the theme's
-/// markup - a hand-written template would only prove that the binding engine works, which was never in doubt.</para>
-/// </summary>
+// ScrollViewer attached properties set on a list reach its themed template via {TemplateBinding
+// (ScrollViewer.VerticalScrollBarVisibility)}; uses the shipped theme's template.
 [TestFixture]
 public class ScrollPolicyFromOutsideTests
 {

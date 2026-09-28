@@ -13,14 +13,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// What a tile-size drag costs, headless: the same gesture the sandbox reproduces by hand, run here so it can be measured
-/// as often as needed without a person at the keyboard. Not an assertion - it prints counters and passes; read the output.
-///
-/// A caution learned the hard way: this harness has no theme, no styles and no renderer, so it UNDERSTATES the real thing.
-/// It is good for shape (does the cost scale with the window, or worse?) and useless for "is the app fast now" - that only
-/// the live stand answers.
-/// </summary>
+// Prints (does not assert) the cost of a tile-size drag headless. No theme or renderer, so it shows scaling, not
+// absolute app speed.
 [TestFixture]
 [Explicit("Measurement probe - run it deliberately and read the numbers")]
 public class TileResizeCostProbe

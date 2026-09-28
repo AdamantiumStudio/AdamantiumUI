@@ -74,11 +74,8 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// opaque and frameless. Tying it to how the window is composed makes one of those impossible to ask for.</summary>
     bool ShowWindowBorder { get; set; }
 
-    /// <summary>Per-pixel transparency: the window's own rendering is composed by the desktop WITH its alpha, so a
-    /// translucent brush or a rounded, antialiased edge shows what is behind it. Read when the surface is created.
-    /// <para>This is the honest version of a see-through window - not a colour key with its exact-match fringing, and
-    /// not a bitmap pushed at the OS. Needs the surface to offer pre-multiplied composition; when it does not, the
-    /// window is simply opaque and says so.</para></summary>
+    /// <summary>Per-pixel transparency via premultiplied desktop composition, read when the surface is created; opaque if
+    /// the surface cannot do it.</summary>
     bool UseTransparentComposition { get; set; }
 
     /// <summary>How this window's frames reach the screen, or Inherit to follow the application's setting. Each window
@@ -92,11 +89,8 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// OS message thread. Empty = nothing draggable (custom chrome off, or no title bar).</summary>
     Rect CaptionDragRect { get; set; }
 
-    /// <summary>The resize-grip region (client DIP): the bounds of a <c>ResizeGripper</c> in the bottom-right corner. A
-    /// point inside it hit-tests as the bottom-right sizing corner (HTBOTTOMRIGHT) so the window resizes from the grip,
-    /// used by the grip-only <see cref="Core.WindowResizeMode.CanResizeWithGrip"/> mode (a fully custom-chromed window
-    /// with no edge resize borders). A ResizeGripper publishes it on layout; the worker reads it (plain Rect, thread-safe)
-    /// from the OS message thread. Empty = no grip.</summary>
+    /// <summary>The resize grip's bounds in client DIPs, hit-tested as the bottom-right sizing corner; empty means no
+    /// grip.</summary>
     Rect ResizeGripRect { get; set; }
 
     /// <summary>Per-window DPI scale (device pixels per DIP), separate X/Y (usually equal on desktop). 1,1 = 96 DPI /

@@ -56,11 +56,8 @@ public class ThemeManager : IThemeManager
     /// that comes back at the same version needs none of the revalidation a returning view otherwise does.</summary>
     public static int Version { get; private set; }
 
-    /// <summary>Bumped whenever the PALETTE is repainted - a variant switch, and a swap (which repaints it by replacing
-    /// it). A variant deliberately leaves styles, templates and property values alone, so <see cref="Version"/> does not
-    /// move for one; but the colours in every brush DID change, and anything that was out of the tree at the time was
-    /// told nothing. That is the question a returning parked subtree has to ask, and it is not the same question as
-    /// "must I be re-styled".</summary>
+    /// <summary>Bumped whenever the palette is repainted (variant switch or swap), unlike <see cref="Version"/>; lets a
+    /// returning parked subtree check for repaints.</summary>
     public static int PaletteVersion { get; private set; }
 
     /// <summary>Switch the current theme's variant. See <see cref="IThemeManager.SetVariant"/> for why this is not a
@@ -93,12 +90,7 @@ public class ThemeManager : IThemeManager
         // a raw COLOUR has no such thread - a gradient stop is handed a value, and only this tells it there is a new one.
         UIAppContext.Current?.ResourceManager?.NotifyResourcesChanged();
 
-        // Nothing else to do here. A variant writes new colours into the brushes the palette already owns, and a brush
-        // tells its owners - which INCLUDES the elements that took the value by inheritance, because an inherited value
-        // is materialised on the inheritor and attaches from there. There was a window-wide paint walk in this spot,
-        // added on the theory that a TextBlock inheriting Foreground is not an owner and would never be told; the pixel
-        // test in InheritedBrushRepaintTests disproves it - the text follows the brush with no walk anywhere in sight.
-        // The text that really did stay in the old colour was a STALE SNAPSHOT one layer down (TextRenderUnit.RefreshColors).
+        // Nothing else: recolored brushes notify their owners, including inheritors (see InheritedBrushRepaintTests).
         return true;
     }
 
@@ -130,12 +122,8 @@ public class ThemeManager : IThemeManager
             return;
         }
 
-        // A real swap: this frame ONLY raises the busy overlay (IsThemeChanging above) - a fixed 48x48 that needs no palette.
-        // DEFER both the palette swap AND the content re-style by one frame. Both churn the whole tree, and doing them now
-        // makes THIS a long frame; the overlay's compositor basis is captured at the START of a frame (before its own layout
-        // runs), so a long swap frame keeps the spinner at 0x0 - unrecorded, nothing to animate - for its whole duration:
-        // the frozen spinner. Next frame the overlay is already laid out (48x48), so the compositor spins it right through
-        // the churn. The opaque scrim hides the single stale-palette content frame.
+        // A real swap: this frame only raises the busy overlay; the palette swap and re-style wait a frame so the spinner
+        // is laid out and composited first.
         var contentStarted = false;
         AnimationManager.AddTicker(dt =>
         {
@@ -208,11 +196,7 @@ public class ThemeManager : IThemeManager
     {
         LayoutManager.Quiescent -= OnLayoutQuiescent;
 
-        // The swap has drained: every template that was going to be rebuilt has been, and the elements it replaced are
-        // out of the tree for good. They are still held, though - a brush keeps every element painting with it
-        // subscribed, and it is only ever TOLD to let go when that element's property takes a different value, which is
-        // exactly what never happens to something discarded. Nothing else in the run knows that a whole application's
-        // worth of elements just died; this is the one moment that does. See Brush.SweepEveryBrush.
+        // The swap has drained: sweep brushes still holding the discarded elements (see Brush.SweepEveryBrush).
         Media.Brush.SweepEveryBrush();
 
         var args = _swapArgs;

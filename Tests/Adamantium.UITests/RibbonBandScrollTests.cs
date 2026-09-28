@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// The last resort of the adaptive band (docs/RIBBON_PLAN.md §3.4): when everything has been shrunk and collapsed and it
+// The last resort of the adaptive band: when everything has been shrunk and collapsed and it
 // still does not fit, the row scrolls - by WHOLE GROUPS, because a half-shown group reads as damage rather than as
 // "there is more".
 [TestFixture]

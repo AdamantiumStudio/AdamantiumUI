@@ -6,15 +6,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Docking;
 
-/// <summary>
-/// The five indicators shown over the group under the pointer - centre for "another tab here", four sides for "split
-/// it" - plus the translucent preview of where the pane would land.
-/// <para>The decision is made by hitting an INDICATOR, not by which quarter of the group the pointer is in. A quarter
-/// map has no edges the user can see, so the only way to find out what a drop will do is to do it; five targets can be
-/// aimed at, and the preview says what each one means before the button comes up.</para>
-/// <para>Geometry lives in <see cref="ZoneAt"/> and is pure arithmetic over the target rectangle, so what the compass
-/// shows and what a drop does are one calculation asked twice - see <see cref="DockTarget"/>.</para>
-/// </summary>
+/// <summary>The five dock indicators over the group under the pointer (center for a tab, sides to split) and the preview of
+/// where the pane lands; the geometry in <see cref="ZoneAt"/> serves both.</summary>
 public class DockCompass : Panel
 {
     private readonly Border _preview = new();
@@ -140,13 +133,8 @@ public class DockCompass : Panel
     private bool _armedIsEdge;
     private double _edgeExtent = double.NaN;
 
-    /// <summary>Aims at the group under the pointer - its rectangle in THIS control's own coordinates - and lights up the
-    /// indicator the pointer is on, or <see cref="DockZone.None"/> between them.
-    /// <para>This control covers the whole docking area, in one overlay window that neither moves nor resizes for the
-    /// length of a drag. That is what makes the rectangle safe to pass: it is a sub-rectangle of a surface that is not
-    /// changing under it. Sizing the window to the GROUP instead meant the rectangle and the surface were two separate
-    /// updates racing each other - measured, the overlay had already resized to the next group while the compass was
-    /// still laid out at the previous size, so the cross was built around a centre it was nowhere near.</para></summary>
+    /// <summary>Aims at the group under the pointer (a rectangle in this control's coordinates, which cover the whole docking
+    /// area) and lights the indicator under the pointer.</summary>
     /// <param name="isEdge">The armed indicator is one of the four EDGE anchors rather than one of the cross - which is
     /// what decides whether the preview covers part of the group or part of the whole area.</param>
     /// <param name="edgeExtent">How wide the band an edge anchor would take is, so the preview shows what the drop does.</param>
@@ -164,16 +152,7 @@ public class DockCompass : Panel
     /// <summary>Nothing is aimed at - draw neither the indicators nor the preview.</summary>
     public void Clear() => AimAt(default, DockZone.None);
 
-    /// <summary>Which zones the panes being dragged are ALLOWED to land in - the rest are not drawn at all.
-    /// <para>Not drawn rather than drawn-and-inert: an indicator is a promise that dropping there does something, and one
-    /// that quietly declines is worse than none - you aim at it, nothing happens, and there is no way to tell a refusal
-    /// from a missed target. What CANNOT be shown this way is the application's veto (DockingArea.PaneDocking), which is
-    /// asked on the drop: the compass shows what the ZONES allow, which is data, and a veto is an exception to it.</para>
-    /// <para>Deliberately NOT an AdamantiumProperty, unlike the brushes and sizes beside it. Those are looks and belong to
-    /// the theme; this is the state of the gesture in progress, like the aimed-at rectangle - it comes from the panes
-    /// being dragged and nobody else has an opinion worth having. Made settable from markup, a theme could say "All" and
-    /// get indicators that decline, since the real check lives in DockingArea.Resolve.</para>
-    /// </summary>
+    /// <summary>The zones the dragged panes may land in; the rest are not drawn. Gesture state, not a themeable property.</summary>
     public DockZone AllowedZones
     {
         get => _allowed;
@@ -260,11 +239,8 @@ public class DockCompass : Panel
         };
     }
 
-    /// <summary>Where a pane dropped in <paramref name="zone"/> would end up inside <paramref name="target"/>. A side
-    /// takes half by default; the centre joins the tabs and so covers the whole group.
-    /// <para><paramref name="extent"/> overrides how much the newcomer takes along the split axis - an EDGE anchor is a
-    /// side panel, a band of a couple of hundred pixels, not half the editor. Same function for the preview and for what
-    /// the drop then does, so the two cannot disagree.</para></summary>
+    /// <summary>Where a pane dropped in <paramref name="zone"/> lands inside <paramref name="target"/>: half for a side (or
+    /// <paramref name="extent"/>), all of it for the center. Used by both preview and drop.</summary>
     public static Rect PreviewOf(Rect target, DockZone zone, double extent)
     {
         if (double.IsNaN(extent) || extent <= 0) return PreviewOf(target, zone);

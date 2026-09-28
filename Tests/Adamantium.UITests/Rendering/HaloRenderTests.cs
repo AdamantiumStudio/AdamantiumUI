@@ -401,14 +401,7 @@ public class HaloRenderTests
         Assert.That(below.R, Is.GreaterThan(40), $"the shadow is missing: {below}");
     }
 
-    // WHERE a band is drawn is answered by TWO things, exactly as it is for every fill family: the bake folded into the
-    // instance, and the transform slot applied on top of it. The bake used to be dropped here and the slot was the
-    // band's ONLY address - right while that slot holds the full world, wrong the moment it holds a motion NODE's,
-    // because the shape's own place INSIDE the node then has nowhere to live and the band collapses onto the node's
-    // origin. Measured as a sliding view's aura jumping to the top-left corner while its shape moved correctly.
-    //
-    // The claim is deliberately "identical", not "roughly there": a node above a shape is a statement about how the
-    // frame is drawn, never about what it looks like.
+    // A band under a motion node draws identically to one without: the bake stays in the instance under the node's slot.
     [Test]
     public void AnAuraInsideAMotionNode_StaysOnItsShape()
     {
@@ -451,11 +444,7 @@ public class HaloRenderTests
         return pixels;
     }
 
-    // A RECOLOUR, on the very next frame. The bands are their own records in their own arena, and only the recording
-    // walk ever wrote them - so a repaint rewrote the shape's fill and left its aura on the old colour until some
-    // unrelated frame happened to walk the scene. "It catches up eventually" is exactly the bug: the colour a hand just
-    // chose has to be on screen now, and it must not cost the frame a walk to get there.
-    // The same holds for a SHADOW: both sides ride this one collector, split only by which side of the fill they paint.
+    // A recolored aura or shadow shows on the very next frame, without a walk.
     [Test]
     public void RecolouringAnAura_ShowsOnTheNextFrame_WithoutAWalk()
     {

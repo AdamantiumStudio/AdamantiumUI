@@ -2,13 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A content control is a HOLDER: it shows one thing and adds nothing of its own. So this theme's version says the
-         same as any other would, and that is the right answer rather than a missing one - there is no editor-specific
-         way to hold a piece of content. It is written out here all the same, because a theme that borrows even one
-         template from another is a theme that changes when the other one does.
-         The transition properties are forwarded because the presenter is where a content swap is animated, and which
-         controls animate their content is the APPLICATION's decision, not the theme's - dropping them here would take
-         that decision away from it. -->
+    <!-- A plain content holder, restated here so this theme borrows no template. Transition properties are forwarded to
+         the presenter, leaving animation to the application. -->
 
     <Style Selector="ContentControl">
         <Setter Property="Template">

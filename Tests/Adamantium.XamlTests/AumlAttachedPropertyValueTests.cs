@@ -2,11 +2,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>An ATTACHED property is not a property on the element - it is <c>Owner.SetName(target, value)</c>. Every
-/// form of value has to reach that setter, not just a literal.
-/// <para>A non-literal one did not: <c>{x:Static}</c> on an attached property emitted nothing at all, so the property
-/// kept its default and nothing reported a problem. Found on a region name - the control declared a region whose name
-/// was never set, so it was never wired to one, and navigation ran into a region nobody was showing.</para></summary>
+// Every value form, not only literals (e.g. {x:Static}), reaches an attached property's Owner.SetName(target, value).
 [TestFixture]
 public class AumlAttachedPropertyValueTests
 {

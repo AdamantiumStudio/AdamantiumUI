@@ -183,22 +183,12 @@ public class Transform : AnimatableUIComponent
             return;
         }
 
-        // The RENDER thread IS drawing this transform's animated matrix (see Compositor) - so re-baking it here is pure
-        // double work (the fps cost). This loop write is only the MIRROR that keeps hit-testing and bindings in step.
-        // "Recently" and not just "owns": if the compositor holds the entry but is NOT applying it - its owner isn't
-        // recorded, e.g. a spinner the theme swap just re-templated - the picture would freeze, so fall through and let the
-        // loop thread re-bake it, exactly as for an uncomposited transform.
+        // The render thread is drawing this matrix, so this write is only a mirror; if it has not applied it recently,
+        // fall through and re-bake.
         if (Media.Animation.Compositor.EntryFor(this) is { AppliedRecently: true }) return;
 
-        // A transform change MOVES the owning element; the recorded geometry is unchanged. When the owner is a MOTION
-        // NODE its instances reference its transform-table slot, so only that node is marked (one matrix rewrite +
-        // replay); otherwise the conservative global Transform mark re-bakes world transforms as before. Neither is a
-        // STRUCTURAL mark, so a held theme swap still reaches layout quiescence and completes. Transform's inner properties
-        // carry no AffectsRender, so without this they'd self-mark nothing and the animation heartbeat had to fall back to
-        // MarkStructural every tick (a full-window walk = the tab-drag lag).
-        // Owner is null only when this transform isn't assigned as anyone's RenderTransform (so it moves nothing yet) -
-        // MarkTransform then records an UNNAMEABLE move and the recorder re-captures the whole layout snapshot for that
-        // frame rather than silently keeping a stale entry.
+        // A transform moves its owner without changing geometry: mark just the motion node, else the global Transform
+        // mark (which, with no owner, re-captures the snapshot).
         if (Owner is { IsRenderMotionNode: true } node) RenderDirty.MarkNodeTransform(node);
         else RenderDirty.MarkTransform(Owner);
     }

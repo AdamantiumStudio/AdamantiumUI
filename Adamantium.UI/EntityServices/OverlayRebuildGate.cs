@@ -5,15 +5,7 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.EntityServices;
 
-/// <summary>
-/// Whether an overlay STAGE - the popups, the adorners - could look different than it did last frame. A stage that
-/// cannot say this rebuilds itself every frame: it walks its components, re-records their draws and re-rasterizes them,
-/// for a picture identical to the one already on screen. Measured on an idle window: the adorner stage walked 2732 times
-/// in 25 seconds to draw nothing at all.
-/// <para>Asked of the flattened stage: the set of drawn components, whether any of them says its content is stale, and
-/// whether any of them moved. That is far cheaper than the rebuild it decides against - and it is the same question for
-/// every stage, which is why it lives in one place rather than once per processor.</para>
-/// </summary>
+// Decides whether an overlay stage (popups, adorners) could differ from last frame, so an idle stage skips its rebuild.
 internal sealed class OverlayRebuildGate
 {
     private HashSet<Guid> _prevIds = new();
@@ -30,14 +22,8 @@ internal sealed class OverlayRebuildGate
     {
         var changed = false;
 
-        // A RECOLOUR - an opacity, a brush pulse, a theme fade - was the one kind of change this gate could not see. It
-        // leaves the commands, the geometry, the positions and the open set all identical, so every question below
-        // answers "no" and the stage keeps replaying the picture it last built. That is why a title bar's traffic-light
-        // glyphs, faded in and out by a trigger writing Opacity, stopped obeying the trigger as soon as the window
-        // settled: while it was still opening something else moved the gate every frame and hid the defect.
-        // Asked as a COUNTER rather than of the mark set itself: the sets are cleared once per frame by the loop thread
-        // (UIApplication.RenderDirty.Clear), and this stage builds later, on the render thread - it would find them
-        // already empty. The count only grows, so a mark can't be missed no matter which thread wins.
+        // Recolors (opacity, brush pulses) change nothing else checked here. A monotonic counter, since the loop thread
+        // clears the mark sets before this render-thread build runs.
         var marks = scope?.TotalPaintMarks ?? 0;
         if (marks != _seenPaintMarks)
         {
@@ -45,12 +31,8 @@ internal sealed class OverlayRebuildGate
             changed = true;
         }
 
-        // LETTERS THAT LANDED are a change to what this stage draws, and until now the gate never asked. An overlay is
-        // built by BuildFromComponents, which fuses record and apply and so never runs the content path's late-glyph
-        // adoption - and the gate held the rebuild back because the open set, the geometry and the positions were all
-        // unchanged. So a glyph that finished rasterizing AFTER a popup first opened had nothing to put it on screen:
-        // a SlidePanel's close cross stayed blank until the panel was closed and opened again, which is what finally
-        // moved the gate. Asked here because this is the one place that decides whether the stage redraws at all.
+        // Late-rasterized glyphs also need a rebuild: BuildFromComponents never runs the content path's late-glyph
+        // adoption.
         var landed = Adamantium.Graphics.Fonts.FontAtlasStore.LandedVersion;
         if (landed != _seenGlyphVersion)
         {

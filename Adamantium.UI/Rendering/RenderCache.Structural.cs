@@ -330,12 +330,8 @@ public partial class RenderCache
         return TryLastRankOfSubtree(before, out rank);
     }
 
-    // Everything under a component that left the DRAWN set - two very different fates:
-    //  - DETACHED from the tree: gone. Free its units.
-    //  - HIDDEN (or under something hidden): still there and likely back soon (a recycled list container). It leaves the
-    //    paint order but KEEPS its units, so a re-show is a re-insert, not a GPU-buffer rebuild - freeing here would churn
-    //    every container on every scroll step.
-    // Either way its RANK and frozen layout go (re-frozen when it returns), else both maps grow forever on a recycling list.
+    // A subtree that left the drawn set: detached components free their units; hidden ones keep them for a cheap re-show.
+    // Either way rank and frozen layout are dropped.
     private void PlanRemoval(IUIComponent component)
     {
         _subtreeStack.Clear();
@@ -441,13 +437,7 @@ public partial class RenderCache
     // the root. long.MaxValue = nothing follows (the run appends at the very end).
     private long SuccessorRank(IUIComponent component)
     {
-        // BOUNDED, both walks. They follow links that are only ever as sound as the tree they were built from, and a
-        // tree can be malformed: a component that turns up TWICE among one parent's children makes its own "next
-        // sibling" point at itself, and one that is its own ancestor does the same to the climb. Either spins here for
-        // ever, on the record thread, with nothing in the stack that names the cause - an application frozen solid.
-        // The bounds are not arbitrary: a chain of links cannot honestly be longer than the number of links there are,
-        // and the climb cannot be longer than the tree is deep. Past them the plan is refused and the full walk - which
-        // re-derives everything from the components themselves - puts it right.
+        // Both walks are bounded, so a malformed tree (a duplicated child, a cycle) refuses the plan instead of hanging.
         var steps = 0;
         var links = _nextSibling.Count;
 
@@ -481,14 +471,7 @@ public partial class RenderCache
     // A walk above ran past what the tree could honestly hold. The plan cannot be trusted and is given up.
     private bool _rankWalkBroken;
 
-    // WHO comes next among a parent's painted children - built ONCE per parent per plan. This used to be answered by
-    // copying the whole child list and scanning it for `c`, per call, and the call is made once per parent being placed:
-    // a tab arriving into a container of 5000 siblings placed 228 marks and re-read 1.14 MILLION children to do it, all
-    // of it in here (ScansSuccessor was 99.98% of the total). The same "re-scan the siblings per placement" shape
-    // BuildNeighbourMaps was already written to avoid - it just was not applied to this one.
-    //
-    // The forward scan below is still O(siblings) in the worst case (nothing after `c` holds a rank at all); what it is
-    // not any more is O(siblings) PER PLACEMENT, which is the part that made a tab switch stutter.
+    // Next painted sibling per child, built once per parent per plan rather than rescanning siblings per placement.
     private readonly Dictionary<IUIComponent, IUIComponent> _nextSibling = new();
     private readonly HashSet<IUIComponent> _siblingsIndexed = new();
 

@@ -4,17 +4,7 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
-/// <summary>
-/// AppKit <see cref="INativeCursors"/>: maps a <see cref="CursorType"/> onto an <c>NSCursor</c> class shape and pushes
-/// it as the current cursor.
-/// <para>
-/// AppKit's catalog is smaller than Win32's, so several shapes fall back to the nearest sibling - this is where those
-/// substitutions are decided, and they are deliberate: Wait/AppStarting have no NSCursor (macOS shows the spinning
-/// wheel itself, per-application, not per-element), Help/UpArrow have none, and both diagonal resize shapes collapse
-/// onto the horizontal one. Everything drag-related - "not allowed", copy, link - IS native here, which is exactly the
-/// feedback the drag engine needs.
-/// </para>
-/// </summary>
+// AppKit cursors: missing shapes (Wait, AppStarting, Help, UpArrow, diagonal resize) fall back to the nearest NSCursor.
 internal sealed class MacOSCursors : INativeCursors
 {
     public void Apply(Cursor cursor)

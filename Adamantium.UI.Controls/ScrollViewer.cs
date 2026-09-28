@@ -8,13 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// Scrolls content larger than its own size, showing two overlay scrollbars (no arrow buttons). It owns scroll
-/// policy - wheel step, page size, bar visibility - and drives a <see cref="IScrollableContent"/> (the default
-/// <see cref="ScrollContentPresenter"/>) that owns the mechanism. Bars and content are kept in sync in pixel units:
-/// a bar's Maximum is Extent-Viewport, its ViewportSize is the viewport, its Value is the offset. Mirrors WPF's
-/// ScrollViewer, minus the IScrollInfo surface.
-/// </summary>
+/// <summary>Scrolls content larger than itself with overlay scrollbars. Owns scroll policy and drives an
+/// <see cref="IScrollableContent"/> that owns the mechanism; bars work in pixels.</summary>
 public class ScrollViewer : ContentControl
 {
     // A wheel notch (120 units) scrolls this many lines; a line is this many device-independent pixels.
@@ -52,14 +47,8 @@ public class ScrollViewer : ContentControl
     public static bool GetScrollChaining(AdamantiumComponent e) => e.GetValue<bool>(ScrollChainingProperty);
     public static void SetScrollChaining(AdamantiumComponent e, bool value) => e.SetValue(ScrollChainingProperty, value);
 
-    // TRUE only while BOTH bars are showing - which is the one moment the square where they cross belongs to neither of
-    // them. A template needs this and could not work it out: each bar's own Visibility is decided here from the metrics,
-    // and a style trigger cannot ask a sibling part what it came out as.
-    //
-    // Read-only because it is an OBSERVATION, not a setting: it says what the metrics produced. What is DONE about the
-    // corner stays with the theme, which is the split the rest of this control keeps (see the note on auto-hide in the
-    // Fluent ScrollViewer set) - one theme fills the square, another lets the content show through it, a third insets
-    // both bars away from it entirely.
+    // True while both bars show, so a theme can treat the corner where they cross; read-only, since it reports what the
+    // metrics produced.
     public static readonly AdamantiumProperty IsScrollBarCornerOccupiedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsScrollBarCornerOccupied), typeof(bool), typeof(ScrollViewer), new PropertyMetadata(false));
 
@@ -115,12 +104,8 @@ public class ScrollViewer : ContentControl
     // common between the two screens, which is why every reader (and every browser) keeps a couple of lines.
     private const double PageOverlap = 2 * LineStep;
 
-    /// <summary>Scrolls one viewport-worth, minus a couple of lines of overlap. False when there is nothing to scroll
-    /// or it is already parked at that end - the caller then leaves the key alone, so an enclosing viewer can take it
-    /// (the same hand-off the wheel does at its edge).</summary>
-    /// <remarks>Public and driven from the WINDOW rather than from a key handler here: routed keys travel up from the
-    /// FOCUSED element, and a ScrollViewer is deliberately not focusable - so with the focus outside it (or nowhere at
-    /// all) it never sees the key. Which is exactly the reading case, where a page gesture is wanted most.</remarks>
+    /// <summary>Scrolls one viewport minus a little overlap; false at the end or with nothing to scroll, so an outer
+    /// viewer can take the key. Called by the window, since a ScrollViewer is not focusable.</summary>
     public bool PageVertically(bool back)
     {
         if (_presenter is not { CanScrollVertically: true }) return false;
@@ -290,12 +275,7 @@ public class ScrollViewer : ContentControl
         var viewport = _presenter.Viewport;
         var offset = _presenter.Offset;
 
-        // Coalesce the SUB-PIXEL scroll stream. A high-resolution wheel / touchpad pushes metrics every frame with the
-        // offset creeping by a fraction of a pixel; each push re-writes both bars' Value, which re-arranges the whole
-        // scrollbar template - a per-frame render churn that kept the scene in constant partials (and let the odd full
-        // walk catch a virtualization row-transition mid-flight = the row that "blinks"). The thumb travel for such a
-        // tiny offset move is invisible (its length maps the whole extent onto the trough), so skip the push until the
-        // thumb would actually move a visible amount, or the extent/viewport themselves change (resize / count change).
+        // Coalesce sub-pixel scroll: skip pushing to the bars until the thumb would visibly move or extent/viewport change.
         if (extent == _lastPushedExtent && viewport == _lastPushedViewport)
         {
             // "Visible" is 0.5 DEVICE pixels: the thumb travel is in logical px, so the imperceptibility floor scales

@@ -1,19 +1,7 @@
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// One LAYER of the recorded frame: the set of draws whose mutual order does not matter, while everything else is
-/// strictly earlier or strictly later. It is not a level of the tree - depth does not decide paint order (a deep child of
-/// an early sibling paints BEFORE a shallow late one) - and two siblings that overlap cannot share one, because then
-/// their order is exactly what decides the picture.
-/// <para>The engine already computes these: a batch is flushed the moment the next draw OVERLAPS what it has pending, so
-/// one flush cycle IS such a set. What was missing is that it had no name - the cycle was implicit in a flat op stream,
-/// its place in the order was remembered as a single rank rather than the INTERVAL it really covers, and a newcomer
-/// landing inside that interval could only be dealt with by cutting the stream open (see §5a in
-/// docs/RENDER_CACHE_REDESIGN.md).</para>
-/// <para>The layer owns a slice of the recorded stream, addressed by rank INTERVAL. A newcomer whose rank falls inside
-/// the interval and which overlaps nothing the layer draws simply joins it; one that does overlap opens a layer of its
-/// own directly after - which is the ordinary operation, not a repair.</para>
-/// </summary>
+// One flush cycle of the recorded frame: draws whose mutual order does not matter, owning a slice of the op stream by
+// rank interval. A newcomer in the interval joins it if it overlaps nothing there, else opens a layer right after.
 internal sealed class RenderLayer
 {
     /// <summary>Paint rank of the first draw in this layer, and of the last. Together they are the layer's PLACE in the

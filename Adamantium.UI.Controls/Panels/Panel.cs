@@ -14,14 +14,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
    // A panel is a passive layout container - never a keyboard-focus target. That now comes for free from the
    // Focusable=false default (see InputUIComponent); no per-panel override needed.
 
-   /// <summary>A panel with no shape of its own - a Canvas where every child is placed by hand, a DockPanel where they
-   /// are stacked against edges - has exactly ONE order to answer with, and both Tab and the arrows get it: the
-   /// children's own order, or the author's numbering where there is one, run forwards by Next/Down/Right and
-   /// backwards by Previous/Up/Left.
-   /// <para>The numbering wins over the order they were added for the arrows too, and deliberately: in a panel with no
-   /// rows and no columns there is nothing for an arrow to mean EXCEPT that order, so stating it should state it once.
-   /// Panels that DO have a shape (a stack, a grid, wrapped lines, a tab strip) override this and answer the arrows
-   /// from their layout - there an explicit tab order says nothing about what sits to the left of what.</para></summary>
+   /// <summary>Tab and arrow navigation for a panel without a layout shape: children in tab-index or child order, forward
+   /// on Next/Down/Right. Panels with rows or columns override this.</summary>
    public virtual IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction) =>
       TabNeighbour(from, IsForward(direction));
 
@@ -65,11 +59,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
       return next >= 0 && next < ordered.Count ? ordered[next] : null;
    }
 
-   /// <summary>The child one step along the children's own order, or null at either end.
-   /// Over the VISUAL children, not <see cref="Children"/>: a virtualizing items host attaches its realized containers
-   /// straight to the visual tree (<c>AddVisualChild</c>), so they are not in Children at all - which is why a list
-   /// could be entered but never walked, with either the arrows or Tab. For a plain panel the two mirror each other
-   /// index for index, so nothing else changes.</summary>
+   /// <summary>The next or previous visual child, or null at either end. Visual rather than <see cref="Children"/>,
+   /// since a virtualizing host's containers are visual children only.</summary>
    protected IUIComponent Neighbour(IUIComponent from, bool forward)
    {
       IUIComponent previous = null;
@@ -158,12 +149,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
       context.ForControl(this).DrawRectangle(Background, new Rect(new Size(ActualWidth, ActualHeight)));
   }
 
-   // NO HitTestCore override: hit-testing is DECOUPLED from Background. A panel catches the mouse across its whole
-   // (honest, content-tight) bounds like every other container (Border/Decorator/Control), whether or not a Background
-   // is set - so "I forgot to set a Background" never silently makes a container click-through (the WPF gotcha this
-   // engine deliberately avoids). Children are still hit-tested BEFORE the panel, so a real child always wins. To make
-   // a panel (or any element) intentionally pass-through - e.g. a transparent overlay covering interactive siblings
-   // behind it - set IsHitTestVisible="False" explicitly; that is the one, discoverable opt-out.
+   // No HitTestCore override: a panel is hit across its bounds with or without a Background. Use IsHitTestVisible="False"
+   // to make it pass-through.
 
    // A panel measures and arranges from Children, so that is where a child taken by another parent has to be removed:
    // dropping it from the visual collection alone would leave the panel still laying out a control it no longer owns.

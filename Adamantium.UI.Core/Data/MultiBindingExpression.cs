@@ -3,14 +3,8 @@ using System.Globalization;
 
 namespace Adamantium.UI.Core.Data;
 
-/// <summary>
-/// A live <see cref="MultiBinding"/>: it creates a child expression for every <see cref="MultiBinding.Bindings"/>
-/// entry (as a <em>producer</em> — no target property of its own), gathers their <see cref="BindingExpressionBase.ProducedValue"/>s
-/// into an array, runs <see cref="MultiBinding.Converter"/>, and either pushes the result to the target property
-/// (top level) or publishes it as its own <see cref="BindingExpressionBase.ProducedValue"/> (when it is itself the
-/// child of another MultiBinding). Because a child can be another MultiBindingExpression, this nests to any depth;
-/// any leaf source change bubbles up through the chain and re-combines.
-/// </summary>
+/// <summary>A live <see cref="MultiBinding"/>: combines its producer children's values through the converter and pushes
+/// the result to the target, or publishes it when nested in another MultiBinding.</summary>
 public class MultiBindingExpression : BindingExpressionBase
 {
    public MultiBinding MultiBinding { get; }

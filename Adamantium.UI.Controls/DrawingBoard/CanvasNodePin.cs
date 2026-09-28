@@ -4,13 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>One socket on a <see cref="CanvasNode"/> - a place a connection can start or end.
-/// <para>An object and not just a number, because a pin has things to say that a count cannot: what it is called, which
-/// side it is on, what colour it wears, and whether anything is docked to it. A graph editor tells types apart by the
-/// colour of the socket long before anybody reads the label, which is why the colour is here from the start.</para>
-/// <para>An EMPTY socket is drawn hollow and a taken one solid, the way a blueprint editor does it. That is a real
-/// reading of the graph and not a decoration: it says at a glance which ends are still loose, which is the question
-/// somebody wiring a graph asks most often.</para></summary>
+/// <summary>One socket on a <see cref="CanvasNode"/>: its name, side, color and whether a wire is docked (drawn solid, or
+/// hollow when free).</summary>
 public class CanvasNodePin : AdamantiumComponent
 {
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
@@ -22,13 +17,8 @@ public class CanvasNodePin : AdamantiumComponent
     public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
         typeof(Brush), typeof(CanvasNodePin), new PropertyMetadata(null, OnLookChanged));
 
-    /// <summary>WHAT FLOWS through this socket, as a word the application chooses - "float", "image", "event". Two
-    /// sockets may be joined when they agree about it.
-    /// <para>A word and not the colour. The colour is how a person tells types apart at a glance and is the right thing
-    /// to show one with, but a colour is a presentation: two shades of the same idea, or one shade shared by two ideas,
-    /// are both things an application is entitled to do, and neither should change what may be wired to what.</para>
-    /// <para>EMPTY means "anything", which is what a socket says when the application has not been asked to think about
-    /// types at all - so a graph that never sets this behaves exactly as it did before there were any.</para></summary>
+    /// <summary>What flows through this socket, as the application's word ("float", "image"); sockets join when their kinds
+    /// agree, and empty means anything. The color is only presentation.</summary>
     public static readonly AdamantiumProperty KindProperty = AdamantiumProperty.Register(nameof(Kind),
         typeof(String), typeof(CanvasNodePin), new PropertyMetadata(String.Empty));
 

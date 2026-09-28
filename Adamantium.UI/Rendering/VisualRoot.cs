@@ -4,16 +4,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// A minimal off-screen <see cref="IRootVisualComponent"/> that hosts a single visual so <see cref="VisualRenderer"/> can
-/// record + render it into a texture (the engine's analog of UWP's RenderTargetBitmap root). It is NOT an OS window: the
-/// screen<->client transforms are identity and there is no UI context. It measures/arranges its content to the requested
-/// size, and <see cref="RootVisualExtensions.GetProjectionMatrix"/> reads ClientWidth/ClientHeight for the projection.
-///
-/// Hosting adds the content as this root's visual child, so it is for FRESH/detached trees (AUML-loaded or not-in-a-window
-/// visuals). A live, already-parented on-screen element must NOT be hosted here (two parents) - that case is baked through
-/// a parallel render cache without reparenting (see DRAG_DROP_PLAN Phase 1).
-/// </summary>
+// A minimal off-screen root hosting one detached visual for VisualRenderer: identity screen transforms, no UI context.
+// Live, parented elements must not be hosted here; they are baked without reparenting.
 internal sealed class VisualRoot : MeasurableUIComponent, IRootVisualComponent
 {
     private readonly IUIComponent _content;

@@ -125,15 +125,8 @@ public class Theme : AdamantiumComponent, ITheme
         Recolour(AccentForegroundColorProperty, OnAccent(seed));
     }
 
-    // Change the brush's COLOUR, not the theme's brush. The two look alike and cost nothing alike: a theme property that
-    // changes IDENTITY has to be pushed onto every {ThemeResource} consumer, and a list realizes one container per row -
-    // each of which reads the accent for its selected and hovered states. Measured on a 9 000-tile grid: ~18 000 property
-    // writes per step of a colour drag, about a second of them, and the window dead for forty seconds while the steps
-    // piled up. Layout and rendering were idle throughout; it was all property writes.
-    //
-    // Keeping the identity, nobody has to be told: every consumer already holds this brush, and the paint change travels
-    // the path built for exactly that (Color is AffectsPaint), which repaints the units that actually paint with it - for
-    // an accent, the selected row and the one under the cursor.
+    // Recolor the existing brush instead of replacing it: consumers already hold it, so only a paint change travels, with
+    // no property write per consumer.
     private void Recolour(AdamantiumProperty property, Color color)
     {
         if (GetValue(property) is SolidColorBrush brush)
@@ -279,25 +272,13 @@ public class Theme : AdamantiumComponent, ITheme
 
         var type = component.GetType();
 
-        // Selector.Match is purely STRUCTURAL - type IS-A + id + classes, no instance state. So a component with no id and
-        // no classes can be matched ONLY by type selectors, making its matched set a pure function of its runtime type:
-        // cache it by type. This collapses the per-element theme scan from O(all theme styles) to O(1) on repeats, so
-        // realizing N identical containers (e.g. 40 MenuItems) scans the styles once per DISTINCT type, not once per element.
-        // Class/id-bearing components are rare; they take the full scan every time (correctness over their cold path).
-        // IsNullOrEmpty, not == null: Id is registered with String.Empty as its default (an unset Id reads as ""), so a
-        // null test made EVERY component uncacheable and the scan below ran per element instead of per type. Measured on
-        // the Brushes tab: 450 ms of a 2.2 s build, 104 us per element, for a lookup that is meant to be a dictionary hit.
+        // Without id or classes the matched set depends only on the type, so cache it per type. An unset Id reads as "",
+        // hence IsNullOrEmpty.
         var cacheable = string.IsNullOrEmpty(component.Id) && !component.HasClassNames;
         if (cacheable && _typeStyleCache.TryGetValue(type, out var cached)) return cached;
 
-        // A styled TYPE is a BOUNDARY (DefaultStyleKey semantics): among the IS-A candidates, keep the type styles of only
-        // the NEAREST styled ancestor (smallest inheritance distance). So a derived control does NOT inherit a base type's
-        // implicit style - a CheckBox : ToggleButton gets the CheckBox style, not ToggleButton's - which makes matching
-        // predictable and kills the accidental-inheritance leaks. But a subclass with NO style of its own (an AUML x:Class
-        // MainWindow : Window) still falls back to its base's chrome, because the nearest styled ancestor IS the base.
-        // A selector with no type facet (class/id only) is not type-bound and always applies. Cross-type sharing that a
-        // control DOES want is explicit via Style.BasedOn. Ordering within the kept set is base-first + stable (document
-        // order at equal specificity), so a class style still lands after the type style it refines.
+        // Keep type styles only from the nearest styled ancestor type (a subclass without its own style falls back to its
+        // base); typeless selectors always apply. Order is base-first and stable.
         var matched = MergedStyles.Styles.Where(x => x.Selector.Match(component)).ToArray();
         var nearestDistance = matched
             .Where(x => x.Selector.Types.Count > 0)
@@ -338,12 +319,8 @@ public class Theme : AdamantiumComponent, ITheme
             && s.Selector.Types.Any(t => t == type));
 
     // ── Variants ──────────────────────────────────────────────────────────────────────────────────────────────────
-    //
-    // The PALETTE belongs to the theme: one brush per key, shared by every variant. A variant supplies that brush's
-    // COLOUR, not a brush of its own. That inversion is the entire point - two dictionaries of separate brush objects
-    // under the same keys would mean every element's Background receives a DIFFERENT OBJECT when the variant changes,
-    // which is a property write per element (measured at ~18000 on a swap) plus a re-subscribe on every brush. Writing
-    // a colour into a brush that is already there is O(palette keys) and touches no element at all.
+    // The theme owns one brush per palette key; a variant supplies colors, so switching writes O(palette keys) and no
+    // element.
 
     private readonly Dictionary<string, SolidColorBrush> _palette = new();
     private readonly Dictionary<ThemeVariant, ThemeVariantDefinition> _variants = new();
@@ -455,12 +432,8 @@ public class Theme : AdamantiumComponent, ITheme
 
         CurrentVariant = variant;
 
-        // Colours first: writing into the brushes that already exist, so every element drawing with one keeps drawing
-        // with the same object and simply repaints.
-        // A RAW COLOUR HAS TO BE ANNOUNCED; a brush does not. Writing into a brush that already exists reaches everyone
-        // holding it, because they hold the same object. A colour is a VALUE: the entry is replaced and nobody hears -
-        // so anything that took one live kept the old one. That is how every acrylic and liquid-glass surface stayed
-        // dark through a switch to light while the solid fills beside it followed: the tint is a raw colour.
+        // Write colors into the existing brushes. Raw color entries are values nobody holds, so their change must be
+        // announced.
         var rawChanged = false;
 
         foreach (var entry in definition.Colors)
@@ -499,16 +472,8 @@ public class Theme : AdamantiumComponent, ITheme
     }
 
     // ── One theme, several variants AT ONCE ───────────────────────────────────────────────────────────────────────
-    //
-    // Applying a variant re-colours the palette IN PLACE, and that is what makes an application-wide switch cheap. But
-    // the palette is ONE set of brushes, so a single theme object cannot show light in one subtree and dark in another
-    // at the same time - and a preview pane beside the thing it previews is exactly that.
-    //
-    // So a variant that differs from the one this theme is currently showing resolves to a SIBLING: same styles, same
-    // templates (literally the same Style objects), its own palette. Which keeps both properties, each where it
-    // belongs - the common case (the whole application on one variant) stays a colour write per palette key and costs
-    // no element anything, and the rare case (a subtree that wants a different variant) pays a re-style ONCE, when it
-    // opts in, instead of making everyone else pay for the possibility.
+    // A subtree pinned to another variant gets a sibling theme sharing the Style objects but with its own palette; it
+    // pays one re-style when it opts in.
 
     private readonly Dictionary<ThemeVariant, Theme> _siblings = new();
     private Theme _variantRoot;   // the theme this one was made from; null on the original
@@ -521,11 +486,8 @@ public class Theme : AdamantiumComponent, ITheme
         if (variant.IsUnspecified || variant.FollowsSystem) return this;
         if (!_variants.ContainsKey(variant)) return this;
 
-        // A named variant ALWAYS gets its own sibling, even when this theme happens to be showing that variant right
-        // now. Handing back the theme itself looked like a free optimisation and was a bug: the subtree then held the
-        // APPLICATION's brushes, so the moment the application switched variant the pinned subtree switched with it -
-        // a pane labelled "Dark" going light because something elsewhere changed. Naming a variant has to mean it
-        // cannot be changed by anyone else, and that is only true of brushes nobody else is holding.
+        // Always a sibling, even for the current variant: sharing the app's brushes would let an app-wide switch repaint
+        // the pinned subtree.
 
         var root = _variantRoot ?? this;
         lock (root._siblings)
@@ -612,12 +574,7 @@ public class Theme : AdamantiumComponent, ITheme
         if (Initialized || Initializing) return;
         Initializing = true;
 
-        // A theme with variants must HAVE one from the moment it is usable. Declaring a variant only creates the
-        // palette brushes; the accent, the on-accent text colour and the focus strokes are theme PROPERTIES and are set
-        // by nothing but ApplyVariant. A theme left on no variant therefore comes up with those properties null - and
-        // {ThemeResource AccentForegroundColor} (31 uses) and {ThemeResource AccentFillColorDefault} (72) then resolve
-        // to nothing, so the window's title text has no Foreground at all and the render walk throws on it. The screen
-        // shows a blank tab and empty fills, which says nothing about the cause.
+        // A theme with variants must apply one before use: accent and focus properties are set only by ApplyVariant.
         if (CurrentVariant.IsUnspecified && !DefaultVariant.IsUnspecified) ApplyVariant(DefaultVariant);
 
         foreach (var styleInclude in StyleIncludes)

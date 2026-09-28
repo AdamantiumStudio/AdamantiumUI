@@ -134,13 +134,7 @@ public class DockingAreaTests
         }
     }
 
-    /// <summary>
-    /// A REVEALED panel is a glance at a tool: a press anywhere outside it puts it away again, and only pinning keeps it.
-    /// <para>Dismissal itself now belongs to the FLYOUT (a Popup with KeepOpen=false), because the revealed body lives in
-    /// the window's popup layer - outside this group's own subtree - so the area's "was the press inside the group?" test
-    /// would count a press on the panel's own content as a press elsewhere. What is asserted here is the half that is
-    /// still the area's: that being dismissed puts the panel away rather than leaving it half-shown.</para>
-    /// </summary>
+    // A revealed panel's flyout dismisses on an outside press (KeepOpen=false); here: dismissal fully puts the panel away.
     [Test]
     public void DismissingARevealedPanel_PutsItAway()
     {

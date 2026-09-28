@@ -18,15 +18,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// Rasterizing a glyph is MSDF arithmetic - about 8 ms apiece even with every core busy - and a tab full of new text used
-/// to pay all of it before its first frame could go out (measured: 88% of the whole apply phase). So the frame ASKS for
-/// its glyphs and does not wait: they are generated on a worker, uploaded on the thread that owns the device, and the
-/// text blocks that were built without them rebuild as they land.
-/// <para>What these tests pin is the pair of promises that makes that safe: text ARRIVES (a frame that starts with an
-/// empty atlas ends up drawing the same pixels as a synchronous one), and a render that has no next frame - a bitmap
-/// bake, a preview, an off-screen test - still fills inline, because for it "later" never comes.</para>
-/// </summary>
+// Glyphs rasterize on workers and text rebuilds as they land: the final pixels match a synchronous fill, and a render
+// with no next frame fills inline.
 [TestFixture]
 [Category("Gpu")]
 public class AsyncGlyphFillTests

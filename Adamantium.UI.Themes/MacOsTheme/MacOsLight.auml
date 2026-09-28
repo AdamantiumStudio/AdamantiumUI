@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<!-- The LIGHT variant of the macOS theme. See MacOsDark for what separates these palettes from Fluent's; the same
-     three things hold here, upside down.
-
-     One difference is specific to light appearance and worth naming: a Mac's light window is NOT white. The body sits
-     near #ECECEC and the content areas within it are white, so a window reads as paper laid on a surface. Fluent does
-     the opposite - white window, grey cards - and getting this the wrong way round is what makes a light macOS skin
-     look like a washed-out Windows one. -->
+<!-- The light macOS variant (see MacOsDark): a #ECECEC window with white content areas, the reverse of Fluent. -->
 
 <ThemeVariantDefinition xmlns="http://adamantium/ui"
                         Key="Light">
@@ -83,17 +77,8 @@
     <!-- See the dark variant: no track behind the capsule, so it cannot afford to be half transparent. -->
     <PaletteColor Key="ScrollThumbFillColor" Color="#99000000"/>
 
-    <!-- A slider knob is white in both appearances, so what separates it from its background is NOT its own colour -
-        which means the separation has to vary by variant even though the knob does not. Here it is a shadow: white on
-        a white content well is otherwise held up by a hairline alone. Served As="Color" because Shadow.Color is a
-        colour, not a brush.
-
-        KEPT DELIBERATELY FAINT (20%, down from 30%). A shadow is translucent, so it composites with WHATEVER it falls
-        on - and a slider knob always straddles two things at once: the accent-filled side of the rail and the empty
-        side. The stronger it is, the more plainly the same ring reads as two different rings, one over blue and one
-        over grey. No amount of moving the rail hides that, because it is not geometry: it is the shadow doing exactly
-        what a shadow does. Strength is the only lever, and the hairline is what keeps the knob findable once the
-        shadow stops shouting. -->
+    <!-- A faint (20%) knob shadow separates the white knob on light wells; stronger, it reads differently over the filled
+        and empty rail. As="Color" for Shadow.Color. -->
     <PaletteColor Key="SliderKnobShadowColor" Color="#33000000" As="Color"/>
     <!-- The glow while the knob is HELD. Same blue as the focus stroke: both mean "this is the thing you are working
          with right now", and answering that with two different blues would be two answers to one question. -->

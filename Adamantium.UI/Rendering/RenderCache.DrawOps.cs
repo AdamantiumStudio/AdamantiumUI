@@ -59,21 +59,8 @@ public partial class RenderCache
                         device.SetScissors(op.Scissor);
                         break;
                     case RenderOpKind.Unit:
-                        // A per-unit draw bakes its full world into RenderData at RECORD time and never reads the transform
-                        // slot - while every batched draw follows its slot matrix LIVE. So on any replay where something has
-                        // moved, the two disagree: measured on a scrolling tab strip, the batched fill had followed but this
-                        // Border was still drawn 48 px back, one scroll step behind. That gap is the flicker.
-                        //
-                        // Only the compositor-driven ones. Re-pointing EVERY per-unit draw looks like it fixes the opposite
-                        // problem (a per-unit outline lagging its batched fill), but it introduces the mirror of it: the
-                        // batched half still follows its slot matrix, which a replay does not recompute, so the two halves
-                        // end up a fraction of a step apart and the element jitters. Coherence on a replay comes from
-                        // refusing to replay once the layout moved (see _layoutChangedSinceRecord), not from updating one
-                        // half of the frame.
-                        //
-                        // ...and the same holds for a unit under a node that MOVED this frame: RefreshMovedNodes has just
-                        // written that node's matrix, so both halves are being taken from one position in one frame - which
-                        // is the condition the paragraph above is really about.
+                        // Per-unit draws bake their world at record time while batches follow slots live, so re-point the
+                        // ones whose batched half moved this frame (see RepointIfItMoved).
                         RepointIfItMoved(op.Unit);
                         RefreshOverlayFade(op.Unit);
                         op.Unit.Render();
@@ -112,19 +99,7 @@ public partial class RenderCache
         Core.Diagnostics.RuntimeStats.LastOpsExecuted = executed;
     }
 
-    // A draw that baked its transform at RECORD time, on a frame where its element is somewhere else: re-point it. Three
-    // kinds of mover qualify, and only those - the compositor, which moved it on this thread; a motion node whose matrix
-    // this frame has just rewritten (RefreshMovedNodes); and an element inside a subtree whose slots this frame has just
-    // rewritten (RefreshMovedComponents). All three mean the batched half and this half are being taken from one position
-    // in one frame; re-pointing anything else is what tears a frame in two.
-    /// <summary>Hand a PER-UNIT draw the alpha its slot carries right now.
-    ///
-    /// <para>These draws (a stroke, a fill fringe, a per-unit body) are re-issued by the CPU on every replayed frame -
-    /// ExecuteOps calls Render() again - so they never needed to read the table from a shader: they only needed someone
-    /// to tell them the current number. Nobody did, which is why a unit wearing one used to keep the whole opacity
-    /// CHAIN in its baked colour and be re-baked by a slot-blind list whenever an ancestor faded. Now the chain comes
-    /// from the table (one lookup, already composed) and multiplies the element's own alpha, so the same unit's
-    /// INSTANCED fill can ride the slot like every other family.</para></summary>
+    // Gives a per-unit draw (re-issued by the CPU on replay) its slot's current composed alpha times its own.
     private void RefreshOverlayFade(IRenderUnit unit)
     {
         if (_transformTable == null || unit?.Component == null) return;
@@ -140,6 +115,8 @@ public partial class RenderCache
         RefreshOverlayFade(unit);
     }
 
+    // Re-points a record-time-baked draw only for movers whose batched half moved this frame too: the compositor,
+    // RefreshMovedNodes or RefreshMovedComponents. Anything else would tear the frame.
     private void RepointIfItMoved(IRenderUnit unit)
     {
         if (_compositedOwners.Count == 0 && _movedNodeOwners.Count == 0 && _movedOwners.Count == 0) return;
@@ -342,17 +319,8 @@ public partial class RenderCache
         // still a fill, and a label on top of it is content.
         if (_materialBatch != null)
         {
-            // Captured from what the INSTANCES cover, grown so the blur has neighbours to average at the edges - without
-            // the margin a material darkens along its border towards whatever the clamp returns.
-            //
-            // Their bounds, not the clip group's scissor. The copy is downscaled fourfold, so its resolution is the
-            // material's detail budget: taken from a whole scrolled panel, a 300x92 pane was reading about 75x23 texels
-            // and looked like fog rather than frosting. The scissor is the fallback for a segment with no bounds.
-            //
-            // The grown box is then CUT BACK to the clip group. The margin reaches outside what the material covers, and
-            // outside a scrolling panel is whatever is drawn OVER it - a scrolled pane picked up the tab strip along its
-            // top edge and the blur dragged that darkness inward as a dense band. Cut there, the sampler's clamp extends
-            // the panel's own edge pixels instead, which is what a blur against a clip boundary should do.
+            // Captured from the instances' bounds (the scissor is the fallback), grown by a blur margin, then cut back to
+            // the clip group so content drawn over a scrolled panel does not bleed in.
             const int blurMargin = 24;
             var limit = _batchOpen ? _batchScissor : fullScissor;
             var box = _materialBatch.HasPending
@@ -398,8 +366,8 @@ public partial class RenderCache
 
     // Record a batch segment op (the immediate draw already happened in Flush; this only appends it for a clean-frame
     // replay). A Flush that drew nothing returns -1 and records nothing.
-    // A LAYER is one flush cycle - the set whose mutual order does not matter (§5a). Counted here because this is where
-    // one ends: two increments per cycle, which is what phase 3 is verified against.
+    // A LAYER is one flush cycle - the set whose mutual order does not matter. Counted here because this is where
+    // one ends: two increments per cycle.
     private bool _flushedSomething;
 
     private void RecordSegment(byte batch, int segId)
@@ -444,11 +412,8 @@ public partial class RenderCache
             return ToFramebufferScissor(logical, fullScissor);
         }
 
-        // A unit under a render MOTION NODE is drawn through the node's slot matrix, which the O(1)-scroll replay REWRITES
-        // every frame WITHOUT re-recording the op stream - so its record-time world is NOT where later frames draw it (an
-        // off-viewport buffer row scrolls INTO view under the same recorded op). Culling it would drop it from the stream,
-        // leaving the row to "materialise" a frame late. Don't cull motion-node units: the scissor still clips them, and
-        // the realized window is bounded (viewport + a couple of buffer rows), so recording the few off-screen ones is cheap.
+        // Motion-node units are never culled: the node scrolls them into view without a re-record, and the scissor still
+        // clips them.
         if (NodeOf(component) != null)
         {
             clipped = true;
@@ -473,13 +438,8 @@ public partial class RenderCache
     {
         if (_lastVisualRoot == null) return default;
 
-        // LivePosition, not Position: the bindable one is updated through the loop thread's queue, so during a drag it
-        // trails the window by a frame or more - and a backdrop drawn from a stale position slides about instead of
-        // standing still on the desktop.
-        // FROZEN while the window is dragged, so a desktop-anchored backdrop rides along instead of chasing. During a
-        // drag the correct answer does not exist: the frame would need the position the window will have when it is
-        // SHOWN, which the compositor decides afterwards - measured, 7-24% of frames arrive 8px out of date (peaks past
-        // 30), and that was the shaking.
+        // LivePosition, since Position trails through the loop queue. Frozen during a drag, so the backdrop rides along
+        // rather than chasing a position the compositor has not decided yet.
         if (_lastVisualRoot is Controls.WindowBase { IsBeingMoved: true })
         {
             if (!_frozenWhileMoving) { _frozenPosition = _lastVisualRoot.LivePosition; _frozenWhileMoving = true; }
@@ -537,7 +497,7 @@ public partial class RenderCache
 
     // RECORD half of the full walk (DEVICE-FREE): DFS the tree, run component.Render, and COPY each component's commands
     // into the packet in paint order (the shared context is reused for the next component, so snapshot now). No GPU - the
-    // applier realizes them (ApplyFullWalk). This is what lets the recorder run on the update thread (docs/RENDER_THREAD_PLAN.md).
+    // applier realizes them (ApplyFullWalk). This is what lets the recorder run on the update thread.
     private void RecordFullWalk(IRootVisualComponent visualRoot, RenderPacket packet)
     {
         // Renumber from scratch with FRESH GAPS. Safe to mutate in place: the ranks no longer cross the seam (each draw
@@ -626,11 +586,7 @@ public partial class RenderCache
         {
             group.InOrder = false;
 
-            // Everyone leaves here, and whoever the walk does not put back has instances left in the arena with nobody
-            // to speak for them - a segment is issued as a RANGE, so they are drawn along with their neighbours. The ones
-            // that DO come back are skipped when the sweep runs (they are in the order again by then), so this costs a
-            // flag check apiece. Leaving it out is what painted a departed tab's sliders across the tab strip after a
-            // theme swap: the swap walks in full, and a full walk empties the order right here.
+            // Listed for the orphan sweep; groups the walk puts back are skipped by it.
             _leftTheOrder.Add(group);
         }
 
@@ -764,15 +720,10 @@ public partial class RenderCache
 
     private void ProcessRenderCommands(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, Matrix4x4F projectionMatrix, bool wasGeometryValid, long order, IReadOnlyList<Matrix4x4F> clones = null)
     {
-        // A departed subtree takes no place in the paint order, whatever the packet still says about it. The packet
-        // describes the tree as it was WALKED, and a view can leave after that - a content transition finishing inside
-        // the animation tick removes the outgoing one - so its components arrive here already detached. Recorded, they
-        // bake real instances that are issued with their segment's RANGE on every replayed frame: the outgoing view's
-        // scrollbar painting over the incoming one, at the coordinates it had. Evicting them afterwards cannot win,
-        // because the next walk puts them straight back.
+        // A subtree that left the tree after being walked takes no place in the paint order.
         if (LeftTheTree(component)) return;
 
-        // A CLONE HOST takes its place in the paint order even when it draws nothing of its own (§4o): the clone run
+        // A CLONE HOST takes its place in the paint order even when it draws nothing of its own: the clone run
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
         // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once.
         if (drawCommands.Count == 0 && clones is { Count: > 0 })
@@ -813,21 +764,11 @@ public partial class RenderCache
         }
     }
 
-    /// <summary>Frees the cached units of any control no longer attached to the visual tree. Must run during the build
-    /// (EndDraw): disposal is deferred and drained M frames later, so calling it earlier (from the detach event during
-    /// Update) would dispose a unit still in flight. Attachment, not visibility, is the keep signal - hidden-but-attached
-    /// controls retain their resources.
-    /// <para>A PARKED control is the third case: out of the tree, but coming back. Freeing its units would throw away
-    /// exactly what parking exists to keep - rebuilding them is the pause a kept-alive view is meant to avoid - so the
-    /// keep signal is "attached OR parked".</para></summary>
-    // Out of the tree and not parked - whatever else is true of it, it does not draw. Read off the GROUP's own component:
-    // a group can hold no units at all (a control whose draws are all instanced), and units[0] would then say nothing.
+    // Out of the tree and not parked. Read off the group's own component, since a group can hold no units.
     private static bool LeftTheTree(ControlGroup group)
         => LeftTheTree(group.Component ?? (group.Units.Count > 0 ? group.Units[0].Component : null));
 
-    /// <summary>Has this control left the visual tree for good? Parked visuals have left it ON PURPOSE and are kept, so
-    /// they are not departures. THE statement of it - the paint order refuses a departed subtree on the way in and
-    /// evicts one that leaves while it is there, and both have to mean the same thing.</summary>
+    // Whether a control left the visual tree for good (parked visuals have not); the single rule for the paint order.
     private static bool LeftTheTree(IUIComponent component)
     {
         if (component == null) return false;
@@ -850,6 +791,8 @@ public partial class RenderCache
         return true;
     }
 
+    // Frees units of controls neither attached nor parked. Runs during the build (EndDraw), since disposal is deferred
+    // and an earlier call could free a unit still in flight.
     private int ReconcileDetachedControls()
     {
         List<Guid> detached = null;
@@ -880,14 +823,8 @@ public partial class RenderCache
                 RemoveAndDeferDispose(id);
         }
 
-        // ...and the LAYOUT SNAPSHOTS, which this sweep never looked at. They are dropped on the two DEPARTURE loops in
-        // the applier (packet.Removed / packet.Undrawn), and a template part destroyed by a re-template appears in
-        // neither: it leaves the tree through the teardown, not through anything the record pass names. The map then
-        // keeps its key - the control itself - for the life of the window. Measured on a theme swap: 39 destroyed
-        // controls held here per swap, dead linear, while every other count in this cache stayed flat and so looked
-        // innocent. The size of a map says nothing about what its entries point at.
-        // DISCARDED, not LeftTheTree: a destroyed part still carries a RenderParent chain that reaches a live ancestor,
-        // so the departure test says it is still here. The teardown's own mark is the one thing that cannot be wrong.
+        // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
+        // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.
         List<IUIComponent> stale = null;
         foreach (var component in _applySnap.Keys)
         {
@@ -939,17 +876,7 @@ public partial class RenderCache
             unit?.DeferDispose();
         RemoveFromOrder(group, "disposed");
 
-        // ...and the TAG map, which nothing has ever removed from. _groupByTag exists so an arena slot can name its owner
-        // however far its bytes have been copied, and it is written once per group and left. Every other map here is
-        // swept - _groupById by name just above, the paint order by RemoveFromOrder - so the cache LOOKED clean while
-        // this one held every group it had ever tagged, and through the group its control and all its units.
-        //
-        // Found by walking the object graph from the strong handles rather than by guessing: the path to a retained
-        // Border ran MainWindow -> ForwardWindowRenderer -> RenderCache -> Dictionary<int, ControlGroup> -> the Border.
-        // Two mentions in the whole codebase, the declaration and one write.
-        //
-        // AFTER _leftTheOrder has been told (above): that list is what blanks the instances still being issued, and it
-        // reads the tag to do it.
+        // ...and the tag map, after _leftTheOrder (which reads the tag to blank instances).
         if (group.Tag != 0) _groupByTag.Remove(group.Tag);
         // Return its transform slot to the pool. Every drawn element holds one now (ResolveBake stopped world-baking), so
         // without this a list that recycles rows would consume slots forever. Safe here: this runs in the build phase of a

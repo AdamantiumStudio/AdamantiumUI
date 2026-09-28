@@ -8,11 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>What an <c>Auto</c> track is: exactly as big as what is in it. Not bigger when the grid has room to spare,
-/// not smaller when it has not - spare space belongs to <c>*</c> tracks, and a shortfall overflows.
-/// <para>Arrange used to re-decide this: it split any spare equally between the Auto tracks, and divided any shortfall
-/// between them by ratio. So a two-column Auto grid holding a 16-wide icon and a 24-wide label arranged them into
-/// 17.25 and 22.75 - the icon drifting right inside its inflated cell, the label clipped by what the icon took.</para></summary>
+// An Auto track is exactly its content's size in arrange: spare space goes to star tracks, a shortfall overflows.
 [TestFixture]
 public class GridAutoTrackTests
 {

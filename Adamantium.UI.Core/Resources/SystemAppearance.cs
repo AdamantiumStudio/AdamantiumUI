@@ -2,18 +2,8 @@ using System;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// What the operating system is currently asking interfaces to look like. The platform layer sets it - from the
-/// Windows personalisation setting, from the macOS effective appearance - and everything that resolves
-/// <see cref="ThemeVariant.System"/> reads it here.
-/// </summary>
-/// <remarks>
-/// Platform-neutral on purpose, and one value rather than a value per window: the OS says light or dark for the whole
-/// session, and a per-window copy would be a second place for the same fact to live in - the shape that has already
-/// cost this codebase a quadratic and a leak.
-/// <para>It is a SIGNAL, not a poll. The OS announces a change (a message on Windows, a notification on macOS), so
-/// nothing here asks repeatedly; <see cref="Changed"/> fires when the answer actually differs, and only then.</para>
-/// </remarks>
+/// <summary>The OS light/dark appearance for the session, set by the platform and read when resolving
+/// <see cref="ThemeVariant.System"/>. <see cref="Changed"/> fires only on an actual change.</summary>
 public static class SystemAppearance
 {
     private static bool _prefersDark;

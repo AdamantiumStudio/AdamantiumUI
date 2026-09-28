@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS text field. The template is the engine's - a themed Border round PART_TextPresenter inside the
-         scrolling content host - because that is what the control requires, not what Windows prefers. What is macOS
-         here is which SURFACE the field is made of:
-
-         A FIELD IS A WELL, NOT A CONTROL. Fluent builds it out of a ControlFill, the same material as a button, so a
-         field and a button sitting side by side are the same colour and only their outlines differ. A Mac sinks a
-         field into the window the way it sinks a list or an editor - it is content you type into, not a thing you
-         press. Hence SolidBackgroundFillColorSecondary, the well, shared with every other content surface.
-
-         NO HOVER, as everywhere else in this theme.
-
-         FOCUS IS THE BORDER, and only the border. A Mac also puts a wide halo round a focused field; that halo is the
-         application's ONE focus ring on the adorner layer, and a template that drew its own would be a second answer
-         to the same question. The fill does NOT change on focus either - Fluent lightens it, which reads as the field
-         becoming a control again just as it becomes editable. -->
+    <!-- The macOS text field: the engine's template on the well surface (SolidBackgroundFillColorSecondary). No hover;
+         focus changes only the border, the halo is the adorner's focus ring. -->
 
     <Style Selector="TextBox">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>

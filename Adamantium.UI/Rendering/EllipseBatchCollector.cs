@@ -13,7 +13,7 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Ellipse/circle SDF batch (the "SDF family", docs/PER_MONITOR_DPI_PLAN.md): collects same-clip SOLID full-ellipse fills
+// Ellipse/circle SDF batch (the "SDF family"): collects same-clip SOLID full-ellipse fills
 // - each baked to WORLD space on the CPU - into ONE instanced draw. The shader evaluates the ellipse implicit and
 // self-anti-aliases via fwidth, so N circles/ellipses cost ~1 draw AND are resolution-independent (no tessellation, crisp
 // at any DPI/zoom, no AA fringe). Sibling of RectBatchCollector; drawn in the SAME fill layer (below the text batch).
@@ -26,11 +26,8 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
 
     protected override IEffectPass DrawPass => Effect.BatchEllipsePass;
 
-    // Batchable = a visible solid fill + a batchable pen (none, or a SOLID stroke the SDF shader draws analytically). A
-    // SECTOR and a SEGMENT batch too: both are this same ellipse with a straight boundary added, which the field
-    // intersects (see EllipseCutDistance) - so neither needs a shape, a pass or a collector of its own. A gradient/image
-    // fill, a non-solid pen or Enabled=off still falls back to the per-unit tessellated draw. Lock-step with
-    // EllipseRenderUnit.IsSdfBatchable.
+    // A visible solid fill with no pen or a solid one; sectors and segments included (EllipseCutDistance). Keep in step
+    // with EllipseRenderUnit.IsSdfBatchable.
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>
     public static bool WantsBatch(EllipsePayload p)
     {
@@ -46,14 +43,8 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         return IsCutBatchable(p);
     }
 
-    /// <summary>Whether the angular cut is one this batch can draw. A WHOLE ellipse always is. A partial one is, with two
-    /// honest exceptions:
-    /// <list type="bullet">
-    /// <item>a NEGATIVE sweep - the tessellator mirrors the whole traversal for it (start included), and a batch that
-    /// guessed at that rule would draw a different shape than the fallback;</item>
-    /// <item>a DASHED or TRIMMED pen on a cut shape - dashes are placed by arc length along the ELLIPSE, and a sector's
-    /// outline is arc plus straight edges, so the pattern would be fitted to a contour the shape does not have.</item>
-    /// </list></summary>
+    // Cuts batch unless the sweep is negative (the tessellator mirrors it) or a dashed/trimmed pen would follow the
+    // ellipse instead of the cut outline.
     internal static bool IsCutBatchable(EllipsePayload p)
     {
         if (p.SweepAngle >= 360.0) return true;   // not cut at all - see BakeCut, the start angle is irrelevant here

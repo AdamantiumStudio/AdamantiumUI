@@ -12,16 +12,8 @@ using Image = Adamantium.UI.Controls.Image;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>
-/// Fills an <see cref="Image"/> from a <see cref="DroppedPicture"/> WITHOUT blocking the UI: the tile is already on
-/// screen showing its busy indicator, and the decode happens on a background thread. Only the finished bitmap comes
-/// back to the loop thread.
-/// <para>
-/// This is the view's half of the split: the item carries bytes and a flag, the decoding and the image type live here.
-/// Doing it in a value converter (the obvious first try) decodes INLINE on the UI thread - which for a large picture,
-/// or an animated GIF whose every frame is decoded up front, is a visible freeze.
-/// </para>
-/// </summary>
+/// <summary>Fills an <see cref="Image"/> from a <see cref="DroppedPicture"/>, decoding on a background thread; a value
+/// converter would decode on the UI thread and freeze it.</summary>
 public class AsyncPictureBehavior : Behavior<Image>
 {
     /// <summary>

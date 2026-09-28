@@ -4,16 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>WHAT CAN BE DONE TO WHAT IS SELECTED, in a bar that follows the selection frame rather than an edge of the
-/// viewport.
-/// <para>ACTIONS and not properties, with no exception: what a thing looks like belongs to the inspector, and saying it
-/// in two places is two places to keep in step. A colour swatch stood here once and was exactly that - it could only
-/// ever show ONE of the colours an object has (a shape's outline, as it happened), while a person looking at a green
-/// rectangle read it as "the colour of this", and the panel says all three of them a few pixels away.</para>
-/// <para>Everything here except the bin belongs to a DRAWING: in a graph a node's colour is its accent, paint order
-/// between nodes is not something anybody reasons about since they are all in one band, and what groups a graph is a
-/// comment frame rather than a group. So in a graph the bar is the one thing that still means something - take it
-/// away.</para></summary>
+/// <summary>Actions for the selection in a bar that follows the selection frame; properties stay in the inspector. In a graph
+/// only delete applies.</summary>
 public class CanvasSelectionBar : Control, ICanvasPart
 {
     public static readonly AdamantiumProperty CanvasProperty = AdamantiumProperty.Register(nameof(Canvas),

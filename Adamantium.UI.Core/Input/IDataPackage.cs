@@ -5,8 +5,8 @@ namespace Adamantium.UI.Core.Input;
 
 /// <summary>
 /// The drag payload abstraction: carries EITHER a live CLR object (levels 1-2, the fast in-app path) OR named formats
-/// (Text / Files / arbitrary bytes - level 3, OLE). One <c>DropCommand</c> handles both: <c>data.Get&lt;MyItem&gt;()</c>
-/// for the live object, <c>data.Contains("Files")</c> for an OS format (docs/DRAG_DROP_PLAN.md, decision 3).
+/// (Text / Files / arbitrary bytes, OLE). One <c>DropCommand</c> handles both: <c>data.Get&lt;MyItem&gt;()</c>
+/// for the live object, <c>data.Contains("Files")</c> for an OS format.
 /// </summary>
 public interface IDataPackage
 {

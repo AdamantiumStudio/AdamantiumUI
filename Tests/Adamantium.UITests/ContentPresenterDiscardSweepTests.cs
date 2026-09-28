@@ -6,16 +6,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// When a subtree is discarded, every presenter still naming one of its roots drops its handles on it. Dropping a
-/// HANDLE is not the same as letting the child GO, and the two were confused: the sweep assumed a discarded root has no
-/// visual parent left, so the field was the only thing still naming it. That holds when the PRESENTER is the one being
-/// destroyed and fails the other way round - a root discarded while its presenter goes on living is still one of that
-/// presenter's children.
-/// <para>Forgotten but not removed, it stayed in the tree: laid out, drawn, and now untracked, so no later content swap
-/// could ever release it. Measured on docking - a pane's authored body stayed under the view that replaced it and the
-/// two drew on top of each other for the rest of the session.</para>
-/// </summary>
+// A discarded root whose presenter lives on must also be removed from its children, not just forgotten.
 [TestFixture]
 public class ContentPresenterDiscardSweepTests
 {

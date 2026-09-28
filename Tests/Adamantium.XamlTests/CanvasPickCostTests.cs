@@ -13,12 +13,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>WHAT A CLICK COSTS on a plane holding nodes, and where the time goes.
-/// <para>A press feels slow once nodes are on the plane and did not before, and there are three candidates a guess
-/// cannot tell apart: the scene is walked linearly to find what was hit; a node is a CONTROL with a subtree of its own,
-/// so hit-testing walks that too; and a press touches the scene, which may set a layout pass going. This times each of
-/// them on its own and writes the numbers to a file, because a number nobody can read afterwards settles nothing.</para>
-/// </summary>
+// Times the parts of a click on a canvas with nodes (scene pick, node subtree hit-test, layout) and writes them to a file.
 [TestFixture]
 public class CanvasPickCostTests
 {

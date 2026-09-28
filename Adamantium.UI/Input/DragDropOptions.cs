@@ -5,14 +5,7 @@ using Adamantium.UI.Core;
 namespace Adamantium.UI.Input;
 
 /// <summary>
-/// The drag-drop knobs that are OURS, not the OS's - deliberately kept apart from <see cref="PlatformSettings"/>, which
-/// means "what the user configured in the system". Nobody's control panel has an opinion about how deep a scroll edge
-/// band is; calling it a platform setting would claim the OS said so.
-/// <para>
-/// Everything here has a working default and can be changed at startup by an application that wants a different feel.
-/// Per-element overrides stay where they belong: scroll speed is also an attached property
-/// (<c>DragDrop.AutoScrollSpeed</c>) so one list can differ from the rest.
-/// </para>
+/// Application-level drag-drop settings, separate from the user's <see cref="PlatformSettings"/>; set at startup.
 /// </summary>
 public static class DragDropOptions
 {
@@ -34,15 +27,8 @@ public static class DragDropOptions
     public static int GhostCursorOffset { get; set; } = 12;
 
     /// <summary>
-    /// Also offer a dragged PICTURE as a FILE. Many targets never look at a bitmap: they ask for a file list and take
-    /// nothing else - Paint 3D and packaged applications generally, even when the very same bitmap pastes into them
-    /// fine, because dropping and pasting are different handlers. With this on, a drag carrying
-    /// <c>DataFormats.Image</c> and no file list of its own also advertises one, written on demand into
-    /// <see cref="ImageFileDirectory"/>.
-    /// <para>
-    /// OFF by default, and deliberately so: it writes files to disk, which an application must ask for rather than
-    /// discover. Turn it on once at startup if your pictures should be droppable anywhere.
-    /// </para>
+    /// Also offers a dragged image as a file, written on demand into <see cref="ImageFileDirectory"/>, for targets that
+    /// accept only files. Off by default because it writes to disk.
     /// </summary>
     public static bool OfferImagesAsFiles { get; set; }
 

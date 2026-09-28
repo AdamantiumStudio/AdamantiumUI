@@ -9,14 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The strip that says what the table is sorted by, in what order, and which way each key runs - and is how
-/// all three are changed.
-/// <para>It exists because the usual answer, Shift+click on the headers, tells the user NOTHING: nothing says the
-/// table can sort by more than one column, nothing says which key decides, and the order can only be changed by taking
-/// keys off and putting them back in the right sequence by guesswork. Here the whole sort is one readable line, and
-/// every part of it has a handle.</para>
-/// <para>A header is ADDED by dropping it here, the same gesture the grouping strip already teaches - a header can be
-/// picked up and carried, and this is one more place it can be put down.</para></summary>
+/// <summary>Shows and edits the sort: keys in order, each with its direction. A header dropped here adds a key, as on the
+/// grouping strip.</summary>
 public class DataGridSortPanel : Control
 {
     private TreeDataGrid _owner;

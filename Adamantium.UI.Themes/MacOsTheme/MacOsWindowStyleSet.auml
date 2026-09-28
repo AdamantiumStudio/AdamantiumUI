@@ -2,24 +2,13 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS window. Two things differ from the Windows one, and both are about the window reading as ONE SURFACE
-         rather than as a frame around content:
-
-         THE CORNERS ARE GENEROUSLY ROUNDED. It is the most recognisable number in the theme.
-
-         THE CAPTION IS NOT A BAR. On Windows the caption is painted with the accent and separates itself from the
-         content; on a Mac it is the top of the same surface, so it takes the window's own background and the title
-         simply sits on it. That is why the caption colours below are the window's background rather than the accent -
-         the same properties, answered the way this platform answers them. -->
+    <!-- The macOS window: generously rounded corners and a caption drawn on the window's surface instead of the
+         accent. -->
 
     <Style Selector="Window">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <!-- The caption is a SURFACE OF ITS OWN, just barely. Not the accent bar Windows paints - a Mac caption belongs
-             to the window - but not a seamless continuation either: it sits a layer above the body, and a hairline
-             under it (in the caption's own template) is what separates them. Given the same colour as the body it
-             reads as nothing at all, which is what it did. Inactive drops back to the body colour, so an unfocused
-             window loses the distinction along with its title's contrast. -->
+        <!-- The caption sits one layer above the body, with a hairline below; inactive falls back to the body color. -->
         <Setter Property="TitleBarBackground" Value="{ObservableResource LayerFillColorDefault}"/>
         <Setter Property="InactiveTitleBarBackground" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
         <!-- The title dims when the window loses focus, which on a Mac is the main way an inactive window says so. -->

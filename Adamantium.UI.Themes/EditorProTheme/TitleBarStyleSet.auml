@@ -2,24 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The custom-chrome caption. The control resolves its host window and drives DragMove / Minimize /
-         ToggleMaximizeRestore / Close; the PART names and the whole trigger set are behaviour and are kept exactly.
-
-         Three things differ from Fluent, and none of them is a colour.
-
-         THE STRIP IS A BAND. It closes with a hairline along its bottom edge. Fluent's caption dissolves into the page
-         below it, which suits a document window whose content starts at the top. An editor's does not: under the
-         caption sits a tab strip, under that a toolbar, and without a line the three read as one tall smear of chrome.
-         This theme builds every boundary out of hairlines, and this is the first one.
-
-         THE TITLE STEPS BACK. Secondary, not primary. In an editor the thing you are working on is named by the TAB;
-         the caption names the application, which you already know. Fluent gives the title the same weight as content
-         because there it IS the document's name.
-
-         A GUTTER BEFORE THE WINDOW BUTTONS. An editor puts working commands in the caption, so the strip ends up
-         holding two kinds of button side by side - ones that do something to your project and ones that close it. The
-         hairline says where the second kind begins. This is the one place in the chrome where a misplaced click is
-         expensive, so it gets a boundary the eye can find without reading the icons. -->
+    <!-- The custom caption (part names and triggers kept): a band closed by a bottom hairline, a secondary-weight title,
+         and a hairline gutter before the window buttons. -->
 
     <Style Selector="TitleBar">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>
@@ -149,14 +133,8 @@
                                         Background="{ResourceReference ControlStrokeColorDefault}"/>
                             </StackPanel>
 
-                            <!-- Window buttons. VECTOR Path icons (Data + Stroke), NOT font glyphs - crisp and
-                                     font-independent. Focusable is stated HERE as well as in the class style: a value
-                                     set on a template PART wins over a style setter, so this is the one guaranteed to
-                                     hold. Without it a click left the button focused and its focus ring sat in the
-                                     caption long after the click. -->
-                            <!-- A GRID, not a stack, and only because the ORDER has to be swappable: a stack lays its
-                                 children out in markup order and nothing can reverse that from a trigger, while a
-                                 column index is an ordinary attached property a setter can write. -->
+                            <!-- Window buttons with vector Path icons, Focusable="False" on the parts; a Grid so triggers
+                                 can reorder them by column. -->
                             <Grid x:Name="PART_ButtonsPanel" Grid.Column="5" ColumnDefinitions="Auto,Auto,Auto"
                                     VerticalAlignment="Stretch">
                                     <Button x:Name="PART_MinButton" Grid.Column="0" Classes="CaptionButton" Focusable="False" Height="{TemplateBinding Height}">

@@ -1,7 +1,6 @@
 namespace Adamantium.UI.Rendering;
 
-/// <summary>How much work the most recent <see cref="RenderCache.BuildFromVisualTree"/> did this frame
-/// (docs/RENDER_CACHE_REDESIGN.md §4a/§4i).</summary>
+/// <summary>How much work the most recent <see cref="RenderCache.BuildFromVisualTree"/> did this frame.</summary>
 public enum RenderBuildKind
 {
     /// <summary>Nothing changed - the retained units were re-drawn as-is (no walk, no re-record, no transform re-bake).</summary>

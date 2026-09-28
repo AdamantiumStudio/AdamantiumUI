@@ -11,16 +11,10 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
-// GPU fill anti-aliasing (Analytic AA). A CLOSED fill contour gets a coverage fringe RING around it (FringeGeometry),
-// drawn on TOP of the CPU-triangulated solid body with alpha *= coverage -> an analytic feathered edge, no MSAA. A
-// geometry with holes / combined contours contributes one ring per contour, all in one vertex buffer = one draw.
-//
-// This is the PER-UNIT fringe: the fill it feathers isn't in the instanced path (a gradient/pattern fill, or a mesh with
-// no frozen snapshot). An instanced solid fill gets the very same ring drawn once for all its elements - see
-// InstancedFillCollector. Both build it from FringeGeometry, so the ring has ONE definition.
-//
-// The ring holds no width: the vertex shader offsets it in DEVICE PIXELS, so it is identical at any zoom - which is
-// why it is built once on the CPU here rather than re-expanded on the GPU each time the scale moves.
+/// <summary>
+/// The per-unit analytic AA fringe: a coverage ring per closed contour (FringeGeometry) drawn over the solid body, for
+/// fills outside the instanced path. Built once; the shader sizes it in device pixels.
+/// </summary>
 public sealed class GpuFillRenderComponent : UIRenderComponent
 {
     // Fringe width in DEVICE pixels, applied by the vertex shader.
@@ -51,7 +45,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         _localBounds = ComputeLocalBounds(contours);
 
         // Rented from the buffer manager (ReusableBuffer), not allocated per frame: a same-size geometry change (a
-        // resize) rewrites the ring into the existing slot with no Vulkan allocation. See GPU_BUFFER_REUSE_PLAN.
+        // resize) rewrites the ring into the existing slot with no Vulkan allocation.
         _vertexBuffer = ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, FillMemory));
         _vertexBuffer.Reserve(RingBytes);
         _vertexBuffer.Invalidate();

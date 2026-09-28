@@ -2,14 +2,8 @@
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A WIRE between two sockets: the two ends and nothing else.
-/// <para>A class and not a contract, deliberately. A wire stands in two sockets at once, and keeping those two in step
-/// is exactly the kind of bookkeeping that becomes two collections somebody has to remember to update - so the wire
-/// holds it itself: made, it puts itself in both; cut, it leaves both. One operation, one owner of the invariant, and
-/// nothing for an application to implement wrongly.</para>
-/// <para>No geometry: where a wire runs is worked out from where its nodes stand, so dragging one drags its wires with
-/// nothing to keep in step. Its ends never change either - re-routing is cutting this one and making another, which is
-/// also what the person doing it means.</para></summary>
+/// <summary>A wire between two sockets. It adds itself to both on creation and leaves both when cut; its route comes from
+/// its nodes, and its ends never change.</summary>
 public sealed class CanvasConnection
 {
     /// <summary>The socket the wire LEAVES - an output.</summary>

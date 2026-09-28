@@ -15,15 +15,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A regular polygon is one shape whose only distinguishing number is how many corners it has: 3 a triangle, enough of
-/// them a circle. Its own record and its own pass, because a polygon and an ellipse share a shape of RECORD, not a shape.
-/// <para>The tests pin what a "polygon" has to mean rather than what any one of them looks like: a triangle's flat side
-/// cuts a corner the circle keeps (which is how you tell the two apart at all), the count actually changes the shape,
-/// many corners converge on the ellipse the batch already draws, a ring hollows it, and the batch agrees with the
-/// tessellated fallback about which pixels are inside - INCLUDING the rotation, since the first vertex sits on the +x
-/// axis in both.</para>
-/// </summary>
+// Regular polygons: the corner count changes the shape, many corners converge on the ellipse, rings hollow it, and the
+// batch matches the fallback including rotation (first vertex on +x).
 [TestFixture]
 [Category("Gpu")]
 public class RegularPolygonRenderTests
@@ -194,11 +187,7 @@ public class RegularPolygonRenderTests
         });
     }
 
-    // A TRANSLUCENT outline is the honest test of the composite. Fill and stroke come out of ONE field and are combined
-    // analytically, so the half of the band that rides over the fill must be a SINGLE layer of stroke over it - and at a
-    // corner, where the outline turns and a ribbon-based stroke overlaps itself, it must be that same single layer. The
-    // straight run and the corner are compared against each other AND against the arithmetic, so neither a corner that
-    // blends twice nor a band that blends twice everywhere can pass.
+    // A translucent outline blends exactly once over the fill, on straight runs and at corners alike.
     [Test]
     public void ATranslucentStroke_IsOneLayer_AtACornerToo()
     {
@@ -228,11 +217,8 @@ public class RegularPolygonRenderTests
             $"{what} at ({x},{y}): expected ({string.Join(",", expected)}), was ({string.Join(",", actual)})");
     }
 
-    // A brush is not tied to a shape. A gradient, a pattern and a noise fill must paint the SAME polygon a plain colour
-    // does - and the shape stays a FIELD while they do it (see the batch test below), which is the whole point of having
-    // it in the SDF family rather than tessellating it the moment the fill stops being one colour.
-    // COVERED, not lit: a gradient runs to a colour whose blue channel is dark, and LitPixels reads one channel - it
-    // would count the far half of the gradient as empty and call a correct picture a hole.
+    // Pixels with any coverage (not LitPixels' single channel), so dark gradient ends still count; gradient, pattern and
+    // noise fills must cover the same polygon.
     private static int CoveredPixels(byte[] px)
     {
         var count = 0;

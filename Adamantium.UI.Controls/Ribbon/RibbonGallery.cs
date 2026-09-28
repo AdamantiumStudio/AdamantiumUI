@@ -6,11 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A grid of visual choices standing in the group itself - styles, materials, shapes. A
-/// <see cref="Selector"/>, because "which of these is the current one" is exactly the question it answers.
-/// <para>Its items are DATA. A gallery is shown TWICE at once - in the band and, when the chevron drops it, in full -
-/// and a control can only be in one place; the drop-down builds its own cells from the same
-/// <see cref="ItemsControl.ItemTemplate"/>, the same way the quick-access bar builds its own compact form.</para></summary>
+/// <summary>An in-group grid of visual choices. Items are data, since the band and the full drop-down both build cells
+/// from <see cref="ItemsControl.ItemTemplate"/>.</summary>
 public class RibbonGallery : Selector
 {
     public static readonly AdamantiumProperty ColumnsProperty = AdamantiumProperty.Register(nameof(Columns),
@@ -56,7 +53,7 @@ public class RibbonGallery : Selector
 
     // --- What the band's ladder does to it --------------------------------------------------------------------------
     //
-    // The gallery rides the SAME ladder as every other command (§3.1): the group hands it a RibbonSize, and it answers
+    // The gallery rides the SAME ladder as every other command: the group hands it a RibbonSize, and it answers
     // in columns. Small is where a gallery stops being one - three thumbnails in a strip say nothing - so there it
     // becomes the chevron alone, and the whole set is one press away.
 
@@ -93,12 +90,8 @@ public class RibbonGallery : Selector
         MouseWheel += OnMouseWheel;
     }
 
-    // The band shows a WINDOW onto the rows - two of however many the items make - and the arrows beside it were the
-    // only way to move it. A wheel over a grid of choices is what a person reaches for first, and one that does nothing
-    // reads as a gallery with nothing more in it.
-    // At the end of the run the event is LEFT UNHANDLED, the same chaining rule ScrollViewer follows: a gallery that
-    // has stopped must hand the wheel back so the strip around it still scrolls, rather than dead-ending under the
-    // pointer. A tilt wheel is not this control's axis and is passed straight through.
+    // The wheel steps the visible rows; at either end it stays unhandled so the surrounding strip scrolls, as in
+    // ScrollViewer. Tilt passes through.
     private void OnMouseWheel(object sender, Core.Input.MouseWheelEventArgs e)
     {
         if (e.IsHorizontal) return;

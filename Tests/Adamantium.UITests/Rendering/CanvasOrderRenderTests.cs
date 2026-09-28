@@ -347,11 +347,7 @@ public class CanvasOrderRenderTests
             $"a control carried out of its run into a new layer is still drawn where it was: {over}");
     }
 
-    // THE SAME QUESTION ASKED OF A SECOND FRAME, which is the only way it is ever asked in an application. Every test
-    // above takes its reading through a FRESH VisualRoot, and a fresh root writes the whole picture from nothing - so
-    // none of them has ever gone down the path a running canvas takes, where the frame after a change is PATCHED from
-    // the one before it. A picture that is gathered up and goes dark on the stand, with every structural reading saying
-    // the control is there, visible and the right size, is a picture whose slot the patch never rewrote.
+    // The same check on a second, patched frame, the path a running canvas takes (the tests above use fresh roots).
     [Test]
     public void APictureGatheredIntoAGroupSurvivesTheNextFrame()
     {

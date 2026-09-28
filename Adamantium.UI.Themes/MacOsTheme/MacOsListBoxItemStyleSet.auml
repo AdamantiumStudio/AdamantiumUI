@@ -2,21 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- A row in a macOS list, and two things make it one:
-
-         SELECTION IS A CAPSULE HELD OFF THE EDGES, not a band across the list. A Windows list paints the chosen row
-         edge to edge, so the highlight reads as a stripe THROUGH the list; a Mac draws a rounded plate INSIDE it, so
-         the highlight reads as a thing sitting in a container. The inset is a margin on the row's chrome only - the
-         row's hit area is still the full width, because clicking the empty strip beside the plate must still choose
-         the row.
-
-         AND IT IS SOLID. Fluent uses a translucent wash and keeps the label's ordinary colour, which is right for a
-         layered interface where the row's own tile must show through. A Mac list is a solid well, so the plate is the
-         accent itself and the label takes the on-accent colour - which the theme derives from the accent, so it stays
-         readable whatever accent is chosen.
-
-         NO HOVER. A row in a Finder list does not light up under the pointer; a MENU row does, and that is a different
-         control - see MacOsDropDownItemStyleSet, which is where the hover lives. -->
+    <!-- A macOS list row: selection is a solid accent capsule inset from the edges (the hit area stays full width) with an
+         on-accent label; no hover. -->
 
     <Style Selector="ListBoxItem">
         <!-- No rest Background on purpose: a transparent fill still builds a fill unit and an anti-aliased fringe per

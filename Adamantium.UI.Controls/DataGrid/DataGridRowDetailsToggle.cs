@@ -2,13 +2,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The strip on the far left that opens and shuts a record's details panel - one of these per row, in a column
-/// of its own.
-/// <para>Its own column, and not a second meaning on the tree's expander: a row can have children AND a panel, and one
-/// control that opened whichever the row happened to have would leave no way to ask for the other. Two questions, two
-/// places to press.</para>
-/// <para>It is pinned like the number strip and stands still while the columns scroll under it - a handle that slides
-/// away from the row it belongs to is a handle nobody can hit.</para></summary>
+/// <summary>Opens and shuts a row's details panel, in a pinned column of its own, separate from the tree expander since a row
+/// can have both children and a panel.</summary>
 public class DataGridRowDetailsToggle : ContentControl
 {
     /// <summary>Whether this row's panel is open - the theme turns the sign from + to − on it.</summary>

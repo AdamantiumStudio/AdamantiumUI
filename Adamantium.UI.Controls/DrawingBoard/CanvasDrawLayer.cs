@@ -6,15 +6,8 @@ using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Draws ONE RUN of an <see cref="InfiniteCanvas"/>'s scene - the items between two controls.
-/// <para>It exists because the plane has ONE order and everything on it stands in that order, controls included. A
-/// control has to be a real child of a layer to be laid out, drawn and clicked at all, and a layer is one place in
-/// paint order - so a picture with a stroke over it and another picture over that is three places, and they have to be
-/// three layers. What makes that affordable is that a layer is made per RUN of neighbours of the same sort and not per
-/// item: a drawing with two pictures in it is three layers whatever else is on the plane, and a graph of ten thousand
-/// nodes with no drawing between them is still one.</para>
-/// <para>It draws and nothing else: it takes no part in hit-testing, so what is under it stays clickable. Picking is
-/// the canvas's own walk over the scene, which sees the same order this does.</para></summary>
+/// <summary>Draws one run of an <see cref="InfiniteCanvas"/>'s scene between two controls, so drawings and controls share
+/// one paint order. Draw-only; picking is the canvas's own walk.</summary>
 public class CanvasDrawLayer : MeasurableUIComponent
 {
     private readonly List<ICanvasItem> _items = new();

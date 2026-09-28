@@ -1,18 +1,5 @@
-// THE CANVAS GRID - an unbounded plane of marks, decided per fragment from the world coordinate under it.
-//
-// A FOURTH effect, and for the reason the third one records: the driver's shader-object compiler has a ceiling on what
-// one effect can carry, and adding shaders to BrushEffect has already killed vkCreateShadersEXT on a pass that had
-// worked for months. So the grid gets its own parameter block and its own shader objects.
-//
-// What it replaces: the canvas used to emit one rectangle per mark. Measured at about a thousand a frame at 1:1, and
-// growing as viewport area over pitch squared - three thousand at the density the step is allowed to reach, four times
-// that again on a 4K viewport. Here it is ONE quad: nothing is generated for the grid, and an unbounded grid never
-// exists as geometry for a moment.
-//
-// Two things become possible that the mark-at-a-time version could not do at all. A mark is ANALYTICALLY covered, so a
-// line is exactly its width at any zoom instead of snapping between one pixel and two. And the step CROSS-FADES: the
-// finer level dissolves in as it becomes readable rather than the whole grid jumping from tens to hundreds at once,
-// which is what a grid in a 3D editor does and what makes it feel like a plane rather than a picture of one.
+// THE CANVAS GRID - an unbounded plane of marks decided per fragment on one quad: analytic line coverage at any zoom,
+// and adjacent step levels cross-fade.
 
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
@@ -114,11 +101,7 @@ float4 CanvasGridPS(GridPSInput i) : SV_Target
     // logical unit is worth. Doing it once here is what keeps the grid the same weight on a high-DPI monitor.
     float pixelsPerUnit = it.Camera.z * i.Scale;
 
-    // Camera.xy is the lattice's PHASE - where it stands within one cell - and never how far the camera has travelled.
-    // The grid repeats every cell, so this draws exactly what the true offset would; what it also does is stay inside
-    // one cell, where a float still resolves a fraction of a pixel. Given the distance instead, a million pixels out
-    // the gaps between neighbouring floats were wider than a pixel, so neighbouring fragments read the same world
-    // point: the dots ran into lines and a pan stepped the grid instead of sliding it.
+    // Camera.xy is the lattice phase within one cell, not the camera distance, so floats keep sub-pixel precision far out.
     float2 world = (i.Local - it.Camera.xy) / max(it.Camera.z, 1e-6);
 
     // The step arrives ALREADY COARSENED - the canvas works it out from the camera and hands it over, which it has to
@@ -126,14 +109,8 @@ float4 CanvasGridPS(GridPSInput i) : SV_Target
     float step = max(it.Step.x, 1e-6);
     float halfWidth = max(it.Params.w * i.Scale, 0.5) * 0.5;
 
-    // TWO levels, and BOTH readable: the step, and the one a coarsening above it. Never the one BELOW - that one is
-    // closer than the readable pitch by construction, so drawing it is not a fainter grid but a dense sub-pixel wash
-    // under the readable one, which is what every attempt to fade it produced.
-    //
-    // The main level fades as its own marks approach the pitch, which is exactly when the step is about to be taken up
-    // a level. At that moment the accent is already drawn at full and becomes the new main - so the handover has
-    // nothing to jump over. In LOGICAL pixels, and against a reciprocal the canvas sends: a division added here is what
-    // stopped the driver creating the shader at all.
+    // Two readable levels, the step and one coarser; the main fades near the minimum pitch as the accent takes over. In
+    // logical pixels, using the reciprocal the canvas sends.
     float mainPitch = step * it.Camera.z;
     float blend = saturate(mainPitch * it.Step.z - 1.0);
     float stepAccent = step * max(it.Step.y, 2.0);
@@ -150,12 +127,7 @@ float4 CanvasGridPS(GridPSInput i) : SV_Target
     float4 marksColor = it.GridColor;
     marksColor.a *= coverage;
 
-    // The marks OVER the ground, one composite - so the element is one draw and not two.
-    //
-    // NOT named "color". A pixel-stage local by that name makes this compile into a shader that loses the device -
-    // measured 6 starts of 6, against 0 of 6 for the same code under any other name, and 0 of 6 for a comment-only
-    // change, so it is the NAME and not the recompile. HLSL semantics are matched case-insensitively and COLOR is a
-    // legacy pixel-stage output semantic, so the front end evidently treats the name as one.
+    // The marks over the ground in one composite, so the element is one draw.
     float4 composited = float4(lerp(it.Background.rgb, marksColor.rgb, marksColor.a),
                            it.Background.a + marksColor.a * (1.0 - it.Background.a));
 

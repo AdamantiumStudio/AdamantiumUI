@@ -3,11 +3,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A command that opens a menu instead of doing something: Paste with its paste-special rows, a shape tool with
-/// its shapes. The flyout is a <see cref="ContextMenu"/> - the same one a right-click uses - so light dismiss, Escape,
-/// submenus and <c>ItemsSource</c> are already answered.
-/// <para><see cref="Primitives.ToggleButton.IsChecked"/> IS the open state; there is no second property saying the same
-/// thing, and the theme's checked look is what marks the command while its menu is down.</para></summary>
+/// <summary>A command that opens a <see cref="ContextMenu"/> flyout; <see cref="Primitives.ToggleButton.IsChecked"/> is the
+/// open state.</summary>
 public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
 {
     /// <summary>Reached by its key tip: drop the menu AND step the keyboard into it. A command opened from the keyboard

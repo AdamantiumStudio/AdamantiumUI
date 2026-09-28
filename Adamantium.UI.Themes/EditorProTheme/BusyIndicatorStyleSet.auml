@@ -2,26 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The loading-indicator pack. BusyIndicator has NO look of its own - only IsActive - so every indicator here is
-         purely a theme template, picked by class (<BusyIndicator Classes="Dots"/>). A new indicator is a new <Style>,
-         not a new enum value in the engine, and an app can add its own the same way.
-
-         WHAT THIS THEME CHANGES, and it runs through every one of the ten: TEMPO and AMPLITUDE.
-
-         Fluent's timings are a product page's - a ring around in 1.1s, dots bouncing over half their own size twice a
-         second. An editor's indicator is different in kind: it sits in a corner of a panel, in peripheral vision, for
-         as long as the work takes, next to text somebody is reading. Fast, wide motion off to the side is the single
-         most distracting thing a UI can do. So every loop here is roughly half again as long and every excursion is
-         smaller - calm enough to ignore while you read, alive enough to answer "is it still working?" at a glance.
-
-         WHAT IT DOES NOT CHANGE is the forms. The class name IS the form: Dots that were not three dots, or Ants
-         without a marching dash, would be a different indicator wearing the same name, and an app that asked for one
-         by name would get the other. The SIZES are already this theme's own - every number below resolves against
-         Editor Pro's Metrics, where the pieces are square-cornered - so shape follows without being restated.
-
-         Each look starts on the IsActive trigger and STOPS on the way out. These loops never end by themselves
-         (IterationCount="Infinity"), so without the ExitAction a hidden indicator would keep animating - and a looping
-         animation on a detached element is a leak. -->
+    <!-- The loading indicators, picked by class (<BusyIndicator Classes="Dots"/>). Same forms as Fluent, slower and
+         smaller for peripheral vision. Each loop stops in its ExitAction, or a hidden indicator keeps animating. -->
 
     <!-- ============================== Ring (default): a sweeping arc over a dim track ============================== -->
     <Style Selector="BusyIndicator">
@@ -299,11 +281,8 @@
         </Setter>
     </Style>
 
-    <!-- Two loops of DIFFERENT periods: the arc spins in 1.8s while its length breathes in 1.25s. Because the two
-         never line up, the whole thing never looks like it is repeating - that is the entire trick of this spinner,
-         and it is why the two durations must stay coprime-ish rather than tidy multiples. AutoReverse on the trim
-         means the arc retracts the way it grew, so there is no seam at the loop boundary; a one-way 0->1 trim shows
-         that boundary as a jump. -->
+    <!-- Spin (1.8s) and length (1.25s) loops with non-multiple periods so it never visibly repeats; AutoReverse hides
+         the loop seam. -->
     <Style Selector="BusyIndicator.Arc">
         <PropertyTrigger Property="IsActive" Value="True">
             <PropertyTrigger.EnterActions>
@@ -334,13 +313,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
-                    <!-- A RECTANGLE, not a ring, and that is not a style choice. On a circle "the dashes travel along
-                         the contour" and "the dashed ring spins" are the SAME motion - nothing can tell them apart,
-                         so the marching would read as a spin, which the Ring class already is. Straight runs and
-                         corners are what make it legible, which is also why every selection marquee this effect is
-                         named after is rectangular.
-                         The dash numbers are PIXELS (the array is not scaled by thickness): a dash has to be longer
-                         than the stroke is thick or it reads as a dot. -->
+                    <!-- A rectangle, since marching dashes on a circle read as a spin. Dash lengths are pixels and must
+                         exceed the thickness. -->
                     <Rectangle x:Name="AntsRing"
                                CornerRadius="{ResourceReference BusyPieceRadius}"
                                Stroke="{ThemeResource AccentFillColorDefault}"

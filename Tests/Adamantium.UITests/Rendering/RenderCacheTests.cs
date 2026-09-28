@@ -105,11 +105,8 @@ public class RenderCacheTests
         RenderFrame();
         var unit = _factory.Created.Single();
 
-        // Frame 2: c is dirty and now draws NOTHING, but its Render raises an unnamed structural change - so the partial
-        // pass that ALREADY consumed its dirty flag is discarded and a full walk records the frame instead. That walk
-        // reads dirtiness before calling Render, so a consumed component looks clean, renders no commands, and its
-        // cached units get reused as "draws what it drew before" - the de-selected row that kept its highlight through
-        // a fast virtualized scroll. The discarded pass must give the flag back.
+        // Frame 2: c now draws nothing and its Render escalates to a full walk; the discarded partial must give back the
+        // dirty flag it consumed.
         c.RenderAction = _ => RenderDirty.MarkStructural();
         c.Invalidate();
         RenderFrame();
@@ -320,7 +317,7 @@ public class RenderCacheTests
         Assert.That(unit.DeferDisposeCount, Is.EqualTo(0));
     }
 
-    // -------- dirty-driven build: clean skip / partial in-place re-render / full walk on structural change (§4a/§4i) --------
+    // -------- dirty-driven build: clean skip / partial in-place re-render / full walk on structural change ------------------
 
     [Test]
     public void CleanFrame_IsSkipped()
@@ -535,11 +532,7 @@ public class RenderCacheTests
         AssertPaintOrderMatchesFullWalk("after collapsing a parent");
     }
 
-    // A component can change SIZE without its recorded CONTENT going stale: RenderSize marks it dirty, but leaves
-    // IsGeometryValid true (it draws the same thing, just at a new size), so the record rightly skips re-recording it. Its
-    // frozen layout must still be re-frozen - the draw pass reads the picture's geometry from there, so a stale entry paints
-    // the component at its previous size. On a grid of tiles that is exactly what the size slider produces: gaps when the
-    // cells grow, overlaps when they shrink.
+    // A size change without a content change is not re-recorded, but its frozen layout is re-frozen.
     [Test]
     public void ResizedButNotReRecorded_Component_IsDrawnAtItsNewSize()
     {
@@ -561,15 +554,8 @@ public class RenderCacheTests
         });
     }
 
-    // A brush MUTATED INTERNALLY (an animation moving its Opacity, a theme fade, a pulsing placeholder) changes nothing about
-    // what an element draws: same commands, same kinds, same geometry - and the recorded command holds THAT SAME brush by
-    // reference, so the GPU data is baked from it anyway. So the element must NOT be re-rendered; the renderer only re-bakes
-    // the units it already has.
-    //
-    // This is what makes an animated SHARED brush affordable. It is routinely shared by thousands of elements (a keyed theme
-    // brush - every loading skeleton paints with ONE pulsing brush), so its change reaches all of them on every tick. Treating
-    // that as geometry re-ran OnRender for each: measured at ~470 cards per frame, half of a tile fill's throughput, for one
-    // number.
+    // A brush mutated in place (animation, fade) does not re-render its elements; only their units re-bake, which keeps
+    // shared animated brushes cheap.
     [Test]
     public void BrushMutation_RepaintsWithoutReRecordingTheElement()
     {
@@ -859,11 +845,7 @@ public class RenderCacheTests
     }
 
     // -------- the retained frame's life-support --------
-    // The applier reads ANY snapshot entry as "the layout moved under the recorded stream" and refuses to replay that
-    // stream - for the WHOLE scene, not just the component that moved. So a frame that re-freezes components without
-    // anything having changed silently costs the retained path: measured on the 60k grid, ~15 identical entries a frame,
-    // two thirds of frames falling back to the full walk, 35 ms a frame where the replay takes 0.6. It went unnoticed for
-    // a week because nothing was wrong on screen - it was just slow. These two pin the rule from both sides.
+    // Any snapshot delta makes the applier refuse replay, so unchanged re-freezes must publish nothing (pinned from both sides).
 
     [Test]
     public void AnIdleFramePublishesNoSnapshotEntries()

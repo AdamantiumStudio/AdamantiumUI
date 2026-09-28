@@ -4,12 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the gradient rounded-rect batch (see BatchEffect.fx, pass GradientRect): a rounded-rect whose fill is a
-/// LINEAR or RADIAL gradient (up to <see cref="MaxStops"/> colour stops), position baked to WORLD space. Packed into a BDA
-/// STORAGE buffer and read in the vertex+pixel shaders by SV_InstanceID (the shader's <c>GradientRectData</c>); the quad
-/// comes from SV_VertexID and the pixel shader reconstructs the rounded corners analytically (self-AA) AND evaluates the
-/// gradient per fragment. Mirrors <see cref="RectItem"/>'s stroke fields so the shared CompositeFillStroke draws the
-/// stroke identically. Sibling of the solid RectItem - solid fills stay in the cheaper RectBatch untouched.
+/// One gradient rounded-rect instance (BatchEffect.fx, pass GradientRect), up to <see cref="MaxStops"/> stops, matching
+/// <c>GradientRectData</c>; stroke fields mirror <see cref="RectItem"/>.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct GradientRectItem

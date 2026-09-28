@@ -4,13 +4,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Primitives;
 
-/// <summary>
-/// Base for controls that hold a checked state toggled by a click - the classic press-to-stay button, plus
-/// <see cref="CheckBox"/>, <see cref="RadioButton"/> and <see cref="ToggleSwitch"/>. <see cref="IsChecked"/> is
-/// nullable so a control can also be indeterminate when <see cref="IsThreeState"/> is on. Mirrors WPF's ToggleButton:
-/// the click cycles the state (false -&gt; true -&gt; [null -&gt;] false) and raises Checked/Unchecked/Indeterminate.
-/// The visuals live entirely in the theme template (a trigger on IsChecked), never here.
-/// </summary>
+/// <summary>A button holding a checked state that a click cycles (false, true, [null when <see cref="IsThreeState"/>]);
+/// base of <see cref="CheckBox"/>, <see cref="RadioButton"/> and <see cref="ToggleSwitch"/>.</summary>
 public class ToggleButton : ButtonBase
 {
     public static readonly AdamantiumProperty IsCheckedProperty = AdamantiumProperty.Register(nameof(IsChecked),
@@ -20,11 +15,8 @@ public class ToggleButton : ButtonBase
     public static readonly AdamantiumProperty IsThreeStateProperty = AdamantiumProperty.Register(nameof(IsThreeState),
         typeof(bool), typeof(ToggleButton), new PropertyMetadata(false));
 
-    // The CHECKED state's brushes, for the same reason ButtonBase carries the hover and pressed ones: one template has
-    // to serve every toggle there is, and what a checked toggle looks like is not the same everywhere. A toggle sitting
-    // on a colour of somebody else's choosing - the fold on a graph node, which sits on the node's own accent strip -
-    // has to be able to say "not painted", and a theme that stated the accent in the trigger itself left it nothing to
-    // say it with. Set by the theme; null means "no change in that state".
+    // Checked-state brushes, like ButtonBase's hover and pressed ones, so one template serves every toggle; null means
+    // no change in that state.
     public static readonly AdamantiumProperty BackgroundCheckedProperty = AdamantiumProperty.Register(
         nameof(BackgroundChecked), typeof(Brush), typeof(ToggleButton), new PropertyMetadata(default(Brush)));
 

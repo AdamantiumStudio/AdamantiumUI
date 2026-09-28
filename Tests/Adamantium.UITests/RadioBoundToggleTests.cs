@@ -6,13 +6,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>TWO RADIO BUTTONS THAT ARE ONE CHOICE - the shape every "which face is showing" pair in an application has.
-/// Each is bound to a property that says "am I the one", and writing false to such a property means nothing: a choice
-/// of two is never neither, so the view-model hears only the positive half and says nothing back.
-/// <para>Which is the whole difficulty. Clicking one clears the other, that clearing is written through a binding, and
-/// a source that ignores it has NOT answered - so nothing may be pushed back onto the button from it. Push it back and
-/// the cleared button lights up again, clears the one just clicked in turn, and the pair stops switching.</para>
-/// </summary>
+// Two radios bound to "am I the one" properties whose source ignores false: a cleared radio must not be re-checked from
+// the source, or the pair stops switching.
 [TestFixture]
 public class RadioBoundToggleTests
 {

@@ -8,13 +8,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The <see cref="ValuePriority.TypeDefault"/> slot, exercised through REAL styles rather than by writing a
-/// slot by hand - the point being that the engine picks the slot, and picks it from the selector.
-/// <para>What it buys: a blanket <c>Style Selector="TextBlock"</c> - the most natural style anyone would write, and the
-/// one the themes could not have - no longer cuts the channel a control uses to recolour its own content. Before this
-/// slot existed, writing that style anywhere in an application silently stopped every selected row, pressed button and
-/// disabled label from following its state, with nothing in any log to say so.</para>
-/// </summary>
+// ValuePriority.TypeDefault through real styles: a type-only selector like "TextBlock" lands below inheritance, so it no
+// longer masks controls' state colors.
 [TestFixture]
 public class TypeDefaultSlotTests
 {
@@ -47,11 +42,7 @@ public class TypeDefaultSlotTests
         Assert.That(text.Foreground, Is.SameAs(Brushes.Blue));
     }
 
-    /// <summary>...and it LOSES to what an ancestor actually says, which is the whole change. The presenter of a
-    /// selected row holds the accent; the text inside it follows the row, not the blanket rule.
-    /// <para>Read together with the test above, not alone: on its own this assertion would also pass if the style had
-    /// never applied at all. The pair is what makes it mean something - the SAME style, built the same way, colours a
-    /// loose TextBlock blue, so here it is losing rather than absent.</para></summary>
+    // ...and it loses to an ancestor's value; paired with the test above, which shows the same style does apply.
     [Test]
     public void ABareTypeStyle_LosesToWhatAnAncestorSays()
     {

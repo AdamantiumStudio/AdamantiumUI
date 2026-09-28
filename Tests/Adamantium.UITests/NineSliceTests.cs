@@ -240,11 +240,7 @@ public class NineSliceTests
 
     // --- A VECTOR source: the brush stays raster, but the raster it gets has to be an honest one -------------------
 
-    // The inset is half a TEXEL, so it needs the texture's texel count. For a bitmap that is the source's own size and
-    // these are one number; for a drawing the source has no texels at all and the texture is a bake made to fit, so the
-    // two part company. Reading the inset off the SOURCE then either eats a visible sliver of the piece or leaves the
-    // seam line it exists to remove - and the same source pairs with a different bake at every shape size, so it does
-    // both, at different sizes, from the same brush.
+    // The half-texel inset uses the bound texture's size, which differs from the source for a baked drawing.
     [Test]
     public void TheTexelInsetFollowsTheTextureAndNotTheSource()
     {

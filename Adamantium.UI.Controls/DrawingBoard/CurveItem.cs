@@ -7,12 +7,8 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>A curve through a list of points: a Bezier, a B-spline or a NURBS.
-/// <para>One item for all three because to everything around it they are the same thing - points and a line through
-/// them - and what differs is one call to the maths. Which kind it is can be changed on a curve already drawn, which is
-/// the whole reason it is one item and not three: choosing is what a person does AFTER seeing the line.</para>
-/// <para>It is reshaped by its POINTS and not by a box: it offers only the body grip, so the frame moves it and the
-/// points bend it, and the two gestures do not fight.</para></summary>
+/// <summary>A curve through points - Bezier, B-spline or NURBS, switchable after drawing. Reshaped by its points; the frame
+/// only moves it.</summary>
 public class CurveItem : ICanvasItem, ICanvasPoints
 {
     // What the curve is DRAWN with: a polyline handed to the ink pass as data. See Render for why it is not a geometry.
@@ -185,14 +181,7 @@ public class CurveItem : ICanvasItem, ICanvasPoints
         var along = Walk(control, Kind, Degree, IsUniform, StepsFor(control));
         if (along.Count < 2) return;
 
-        // INK, and not a geometry, and this is the whole point of the class's drawing. Stroked as a path it cost the
-        // frame and cost more the longer the application ran: a geometry is cached by its CONTENT, this one is built
-        // in screen coordinates and so has different content after every pan and every turn of the wheel, and that
-        // cache is never emptied and is walked once per frame. One curve on the plane was enough to bring the whole
-        // thing to a crawl.
-        //
-        // The ink pass has none of that: the points ARE the parameter block, one instance draws the whole polyline,
-        // and nothing is built, cached or left behind. It is the pass a pen stroke already goes through.
+        // Drawn as ink, not geometry: a screen-space geometry is new content every pan and fills the geometry cache.
         if (_screen == null || _screen.Length < along.Count)
             Array.Resize(ref _screen, Math.Max(64, along.Count * 2));
 
@@ -255,17 +244,7 @@ public class CurveItem : ICanvasItem, ICanvasPoints
                     degree > 0 ? degree : points.Count - 1, uniform, 1.0 / steps));
 
             default:
-                // ONE Bezier over ALL the points, and that is what makes it a Bezier: every point but the first and the
-                // last PULLS the line without being on it.
-                //
-                // A CHAIN of spans stood here, with the degree of a span chosen in the inspector, and it was wrong on
-                // exactly that point - the place where one span ends and the next begins lies ON the curve, so a curve
-                // of three cubic spans had two of its interior points sitting on the line and a corner at each of them.
-                // A Bezier has no interior anchors; a line that is anchored at points along its length is a spline, and
-                // both of those are in the list beside this one.
-                //
-                // So the degree is not a choice: a Bezier through N+1 points is of degree N, and the way to ask for a
-                // quadratic is to draw it with three points. See CurveItem.Degree.
+                // One Bezier over all points, of degree N for N+1 points: interior points pull the line without lying on it.
                 return MathHelper.GetBezier(points, (uint)steps);
         }
     }

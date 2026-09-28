@@ -163,14 +163,8 @@ public class TabStripScroller : InputUIComponent, IContainer
         return overshoot != 0 && Pan(overshoot * rate);
     }
 
-    /// <summary>Pan just enough to bring <paramref name="element"/> (a tab) fully into view - the overflow menu calls this
-    /// when a hidden tab is picked. No-op if it is already visible.</summary>
-    /// <summary>Scrolls the element into view. Returns true when it was ALREADY fully visible, so a caller can keep
-    /// asking until it settles.
-    /// <para>One scroll is not enough: the overflow button sits in an Auto column beside this scroller and its
-    /// visibility is decided AFTER a layout pass, so the moment it appears the star column - this viewport - gets
-    /// narrower than it was when the offset was computed, and the tail of the tab (its close button) ends up past the
-    /// new edge.</para></summary>
+    /// <summary>Pans just enough to show <paramref name="element"/> fully; returns true if it already was. Callers repeat
+    /// until true, since the overflow button appearing can narrow the viewport.</summary>
     public bool ScrollIntoView(IUIComponent element)
     {
         if (element == null || Child is not IUIComponent child) return true;
@@ -260,11 +254,8 @@ public class TabStripScroller : InputUIComponent, IContainer
 
         ResolveInner();
 
-        // A VIRTUALIZING strip is measured with the real length, because that length IS the panel's viewport and the
-        // panel decides which tabs to realize from it; unbounded would read as "everything is visible" and realize the
-        // whole strip, which is the thing virtualization is here to avoid. Its extent then comes from the panel, which
-        // is the only one that knows how long the strip would be if all of it existed.
-        // A PLAIN strip keeps the old bargain: unbounded room so it lays out at full length and never shrinks.
+        // A virtualizing strip gets the real length as its viewport and reports its own extent; a plain strip is measured
+        // unbounded at full length.
         var probe = Delegating
             ? availableSize
             : (IsHorizontal

@@ -15,11 +15,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// scaled is a blurred glyph, and the whole reason this engine keeps text as glyphs is not to do that.</para></summary>
 public class TextItem : ICanvasItem
 {
-    // TWO layouts, and they are not an optimisation - they are the fix for a real fault. A layout holds the shaping it
-    // was last given, and the drawing keeps a reference to it: so when the box asked to be measured at the WORLD size
-    // after the drawing had shaped it at the SCREEN size, the drawing came out at whatever the box had left behind.
-    // Zoomed in the two differ, and the letters came out tiny inside a frame of the right size - which is exactly what
-    // it looked like. Measuring now has a layout of its own and cannot disturb what is being drawn.
+    // Two layouts: the drawing keeps a reference to its layout, so measuring at world size must not reshape it.
     private TextLayout _draw;
     private TextLayout _measure;
     private FontFamily _layoutFont;

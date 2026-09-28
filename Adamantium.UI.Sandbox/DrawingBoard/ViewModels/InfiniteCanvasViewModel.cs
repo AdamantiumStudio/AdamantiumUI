@@ -53,11 +53,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
         _graph = new CanvasGraphRunner(Nodes);
 
-        // AND THE DRAWING SIDE, the same way: things on the plane, said AS DATA. The page says what is there and where;
-        // the canvas draws a shape from its description and builds a control for anything else, from the template
-        // chosen for its type. Nothing here is a scene item and nothing here is a control - a view-model holding either
-        // would be a view-model drawing, and what a person set on the plane would then have to be dug back out of the
-        // visual tree to save it.
+        // The drawing side as data too: the canvas draws shapes from descriptions and templates everything else.
         {
             Put(-300, -90, 200, 48, new SampleButton("Button"));
             Put(-300, 0, 200, 40, new SampleSwitch("Check me"));
@@ -192,11 +188,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         RaisePropertyChanged(nameof(Face));
     }
 
-    /// <summary>What is on the plane, TOPMOST FIRST. Reversed from paint order on purpose: the list reads top to
-    /// bottom the way the drawing is stacked front to back, which is what every editor's layer list does and what
-    /// "bring to front" then means without explanation.
-    /// <para>A fresh array every time, not the scene's own list: the same instance handed over twice is not a change,
-    /// and a list bound to it would never notice anything.</para></summary>
+    /// <summary>What is on the plane, topmost first like a layer list; a fresh array each time so bound lists see the
+    /// change.</summary>
     public IReadOnlyList<ICanvasItem> Structure { get; private set; } = System.Array.Empty<ICanvasItem>();
 
     private void RefreshStructure()
@@ -309,13 +302,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     /// decide.</summary>
     public ICanvasTool TextureTool { get; } = new TextureTool();
 
-    /// <summary>A NODE of a graph. The same tool as the three above and not a mechanism of its own: a node IS a
-    /// control, which was the point of building it as one - so putting it on the plane needs nothing the canvas did not
-    /// already have.</summary>
-    /// <summary>The one tool of the GRAPH, and the only one of these that says so: a rail offers what its canvas's mode
-    /// admits, and a node has no business in a drawing any more than a pen has in a graph.
-    /// <para>It does not MAKE anything: a press asks which kind, out of the list this page gave the canvas, and the
-    /// pick puts the node into this page's collection. Which kind is the one thing a tool cannot know.</para></summary>
+    /// <summary>The graph's node tool: a press asks which kind from the page's list, and the pick adds the node to the
+    /// page's collection.</summary>
     public ICanvasTool NodeTool { get; } = new NodeTool { Description = "put a node on the plane" };
 
     /// <summary>The tools the canvas offers, in the order its rail shows them. THE list - there is no second copy of
@@ -485,11 +473,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
     [Bindable] private Vector2 _offset;
 
-    /// <summary>The zoom for the view bar - a MULTIPLIER from one, not a percentage.
-    /// <para>Everything else about the camera is stated that way: the limits are 0.01 and 1024, the readout under the
-    /// canvas says "0.4x", and the panel's own row is called Max zoom. A percentage beside them is a second unit for
-    /// one quantity, and at the far end it stops reading at all - 0.01 shown as "1%" looks like a hundredth of a
-    /// percent rather than a hundredth of full size.</para></summary>
+    /// <summary>The zoom for the view bar as a multiplier ("0.4x"), matching the other camera readouts.</summary>
     public string ZoomText => string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.###}x", _scale);
 
     /// <summary>What the canvas has selected, taken straight off it. The inspector reads THIS and not a copy: the
@@ -518,12 +502,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         RaisePropertyChanged(nameof(Face));
     }
 
-    // The inspector has ONE place and several faces. Which one is on is partly the user's - properties or the list of
-    // what is on the plane - and partly the drawing's: on properties, with nothing selected it shows what you are
-    // working WITH, and with something selected what you are working ON.
-    //
-    // ONE panel and not several, because a second panel beside the first is a second panel to move, to fold and to
-    // find room for - and folded it is a pair of buttons over the drawing that say nothing about what is behind them.
+    // One inspector panel with several faces: properties or structure by the user's choice; properties show the tool
+    // with nothing selected, the selection otherwise.
     public Visibility ToolFace => ShowsProperties && !Anything ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility SelectionFace =>
@@ -622,11 +602,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         }
     }
 
-    /// <summary>Takes one socket off the node holding it. The row's button hands over the socket and nothing else, so
-    /// which node it belongs to is asked of the selection - the only nodes on screen whose sockets are being shown.
-    /// <para>ASKS FIRST, under the same switch as deleting anything else on the plane. Dropping a socket takes its name,
-    /// its color and whatever is wired to it with it, there is no undo reaching in here yet, and the button sits one
-    /// row away from the one that renames it.</para></summary>
+    /// <summary>Removes a socket from its node, found among the selection; asks for confirmation like any delete, since
+    /// its wires go with it.</summary>
     [Command]
     private async Task RemoveSocket(object which)
     {

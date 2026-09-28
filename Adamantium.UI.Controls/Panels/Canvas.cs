@@ -129,12 +129,7 @@ public class Canvas : Panel
       child.Arrange(new Rect(new Vector2(x, y), child.DesiredSize));
    }
 
-   /// <summary>One child moved. Places THAT child and nobody else.
-   ///
-   /// <para>A canvas does not size itself from its contents - a child at any coordinate leaves the panel exactly as big
-   /// as it was - so moving one is not a reason to re-arrange the rest. Marking the panel (AffectsParentArrange) would
-   /// have worked, but it costs a pass over every child on every step of a drag, for a panel that is often used
-   /// precisely because it holds a lot of freely positioned things.</para></summary>
+   // A moved child is placed alone: a canvas does not size from its contents, so the rest need no arrange.
    private static void OnPositionChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
    {
       if (d is not IMeasurableComponent { VisualParent: Canvas canvas } child) return;

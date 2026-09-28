@@ -129,14 +129,8 @@ public class ShapeTool : ICanvasTool
         shape ??= _making;
         if (shape == null) return;
 
-        // The two points of the drag, handed to the shape whole. A normalised box cannot say which way the drag went,
-        // so the shape keeps that as two bits beside it - which way the line leans, and which end of it the hand is at
-        // - and it is the SHAPE that works both out. Set here by hand, the lean was right and the direction was never
-        // written at all: an arrow dragged up and to the left put its head back at the start of the drag, pointing at
-        // the hand rather than away from it.
-        //
-        // Not Resize: while a shape is being dragged out, the box IS what the drag made, and going through Resize
-        // would take the outline's width off it on every single move.
+        // Both drag points go to the shape, which derives the box, lean and direction; not Resize, which would shrink it by
+        // the outline on every move.
         shape.SetEnds(_from, to);
     }
 }

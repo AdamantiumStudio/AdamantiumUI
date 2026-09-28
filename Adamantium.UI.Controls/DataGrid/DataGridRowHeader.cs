@@ -5,12 +5,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The left strip of a table: the row's ORDINAL, and the handle for the row as a whole.
-/// <para>The number is the row's place among what is VISIBLE - after sorting and filtering - because that is what a
-/// person points at when they say "row 12". A source index would be a number nobody can see.</para>
-/// <para>It is pinned like a frozen column and drawn over what scrolls under it, so it has to be opaque; the theme
-/// gives it the band's colour. The same control serves the CORNER above the strip, with no number in it: pressing the
-/// corner takes the whole table.</para></summary>
+/// <summary>A row's pinned, opaque left strip: its ordinal among visible rows and the handle for the whole row. Without a
+/// number it is the corner that selects the table.</summary>
 public class DataGridRowHeader : ContentControl
 {
     /// <summary>The row's place in the visible order, from 1. Zero on the corner, which stands for no row.</summary>

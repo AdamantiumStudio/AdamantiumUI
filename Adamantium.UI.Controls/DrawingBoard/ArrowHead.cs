@@ -3,12 +3,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Where the three points of an arrow head fall. Its own type so that anything else pointing at something -
-/// the CONNECTION between two nodes of a graph, when that arrives - draws the same head from the same numbers rather
-/// than a second one that looks nearly right.
-/// <para>Measured in LINE THICKNESSES, never in world units. A head stated in world units comes adrift from its own
-/// line the moment the line is made thicker: the shape stops being an arrow and becomes a line with a mark near
-/// it.</para></summary>
+/// <summary>Where the three points of an arrow head fall, shared by every arrow. Measured in line thicknesses, so the head
+/// scales with its line.</summary>
 public static class ArrowHead
 {
     /// <summary>The tip, and the two corners of the head's base, for a head pointing from <paramref name="from"/>

@@ -3,14 +3,7 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// One canvas grid (see GridEffect.fx, pass Grid): a rectangle whose every pixel decides for itself, from the world
-/// coordinate under it, whether it is on a mark. Packed into a BDA storage buffer and read by SV_InstanceID; the quad
-/// comes from SV_VertexID.
-/// <para>There is exactly ONE of these in a draw, which is the whole point of the pass - so the colors are kept as
-/// float4 rather than packed into bytes: packing would save twenty-four bytes once and cost the question of how two
-/// four-byte colors align against the fields after them.</para>
-/// </summary>
+/// <summary>One canvas grid instance (GridEffect.fx, pass Grid); colors stay float4 since there is one per draw.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct CanvasGridItem
 {
@@ -20,11 +13,8 @@ public struct CanvasGridItem
     /// <summary>.x transform-table slot; .y marks (1 dots, 2 lines); .z opacity slot, or -1; .w mark size in logical px.</summary>
     public Vector4F Params;
 
-    /// <summary>.xy the lattice's PHASE - where the grid stands within ONE cell, in the element's own logical pixels;
-    /// .z screen pixels per world unit; .w spare.
-    /// <para>NEVER how far the camera has travelled. That number grows without bound and a float32 stops resolving a
-    /// pixel long before a plane with no edges runs out: the dots ran into lines and a pan stepped the lattice instead
-    /// of sliding it. The grid repeats every cell, so a phase says all of it and stays small.</para></summary>
+    /// <summary>.xy the lattice phase within one cell (logical px), never the pan distance, which float32 cannot hold;
+    /// .z screen px per world unit; .w spare.</summary>
     public Vector4F Camera;
 
     /// <summary>.x the step to draw (world units, ALREADY coarsened); .y the coarsening the accent level is above it;

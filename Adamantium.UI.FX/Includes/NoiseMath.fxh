@@ -12,11 +12,8 @@ float Hash21(float2 p)
 // same simplex noise the noise brushes are built on. Everything DERIVED from it - fbm, worley, voronoi, the pattern
 // mixer - belongs to the brushes and lives in BrushData.fxh.
 
-// ---- Base simplex noise: shared because it is not only a brush's business - the LIVING halo wanders its reach
-//      with it too. The DERIVED fields (Fbm, WorleyNoise, voronoi, the pattern mixer) belong to the brushes and live in
-//      BrushEffect.fx; what stays here is the one primitive both effects evaluate.
-// --- Ashima/Gustavson 2D simplex noise (texture-free, ALU only; the webgl-noise MIT function). Returns ~[-1,1]. Feeds the
-// FBM noise pattern type - no texture lookup, so it needs no descriptor, pure ALU like the rest of the batch. ---
+// ---- Base simplex noise, shared by the brushes and the living halo; derived fields live in BrushEffect.fx.
+// --- Ashima/Gustavson 2D simplex noise (webgl-noise, MIT), texture-free. Returns ~[-1,1]. ---
 float3 Mod289(float3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 
 float2 Mod289(float2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }

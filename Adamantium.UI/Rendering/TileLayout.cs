@@ -22,8 +22,8 @@ internal readonly struct TileLayout
 
     /// <summary>The 2x2 that maps a fragment (0..1 of the shape) back into the UNTURNED grid, row-major. It is the
     /// inverse rotation with the shape's aspect folded in - rotating normalised coordinates of a non-square shape would
-    /// shear it - and the turn's centre is folded into <see cref="Tile"/>'s origin. All of that is done here so the
-    /// pixel shader is one 2x2 multiply and nothing else: this driver's compiler AVs as a pass grows.</summary>
+    /// shear it - and the turn's centre is folded into <see cref="Tile"/>'s origin, so the pixel shader does one 2x2
+    /// multiply.</summary>
     public readonly Vector4F Rotation;
 
     /// <summary>Mirror flags: 1 = X, 2 = Y, 3 = both. Packed as a number the shader reads branch-free.</summary>

@@ -3,16 +3,8 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>
-/// A component's FROZEN per-frame layout inputs - the ONE channel through which the render/draw path reads a component's
-/// MUTABLE layout state (transform, size, clip flag, motion-node flag, parent link). The compose helpers (World /
-/// CumulativeClip / NodeOf / RelWorld / LogicalBounds / ResolveScissor) read ONLY from these, never off a live
-/// <see cref="IUIComponent"/>: that is what makes the draw pass a pure function of the snapshot, and so safe to run on a
-/// render thread while layout mutates the tree (docs/RENDER_THREAD_PLAN.md).
-///
-/// Recorded on the update thread and handed to the applier as a per-frame DELTA (<see cref="RenderPacket.SnapDelta"/>) -
-/// only the entries that actually changed. RenderId stays a live read: an immutable identity is thread-safe to read.
-/// </summary>
+// A component's frozen per-frame layout state, the only layout the draw path reads, so it can run on the render thread
+// while layout mutates the tree. Recorded on the update thread and sent as a delta (RenderPacket.SnapDelta).
 internal readonly struct LayoutSnapshot(
     Matrix4x4F localTransform,
     Size renderSize,
@@ -46,12 +38,7 @@ internal readonly struct LayoutSnapshot(
     /// parent for everything but an adorner (which draws in its adorned element's space, not in the visual tree).</summary>
     public IUIComponent RenderParent { get; } = renderParent;
 
-    /// <summary>Field-by-field, and spelled out rather than left to the default for two reasons. The struct holds a
-    /// reference (the parent), so <c>ValueType.Equals</c> would fall back to REFLECTION - and this is asked per re-frozen
-    /// component per frame. And the matrix's own <c>==</c> compares with a TOLERANCE, which is exactly wrong here: this
-    /// answers "is this the same frozen state", not "is it close enough to look the same". A sub-tolerance move would
-    /// otherwise be published as nothing, the applier would keep composing from the older transform, and successive small
-    /// moves would drift without ever announcing themselves. Compared EXACTLY, on every field there is.</summary>
+    // Exact field-by-field: the default would use reflection, and the matrix's tolerant == would drop small moves.
     public bool Equals(LayoutSnapshot other)
     {
         return ExactlySame(in LocalTransform, in other.LocalTransform)

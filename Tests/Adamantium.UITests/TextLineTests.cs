@@ -6,11 +6,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>Where the letters sit in a line of text. A line is the FONT's line - an ascent, a descent, and whatever
-/// leading the font asks for - and the letters sit on a baseline an ascent below the top, with the leading split evenly.
-/// <para>Measured because it cannot be seen from inside a control: a drop-down whose words rode low read as a box a
-/// line too tall, and no alignment setting anywhere could correct it - alignment places the BOX, and the box was
-/// already where it should be.</para></summary>
+// A text line is ascent + descent + the font's leading, split evenly; the baseline sits an ascent (plus half the leading)
+// below the top.
 public class TextLineTests
 {
     private static void Settle(Adamantium.UI.Controls.Window window)

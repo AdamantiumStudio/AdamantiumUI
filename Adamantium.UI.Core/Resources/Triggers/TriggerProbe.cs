@@ -3,11 +3,8 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core.Resources.Triggers;
 
-/// <summary>Records what a trigger was TOLD, so a trigger that appears stuck can be told apart from one that is never
-/// asked again. Writes to a file beside the application - a probe that depends on someone redirecting stdout loses the
-/// one occurrence that mattered.
-/// <para>Watches one property by name (ADAM_TRIGGER_PROBE, e.g. "IsMouseOver"); anything else costs one string
-/// comparison.</para></summary>
+/// <summary>Logs to a file what triggers on the property named by ADAM_TRIGGER_PROBE (e.g. "IsMouseOver") were told, to
+/// tell a stuck trigger from one never re-evaluated.</summary>
 public static class TriggerProbe
 {
     private static readonly string Watched = Environment.GetEnvironmentVariable("ADAM_TRIGGER_PROBE");

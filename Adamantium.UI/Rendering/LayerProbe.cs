@@ -2,16 +2,16 @@ using System;
 
 namespace Adamantium.UI.Rendering;
 
-// SCRATCH (phase 0 of §5a): does the layer key hold? A LAYER is one FlushBatches cycle - the set of draws whose mutual
-// order is irrelevant - and the doc's one pre-condition is that layers are no more numerous than today's segments, or the
+// SCRATCH: does the layer key hold? A LAYER is one FlushBatches cycle - the set of draws whose mutual
+// order is irrelevant - and the one pre-condition is that layers are no more numerous than today's segments, or the
 // number of draw calls would grow. Also counts the repairs the redesign is meant to make unnecessary.
 public static class LayerProbe
 {
     public static long Frames, Cycles, Segments, MaxCycles, MaxSegments;
     public static long Splits, SplitsAvoided, Renumbers, Refusals;
 
-    // Phase 3: how often a control leaving the paint order costs a pass over the arena, and how many slots that pass
-    // covered. The phase is verified on these being small and rare - a sweep per hidden control, not per frame.
+    // How often a control leaving the paint order costs a pass over the arena, and how many slots that pass
+    // covered. These must stay small and rare - a sweep per hidden control, not per frame.
     public static long OrphanSweeps, OrphanSweptSlots;
 
     // FAZA 3 measurement: a layer re-issued INSIDE the room it owns costs a range upload and nothing else; one that has
@@ -54,13 +54,8 @@ public static class LayerProbe
     public static string LastOpDump = "";
     public static int LastOpCount;
 
-    // A CONTROL THAT STOPS BEING DRAWN WHILE IT IS STILL THERE cannot be seen from outside the render thread: the tree
-    // says the control is present, visible and the right size, and the picture says otherwise. What decides it is
-    // whether the bytes it drew survived its trip out of the paint order - so the two ends of that trip are written
-    // down here, named by the control they belong to.
-    //
-    // ADAM_RENDER_WATCH=<file>: off by default and free when off (one null check on a static). A hand can then do the
-    // gesture that loses the picture and the file says what happened to it, which no timing or counter can.
+    /// <summary>ADAM_RENDER_WATCH=&lt;file&gt;: logs a control's draws leaving and re-entering the paint order, to diagnose
+    /// controls that vanish while still in the tree. Off by default.</summary>
     public static readonly string WatchPath = Environment.GetEnvironmentVariable("ADAM_RENDER_WATCH");
 
     private static readonly object WatchLock = new();

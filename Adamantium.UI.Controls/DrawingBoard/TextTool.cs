@@ -9,11 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Words. A click puts a caret on the plane and what is typed appears there; clicking an existing piece of text
-/// puts the caret back into it, and Escape - or a click anywhere else - finishes.
-/// <para>A new piece goes into the scene when the caret LEAVES it, not while it is being typed - the same rule the pen
-/// follows, and for the same reason: half a label is not something to hit-test, save or undo. A caret nobody typed into
-/// leaves nothing behind at all, and emptying an existing piece takes it out.</para></summary>
+/// <summary>Text: a click places a caret (or re-enters existing text), Escape or a click elsewhere finishes. A piece joins the
+/// scene when the caret leaves it; empty text is removed.</summary>
 public class TextTool : ICanvasTool
 {
     // The SAME cadence a text box blinks at. A caret that sat still read as a line somebody had drawn; blinking is what

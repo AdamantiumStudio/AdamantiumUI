@@ -9,12 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>The filter editor a column header drops down: the list of values to tick, and under it two conditions
-/// joined by AND or OR - the shape a spreadsheet uses. Nothing is applied until the buttons at the bottom, so a filter
-/// can be composed without the rows moving under the pointer.
-/// <para>Fully templated (DataGridFilterStyleSet). PART_SelectAll, PART_Values, PART_FirstOperator, PART_FirstValue,
-/// PART_FirstMatchCase, PART_Logic, PART_SecondOperator, PART_SecondValue, PART_SecondMatchCase, PART_Apply,
-/// PART_Clear.</para></summary>
+/// <summary>A column's filter editor: values to tick and two conditions joined by AND or OR, applied only by its buttons so
+/// rows do not move while it is composed. Fully templated (DataGridFilterStyleSet).</summary>
 public class DataGridFilterView : Control
 {
     private static readonly string[] OperatorNames =

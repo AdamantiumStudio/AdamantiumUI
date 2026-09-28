@@ -8,16 +8,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A glow switched ON and OFF again on a shape that is ALREADY DRAWN - which is what a state trigger does, and which no
-/// other halo fixture covers: the rest build a fresh control per frame, so every one of them is a full walk and the
-/// patch path is never entered.
-/// <para>Reproduced by hand first, on a slider knob that lights while it is dragged: switching the glow on worked and
-/// switching it off left it on the screen until something unrelated forced a walk. Chasing that through the running
-/// app cost several rounds of clicking and told us less each time - the frame either walks or patches depending on
-/// whether the pointer moved a pixel, so the interesting case is the one a hand can least reliably produce. Here the
-/// same sequence is three calls.</para>
-/// </summary>
+// A glow toggled on and off on an already drawn shape, through the patch path (other halo fixtures always walk).
 [TestFixture]
 [Category("Gpu")]
 public class HaloTogglePatchRenderTests
@@ -112,14 +103,7 @@ public class HaloTogglePatchRenderTests
             "and must be GONE when it is switched off - it stayed on screen until an unrelated frame walked");
     }
 
-    /// <summary>A shape's shadow must fall ON what was drawn BEFORE it. Asked because a range slider's blue span is
-    /// laid between its two knobs - the span first, the knobs over it - and the knobs' shadows looked cut off where the
-    /// span meets them.
-    /// <para>An outer band goes into the batch that draws beneath EVERY fill, so without help it would end up under the
-    /// span as well as under its own knob. The walk's answer is to flush what is already pending when a band overlaps
-    /// it (OverlapsHigherLayer, layer -1), which leaves the earlier fill below and the band above. This is that rule in
-    /// pixels. The other order needs no test: an opaque fill drawn LATER covering an earlier shadow is just painter's
-    /// order, and asserting otherwise was this test's first, wrong, shape.</para></summary>
+    // A shadow falls on fills drawn before it: overlapping pending fills flush first (OverlapsHigherLayer, layer -1).
     [Test]
     public void AShadowFallsOnWhatWasDrawnBeforeIt()
     {

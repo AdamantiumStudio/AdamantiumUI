@@ -20,13 +20,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RingProgressBar">
                     <Grid>
-                        <!-- The ring is a SHAPE, not a stroke: RingThickness leaves a band that thick inward from the
-                             outline (Ellipse.RingThickness), and a swept band is an annular sector - a donut slice, which
-                             is what a gauge actually is. Drawn as a thick STROKE before, which spent the pen on the shape:
-                             the band could carry no outline of its own, and its thickness had to be a stroke width.
-                             The outer edge lands in the same place either way - a centred stroke on a box deflated by half
-                             its width reaches exactly the bounds, and a band measured inward from the bounds starts there.
-                             Sector, because a band's ends are radial whichever closing is asked for (see the cut bake). -->
+                        <!-- The ring is a shape: Ellipse.RingThickness makes an inward band, swept as an annular sector
+                             with radial ends, leaving the stroke free. -->
                         <Ellipse Fill="{ResourceReference ControlFillColorTertiary}"
                                 RingThickness="{TemplateBinding RingThickness}"
                                 EllipseType="Sector"/>

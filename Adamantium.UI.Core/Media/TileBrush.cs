@@ -2,16 +2,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A brush that paints with CONTENT laid out as tiles - a picture (<see cref="ImageBrush"/>), a drawing, a
-/// live visual. WPF's <c>TileBrush</c>, and the four independent mechanisms are worth keeping apart:
-/// <list type="bullet">
-/// <item><see cref="Viewbox"/> - WHICH part of the content one tile shows.</item>
-/// <item><see cref="Viewport"/> - WHERE one tile lands in the shape, and therefore how big it is.</item>
-/// <item><see cref="Stretch"/> + <see cref="AlignmentX"/>/<see cref="AlignmentY"/> - how the content fits its tile.</item>
-/// <item><see cref="TileMode"/> - whether that tile repeats, and mirrored or not.</item>
-/// </list>
-/// They compose in that order, and each is meaningless without the others being pinned down - which is why they live
-/// here together rather than being invented per brush.</summary>
+/// <summary>Paints with content laid out as tiles, composing in order: <see cref="Viewbox"/> (which part),
+/// <see cref="Viewport"/> (where), <see cref="Stretch"/> with alignment (fit), <see cref="TileMode"/> (repeat).</summary>
 public abstract class TileBrush : Brush
 {
     /// <summary>Whether the picture is laid down ONCE (fitted by <see cref="Stretch"/>) or REPEATED across the shape.

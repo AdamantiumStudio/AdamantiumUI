@@ -3,11 +3,8 @@ using System.Globalization;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>How much of its row a pane takes: either a fixed number of pixels, or a weight in what is left over.
-/// <para>ONE number with a mode, deliberately - not a share plus a pixel hint. Two numbers for one size have to be kept
-/// in step through every split, move, rebuild and divider drag, and every one of those is a place they drift: a pane
-/// whose share said half while its hint said 160 looked right until the hint stopped applying, and then jumped. This is
-/// the same shape a Grid length has, for the same reason.</para></summary>
+/// <summary>How much of its row a pane takes: fixed pixels or a weight of what is left. One number with a mode, like a Grid
+/// length, so there is no second value to drift.</summary>
 public enum PaneUnit
 {
     /// <summary>A weight in whatever is left after the fixed panes have taken theirs (a Grid's star).</summary>

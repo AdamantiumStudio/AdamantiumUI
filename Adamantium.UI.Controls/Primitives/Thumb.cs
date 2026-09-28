@@ -95,11 +95,8 @@ public class Thumb : Control
 
    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => BeginDrag(e);
 
-   /// <summary>Starts a drag from <paramref name="e"/> as though the press had landed on this thumb. For an owner that
-   /// decides a press belongs to this handle even when the hit-test missed it - a band a few pixels thick, on a rail
-   /// several times taller, is aimed at and missed constantly. Doing nothing with such a press is what makes a click
-   /// "not register"; moving the value to it instead makes the handle jump out from under the pointer. Idempotent while
-   /// the drag is live, so an owner may forward a press this thumb ALSO received without restarting anything.</summary>
+   /// <summary>Starts a drag from <paramref name="e"/> as if the press hit this thumb, for owners that route near-misses
+   /// to it. Idempotent while a drag is live.</summary>
    public void BeginDrag(MouseButtonEventArgs e)
    {
       // Already dragging AND still holding capture -> ignore. If IsDragging is stale (capture was revoked externally,
@@ -136,12 +133,8 @@ public class Thumb : Control
       RaiseEvent(new DragCompletedEventArgs(delta, false) { RoutedEvent = DragCompletedEvent });
    }
 
-   // Pointer position in the TOPMOST visual's space (the window / popup root) - the only frame guaranteed not to shift
-   // while the thumb is dragged, so DragDelta is the true CUMULATIVE pointer movement since the press. Measuring in the
-   // thumb's own space broke when the thumb re-positioned; measuring in the immediate PARENT's space broke when the
-   // dragged value drives a layout that MOVES the parent mid-drag - a slider bound to an AffectsMeasure property (stroke
-   // thickness) re-arranges its own row as it changes, folding the panel's movement into the delta so the value ran away
-   // to an extreme. The root never moves, so neither residual can creep in.
+   // Pointer position in the root's space, which never moves during the drag, so a value that re-lays out the thumb's
+   // parent does not feed back into DragDelta.
    private Vector2 DragPosition(MouseEventArgs e)
    {
       IUIComponent root = this;

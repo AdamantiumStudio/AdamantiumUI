@@ -492,12 +492,8 @@ public partial class BrushesViewModel : TabPageViewModel
     // a view-model of its own - is what keeps the shared figure, slot and colours alive across the switch.
     partial void OnLiveStandChanged(LiveStand value) => ShowStand(value);
 
-    // THIS object, shown through the stand's view. Navigating by TYPE would send the region to the container for a
-    // BrushesViewModel - and the first of these runs inside this very constructor, where asking for it either recurses
-    // or hands back a second copy. That is why the first stand never appeared until a button was pressed.
-    //
-    // GetOrCreate, not a lookup: this runs before the view exists, so the first call is what brings the named region
-    // into being and the ContentControl binds to that same one when it attaches.
+    // Navigates to this instance, not by type (which would recurse from the constructor); GetOrCreate since the region
+    // may not exist yet.
     private void ShowStand(LiveStand stand)
         => _ = _regions.GetOrCreateRegion(RegionNames.BrushStand).NavigateToInstanceAsync(this, stand.ToString());
 
@@ -506,13 +502,8 @@ public partial class BrushesViewModel : TabPageViewModel
 
 
     // --- Backdrop material stand ---------------------------------------------------------------------------------
-    // ONE live brush the controls drive in place, exactly as the aura below: the element holds this object and each
-    // property change raises its own Changed, so the pane re-records without the stand rebuilding anything.
-    //
-    // The point of the stand is that acrylic and liquid glass are the SAME material with a different treatment - the
-    // dropdown turns one into the other while everything else stays put, which is far more convincing than two static
-    // swatches side by side. Mica is in the same list because it differs in the third way: not the treatment but the
-    // source, the desktop instead of the frame.
+    // One live brush edited in place; switching the type shows acrylic and liquid glass differ in treatment, mica in
+    // source.
     public MaterialBrush LiveMaterial { get; } = new MaterialBrush
     {
         Material = MaterialType.Acrylic,
@@ -811,13 +802,8 @@ public partial class BrushesViewModel : TabPageViewModel
     /// holds authored coordinates rather than stretching to a slot, so the points are computed here.</summary>
     [Bindable] private PointsCollection _imageStar = Star(320, 200);
 
-    // Ten points on a circle, alternating the full radius and the 0.382 of it that makes a star read as one; first point
-    // straight up, so it stands the way a star is drawn rather than resting on a vertex.
-    //
-    // ONE radius for both axes - scaling x and y apart turns a star into a splat - and the result is then fitted into the
-    // box and shifted so its bounding box starts at the ORIGIN. That last part is not cosmetic: a Shape measures from its
-    // origin to its far edge, so a leading gap would be baked into the element's size and the figure would DRIFT as the
-    // box is dragged instead of scaling with it.
+    // A five-point star (inner radius 0.382), point up, one radius for both axes, shifted so its bounds start at the
+    // origin, since a Shape measures from there.
     private static PointsCollection Star(double width, double height)
     {
         const double innerRatio = 0.382;
@@ -1015,12 +1001,7 @@ public partial class BrushesViewModel : TabPageViewModel
     // stays precise at any depth. Mouse pan/zoom writes the base CenterX/Y and ZoomExp (two-way from FractalView).
     private void ApplyCenter()
     {
-        // DOUBLE all the way in. Vector2 holds doubles, and rounding the centre through a float first gave an O(1) value
-        // a ~1e-7 step - wider than the whole view past zoom 1e7. Since this runs on every zoom change, each step then
-        // snapped the centre to the nearest float and shifted the picture sideways.
-        //
-        // And the two parts stay APART. Adding the small one into the coarse centre here would throw away exactly what
-        // it exists to carry: a value of order 1 steps by ~1e-16, and past zoom ~1e13 that is wider than the whole view.
+        // Doubles throughout, with coarse and fine center parts kept apart, so deep zoom keeps its precision.
         var span = 1.5 / Math.Max(Math.Pow(10, _fractalZoomExp), 1e-4);
         LiveFractal.Center = new Vector2(_fractalCenterX, _fractalCenterY);
         LiveFractal.CenterFine = new Vector2(

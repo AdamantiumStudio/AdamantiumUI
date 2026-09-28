@@ -4,23 +4,8 @@ using System.Threading.Channels;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>
-/// THE update loop's pipe - one channel, the same one the dispatcher posts to. Cross-thread work (window input and every other
-/// event marshalled off the message-pump thread) is written here as an <see cref="Action"/>; everything else that merely makes
-/// the UI owe another frame (a layout invalidation, a render-dirty mark, a queued binding update) writes a bare wake token.
-/// The loop BLOCKS on reading this channel between frames, so an idle window - nobody moving the mouse, nothing animating,
-/// minimized - costs exactly nothing, instead of a thread spinning through Update after Update to re-discover that nothing has
-/// changed.
-///
-/// It has to be ONE channel: a separate "wake" primitive alongside the dispatcher queue can only ever be woken for one of the
-/// two, and then the loop either sleeps through posted input or spins on the marks. Post and Request are the same pipe.
-///
-/// A wake token is DEDUPED (<see cref="_wakePending"/>): a frame that dirties ten thousand components must queue "there is
-/// work", not ten thousand wake-ups. Posted actions are never deduped - each one is real work that has to run.
-///
-/// ANIMATIONS are the one thing this cannot express: they are TIME-driven, not event-driven - nothing "happens" to wake them,
-/// they simply need the next frame - so while one runs the loop is scheduled by its frame pacing instead of by this channel.
-/// </summary>
+/// <summary>The update loop's single channel, shared with the dispatcher: posted actions and deduplicated wake tokens. The
+/// loop blocks on it between frames, so an idle window costs nothing; animations are paced by frames instead.</summary>
 public static class LoopSignal
 {
     // Single reader: the loop thread. Unbounded: a posted action must never be dropped.

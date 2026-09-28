@@ -9,13 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>The WHOLE of what is on the plane, drawn small, with a box round the part of it you are looking at.
-/// <para>A plane with no edges has no scrollbars, and a scrollbar is what normally tells you two things at once: how
-/// much there is, and where in it you are. On a graph of any size those are the two questions asked most often, and
-/// this is the only thing that answers them. Pressing it takes the camera there.</para>
-/// <para>Every item as a plain BOX and nothing else. A small picture of the drawing would be a second renderer to keep
-/// in step with the first; boxes say where things are, which is all a map is for, and they cost one rectangle each.
-/// </para></summary>
+/// <summary>The whole plane drawn small as plain boxes, with a frame round the visible part; pressing it moves the camera
+/// there.</summary>
 public class CanvasMiniMap : InputUIComponent, ICanvasPart
 {
     private Rect _world;

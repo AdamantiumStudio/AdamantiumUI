@@ -12,13 +12,8 @@ using Adamantium.ProceduralGeometry;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>
-/// One tile of a 3D flip-tile board (see <see cref="TilesHost"/>): a solid rounded FRONT that TILTS toward the pointer,
-/// and on click FLIPS 180° around Y to reveal its normalised fragment (<see cref="SourceU"/>..<see cref="SourceVH"/>) of
-/// a photo shared by the whole board. The tile is its own render MOTION NODE: its quad bakes ONCE in tile-local space
-/// and every tilt/flip frame only rewrites its transform-table matrix (a 3D rotation with perspective) - the tile STAYS
-/// in the instanced SDF batch while rotating, which an axis-aligned world bake could not do at all.
-/// </summary>
+/// <summary>One tile of a 3D flip-tile board (see <see cref="TilesHost"/>): tilts toward the pointer and flips on click to
+/// show its fragment of a shared photo. Motion only rewrites its transform, so it stays in the instanced batch.</summary>
 public class FlipTile : Control
 {
     public static readonly AdamantiumProperty FrontBrushProperty = AdamantiumProperty.Register(nameof(FrontBrush),

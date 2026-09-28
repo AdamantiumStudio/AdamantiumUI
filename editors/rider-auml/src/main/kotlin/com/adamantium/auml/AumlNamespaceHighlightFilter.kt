@@ -8,14 +8,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 
 /**
- * Suppresses XML's "URI is not registered" problem on AUML xmlns declarations that point at a CLR
- * namespace, e.g. `xmlns:fluent="clr-namespace:Adamantium.UI.Themes.FluentTheme"`. These
- * URIs are dynamic (a different CLR namespace per file), so unlike the static `http://adamantium/ui`
- * namespaces (handled by AumlResourceProvider) they can't be pre-registered as ignored resources.
- * The AUML language server is the real validator here, so the built-in XML schema check is just noise.
- *
- * Matches on PSI structure (an xmlns attribute whose value starts with `clr-namespace:`) rather than
- * the problem's message text, so it is independent of the IDE's display language.
+ * Suppresses "URI is not registered" on `clr-namespace:` xmlns declarations, matched by PSI structure rather than
+ * message text; the language server validates them instead.
  */
 class AumlNamespaceHighlightFilter : HighlightInfoFilter {
     override fun accept(info: HighlightInfo, file: PsiFile?): Boolean {

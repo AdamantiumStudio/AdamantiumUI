@@ -2,16 +2,8 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's menu rows: the theme's row height, square, with a narrower icon gutter to match the smaller glyph.
-
-         This one had to be a full template rather than a set of overrides, and the reason is worth stating: Fluent's
-         menu template writes its numbers INSIDE itself (MinHeight, Padding and CornerRadius sit on the Root part, not
-         on the MenuItem), so there is no property for a theme to set. That is the duplication the coming sweep of
-         Fluent's inline numbers into its own Metrics is meant to end - a template whose sizes come through
-         {TemplateBinding} can be re-densified by a second theme without being copied at all, which is how the button,
-         the field and the row already work here.
-
-         Everything this file states comes from Metrics. -->
+    <!-- Editor Pro's menu rows: row height, square, a narrower icon gutter; a full template because Fluent's hardcodes
+         its sizes. All numbers come from Metrics. -->
 
     <Style Selector="MenuItem" BasedOn="ItemsControl">
         <Setter Property="Background" Value="Transparent"/>

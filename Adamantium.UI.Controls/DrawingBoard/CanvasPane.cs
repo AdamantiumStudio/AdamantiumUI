@@ -9,13 +9,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>One panel of an <see cref="InfiniteCanvas"/>'s chrome - a tool rail, an inspector, a context bar. It sits
-/// on the GLASS: it neither moves nor scales with the camera, and a press that lands on it never reaches the plane.
-/// <para>Many rather than one, and that is the whole point of the type. A canvas's chrome has three jobs with three
-/// different laws of placement - a rail wants to be narrow and against an edge, an inspector wide and able to slide
-/// away, a context bar tiny and beside the thing it is about - and a single slot holding all three is how a tool panel
-/// turns into a column that does not fit. The canvas owns WHERE a pane goes; what is in it belongs to whoever put it
-/// there.</para></summary>
+/// <summary>One panel of an <see cref="InfiniteCanvas"/>'s chrome (rail, inspector, context bar) on the glass, fixed to the
+/// screen; its presses never reach the plane. The canvas places it.</summary>
 public class CanvasPane : ContentControl
 {
     private ButtonBase _grip;
@@ -65,20 +60,13 @@ public class CanvasPane : ContentControl
     public static readonly AdamantiumProperty CanDragProperty = AdamantiumProperty.Register(nameof(CanDrag),
         typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(true));
 
-    /// <summary>Whether this pane is wanted at all - what a canvas's own switch writes to take one of its default
-    /// panels away.
-    /// <para>Its OWN property rather than plain <c>Visibility</c>, because two things decide whether a pane is on
-    /// screen and they are not the same thing: whether anybody wants it, and - for a pane that follows the selection -
-    /// whether there is a selection to follow. Written to the one property, the later answer simply erased the earlier
-    /// one, and a bar switched off came back the moment something was picked.</para></summary>
+    /// <summary>Whether this pane is wanted at all; separate from <see cref="IsNeeded"/> so neither answer erases the
+    /// other.</summary>
     public static readonly AdamantiumProperty IsWantedProperty = AdamantiumProperty.Register(nameof(IsWanted),
         typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(true, OnWantedChanged));
 
-    /// <summary>Whether the OCCASION for this pane holds - there is a selection for a bar that follows one, the list of
-    /// node kinds was asked for. True for a pane that is simply always there.
-    /// <para>The other half of <see cref="IsWanted"/>: one says whether anybody wants the panel at all, this says
-    /// whether right now is when it belongs on screen. They are different questions and the answer to one must not be
-    /// able to erase the other.</para></summary>
+    /// <summary>Whether the occasion for this pane holds now (a selection to follow, a list asked for); true for an
+    /// always-present pane. The other half of <see cref="IsWanted"/>.</summary>
     public static readonly AdamantiumProperty IsNeededProperty = AdamantiumProperty.Register(nameof(IsNeeded),
         typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(true, OnWantedChanged));
 
@@ -113,11 +101,8 @@ public class CanvasPane : ContentControl
         typeof(Object), typeof(CanvasPane),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnHeaderChanged));
 
-    /// <summary>Which way the pane's own content runs - a rail's buttons in a column or in a row.
-    /// <para>SAID, never inferred. It was derived from <see cref="Placement"/> at first, so that a rail dragged to the
-    /// bottom turned itself into a row; that reads as the panel changing shape under the hand every time it is moved,
-    /// which is exactly what a person moving it does not want. Which way a rail runs and where it sits are two
-    /// separate choices, and the pane's own button is where the first one is made.</para></summary>
+    /// <summary>Which way the pane's content runs; set explicitly, never inferred from <see cref="Placement"/>, so moving a
+    /// rail does not reshape it.</summary>
     public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.Register(nameof(Orientation),
         typeof(Orientation), typeof(CanvasPane),
         new PropertyMetadata(Orientation.Vertical,
@@ -188,12 +173,8 @@ public class CanvasPane : ContentControl
         set => SetValue(IsOpenProperty, value);
     }
 
-    /// <summary>Whether this pane RESERVES the room it occupies. Docked, the canvas stops counting that strip as
-    /// usable, so "fit to view" and "home" center on what is actually visible rather than on what is behind the panel.
-    /// <para>Only edges reserve, and along the edge the placement names: left placements take width from the left,
-    /// right ones from the right, <see cref="CanvasPanePlacement.TopCenter"/> and
-    /// <see cref="CanvasPanePlacement.BottomCenter"/> take height. Free and Selection reserve nothing - a pane that
-    /// follows something cannot also be a wall.</para></summary>
+    /// <summary>Whether this edge-placed pane reserves its strip, so fit-to-view centers on what is visible. Free and
+    /// Selection placements reserve nothing.</summary>
     public Boolean IsDocked
     {
         get => GetValue<Boolean>(IsDockedProperty);
@@ -442,11 +423,7 @@ public class CanvasPane : ContentControl
             Orientation == Orientation.Vertical ? Orientation.Horizontal : Orientation.Vertical);
     }
 
-    // Every press that reaches a pane is the PANE's, whatever the pane then does with it, and the canvas must not read
-    // it as a press on the plane as well. It was: a stroke's CaptureMouse() took the capture a button inside the panel
-    // had just taken for itself, so that button never saw its own release and nothing in the panel answered. MouseDown
-    // is not marked handled by the controls that answer it - they answer MouseLeftButtonDown, raised from a SEPARATE
-    // args object - so where the press came from is the only thing there is to go on.
+    // Every press on a pane is the pane's; the canvas must not also start a stroke and steal a button's capture.
     private void OnPressed(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;

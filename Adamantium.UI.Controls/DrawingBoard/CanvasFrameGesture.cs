@@ -6,11 +6,8 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>Dragging the manipulation frame - a grip to resize what is selected, or the body to move it.
-/// <para>Its own type because the frame belongs to the CANVAS and not to any one tool: the canvas draws it, so the
-/// canvas answers presses on it, and a person who has just dragged out a rectangle can pull its corner straight away
-/// instead of putting the shape tool down first. The select tool uses the same gesture for the body, so there is one
-/// implementation of "what a drag of the frame does" rather than one per tool.</para></summary>
+/// <summary>Dragging the selection frame: a grip resizes, the body moves. Owned by the canvas, not a tool, so it works under
+/// any tool.</summary>
 public sealed class CanvasFrameGesture
 {
     private readonly List<Rect> _startBounds = new();

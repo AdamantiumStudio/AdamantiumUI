@@ -4,11 +4,8 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
-// The GPU stroke expander (StrokeEffect.fx) writes 10 floats per vertex: position, then one float4 per END of the PIECE
-// this vertex belongs to (one dash, one trim run, or the whole open contour). Cap0 = (perp, uA, vA, arcA), Cap1 =
-// (caps, uB, vB, arcB): perp drives the analytic-AA band, u/v place the vertex in that end's straight frame (the cap's
-// SHAPE), arc is its distance to that end along the contour (the cap's REACH), and caps packs both cap codes base-8.
-// That is what lets the shader carve the caps analytically instead of emitting them as geometry.
+// A stroke vertex: position plus one float4 per end of its piece, Cap0 = (perp, uA, vA, arcA) and Cap1 = (caps, uB, vB,
+// arcB), so the shader carves caps analytically; caps packs both cap codes base-8.
 [StructLayout(LayoutKind.Sequential)]
 internal struct StrokeVertex
 {
@@ -16,10 +13,7 @@ internal struct StrokeVertex
     [VertexInputElement("TEXCOORD0")] public Vector4F Cap0;
     [VertexInputElement("TEXCOORD1")] public Vector4F Cap1;
 
-    // Serial number of the PIECE of ribbon this vertex belongs to - one segment quad, one join fan, one dash. A
-    // translucent stroke resolves its self-overlaps by keeping the MAXIMUM coverage per pixel, and this is what breaks
-    // the tie between two pieces that cover a pixel equally (a crossing covers both fully). It rides in its own
-    // attribute rather than packed into Cap1: interpolating a large value across a triangle costs more than half a
-    // unit of error, and rounding it back would then land on the wrong piece.
+    // The ribbon piece id, breaking ties in max-coverage overlap resolution; its own attribute, since packing would lose
+    // precision in interpolation.
     [VertexInputElement("TEXCOORD2")] public float PieceId;
 }

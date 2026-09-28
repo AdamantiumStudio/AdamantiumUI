@@ -5,16 +5,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>
-/// A render MOTION NODE bakes its subtree in its OWN space and rides a transform-table slot, so when it moves the render
-/// rewrites one matrix and replays the recorded frame instead of walking the window. That is what makes panning a tab
-/// strip cheap, and it is only true of a MOVE.
-/// <para>A folded docking panel is where it stops being true: the strip does not slide, it turns - wide and short
-/// becomes narrow and tall, and every label inside it is re-laid-out in the node's own space. Replaying that from a
-/// matrix draws the old shape at the new place, which on the stand was a strip standing above its own panel with the
-/// turned labels clipped. It corrected itself as soon as anything forced a fresh walk - clicking a tab - which is the
-/// signature of a right layout and a stale recording.</para>
-/// </summary>
+// A motion node that is resized or re-laid-out (not just moved) must be re-recorded, not replayed from its matrix.
 [TestFixture]
 public class MotionNodeResizeTests
 {

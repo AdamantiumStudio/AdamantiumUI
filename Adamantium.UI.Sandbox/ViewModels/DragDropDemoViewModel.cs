@@ -82,7 +82,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         new DragTreeNode("Loose item"),
     ]);
 
-    // OS interop (docs/DRAG_DROP_PLAN.md phases 5-6). Everything dropped in from ANOTHER application lands here, and the
+    // OS interop. Everything dropped in from ANOTHER application lands here, and the
     // "export" items below can be dragged OUT into one - both through the same commands an in-app drop uses.
     [Bindable] private ObservableCollection<string> _dropped = new();
 

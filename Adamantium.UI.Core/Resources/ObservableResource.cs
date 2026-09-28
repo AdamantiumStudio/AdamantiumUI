@@ -4,13 +4,8 @@ using Adamantium.UI.Core.MarkupExtensions;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>
-/// Markup extension <c>{ObservableResource Key}</c>: a LIVE, tree-scoped reference to a keyed resource. Unlike
-/// <see cref="ResourceReference"/> - a one-shot lookup resolved once when the element attaches - this stays connected:
-/// a theme swap, or a resource dictionary loaded/unloaded, flows straight to every control that references the key, with
-/// no reload. The dictionary analog of <see cref="ThemeResource"/> (which tracks a single theme PROPERTY); backed by its
-/// own <see cref="ObservableResourceExpression"/>.
-/// </summary>
+/// <summary><c>{ObservableResource Key}</c>: a live, tree-scoped reference to a keyed resource that follows theme swaps
+/// and dictionary changes, unlike the one-shot <see cref="ResourceReference"/>.</summary>
 public class ObservableResource : MarkupExtension
 {
     // Live expressions created by Apply, per target, keyed by "property@priority" + token - so a setter/trigger disposes
@@ -33,11 +28,7 @@ public class ObservableResource : MarkupExtension
 
     /// <summary>Connects a live <see cref="ObservableResourceExpression"/> from the keyed resource to
     /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and triggers.</summary>
-    /// <remarks>Any component, not only one that lives in a tree. A GRADIENT STOP is the case that forced this: a
-    /// theme's fade is a brush, a brush is not in the visual tree, and its stops could therefore only take the STATIC
-    /// <c>{ResourceReference}</c> - resolved once, so every gradient in the application kept the colours of the variant
-    /// it was built under while the solid fills around it followed. Resolution copes: a target with no tree resolves
-    /// against Theme and Global, which is exactly where a palette colour lives.</remarks>
+    /// <remarks>Works on non-tree targets such as gradient stops, which resolve against Theme and Global.</remarks>
     public ObservableResourceExpression Apply(IAdamantiumComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Template, object token = null)
     {
@@ -69,12 +60,8 @@ public class ObservableResource : MarkupExtension
             return;
         }
 
-        // SOMEBODY ELSE MAY STILL OWN THIS PROPERTY, and the token-LESS form below clears the whole priority slot. A
-        // theme swap applies the incoming style before removing the outgoing one, and both write the same property at
-        // the same priority - so without this the departing style closes the connection the ARRIVING one just made and
-        // clears the value with it. The property then falls to its own default, which for a brush is transparent:
-        // measured on a ribbon after a swap, every command icon stroked with a fully transparent brush at its correct
-        // size, hoverable and invisible.
+        // Keyed by owner token: during a swap the outgoing style must not close the connection the incoming one just
+        // made.
         var slot = propertyName + "@" + priority;
         foreach (var pair in map)
         {

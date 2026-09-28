@@ -4,13 +4,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One instance of the TEXTURED rounded-rect batch (see BatchEffect.fx, pass TexRect): a rounded rect whose fill is
-/// SAMPLED from a texture, position baked to WORLD space. Packed into a BDA STORAGE buffer and read by SV_InstanceID
-/// (the shader's <c>TexRectData</c>); the quad comes from SV_VertexID and the pixel shader reconstructs the rounded
-/// corners analytically (self-AA).
-/// <para>The sibling of <see cref="PatternRectItem"/>: same SDF shape, but the fill comes from a sample instead of a
-/// formula. WHICH texture is not in the record - one texture is bound per SEGMENT (see
-/// <see cref="TextureBatchCollector"/>), the way the text batch binds one atlas per segment.</para>
+/// One textured rounded-rect instance (BatchEffect.fx, pass TexRect), matching <c>TexRectData</c>; the texture is bound
+/// per segment (<see cref="TextureBatchCollector"/>).
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct TextureItem

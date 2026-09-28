@@ -16,14 +16,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>
-/// A shape turned by a transform must keep its anti-aliased edge. A diagonal is the only place the question can be
-/// asked at all - an axis-aligned edge lands on the pixel grid and looks clean with no fringe whatsoever - which is
-/// why an icon that TURNS is where a missing fringe shows up first, and why it looks like "the rotation broke it".
-/// <para>Written for a drawing whose nested group carries its own Transform: the geometry never changes, only where
-/// the group puts it, so the mesh is shared and the turn rides in the instance. That is the instanced path, and the
-/// comparison here is against the per-unit one, which draws the same shape with its own fringe.</para>
-/// </summary>
+// A shape rotated through the instanced path keeps its anti-aliased edge, compared against the per-unit fringe.
 [TestFixture]
 [Category("Gpu")]
 public class RotatedGeometryFringeTests

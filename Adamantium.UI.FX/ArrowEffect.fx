@@ -1,21 +1,5 @@
-// ARROW - a whole arrow drawn as ONE shape: a shaft and up to two heads, and the fragment asks how far it is from all
-// of them at once. One instance per arrow, no geometry of any kind.
-//
-// What this replaces. An arrow was a stroked line plus a tessellated mesh per head, rebuilt on the CPU every time
-// anything about it moved. Three things came out of that and all three are gone here rather than fixed:
-//   - A mesh handed to the renderer is read LATER, so a mesh kept and rewritten is one that can be read while it is
-//     being written. What that looks like is a head drawn where the arrow used to be, and a flicker at every move.
-//   - The barbs met at the tip in a MITRE, and a mitre on a sharp corner throws a spike far past the point it is meant
-//     to close. A union of two capsules has no such thing: the corner is exactly where the two overlap.
-//   - Tessellation is fixed at the size it was built for. This is analytic, so an arrow is as clean at forty times the
-//     zoom as at one.
-//
-// A SIXTH effect, for the reason the third, fourth and fifth record: the driver's shader-object compiler has a ceiling
-// on what one effect can carry, and adding shaders to one that works has killed vkCreateShadersEXT before.
-//
-// NO LOOPS AT ALL, which is the other reason this is its own pass. Everything here is a fixed number of closed-form
-// distances; the ink pass had to fight the same compiler over a single flat loop, and this one gives it nothing to
-// give up on.
+// ARROW - a shaft and up to two heads drawn analytically as one shape: one instance per arrow, no geometry, crisp at
+// any zoom, and no mitre spike at the tip.
 
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
@@ -87,23 +71,8 @@ float ArrowDistanceToSegment(float2 p, float2 a, float2 b)
     return length(pa - ba * t);
 }
 
-// NO SECOND FUNCTION. The filled head is worked out inline in the pixel shader below, and that is not a style choice:
-// this driver's shader-object compiler took an access violation inside vkCreateShadersEXT the moment the fragment
-// called a second helper of its own - bisected twice, once on the usual closed-form triangle distance and again on a
-// plainer three-half-plane one, with the pass creating happily the instant neither was called.
-//
-// It costs nothing to inline, because a head has its OWN AXIS and in those coordinates a triangle is two numbers - see
-// the note where it is measured.
-
-// NOTHING between these leaves and the pixel shader. What stood here was two more functions - one picking where the
-// shaft stops, one picking which head to measure - each with an early return and each CALLING the leaves above. The
-// driver's shader-object compiler took an access violation inside vkCreateShadersEXT on it, which is the same ceiling
-// the ink pass met over a single nested loop: this compiler gives up on control flow in a fragment stage, and a branch
-// that returns is control flow.
-//
-// So the pixel shader below is FLAT and BRANCHLESS. Both forms of both heads are measured every time and the ones that
-// are not wanted are pushed out of the way with step/lerp - three distances nobody needed, against a pass the driver
-// refuses to create at all.
+// The pixel shader below is flat and branchless: both head forms are measured and the unwanted ones masked with
+// step/lerp.
 
 [shader("pixel")]
 float4 ArrowPS(ArrowPSInput i) : SV_Target
@@ -134,17 +103,8 @@ float4 ArrowPS(ArrowPSInput i) : SV_Target
     float startWanted = step(0.5, it.Head.y);
     float startSolid = step(1.5, it.Head.y);
 
-    // WHERE THE SHAFT STOPS, and it is not the same answer for the two kinds.
-    //
-    // A TRIANGLE is filled from its base to its tip, so the shaft stops at the base and the fill covers the join.
-    // BARBS are two strokes and nothing else - no fill at the base to cover anything - so a shaft stopped there hangs
-    // in the air with a gap between it and its own head. It has to reach the TIP, and stop half a thickness short of it
-    // so its ROUND end lands exactly on the tip rather than half a thickness past it. That overshoot is what read as a
-    // head set too far back.
-    // ...and for BARBS that is not half a thickness back from the tip, which is where a flat end would go. The shaft
-    // ends ROUND, and a disc of half a thickness sitting on the axis pokes out through the side of a head that has
-    // narrowed to almost nothing by then - a bulge just behind the point. It has to sit back far enough that the disc
-    // clears the head's own outer edge, and that distance is where the edge is half a thickness off the axis.
+    // Where the shaft stops: at a triangle's base, or for barbs just short of the tip, where its round end fits inside
+    // the narrowing head.
     float tuck = edge / max(wide * rsqrt(max(it.Params.w * it.Params.w + wide * wide, 1e-12)), 1e-6);
 
     float endBack = min(lerp(tuck, it.Params.w, endSolid), span);
@@ -157,29 +117,16 @@ float4 ArrowPS(ArrowPSInput i) : SV_Target
     // three times wherever they overlap, which a translucent arrow shows as dark seams at the head.
     float nearest = ArrowDistanceToSegment(i.Local, shaftFrom, shaftTo) - edge;
 
-    // EACH HEAD IN ITS OWN COORDINATES: how far BACK from the tip a point is, and how far OFF the axis - and the second
-    // one as a distance, without a side to it.
-    //
-    // That fold is the whole saving, and the saving is what makes this pass exist at all. The two barbs are mirror
-    // images about the axis, so once the side is dropped they are ONE segment - from the tip to the corner - and one
-    // distance answers both. The triangle's two slanted sides are the same mirror pair, so they are one edge too. What
-    // was four segment distances and four corner points per arrow is now one distance and two numbers.
-    //
-    // A rotation and a reflection are both isometries, so a distance measured here is the distance on screen.
+    // Each head in its own coordinates (back from the tip, unsigned distance off the axis), so mirrored barbs and
+    // triangle sides fold into one segment.
     float reach = max(back, 1e-6);
     float slant = rsqrt(max(reach * reach + wide * wide, 1e-12));
 
     float2 endAt = float2(dot(to - i.Local, along), abs(dot(i.Local - to, across)));
     float2 startAt = float2(dot(i.Local - from, along), abs(dot(i.Local - from, across)));
 
-    // ONE LINE DOES BOTH HEADS. The slanted side runs from the tip out to the corner, and the two forms of a head are
-    // both cut from it: a TRIANGLE is everything inside that line back to the base, and BARBS are the BAND of one
-    // thickness just inside it.
-    //
-    // Which is also what makes the point of a barbed head SHARP. Drawn as two capsules from the tip, its tip was a
-    // capsule's end - round, by half the line's thickness. Both edges of this band pass through the tip, so the band
-    // closes to a point there and there is nothing to round off. No mitre either, and so none of the overshoot a mitre
-    // throws on a sharp corner.
+    // One slanted line gives both heads: a triangle is inside it back to the base, barbs are a band just inside it,
+    // closing to a sharp point.
     float endEdge = (endAt.y * reach - endAt.x * wide) * slant;
     float endBase = endAt.x - reach;
     float endFilled = max(endEdge, endBase);

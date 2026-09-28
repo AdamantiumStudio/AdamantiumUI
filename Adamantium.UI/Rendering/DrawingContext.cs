@@ -38,13 +38,8 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       drawCommands.Clear();
    }
 
-   // Frame-scoped world-transform memo. IUIComponent.WorldTransform composes up the render-parent chain LIVE on every
-   // call - O(depth), and each step builds a translation matrix, reads RenderTransform/RenderTransformOrigin and does a
-   // 4x4 multiply. Measured at ~1us for a component ONE level below the root, and the record asks for it once per draw
-   // command: 8000 commands x depth 10 on a tile grid. Composed here exactly as the property does (same formula, same
-   // RenderParent - which an Adorner overrides, and this follows it), so the value is identical; it is only computed
-   // once per component per frame instead of once per command from scratch. The render cache memoises the same walk over
-   // its FROZEN snapshot for the same reason (RenderCache.Bake.World).
+   // Per-frame WorldTransform memo: the property recomposes the O(depth) chain on every call, and recording asks once
+   // per draw command. Composed exactly as the property does.
    private readonly Dictionary<IUIComponent, Matrix4x4F> _worldMemo = new();
 
    public void BeginRecordFrame() => _worldMemo.Clear();
@@ -104,11 +99,8 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
 
    IDrawingSession IDrawingSession.DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen)
    {
-      // Nothing VISIBLE to fill and no border to stroke -> draw nothing, and don't create a render unit (with its GPU
-      // buffers + AA fringe) for it. A null OR a fully-transparent brush both paint nothing: Border/Panel/TextBlock all
-      // DEFAULT their Background to Brushes.Transparent, so without folding transparent in here every rest-state
-      // ListBoxItem (and each item's text background) still piled up an invisible fill unit + fringe - the ListBox FPS
-      // drop. Hit-testing is bounds-based, so nothing depends on the invisible draw.
+      // No visible fill and no pen: create no render unit (transparent is the default Background; hit-testing uses
+      // bounds).
       if (!brush.IsVisible() && pen == null)
          return this;
 
@@ -245,11 +237,8 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return renderData;
    }
 
-   // Opacity composites DOWN the visual tree (WPF semantics): a control's effective opacity is its own Opacity times
-   // every ancestor's. Without this a COMPOSITE control ignores its own Opacity - e.g. a Button draws nothing itself,
-   // its pixels come from its template's Border child (Opacity 1), so Button.Opacity never reached those draw commands.
-   // SelfOpacity is the NON-composited counterpart: it fades only THIS element's own draws, so it is folded in here but
-   // the ancestor walk multiplies each parent's Opacity ONLY, never their SelfOpacity - so it never reaches descendants.
+   // Own Opacity times every ancestor's (WPF semantics); SelfOpacity applies to this element's draws only, never to
+   // descendants.
    private float GetEffectiveOpacity()
    {
       var opacity = _currentComponent.Opacity * _currentComponent.SelfOpacity;

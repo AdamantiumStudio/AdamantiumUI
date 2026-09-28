@@ -8,11 +8,8 @@ public interface ISetter
 
    public string TargetName { get; set; }
 
-   /// <summary>Where this setter stands in the markup, among all the triggers of one collection. Two triggers writing
-   /// the SAME property on the same part are resolved by this - the one written LOWER wins, which is the only rule a
-   /// theme author can reason about. Resolving by which fired last instead made the look depend on the history of
-   /// events: a drop-down row that was both selected and keyboard-highlighted came out accent or grey depending on
-   /// whether it was the first opening or the third. Stamped when the trigger joins its collection.</summary>
+   /// <summary>Position in markup among a collection's triggers; when two write the same property, the later-declared one
+   /// wins regardless of firing order.</summary>
    int DeclarationOrder { get; set; }
 
    /// <summary>How far down a <see cref="Style.BasedOn"/> chain the style that owns this setter stands. Compared BEFORE

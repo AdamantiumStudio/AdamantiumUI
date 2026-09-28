@@ -68,11 +68,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         VisualTreeNotifications.RaiseZOrderChanged(component);
     }
 
-    /// <summary>Whether this component's shapes are drawn with analytic anti-aliasing. On (the default) an edge fades
-    /// over about a pixel, which is what a curve or a slanted line needs. An axis-aligned RECTANGLE sitting on whole
-    /// pixels needs none of it - and pays for it: coverage is a half exactly on the edge, so two abutting rectangles
-    /// compose to about three quarters and leave a dark hairline down the join. Turn it off there.
-    /// <para>Per component rather than a rule in the renderer: only the author knows whether a shape is one of those.</para></summary>
+    /// <summary>Whether shapes are drawn with analytic anti-aliasing. Turn it off for pixel-aligned rectangles that abut, whose
+    /// half-covered edges would leave a dark hairline down the join.</summary>
     public static readonly AdamantiumProperty UseAnalyticAAProperty = AdamantiumProperty.Register(nameof(UseAnalyticAA),
         typeof(Boolean), typeof(UIComponent), new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
 
@@ -93,19 +90,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             PropertyMetadataOptions.AffectsRender,
             OnVisibilityChanged));
 
-    // COLLAPSING changes the DRAWN set (a unit leaves the paint order), so it is a STRUCTURAL change for the render cache,
-    // which NAMES the component so the change can be spliced instead of re-derived by walking the whole tree. Hiding is
-    // the lesser fact - see below.
-    //
-    // UnsetValue means the property was never assigned - but the component's EFFECTIVE visibility was still the default
-    // (Visible), so a control going straight from that default to Collapsed really did leave the drawn set. Treating that as
-    // "there is no old value, skip it" is why a pooled container - collapsed for the FIRST time in its life, which is exactly
-    // what recycling does to it - named nobody: the render cache never learned it was gone and kept drawing its tile at the
-    // old slot (the gaps and overlapping tiles while the size slider is dragged). The old full-walk rebuild hid this, because
-    // it re-derived the drawn set from the tree every frame and never needed the mark to be right.
-    //
-    // What the guard is actually for is the constructor's SEED (UnsetValue -> Visible, fired for every control ever created),
-    // and that is a no-op change once the old value is read as the default it really was.
+    // Collapsing leaves the paint order, a structural change named for the render cache. An unset old value reads as the
+    // default Visible, so a first collapse is still named while the constructor's seed stays a no-op.
     private static void OnVisibilityChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is not UIComponent component) return;
@@ -117,22 +103,13 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         if (previous == effective) return;
 
-        // Hidden <-> Visible keeps the element's slot and its size: nothing enters or leaves the paint ORDER, only what
-        // is painted changes. Said that way it is a content change of this element and its subtree, which the retained
-        // frame patches - where a structural change discards the frame and re-walks the window. That difference is a
-        // close button appearing on hover costing a full-scene walk, once per tab a scrolling strip carries past the
-        // pointer. Collapsed is the other thing: it leaves the layout too, and stays structural.
+        // Hidden <-> Visible keeps the slot, so it is a content change the retained frame patches, not a structural one.
         if (previous != Visibility.Collapsed && effective != Visibility.Collapsed)
             VisualTreeNotifications.RaiseShownOrHidden(component);
         else
             VisualTreeNotifications.RaiseVisibilityChanged(component);
 
-        // And tell whatever MEASURED it, because what that parent measured just changed: a collapsed child asks for
-        // nothing. Nothing else carries this. InvalidateMeasure deliberately does NOT walk up from an already-measured
-        // node - it leaves that to the layout pass, which propagates only when a re-measure CHANGES the node's
-        // DesiredSize - and DesiredSize reads zero for a collapsed element from the instant this flag is written, so by
-        // the time the pass looks there is no difference left to find. The minimized ribbon's band kept its full height
-        // that way: content moved into the flyout, row still standing.
+        // Tell the parent directly: a collapsed element's DesiredSize reads zero at once, so the layout pass would see no change.
         component.NotifyParentOfContributionChange();
     }
       
@@ -140,13 +117,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         AdamantiumProperty.Register(nameof(IsHitTestVisible),
             typeof(Boolean), typeof(UIComponent), new PropertyMetadata(true));
 
-    // Opt-in, like WPF: a component clips its descendants to its bounds (a Vulkan scissor, honoured by the renderer)
-    // only when this is set. Default false so content that intentionally overflows its bounds - drop shadows, the
-    // analytic-AA fill fringe, glyph effect padding, render-transformed children - is never clipped unless asked. A
-    // ScrollViewer's content host, and a control mid content-transition, set it to true.
-    // AffectsRender: turning a clip on or off changes WHAT IS DRAWN - the scissor every descendant is drawn under. Without
-    // it the frame kept whatever the last walk recorded, so a clip toggled at runtime (a binding, a trigger, a content
-    // transition switching one on) did nothing until something else happened to force a redraw.
+    // Opt-in clipping of descendants to the bounds, so shadows and AA fringes overflow unless asked. AffectsRender: a
+    // toggle changes the scissor every descendant is drawn under.
     public static readonly AdamantiumProperty ClipToBoundsProperty = AdamantiumProperty.Register(nameof(ClipToBounds),
         typeof(Boolean), typeof(UIComponent),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender, OnClipToBoundsChanged));
@@ -162,13 +134,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         VisualTreeNotifications.RaiseClipChanged(component);
     }
 
-    /// <summary>How the CLIP's own corners are rounded, when <see cref="ClipToBounds"/> is on. Unset (all zero) means
-    /// "take the container's own corners", so a rounded Border or Control clips the way it looks without being told
-    /// twice; set it to clip differently from how the container is drawn.
-    ///
-    /// <para>Lives here rather than on the rounded controls because CLIPPING is a property of any container, while
-    /// CornerRadius belongs to whoever happens to paint corners - Control, Border, Image and Rectangle each declare
-    /// their own, and a Grid or a StackPanel declares none while still being perfectly able to clip.</para></summary>
+    /// <summary>The clip's corner rounding when <see cref="ClipToBounds"/> is on. Unset takes the container's own corners, so
+    /// a rounded Border clips the way it looks.</summary>
     public static readonly AdamantiumProperty ClipCornerRadiusProperty = AdamantiumProperty.Register(
         nameof(ClipCornerRadius), typeof(ProceduralGeometry.CornerRadius), typeof(UIComponent),
         new PropertyMetadata(default(ProceduralGeometry.CornerRadius), PropertyMetadataOptions.AffectsRender,
@@ -204,17 +171,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// the types that actually have a CornerRadius override it.</summary>
     protected virtual Vector4F OwnCornerRadii() => Vector4F.Zero;
 
-    /// <summary>A container that clips BY ITS OWN CORNERS has just been given different ones. The property-changed
-    /// callback of every CornerRadius that feeds <see cref="OwnCornerRadii"/> must call this.
-    ///
-    /// <para>AffectsRender on the CornerRadius itself is not enough, and for the same reason ClipToBounds needed its own
-    /// announcement: the clip belongs to the whole SUBTREE, not to the element that owns the corners, and the frozen
-    /// layout snapshot the renderer clips from is only re-taken for what a mark names. Without this the cut kept the
-    /// radii it was recorded with - a container whose radius was bound or animated went on cutting square until an
-    /// unrelated full walk (a scroll, the window losing focus) re-froze it, and then changed in one jump.</para>
-    ///
-    /// <para>Silent when the clip does not read them: an explicit ClipCornerRadius wins over the painted corners, so
-    /// changing those then means nothing to the cut - and a structural mark is the most expensive kind there is.</para></summary>
+    /// <summary>Announces new corners on a container that clips by its own corners; every CornerRadius feeding
+    /// <see cref="OwnCornerRadii"/> must call it, since the clip belongs to the whole subtree.</summary>
     protected static void NotifyOwnCornersChanged(AdamantiumComponent d)
     {
         if (d is not UIComponent { ClipToBounds: true } component) return;
@@ -241,14 +199,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         typeof(Double), typeof(UIComponent),
         new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsPaint, OnOpacityChanged));
 
-    // Opacity composites DOWN the visual tree, but it does NOT re-bake the subtree: the value rides an opacity SLOT in
-    // the transform table, and the shaders that read it compose it at draw time. So only THIS element is marked - the
-    // descendants' instances are untouched, which is what makes fading a 22k-node subtree cost one float instead of
-    // 22k re-bakes (measured: 42.55 ms a frame -> 3.78).
-    //
-    // The families whose shader cannot read that slot (text above all - see GlyphItem) still need a re-bake, and the
-    // render cache re-bakes exactly those, from the list it keeps of them. Marking the whole subtree here to cover them
-    // costs the walk over every descendant that this change exists to avoid.
+    // Only this element is marked: opacity rides a slot in the transform table that shaders compose at draw time. The render
+    // cache re-bakes the few families that cannot read the slot.
     private static void OnOpacityChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is not UIComponent component) return;
@@ -330,11 +282,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         typeof(FontFamily), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
 
-    // Foreground is INHERITED (like FontFamily / DataContext): set it on an ancestor and descendant text picks it up
-    // unless it sets its own (an explicit local/style value stops the cascade; a mere default does not, so overriding the
-    // default per type is safe). Declared once here so the SAME property flows across Control / TextBlock / ContentPresenter
-    // (inheritance is by property IDENTITY - three separate registrations would never cross-inherit). Leaf types
-    // OverrideMetadata to keep their own default brush + render/measure callbacks while preserving Inherits.
+    // Inherited, and declared once so the same property flows across Control, TextBlock and ContentPresenter; leaf types
+    // override the metadata for their default.
     public static readonly AdamantiumProperty ForegroundProperty = AdamantiumProperty.Register(nameof(Foreground),
         typeof(Brush), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits));
@@ -345,12 +294,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(ForegroundProperty, value);
     }
 
-    // FontSize is INHERITED (like FontFamily / Foreground): declared ONCE here so the SAME property flows across
-    // Control / TextBlock / ContentPresenter etc. (inheritance is by property IDENTITY - separate per-control registrations
-    // never cross-inherit, which is why an unstyled templated header used to fall back to its OWN default instead of the
-    // control's size). AffectsMeasure fires on BOTH a direct set AND the inherited cascade (RunSetValueSequence runs the
-    // flags for every priority, including ValuePriority.Inherited), so text re-measures when an ancestor's FontSize flows
-    // in. Default 14; leaf types OverrideMetadata only to change the default (and re-specify Inherits | AffectsMeasure).
+    // Inherited and declared once, like Foreground; AffectsMeasure also fires for an inherited change. Leaf types override
+    // the metadata only for their default.
     public static readonly AdamantiumProperty FontSizeProperty = AdamantiumProperty.Register(nameof(FontSize),
         typeof(double), typeof(UIComponent),
         new PropertyMetadata(14.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -362,11 +307,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontSizeProperty, value);
     }
 
-    // Cursor is INHERITED (like Foreground): the cursor is applied from the element the pointer ENTERS (see
-    // InputUIComponent.OnMouseEnter), so a cursor set on a container must flow down to its parts - a grip/splitter whose hit
-    // target is a template child would otherwise show the child's default arrow. Declared HERE (not on InputUIComponent) so
-    // the property exists on EVERY node the inheritance walks - including non-input ones like Popup - otherwise propagating
-    // it into their subtree throws "not registered" on them.
+    // Inherited, so a container's cursor reaches the template part the pointer enters; declared here so every node the
+    // inheritance walks has it.
     public static readonly AdamantiumProperty CursorProperty = AdamantiumProperty.Register(nameof(Cursor),
         typeof(Cursor), typeof(UIComponent),
         new PropertyMetadata(Cursor.Default, PropertyMetadataOptions.Inherits, OnCursorChanged));
@@ -377,13 +319,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(CursorProperty, value);
     }
 
-    // The pointer is handed to the platform on MouseEnter (InputUIComponent.OnMouseEnter), which is enough only while a
-    // cursor belongs to a whole element. It does not for anything that decides from WHERE INSIDE itself the pointer is -
-    // a column separator, a splitter, a resize grip: those change their cursor with no enter to carry it, and what the
-    // screen showed was whatever the last crossing applied. The grid's header showed the resize cursor several pixels
-    // past the separator, so a press there reordered the column instead of resizing it - the pointer lied about what
-    // the press would do. Only the element UNDER the pointer may speak, and the inheritance walk goes parent -> child,
-    // so the deepest one speaks last and wins.
+    // Applies a cursor changed without a mouse enter (a separator, a grip); only the element under the pointer may, and the
+    // deepest one speaks last.
     private static void OnCursorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         if (component is UIComponent { } element and IInputComponent { IsMouseOver: true })
@@ -406,15 +343,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private Visibility _visibility = Visibility.Visible;
 
-    /// <summary>Whether this component is drawn, and whether it takes part in layout.</summary>
-    /// <remarks>
-    /// The GETTER reads a plain field, not the property store. This is the single hottest property in the engine - deriving
-    /// the paint order, hit-testing, and every subtree walk ask it about EVERY component they touch, several times each - and
-    /// one read through the property system takes a lock, resolves the value's priority stack, and BOXES the enum. On a 4800
-    /// tile grid that was tens of milliseconds per frame of pure overhead, entirely independent of what had actually changed.
-    /// The field is kept current by the property's own changed callback, so bindings, styles and triggers all still drive it
-    /// through SetValue exactly as before.
-    /// </remarks>
+    /// <summary>Whether this component is drawn and takes part in layout. The getter reads a field mirror, since this is the
+    /// hottest property in the engine.</summary>
     public Visibility Visibility
     {
         get => _visibility;
@@ -535,13 +465,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// units are the same, and the GPU data they bake from the brush is all that is stale.</summary>
     public void InvalidatePaint() => VisualTreeNotifications.RaisePaintInvalidated(this);
 
-    /// <summary>What the last record found: this element produced no draw commands, so a re-layout need not re-record
-    /// it - a resize can only invalidate geometry THROUGH what is drawn, and there is nothing drawn.
-    /// <para>Never latched from a record taken at NO SIZE. At zero by zero almost everything draws nothing, and that
-    /// says nothing whatever about what it draws once it has been given a size - but the flag is permanent, so one such
-    /// record used to silence the element for good: it was skipped at every later size, and only a full walk (a window
-    /// resize, say) ever drew it again. That is how a picture at the bottom of a scrolled column, recorded once before
-    /// it was arranged, stayed a blank square for the life of the application.</para></summary>
+    /// <summary>The last record produced no draw commands, so a re-layout need not re-record it. Never latched from a record
+    /// taken at zero size, which says nothing about later sizes.</summary>
     public bool DrawsNothing
     {
         get => _drawsNothing;
@@ -606,20 +531,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ReportedRenderFailures = new();
 
-    // The same boundary the theming seam has (FundamentalUIComponent.ApplyCurrentTheme), for the same reason and with
-    // the same two halves.
-    //
-    // WHY A BOUNDARY: the record walk visits every component of the scene in ONE pass, so a single component throwing
-    // out of OnRender abandoned the pass - nothing after it was recorded, and nothing BEFORE it was published either.
-    // The whole window came up empty, which reads as "the layout is broken" rather than as "one brush is the wrong
-    // type". Measured: a palette key served as a Brush landed in GradientStop.Color, and a window with a title bar, a
-    // tab strip and eleven pages showed a bare frame.
-    //
-    // WHY IT MUST NOT RETRY: the loop records EVERY frame, and a failure that leaves IsGeometryValid false is a failure
-    // repeated at frame rate - one bad attribute wrote 15MB of identical stack traces in under a minute and spent the
-    // whole loop thread doing it. So the component is marked recorded, exactly as a control that fails to theme is
-    // marked applied: it stays visibly wrong, and it stops costing anything. Whatever next invalidates it gets a fresh
-    // attempt, so a fix at runtime still takes effect.
+    // One component throwing from OnRender must not abandon the whole record pass; it is marked recorded rather than retried
+    // every frame, and the next invalidation tries again.
     private void ReportRenderFailure(Exception e)
     {
         var key = $"{GetType().FullName}:{e.GetType().FullName}:{e.Message}";
@@ -630,11 +543,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             GetType().FullName);
     }
 
-    // Emit this element's draw commands into a context WITHOUT touching IsGeometryValid (so no RenderDirty mark, no loop
-    // wake) and WITHOUT the clean-frame gate. For an OFF-SCREEN snapshot of a LIVE (already-valid) element through a
-    // parallel render cache: the ordinary Render() would no-op on a valid element, and forcing it via InvalidateRender
-    // would mark the global RenderDirty and wake the window loop into a concurrent render (a hang). This just replays
-    // OnRender read-only - the element's own render state is untouched, so the window never notices.
+    // Replays OnRender for an off-screen snapshot of a live element without touching its render state, so the window loop is
+    // not woken into a concurrent render.
     public void RenderReadOnly(IDrawingContext context) => OnRender(context);
 
     public event EventHandler<VisualTreeAttachmentEventArgs> AttachedToVisualTreeEvent;
@@ -676,20 +586,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         return new Size(Math.Max(size.Width, 0), Math.Max(size.Height, 0));
     }
 
-    // EVERY change to the visual children lands here - and every one of them changes the DRAWN set, so every one of them must
-    // NAME the components that entered or left it. That is what lets the render cache splice the paint order (O(changed))
-    // instead of re-deriving it by walking the whole tree (O(scene), which on a 4K fill meant re-recording ~20 000 components
-    // on every frame of the fill).
-    //
-    // The marks live HERE, at the collection, and not at the callers, because there is no single caller: AddVisualChild does
-    // it, but so do Decorator.Child (a Border putting its content in - the case that kept the fill in full-walk mode), Panel's
-    // Children reconciliation, Slider's tooltip, TabStripScroller's child swap. Marking at each site is a rule that gets
-    // forgotten - and a forgotten one is silent: the old full-walk rebuild re-derived the drawn set from the tree anyway, so
-    // an unnamed change cost nothing and left no trace. Now it costs a whole-tree re-record, so the collection names them
-    // itself and no caller can forget.
-    // The visual tree's OWN plumbing, and the only place that knows a child entered or left it. Attaching/detaching the child
-    // and telling the renderer that the drawn set changed are two halves of the same fact, so they live together, here - once.
-    // No control ever writes either of them: a control adds a child, and everything that follows is the tree's business.
+    // Every visual-children change names the components that entered or left, so the render cache splices the paint order
+    // instead of walking the tree. Marked here, at the collection, because no caller can then forget.
     private void VisualChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         Detach(e.OldItems);
@@ -706,13 +604,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         }
     }
 
-    /// <summary>Give up a child another parent has taken. The base drops it from the visual children; a container that
-    /// lays out from a collection of its OWN - a panel's Children, a decorator's Child - overrides to drop it there too,
-    /// because that is what its measure and arrange actually walk.
-    /// <para>Deliberately NOT routed through <see cref="IContainer"/>, tempting as that is: that interface is about
-    /// AUTHORED markup children (it is what the designer edits incrementally), not about what a control lays out. Asking
-    /// it here reached an ItemsControl's Items and a ContentControl's Content - the model, not the visual tree - so a
-    /// control merely moving to another parent would have deleted the item or the content it was showing.</para></summary>
+    /// <summary>Gives up a child another parent has taken. A container that lays out its own collection overrides to drop it
+    /// there too; not routed through <see cref="IContainer"/>, which holds the authored model.</summary>
     protected internal virtual void DisownVisualChild(IUIComponent child)
     {
         _visualChildren?.Remove(child);
@@ -745,14 +638,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             if (_bounds == value) return;
             var sameSize = _bounds.Size == value.Size;
             _bounds = value;
-            // A MOTION NODE moving is the granular case: its subtree's instances reference its transform-table slot, so
-            // the render rewrites ONE matrix and replays - no global transform invalidation, no O(N) re-bake (the
-            // transform-only scroll). Everything else keeps the conservative global mark.
-            // Only a MOVE, though - the slot rewrite replays a recording made in this node's OWN space, and that is the
-            // same picture only while the space is. Resizing one re-lays-out everything inside it, so replaying draws
-            // the old shape at the new place: a tab strip folding against a side (wide and short -> narrow and tall)
-            // stood above its own panel with the turned labels clipped, and came right the moment anything forced a
-            // fresh walk. Right layout, stale recording.
+            // A motion node that only moves rewrites one transform-table matrix and replays; a resize changes its own space,
+            // so it takes the global mark.
             if (IsRenderMotionNode)
             {
                 // Its slot is rewritten either way - the subtree beneath it is baked RELATIVE to this node, so without
@@ -810,14 +697,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private int _zIndex;
 
-    /// <summary>Paint/hit-test order among siblings (higher = drawn later, hit first).</summary>
-    /// <remarks>
-    /// The GETTER reads a plain field, not the property store. Deriving the paint order asks EVERY child of EVERY component
-    /// for its ZIndex, on every walk - and one read through the property system takes a lock, resolves the value's priority
-    /// stack, and BOXES the int. At ~4800 children that was ~16 ms per pass, an overhead that did not depend on how much had
-    /// actually changed. The field is kept current by the property's own changed callback, so bindings, styles and triggers
-    /// all still work through SetValue exactly as before.
-    /// </remarks>
+    /// <summary>Paint and hit-test order among siblings (higher is drawn later, hit first). The getter reads a field mirror,
+    /// since every walk asks it of every child.</summary>
     public Int32 ZIndex
     {
         get => _zIndex;
@@ -827,11 +708,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     private Transform _renderTransform;
     private Transform _layoutTransform;
 
-    /// <summary>Field mirrors, for the same reason as <see cref="ZIndex"/>: both are read by every
-    /// <see cref="LocalTransform"/>, which is asked for by every layout snapshot and every world composition - and both
-    /// are NULL on almost every element. Measured at 60ns a read against 242ns for the whole of LocalTransform, so half
-    /// its cost was asking the property store twice whether there was a transform at all. Kept current by the properties'
-    /// own changed callbacks, so bindings, styles, triggers and animations all still go through SetValue as before.</summary>
+    /// <summary>A field mirror like <see cref="ZIndex"/>: every <see cref="LocalTransform"/> reads it, and it is null on almost
+    /// every element.</summary>
     public Transform RenderTransform
     {
         get => _renderTransform;
@@ -844,19 +722,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LayoutTransformProperty, value);
     }
     
-    /// <summary>The point the <see cref="RenderTransform"/> is applied AROUND, as a fraction of this element's own size:
-    /// (0,0) = top-left (the default), (0.5,0.5) = centre, (1,1) = bottom-right. Rotation and scale both honour it.</summary>
-    /// <remarks>
-    /// This belongs to the ELEMENT, not to the Transform, because it is the only one of the two that knows the size. A
-    /// Transform can only name an ABSOLUTE centre (RotationCenterX/Y, in pixels), which a TEMPLATE cannot know: it is
-    /// written once and then used at whatever size the control is given, so a hardcoded centre is right at exactly one
-    /// size and visibly wrong at every other (a spinner's arc orbiting a point off its own centre). Stating the origin as a
-    /// FRACTION makes it size-independent. Same seam as WPF's RenderTransformOrigin - which is likewise on the element,
-    /// alongside the transform's own absolute centre.
-    ///
-    /// It also fixes SCALE, which had no centre at all (the transform scales about zero): a scale animation grew its
-    /// element out of its top-left corner instead of its middle.
-    /// </remarks>
+    /// <summary>The point <see cref="RenderTransform"/> rotates and scales around, as a fraction of this element's size
+    /// ((0.5,0.5) is the center); on the element because only it knows the size.</summary>
     public static readonly AdamantiumProperty RenderTransformOriginProperty = AdamantiumProperty.Register(
         nameof(RenderTransformOrigin), typeof(Vector2), typeof(UIComponent),
         new PropertyMetadata(default(Vector2), RenderTransformOriginChanged));
@@ -941,11 +808,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     public virtual Matrix4x4F WorldTransform
     {
-        // Compose up the RENDER parent chain (= the visual tree for everything but an adorner, which draws in its adorned
-        // element's space). Computed live each call (not cached): RenderTransform animates per-frame, and an animated
-        // ancestor must carry its whole subtree - a persistent dirty-flag cache would freeze descendants mid-flight. Hot
-        // callers that read it repeatedly within ONE frame (the render pass) memoize it frame-scoped instead (RenderCache),
-        // composing over the SAME RenderParent chain - so the frozen path cannot disagree with this one.
+        // Composed live up the render-parent chain, since an animated ancestor must carry its subtree; the render pass memoizes
+        // it per frame over the same chain.
         get => RenderParent != null ? LocalTransform * RenderParent.WorldTransform : LocalTransform;
     }
 
@@ -1009,12 +873,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// </summary>
     public bool IsAttachedToVisualTree => RootVisual != null;
 
-    /// <summary>Parked: out of the tree on purpose and coming back, so nothing cached for it may be thrown away. Read
-    /// off <see cref="FundamentalUIComponent.Lifecycle"/> rather than kept as a second flag beside it - "parked" and
-    /// "destroyed" are answers to the SAME question and two independent booleans could say yes to both, which is how a
-    /// keep-alive view came back marked dead. Still a plain field read, no property system: the render cache reads this
-    /// while deciding what to free, and that is a hot path (same rule as Visibility). Set through
-    /// <see cref="ParkedSubtree"/>, which is what parks and unparks a subtree.</summary>
+    /// <summary>Out of the tree on purpose and coming back, so nothing cached for it may be freed. Read off
+    /// <see cref="FundamentalUIComponent.Lifecycle"/>; set through <see cref="ParkedSubtree"/>.</summary>
     public bool IsParked => Lifecycle == Core.VisualLifecycle.Parked;
 
     /// <summary>Draw this subtree once per matrix instead of once at its own place - see <see cref="IUIComponent.RenderClones"/>.
@@ -1067,12 +927,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         var old = VisualParent;
 
-        // Moving to a new parent while another still holds it: take it off the old one, exactly as SetParent does for
-        // the logical tree. A component belongs to one parent, but nothing here used to reach the previous parent's
-        // child collection - so it went on listing the component, and went on measuring and arranging it. Two parents
-        // placing one control means its position is decided by whichever the layout pass reaches last, which is an
-        // accident of tree order. Measured through docking: a tab moved into another group kept the bounds of its old
-        // strip and so sat on top of a neighbour.
+        // A new parent takes it off the old one, as SetParent does for the logical tree; two parents would both lay it out.
         if (old != null && parent != null) (old as UIComponent)?.DisownVisualChild(this);
 
         VisualParent = parent;
@@ -1095,13 +950,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private void AttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        // It came back, so it is alive again - whatever it was on the way out. Here rather than in each of the ways of
-        // leaving, because as long as leaving was recorded and returning was not, the record could only get staler, and
-        // a queued release then reached an element that was already back on screen.
-        // NOT for a parked subtree: it stays parked until ParkedSubtree.Unpark says otherwise, and clearing that here
-        // would defeat the return path a few lines below - a parked root skips InvalidateRender precisely because it
-        // kept what was recorded for it (measured on the Layout tab: 5997 components dirtied, 25 ms, all of it that).
-        // Discarded is never revived - see FundamentalUIComponent.Revive.
+        // Back in the tree, so alive again; a parked subtree stays parked until ParkedSubtree.Unpark.
         if (!IsParked) Revive();
 
         RootVisual = e.Root;
@@ -1114,15 +963,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         // happens thousands of times in a frame that scrolls.
         RenderScope = _ownRenderScope ?? (VisualParent as UIComponent)?.RenderScope;
 
-        // While detached, a control's cached render units are freed (RenderCache.ReconcileDetachedControls). On re-attach
-        // it is still geometry-valid, so its Render() would record nothing and it would draw blank (e.g. a TabItem body
-        // shown, hidden by switching tabs, then shown again). Invalidate so the next render pass rebuilds its units; the
-        // recursion below carries this to the whole re-attached subtree.
-        //
-        // A PARKED subtree is the exception, and the reason parking exists: its units were kept, so asking the renderer to
-        // record them again throws away precisely what was saved. Measured on the Layout tab at the smallest tile - a
-        // return marked 5997 components dirty and cost 25 ms, all of it this line. The mark is cleared only for a subtree
-        // that comes home to the SAME window and theme (ParkedVisuals.IsUnchanged); anything else takes the full path above.
+        // Units freed while detached are rebuilt on return; a parked subtree kept its units, so it is not re-recorded.
         if (!IsParked) InvalidateRender(false);
 
         // ...and the values that DRAW it: a brush keeps every element painting with it subscribed, and leaving gave
@@ -1154,11 +995,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private void DetachedFromVisualTree(VisualTreeAttachmentEventArgs e, bool isSubtreeRoot = true)
     {
-        // The renderer has to withdraw what a departed control drew, and THIS is where the fact happens - attachment
-        // flipping, whatever route led here. Reading it off the child collection's notification instead missed every path
-        // that detaches directly (SetVisualParent re-parenting, DetachFromRoot when a window or a popup layer goes), and a
-        // view that left one of those ways kept its place in the paint order: drawn from the retained frame, frozen at the
-        // size it had when it left. Once per subtree - the recursion below carries the same departure.
+        // The renderer withdraws a departed control here, where detaching happens on every route; once per subtree.
         if (isSubtreeRoot) Core.RenderDirty.MarkDetached();
 
         // Clear the root link so IsAttachedToVisualTree (=> RootVisual != null) flips to false for this subtree.
@@ -1187,14 +1024,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         }
     }
 
-    /// <summary>Joins a subtree that has NO visual parent to a root - what a popup's content needs. The content is drawn
-    /// by the window's overlay and never becomes anyone's visual child, so the ordinary attach (driven by
-    /// <see cref="SetVisualParent"/>) never reaches it: without this it would never learn which root it lives in, and
-    /// with it the two things attaching does - re-recording what was freed while it was away, and restarting the
-    /// triggers that were suspended - would keep passing popups by.
-    /// <para><paramref name="ownsLayout"/> keeps the layout where it was: this subtree becomes its own
-    /// <see cref="LayoutRoot"/>, so its invalidations resolve to a manager of its own instead of joining the window's
-    /// queue, which the popup layer is already driving.</para></summary>
+    /// <summary>Joins a subtree with no visual parent, such as popup content, to a root. <paramref name="ownsLayout"/> makes it
+    /// its own <see cref="LayoutRoot"/> with a manager of its own.</summary>
     internal void AttachToRoot(IRootVisualComponent root, bool ownsLayout = false)
     {
         if (root == null || ReferenceEquals(RootVisual, root)) return;

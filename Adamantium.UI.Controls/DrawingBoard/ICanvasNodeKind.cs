@@ -1,10 +1,6 @@
 ﻿namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>ONE KIND a node can be, as the application offers it - an entry of the catalogue bound to the canvas.
-/// <para>What replaced a factory handed to the control: the list of kinds is DATA, and an entry of it is asked for a
-/// node when the canvas needs one - from the palette, from the tool that places one, from a wire let go over nothing.
-/// So there is no delegate on the canvas's surface, and no node objects of the engine's own either: what a node IS
-/// belongs to the application, and the control does with it what a generator does with an item.</para></summary>
+/// <summary>One node kind in the application's catalog bound to the canvas; asked for a node whenever the canvas needs one.</summary>
 public interface ICanvasNodeKind
 {
     /// <summary>The word a node of this kind carries, and what a file names it by.</summary>
@@ -27,10 +23,6 @@ public interface ICanvasNodeKind
     /// <summary>A fresh specialization of this kind - one per node, never shared.</summary>
     ICanvasNodeSpecialization Create();
 
-    /// <summary>A WHOLE NODE of this kind, ready to join the graph - the application's own object, with this kind's
-    /// specialization already in it.
-    /// <para>Asked of the catalogue because a node is the application's to define: the canvas holds no node type of its
-    /// own to fall back on, exactly as an items control holds no item type. Where it goes is the canvas's business and
-    /// is set after this returns; everything else about it is the application's.</para></summary>
+    /// <summary>A whole node of this kind, the application's own object; the canvas places it afterward.</summary>
     ICanvasNode Make();
 }
