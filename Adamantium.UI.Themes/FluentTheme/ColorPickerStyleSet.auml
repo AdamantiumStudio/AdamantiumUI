@@ -27,39 +27,50 @@
                         <StackPanel Orientation="Horizontal">
 
                             <!-- Saturation (x) / Value (y) square. Background is the pure hue (set in code); over it a
-                                 white->transparent horizontal (saturation) and a transparent->black vertical (value). -->
-                            <Border x:Name="PART_SVArea"
-                                             Width="220"
-                                             Height="220"
-                                             CornerRadius="6"
-                                             ClipToBounds="True">
-                                <Grid>
-                                    <Border>
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                                                <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
+                                 white->transparent horizontal (saturation) and a transparent->black vertical (value).
+                                 The ring sits OUTSIDE the clipped square, so at an edge or a corner it is whole. Dark,
+                                 white, dark: it shows on white, on black and on any hue. -->
+                            <Grid Width="220"
+                                  Height="220">
+                                <Border x:Name="PART_SVArea"
+                                        CornerRadius="6"
+                                        ClipToBounds="True">
+                                    <Grid>
+                                        <Border>
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                    <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                                    <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                        <Border>
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                    <GradientStop Color="#00000000" Offset="0"/>
+                                                    <GradientStop Color="#FF000000" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="PART_SVThumb"
+                                        Width="16"
+                                        Height="16"
+                                        CornerRadius="8"
+                                        BorderThickness="1"
+                                        BorderBrush="#99000000"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top">
+                                    <Border CornerRadius="7"
+                                            BorderThickness="2"
+                                            BorderBrush="White">
+                                        <Border CornerRadius="5"
+                                                BorderThickness="1"
+                                                BorderBrush="#99000000"/>
                                     </Border>
-                                    <Border>
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                <GradientStop Color="#00000000" Offset="0"/>
-                                                <GradientStop Color="#FF000000" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                    </Border>
-                                    <Border x:Name="PART_SVThumb"
-                                                     Width="16"
-                                                     Height="16"
-                                                     CornerRadius="8"
-                                                     BorderThickness="3"
-                                                     BorderBrush="White"
-                                                     HorizontalAlignment="Left"
-                                                     VerticalAlignment="Top"/>
-                                </Grid>
-                            </Border>
+                                </Border>
+                            </Grid>
 
                             <!-- Hue bar (0..360 top->bottom). -->
                             <Border x:Name="PART_HueArea"

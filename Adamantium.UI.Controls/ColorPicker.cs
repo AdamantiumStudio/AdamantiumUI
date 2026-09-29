@@ -210,7 +210,7 @@ public class ColorPicker : Control
     // Which area (if any) is under the pointer - the press picks the drag target, and moves keep updating it.
     private DragTarget HitArea(MouseButtonEventArgs e)
     {
-        if (Inside(_svArea, e))
+        if (Inside(_svArea, e) || Inside(_svThumb as InputUIComponent, e))
         {
             return DragTarget.SaturationValue;
         }
@@ -228,7 +228,7 @@ public class ColorPicker : Control
         return DragTarget.None;
     }
 
-    private static bool Inside(Border area, MouseButtonEventArgs e)
+    private static bool Inside(InputUIComponent area, MouseButtonEventArgs e)
     {
         if (area == null)
         {
