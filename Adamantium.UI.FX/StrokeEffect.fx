@@ -369,7 +369,7 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
 uint EmitJoin(float* outVerts, uint vCount, uint maxV, float2 V, float2 dIn, float2 dOut,
               float arcA, float arcB, PieceFrame f, float pieceId)
 {
-    float h = HalfThickness + Fringe * 0.5;   // widened; the outer corner verts carry perp=+/-h, the centre V carries 0
+    float h = HalfThickness + Fringe * 0.5;   // widened; the outer corner verts carry perp=+/-h, the center V carries 0
     float2 nInU = float2(-dIn.y, dIn.x);
     float2 nOutU = float2(-dOut.y, dOut.x);
     if (JoinType == 2u)   // round join: a disc of radius half
@@ -614,7 +614,7 @@ float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
     if (arc > h + Fringe) return 1e9;                             // farther along the contour than this cap can reach
     if (cap == 1u) return u + h;                                  // square: half a thickness of flat nub
     if (cap == 2u) return (u >= 0.0) ? 1e9 : h - length(float2(u, v));        // convex round: half-disc out
-    if (cap == 3u) return (u >= 0.0) ? 1e9 : (u + h - abs(v)) * 0.70710678;   // convex triangle: tip out at the centre
+    if (cap == 3u) return (u >= 0.0) ? 1e9 : (u + h - abs(v)) * 0.70710678;   // convex triangle: tip out at the center
     if (cap == 4u) return (u - hBite + abs(v)) * 0.70710678;      // concave triangle: V notch cut in
     if (cap == 5u) return length(float2(max(u, 0.0), v)) - hBite; // concave round: half-disc bitten out
     return u;                                                     // flat
@@ -699,7 +699,7 @@ technique Stroke
         ComputeShader = StrokeDashCutCS;
     }
 
-    // Draw (graphics): rasterize the compute-produced ribbon with a solid colour.
+    // Draw (graphics): rasterize the compute-produced ribbon with a solid color.
     pass Draw
     {
         EffectName = "StrokeEffect";

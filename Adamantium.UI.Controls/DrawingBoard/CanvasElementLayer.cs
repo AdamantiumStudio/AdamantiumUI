@@ -203,7 +203,7 @@ public class CanvasElementLayer : Panel
 
             // ...AND THE ITEM'S OWN TURN, in the SAME transform. One control has one render transform: a second one
             // written anywhere else simply replaces this, and the control then stands unscaled inside a frame drawn at
-            // the camera's scale. The turn is about the MIDDLE of the control's own box - stated as a centre rather
+            // the camera's scale. The turn is about the MIDDLE of the control's own box - stated as a center rather
             // than as an origin, because the origin here is the top-left the zoom scales about.
             var turn = _items[i] is ICanvasTransformed turned ? turned.Transform : CanvasTransform.None;
 

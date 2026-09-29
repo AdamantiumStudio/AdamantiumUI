@@ -62,7 +62,7 @@ public class EllipseCutRenderTests
         return px[i] > 128 || px[i + 1] > 128 || px[i + 2] > 128;
     }
 
-    // One probe per quadrant, halfway out from the centre - well inside the ellipse, well away from every boundary.
+    // One probe per quadrant, halfway out from the center - well inside the ellipse, well away from every boundary.
     private static (bool right_down, bool left_down, bool left_up, bool right_up) Quadrants(byte[] px)
     {
         const int off = Dim / 5;
@@ -87,7 +87,7 @@ public class EllipseCutRenderTests
         });
     }
 
-    // The start angle has to be honoured, not just the sweep: this is the same wedge moved a half-turn.
+    // The start angle has to be honored, not just the sweep: this is the same wedge moved a half-turn.
     [Test]
     public void TheStartAngleMovesTheWedge()
     {
@@ -100,18 +100,18 @@ public class EllipseCutRenderTests
         });
     }
 
-    // The two closings differ exactly at the CENTRE: a sector reaches it, a segment is cut off by its chord. Testing
+    // The two closings differ exactly at the CENTER: a sector reaches it, a segment is cut off by its chord. Testing
     // anything else about them would pass for both.
     [Test]
-    public void ASectorKeepsTheCentre_ASegmentDoesNot()
+    public void ASectorKeepsTheCenter_ASegmentDoesNot()
     {
         var sector = Render(0, 90, EllipseType.Sector);
         var segment = Render(0, 90, EllipseType.EdgeToEdge);
 
         Assert.Multiple(() =>
         {
-            Assert.That(IsLit(sector, Half + 2, Half + 2), Is.True, "a sector is closed through the centre");
-            Assert.That(IsLit(segment, Half + 2, Half + 2), Is.False, "a segment is closed by the chord, short of the centre");
+            Assert.That(IsLit(sector, Half + 2, Half + 2), Is.True, "a sector is closed through the center");
+            Assert.That(IsLit(segment, Half + 2, Half + 2), Is.False, "a segment is closed by the chord, short of the center");
             // ...and both still fill the rim of their quarter, or the test above would pass on an empty picture.
             Assert.That(IsLit(segment, Half + Dim / 4, Half + Dim / 4), Is.True, "the segment still fills out to the arc");
         });
@@ -197,7 +197,7 @@ public class EllipseCutRenderTests
         {
             Assert.That(IsLit(px, arcAt, arcAt), Is.True, "the ribbon has to be there at all");
             Assert.That(IsLit(px, chord, chord), Is.False, "nothing may be drawn along the chord - the contour is open");
-            Assert.That(IsLit(px, Half + 2, Half + 2), Is.False, "and nothing at the centre either: no radii, no wedge");
+            Assert.That(IsLit(px, Half + 2, Half + 2), Is.False, "and nothing at the center either: no radii, no wedge");
         });
     }
 
@@ -217,14 +217,14 @@ public class EllipseCutRenderTests
     }
 
     // A WHOLE sweep has no cut, whatever the start angle says. With a non-zero start the two bounding rays of the wedge
-    // land on the SAME ray, and anti-aliasing an edge that is not there left a one-pixel seam running out from the centre -
+    // land on the SAME ray, and anti-aliasing an edge that is not there left a one-pixel seam running out from the center -
     // visible, and a disagreement with the tessellated path, which closes the contour whenever |sweep| >= 360.
     [Test]
     public void AWholeSweepFromANonZeroStart_HasNoSeam()
     {
         var px = Render(45, 360, EllipseType.Sector);
 
-        // Along the start ray, from just outside the centre to just inside the rim: every pixel FULLY painted. The
+        // Along the start ray, from just outside the center to just inside the rim: every pixel FULLY painted. The
         // threshold is deliberately high - a seam shows up as a half-covered pixel, which a "lit or not" test lets past.
         // The ray is DIAGONAL, so it reaches the rim at Half/sqrt(2) steps, not at Half - walking further only measures
         // the rim's own anti-aliasing (which this test first mistook for a seam).
@@ -275,7 +275,7 @@ public class EllipseCutRenderTests
 
         Assert.Multiple(() =>
         {
-            // On the 45-degree diagonal the band of a 32px radius sits between 24 and 32 from the centre, i.e. 17..23 px
+            // On the 45-degree diagonal the band of a 32px radius sits between 24 and 32 from the center, i.e. 17..23 px
             // along each axis - a probe at Dim/4 (16) would be in the HOLE, which is what this test first measured.
             Assert.That(IsLit(px, Half + 20, Half + 20), Is.True, "the slice fills its quarter of the band");
             Assert.That(IsLit(px, Half, Half), Is.False, "the hole survives the cut");
@@ -338,7 +338,7 @@ public class EllipseCutRenderTests
 
             var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
             stage.RenderAction = s => s.DrawEllipse(new Rect(0, 0, Dim, Dim), Brushes.White, 0, 90, EllipseType.Sector);
-            // The flip about the box's own centre, which is what the ring's transform amounts to.
+            // The flip about the box's own center, which is what the ring's transform amounts to.
             stage.RenderTransform = new Transform { ScaleY = -1.0, RotationCenterX = Half, RotationCenterY = Half };
 
             var root = new VisualRoot(stage, Dim, Dim);

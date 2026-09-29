@@ -94,7 +94,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          if (ReferenceEquals(candidate, from)) { isOurs = true; continue; }
 
          // A PARKED container is still a visual child - virtualization hides it rather than detaching it - and it keeps
-         // the bounds it had when it was last on screen. Offering one as a neighbour put the focus nowhere and left the
+         // the bounds it had when it was last on screen. Offering one as a neighbor put the focus nowhere and left the
          // search to carry on from a position that no longer exists: a wall in the middle of a visible row, forwards
          // only, because the parked ones lie in the direction the window has moved.
          if (candidate.Visibility != Visibility.Visible) continue;
@@ -134,7 +134,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          if (forward ? line <= selfLine + LineTolerance : line >= selfLine - LineTolerance) continue;
          if (best != null)
          {
-            // The NEAREST line wins; within one line, the neighbour nearest along the flow - which is what keeps a
+            // The NEAREST line wins; within one line, the neighbor nearest along the flow - which is what keeps a
             // column when the tiles above and below are of different widths.
             if (forward ? line > bestLine + LineTolerance : line < bestLine - LineTolerance) continue;
             if (Math.Abs(line - bestLine) <= LineTolerance &&
@@ -277,7 +277,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    public WrapPanel()
    { }
 
-   // ---- Plain container layout (a WrapPanel used with explicit Children; behaviour unchanged) -----------------
+   // ---- Plain container layout (a WrapPanel used with explicit Children; behavior unchanged) -----------------
    protected override Size MeasurePlain(Size availableSize)
    {
       Size desiredSize = new Size();
@@ -655,7 +655,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       }
 
       // Each tile's slot is CONSTANT from its index (absolute grid, no cumulative dependency), so the tiles' Arrange are
-      // INDEPENDENT - fan them across cores when there are enough to amortise the thread overhead (a maximize-to-4K storm
+      // INDEPENDENT - fan them across cores when there are enough to amortize the thread overhead (a maximize-to-4K storm
       // arranges thousands at once; a range Partitioner keeps per-tile overhead low). Small windows stay sequential.
       // The only shared write a tile arrange makes is RenderDirty.MarkGeometry (locked); diagnostic counters race harmlessly.
       if (_arrangeIndexBuf.Count >= ParallelArrangeThreshold)

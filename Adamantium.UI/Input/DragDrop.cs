@@ -226,7 +226,7 @@ public static partial class DragDrop
     }
 
     // A press starts a drag when it landed on a drag handle - or when the source declares none at all, which is the
-    // whole-body behaviour everything had before handles existed. ONE walk answers both questions, so the common case
+    // whole-body behavior everything had before handles existed. ONE walk answers both questions, so the common case
     // (no handles) costs a scan of a single item template and nothing else.
     // The handle's BOUNDS decide, not a hit-test: a press between the strokes of a ≡ glyph is still a press on the grip.
     private static bool PressedOnDragHandle(IInputComponent input)
@@ -539,7 +539,7 @@ public static partial class DragDrop
         _ => Orientation.Vertical,
     };
 
-    // The insertion caret's colour, from the active theme (the accent) so it matches the app - not a hard-coded hue.
+    // The insertion caret's color, from the active theme (the accent) so it matches the app - not a hard-coded hue.
     private static Brush InsertionBrush()
     {
         if (UIApplication.Current?.ThemeManager?.CurrentTheme is { } theme &&
@@ -954,7 +954,7 @@ public static partial class DragDrop
     private static void OnGlobalKeyDown(object sender, KeyEventArgs e)
     {
         // A native drag cancels through the platform's own loop (it owns the keyboard for the gesture), so only our own
-        // in-app drag is cancelled here.
+        // in-app drag is canceled here.
         if (_dragging && !_nativeDragActive && e.Key == Key.Escape)
         {
             e.Handled = true;
@@ -1163,7 +1163,7 @@ public static partial class DragDrop
         Ghost?.Hide();
 
         // Decide the effect FRESH at release: over a target, read Ctrl now (Copy) else Move; None with no target (incl. a
-        // drop-disabled panel, which isn't an AllowDrop target). Honour a per-target DragOver that downgraded to None. Using
+        // drop-disabled panel, which isn't an AllowDrop target). Honor a per-target DragOver that downgraded to None. Using
         // the live Ctrl here - not the last DragOver's cached value - is what makes Move actually remove from the source.
         var target = HitTestDropTarget(out var positionInTarget);
         var effects = target != null && _dragEffects != DragDropEffects.None ? DefaultEffects() : DragDropEffects.None;

@@ -11,7 +11,7 @@
         <TextBlock Text="ObservableResource (live) vs ResourceReference (static)" FontSize="18" Margin="0,0,0,4"/>
 
         <!-- THEME resource: swap the whole theme (Up = Dark, Down = Light). The live swatch re-resolves to the new
-             palette; the static one keeps the colour it resolved once. The rest of the UI re-colours too. -->
+             palette; the static one keeps the color it resolved once. The rest of the UI re-colors too. -->
         <TextBlock Text="Theme palette (SystemFillColorCritical) — press ↑ Dark / ↓ Light to swap the theme:" Margin="0,10,0,6"/>
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical" Margin="0,0,32,0">
@@ -38,7 +38,7 @@
                 </Button.Behaviors>
             </Button>
 
-            <!-- The other half of the pair: a variant switch rewrites colours in place, a theme SWAP re-templates the
+            <!-- The other half of the pair: a variant switch rewrites colors in place, a theme SWAP re-templates the
                  whole application with different style sets and different metrics. Side by side, what each costs is
                  visible instead of argued about. The list is every REGISTERED theme, so a theme added later shows up
                  here without this markup changing. -->
@@ -57,8 +57,8 @@
         </StackPanel>
 
         <!-- ACCENT: the theme's accent brushes are observable theme properties consumed via {ThemeResource}. Cycling them
-             at runtime re-colours the live swatch and every accented control (checked toggle / checkbox / radio) at once. -->
-        <TextBlock Text="Theme accent ({ThemeResource}) — live-recolour every accented control:" Margin="0,28,0,6"/>
+             at runtime re-colors the live swatch and every accented control (checked toggle / checkbox / radio) at once. -->
+        <TextBlock Text="Theme accent ({ThemeResource}) — live-recolor every accented control:" Margin="0,28,0,6"/>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Rectangle Width="60" Height="60" CornerRadius="6" Margin="0,0,16,0" Fill="{ThemeResource AccentFillColorDefault}"/>
             <ToggleButton Content="Toggle" IsChecked="true" Margin="0,0,16,0"/>
@@ -73,7 +73,7 @@
 
         <!-- LOCAL inline resource: a private dictionary on THIS panel (invisible outside it). The Cycle button carries a
              view-layer CycleResourceBehavior that swaps PanelAccent for a new brush; again the live swatch follows and
-             the static one keeps its first colour. The button is a descendant so the behavior finds the dictionary. -->
+             the static one keeps its first color. The button is a descendant so the behavior finds the dictionary. -->
         <StackPanel Orientation="Vertical" Margin="0,28,0,0">
             <ResourceContext.Resources>
                 <SolidColorBrush x:Key="PanelAccent" Color="#22D3EE"/>
@@ -99,7 +99,7 @@
         </StackPanel>
 
         <!-- GLOBAL resource: a dictionary TYPE linked at Global scope (GlobalResources.auml). It belongs to NO theme,
-             so toggling the theme above re-colours every palette swatch but leaves these untouched - the scope's whole
+             so toggling the theme above re-colors every palette swatch but leaves these untouched - the scope's whole
              point. Cycle overrides the value at runtime (Scope=Global): live follows, static keeps; and unlike the
              Theme-scope override above, the new value SURVIVES a theme swap. -->
         <StackPanel Orientation="Vertical" Margin="0,28,0,0"

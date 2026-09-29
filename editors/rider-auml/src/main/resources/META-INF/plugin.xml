@@ -65,7 +65,7 @@
             <description><![CDATA[Adamantium UI markup language server]]></description>
         </server>
         <fileNamePatternMapping patterns="*.auml" serverId="adamantium-auml"/>
-        <!-- Paint the server's 'unknown' token (unresolved element) red; the rest get sensible colours.
+        <!-- Paint the server's 'unknown' token (unresolved element) red; the rest get sensible colors.
              serverId MUST match the <server id> above — the provider is bound per server definition. -->
         <semanticTokensColorsProvider serverId="adamantium-auml"
                                       class="com.adamantium.auml.AumlSemanticTokensColorsProvider"/>

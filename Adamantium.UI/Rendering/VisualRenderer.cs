@@ -32,7 +32,7 @@ public sealed class VisualRenderer : IVisualRenderer
 
     // DI singleton. Its render device has its own queue / command pool / fences, but SHARES the one VkDevice with the window
     // loop's device - so an off-screen draw must not run device-wide barriers (DeviceWaitIdle) or submit concurrently with
-    // the render thread; the live-snapshot path serialises the GPU half onto the render thread for exactly that reason (see
+    // the render thread; the live-snapshot path serializes the GPU half onto the render thread for exactly that reason (see
     // the queue note below).
     public VisualRenderer(IGraphicsDeviceService deviceService, IResourceFactory resourceFactory)
     {

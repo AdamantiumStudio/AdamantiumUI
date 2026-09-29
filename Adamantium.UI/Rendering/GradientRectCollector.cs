@@ -58,7 +58,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
     }
 
     // POLYGON variant: a regular polygon with a gradient fill batches into the SAME pass - the shape is still a field, so
-    // it stays one instanced draw and keeps its own anti-aliasing. Only where the colour comes from differs.
+    // it stays one instanced draw and keeps its own anti-aliasing. Only where the color comes from differs.
     /// <summary>THE one statement for the polygon form - the render unit asks THIS, never its own copy.</summary>
     public static bool WantsBatchPolygon(RegularPolygonPayload p)
     {
@@ -125,7 +125,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         item.Stroke1 = stroke1;
         item.Dash = dash;
 
-        // Params.w packs BOTH the spread (0 pad/1 reflect/2 repeat) and the colour-interpolation mode (0 sRGB/1 OKLab):
+        // Params.w packs BOTH the spread (0 pad/1 reflect/2 repeat) and the color-interpolation mode (0 sRGB/1 OKLab):
         // spread + 8*mode. The shader unpacks (packed & 7) for spread and (packed >> 3) for the mode - no extra record field.
         var rectRadii = RectBatchCollector.BakeRadii(corners, dest, sx);
         item.Radii = shape.RadiiFor(rectRadii);

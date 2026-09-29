@@ -39,7 +39,7 @@ public static class SemanticTokensEngine
                 {
                     int valStart = ++i;
                     while (i < text.Length && text[i] != c) i++;
-                    TokenizeValue(tokens, text, valStart, i, namespaces, model);   // colour {Binding}/{x:Type}/… inside
+                    TokenizeValue(tokens, text, valStart, i, namespaces, model);   // color {Binding}/{x:Type}/… inside
                     if (i < text.Length) i++;                  // past the closing quote
                     continue;
                 }
@@ -49,7 +49,7 @@ public static class SemanticTokensEngine
                     while (i < text.Length && IsNameChar(text[i])) i++;
                     int j = i;
                     while (j < text.Length && char.IsWhiteSpace(text[j])) j++;
-                    // Only an attribute name (followed by '='); xmlns declarations are left to XML syntax colouring.
+                    // Only an attribute name (followed by '='); xmlns declarations are left to XML syntax coloring.
                     if (j < text.Length && text[j] == '=' && !StartsWith(text, attrStart, "xmlns"))
                         AddName(tokens, text, attrStart, i, element: false, namespaces, model);
                     continue;
@@ -78,7 +78,7 @@ public static class SemanticTokensEngine
         if (element)
         {
             // Property-element syntax <Owner.Property> (e.g. <RenderTargetPanel.Behaviors>): the tag name is not a
-            // type, it's a type plus a property. Colour the owner like a type and the trailing .Property like a
+            // type, it's a type plus a property. Color the owner like a type and the trailing .Property like a
             // property, instead of trying (and failing) to resolve "Owner.Property" as a type and painting the
             // whole tag red (Unknown). Split on the first '.', since the owner is always a simple type name.
             int dot = -1;
@@ -116,8 +116,8 @@ public static class SemanticTokensEngine
         tokens.Add(new SemToken(localStart, localLength, type));
     }
 
-    // Colours a markup extension written inside an attribute value (e.g. "{Binding ShowMessageCommand}",
-    // "{x:Type vm:MainViewModel}"); a plain string value is left to the client's default string colour.
+    // Colors a markup extension written inside an attribute value (e.g. "{Binding ShowMessageCommand}",
+    // "{x:Type vm:MainViewModel}"); a plain string value is left to the client's default string color.
     private static void TokenizeValue(List<SemToken> tokens, string text, int start, int end,
         IReadOnlyDictionary<string, string> namespaces, AumlTypeModel? model)
     {
@@ -163,7 +163,7 @@ public static class SemanticTokensEngine
         }
     }
 
-    // Colours a "[prefix:]name" token: the prefix as a namespace; the local part as prefixedKind when it has a prefix
+    // Colors a "[prefix:]name" token: the prefix as a namespace; the local part as prefixedKind when it has a prefix
     // (a value's prefix:name is always a type reference), else bareKind.
     private static void AddQualifiedName(List<SemToken> tokens, string text, int start, int end, int bareKind, int prefixedKind)
     {

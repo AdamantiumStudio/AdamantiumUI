@@ -24,7 +24,7 @@
                             <Grid>
                                 <Border x:Name="PART_Swatch" Background="{TemplateBinding SelectedBrush}"
                                         CornerRadius="6"/>
-                                <!-- No one colour to show: a swatch painted anyway would be one none of them has. -->
+                                <!-- No one color to show: a swatch painted anyway would be one none of them has. -->
                                 <TextBlock x:Name="PART_Mixed" Text="—" Visibility="Collapsed"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Foreground="{ResourceReference TextFillColorSecondary}"/>

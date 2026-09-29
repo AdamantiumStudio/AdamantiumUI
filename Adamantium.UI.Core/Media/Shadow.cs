@@ -74,7 +74,7 @@ public sealed class Shadow : AdamantiumComponent
         set => SetValue(ColorProperty, value);
     }
 
-    /// <summary>Multiplies the colour's own alpha. A real shadow is never opaque - the default is deliberately low.</summary>
+    /// <summary>Multiplies the color's own alpha. A real shadow is never opaque - the default is deliberately low.</summary>
     public double Opacity
     {
         get => GetValue<double>(OpacityProperty);

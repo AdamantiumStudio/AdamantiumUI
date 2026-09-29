@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-/// <summary>Prints the band around a star as a coarse map, for LOOKING at a reported artefact instead of guessing where
+/// <summary>Prints the band around a star as a coarse map, for LOOKING at a reported artifact instead of guessing where
 /// it is. Explicit: a diagnostic, not a check.</summary>
 [TestFixture]
 [Category("Gpu")]

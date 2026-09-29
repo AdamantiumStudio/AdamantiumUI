@@ -13,11 +13,11 @@ public enum LiveStand
     [Display(Name = "Gradients")]
     Gradients,
 
-    /// <summary>A ramp between four corner colours, interpolated across the shape.</summary>
+    /// <summary>A ramp between four corner colors, interpolated across the shape.</summary>
     [Display(Name = "Mesh gradient")]
     Mesh,
 
-    /// <summary>A procedural two-colour pattern, evaluated per fragment.</summary>
+    /// <summary>A procedural two-color pattern, evaluated per fragment.</summary>
     [Display(Name = "Pattern")]
     Pattern,
 

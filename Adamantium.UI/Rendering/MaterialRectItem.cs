@@ -32,7 +32,7 @@ public struct MaterialRectItem
     public Vector4F Knobs;
 
     /// <summary>The pen, in the same three slots every other SDF batch bakes it into (see RectBatchCollector.BakeStroke),
-    /// so the shared CompositeFillStroke draws it: colour, then .x width / .y alignment / .zw dash run, then dash offset,
+    /// so the shared CompositeFillStroke draws it: color, then .x width / .y alignment / .zw dash run, then dash offset,
     /// trim and flags. Zero width = no pen.</summary>
     public Vector4F StrokeColor;
     public Vector4F Stroke0;

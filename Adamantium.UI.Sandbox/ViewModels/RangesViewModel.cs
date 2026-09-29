@@ -68,7 +68,7 @@ public partial class RangesViewModel : TabPageViewModel
         Maximum = InitialMaximum;
         Value = InitialValue;
 
-        // Same reasoning between the two bounds, which clamp against EACH OTHER: move the one travelling away from the
+        // Same reasoning between the two bounds, which clamp against EACH OTHER: move the one traveling away from the
         // other first. Coming down, that is the start (it has room below); going up, it is the end.
         if (SpanStart > InitialSpanStart)
         {

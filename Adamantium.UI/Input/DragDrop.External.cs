@@ -251,7 +251,7 @@ public static partial class DragDrop
             : shift ? DragDropEffects.Move
             : _nativeDragActive ? DragDropEffects.Move : DragDropEffects.Copy;
 
-        // Our OWN native drag also honours what its source allowed; a drag from another app is bounded only by that app.
+        // Our OWN native drag also honors what its source allowed; a drag from another app is bounded only by that app.
         if (_nativeDragActive) wanted = Narrow(wanted);
         if ((wanted & _externalAllowed) != 0) return wanted;
         if ((_externalAllowed & DragDropEffects.Copy) != 0) return DragDropEffects.Copy;

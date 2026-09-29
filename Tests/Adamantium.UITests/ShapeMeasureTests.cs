@@ -15,8 +15,8 @@ namespace Adamantium.UITests;
 public class ShapeMeasureTests
 {
     // A Line keeps its authored X1/Y1..X2/Y2 (WPF Stretch=None): it must NOT snap to the control origin, and the
-    // element must grow to include the centred stroke + round caps so the stroke can't poke past the control.
-    // (Regression: an earlier geometry-normalisation shifted the line to the top-left corner.)
+    // element must grow to include the centered stroke + round caps so the stroke can't poke past the control.
+    // (Regression: an earlier geometry-normalization shifted the line to the top-left corner.)
     [Test]
     public void Line_KeepsAuthoredPosition_AndSizeIncludesStroke()
     {

@@ -98,7 +98,7 @@ public interface IUIComponent : IFundamentalUIComponent
     Transform RenderTransform { get; set; }
 
     /// <summary>The point <see cref="RenderTransform"/> turns/scales about, as a FRACTION of the element's own size (0.5,0.5
-    /// = its centre). Relative, so one template stays centred at any size. Read by the compositor when it composes the
+    /// = its center). Relative, so one template stays centered at any size. Read by the compositor when it composes the
     /// element's matrix itself.</summary>
     Vector2 RenderTransformOrigin { get; set; }
 
@@ -119,7 +119,7 @@ public interface IUIComponent : IFundamentalUIComponent
     /// a LIVE element through a parallel render cache, where the ordinary <c>Render()</c> would no-op on a valid element.</summary>
     void RenderReadOnly(IDrawingContext context);
 
-    /// <summary>Only this element's PAINT changed - same shape, same draw commands, a new colour/brush/opacity. It is NOT
+    /// <summary>Only this element's PAINT changed - same shape, same draw commands, a new color/brush/opacity. It is NOT
     /// re-rendered: the renderer re-bakes the GPU data of the units it already holds (see
     /// <see cref="PropertyMetadataOptions.AffectsPaint"/>).</summary>
     void InvalidatePaint();

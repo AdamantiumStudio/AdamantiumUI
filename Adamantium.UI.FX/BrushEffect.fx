@@ -46,7 +46,7 @@ float GradSpread(float t, int spread)
 
 // The gradient parameter t at fragment `uv` (0..1 across the bounds). Linear = projection onto the start->end axis.
 // Radial = SVG focal formula: the fraction of the way from the focal point (origin) to the ellipse boundary, so an
-// off-centre origin gives a real "spotlight". Coordinates are normalised by the radius so an ellipse becomes a unit circle.
+// off-center origin gives a real "spotlight". Coordinates are normalized by the radius so an ellipse becomes a unit circle.
 float GradParam(GradientRectData it, float2 uv)
 {
     if (int(it.Params.y) == 2)
@@ -77,9 +77,9 @@ float GradParam(GradientRectData it, float2 uv)
     return dot(uv - start, axis) / denom;
 }
 
-// ---- sRGB <-> OKLab (Bjorn Ottosson) for PERCEPTUAL gradient interpolation. Blending in sRGB muddies midpoints (a grey
+// ---- sRGB <-> OKLab (Bjorn Ottosson) for PERCEPTUAL gradient interpolation. Blending in sRGB muddies midpoints (a gray
 // dead-zone between complements) and bands; OKLab is perceptually uniform, so the blend keeps even brightness + hue. Used
-// only when a stop's interpolation mode is OKLab (mode 1); mode 0 (sRGB) leaves the colours untouched.
+// only when a stop's interpolation mode is OKLab (mode 1); mode 0 (sRGB) leaves the colors untouched.
 float3 SrgbToLinear(float3 c)
 {
     float3 lo = c / 12.92;
@@ -132,7 +132,7 @@ float4 GradColor(GradientRectData it, float4 cols[8], float t, float aa, int mod
     offs[0] = it.Offsets0.x; offs[1] = it.Offsets0.y; offs[2] = it.Offsets0.z; offs[3] = it.Offsets0.w;
     offs[4] = it.Offsets1.x; offs[5] = it.Offsets1.y; offs[6] = it.Offsets1.z; offs[7] = it.Offsets1.w;
 
-    if (mode == 1)   // straight-sRGB stop colours -> OKLab (alpha stays linear)
+    if (mode == 1)   // straight-sRGB stop colors -> OKLab (alpha stays linear)
     {
         for (int k = 0; k < n; k++)
         {
@@ -153,7 +153,7 @@ float4 GradColor(GradientRectData it, float4 cols[8], float t, float aa, int mod
         }
         else
         {
-            bl = saturate((t - 0.5 * (lo + hi)) / max(aa, 1e-6) + 0.5);   // 1px ramp centred on a hard stop
+            bl = saturate((t - 0.5 * (lo + hi)) / max(aa, 1e-6) + 0.5);   // 1px ramp centered on a hard stop
         }
         col = lerp(col, cols[i], bl);
     }
@@ -168,7 +168,7 @@ float4 GradColor(GradientRectData it, float4 cols[8], float t, float aa, int mod
 struct GradPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;   // rect half-size (device px)
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     nointerpolation uint InstId : TEXCOORD3;   // instance -> re-read GradientRectData in the PS for its gradient
@@ -236,7 +236,7 @@ float4 GradientPS(GradPSInput input) : SV_Target
     int packedW = int(it.Params.w + 0.5);
     float gt = GradSpread(GradParam(it, uv), packedW & 7);
     // Wrap-aware AA width: at a conic/repeat seam gt jumps 1->0 so fwidth(gt) spikes to ~1 (the whole gradient collapses to
-    // hard-stop ramps -> a coloured line). Shifting by half a turn moves the discontinuity to the far side, so min() picks
+    // hard-stop ramps -> a colored line). Shifting by half a turn moves the discontinuity to the far side, so min() picks
     // the TRUE small derivative everywhere. Harmless for linear/radial (min keeps the real value).
     // Widened in THIS stage's own body - see GradColor.
     float4 sdfCols[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
@@ -244,7 +244,7 @@ float4 GradientPS(GradPSInput input) : SV_Target
                           float4(it.Stop4) * (1.0 / 255.0), float4(it.Stop5) * (1.0 / 255.0),
                           float4(it.Stop6) * (1.0 / 255.0), float4(it.Stop7) * (1.0 / 255.0) };
     float4 grad = GradColor(it, sdfCols, gt, min(fwidth(gt), fwidth(frac(gt + 0.5))), (packedW >> 3) & 1);
-    // MESH gradient (type 4): four CORNER colours blended bilinearly across the shape - no axis, no stops, so the
+    // MESH gradient (type 4): four CORNER colors blended bilinearly across the shape - no axis, no stops, so the
     // gradient maths above has nothing meaningful to chew on for it (GradientBake packs zero geometry). The corners ride
     // the stop slots. Selected BRANCH-FREE: this pass has a history of device-losing on a ?:, so both are computed.
     float4 mesh = lerp(lerp(float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0), uv.x),
@@ -310,7 +310,7 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
     GradGeomData* items = (GradGeomData*)InstancesAddress;
     // FIELD BY FIELD, not a copy of the whole record: this stage needs four float4s out of it and never looks at a
-    // stop, and pulling the struct in wholesale drags the eight FOUR-BYTE colours through the vertex stage with it.
+    // stop, and pulling the struct in wholesale drags the eight FOUR-BYTE colors through the vertex stage with it.
     float4x4 local = items[instanceId].Local;
     float4 geom1 = items[instanceId].Geom1;
     float4 gparams = items[instanceId].Params;
@@ -331,8 +331,8 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     return o;
 }
 
-// The gradient colour at a LOCAL mesh position, for instanced geometry. The fill and its analytic-AA fringe both call
-// this, so the ring is coloured by exactly the same gradient as the body it feathers.
+// The gradient color at a LOCAL mesh position, for instanced geometry. The fill and its analytic-AA fringe both call
+// this, so the ring is colored by exactly the same gradient as the body it feathers.
 float4 GradGeomColor(GradGeomData it, float2 local)
 {
     // Reconstruct a GradientRectData for the shared GradParam/GradColor (Bounds/stroke fields unused by the fill eval).
@@ -370,8 +370,8 @@ float4 GradientFillPS(GradFillPSInput input) : SV_Target
 }
 
 // The analytic-AA fringe of those gradient instances: same shared ring, same instance buffer, one draw. Unlike the
-// solid and pattern fringes it needs its own PS - the ring's colour varies per fragment, so it cannot be resolved in
-// the vertex stage and handed over as one colour.
+// solid and pattern fringes it needs its own PS - the ring's color varies per fragment, so it cannot be resolved in
+// the vertex stage and handed over as one color.
 struct GradFringePSInput
 {
     float4 Position : SV_Position;
@@ -418,7 +418,7 @@ float4 InstancedGradientFringePS(GradFringePSInput input) : SV_Target
     return c;
 }
 
-// ---- Pattern batch: the SAME SDF rounded-rect (self-AA shape + the shared stroke), but the FILL is a PROCEDURAL two-colour
+// ---- Pattern batch: the SAME SDF rounded-rect (self-AA shape + the shared stroke), but the FILL is a PROCEDURAL two-color
 // PATTERN (checkerboard/stripes/dots/grid) evaluated per fragment - resolution-independent, no texture. Per-instance
 // PatternRectData from a BDA storage buffer by SV_InstanceID; the PS re-reads the record (light interpolator signature, like
 // GradientPS) and mixes Color1/Color2 by the pattern. Solid/gradient rects stay in their own passes.
@@ -434,7 +434,7 @@ struct PatternRectData
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px); runs 0 and 1 ride in Stroke0.zw, the count in Stroke1.w
     float4 Noise;        // FBM noise (type 4 only): x octaves, y seed, z lacunarity, w gain
-    float4 Color3;       // optional MID colour for a 3-colour noise gradient-map (Color1->Color3->Color2); .w==0 = off
+    float4 Color3;       // optional MID color for a 3-color noise gradient-map (Color1->Color3->Color2); .w==0 = off
     float4 Anim;         // .x = offset subtracted from the clock while animating, .y = the phase held while paused,
                          // .z = an opacity slot the CPU stamps that NO pass reads (this carrier folds the chain into
                          // Color1/Color2), .w = the ROUNDED CLIP's slot, -1 = none
@@ -443,7 +443,7 @@ struct PatternRectData
 struct PatternPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;   // rect half-size
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     nointerpolation uint InstId : TEXCOORD3;   // instance -> re-read PatternRectData in the PS
@@ -453,7 +453,7 @@ struct PatternPSInput
     nointerpolation float4 ClipBox   : TEXCOORD5;   // the ancestor's rounded clip, fetched in the VERTEX stage
     nointerpolation float4 ClipRadii : TEXCOORD6;
     // The element's alpha from the OPACITY SLOT, fetched in the same stage. The CPU has stamped that slot into the
-    // record all along and nothing read it, while the bake had already taken the opacity CHAIN out of the colour
+    // record all along and nothing read it, while the bake had already taken the opacity CHAIN out of the color
     // (RenderCache calls FadeBySlot for this family) - so a faded ancestor left a pattern at full strength. Measured on
     // the Opacity stand: every other family sat at 0.58 of its reference and the pattern at 1.28.
     nointerpolation float Fade : TEXCOORD7;
@@ -533,8 +533,8 @@ float PerlinNoise(float2 v)
     return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y) * 1.4;
 }
 
-// Worley (cellular / Voronoi): squared distance to the nearest of one feature point per cell over the 3x3 neighbourhood,
-// inverted so cell centres are bright. `phase` orbits each cell's feature point on a per-cell Lissajous so the cells FLOW in
+// Worley (cellular / Voronoi): squared distance to the nearest of one feature point per cell over the 3x3 neighborhood,
+// inverted so cell centers are bright. `phase` orbits each cell's feature point on a per-cell Lissajous so the cells FLOW in
 // place when animated (phase=0 -> a fixed per-cell point, i.e. a static Voronoi).
 float WorleyNoise(float2 v, float phase)
 {
@@ -557,7 +557,7 @@ float WorleyNoise(float2 v, float phase)
 
 // iq's Voronoi distance (shadertoy Xd23Dh): distance to the nearest cell BORDER (the Voronoi edge network), NOT the nearest
 // point - thin glowing cell walls / cracks instead of Worley's filled cells. Pass 1 finds the nearest feature point (mr) and
-// its cell (mb); pass 2 takes the min distance to the perpendicular bisectors with the neighbours of mb. Feature points orbit
+// its cell (mb); pass 2 takes the min distance to the perpendicular bisectors with the neighbors of mb. Feature points orbit
 // by `phase` so the whole network morphs. Guards normalize(0) at the nearest cell itself.
 float VoronoiEdge(float2 v, float phase)
 {
@@ -842,7 +842,7 @@ float BaseNoise(float2 p, int basis, float phase)
 }
 
 // Fractional Brownian motion: sum `oct` octaves of the chosen base noise, each octave freq*lacunarity and amp*gain.
-// Normalised to ~[-1,1]. The 8-iteration loop with an early break caps the cost while honouring the per-instance octave count.
+// Normalized to ~[-1,1]. The 8-iteration loop with an early break caps the cost while honoring the per-instance octave count.
 float Fbm(float2 p, int oct, float lacunarity, float gain, int basis, float phase)
 {
     float amp = 0.5;
@@ -870,7 +870,7 @@ float Fbm(float2 p, int oct, float lacunarity, float gain, int basis, float phas
 
 // Ridged / turbulence FBM folds over simplex. Turbulence (mode 0) sums |noise| -> billowy/smoky; ridged (mode 1) sums
 // (1-|noise|)^2 -> sharp ridges / marble veins. Returns ~[0,1] (already non-negative from the abs), so the caller maps it
-// straight to the colour ramp rather than the signed *0.5+0.5 of the plain FBM types.
+// straight to the color ramp rather than the signed *0.5+0.5 of the plain FBM types.
 float FbmFold(float2 p, int oct, float lacunarity, float gain, int mode, float phase)
 {
     float amp = 0.5;
@@ -917,7 +917,7 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
         float i = 2.0 * (abs(frac((g.x - 0.5 * w) * 0.5) - 0.5) - abs(frac((g.x + 0.5 * w) * 0.5) - 0.5)) / w;
         return saturate(0.5 - 0.5 * i);
     }
-    if (type == 2)   // dots: a Color2 disc centred in each cell
+    if (type == 2)   // dots: a Color2 disc centered in each cell
     {
         float2 f = frac(g) - 0.5;
         float d = length(f) - 0.34;                // radius 0.34 cells
@@ -975,9 +975,9 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
         float2 hh = grid * 0.5;
         float2 a = frac(g / grid) * grid - hh;
         float2 b = frac((g + hh) / grid) * grid - hh;
-        float2 gv = dot(a, a) < dot(b, b) ? a : b;             // fragment within the nearest hex, centred
+        float2 gv = dot(a, a) < dot(b, b) ? a : b;             // fragment within the nearest hex, centered
         float2 ag = abs(gv);
-        float hd = max(ag.x * 0.8660254 + ag.y * 0.5, ag.y);   // 0 at centre .. 0.5 at the hex edge
+        float hd = max(ag.x * 0.8660254 + ag.y * 0.5, ag.y);   // 0 at center .. 0.5 at the hex edge
         float dpx = (0.5 - hd) * cell;                         // px to the nearest honeycomb edge
         float aa = fwidth(dpx) + 1e-4;
         return 1.0 - smoothstep(0.5, 0.5 + aa + 1.0, dpx);     // ~1px hex lines
@@ -989,7 +989,7 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
         float aa = fwidth(dpx) + 1e-4;
         return 1.0 - smoothstep(0.5, 0.5 + aa + 1.0, dpx);
     }
-    if (type == 6)   // WEAVE (carbon fibre): two ribbons cross in every cell, and which one lies ON TOP alternates
+    if (type == 6)   // WEAVE (carbon fiber): two ribbons cross in every cell, and which one lies ON TOP alternates
     {                 // like a checkerboard - that alternation IS the weave; without it this is just a grid.
         float2 f = frac(g);
         float2 id = floor(g);
@@ -1015,8 +1015,8 @@ float PatternMix(int type, float2 p, float cell, float4 noise, float2 anim)
     return saturate(0.5 - 0.5 * i2.x * i2.y);
 }
 
-// --- Combustible Voronoi (Shane, shadertoy 4tlSzl): 3D Voronoi fBm coloured by a blackbody FIRE palette. Its own colour
-// path (the palette returns RGB, not a 2-colour lerp), so PatternPS handles type 13 specially. fBm layers x a 3x3x3
+// --- Combustible Voronoi (Shane, shadertoy 4tlSzl): 3D Voronoi fBm colored by a blackbody FIRE palette. Its own color
+// path (the palette returns RGB, not a 2-color lerp), so PatternPS handles type 13 specially. fBm layers x a 3x3x3
 // cell search - the heaviest pattern branch. ---
 float3 Hash33(float3 p)
 {
@@ -1070,7 +1070,7 @@ float NoiseLayers(float3 p, float time)
     return tot / sum;
 }
 
-// Shane's favourite fire palette: blackbody radiation across a 1400..2700K temperature range (Planck-ish per wavelength).
+// Shane's favorite fire palette: blackbody radiation across a 1400..2700K temperature range (Planck-ish per wavelength).
 float3 FirePalette(float i)
 {
     float T = 1400.0 + 1300.0 * i;
@@ -1093,13 +1093,13 @@ struct PatternFill
 
 float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 centerRel, float halfY)
 {
-    // ptype comes in as a compile-time constant from the pass entry point, so the optimiser drops every branch but one
+    // ptype comes in as a compile-time constant from the pass entry point, so the optimizer drops every branch but one
     // and each pass gets a small pixel shader.
     float4 fill;
-    if (ptype == 107)   // Combustible Voronoi: its own 3D-ray + fire-palette colour path (ignores Color1/Color2 as a lerp)
+    if (ptype == 107)   // Combustible Voronoi: its own 3D-ray + fire-palette color path (ignores Color1/Color2 as a lerp)
     {
         float time = NoisePhase(it.Noise.x, it.Anim.xy);
-        float2 uv = centerRel / max(halfY, 1.0);   // centred, normalised by half height
+        float2 uv = centerRel / max(halfY, 1.0);   // centered, normalized by half height
         float cs = cos(time * 0.25);
         float si = sin(time * 0.25);
         float3 rd = normalize(float3(uv.x, uv.y, 0.3926991));   // ~PI/8 ray, gives the central fireball
@@ -1115,15 +1115,15 @@ float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 cente
         float3 triLo3 = lerp(it.Color1.xyz, it.Color3.xyz, saturate(cc * 2.0));
         float3 triHi3 = lerp(it.Color3.xyz, it.Color2.xyz, saturate(cc * 2.0 - 1.0));
         float3 tri3 = lerp(triLo3, triHi3, step(0.5, cc));
-        float3 userCol = lerp(duo3, tri3, step(0.001, it.Color3.w));   // Color3.w==0 -> 2-colour ramp
+        float3 userCol = lerp(duo3, tri3, step(0.001, it.Color3.w));   // Color3.w==0 -> 2-color ramp
         float3 col = lerp(userCol, fireCol, step(0.5, it.Noise.w));
         fill = float4(col, it.Color1.w);                            // alpha carries brush opacity
     }
     else
     {
         float k = PatternMix(ptype, pTopLeft, it.Params.z, it.Noise, it.Anim.xy);
-        // TRITONE gradient-map (Color1 -> Color3 mid -> Color2), selected by step(). Color3.w==0 (no mid colour) blends
-        // back to the plain two-colour duotone.
+        // TRITONE gradient-map (Color1 -> Color3 mid -> Color2), selected by step(). Color3.w==0 (no mid color) blends
+        // back to the plain two-color duotone.
         float4 duo = lerp(it.Color1, it.Color2, k);
         float4 triLo = lerp(it.Color1, it.Color3, saturate(k * 2.0));
         float4 triHi = lerp(it.Color3, it.Color2, saturate(k * 2.0 - 1.0));
@@ -1163,7 +1163,7 @@ float4 PatternSdfShade(PatternPSInput input, int kind)
 
     float2 p = input.Local + input.Half;   // fragment from the shape's TOP-LEFT (stable pattern origin at the corner)
     float4 fill = PatternFillColor(itPx, kind, p, input.Local, input.Half.y);
-    // Not faded through the slot: the opacity chain stays in the colour here.
+    // Not faded through the slot: the opacity chain stays in the color here.
 
     float widthPx = it.Stroke0.x * sc;
     float mask = 1.0;
@@ -1217,9 +1217,9 @@ PatFillPSInput PatternFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     return o;
 }
 
-// The pattern FRINGE is not here: a one-pixel ring does not evaluate the pattern, it takes the brush's low colour, so
+// The pattern FRINGE is not here: a one-pixel ring does not evaluate the pattern, it takes the brush's low color, so
 // it is the SAME flat pass the solid fringe uses and lives with it in BatchEffect (pass PatternFringe). Only the fringes
-// that genuinely compute their colour - the gradient's and the texture's - are brushes and stay in this file.
+// that genuinely compute their color - the gradient's and the texture's - are brushes and stay in this file.
 
 float4 PatternMeshShade(PatFillPSInput input, int kind)
 {
@@ -1235,7 +1235,7 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
     pd.Anim = it.Anim;
 
     float2 pTopLeft = input.Local - it.LocalBounds.xy;                                   // fragment from the shape top-left
-    float2 centerRel = input.Local - (it.LocalBounds.xy + it.LocalBounds.zw * 0.5);      // fragment from the shape centre
+    float2 centerRel = input.Local - (it.LocalBounds.xy + it.LocalBounds.zw * 0.5);      // fragment from the shape center
     float4 c = PatternFillColor(pd, kind, pTopLeft, centerRel, max(it.LocalBounds.w * 0.5, 1.0));
     return float4(c.rgb, c.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -1282,7 +1282,7 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 [shader("fragment")] float4 NoiseCircuitMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 108); }
 
 
-// ---- TEXTURED rounded rect: a fill whose colour is SAMPLED rather than computed - SDF, one uv wrap, one sample, one
+// ---- TEXTURED rounded rect: a fill whose color is SAMPLED rather than computed - SDF, one uv wrap, one sample, one
 // multiply. No stroke: a textured fill with a pen falls back to the per-unit path.
 struct TexRectData
 {
@@ -1292,7 +1292,7 @@ struct TexRectData
     float4 Tile;       // tile grid over the bounds: tiles per axis (.xy), grid origin in tiles (.zw)
     float4 Rotation;   // 2x2 mapping a fragment back into the unturned grid, row-major (identity = 1,0,0,1)
     float4 Drawn;      // the content's rect inside ONE tile: offsetXY, scaleXY, both in 0..1 of the tile
-    float4 UvRect;     // sub-rectangle of the source: x, y, w, h (normalised)
+    float4 UvRect;     // sub-rectangle of the source: x, y, w, h (normalized)
     uint8_t4 Tint;     // multiplied into the sample, straight RGBA in four bytes
     float4 Clip;       // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
 };
@@ -1300,7 +1300,7 @@ struct TexRectData
 struct TexPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;   // rect half-size
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     nointerpolation uint InstId : TEXCOORD3;
@@ -1356,7 +1356,7 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     // REPEAT is done here with frac() rather than by a wrapping sampler: the sampler would wrap the WHOLE texture, and
     // a slice of it needs its own strip wrapped.
     float2 t = input.Local / max(input.Half * 2.0, float2(1e-4, 1e-4)) + 0.5;
-    // Back into the UNTURNED grid: one 2x2, with the inverse, the aspect and the turn centre already folded in.
+    // Back into the UNTURNED grid: one 2x2, with the inverse, the aspect and the turn center already folded in.
     float2 g = float2(t.x * it.Rotation.x + t.y * it.Rotation.y, t.x * it.Rotation.z + t.y * it.Rotation.w);
     float2 n = g * it.Tile.xy - it.Tile.zw;
     // A SINGLE copy never wraps: frac() would send its far edge (n = 1) back to 0, drawing one column of the opposite
@@ -1482,9 +1482,9 @@ struct TexFringePSInput
 };
 
 // The analytic-AA fringe of those textured instances: the SAME shared ring and the SAME instance buffer as the body, so
-// N elements cost one draw instead of N. Unlike the pattern fringe - which takes the brush's low colour - a picture has
-// no single edge colour, so the ring SAMPLES it, which is what makes the edge of a textured shape read as that shape's
-// own edge rather than a coloured halo.
+// N elements cost one draw instead of N. Unlike the pattern fringe - which takes the brush's low color - a picture has
+// no single edge color, so the ring SAMPLES it, which is what makes the edge of a textured shape read as that shape's
+// own edge rather than a colored halo.
 [shader("vertex")]
 TexFringePSInput InstancedTexFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
@@ -1535,13 +1535,13 @@ float4 TexFringePS(TexFringePSInput input) : SV_Target
 // ---- Fractal batch: the SAME SDF rounded-rect (self-AA shape + shared stroke), but the FILL is an escape-time FRACTAL
 // (Julia/Mandelbrot) iterated per fragment - resolution-independent, no texture. Per-instance FractalRectData from a BDA
 // storage buffer by SV_InstanceID; the PS re-reads the record, maps the fragment to the complex plane, iterates z=z^2+c and
-// colours by the smooth escape count. With the animate flag set, a Julia's C drifts on a Lissajous over the global Time.
+// colors by the smooth escape count. With the animate flag set, a Julia's C drifts on a Lissajous over the global Time.
 struct FractalRectData
 {
     float4 Bounds;       // NODE-local x, y, w, h
     float4 Params;       // .x corner radius, .y type (0 Julia/1 Mandelbrot), .z transform slot, .w max iterations
     float4 Radii;        // corner radii: x = TL, y = TR, z = BR, w = BL
-    float4 Geom;         // .x/.y complex-plane centre, .z zoom, .w morph speed
+    float4 Geom;         // .x/.y complex-plane center, .z zoom, .w morph speed
     float4 Julia;        // .x/.y Julia constant C, .z animate flag, .w reserved
     uint8_t4 Color1;      // straight RGBA in four bytes
     uint8_t4 Color2;      // straight RGBA in four bytes
@@ -1556,7 +1556,7 @@ struct FractalRectData
 struct FractalPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the rect CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;   // rect half-size
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     nointerpolation uint InstId : TEXCOORD3;   // instance -> re-read FractalRectData in the PS
@@ -1598,8 +1598,8 @@ FractalPSInput FractalRectInstancedVS(uint vertexId : SV_VertexID, uint instance
     return o;
 }
 
-// Newton fractal for z^3 - 1: iterate z -= (z^3-1)/(3z^2) and colour by which of the 3 cube roots of unity it converges to
-// (a different look from escape-time: smooth colour basins with a fractal border). The two brush colours take two roots,
+// Newton fractal for z^3 - 1: iterate z -= (z^3-1)/(3z^2) and color by which of the 3 cube roots of unity it converges to
+// (a different look from escape-time: smooth color basins with a fractal border). The two brush colors take two roots,
 // their blend the third; converging in more steps (near a border) darkens, so the boundary detail shows. Animate flows it.
 float4 NewtonColor(float2 z, int maxIt, bool animate, float4 c1, float4 c2)
 {
@@ -1645,7 +1645,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
     int joinType = int(fmod(floor(it.Stroke1.w / 4096.0), 8.0));
     float d = SdRoundRectJoin(input.Local, input.Half, r4, joinType);
 
-    // Fragment -> complex plane, aspect-correct: the smaller axis spans 3/zoom around the centre, so pixels stay square.
+    // Fragment -> complex plane, aspect-correct: the smaller axis spans 3/zoom around the center, so pixels stay square.
     float minHalf = max(min(input.Half.x, input.Half.y), 1e-4);
     float2 cp = it.Geom.xy + (input.Local / minHalf) * (1.5 / max(it.Geom.z, 1e-4));
 
@@ -1679,8 +1679,8 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             float4* orbit = (float4*)OrbitAddress;
             uint ofs = (uint)it.Ref.x;
             int rlen = (int)it.Ref.y;
-            // pixel offset from the REFERENCE point: (pixel - view centre) + (view centre - C_ref). The second term
-            // (Ref.zw) lets the CPU pick a reference OFF the view centre (a longer-living orbit) without moving the view.
+            // pixel offset from the REFERENCE point: (pixel - view center) + (view center - C_ref). The second term
+            // (Ref.zw) lets the CPU pick a reference OFF the view center (a longer-living orbit) without moving the view.
             float2 delta = (input.Local / minHalf) * (1.5 / max(it.Geom.z, 1e-4)) + float2(it.Ref.z, it.Ref.w);
             // Segmented rebasing (Zhuoran): the orbit is indexed by the inner loop counter, and a rebase restarts the outer
             // loop at j=0. Ref0 keeps its lo residue, or each rebase reinjects ~1e-7 error.
@@ -1689,7 +1689,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             float2 Ref0l = Ref0p.zw;
             float2 dz = mandelbrot ? float2(0.0, 0.0) : delta;   // Delta = z - Ref[j]. Julia: z0 offset. Mandelbrot: 0.
             float2 dc = mandelbrot ? delta : float2(0.0, 0.0);   // per-iteration additive. Mandelbrot: dc. Julia: 0.
-            int pi = 0;                 // true iteration count (drives the smooth colour)
+            int pi = 0;                 // true iteration count (drives the smooth color)
             float2 pz = float2(0.0, 0.0);
             bool escaped = false;
             bool done = false;
@@ -1728,7 +1728,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             {
                 float sm = float(pi) + 1.0 - log2(max(0.5 * log2(dot(pz, pz)), 1.0));   // smooth continuous escape count
                 float ramp = sqrt(saturate(sm / float(maxIt)));
-                if (animate && mandelbrot) ramp = frac(ramp + Time * 0.06);   // Mandelbrot-mode: flow the colour ramp
+                if (animate && mandelbrot) ramp = frac(ramp + Time * 0.06);   // Mandelbrot-mode: flow the color ramp
                 fill = lerp(float4(it.Color1), float4(it.Color2), ramp) * (1.0 / 255.0);
             }
             else
@@ -1786,7 +1786,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
             {
                 z = float2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + cc;
             }
-            if (dot(z, z) > 256.0) break;   // large bail radius -> smoother continuous colouring
+            if (dot(z, z) > 256.0) break;   // large bail radius -> smoother continuous coloring
         }
 
         if (i >= maxIt)
@@ -1797,7 +1797,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
         {
             float sm = float(i) + 1.0 - log2(max(0.5 * log2(dot(z, z)), 1.0));   // smooth (continuous) escape count
             float ramp = sqrt(saturate(sm / float(maxIt)));
-            if (animate && mandelbrot && formula != 4)   // Mandelbrot-mode: no C to morph, so flow the colour ramp instead
+            if (animate && mandelbrot && formula != 4)   // Mandelbrot-mode: no C to morph, so flow the color ramp instead
             {
                 ramp = frac(ramp + Time * 0.06);
             }
@@ -1825,7 +1825,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
     return float4(fracOut.rgb, fracOut.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
-// The literals are what makes the split real: each of these specialises the body above down to one formula. Keep them
+// The literals are what makes the split real: each of these specializes the body above down to one formula. Keep them
 // literal - reading the selector back out of the record here would put every formula into every pass again.
 [shader("fragment")]
 float4 FractalQuadraticPS(FractalPSInput input) : SV_Target { return FractalShade(input, 0, false); }
@@ -1872,8 +1872,8 @@ technique Gradient
         PixelShader = GradientFillPS;
     }
 
-    // Its OWN pixel stage, unlike the other two families: the ring is coloured by the gradient per fragment, so it
-    // cannot share the flat-colour fringe.
+    // Its OWN pixel stage, unlike the other two families: the ring is colored by the gradient per fragment, so it
+    // cannot share the flat-color fringe.
     pass Fringe
     {
         VertexShader = InstancedGradientFringeVS;
@@ -2108,7 +2108,7 @@ technique Texture
 
 // The backdrop materials live in MaterialEffect.fx.
 
-// Escape-time fractals: z = z^2 + c per fragment, coloured by the smooth escape count, with a perturbation path for
+// Escape-time fractals: z = z^2 + c per fragment, colored by the smooth escape count, with a perturbation path for
 // deep zoom (see OrbitAddress). No Fill/Fringe - a fractal fills a rect, and its edge is the rect's own SDF.
 technique Fractal
 {

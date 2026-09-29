@@ -5,7 +5,7 @@
          stretched. Zoom in on the big one and the edges must stay clean. -->
     <ResourceContext.Resources>
         <!-- A folder icon: body, tab and a stroked outline, authored in a 0..24 box. The brushes bind to the view
-             model, so the colour knobs recolour every size at once. -->
+             model, so the color knobs recolor every size at once. -->
         <DrawingImage x:Key="FolderIcon">
             <DrawingGroup>
                 <GeometryDrawing>
@@ -107,7 +107,7 @@
             <TextBlock Text="One drawing, every size"
                        FontSize="18"
                        Margin="0,0,0,4"/>
-            <TextBlock Text="All six below are the SAME DrawingImage resource. Nothing is rasterised: each is replayed through its own placement, so the edges stay clean at any size and a DPI change costs nothing."
+            <TextBlock Text="All six below are the SAME DrawingImage resource. Nothing is rasterized: each is replayed through its own placement, so the edges stay clean at any size and a DPI change costs nothing."
                        Foreground="{ResourceReference TextFillColorSecondary}"
                        TextWrapping="WrapByWords"
                        MarginBottom="14"/>
@@ -180,7 +180,7 @@
 
                 <StackPanel Orientation="Vertical"
                             VerticalAlignment="Top">
-                    <TextBlock Text="Colours — one edit, every size"
+                    <TextBlock Text="Colors — one edit, every size"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="8"/>
                     <TextBlock Text="Accent"

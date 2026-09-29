@@ -26,8 +26,8 @@ public class ProceduralBrushBakeTests
         Assert.Multiple(() =>
         {
             Assert.That(type, Is.EqualTo(3f), "conic is gradient type 3 (not a new pass)");
-            Assert.That(geom0.X, Is.EqualTo(0.3f).Within(1e-4f), "centre x -> geom0.x");
-            Assert.That(geom0.Y, Is.EqualTo(0.7f).Within(1e-4f), "centre y -> geom0.y");
+            Assert.That(geom0.X, Is.EqualTo(0.3f).Within(1e-4f), "center x -> geom0.x");
+            Assert.That(geom0.Y, Is.EqualTo(0.7f).Within(1e-4f), "center y -> geom0.y");
             Assert.That(geom0.Z, Is.EqualTo(0.25f).Within(1e-4f), "start angle 90deg -> 0.25 turns in geom0.z");
         });
     }

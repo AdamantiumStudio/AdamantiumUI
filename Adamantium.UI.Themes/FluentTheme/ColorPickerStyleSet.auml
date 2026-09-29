@@ -4,12 +4,12 @@
 
     <!-- ColorPicker: a saturation/value square + a hue bar + an alpha bar (each dragged), a preview swatch, and hex + R/G/B/A
          text fields. The SV square's background (the pure hue), the alpha bar's gradient and the preview are set from code
-         (they track the picked colour); the SV overlays and the hue rainbow are static, authored here. -->
+         (they track the picked color); the SV overlays and the hue rainbow are static, authored here. -->
     <Style Selector="ColorPicker">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeChrome}"/>
         <!-- A property rather than a fixed resource in the template, because this control lives in two places: standing
-             on a page it is a solid card, opened from a colour well it is a FLYOUT - and a flyout in this theme is
+             on a page it is a solid card, opened from a color well it is a FLYOUT - and a flyout in this theme is
              acrylic, like the menus and the drop-downs. The button's popup hands it the material; this is the
              standalone value. -->
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
@@ -134,9 +134,9 @@
                                 <TextBlock Text="Preview"
                                                     Foreground="{ObservableResource TextFillColorSecondary}"
                                                     MarginBottom="4"/>
-                                <!-- A checkerboard backdrop (PatternBrush) so a colour's alpha reads truthfully - the
+                                <!-- A checkerboard backdrop (PatternBrush) so a color's alpha reads truthfully - the
                                      transparency preview this whole tile-brush effort started for. The checkerboard is INSET
-                                     2px inside PART_Preview so the colour layer always covers the pattern's 1px SDF AA
+                                     2px inside PART_Preview so the color layer always covers the pattern's 1px SDF AA
                                      fringe - a coincident-size checkerboard bled its bright edge past the rounded border. -->
                                 <Border CornerRadius="6"
                                                  Height="46">

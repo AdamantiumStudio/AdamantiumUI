@@ -28,7 +28,7 @@ public static class LoopSignal
     }
 
     /// <summary>Runs every posted action in order, on the loop thread, at the start of a frame. Clears the wake token FIRST, so
-    /// anything signalled while this frame runs queues a fresh one and becomes the wake for the next frame - never swallowed.</summary>
+    /// anything signaled while this frame runs queues a fresh one and becomes the wake for the next frame - never swallowed.</summary>
     public static void Drain()
     {
         Interlocked.Exchange(ref _wakePending, 0);
@@ -57,6 +57,6 @@ public static class LoopSignal
             pending.AsTask().Wait(timeoutMs, token);
         }
         catch (OperationCanceledException) { /* shutting down */ }
-        catch (AggregateException) { /* the wait was cancelled */ }
+        catch (AggregateException) { /* the wait was canceled */ }
     }
 }

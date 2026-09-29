@@ -167,7 +167,7 @@ public class DrawingImageTests
     }
 
     [Test]
-    public void RecolouringAShapeDeepInside_ReachesTheImage()
+    public void RecoloringAShapeDeepInside_ReachesTheImage()
     {
         var brush = new SolidColorBrush(Colors.Red);
         var image = new DrawingImage
@@ -193,11 +193,11 @@ public class DrawingImageTests
     }
 
     /// <summary>The same, for a STROKED shape. Half an icon set is strokes - a cross, a checkmark, an arrow - and the
-    /// stroke brush was the one half of the pair nothing watched: only <c>Brush</c> was hooked, so recolouring a stroke
+    /// stroke brush was the one half of the pair nothing watched: only <c>Brush</c> was hooked, so recoloring a stroke
     /// changed the picture and told nobody. Whoever holds PIXELS of the drawing (a baked tile brush, a nine-slice) then
     /// keeps the old ones for good, because the bake is only ever thrown away on this event.</summary>
     [Test]
-    public void RecolouringASTROKE_ReachesTheImage()
+    public void RecoloringASTROKE_ReachesTheImage()
     {
         var brush = new SolidColorBrush(Colors.Red);
         var image = new DrawingImage
@@ -302,11 +302,11 @@ public class DrawingImageTests
         Assert.That(session.Texts[0].Layout.FontSize, Is.LessThan(session.Texts[1].Layout.FontSize));
     }
 
-    /// <summary>A glyph run is anchored by its CORNER, so a fixed Origin centres exactly one string and drifts as soon as
-    /// the text changes length. The box is what makes centring hold: the same box with a longer caption must stay centred,
+    /// <summary>A glyph run is anchored by its CORNER, so a fixed Origin centers exactly one string and drifts as soon as
+    /// the text changes length. The box is what makes centering hold: the same box with a longer caption must stay centered,
     /// and the drawing's extent must not move with the words either.</summary>
     [Test]
-    public void TextCentredInABox_StaysCentredWhenTheStringChanges()
+    public void TextCenteredInABox_StaysCenteredWhenTheStringChanges()
     {
         var run = new GlyphRunDrawing
         {
@@ -320,8 +320,8 @@ public class DrawingImageTests
         var session = new RecordingDrawingSession();
         image.Render(session, new Rect(0, 0, 200, 80));   // drawn at 2x
 
-        // The alignment must reach the LAYOUT, shaping into the box: the ink does not sit centred inside a line box
-        // (ascender and descender space are not symmetric), so centring from out here lands the text visibly low.
+        // The alignment must reach the LAYOUT, shaping into the box: the ink does not sit centered inside a line box
+        // (ascender and descender space are not symmetric), so centering from out here lands the text visibly low.
         var shaped = session.Texts[0].Layout.RenderingParameters;
         Assert.That(shaped.HorizontalTextAlignment, Is.EqualTo(HorizontalTextAlignment.Center));
         Assert.That(shaped.VerticalTextAlignment, Is.EqualTo(VerticalTextAlignment.Center));

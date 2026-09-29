@@ -79,7 +79,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // True when newPen keeps every SIZE-affecting parameter (cut mode, join, dash pattern -> same buffer sizes + fan
-    // counts). The rest (thickness, dash offset, trim values, colour, and now every CAP - they are analytic, so they
+    // counts). The rest (thickness, dash offset, trim values, color, and now every CAP - they are analytic, so they
     // emit no geometry at all) are GPU uniforms, so a compatible pen can be swapped without reallocating - TryRepoint /
     // TryUpdateGeometry just re-dispatch with the new uniforms.
     private bool IsPenSizeCompatible(Pen newPen)
@@ -98,7 +98,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return true;
     }
 
-    // Cheap pen update for animation: a size-compatible pen change (thickness/offset/trim/colour) keeps the buffers, so
+    // Cheap pen update for animation: a size-compatible pen change (thickness/offset/trim/color) keeps the buffers, so
     // just swap the pen and re-dispatch with the new uniforms - no per-frame realloc/re-upload (that churn is what tanks
     // FPS during stroke animation). Returns false (caller rebuilds via ProcessStrokeData) when a size-affecting param
     // changed.
@@ -389,11 +389,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     {
         if (_contours.Count == 0) return;
 
-        // Points are in geometry-local space: WVP = transform(local->world) * projection(world->clip). The pen colour
+        // Points are in geometry-local space: WVP = transform(local->world) * projection(world->clip). The pen color
         // and transform are shared by every contour, so set them once, then draw each contour's expanded ribbon.
         _effect.Projection.SetValue(RenderData.TransformMatrix * RenderData.ProjectionMatrix);
         var color = (_pen.Brush as SolidColorBrush)?.Color.ToVector4() ?? new Vector4F(0, 0, 0, 1);
-        color.W *= (float)(_pen.Brush?.Opacity ?? 1.0) * RenderData.Opacity;   // colour alpha x pen-brush Opacity x element Opacity
+        color.W *= (float)(_pen.Brush?.Opacity ?? 1.0) * RenderData.Opacity;   // color alpha x pen-brush Opacity x element Opacity
         _effect.StrokeColor.SetValue(color);
         // StrokePS reads these for the analytic-AA coverage (distance vs HalfThickness +/- Fringe/2).
         _effect.HalfThickness.SetValue((float)(_pen.Thickness / 2.0));
@@ -422,7 +422,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         // carries the instanced fills' coverage marks and must survive.
         _device.ClearDepthInRect(bounds);
 
-        // Pass 1: settle the union's coverage into that depth, no colour. Pass 2: the one fragment that survived blends.
+        // Pass 1: settle the union's coverage into that depth, no color. Pass 2: the one fragment that survived blends.
         // Both passes must be draws of the SAME ribbon so their depths agree bit for bit.
         _device.ColorComponentFlags = 0;
         _device.DepthCompareFunction = CompareOp.Less;

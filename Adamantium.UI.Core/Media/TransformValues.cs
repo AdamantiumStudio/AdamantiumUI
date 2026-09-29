@@ -54,7 +54,7 @@ public struct TransformValues
         var scalingRotation = Quaternion.Identity;
 
         // Z spin (the classic 2D angle) composed with the 3D X/Y rotations (pitch/yaw) - one quaternion, rotated around
-        // the same centre, so the 2D-only case is bit-identical to before (RotationX/Y = 0 -> pure UnitZ rotation).
+        // the same center, so the 2D-only case is bit-identical to before (RotationX/Y = 0 -> pure UnitZ rotation).
         var rotation = Quaternion.RotationYawPitchRoll(
             MathHelper.DegreesToRadians(RotationY),
             MathHelper.DegreesToRadians(RotationX),
@@ -72,10 +72,10 @@ public struct TransformValues
         var toCenter = Matrix4x4.Translation(-(float)RotationCenterX, -(float)RotationCenterY, 0);
         var fromCenter = Matrix4x4.Translation((float)RotationCenterX, (float)RotationCenterY, 0);
 
-        // SHEAR, around the same centre and applied FIRST - in the element's own space, before scale/rotate/translate.
+        // SHEAR, around the same center and applied FIRST - in the element's own space, before scale/rotate/translate.
         // Row-vector convention (v * M), so x' = x + y*tan(SkewX) is M21 and y' = y + x*tan(SkewY) is M12. WPF splits this
         // into a separate SkewTransform whose place is whatever a TransformGroup says; here the order is fixed, and
-        // innermost is the one that reads as "italicise this element" rather than "shear the world it sits in".
+        // innermost is the one that reads as "italicize this element" rather than "shear the world it sits in".
         if (SkewX != 0 || SkewY != 0)
         {
             var skew = Matrix4x4.Identity;
@@ -84,7 +84,7 @@ public struct TransformValues
             matrix = toCenter * skew * fromCenter * matrix;
         }
 
-        // Perspective foreshortening around the rotation centre: w' = 1 - z/d, so points rotated toward the viewer
+        // Perspective foreshortening around the rotation center: w' = 1 - z/d, so points rotated toward the viewer
         // (negative z) grow and away shrink - the WPF-3D-tile look. Off (affine) when Perspective is 0. Composed as
         // T(-c) * M34(-1/d) * T(c) AFTER the affine transform: depth produced by the rotation feeds the divide.
         var d = Perspective;

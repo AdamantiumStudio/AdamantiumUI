@@ -6,7 +6,7 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Shows a colour kept as a <see cref="Vector3F"/> - a light's, 0 to 1 per channel - in a colour picker, and
+/// <summary>Shows a color kept as a <see cref="Vector3F"/> - a light's, 0 to 1 per channel - in a color picker, and
 /// hands the picked <see cref="Color"/> back the same way.</summary>
 public class VectorToColorConverter : IValueConverter
 {

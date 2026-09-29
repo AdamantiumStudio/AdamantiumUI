@@ -14,7 +14,7 @@ namespace Adamantium.UITests.Rendering;
 
 /// <summary>
 /// A textured brush is not tied to a rectangle. The textured batch used to claim RECTANGLES only, so an ImageBrush on an
-/// ellipse fell through every batch AND was refused by the per-unit path (which paints solid colours only) - it drew
+/// ellipse fell through every batch AND was refused by the per-unit path (which paints solid colors only) - it drew
 /// NOTHING. These are GPU tests because nothing on the CPU side can tell "sampled the texture into an ellipse" from
 /// "sampled it into the bounding rect": only the pixels say which shape was cut.
 /// </summary>
@@ -53,8 +53,8 @@ public class TexturedShapeRenderTests
         _tall = null;
     }
 
-    // One flat colour: the test is about WHERE the texture lands, not what it holds, and a flat source makes any sampled
-    // pixel unambiguous - no blend with a neighbouring texel to argue about.
+    // One flat color: the test is about WHERE the texture lands, not what it holds, and a flat source makes any sampled
+    // pixel unambiguous - no blend with a neighboring texel to argue about.
     private static BitmapSource FlatRed()
     {
         const int src = 16;
@@ -69,7 +69,7 @@ public class TexturedShapeRenderTests
         return new BitmapSource(src, src, 1, 1, SurfaceFormat.B8G8R8A8.UNorm, pixels);
     }
 
-    // TALL (1:2) and two-coloured: Uniform fits it to HALF the square shape's width, and a wrapped edge then shows up
+    // TALL (1:2) and two-colored: Uniform fits it to HALF the square shape's width, and a wrapped edge then shows up
     // as the wrong half rather than as "some red".
     private static BitmapSource TwoHalves()
     {

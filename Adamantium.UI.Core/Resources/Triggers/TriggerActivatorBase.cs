@@ -208,7 +208,7 @@ public abstract class TriggerActivatorBase : ITriggerActivator
 
             // A live link to the ACTIVE THEME's accent/focus, which is established against an element. A non-element
             // target cannot hold one; {ObservableResource} is the marker that reaches those (its Apply takes any
-            // IAdamantiumComponent), which is what a named Aura's colour uses.
+            // IAdamantiumComponent), which is what a named Aura's color uses.
             case ThemeResource themeResource when element != null:
                 themeResource.Apply(element, setter.Property, ValuePriority.Trigger, setter);
                 _applied[setter] = (component, () => ThemeResource.Remove(element, setter.Property, ValuePriority.Trigger, setter));

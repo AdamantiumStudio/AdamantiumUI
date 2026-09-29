@@ -14,7 +14,7 @@ public sealed class NoiseBrush : Brush
     // brush is a real owner. Set true FIRST in CreateClone, before the clone's Animate is assigned. Mirrors FractalBrush.
     private bool _suppressClock;
 
-    // PAINT, all of them: the noise field is fill-relative, so changing any of these re-colours the same pixels - never the
+    // PAINT, all of them: the noise field is fill-relative, so changing any of these re-colors the same pixels - never the
     // element's shape or its layout (see Brush.Opacity).
     public static readonly AdamantiumProperty ScaleProperty = AdamantiumProperty.Register(nameof(Scale),
         typeof(double), typeof(NoiseBrush), new PropertyMetadata(40.0, PropertyMetadataOptions.AffectsPaint));
@@ -37,8 +37,8 @@ public sealed class NoiseBrush : Brush
     public static readonly AdamantiumProperty Color2Property = AdamantiumProperty.Register(nameof(Color2),
         typeof(Color), typeof(NoiseBrush), new PropertyMetadata(new Color(148, 163, 184, 255), PropertyMetadataOptions.AffectsPaint));
 
-    // Optional MID colour: with a non-zero alpha the noise maps through a 3-colour gradient-map ramp (Color1 -> MidColor ->
-    // Color2) instead of the plain two-colour duotone - terrain / heat-map / lava looks. Default transparent = off.
+    // Optional MID color: with a non-zero alpha the noise maps through a 3-color gradient-map ramp (Color1 -> MidColor ->
+    // Color2) instead of the plain two-color duotone - terrain / heat-map / lava looks. Default transparent = off.
     public static readonly AdamantiumProperty MidColorProperty = AdamantiumProperty.Register(nameof(MidColor),
         typeof(Color), typeof(NoiseBrush), new PropertyMetadata(new Color(0, 0, 0, 0), PropertyMetadataOptions.AffectsPaint));
 
@@ -55,7 +55,7 @@ public sealed class NoiseBrush : Brush
     public static readonly AdamantiumProperty FlowSpeedProperty = AdamantiumProperty.Register(nameof(FlowSpeed),
         typeof(double), typeof(NoiseBrush), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsPaint));
 
-    // CombustibleVoronoi only: true = the built-in blackbody FIRE palette; false = colour it through this brush's own
+    // CombustibleVoronoi only: true = the built-in blackbody FIRE palette; false = color it through this brush's own
     // Color1 -> MidColor -> Color2 ramp (so any palette - ice, toxic, etc.). Ignored by every other noise type.
     public static readonly AdamantiumProperty UseFirePaletteProperty = AdamantiumProperty.Register(nameof(UseFirePalette),
         typeof(bool), typeof(NoiseBrush), new PropertyMetadata(true, PropertyMetadataOptions.AffectsPaint));
@@ -115,7 +115,7 @@ public sealed class NoiseBrush : Brush
         }
     }
 
-    /// <summary>The colour at low noise values.</summary>
+    /// <summary>The color at low noise values.</summary>
     public Color Color1
     {
         get => GetValue<Color>(Color1Property);
@@ -126,7 +126,7 @@ public sealed class NoiseBrush : Brush
         }
     }
 
-    /// <summary>The colour at high noise values.</summary>
+    /// <summary>The color at high noise values.</summary>
     public Color Color2
     {
         get => GetValue<Color>(Color2Property);
@@ -137,7 +137,7 @@ public sealed class NoiseBrush : Brush
         }
     }
 
-    /// <summary>Optional MID colour for a 3-colour gradient-map ramp (Color1 -> MidColor -> Color2). Transparent = off.</summary>
+    /// <summary>Optional MID color for a 3-color gradient-map ramp (Color1 -> MidColor -> Color2). Transparent = off.</summary>
     public Color MidColor
     {
         get => GetValue<Color>(MidColorProperty);

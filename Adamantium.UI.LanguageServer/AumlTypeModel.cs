@@ -18,7 +18,7 @@ public sealed class AumlTypeModel
 {
     private readonly ITypeResolver _resolver;
     private readonly Dictionary<string, IReadOnlyList<IResolvedType>> _clrNamespaceCache = new(StringComparer.Ordinal);
-    // The project's own AUML views (<View>/<Window> roots), pre-registered from the .auml files so they're recognised
+    // The project's own AUML views (<View>/<Window> roots), pre-registered from the .auml files so they're recognized
     // and complete like framework controls even though the source generator hasn't emitted their classes.
     private readonly List<IResolvedType> _localViews = new();
 
@@ -104,7 +104,7 @@ public sealed class AumlTypeModel
 
     /// <summary>
     /// Registers the project's own AUML views (<c>&lt;View&gt;</c>/<c>&lt;Window&gt;</c>/... roots) as types, so an
-    /// embedded view (<c>&lt;ControlsView/&gt;</c>) is recognised and its inherited properties complete - mirroring the
+    /// embedded view (<c>&lt;ControlsView/&gt;</c>) is recognized and its inherited properties complete - mirroring the
     /// source generator's pre-registration. Parsed straight from the .auml files, so it works with no build.
     /// </summary>
     public void RegisterViews(IEnumerable<string> aumlFiles, string rootNamespace, string projectDir)
@@ -240,7 +240,7 @@ public sealed class AumlTypeModel
     /// The keys completable in <c>{ThemeResource Key}</c>: the <c>Brush</c>-typed properties of the framework
     /// <see cref="ThemeTypeFullName">Theme</see> class (the theme's runtime-mutable brushes - AccentFillColorDefault,
     /// FocusStrokeColorOuter, ...). These are NOT the static <c>{ResourceReference}</c> brushes, which live in a
-    /// ResourceDictionary - hence offering the Theme's own brushes here instead of an arbitrary colour list.
+    /// ResourceDictionary - hence offering the Theme's own brushes here instead of an arbitrary color list.
     /// </summary>
     public IReadOnlyList<string> GetThemeBrushKeys()
     {

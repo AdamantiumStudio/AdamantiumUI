@@ -250,7 +250,7 @@ public class CanvasCommandTests
     }
 
     // A BUTTON IS ASKED AGAIN when what it answers from moves. A command left out of that list is asked exactly once -
-    // while nothing is selected and the plane is empty - and its button is then grey for the rest of the session,
+    // while nothing is selected and the plane is empty - and its button is then gray for the rest of the session,
     // whatever is picked afterwards. Which is what "the buttons are disabled for no reason" was.
     [Test]
     public void EveryCommandSaysItCanBePressedAgainWhenTheSelectionChanges()

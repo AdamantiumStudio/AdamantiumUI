@@ -7,7 +7,7 @@ namespace Adamantium.UI.Core.Media;
 /// <see cref="VisualTreeNotifications"/>.</summary>
 public sealed class VisualBrush : TileBrush
 {
-    // PAINT: the picture fills the shape it is given, so a different source re-colours the same pixels.
+    // PAINT: the picture fills the shape it is given, so a different source re-colors the same pixels.
     public static readonly AdamantiumProperty VisualProperty = AdamantiumProperty.Register(nameof(Visual),
         typeof(IUIComponent), typeof(VisualBrush), new PropertyMetadata(null, PropertyMetadataOptions.AffectsPaint, OnVisualChanged));
 

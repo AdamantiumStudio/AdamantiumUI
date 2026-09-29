@@ -31,7 +31,7 @@ public class BrushRepaintByIndexTests
     }
 
     [Test]
-    public void ARecolouredBrush_ReachesTheShape_WithNothingMarkingTheElement()
+    public void ARecoloredBrush_ReachesTheShape_WithNothingMarkingTheElement()
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -57,18 +57,18 @@ public class BrushRepaintByIndexTests
         var after = Pixel(renderer, 50, 50);
         Assert.Multiple(() =>
         {
-            Assert.That(after.G, Is.GreaterThan(200), "the shape must wear the new colour");
+            Assert.That(after.G, Is.GreaterThan(200), "the shape must wear the new color");
             Assert.That(after.R, Is.LessThan(60), "...and none of the old one");
             Assert.That(renderer.Cache.BrushRepaintTotal, Is.GreaterThan(repaintsBefore),
-                "...and it has to have travelled by the brush index - nothing else knows this element changed");
+                "...and it has to have traveled by the brush index - nothing else knows this element changed");
         });
     }
 
     /// <summary>The STROKED half of the same question. Half the icons in a set are strokes - a cross, a checkmark, an
-    /// arrow - and a stroke keeps its colour somewhere else entirely from a fill, so the fill following the palette says
+    /// arrow - and a stroke keeps its color somewhere else entirely from a fill, so the fill following the palette says
     /// nothing about them.</summary>
     [Test]
-    public void ARecolouredBrush_ReachesA_STROKE_WithNothingMarkingTheElement()
+    public void ARecoloredBrush_ReachesA_STROKE_WithNothingMarkingTheElement()
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -93,13 +93,13 @@ public class BrushRepaintByIndexTests
         var after = Pixel(renderer, 60, 60);
         Assert.Multiple(() =>
         {
-            Assert.That(after.G, Is.GreaterThan(200), "the stroke must wear the new colour");
+            Assert.That(after.G, Is.GreaterThan(200), "the stroke must wear the new color");
             Assert.That(after.R, Is.LessThan(60), "...and none of the old one");
         });
     }
 
     /// <summary>The real icon path, end to end: a shared <see cref="DrawingImage"/> resource shown by an
-    /// <see cref="Adamantium.UI.Controls.Image"/>, recoloured through the brush the drawing holds - which is how a theme
+    /// <see cref="Adamantium.UI.Controls.Image"/>, recolored through the brush the drawing holds - which is how a theme
     /// palette repaints one. The element is NOT the brush's owner here (the brush lives inside the drawing), so nothing
     /// about the element itself says it changed.</summary>
     [TestCase(false, TestName = "AnIconFILL_FollowsItsBrush")]
@@ -149,7 +149,7 @@ public class BrushRepaintByIndexTests
         var after = Pixel(renderer, sx, sy);
         Assert.Multiple(() =>
         {
-            Assert.That(after.G, Is.GreaterThan(200), "the icon must wear the new colour");
+            Assert.That(after.G, Is.GreaterThan(200), "the icon must wear the new color");
             Assert.That(after.R, Is.LessThan(60), "...and none of the old one");
         });
     }

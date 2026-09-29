@@ -43,14 +43,14 @@ public class RingProgressBar : RangeBase
         set => SetValue(RingThicknessProperty, value);
     }
 
-    /// <summary>Show the filled percentage centred inside the ring.</summary>
+    /// <summary>Show the filled percentage centered inside the ring.</summary>
     public bool ShowValueText
     {
         get => GetValue<bool>(ShowValueTextProperty);
         set => SetValue(ShowValueTextProperty, value);
     }
 
-    /// <summary>The filled percentage as text (e.g. "42%") - the template binds the centre label to it. Read-only output.</summary>
+    /// <summary>The filled percentage as text (e.g. "42%") - the template binds the center label to it. Read-only output.</summary>
     public string ValueText
     {
         get => GetValue<string>(ValueTextProperty);
@@ -140,7 +140,7 @@ public class RingProgressBar : RangeBase
         return square;
     }
 
-    // Sweep the arc to Percentage and refresh the centre label. StopAngle is a SWEEP span from StartAngle, so the arc is
+    // Sweep the arc to Percentage and refresh the center label. StopAngle is a SWEEP span from StartAngle, so the arc is
     // always [start 0, sweep fraction*360]; StartPosition (rotation) and Direction (flip) are handled by the transform.
     // Size-independent, so - unlike a linear fill - this needs no arrange.
     private void UpdateIndicator()

@@ -63,7 +63,7 @@ float4 CompositeFillBorder(float dOuter, float2 p, float2 half, float4 radii, fl
     return float4(outRGB, outA);
 }
 
-// Cap "reach" along the contour, at a fragment whose PERPENDICULAR distance from the stroke centreline is dPerp: how far
+// Cap "reach" along the contour, at a fragment whose PERPENDICULAR distance from the stroke centerline is dPerp: how far
 // past a piece end the stroke still paints (SIGNED - negative reach cuts the end INWARD, giving the concave caps). All six
 // PenLineCaps analytically, no cap geometry, matching the geometry stroker's codes (StrokeEffect.fx CapSd): 0 flat,
 // 1 square, 2 convex round, 3 convex triangle, 4 concave triangle, 5 concave round. Convex/concave are mirrors (+/-).
@@ -71,7 +71,7 @@ float CapReach(int cap, float dPerp, float halfW)
 {
     if (cap == 1) return halfW;                                            // square: rectangular nub
     if (cap == 2) return sqrt(max(halfW * halfW - dPerp * dPerp, 0.0));    // convex round: semicircle out
-    if (cap == 3) return halfW - abs(dPerp);                              // convex triangle: tip out at the centre
+    if (cap == 3) return halfW - abs(dPerp);                              // convex triangle: tip out at the center
     if (cap == 4) return abs(dPerp) - halfW;                              // concave triangle: V notch cut in
     if (cap == 5) return -sqrt(max(halfW * halfW - dPerp * dPerp, 0.0));   // concave round: semicircular bite in
     return 0.0;                                                            // flat: hard cut
@@ -137,9 +137,9 @@ float DashTrimMaskCapped(float sTrim, float sDash, float perimeter, float dashOn
         float a = trimStart * perimeter;
         float b = trimEnd * perimeter;
         windowOpen = (b > a) ? 1.0 : 0.0;
-        float centre = (a + b) * 0.5;
+        float center = (a + b) * 0.5;
         float halfLen = (b - a) * 0.5;
-        float ds = sTrim - centre;
+        float ds = sTrim - center;
         ds -= perimeter * floor(ds / perimeter + 0.5);   // wrapped: a convex cap at the seam bulges across s=0
         tS = halfLen + ds;
         tE = halfLen - ds;

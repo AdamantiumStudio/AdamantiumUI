@@ -10,7 +10,7 @@ namespace Adamantium.UI.Rendering;
 [StructLayout(LayoutKind.Sequential)]
 public struct GradientRectItem
 {
-    /// <summary>Max colour stops packed inline (covers essentially all real gradients). Keep in lock-step with the shader.</summary>
+    /// <summary>Max color stops packed inline (covers essentially all real gradients). Keep in lock-step with the shader.</summary>
     public const int MaxStops = 8;
 
     /// <summary>World-space bounds: x, y, w, h.</summary>
@@ -29,7 +29,7 @@ public struct GradientRectItem
     /// <summary>Radial only: (originX, originY, _, _) - the focal point. Unused for linear.</summary>
     public Vector4F Geom1;
 
-    /// <summary>Straight stroke colour (opacity folded into the alpha); alpha 0 = no stroke. Four BYTES, read by the
+    /// <summary>Straight stroke color (opacity folded into the alpha); alpha 0 = no stroke. Four BYTES, read by the
     /// shader as a <c>uint8_t4</c>.</summary>
     public Color StrokeColor;
 
@@ -43,8 +43,8 @@ public struct GradientRectItem
     /// packed into <see cref="Stroke1"/>.w. A pattern longer than one ON/GAP period lives here.</summary>
     public Vector4F Dash;
 
-    /// <summary>Straight (non-premultiplied) stop colours, opacity folded into the alpha. Only the first .z (stop count)
-    /// are valid. Four BYTES each: eight stops at a float4 apiece was 128 bytes of the record, and a stop is a colour -
+    /// <summary>Straight (non-premultiplied) stop colors, opacity folded into the alpha. Only the first .z (stop count)
+    /// are valid. Four BYTES each: eight stops at a float4 apiece was 128 bytes of the record, and a stop is a color -
     /// the same four bytes every other fill in this file carries.</summary>
     public Color Stop0, Stop1, Stop2, Stop3, Stop4, Stop5, Stop6, Stop7;
 

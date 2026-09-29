@@ -7,7 +7,7 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media.Drawings;
 
-/// <summary>Text inside a drawing - a labelled diagram, a lettered badge. The text is RE-SHAPED at the size it is drawn
+/// <summary>Text inside a drawing - a labeled diagram, a lettered badge. The text is RE-SHAPED at the size it is drawn
 /// at rather than scaled as a picture, so an icon blown up to 512px gets glyphs shaped for 512px, not stretched ones.</summary>
 public class GlyphRunDrawing : Drawing
 {
@@ -83,7 +83,7 @@ public class GlyphRunDrawing : Drawing
         set => SetValue(BoxProperty, value);
     }
 
-    /// <summary>Where the run sits horizontally in <see cref="Box"/>. Centre by default - aligning is the reason to
+    /// <summary>Where the run sits horizontally in <see cref="Box"/>. Center by default - aligning is the reason to
     /// declare a box at all.</summary>
     public HorizontalTextAlignment HorizontalAlignment
     {
@@ -203,16 +203,16 @@ public class GlyphRunDrawing : Drawing
         }
         else
         {
-            // Shape INTO the box and let the LAYOUT align the run in it. Doing that arithmetic out here means centring on
-            // the line box, and the ink does not sit centred inside a line box - ascender and descender space are not
+            // Shape INTO the box and let the LAYOUT align the run in it. Doing that arithmetic out here means centering on
+            // the line box, and the ink does not sit centered inside a line box - ascender and descender space are not
             // symmetric - so the text came out visibly low. The layout is the only thing that knows those metrics.
             desired = new Size(box.Width * scale, box.Height * scale);
             Shape(layout, text, fontSize, desired, HorizontalAlignment, VerticalAlignment);
             corner = new Vector2(box.X, box.Y);
         }
 
-        // The quad's TOP-LEFT. Measured, not assumed: placing it by the centre put the text half its own width and
-        // height further down and right, which is what a top-left anchor does with a centre handed to it.
+        // The quad's TOP-LEFT. Measured, not assumed: placing it by the center put the text half its own width and
+        // height further down and right, which is what a top-left anchor does with a center handed to it.
         var placed = new Rect(corner.X, corner.Y, 0, 0).TransformToAABB(transform);
         var place = Matrix4x4F.Translation((float)placed.X, (float)placed.Y, 0);
         var parameters = Parameters(Foreground, new Rect(0, 0, desired.Width, desired.Height),

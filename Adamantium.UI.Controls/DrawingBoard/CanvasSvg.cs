@@ -806,7 +806,7 @@ public static class CanvasSvg
     {
         if (String.IsNullOrWhiteSpace(text)) return fallback;
 
-        // A LENGTH may carry its unit. Only the user units a canvas deals in are taken; a value in millimetres would
+        // A LENGTH may carry its unit. Only the user units a canvas deals in are taken; a value in millimeters would
         // have to be converted against a page size this has no idea about.
         var cut = text.Trim().TrimEnd('p', 'x', 'P', 'X');
 

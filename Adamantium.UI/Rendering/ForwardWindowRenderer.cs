@@ -32,7 +32,7 @@ public class ForwardWindowRenderer : WindowRendererBase
     protected override void InitializeWindowResources()
     {
         // Viewport/scissor at the render resolution (ClientSize x RenderScale); the projection stays the logical
-        // ClientSize, so RenderScale > 1 rasterises the same layout into a larger target (crisp designer zoom).
+        // ClientSize, so RenderScale > 1 rasterizes the same layout into a larger target (crisp designer zoom).
         var width = (uint)(Window.ClientWidth * RenderScale);
         var height = (uint)(Window.ClientHeight * RenderScale);
 

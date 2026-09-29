@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls;
 /// <summary>
 /// A radio button: one of a mutually exclusive set. Clicking it checks it and clears the rest of its group; a click
 /// never unchecks it (pick another, or clear it in code). Buttons with the same non-empty <see cref="GroupName"/> are
-/// exclusive app-wide; unnamed ones are exclusive among siblings under the same visual parent. Behaviour only -
+/// exclusive app-wide; unnamed ones are exclusive among siblings under the same visual parent. Behavior only -
 /// the circle + dot + label are the theme template.
 /// </summary>
 public class RadioButton : ToggleButton

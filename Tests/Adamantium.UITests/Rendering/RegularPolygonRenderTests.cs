@@ -263,7 +263,7 @@ public class RegularPolygonRenderTests
             Assert.That(PatternRectCollector.WantsBatchPolygon(pattern), Is.True, "...and so does a pattern one");
             // Exactly ONE batch each: a solid fill belongs to the plain polygon pass and to none of the brush siblings.
             Assert.That(RegularPolygonCollector.WantsBatch(solid), Is.True);
-            Assert.That(RegularPolygonCollector.WantsBatch(gradient), Is.False, "a gradient is not a colour the solid pass can paint");
+            Assert.That(RegularPolygonCollector.WantsBatch(gradient), Is.False, "a gradient is not a color the solid pass can paint");
             Assert.That(GradientRectCollector.WantsBatchPolygon(solid), Is.False);
             Assert.That(PatternRectCollector.WantsBatchPolygon(solid), Is.False);
         });

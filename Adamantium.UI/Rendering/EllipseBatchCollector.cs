@@ -58,7 +58,7 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
 
     public bool CanBatch(EllipsePayload p) => WantsBatch(p);
 
-    // Bake one solid ellipse fill (bounds -> world, colour straight with opacity folded in) into the pending segment.
+    // Bake one solid ellipse fill (bounds -> world, color straight with opacity folded in) into the pending segment.
     // False only if it can't be baked (rotated/sheared world or a GPU-buffer overflow this frame) - the caller then draws
     // that ellipse via the per-unit path.
     public bool TryAdd(EllipsePayload p, Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot = 0,
@@ -82,10 +82,10 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         const float eps = 1e-4f;
         if (Math.Abs(world.M12) > eps || Math.Abs(world.M21) > eps) return false;   // rotation/shear -> per-unit
 
-        var color = RectBatchCollector.FillColour(p.Brush, opacity);
+        var color = RectBatchCollector.FillColor(p.Brush, opacity);
 
-        // Stroke (optional): the full pen baked to the instance (colour + device-px width, dash on/gap, offset, trim),
-        // CENTRE-aligned. Solid/dashed/trimmed all draw analytically in the SDF shader, so a stroked ellipse stays in the
+        // Stroke (optional): the full pen baked to the instance (color + device-px width, dash on/gap, offset, trim),
+        // CENTER-aligned. Solid/dashed/trimmed all draw analytically in the SDF shader, so a stroked ellipse stays in the
         // batch (no per-tile GPU buffers).
         var sx = world.M11; var sy = world.M22; var tx = world.M41; var ty = world.M42;
         var r = p.DestinationRect;
@@ -110,7 +110,7 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
     }
 
     // The angular cut, in the ellipse's own PARAMETRIC angle (radians) - the angle the tessellator sweeps, so the batch
-    // and the fallback cut at the same place. .z says how the shape closes: 0 whole, 1 sector (through the centre),
+    // and the fallback cut at the same place. .z says how the shape closes: 0 whole, 1 sector (through the center),
     // 2 edge-to-edge (by the chord).
     private static Vector4F BakeCut(EllipsePayload p, double sx)
     {
@@ -118,7 +118,7 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         var ring = (float)(p.RingThickness * sx);
         // A WHOLE sweep is not cut at all, and the start angle has nothing to say about it - where a closed contour begins
         // is not a property of the shape. Baking a cut anyway put both bounding rays of the wedge on the SAME ray, and
-        // anti-aliasing that non-existent edge left a one-pixel seam running out from the centre. The tessellator draws
+        // anti-aliasing that non-existent edge left a one-pixel seam running out from the center. The tessellator draws
         // this case closed (its `isClosed` asks only about the sweep), so cutting here also split the two paths.
         if (p.SweepAngle >= 360.0) return new Vector4F(0, 0, 0, ring);
 

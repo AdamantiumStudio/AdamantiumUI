@@ -5,7 +5,7 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>A COLOUR SCALED by a number - what brightness is. Handed several colours it works on them as one.</summary>
+/// <summary>A COLOR SCALED by a number - what brightness is. Handed several colors it works on them as one.</summary>
 public sealed class ScaleSpecialization : NodeSpecialization
 {
     public override ValueTask<object> Evaluate(IReadOnlyList<CanvasArrival> inputs, CancellationToken token)

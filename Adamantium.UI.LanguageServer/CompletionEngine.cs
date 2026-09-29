@@ -129,7 +129,7 @@ public sealed class CompletionEngine
             return [];
 
         // {ThemeResource Key} -> only the theme's OWN brush keys (the Theme class's Brush properties), not the generic
-        // colour list the Brush-typed default property would otherwise pull in (which was confusing).
+        // color list the Brush-typed default property would otherwise pull in (which was confusing).
         if (extLocal is "ThemeResource" or "ThemeResourceExtension")
             return _model.GetThemeBrushKeys()
                 .Where(k => Matches(k, partial))

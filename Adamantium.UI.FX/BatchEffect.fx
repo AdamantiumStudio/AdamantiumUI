@@ -16,7 +16,7 @@
 struct PSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment position relative to the rect CENTRE (SDF space)
+    float2 Local    : TEXCOORD0;   // fragment position relative to the rect CENTER (SDF space)
     float2 Half     : TEXCOORD1;   // rect half-size
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     float4 Color    : COLOR0;
@@ -80,8 +80,8 @@ float4 RectBatchPS(PSInput input) : SV_Target
 
 // ---- InstancedFill pass: general retained geometry instancing ---------------------------------------------------------
 // A SHARED local mesh (bound as the only vertex buffer) drawn instanceCount times; each instance's world transform and
-// colour are fetched from this StructuredBuffer by SV_InstanceID. So N identical shapes = ONE instanced draw, and a
-// move/resize/recolour is a patch of one record - no per-frame re-record. Matches Retained/GeometryInstance.cs.
+// color are fetched from this StructuredBuffer by SV_InstanceID. So N identical shapes = ONE instanced draw, and a
+// move/resize/recolor is a patch of one record - no per-frame re-record. Matches Retained/GeometryInstance.cs.
 struct GeometryInstance
 {
     float4x4 Local;   // element local -> SLOT space. Matches Matrix4x4F Local.
@@ -110,8 +110,8 @@ FillPSInput InstancedFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     o.Position = mul(world, Projection);
     int fillFadeSlot = int(inst.Params.y);
     float fillFade = lerp(1.0, nodes[max(fillFadeSlot, 0)].Params.x, step(0.0, float(fillFadeSlot)));
-    float4 instColour = float4(inst.Color) * (1.0 / 255.0);
-    o.Color = float4(instColour.rgb, instColour.a * fillFade);
+    float4 instColor = float4(inst.Color) * (1.0 / 255.0);
+    o.Color = float4(instColor.rgb, instColor.a * fillFade);
     o.ClipBox   = ClipShapeBox(inst.Params.z);
     o.ClipRadii = ClipShapeRadii(inst.Params.z);
     return o;
@@ -140,18 +140,18 @@ FringePSInput InstancedFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
     o.Position = ExpandFringe(v, m, coverage);
     int fillFadeSlot = int(inst.Params.y);
     float fillFade = lerp(1.0, nodes[max(fillFadeSlot, 0)].Params.x, step(0.0, float(fillFadeSlot)));
-    float4 instColour = float4(inst.Color) * (1.0 / 255.0);
-    o.Color = float4(instColour.rgb, instColour.a * fillFade);
+    float4 instColor = float4(inst.Color) * (1.0 / 255.0);
+    o.Color = float4(instColor.rgb, instColor.a * fillFade);
     o.Coverage = coverage;
     o.ClipBox   = ClipShapeBox(inst.Params.z);
     o.ClipRadii = ClipShapeRadii(inst.Params.z);
     return o;
 }
 
-// Coverage -> alpha. THE flat fringe stage for the whole application: every ring that is one flat colour ends here, and
+// Coverage -> alpha. THE flat fringe stage for the whole application: every ring that is one flat color ends here, and
 // there is exactly one of it, because the effect pool merges shaders by BYTECODE and refuses to give one shader two
 // owning effects. That is also why the PATTERN's ring is drawn from this file rather than from BrushEffect - it takes
-// the brush's low colour without evaluating anything, so it is this same pass.
+// the brush's low color without evaluating anything, so it is this same pass.
 [shader("fragment")]
 float4 InstancedFringePS(FringePSInput input) : SV_Target
 {
@@ -192,7 +192,7 @@ struct RectData
     float4 Params;       // .x = LARGEST corner radius; .y = transform-table slot; .z = no-fringe flag; .w = fade slot
     float4 Radii;        // corner radii: x = TL, y = TR, z = BR, w = BL
     uint8_t4 Color;       // straight RGBA in four bytes
-    uint8_t4 StrokeColor; // straight stroke RGBA in four bytes (alpha 0 -> no stroke); the BORDER's colour when Inset is non-zero
+    uint8_t4 StrokeColor; // straight stroke RGBA in four bytes (alpha 0 -> no stroke); the BORDER's color when Inset is non-zero
     float4 Stroke0;      // width_px, align, dashOn, dashGap
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px); runs 0 and 1 ride in Stroke0.zw, the count in Stroke1.w
@@ -256,7 +256,7 @@ PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_I
 struct EllipsePSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment position relative to the ellipse CENTRE
+    float2 Local    : TEXCOORD0;   // fragment position relative to the ellipse CENTER
     float2 Half     : TEXCOORD1;   // ellipse half-axes (rx, ry)
     float4 Color    : COLOR0;
     float4 StrokeColor : COLOR1;
@@ -427,7 +427,7 @@ struct PolygonData
 struct PolygonPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the shape's CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the shape's CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;   // half-extents of the box the polygon is inscribed in
     float4 Color    : COLOR0;
     float4 StrokeColor : COLOR1;
@@ -511,7 +511,7 @@ struct HaloRectData
 struct HaloPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment from the SHAPE's centre, device px
+    float2 Local    : TEXCOORD0;   // fragment from the SHAPE's center, device px
     float2 Half     : TEXCOORD1;   // the shape's half-size, device px
     float4 Radii    : TEXCOORD2;   // corner radii (TL, TR, BR, BL) in device px
     float Scale     : TEXCOORD3;
@@ -690,20 +690,20 @@ HaloPSInput HaloLivingVS(uint vertexId : SV_VertexID, uint instanceId : SV_Insta
 float4 LivingPalette(HaloLivingData it, float t)
 {
     float count = it.Ramp.x;
-    float4 colours[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
+    float4 colors[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
                           float4(it.Stop2) * (1.0 / 255.0), float4(it.Stop3) * (1.0 / 255.0),
                           float4(it.Stop4) * (1.0 / 255.0), float4(it.Stop5) * (1.0 / 255.0),
                           float4(it.Stop6) * (1.0 / 255.0), float4(it.Stop7) * (1.0 / 255.0) };
     float offsets[8] = { it.Offsets0.x, it.Offsets0.y, it.Offsets0.z, it.Offsets0.w,
                          it.Offsets1.x, it.Offsets1.y, it.Offsets1.z, it.Offsets1.w };
 
-    float4 c = colours[0];
+    float4 c = colors[0];
     for (int i = 1; i < 8; i++)
     {
         float active = step((float)i + 0.5, count);                  // this stop exists
         float span = max(offsets[i] - offsets[i - 1], 1e-4);
         float k = saturate((t - offsets[i - 1]) / span);
-        c = lerp(c, lerp(colours[i - 1], colours[i], k), active * step(offsets[i - 1], t));
+        c = lerp(c, lerp(colors[i - 1], colors[i], k), active * step(offsets[i - 1], t));
     }
     return c;
 }
@@ -756,13 +756,13 @@ float4 HaloLivingPS(HaloPSInput input) : SV_Target
     a *= lerp(saturate(dShape / aa + 0.5), saturate(-dShape / aa + 0.5), step(0.5, inner));
     a *= lerp(1.0, bandFade, sampled);
 
-    // The hue rides its OWN sample, not the wander. Colouring by the wander ties each end of the palette to a fixed
-    // brightness - the far end always lands where the band has already faded - so one colour is never really seen.
+    // The hue rides its OWN sample, not the wander. Coloring by the wander ties each end of the palette to a fixed
+    // brightness - the far end always lands where the band has already faded - so one color is never really seen.
     // Decorrelated, the hues travel across the band independently of how far it happens to be reaching.
     float hue = SimplexNoise(ring * 0.8 + float2(-t * 0.35, t * 0.9)) * 0.5 + 0.5;
-    float4 colour = lerp(float4(it.Color) * (1.0 / 255.0), LivingPalette(it, saturate(hue)), step(1.5, it.Ramp.x));
-    colour.a *= saturate(a) * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
-    return colour;
+    float4 color = lerp(float4(it.Color) * (1.0 / 255.0), LivingPalette(it, saturate(hue)), step(1.5, it.Ramp.x));
+    color.a *= saturate(a) * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
+    return color;
 }
 
 // =====================================================================================================================
@@ -778,7 +778,7 @@ technique Batch
         PixelShader = RectBatchPS;
     }
 
-    // General geometry instancing - a shared local mesh drawn N times, per-instance world+colour from a BDA buffer.
+    // General geometry instancing - a shared local mesh drawn N times, per-instance world+color from a BDA buffer.
     pass Fill
     {
         VertexShader = InstancedFillVS;
@@ -805,7 +805,7 @@ technique Batch
         PixelShader = HaloRectPS;
     }
 
-    // An aura that BREATHES: its reach wanders along the outline and drifts over time, travelling a palette. Kept out of
+    // An aura that BREATHES: its reach wanders along the outline and drifts over time, traveling a palette. Kept out of
     // the plain Halo pass so a still band pays nothing for the noise.
     pass HaloLiving
     {

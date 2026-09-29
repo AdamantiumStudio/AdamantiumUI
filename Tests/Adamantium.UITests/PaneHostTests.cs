@@ -140,10 +140,10 @@ public class PaneHostTests
     {
         var split = new PaneHost { Orientation = Orientation.Horizontal, DividerThickness = 0 };
         var left = Star(0.25);
-        var centre = Star(0.75);
+        var center = Star(0.75);
         var inspector = Fixed(100);
         split.Children.Add(left);
-        split.Children.Add(centre);
+        split.Children.Add(center);
         split.Children.Add(inspector);
 
         split.Measure(new Size(500, 100));
@@ -153,13 +153,13 @@ public class PaneHostTests
         {
             Assert.That(inspector.Bounds.Width, Is.EqualTo(100).Within(0.5));
             Assert.That(left.Bounds.Width, Is.EqualTo(100).Within(0.5), "a quarter of the 400 that is left, not a third of it");
-            Assert.That(centre.Bounds.Width, Is.EqualTo(300).Within(0.5));
+            Assert.That(center.Bounds.Width, Is.EqualTo(300).Within(0.5));
         });
     }
 
     /// <summary>
     /// THE reason for fixed lengths: resizing the window must not resize a docked panel. An inspector told to be 240
-    /// wide stays 240 wide while the centre absorbs everything the window gains or loses - which is what every editor
+    /// wide stays 240 wide while the center absorbs everything the window gains or loses - which is what every editor
     /// does, and what a pure share can never do.
     /// </summary>
     [Test]
@@ -180,7 +180,7 @@ public class PaneHostTests
         Assert.Multiple(() =>
         {
             Assert.That(inspector.Bounds.Width, Is.EqualTo(240).Within(0.5), "the panel keeps the width it was given");
-            Assert.That(documents.Bounds.Width, Is.EqualTo(1160).Within(0.5), "the centre takes the whole difference");
+            Assert.That(documents.Bounds.Width, Is.EqualTo(1160).Within(0.5), "the center takes the whole difference");
         });
     }
 

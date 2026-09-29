@@ -653,7 +653,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
                 // Stretch anchors at the START, like Left. When the element fills the slot the offset is 0 either way;
                 // when it returns LESS than the slot (a control that can't stretch - e.g. a CheckBox's content stack)
                 // it must stay at the slot origin, not drift to the middle. Grouping Stretch with Center slid such
-                // content to the centre of its parent the moment the element stopped filling.
+                // content to the center of its parent the moment the element stopped filling.
                 case HorizontalAlignment.Left:
                 case HorizontalAlignment.Stretch:
                     size.Width = Math.Min(sizeMinusMargins.Width, outerUsed.Width);

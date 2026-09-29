@@ -121,9 +121,9 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
     private Rect _lastWindowBounds;
 
-    /// <summary>The point that picks the MONITOR - the window's centre, so a window mostly on the second screen reads
+    /// <summary>The point that picks the MONITOR - the window's center, so a window mostly on the second screen reads
     /// that screen's wallpaper rather than the one its top-left corner still touches.</summary>
-    private static PixelPoint CentreOf(Rect bounds)
+    private static PixelPoint CenterOf(Rect bounds)
         => new((int)(bounds.X + bounds.Width / 2), (int)(bounds.Y + bounds.Height / 2));
 
     protected override void OnSegmentRecorded(int index)
@@ -287,7 +287,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
             // No capture at all: the picture is prepared once and only re-read when the desktop says it changed. The
             // texture is asked for HERE rather than at bake time so a wallpaper that changed between recording and
             // replaying is picked up by the replay too.
-            var picture = _wallpaper.Texture(device, CentreOf(WindowBounds));
+            var picture = _wallpaper.Texture(device, CenterOf(WindowBounds));
             if (picture == null) return false;
 
             // Computed NOW, every draw: the window may have been dragged since this segment was recorded, and it is the
@@ -510,7 +510,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
         // The desktop has to have been read at least once before there is a rectangle to compute. Cheap to ask - a path
         // and a timestamp, compared as one record, and only re-read when that comparison differs.
-        _wallpaper.Ensure(CentreOf(window));
+        _wallpaper.Ensure(CenterOf(window));
 
         var placement = _wallpaper.Placement(PlatformSettings.VirtualScreen);
         if (placement.Width <= 0 || placement.Height <= 0) return Vector4F.Zero;

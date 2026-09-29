@@ -152,7 +152,7 @@
                         <Border x:Name="PART_SizerLeft" DockPanel.Dock="Left" Width="8" Visibility="Collapsed"
                                 Background="Transparent" Cursor="SizeEWE"
                                 ToolTip="Drag to set how wide the panel is">
-                            <!-- Short and centred: the strip is taken from the pane's full height, so a full-height
+                            <!-- Short and centered: the strip is taken from the pane's full height, so a full-height
                                  line would run past the plate's corners. -->
                             <Grid Height="56" VerticalAlignment="Center">
                                 <Border Width="1" HorizontalAlignment="Center"
@@ -189,7 +189,7 @@
                              panel can be asked about itself. Both above the body, so a folded pane is its handles. -->
                         <!-- The handles ride in a row of their OWN, named so it can be collapsed whole. Hiding only the
                              buttons left the row's own bottom margin behind, which made the plate taller than what is
-                             in it - a bar looked lifted off its neighbours by a few pixels for no reason. -->
+                             in it - a bar looked lifted off its neighbors by a few pixels for no reason. -->
                         <StackPanel x:Name="PART_Handles" Orientation="Horizontal" DockPanel.Dock="Top"
                                     HorizontalAlignment="Left" MarginBottom="6">
                             <Button x:Name="PART_Grip" Width="30" Height="24"
@@ -217,7 +217,7 @@
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Padding="{TemplateBinding Padding}">
                             <DockPanel LastChildFill="True">
-                                <!-- The caption names what the panel is about. Quieter than the rows and coloured
+                                <!-- The caption names what the panel is about. Quieter than the rows and colored
                                      OUTRIGHT: a presenter handed a bare string does not carry the pane's foreground
                                      down to the text it makes, so the caption came out drawn in nothing. -->
                                 <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
@@ -293,7 +293,7 @@
     </Style>
 
 
-    <!-- The MAP. Its things are drawn in the quiet text colour and the box round what is being looked at takes the
+    <!-- The MAP. Its things are drawn in the quiet text color and the box round what is being looked at takes the
          accent: a map is read at a glance to find where you are, and where you are is the one thing on it that answers
          that. -->
     <Style Selector="CanvasMiniMap">
@@ -544,7 +544,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasSelectionBar">
                     <StackPanel Orientation="Horizontal">
-                        <!-- NO COLOUR HERE. A colour is set in the panel, where it is said as the three things it
+                        <!-- NO COLOR HERE. A color is set in the panel, where it is said as the three things it
                              actually is - fill, outline, text - and beside the rest of what the object holds. One
                              swatch on a bar could only ever be one of them, and read as all of them. -->
                         <Button x:Name="PART_Front" Width="26" Height="24" MinWidth="0" MinHeight="0"
@@ -562,7 +562,7 @@
 
                         <!-- ONE PLACE AT A TIME, beside the two that go all the way. The ends are not where arranging
                              happens: a shape that belongs BETWEEN two others cannot be put there by a button that can
-                             only put it on top of both. These grey out at the end they have reached. -->
+                             only put it on top of both. These gray out at the end they have reached. -->
                         <Button x:Name="PART_Forward" Width="26" Height="24" MinWidth="0" MinHeight="0"
                                 MarginRight="4" Padding="0"
                                 ToolTip="Bring over the thing in front of it"
@@ -748,7 +748,7 @@
                                 </Grid>
 
                                 <!-- Inputs down the left and outputs down the right, each column as wide as it needs to
-                                     be. A Grid of two star columns would centre two short lists in the middle of a wide
+                                     be. A Grid of two star columns would center two short lists in the middle of a wide
                                      node, which reads as one list of six rather than two of three. -->
                                 <Grid x:Name="PART_Rows" ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,10" MinWidth="120">
                                     <!-- The node's body between the socket columns; empty by default at no cost. -->

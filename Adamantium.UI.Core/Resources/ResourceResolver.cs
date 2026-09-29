@@ -57,7 +57,7 @@ public static class ResourceResolver
             // Remembered as well as re-resolved on attach. Attaching is not the only thing that changes the answer:
             // an element inside a theme SCOPE resolves against that scope's theme, and the scope can be switched while
             // the element sits still - a preview pane changing its variant. Without the record there would be nothing
-            // to ask again with, and the pane would keep the colours it happened to attach with.
+            // to ask again with, and the pane would keep the colors it happened to attach with.
             _pending.GetValue(target, static _ => []).Add((property, key));
 
             visual.AttachedToVisualTreeEvent += (_, _) =>

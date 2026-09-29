@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 // A live stand shows one figure at a time by collapsing the others, and drives its SIZE from a slider. Growing the
-// figure has to GROW it in place, not slide it out of the panel - which is what a stand does when the box it is centred
+// figure has to GROW it in place, not slide it out of the panel - which is what a stand does when the box it is centered
 // in is sized by something other than the figure on show.
 [TestFixture]
 public class PolygonResizeLayoutTests
@@ -19,7 +19,7 @@ public class PolygonResizeLayoutTests
     private static PointsCollection Triangle(double w, double h) =>
         new([new Vector2(w / 2, 0), new Vector2(w, h), new Vector2(0, h)]);
 
-    // The stand's own shape: a fixed panel, a centred box, and three figures of which one is visible.
+    // The stand's own shape: a fixed panel, a centered box, and three figures of which one is visible.
     private static (Polygon shape, Border panel, Window window) Stand(double w, double h)
     {
         var shape = new Polygon
@@ -70,17 +70,17 @@ public class PolygonResizeLayoutTests
     }
 
     [Test]
-    public void TheFigureStaysCentredInThePanelAsItGrows()
+    public void TheFigureStaysCenteredInThePanelAsItGrows()
     {
         foreach (var w in new[] { 120.0, 200.0, 320.0 })
         {
             var (shape, panel, window) = Stand(w, 200);
             var box = shape.VisualParent;
-            var boxCentre = box.Bounds.X + box.Bounds.Width / 2;
-            var panelCentre = panel.Bounds.Width / 2;
+            var boxCenter = box.Bounds.X + box.Bounds.Width / 2;
+            var panelCenter = panel.Bounds.Width / 2;
 
-            Assert.That(boxCentre, Is.EqualTo(panelCentre).Within(1.0),
-                $"at width {w} the figure's box sits at {boxCentre}, the panel's middle is {panelCentre}");
+            Assert.That(boxCenter, Is.EqualTo(panelCenter).Within(1.0),
+                $"at width {w} the figure's box sits at {boxCenter}, the panel's middle is {panelCenter}");
         }
     }
 
@@ -115,11 +115,11 @@ public class PolygonResizeLayoutTests
             $"the box stayed {box.Bounds.Width} wide - it is still sized by the figure that was switched OFF");
     }
 
-    // The one thing the stand actually relies on: a figure SMALLER than the box it sits in has to be centred in it, not
+    // The one thing the stand actually relies on: a figure SMALLER than the box it sits in has to be centered in it, not
     // pinned to a corner. A figure that keeps its proportions never fills the box on both axes, so if this fails the
     // figure slides along the box's edge every time the box is resized.
     [Test]
-    public void AFigureSmallerThanItsBoxIsCentredInIt()
+    public void AFigureSmallerThanItsBoxIsCenteredInIt()
     {
         var shape = new Polygon
         {

@@ -39,7 +39,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
         CreatePresenter(width, height, msaa);
     }
 
-    /// <summary>Colour the target is cleared to before drawing. Default transparent.</summary>
+    /// <summary>Color the target is cleared to before drawing. Default transparent.</summary>
     public Color ClearColor { get; set; } = Colors.Transparent;
 
     /// <summary>Framework tooling overlays (selection frames etc.) drawn ON TOP of the content in the same frame.

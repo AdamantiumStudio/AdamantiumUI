@@ -24,7 +24,7 @@ public sealed class SolidColorBrush: Brush
       Color = GetColorFromString(color);
    }
 
-   // PAINT: recolouring a brush re-bakes the units that paint with it; it never changes their shape (see Brush.Opacity).
+   // PAINT: recoloring a brush re-bakes the units that paint with it; it never changes their shape (see Brush.Opacity).
    public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
       typeof(Color), typeof(SolidColorBrush), new PropertyMetadata(Colors.Transparent, PropertyMetadataOptions.AffectsPaint));
 

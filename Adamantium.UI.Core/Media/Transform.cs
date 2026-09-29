@@ -14,7 +14,7 @@ public class Transform : AnimatableUIComponent
     public static readonly AdamantiumProperty RotationAngleProperty = AdamantiumProperty.Register(nameof(RotationAngle),
         typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
 
-    // 3D rotations (degrees) around the X / Y axes through the rotation centre - the flip/tilt-tile effects. They fold
+    // 3D rotations (degrees) around the X / Y axes through the rotation center - the flip/tilt-tile effects. They fold
     // into the same single matrix (the render's transform table applies full 4x4s, so a 3D-rotated element STAYS in the
     // instanced batches). Perspective adds the depth foreshortening (see PerspectiveProperty).
     public static readonly AdamantiumProperty RotationXProperty = AdamantiumProperty.Register(nameof(RotationX),
@@ -24,7 +24,7 @@ public class Transform : AnimatableUIComponent
         typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
 
     /// <summary>Camera distance (logical px) for 3D depth foreshortening; 0 (default) = no perspective (affine). Applied
-    /// around the rotation centre, so a tile flips "in place" like WPF's classic 3D tile demos.</summary>
+    /// around the rotation center, so a tile flips "in place" like WPF's classic 3D tile demos.</summary>
     public static readonly AdamantiumProperty PerspectiveProperty = AdamantiumProperty.Register(nameof(Perspective),
         typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
         
@@ -40,7 +40,7 @@ public class Transform : AnimatableUIComponent
     public static readonly AdamantiumProperty TranslateYProperty = AdamantiumProperty.Register(nameof(TranslateY),
         typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
 
-    /// <summary>Shear angles (degrees) about the rotation centre - <see cref="SkewX"/> slants horizontally with y (the
+    /// <summary>Shear angles (degrees) about the rotation center - <see cref="SkewX"/> slants horizontally with y (the
     /// "italic" lean), <see cref="SkewY"/> vertically with x. WPF's SkewTransform AngleX/AngleY; folded into the same
     /// single matrix, so a sheared element stays in the instanced batches like any other.</summary>
     public static readonly AdamantiumProperty SkewXProperty = AdamantiumProperty.Register(nameof(SkewX),

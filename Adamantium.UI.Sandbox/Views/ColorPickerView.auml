@@ -6,7 +6,7 @@
         <TextBlock Text="Color Picker"
                    FontSize="20"
                    MarginBottom="4"/>
-        <TextBlock Text="An inline HSV picker: drag the square (saturation / value), the hue bar and the alpha bar, or type a hex / R-G-B-A value. The picked colour is fed into the THEME accent, so the controls on the right recolour live."
+        <TextBlock Text="An inline HSV picker: drag the square (saturation / value), the hue bar and the alpha bar, or type a hex / R-G-B-A value. The picked color is fed into the THEME accent, so the controls on the right recolor live."
                    FontSize="13"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    MaxWidth="680"
@@ -20,7 +20,7 @@
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="Colour wheel (conic hue × radial saturation)"
+                <TextBlock Text="Color wheel (conic hue × radial saturation)"
                            FontSize="14"
                            MarginBottom="14"/>
                 <!-- Two-way to the SAME PickedColor as the inline picker. The wheel picks hue+saturation; its OWN Value slider

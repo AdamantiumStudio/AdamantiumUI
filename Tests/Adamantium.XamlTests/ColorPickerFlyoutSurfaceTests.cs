@@ -14,7 +14,7 @@ namespace Adamantium.XamlTests;
 
 // A color picker opened as a flyout wears the theme's flyout material (Editor Pro has no materials, so it is excluded).
 [TestFixture]
-public class ColourPickerFlyoutSurfaceTests
+public class ColorPickerFlyoutSurfaceTests
 {
     private FakeApp _app;
 
@@ -51,7 +51,7 @@ public class ColourPickerFlyoutSurfaceTests
     };
 
     // The seam the flyout needs: the surface follows the control's own Background, so the ONE place that knows where
-    // the picker is standing - the colour well's popup - can hand it a material. Baked into the template as a fixed
+    // the picker is standing - the color well's popup - can hand it a material. Baked into the template as a fixed
     // resource, as it was, no caller can say anything about it at all.
     [TestCase("Fluent")]
     [TestCase("macOS")]
@@ -72,14 +72,14 @@ public class ColourPickerFlyoutSurfaceTests
             "...and a caller that knows better can replace it - which is what the flyout does");
     }
 
-    // ...and that the flyout actually does it. Textual, because the picker inside a colour well is built lazily on the
+    // ...and that the flyout actually does it. Textual, because the picker inside a color well is built lazily on the
     // popup's first open and there is nothing to inspect until someone clicks.
     [TestCase("FluentTheme")]
     [TestCase("MacOsTheme")]
-    public void TheColourWellsPopupHandsThePickerTheFlyoutMaterial(string themeFolder)
+    public void TheColorWellsPopupHandsThePickerTheFlyoutMaterial(string themeFolder)
     {
         var file = Directory.GetFiles(Path.Combine(ThemesRoot(), themeFolder), "*ColorPickerButtonStyleSet.auml");
-        Assert.That(file, Has.Length.EqualTo(1), "the theme owns exactly one colour-well style set");
+        Assert.That(file, Has.Length.EqualTo(1), "the theme owns exactly one color-well style set");
 
         var markup = File.ReadAllText(file[0]);
         var picker = Regex.Match(markup, @"<ColorPicker\b[^>]*>", RegexOptions.Singleline);

@@ -39,7 +39,7 @@
 
         <ListBox Width="720" Height="300" ItemsSource="{Binding Large}" HorizontalAlignment="Left"/>
 
-        <!-- The same width as the list it belongs to, so the row of buttons centres over the rows it is turning. -->
+        <!-- The same width as the list it belongs to, so the row of buttons centers over the rows it is turning. -->
         <DataPager Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
                    Source="{Binding Large}" DisplayMode="{Binding PagerMode}"
                    PageSizes="{Binding PageSteps}"/>

@@ -28,7 +28,7 @@
                                 </Ellipse.Fill>
                             </Ellipse>
 
-                            <!-- Saturation: white at the centre fading to transparent at the rim. -->
+                            <!-- Saturation: white at the center fading to transparent at the rim. -->
                             <Ellipse>
                                 <Ellipse.Fill>
                                     <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">

@@ -74,7 +74,7 @@ public class CanvasNodePin : AdamantiumComponent
         set => SetValue(IsInputProperty, value);
     }
 
-    /// <summary>The colour of the socket - its ring always, and its middle once something is docked. Null takes the
+    /// <summary>The color of the socket - its ring always, and its middle once something is docked. Null takes the
     /// node's own, which is what an editor with only one kind of connection wants.</summary>
     public Brush Color
     {
@@ -90,7 +90,7 @@ public class CanvasNodePin : AdamantiumComponent
         set => SetValue(IsConnectedProperty, value);
     }
 
-    /// <summary>What paints the INSIDE of the socket: the colour when something is docked, and nothing at all when the
+    /// <summary>What paints the INSIDE of the socket: the color when something is docked, and nothing at all when the
     /// socket is empty. Derived from <see cref="Color"/> and <see cref="IsConnected"/> - setting it directly is
     /// overwritten by the next change to either.</summary>
     public Brush Fill

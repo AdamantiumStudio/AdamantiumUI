@@ -9,15 +9,15 @@ public interface ICanvasNodeKind
     /// <summary>What the palette shows. The kind itself when there is nothing better to say.</summary>
     string Title { get; }
 
-    /// <summary>WHICH FAMILY OF WORK it belongs to - "Math", "Colour". What a palette puts its sections in, the same way
+    /// <summary>WHICH FAMILY OF WORK it belongs to - "Math", "Color". What a palette puts its sections in, the same way
     /// the tool rail groups tools; empty means it belongs to no section and stands on its own.
-    /// <para>A section is not a SET: a set of kinds is a whole catalogue bound to the canvas, and a graph made with one
-    /// is not made with another. Sections organise what is inside one catalogue.</para></summary>
+    /// <para>A section is not a SET: a set of kinds is a whole catalog bound to the canvas, and a graph made with one
+    /// is not made with another. Sections organize what is inside one catalog.</para></summary>
     string Group => string.Empty;
 
-    /// <summary>WHAT COLOUR a node of this kind is - what a screenful of them is read by at a glance, and the colour a
-    /// new one is born with. Null leaves it to the theme, which is what a catalogue that has not been asked to think
-    /// about colour says.</summary>
+    /// <summary>WHAT COLOR a node of this kind is - what a screenful of them is read by at a glance, and the color a
+    /// new one is born with. Null leaves it to the theme, which is what a catalog that has not been asked to think
+    /// about color says.</summary>
     Adamantium.Mathematics.Color? Accent { get; }
 
     /// <summary>A fresh specialization of this kind - one per node, never shared.</summary>

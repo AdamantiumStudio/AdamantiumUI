@@ -27,7 +27,7 @@ public struct TextureItem
     public Vector4F Tile;
 
     /// <summary>The tile grid's rotation: 2x2 that maps a fragment back into the unturned grid, row-major.
-    /// The inverse, the shape's aspect and the turn's centre are folded in by ImageTiling.</summary>
+    /// The inverse, the shape's aspect and the turn's center are folded in by ImageTiling.</summary>
     public Vector4F Rotation;
 
     /// <summary>The rectangle the content occupies inside ONE tile: offset x, y and scale w, h, in 0..1 of the tile.
@@ -35,12 +35,12 @@ public struct TextureItem
     /// turned a circle into an oval.</summary>
     public Vector4F Drawn;
 
-    /// <summary>The sub-rectangle of the source to sample, normalised: x, y, w, h. A whole image is (0,0,1,1); one
+    /// <summary>The sub-rectangle of the source to sample, normalized: x, y, w, h. A whole image is (0,0,1,1); one
     /// slice of a nine-slice is its own ninth.</summary>
     public Vector4F UvRect;
 
-    /// <summary>Multiplied into the sampled colour, straight RGBA, opacity folded into the alpha. White = the image as
-    /// it is; a colour tints it, which is how one greyscale skin serves several themes. Four BYTES, read by the shader
+    /// <summary>Multiplied into the sampled color, straight RGBA, opacity folded into the alpha. White = the image as
+    /// it is; a color tints it, which is how one grayscale skin serves several themes. Four BYTES, read by the shader
     /// as a <c>uint8_t4</c>.</summary>
     public Color Tint;
 

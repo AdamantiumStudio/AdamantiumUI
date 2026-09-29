@@ -16,7 +16,7 @@ public interface IQuickAccessItem
     /// request to put it in did - which is the only identity an item that is not a command has.</summary>
     object Key { get; }
 
-    /// <summary>What the item RUNS, when it runs anything. The ordinary way a command in the ribbon is recognised in the
+    /// <summary>What the item RUNS, when it runs anything. The ordinary way a command in the ribbon is recognized in the
     /// bar: it is the same <see cref="ICommand"/>. A command that runs nothing - one that only carries a state - has to
     /// be named by <see cref="Key"/> instead.</summary>
     ICommand Action { get; }

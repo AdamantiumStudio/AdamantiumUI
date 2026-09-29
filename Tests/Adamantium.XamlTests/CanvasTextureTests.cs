@@ -14,7 +14,7 @@ namespace Adamantium.XamlTests;
 
 /// <summary>A TEXTURE ON THE PLANE. Not a control of its own and not a picture of its own: a surface whose BACKGROUND
 /// is a picture - so its box, its corners, its outline and its turn are the ones every control on the plane already
-/// has, and the file is chosen on the same Source row a colour would be chosen on.</summary>
+/// has, and the file is chosen on the same Source row a color would be chosen on.</summary>
 [TestFixture]
 public class CanvasTextureTests
 {
@@ -109,7 +109,7 @@ public class CanvasTextureTests
         });
     }
 
-    // THE PICTURE IS A BACKGROUND, which is the whole design: the row that takes a file is the same row a colour goes
+    // THE PICTURE IS A BACKGROUND, which is the whole design: the row that takes a file is the same row a color goes
     // on, and everything already said about what carries it goes on meaning what it meant.
     [Test]
     public void TheSourceRowPaintsTheBackgroundWithThePicture()
@@ -138,23 +138,23 @@ public class CanvasTextureTests
                 Is.EqualTo("C:/pictures/leaf.png"), "it shows another file than the one chosen");
         });
 
-        // ...AND A COLOUR WRITTEN AFTERWARDS LEAVES IT ALONE. The two are different things about the element - what it
-        // shows, and what is behind what it shows - and they were one property until this: a colour picked in the
+        // ...AND A COLOR WRITTEN AFTERWARDS LEAVES IT ALONE. The two are different things about the element - what it
+        // shows, and what is behind what it shows - and they were one property until this: a color picked in the
         // panel wiped the picture outright.
-        // The colour lives in the Look block, which starts folded.
+        // The color lives in the Look block, which starts folded.
         Open(canvas, window);
 
         var ground = Row(canvas, "Background");
 
-        Assert.That(ground, Is.Not.Null, "the panel offers no background colour");
+        Assert.That(ground, Is.Not.Null, "the panel offers no background color");
 
         ground.Owner.Write(ground, Colors.Tomato);
 
         Assert.Multiple(() =>
         {
-            Assert.That(item.Tiled?.Source, Is.Not.Null, "a colour wiped the picture");
+            Assert.That(item.Tiled?.Source, Is.Not.Null, "a color wiped the picture");
             Assert.That((item.Tiled?.Background as SolidColorBrush)?.Color, Is.EqualTo(Colors.Tomato),
-                "the colour did not reach the ground");
+                "the color did not reach the ground");
         });
 
         Settle(window);

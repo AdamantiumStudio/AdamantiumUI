@@ -7,9 +7,9 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Builds a three-stop GRADIENT brush from a colour string, so the Layout tiles show off the linear/radial
+/// <summary>Builds a three-stop GRADIENT brush from a color string, so the Layout tiles show off the linear/radial
 /// gradient batch. To exercise BOTH kinds at once across the grid, the gradient TYPE is chosen deterministically from the
-/// colour (so a given palette colour is always the same kind, but the palette mixes linear and radial). The stops go
+/// color (so a given palette color is always the same kind, but the palette mixes linear and radial). The stops go
 /// light -> base -> dark, so every tile reads as a shaded, dimensional swatch instead of a flat fill.</summary>
 public sealed class StringToGradientBrushConverter : IValueConverter
 {
@@ -22,7 +22,7 @@ public sealed class StringToGradientBrushConverter : IValueConverter
         var light = Lerp(baseColor, Color.FromRgba(255, 255, 255, 255), 0.4f);
         var dark = Lerp(baseColor, Color.FromRgba(0, 0, 0, 255), 0.4f);
 
-        // Deterministic per-colour choice: mix linear and radial across the palette without any extra state.
+        // Deterministic per-color choice: mix linear and radial across the palette without any extra state.
         var radial = (HashString(s) & 1) == 0;
         var stops = new GradientStopCollection
         {
@@ -36,7 +36,7 @@ public sealed class StringToGradientBrushConverter : IValueConverter
             return new RadialGradientBrush(stops)
             {
                 Center = new Vector2(0.5f, 0.5f),
-                GradientOrigin = new Vector2(0.35f, 0.32f),   // off-centre highlight -> a soft "spotlight"
+                GradientOrigin = new Vector2(0.35f, 0.32f),   // off-center highlight -> a soft "spotlight"
                 RadiusX = 0.6,
                 RadiusY = 0.6
             };
@@ -57,7 +57,7 @@ public sealed class StringToGradientBrushConverter : IValueConverter
         return Color.FromRgba(L(a.R, b.R), L(a.G, b.G), L(a.B, b.B), L(a.A, b.A));
     }
 
-    // Small stable hash of the colour string (String.GetHashCode is randomised per run, which would flicker the type).
+    // Small stable hash of the color string (String.GetHashCode is randomized per run, which would flicker the type).
     private static int HashString(string s)
     {
         var h = 0;

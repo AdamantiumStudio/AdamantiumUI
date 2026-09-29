@@ -16,8 +16,8 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// The textured batch, end to end on the GPU: a 4x4 source whose four corners are four different colours is drawn as a
-/// nine-slice over a much larger rect. Each corner of the RESULT must be the colour of the matching corner of the
+/// The textured batch, end to end on the GPU: a 4x4 source whose four corners are four different colors is drawn as a
+/// nine-slice over a much larger rect. Each corner of the RESULT must be the color of the matching corner of the
 /// source - which is the whole promise of a nine-slice, and something no amount of CPU-side rectangle arithmetic can
 /// prove: it needs the shader to sample the right ninth.
 /// </summary>
@@ -26,13 +26,13 @@ namespace Adamantium.UITests.Rendering;
 public class NineSliceRenderTests
 {
     private const int Dim = 200;
-    private const int Frame = 120;   // the drawn rect, centred-ish in the target
+    private const int Frame = 120;   // the drawn rect, centered-ish in the target
 
     private const int Src = 16;      // source size
     private const int Cut = 4;       // corner block = Slice 0.25 of it
     private const int Border = 30;   // how big the corners are DRAWN, so a pixel can be read well inside one
 
-    // A 16x16 source with four distinct 4x4 corners and a grey middle. One renderer and source for the fixture, since the
+    // A 16x16 source with four distinct 4x4 corners and a gray middle. One renderer and source for the fixture, since the
     // shared device's allocator never returns blocks.
     private static OffscreenTestRenderer _renderer;
     private static OffscreenTestRenderer _renderer2;   // wider target for the demo-shaped seam test
@@ -103,8 +103,8 @@ public class NineSliceRenderTests
     private const int Skin = 64;
     private const int SkinCut = 16;
 
-    // Its EDGE strips are one flat colour: tiled, a correct edge is a perfectly even band, so a seam is a pixel that
-    // differs from its neighbours - nothing to argue about.
+    // Its EDGE strips are one flat color: tiled, a correct edge is a perfectly even band, so a seam is a pixel that
+    // differs from its neighbors - nothing to argue about.
     private static BitmapSource FlatEdgeSource()
     {
         var pixels = new byte[Skin * Skin * 4];
@@ -131,7 +131,7 @@ public class NineSliceRenderTests
     }
 
     // The seam test: a tiled edge of a FLAT strip must come out flat. Every wrap of frac() is a chance to sample
-    // something that is not the strip - the neighbouring texel, or a mip picked from a spiking derivative.
+    // something that is not the strip - the neighboring texel, or a mip picked from a spiking derivative.
     [Test]
     public void ATiledEdgeOfAFlatStripHasNoSeam()
     {
@@ -192,8 +192,8 @@ public class NineSliceRenderTests
         Assert.That(worst, Is.LessThan(12), $"seam at x={worstX}: the tiled edge deviates from its flat strip by {worst}");
 
         // ...and the JOINTS. The nine pieces share edges that are not the shape's outline; where two of them meet, the
-        // background must not show through. Walk DOWN the middle, crossing the top edge -> centre -> bottom edge cuts,
-        // and look for the clear colour: any pixel neither piece claimed is a hairline on screen.
+        // background must not show through. Walk DOWN the middle, crossing the top edge -> center -> bottom edge cuts,
+        // and look for the clear color: any pixel neither piece claimed is a hairline on screen.
         var midX = 10 + w / 2;
         var darkest = 255;
         var darkestY = -1;
@@ -243,7 +243,7 @@ public class NineSliceRenderTests
             return (pixels[i + 2], pixels[i + 1], pixels[i + 0]);
         }
 
-        // Well inside each drawn corner (30px), away from its edges so no linear blend with the neighbouring strip.
+        // Well inside each drawn corner (30px), away from its edges so no linear blend with the neighboring strip.
         const int In = 8;
         var topLeft = At(20 + In, 20 + In);
         var topRight = At(20 + Frame - In, 20 + In);
@@ -316,11 +316,11 @@ public class NineSliceRenderTests
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 
-        var centre = ((y: 20 + Frame / 2, x: 20 + Frame / 2));
-        var i = (centre.y * Dim + centre.x) * 4;
-        var grey = pixels[i + 2];
+        var center = ((y: 20 + Frame / 2, x: 20 + Frame / 2));
+        var i = (center.y * Dim + center.x) * 4;
+        var gray = pixels[i + 2];
 
-        Assert.That(grey, Is.GreaterThan(60), "the shape's middle carries the source's mid-grey, not the black clear");
+        Assert.That(gray, Is.GreaterThan(60), "the shape's middle carries the source's mid-gray, not the black clear");
         Assert.That(pixels[i + 3], Is.GreaterThan(200), "and it is opaque");
     }
 

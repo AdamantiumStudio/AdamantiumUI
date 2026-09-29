@@ -110,7 +110,7 @@ public class GridSplitter:Thumb
 
    private void SetLength(double prevDefinitionPixels, double nextDefinitionPixels)
    {
-      if (_splitBehaviour == SplitBehaviour.ResizeBoth)
+      if (_splitBehavior == SplitBehavior.ResizeBoth)
       {
          foreach (var definition in definitions)
          {
@@ -128,15 +128,15 @@ public class GridSplitter:Thumb
             }
          }
       }
-      else if (_splitBehaviour == SplitBehaviour.ResizeFirst)
+      else if (_splitBehavior == SplitBehavior.ResizeFirst)
       {
          SetLengthInPixels(definition1, prevDefinitionPixels);
       }
-      else if (_splitBehaviour == SplitBehaviour.ResizeSecond)
+      else if (_splitBehavior == SplitBehavior.ResizeSecond)
       {
          SetLengthInPixels(definition2, nextDefinitionPixels);
       }
-      else if (_splitBehaviour == SplitBehaviour.ResizeLeftPlusStar)
+      else if (_splitBehavior == SplitBehavior.ResizeLeftPlusStar)
       {
          SetLengthInPixels(definition1, prevDefinitionPixels);
          SetLengthInStars(definition2, nextDefinitionPixels);
@@ -162,18 +162,18 @@ public class GridSplitter:Thumb
       double definition2Min = GetMinLength(definition2);
       double definition2Max = GetMaxLength(definition2);
 
-      if (_splitBehaviour == SplitBehaviour.ResizeBoth)
+      if (_splitBehavior == SplitBehavior.ResizeBoth)
       {
          // Determine the minimum and maximum the columns can be resized
          min = -Math.Min(definition1Len - definition1Min, definition2Max - definition2Len);
          max = Math.Min(definition1Max - definition1Len, definition2Len - definition2Min);
       }
-      else if (_splitBehaviour == SplitBehaviour.ResizeFirst)
+      else if (_splitBehavior == SplitBehavior.ResizeFirst)
       {
          min = definition1Min - definition1Len;
          max = definition1Max - definition1Len;
       }
-      else if (_splitBehaviour == SplitBehaviour.ResizeSecond)
+      else if (_splitBehavior == SplitBehavior.ResizeSecond)
       {
          min = definition2Len - definition2Max;
          max = definition2Len - definition2Min;
@@ -389,20 +389,20 @@ public class GridSplitter:Thumb
          }
       }
 
-      //WPF GridSplitter behaviour
+      //WPF GridSplitter behavior
       if (isStar1 && isStar2)
       {
-         _splitBehaviour = SplitBehaviour.ResizeBoth;
+         _splitBehavior = SplitBehavior.ResizeBoth;
       }
       else
       {
-         _splitBehaviour = !isStar1 ? SplitBehaviour.ResizeFirst : SplitBehaviour.ResizeSecond;
+         _splitBehavior = !isStar1 ? SplitBehavior.ResizeFirst : SplitBehavior.ResizeSecond;
       }
    }
 
-   private SplitBehaviour _splitBehaviour;
+   private SplitBehavior _splitBehavior;
 
-   private enum SplitBehaviour
+   private enum SplitBehavior
    {
       /// <summary>
       /// This flag means that splitter will resize 2 star definitions

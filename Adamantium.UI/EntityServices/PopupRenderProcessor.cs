@@ -71,7 +71,7 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
         var flat = Flatten(window.PopupRoots, window);
 
         // These are OURS to redraw, so their dirty marks are ours too. Sharing one set with the content meant a hovered
-        // menu item told the content stage it had work, and the content stage then had to recognise the marks as coming
+        // menu item told the content stage it had work, and the content stage then had to recognize the marks as coming
         // from a tree it does not draw and step over them - one symptom of a set with no owner (see RenderDirtyRouter).
         foreach (var root in window.PopupRoots) ClaimScope(root);
 

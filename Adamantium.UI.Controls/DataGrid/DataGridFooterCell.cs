@@ -8,7 +8,7 @@ namespace Adamantium.UI.Controls.DataGrid;
 public class DataGridFooterCell : ContentControl
 {
     /// <summary>Whether this column asked for a total at all. A column without one leaves its place in the strip blank
-    /// rather than borrowing the neighbour's number.</summary>
+    /// rather than borrowing the neighbor's number.</summary>
     public static readonly AdamantiumProperty HasTotalProperty = AdamantiumProperty.Register(nameof(HasTotal),
         typeof(bool), typeof(DataGridFooterCell),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));

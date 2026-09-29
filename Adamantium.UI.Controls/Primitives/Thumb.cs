@@ -108,7 +108,7 @@ public class Thumb : Control
       dragStartPoint = DragPosition(e);
       // Capture so the drag keeps tracking once the pointer leaves the thumb. WITHOUT this the move never reaches the
       // thumb: the raw-move event is routed to the FOCUSED element, and the captured MouseMove below is the only path
-      // that honours capture - so the thumb (unfocused) would otherwise never see a drag and never move.
+      // that honors capture - so the thumb (unfocused) would otherwise never see a drag and never move.
       CaptureMouse();
       RaiseEvent(new DragStartedEventArgs(dragStartPoint) { RoutedEvent = DragStartedEvent });
    }

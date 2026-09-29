@@ -33,7 +33,7 @@ public struct TextureGeometryInstance
     /// <summary>The sub-rectangle of the source one copy samples.</summary>
     public Vector4F UvRect;
 
-    /// <summary>Multiplied into the sample, straight RGBA. Four BYTES - the form the colour arrived in - read by the
+    /// <summary>Multiplied into the sample, straight RGBA. Four BYTES - the form the color arrived in - read by the
     /// shader as a <c>uint8_t4</c>.</summary>
     public Color Tint;
 

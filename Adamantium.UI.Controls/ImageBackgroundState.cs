@@ -10,7 +10,7 @@ public enum ImageBackgroundState
     WhenEmpty,
 
     /// <summary>Under the picture as well. A picture fitted by <c>Uniform</c> leaves a margin on two sides that has to
-    /// be some colour, and one drawn with transparency has something to sit on.</summary>
+    /// be some color, and one drawn with transparency has something to sit on.</summary>
     Always,
 
     /// <summary>Never - the element draws the picture and nothing else, whatever its background says.</summary>

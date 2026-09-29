@@ -8,8 +8,8 @@ public partial class RenderCache
 {
     private bool _needRenumber;   // PlanNewChildren ran out of rank space -> renumber (a cheap order-walk), not a full-walk fallback
 
-    private readonly List<int> _prevVisible = new();   // BuildNeighbourMaps: nearest painted sibling before i
-    private readonly List<int> _nextAnchor = new();    // BuildNeighbourMaps: nearest ranked, not-being-placed sibling after i
+    private readonly List<int> _prevVisible = new();   // BuildNeighborMaps: nearest painted sibling before i
+    private readonly List<int> _nextAnchor = new();    // BuildNeighborMaps: nearest ranked, not-being-placed sibling after i
 
     private readonly List<(IUIComponent Component, long Rank)> _plannedList = new();
     private readonly HashSet<IUIComponent> _plannedSet = new();
@@ -216,14 +216,14 @@ public partial class RenderCache
         return true;
     }
 
-    // Rank every component of every NEW subtree under one parent strictly between its ranked neighbours - no existing
-    // component is renumbered. Neighbours come from TWO index maps built in ONE pass over the children, NOT a per-run
+    // Rank every component of every NEW subtree under one parent strictly between its ranked neighbors - no existing
+    // component is renumbered. Neighbors come from TWO index maps built in ONE pass over the children, NOT a per-run
     // sibling re-scan: recycled skeleton cards split the adds into many runs, so that re-scan was O(children x runs).
     private bool PlanNewChildren(IUIComponent parent)
     {
         Core.Diagnostics.RuntimeStats.LastRecordPlanParents++;
         ChildrenInPaintOrder(parent, _childBuf); Core.Diagnostics.RuntimeStats.ScansParent += _childBuf.Count;
-        BuildNeighbourMaps(parent);
+        BuildNeighborMaps(parent);
 
         for (var i = 0; i < _childBuf.Count; i++)
         {
@@ -282,7 +282,7 @@ public partial class RenderCache
     // One pass over the parent's children, giving each position two anchors: _prevVisible[i] = nearest PAINTED sibling
     // before i; _nextAnchor[i] = nearest painted sibling after i that already HOLDS a rank and isn't being placed. Per-run
     // lookup is then O(1) instead of a walk of the whole sibling list.
-    private void BuildNeighbourMaps(IUIComponent parent)
+    private void BuildNeighborMaps(IUIComponent parent)
     {
         var count = _childBuf.Count;
         _prevVisible.Clear();

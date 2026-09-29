@@ -39,8 +39,8 @@ internal static class DrawingImageRaster
     private static IVisualRenderer Renderer => _renderer ??= UIApplication.Current?.Container.Resolve<IVisualRenderer>();
 
     /// <summary>Throw the bakes away when the PALETTE has been repainted. A drawing is baked to pixels, and the key is
-    /// the drawing and the size - not the colours, which live in brushes the palette owns and rewrites in place. So an
-    /// icon baked under one variant kept its pixels under the next, and the chevrons stayed in the colour they were
+    /// the drawing and the size - not the colors, which live in brushes the palette owns and rewrites in place. So an
+    /// icon baked under one variant kept its pixels under the next, and the chevrons stayed in the color they were
     /// first drawn in while every vector around them followed.</summary>
     private static void DropStaleBakes()
     {
@@ -254,7 +254,7 @@ internal static class DrawingImageRaster
 
     // The device scale is PART of the key: the same drawing at the same logical size needs a different number of pixels
     // on a 150% display than on a 100% one, and one standing in for the other is exactly the blur this was meant to
-    // avoid. Quantised to a hundredth so a scale that arrives as 1.4999999 does not key a second bake.
+    // avoid. Quantized to a hundredth so a scale that arrives as 1.4999999 does not key a second bake.
     private static (DrawingImage Image, int Width, int Height, int Scale, int Slice) KeyOf(DrawingImage image, Size size, double deviceScale, Vector4F slice)
     {
         var longest = System.Math.Max(size.Width, size.Height);
@@ -273,7 +273,7 @@ internal static class DrawingImageRaster
 
     /// <summary>The slice, folded into one number so it can join the cache key. It HAS to be in there: two brushes
     /// showing different parts of one drawing at the same bake size are different pictures, and without this the second
-    /// would be handed the first one's pixels. Quantised to 1/1000 of the source - finer than any viewbox a person
+    /// would be handed the first one's pixels. Quantized to 1/1000 of the source - finer than any viewbox a person
     /// states, coarse enough that a slider dragged through it does not mint a bake per frame.</summary>
     private static int SliceKey(Vector4F slice)
     {
@@ -301,7 +301,7 @@ internal static class DrawingImageRaster
 
     // LOOP thread. Baked THROUGH the vector path - an Image showing the drawing draws exactly what the on-screen one
     // does - and QUEUED, never rendered here: the GPU half shares one device with the render thread, so submitting it
-    // from this thread interleaved with a live frame and the bake came back with one shape wearing another's colour.
+    // from this thread interleaved with a live frame and the bake came back with one shape wearing another's color.
     private static void Bake((DrawingImage Image, int Width, int Height, int Scale, int Slice) key, Size size, IUIComponent owner, int palette, Vector4F slice)
     {
         var renderer = Renderer;
@@ -359,7 +359,7 @@ internal static class DrawingImageRaster
         _pending.TryRemove(key, out _);
 
         // Drawn BEFORE the palette was repainted: these are last variant's pixels, and filing them would pin the icon
-        // to the colour it had when the bake was asked for. Ask again instead.
+        // to the color it had when the bake was asked for. Ask again instead.
         if (palette != _bakedPalette)
         {
             owner?.InvalidateRender(false);

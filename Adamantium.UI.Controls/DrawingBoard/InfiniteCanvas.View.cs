@@ -79,7 +79,7 @@ public partial class InfiniteCanvas
         CenterOn(new Vector2(world.X + world.Width / 2, world.Y + world.Height / 2));
     }
 
-    /// <summary>Puts the camera on ONE item: centred, and zoomed so it fills the usable viewport. A flat item - a line
+    /// <summary>Puts the camera on ONE item: centered, and zoomed so it fills the usable viewport. A flat item - a line
     /// has no height - is looked at through the square that holds it, since fitting to a box with a zero side does
     /// nothing at all.</summary>
     public void ZoomTo(ICanvasItem item, Double padding = 40)
@@ -152,7 +152,7 @@ public partial class InfiniteCanvas
     public void CenterOn(Vector2 world) => CenterOn(world, RenderSize);
 
     // ...against a viewport SAID rather than read. Inside an arrange pass RenderSize is still what the canvas used to
-    // be - this pass is what sets it - and centring then lands against a size of nothing.
+    // be - this pass is what sets it - and centering then lands against a size of nothing.
     private void CenterOn(Vector2 world, Size viewport)
     {
         var taken = _chromeLayer?.Inset() ?? new Thickness(0);
@@ -175,7 +175,7 @@ public partial class InfiniteCanvas
     }
 
     /// <summary>Points the camera at a box in the WORLD and zooms so the whole of it is in view. A box with no size is
-    /// CENTRED at the zoom already in hand rather than zoomed to infinity.</summary>
+    /// CENTERED at the zoom already in hand rather than zoomed to infinity.</summary>
     public void Fit(Rect world)
     {
         var room = UsableBounds;
@@ -747,7 +747,7 @@ public partial class InfiniteCanvas
         return pen;
     }
 
-    // The grid is a shader, and a shader wants COLOURS: anything that is not a plain colour falls back to nothing
+    // The grid is a shader, and a shader wants COLORS: anything that is not a plain color falls back to nothing
     // rather than being approximated into something the theme did not ask for.
     private static Color ColorOf(Brush brush, Color fallback) =>
         brush is SolidColorBrush solid ? solid.Color : fallback;

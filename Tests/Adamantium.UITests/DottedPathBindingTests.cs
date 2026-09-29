@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>A dotted path is live along its whole length: <c>Light.Color</c> follows the view-model's <c>Light</c> when it
-/// arrives or is replaced, not only the colour of the light the path happened to resolve at.</summary>
+/// arrives or is replaced, not only the color of the light the path happened to resolve at.</summary>
 [TestFixture]
 public class DottedPathBindingTests
 {
@@ -114,7 +114,7 @@ public class DottedPathBindingTests
     // The flyout's picker is a part of the button's template bound to the button itself, the way the themes build it: a
     // pick is the button publishing its own value, so it must not shadow the button's binding to the light.
     [Test]
-    public void APickInTheFlyout_DoesNotHideTheNextLightsColour()
+    public void APickInTheFlyout_DoesNotHideTheNextLightsColor()
     {
         var first = new Light { Color = new Vector3F(1, 0, 0) };
         var second = new Light { Color = new Vector3F(1, 1, 1) };

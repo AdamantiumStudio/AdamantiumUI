@@ -124,16 +124,16 @@ public class InstancedFillCollectorTests
         large.Dispose();
     }
 
-    // The COLOUR is per-instance, not part of the identity: two same-shape fills in different colours still share the one
-    // mesh (that is what makes a grid of differently-coloured tiles a single draw).
+    // The COLOR is per-instance, not part of the identity: two same-shape fills in different colors still share the one
+    // mesh (that is what makes a grid of differently-colored tiles a single draw).
     [Test]
-    public void SameShapeDifferentColour_StillSharesOneSegment()
+    public void SameShapeDifferentColor_StillSharesOneSegment()
     {
         using var collector = NewCollector();
         var red = Unit(Brushes.Red, 10);
         var blue = Unit(Brushes.Blue, 10);
 
-        Assert.That(KeyOf(red), Is.EqualTo(KeyOf(blue)), "colour is per-instance - it must not split the mesh");
+        Assert.That(KeyOf(red), Is.EqualTo(KeyOf(blue)), "color is per-instance - it must not split the mesh");
 
         collector.TryAdd(red, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10, 10), transformSlot: 0);
         collector.TryAdd(blue, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10, 10), transformSlot: 0);

@@ -34,8 +34,8 @@ public class Theme : AdamantiumComponent, ITheme
 
     public string Name { get; protected set; }
 
-    // The ONE accent seed. Setting it derives the whole ramp below (Default/hover/pressed + the on-accent text colour),
-    // so a theme - or a runtime accent swap - specifies a single colour and every accented control stays correct and
+    // The ONE accent seed. Setting it derives the whole ramp below (Default/hover/pressed + the on-accent text color),
+    // so a theme - or a runtime accent swap - specifies a single color and every accented control stays correct and
     // readable. This is the piece WinUI/Avalonia leave to fixed per-theme tokens (which break on a custom accent).
     public static readonly AdamantiumProperty AccentColorProperty = AdamantiumProperty.Register(
         nameof(AccentColor), typeof(Brush), typeof(Theme), new PropertyMetadata(null, OnAccentColorChanged));
@@ -56,7 +56,7 @@ public class Theme : AdamantiumComponent, ITheme
         }
         else if (e.NewValue is Brush brush)
         {
-            // A non-solid accent (gradient/image) has no single colour to darken or measure for contrast. Use it flat
+            // A non-solid accent (gradient/image) has no single color to darken or measure for contrast. Use it flat
             // for all three fills (no hover/pressed ramp) and default the on-accent text to white - so a non-solid seed
             // degrades gracefully instead of leaving the ramp derived from a PREVIOUS solid seed. Themes use a solid seed.
             theme.AccentFillColorDefault = brush;
@@ -84,8 +84,8 @@ public class Theme : AdamantiumComponent, ITheme
         set => SetValue(AccentSelectionOpacityProperty, value);
     }
 
-    private static Color WithAlpha(Color colour, double opacity) =>
-        new(colour.R, colour.G, colour.B, (byte)Math.Clamp(opacity * 255.0, 0, 255));
+    private static Color WithAlpha(Color color, double opacity) =>
+        new(color.R, color.G, color.B, (byte)Math.Clamp(opacity * 255.0, 0, 255));
 
     /// <summary>Fraction (0..1, toward black) the hover accent (<see cref="AccentFillColorSecondary"/>) is darkened from
     /// the seed. Default 0.12.</summary>
@@ -115,19 +115,19 @@ public class Theme : AdamantiumComponent, ITheme
     // for ANY accent. Disabled/focus stay theme-authored (they're neutral, not accent-derived).
     private void DeriveAccentPalette(Color seed)
     {
-        Recolour(AccentFillColorDefaultProperty, seed);
-        Recolour(AccentFillColorSecondaryProperty, Color.Lerp(seed, Black, (float)AccentHoverDarken));   // hover
-        Recolour(AccentFillColorTertiaryProperty, Color.Lerp(seed, Black, (float)AccentPressedDarken));  // pressed
+        Recolor(AccentFillColorDefaultProperty, seed);
+        Recolor(AccentFillColorSecondaryProperty, Color.Lerp(seed, Black, (float)AccentHoverDarken));   // hover
+        Recolor(AccentFillColorTertiaryProperty, Color.Lerp(seed, Black, (float)AccentPressedDarken));  // pressed
         // Derived, not authored in a palette: they have to follow the seed like the rest of the ramp, or a runtime
-        // accent change would leave every selected row in the previous colour.
-        Recolour(AccentFillColorSelectionProperty, WithAlpha(seed, AccentSelectionOpacity));
-        Recolour(AccentFillColorSelectionStrongProperty, WithAlpha(seed, AccentSelectionOpacity + 0.15));
-        Recolour(AccentForegroundColorProperty, OnAccent(seed));
+        // accent change would leave every selected row in the previous color.
+        Recolor(AccentFillColorSelectionProperty, WithAlpha(seed, AccentSelectionOpacity));
+        Recolor(AccentFillColorSelectionStrongProperty, WithAlpha(seed, AccentSelectionOpacity + 0.15));
+        Recolor(AccentForegroundColorProperty, OnAccent(seed));
     }
 
     // Recolor the existing brush instead of replacing it: consumers already hold it, so only a paint change travels, with
     // no property write per consumer.
-    private void Recolour(AdamantiumProperty property, Color color)
+    private void Recolor(AdamantiumProperty property, Color color)
     {
         if (GetValue(property) is SolidColorBrush brush)
         {
@@ -329,7 +329,7 @@ public class Theme : AdamantiumComponent, ITheme
     /// variant, so a theme file and a theme built in code go through exactly the same path.</summary>
     public ThemeVariantCollection Variants { get; }
 
-    /// <summary>The theme's palette brushes by key - created once from the variants' colour tables and never replaced.
+    /// <summary>The theme's palette brushes by key - created once from the variants' color tables and never replaced.
     /// Their IDENTITY is what makes a variant switch cheap.</summary>
     public IReadOnlyDictionary<string, SolidColorBrush> Palette => _palette;
 
@@ -344,7 +344,7 @@ public class Theme : AdamantiumComponent, ITheme
 
     public ThemeVariant SystemDarkVariant { get; set; }
 
-    /// <summary>Declare a variant. The palette gains a brush for any colour key it has not seen yet, so the brushes
+    /// <summary>Declare a variant. The palette gains a brush for any color key it has not seen yet, so the brushes
     /// exist before anything asks for them and never have to be swapped later.</summary>
     public void AddVariant(ThemeVariantDefinition variant)
     {
@@ -355,18 +355,18 @@ public class Theme : AdamantiumComponent, ITheme
 
         RegisterPaletteKeys(variant);
 
-        // ...and keep registering. Markup adds the variant to the theme BEFORE filling in its colours - the loader
+        // ...and keep registering. Markup adds the variant to the theme BEFORE filling in its colors - the loader
         // parents a child and then populates it - so a palette built once, here, would come out empty for every theme
         // read from a file while looking perfectly correct for every theme built in a test. The keys arrive when they
         // arrive; this listens rather than assuming an order.
         variant.Colors.CollectionChanged += (_, _) => RegisterPaletteKeys(variant);
     }
 
-    // Keys served as a raw Color rather than as a brush - a gradient STOP takes a colour. Kept beside the brushes
+    // Keys served as a raw Color rather than as a brush - a gradient STOP takes a color. Kept beside the brushes
     // rather than in a second collection on the variant: one palette, two ways of being asked for.
     private readonly Dictionary<string, Color> _rawColors = new();
 
-    /// <summary>Palette entries a variant declares as colours rather than brushes.</summary>
+    /// <summary>Palette entries a variant declares as colors rather than brushes.</summary>
     public IReadOnlyDictionary<string, Color> RawColors => _rawColors;
 
     private void RegisterPaletteKeys(ThemeVariantDefinition variant)
@@ -383,21 +383,21 @@ public class Theme : AdamantiumComponent, ITheme
 
             if (_palette.ContainsKey(entry.Key)) continue;
 
-            // The brush is created with the colour of whichever variant is CURRENT, when that variant declares the key
-            // - so a palette entry is never briefly the wrong colour on its way to being right.
-            var colour = entry.Color;
+            // The brush is created with the color of whichever variant is CURRENT, when that variant declares the key
+            // - so a palette entry is never briefly the wrong color on its way to being right.
+            var color = entry.Color;
             if (!CurrentVariant.IsUnspecified && _variants.TryGetValue(CurrentVariant, out var current)
-                && current.Colors.TryGet(entry.Key, out var currentColour))
+                && current.Colors.TryGet(entry.Key, out var currentColor))
             {
-                colour = currentColour;
+                color = currentColor;
             }
 
-            _palette[entry.Key] = Shared(new SolidColorBrush(colour));
+            _palette[entry.Key] = Shared(new SolidColorBrush(color));
         }
     }
 
     // MARKED as the theme's on the way out, at each of the three places one is made. Everything that receives a theme
-    // brush receives the same object, so an editor that writes into it recolours the application - see Brush.IsShared.
+    // brush receives the same object, so an editor that writes into it recolors the application - see Brush.IsShared.
     private static SolidColorBrush Shared(SolidColorBrush brush)
     {
         brush.IsShared = true;
@@ -417,7 +417,7 @@ public class Theme : AdamantiumComponent, ITheme
         {
             foreach (var key in _palette.Keys)
             {
-                if (!variant.Colors.ContainsKey(key)) problems.Add($"{variant.Key}: no colour for '{key}'");
+                if (!variant.Colors.ContainsKey(key)) problems.Add($"{variant.Key}: no color for '{key}'");
             }
         }
 
@@ -452,7 +452,7 @@ public class Theme : AdamantiumComponent, ITheme
         }
 
         // ONCE, after the whole palette is in place, and only when something actually moved. Per key would re-resolve
-        // every live reference in the application once per colour, which is the shape of fan-out that has frozen this
+        // every live reference in the application once per color, which is the shape of fan-out that has frozen this
         // loop before; and announcing mid-way would hand a listener a palette half in one variant and half in the other.
         if (rawChanged) ResourceManager?.NotifyResourcesChanged();
 
@@ -498,7 +498,7 @@ public class Theme : AdamantiumComponent, ITheme
             foreach (var styleSet in StyleSets) sibling.StyleSets.Add(styleSet);
             sibling.Merge(MergedStyles.Styles);
 
-            // The definitions are DATA and are shared: a variant's colour table is read, never written, and having two
+            // The definitions are DATA and are shared: a variant's color table is read, never written, and having two
             // copies drift apart would be a bug nobody could see.
             foreach (var definition in _variants.Values) sibling.AddVariant(definition);
 
@@ -518,11 +518,11 @@ public class Theme : AdamantiumComponent, ITheme
     }
 
     /// <summary>The palette's answer for <paramref name="key"/>, or null. Brushes first, then the few keys a variant
-    /// declares as raw colours.</summary>
+    /// declares as raw colors.</summary>
     internal object PaletteValue(string key)
     {
         if (_palette.TryGetValue(key, out var brush)) return brush;
-        return _rawColors.TryGetValue(key, out var colour) ? colour : null;
+        return _rawColors.TryGetValue(key, out var color) ? color : null;
     }
 
     public object GetResource(string key)

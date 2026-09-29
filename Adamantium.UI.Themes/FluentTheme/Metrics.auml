@@ -4,7 +4,7 @@
 
     <!-- The theme's NUMBERS. Sizes, insets and radii that more than one template needs, in one place - a magic number
          repeated across templates drifts, which is exactly how the drop-down's chevron and the tab strip's ended up two
-         different sizes. Colours live in Brushes, shapes in Icons, numbers here. -->
+         different sizes. Colors live in Brushes, shapes in Icons, numbers here. -->
 
     <!-- The chevron square shared by everything that OPENS a list: the drop-down's arrow, the tab strip's overflow
          button, a tree expander, a submenu arrow. Named for what it is rather than "icon size" - icons in this theme are
@@ -72,7 +72,7 @@
 
     <!-- ── Insets ─────────────────────────────────────────────────────────────────────────────────────────────────
          ASYMMETRIC on purpose, and that is why each role keeps its own key instead of being folded into one: a pixel
-         more below than above is optical centring - a line of text sits high in its box - and collapsing the four
+         more below than above is optical centering - a line of text sits high in its box - and collapsing the four
          values into one would change how every control looks, which is not what a refactor does. -->
     <Thickness x:Key="PaddingControl">11 5 11 6</Thickness>
     <!-- A drop-down is tighter on the right: the chevron sits there and brings its own air. -->

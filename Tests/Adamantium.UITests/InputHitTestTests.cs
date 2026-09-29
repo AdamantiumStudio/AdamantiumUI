@@ -33,7 +33,7 @@ public class InputHitTestTests
     }
 
     // A DISABLED CONTROL TAKES THE PRESS AND DOES NOTHING WITH IT. It used to be skipped entirely, which made it a
-    // HOLE: the press went through to whatever was behind, so a greyed button sitting on a row folded the row instead,
+    // HOLE: the press went through to whatever was behind, so a grayed button sitting on a row folded the row instead,
     // and turning a control off quietly changed what the thing under it does.
     [Test]
     public void HitTest_ADisabledControlTakesThePressRatherThanLettingItThrough()
@@ -138,9 +138,9 @@ public class InputHitTestTests
         root.Measure(new Size(200, 200));
         root.Arrange(new Rect(0, 0, 200, 200));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(100, 100));   // the centre = centre of the centred shape
+        var hit = ((IInputComponent)root).HitTest(new Vector2(100, 100));   // the center = center of the centered shape
 
-        Assert.That(hit, Is.SameAs(shape), "the centred shape must be hit, not the background panel behind it");
+        Assert.That(hit, Is.SameAs(shape), "the centered shape must be hit, not the background panel behind it");
     }
 
     // A Border is itself an input control now, so the mouse HitTest lands ON it (no fall-through to the panel behind).
@@ -162,7 +162,7 @@ public class InputHitTestTests
         panel.Measure(new Size(1280, 720));
         panel.Arrange(new Rect(0, 0, 1280, 720));
 
-        var p = new Vector2(640, 360);   // dead centre = inside the centred Border
+        var p = new Vector2(640, 360);   // dead center = inside the centered Border
         var inputHit = ((IInputComponent)panel).HitTest(p);
         var visualHit = ((IUIComponent)panel).GetVisualsAt(p).FirstOrDefault();
 

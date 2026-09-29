@@ -191,7 +191,7 @@ public class TabStripScrollerTests
     }
 
     // The reorder must land the dragged tab where it was dropped - a regression guard for "the dragged item flew to the
-    // end of the strip". Drag tab 0 just past tab 1's centre: it should commit to index 1, not the end.
+    // end of the strip". Drag tab 0 just past tab 1's center: it should commit to index 1, not the end.
     [Test]
     public void Drag_LandsAtDroppedPosition_NotFlungToTheEnd()
     {
@@ -204,14 +204,14 @@ public class TabStripScrollerTests
         });
 
         tc.BeginDrag(tabs[0], 5.0);      // grab 5px into tab 0
-        tc.UpdateDrag(tabs[0], 100.0);   // dragged centre = 115 -> past tab1 centre (90), before tab2 centre (170)
+        tc.UpdateDrag(tabs[0], 100.0);   // dragged center = 115 -> past tab1 center (90), before tab2 center (170)
         tc.EndDrag(tabs[0]);
         AnimationManager.Tick(10);       // finish the settle -> the reorder commits
 
         Assert.Multiple(() =>
         {
             Assert.That(tc.Items.IndexOf(tabs[0]), Is.EqualTo(1), "landed one slot right, NOT flung to the end");
-            Assert.That(tc.Items.IndexOf(tabs[1]), Is.EqualTo(0), "the passed neighbour shifted into the vacated slot");
+            Assert.That(tc.Items.IndexOf(tabs[1]), Is.EqualTo(0), "the passed neighbor shifted into the vacated slot");
             Assert.That(tc.Items.IndexOf(tabs[3]), Is.EqualTo(3), "the far tab did not move");
         });
 
@@ -223,21 +223,21 @@ public class TabStripScrollerTests
         tc.Arrange(new Rect(0, 0, 1000, 100));
         Assert.Multiple(() =>
         {
-            Assert.That(tabs[1].Bounds.X, Is.EqualTo(0).Within(0.5), "neighbour shifted into slot 0");
+            Assert.That(tabs[1].Bounds.X, Is.EqualTo(0).Within(0.5), "neighbor shifted into slot 0");
             Assert.That(tabs[0].Bounds.X, Is.EqualTo(100).Within(0.5), "the moved tab sits in slot 1, NOT at the end");
             Assert.That(tabs[2].Bounds.X, Is.EqualTo(140).Within(0.5));
             Assert.That(tabs[3].Bounds.X, Is.EqualTo(200).Within(0.5));
         });
     }
 
-    // A short drag that never passes a neighbour's centre must slide home (commit nothing).
+    // A short drag that never passes a neighbor's center must slide home (commit nothing).
     [Test]
     public void Drag_ShortOfMidpoint_SlidesHome_NoReorder()
     {
         var (tc, tabs) = ArrangedStrip(40, 100, 60, 80);
 
         tc.BeginDrag(tabs[0], 5.0);
-        tc.UpdateDrag(tabs[0], 30.0);    // centre = 45 -> short of tab1 centre (90)
+        tc.UpdateDrag(tabs[0], 30.0);    // center = 45 -> short of tab1 center (90)
         tc.EndDrag(tabs[0]);
         AnimationManager.Tick(10);
 
@@ -474,16 +474,16 @@ public class TabStripScrollerTests
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.LessThan(40), "the strip really is virtualized here");
 
         // The tabs carry explicit widths (40..100) so the uniform slot is visibly the thing deciding positions - which
-        // means the DRAGGED tab is 40 wide inside its 100 slot, and its centre is reckoned from that.
+        // means the DRAGGED tab is 40 wide inside its 100 slot, and its center is reckoned from that.
         tc.BeginDrag(tabs[0], 5.0);       // grabbed 5px in
-        tc.UpdateDrag(tabs[0], 160.0);    // dragged centre = 175 -> past slot 1's centre (150), short of slot 2's (250)
+        tc.UpdateDrag(tabs[0], 160.0);    // dragged center = 175 -> past slot 1's center (150), short of slot 2's (250)
         tc.EndDrag(tabs[0]);
         AnimationManager.Tick(10);
 
         Assert.Multiple(() =>
         {
             Assert.That(tc.Items.IndexOf(tabs[0]), Is.EqualTo(1), "landed one slot right");
-            Assert.That(tc.Items.IndexOf(tabs[1]), Is.EqualTo(0), "the passed neighbour took the vacated slot");
+            Assert.That(tc.Items.IndexOf(tabs[1]), Is.EqualTo(0), "the passed neighbor took the vacated slot");
         });
     }
 

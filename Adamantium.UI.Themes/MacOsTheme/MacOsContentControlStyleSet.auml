@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- No colour of its own; this states the contract - the named presenter, the alignments, and the content
+    <!-- No color of its own; this states the contract - the named presenter, the alignments, and the content
          transition passed through. -->
 
     <Style Selector="ContentControl">

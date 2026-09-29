@@ -3,7 +3,7 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- BarH / BarV / Frame are addressed by the triggers below. The frame's wash is its OWN layer so the outline keeps
-         full strength, and it takes the live accent rather than a fixed colour. -->
+         full strength, and it takes the live accent rather than a fixed color. -->
     <Style Selector="DropInsertionIndicator">
         <Setter Property="Template">
             <Setter.Value>

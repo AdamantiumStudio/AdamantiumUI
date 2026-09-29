@@ -4,8 +4,8 @@ using Adamantium.UI.Core;
 namespace Adamantium.UI.Controls;
 
 /// <summary>
-/// A two- or three-state check box: a labelled box that toggles checked / unchecked (and, with
-/// <see cref="ToggleButton.IsThreeState"/>, indeterminate) on click. All behaviour is inherited from
+/// A two- or three-state check box: a labeled box that toggles checked / unchecked (and, with
+/// <see cref="ToggleButton.IsThreeState"/>, indeterminate) on click. All behavior is inherited from
 /// <see cref="ToggleButton"/>; the box, the check glyph and the label are purely the theme template.
 /// </summary>
 public class CheckBox : ToggleButton

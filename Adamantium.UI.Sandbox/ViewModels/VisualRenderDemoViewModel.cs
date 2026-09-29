@@ -21,7 +21,7 @@ public partial class VisualRenderDemoViewModel : TabPageViewModel
         _ghost = ghost;
     }
 
-    // A self-contained snippet (explicit colours, no theme resources / fonts) so it renders standalone off-screen. No fixed
+    // A self-contained snippet (explicit colors, no theme resources / fonts) so it renders standalone off-screen. No fixed
     // Height: the panel sizes to its content and the render auto-fits it, so nothing is clipped.
     [Bindable] private string _aumlText =
         "<StackPanel xmlns='http://adamantium/ui' Orientation='Vertical' Width='220' Background='#FF1B2430'>\n" +
@@ -46,7 +46,7 @@ public partial class VisualRenderDemoViewModel : TabPageViewModel
     [Bindable] private ImageSource _liveSnapshot;
 
     // The element to snapshot arrives as a CommandParameter ({Binding ElementName=...}) - a transient render target, not
-    // view-model state; the VM never holds a UI element. The request is QUEUED and rendered on the loop thread (serialised
+    // view-model state; the VM never holds a UI element. The request is QUEUED and rendered on the loop thread (serialized
     // with the window's render, never racing it); the bitmap comes back on the UI thread via the callback.
     [Command]
     private void SnapshotLive(object element)

@@ -3,7 +3,7 @@ using Adamantium.MVVM;
 namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Shapes tab: a single <see cref="Stroke"/> settings object drives the stroke of EVERY shape in the tab
-/// (thickness/dashes/trim/corner/cap/join/colour) - the gallery, the big rect+ellipse preview and the Bézier/NURBS
+/// (thickness/dashes/trim/corner/cap/join/color) - the gallery, the big rect+ellipse preview and the Bézier/NURBS
 /// curves all bind their stroke off <c>Stroke.*</c>. The animated dashed Line keeps its own hover animation.</summary>
 [ViewModel]
 public partial class ShapesViewModel : TabPageViewModel

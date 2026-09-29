@@ -104,7 +104,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         SetOffsetCore(offset);
     }
 
-    // The actual offset set, WITHOUT cancelling inertia - used by the inertia ticker itself.
+    // The actual offset set, WITHOUT canceling inertia - used by the inertia ticker itself.
     private void SetOffsetCore(Vector2 offset)
     {
         if (Delegating)
@@ -200,7 +200,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _panStartOffset = Offset;
         _lastMoveTimestamp = 0;
         _panVelocity = default;
-        // Capture so the drag keeps tracking once the pointer leaves the content (raw moves only honour capture).
+        // Capture so the drag keeps tracking once the pointer leaves the content (raw moves only honor capture).
         CaptureMouse();
     }
 

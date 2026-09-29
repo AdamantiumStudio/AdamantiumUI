@@ -9,7 +9,7 @@
             <!-- MaxWidth, not just TextWrapping: this page scrolls HORIZONTALLY (the strips are wider than the window),
                  so the panel measures at unlimited width and a wrapping line has nothing to wrap against. The cap gives
                  it one. -->
-            <TextBlock Text="The top strip is inside a container the slider fades; the bottom one is the same strip at full opacity. Compare each swatch with the one below it: they must part in step. A swatch that lags behind reads its alpha differently from its neighbours."
+            <TextBlock Text="The top strip is inside a container the slider fades; the bottom one is the same strip at full opacity. Compare each swatch with the one below it: they must part in step. A swatch that lags behind reads its alpha differently from its neighbors."
                        Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords"
                        MaxWidth="900" HorizontalAlignment="Left" MarginBottom="12"/>
 
@@ -21,7 +21,7 @@
             </StackPanel>
 
             <!-- The SECOND question: an element's own Opacity ON TOP of its container's. The product is what should
-                 reach the screen, so a family that reads the slot AND keeps the chain in its colour goes too dark. -->
+                 reach the screen, so a family that reads the slot AND keeps the chain in its color goes too dark. -->
             <StackPanel Orientation="Horizontal" MarginBottom="14">
                 <TextBlock Text="Element opacity" VerticalAlignment="Center" Width="140"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
@@ -66,7 +66,7 @@
                             <!-- Deliberately LIGHT on both stops. A dark fill reads as "faded" against this mid-tone
                                  strip whatever its alpha does, and its thin bright filaments are all anti-aliased
                                  edges - neither the eye nor a pixel measurement can tell a wrong alpha from a dark
-                                 colour there. -->
+                                 color there. -->
                             <FractalBrush Fractal="Julia" C="-0.8,0.156" Zoom="1.1" Iterations="120"
                                           Color1="#FF67E8F9" Color2="#FFFDE68A"/>
                         </Rectangle.Fill>
@@ -83,7 +83,7 @@
                             <Aura Color="#FFFDE68A" Radius="18" Spread="4"/>
                         </Ellipse.Aura>
                     </Ellipse>
-                    <!-- SHADOW: the same band with an OFFSET, and the other half of the halo pass. A light colour on
+                    <!-- SHADOW: the same band with an OFFSET, and the other half of the halo pass. A light color on
                          purpose - a dark shadow on this mid-tone strip is invisible whatever its alpha does. -->
                     <Rectangle Width="48" Height="44" Fill="#FF485061" CornerRadius="6" Margin="18,6,22,6"
                                VerticalAlignment="Center" Opacity="{Binding ElementOpacity}">
@@ -128,7 +128,7 @@
                             <!-- Deliberately LIGHT on both stops. A dark fill reads as "faded" against this mid-tone
                                  strip whatever its alpha does, and its thin bright filaments are all anti-aliased
                                  edges - neither the eye nor a pixel measurement can tell a wrong alpha from a dark
-                                 colour there. -->
+                                 color there. -->
                             <FractalBrush Fractal="Julia" C="-0.8,0.156" Zoom="1.1" Iterations="120"
                                           Color1="#FF67E8F9" Color2="#FFFDE68A"/>
                         </Rectangle.Fill>

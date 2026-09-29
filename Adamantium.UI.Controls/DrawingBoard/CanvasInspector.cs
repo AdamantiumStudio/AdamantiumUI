@@ -175,7 +175,7 @@ public class CanvasInspector : Control, ICanvasPart
     private static readonly IReadOnlyList<CanvasCurve> Kinds =
         [CanvasCurve.Bezier, CanvasCurve.BSpline, CanvasCurve.Nurbs];
 
-    // A TEXTURE's own catalogues. Every one of them is a brush's property and not the canvas's: what is offered here is
+    // A TEXTURE's own catalogs. Every one of them is a brush's property and not the canvas's: what is offered here is
     // the whole of what the engine can paint a picture with, so a plane is not a poorer place to use a texture than a
     // control in a window is.
     private static readonly IReadOnlyList<Stretch> Filling =
@@ -194,7 +194,7 @@ public class CanvasInspector : Control, ICanvasPart
     // with the first for no gain at all.
 
 
-    /// <summary>The catalogues, straight off the canvas - so the row that names a node's kind offers exactly what the
+    /// <summary>The catalogs, straight off the canvas - so the row that names a node's kind offers exactly what the
     /// palette offers and the two cannot drift apart.</summary>
     public static readonly AdamantiumProperty NodeKindsProperty = AdamantiumProperty.Register(nameof(NodeKinds),
         typeof(IEnumerable), typeof(CanvasInspector), new PropertyMetadata(null));
@@ -297,7 +297,7 @@ public class CanvasInspector : Control, ICanvasPart
     private PropertyGrid _tools;
 
     /// <summary>Hands the canvas the grid that shows what is selected, so that a number typed into a row becomes a step
-    /// in the canvas's memory and a repaint of the plane. The canvas does the listening because it is the specialised
+    /// in the canvas's memory and a repaint of the plane. The canvas does the listening because it is the specialized
     /// one: a property grid is a general-purpose control and must not learn what a scene or a history is.</summary>
     public override void OnApplyTemplate()
     {
@@ -400,7 +400,7 @@ public class CanvasInspector : Control, ICanvasPart
 
     private void OnModeChanged(object sender, EventArgs e) => ReadMode();
 
-    // FOLLOWED rather than taken once. A page states its catalogues with bindings, and a binding is pushed after the
+    // FOLLOWED rather than taken once. A page states its catalogs with bindings, and a binding is pushed after the
     // canvas has been templated and its panes have handed it round - so a panel that read them when it was given the
     // canvas read null, and the lines that name a kind stood blank for ever beside a node that plainly has one.
     private void OnKindsChanged(object sender, EventArgs e) => ReadKinds();
@@ -630,7 +630,7 @@ public class CanvasInspector : Control, ICanvasPart
 
         // ONLY WHEN IT IS ACTUALLY DIFFERENT. This is worked out again after every write - a picture painted onto a
         // surface brings a texture's lines with it - and handing over a fresh list of the SAME sections still counts as
-        // a change, so the grid would rebuild its rows on every keystroke. A person dragging across a colour surface
+        // a change, so the grid would rebuild its rows on every keystroke. A person dragging across a color surface
         // writes continuously, and the row their popup belongs to was being taken out from under it mid-gesture.
         if (!Same(grid.SectionsSource, wanted)) grid.SectionsSource = wanted;
 

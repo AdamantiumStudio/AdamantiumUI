@@ -1,6 +1,6 @@
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>What the four EDGES and the centre of a <see cref="NineSliceBrush"/> do with the space between the corners.
+/// <summary>What the four EDGES and the center of a <see cref="NineSliceBrush"/> do with the space between the corners.
 /// The corners themselves never do either - not distorting them is the whole point of a nine-slice.</summary>
 public enum NineSliceEdgeMode
 {

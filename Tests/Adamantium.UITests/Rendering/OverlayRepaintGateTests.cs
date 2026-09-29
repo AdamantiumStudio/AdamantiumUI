@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// The overlay stages - popups, adorners - redraw only when their gate says they could look different. A RECOLOUR is
+/// The overlay stages - popups, adorners - redraw only when their gate says they could look different. A RECOLOR is
 /// the change that leaves the commands, the geometry, the positions and the open set all identical, so the gate has to
 /// hear about it separately or the stage replays a picture the trigger has already moved on from.
 /// </summary>
@@ -38,16 +38,16 @@ public class OverlayRepaintGateTests
         gate.HasChanged(flat, scope);                       // first sight of this set - always a rebuild
         Assert.That(gate.HasChanged(flat, scope), Is.False, "nothing moved: the stage must not redraw");
 
-        // The trigger's write. Same shape, same commands, same place - only the colour the shader composes.
+        // The trigger's write. Same shape, same commands, same place - only the color the shader composes.
         glyph.Opacity = 0;
 
         Assert.That(gate.HasChanged(flat, scope), Is.True,
-            "a recolour inside the stage must open the gate, or the picture keeps the old opacity forever");
+            "a recolor inside the stage must open the gate, or the picture keeps the old opacity forever");
         Assert.That(gate.HasChanged(flat, scope), Is.False, "...and once redrawn, it settles again");
     }
 
     [Test]
-    public void ARecolourInAnotherStageLeavesThisOneAlone()
+    public void ARecolorInAnotherStageLeavesThisOneAlone()
     {
         var mine = RenderDirtyRouter.NewScope();
         var theirs = RenderDirtyRouter.NewScope();
@@ -91,6 +91,6 @@ public class OverlayRepaintGateTests
         scope.Clear();
 
         Assert.That(gate.HasChanged(flat, scope), Is.True,
-            "the recolour happened - a clear by another thread must not swallow it");
+            "the recolor happened - a clear by another thread must not swallow it");
     }
 }

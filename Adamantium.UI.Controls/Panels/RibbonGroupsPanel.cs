@@ -205,7 +205,7 @@ public class RibbonGroupsPanel : Panel
 
         LowerUntilItFits(groups, available);
 
-        // Only when the tab got WIDER: collapsing frees a lot at once, and re-solving would spend it on the neighbours -
+        // Only when the tab got WIDER: collapsing frees a lot at once, and re-solving would spend it on the neighbors -
         // narrowing by a pixel made the groups on the left spring back to full size.
         if (available > _decidedFor)
         {

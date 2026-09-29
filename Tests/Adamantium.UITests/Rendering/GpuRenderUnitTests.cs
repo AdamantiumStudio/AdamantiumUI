@@ -87,7 +87,7 @@ public class GpuRenderUnitTests
     }
 
     // StrokeEffect is null on purpose: these tests exercise the CPU stroke path (StrokeRenderComponent). With a null
-    // GPU stroke effect ProcessStrokeData falls back to CPU, so the unit's update/dispose behaviour is what's asserted.
+    // GPU stroke effect ProcessStrokeData falls back to CPU, so the unit's update/dispose behavior is what's asserted.
     private RectangleRenderUnit NewRectUnit(RectanglePayload payload) =>
         new RectangleRenderUnit(Command(payload), Ctx((UIBasicEffect)_effect.Clone()));
 
@@ -126,7 +126,7 @@ public class GpuRenderUnitTests
         Assert.That(stroke, Is.InstanceOf<GpuStrokeRenderComponent>(), "solid pen + StrokeEffect -> GPU stroke");
 
         // Thickness is a GPU uniform; buffer sizes don't change -> the SAME component is repointed, no per-frame realloc
-        // (the stroke-animation optimisation: dash offset / thickness / colour / trim all take this path).
+        // (the stroke-animation optimization: dash offset / thickness / color / trim all take this path).
         unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, new Pen(Brushes.Black, 7))));
         Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "thickness-only pen change must repoint, not rebuild");
 
@@ -173,13 +173,13 @@ public class GpuRenderUnitTests
     }
 
     [Test]
-    public void ColourOnlyChange_KeepsGeometryRenderer_NoRebuild()
+    public void ColorOnlyChange_KeepsGeometryRenderer_NoRebuild()
     {
         var unit = NewRectUnit(Rect(Brushes.Red, BoxA, pen: null));
         var geomBefore = unit.GeometryRenderer;
 
         unit.UpdateWithDrawCommand(Command(Rect(Brushes.Blue, BoxA, pen: null)));
-        Assert.That(unit.GeometryRenderer, Is.SameAs(geomBefore), "colour-only change must not rebuild the buffer");
+        Assert.That(unit.GeometryRenderer, Is.SameAs(geomBefore), "color-only change must not rebuild the buffer");
     }
 
     [Test]
@@ -212,8 +212,8 @@ public class GpuRenderUnitTests
         TestContext.WriteLine($"Offscreen presenter kind = {renderer.PresenterKind}");
 
         var root = new TestRoot(64, 64);
-        // Two differently-coloured rects, separated horizontally and centred vertically (so the sample points
-        // are robust to a Y flip). This verifies PER-DRAW isolation: each draw must keep its own colour - the
+        // Two differently-colored rects, separated horizontally and centered vertically (so the sample points
+        // are robust to a Y flip). This verifies PER-DRAW isolation: each draw must keep its own color - the
         // exact thing that removing the per-unit effect clone (and the state cache) could break.
         var control = new TestControl
         {
@@ -237,10 +237,10 @@ public class GpuRenderUnitTests
             var bg = px.GetPixel<uint>(2, 2);      // cleared background
             TestContext.WriteLine($"left=0x{left:X8} right=0x{right:X8} bg=0x{bg:X8}");
 
-            Assert.That(bg, Is.Not.EqualTo(0u), "background must be cleared to a visible colour");
+            Assert.That(bg, Is.Not.EqualTo(0u), "background must be cleared to a visible color");
             Assert.That(left, Is.Not.EqualTo(bg), "first rect must render over the background");
             Assert.That(right, Is.Not.EqualTo(bg), "second rect must render over the background");
-            Assert.That(left, Is.Not.EqualTo(right), "the two rects must keep their distinct per-draw colours");
+            Assert.That(left, Is.Not.EqualTo(right), "the two rects must keep their distinct per-draw colors");
         }
         finally
         {
@@ -251,7 +251,7 @@ public class GpuRenderUnitTests
     // Renderer clipping: a child whose draw OVERFLOWS its ClipToBounds parent must be scissored to the parent's
     // bounds. This is the foundation the ScrollViewer (and ContentControl/Presenter transitions) need - without the
     // per-unit scissor the overflow bleeds across the whole window. Sample points are chosen to read the same way
-    // under a vertical read-back flip (centre row/column, and Y points that are background in either orientation).
+    // under a vertical read-back flip (center row/column, and Y points that are background in either orientation).
     [Test]
     public void ClipToBounds_Parent_ScissorsOverflowingChild()
     {
@@ -286,13 +286,13 @@ public class GpuRenderUnitTests
         {
             var img = Adamantium.Imaging.Image.Load(path);
             var px = img.GetPixelBuffer(0, 0);
-            var inside = px.GetPixel<uint>(32, 32);        // centre of the clip window -> red survives
+            var inside = px.GetPixel<uint>(32, 32);        // center of the clip window -> red survives
             var clippedRight = px.GetPixel<uint>(54, 32);  // within the red draw (x<64) but right of the window -> clipped
             var clippedV = px.GetPixel<uint>(32, 54);      // outside the window in Y -> clipped (flip-safe: row 9 is above the draw, also bg)
             var bg = px.GetPixel<uint>(2, 2);              // cleared background
             TestContext.WriteLine($"inside=0x{inside:X8} clippedRight=0x{clippedRight:X8} clippedV=0x{clippedV:X8} bg=0x{bg:X8}");
 
-            Assert.That(bg, Is.Not.EqualTo(0u), "background must be a visible clear colour");
+            Assert.That(bg, Is.Not.EqualTo(0u), "background must be a visible clear color");
             Assert.That(inside, Is.Not.EqualTo(bg), "inside the clip window the child must render");
             Assert.That(clippedRight, Is.EqualTo(bg), "child overflow to the right of the window must be scissored away");
             Assert.That(clippedV, Is.EqualTo(bg), "child overflow past the window in Y must be scissored away");
@@ -440,17 +440,17 @@ public class GpuRenderUnitTests
             {
                 Assert.That(AnyFrameInLeftStrip(), Is.True, "frame is drawn INSIDE the left edge, not clipped off-window");
                 Assert.That(AnyWhiteInTopLeft(), Is.True, "a corner handle sits inside the top-left corner");
-                Assert.That(Red(32, 32), Is.True, "the element still shows through the centre");
+                Assert.That(Red(32, 32), Is.True, "the element still shows through the center");
             });
         }
         finally { System.IO.File.Delete(path); }
     }
 
-    // Multi-state oracle for the dynamic-state cache: two draws with DIFFERENT blend equations must each honour
-    // their own blend. White @ 50% over black -> AlphaBlend gives grey, Premultiplied gives white. If the
+    // Multi-state oracle for the dynamic-state cache: two draws with DIFFERENT blend equations must each honor
+    // their own blend. White @ 50% over black -> AlphaBlend gives gray, Premultiplied gives white. If the
     // state cache wrongly drops the blend change for the second draw, both come out identical.
     [Test]
-    public void StateCache_PerDrawBlendChange_IsHonoured()
+    public void StateCache_PerDrawBlendChange_IsHonored()
     {
         var prms = new PresentationParameters(PresenterType.RenderTarget, 64, 64, IntPtr.Zero);
         using var presenter = GraphicsPresenter.Create(_device, prms, "blend_test");
@@ -494,7 +494,7 @@ public class GpuRenderUnitTests
         {
             var img = Adamantium.Imaging.Image.Load(path);
             var px = img.GetPixelBuffer(0, 0);
-            var alpha = px.GetPixel<uint>(16, 32);  // AlphaBlend -> grey
+            var alpha = px.GetPixel<uint>(16, 32);  // AlphaBlend -> gray
             var premul = px.GetPixel<uint>(48, 32); // Premultiplied -> white
             var bg = px.GetPixel<uint>(2, 2);       // black
             TestContext.WriteLine($"alphaBlend=0x{alpha:X8} premultiplied=0x{premul:X8} bg=0x{bg:X8}");

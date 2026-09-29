@@ -95,7 +95,7 @@ public class DockingLayout
     public PaneLength BandLength { get; set; } = PaneLength.Pixels(200);
 
     // What the caller asked for, or an even split. A BAND is what the callers who mean one pass in - an edge anchor,
-    // a pane opened from code - and that is now the only way to become the centre's NEIGHBOUR: a drop aimed into the
+    // a pane opened from code - and that is now the only way to become the center's NEIGHBOR: a drop aimed into the
     // document area splits the area itself, and two editors side by side share what one of them had.
     private static PaneLength? BandFor(PaneNode target, PaneLength? stated) => stated;
 
@@ -119,7 +119,7 @@ public class DockingLayout
         }
     }
 
-    /// <summary>Builds a layout from AUTHORED ZONES. The centre is laid first and the rest docked around it in
+    /// <summary>Builds a layout from AUTHORED ZONES. The center is laid first and the rest docked around it in
     /// declaration order, so the last edge declared is the outermost - as reading the markup suggests. This is why
     /// markup carries no fractions: a share written by hand is a share of a split the author cannot see.</summary>
     public static DockingLayout FromZones(IEnumerable<ZoneDeclaration> declarations)
@@ -128,9 +128,9 @@ public class DockingLayout
         var root = new DockingRoot(null, isMain: true);
         layout.Roots.Add(root);
 
-        // The centre column: what the documents occupy and what a top/bottom band divides. It grows into the split node
+        // The center column: what the documents occupy and what a top/bottom band divides. It grows into the split node
         // holding the bands, never into the sides - which is what keeps those full height.
-        PaneNode centre = null;
+        PaneNode center = null;
 
         foreach (var declaration in declarations)
         {
@@ -141,7 +141,7 @@ public class DockingLayout
                 // The first one takes everything and is where the documents live, whatever zone it named: a layout has
                 // to start somewhere, and docking against nothing means nothing. From here on it is a PLACE.
                 root.Content = group;
-                centre = group;
+                center = group;
                 root.DocumentWell = group;
                 continue;
             }
@@ -160,13 +160,13 @@ public class DockingLayout
 
             // WHAT gets split is not always the whole layout. A SIDE takes the full height of the window, so it splits the
             // root; a TOP/BOTTOM band belongs under the documents and must not run beneath the sides, so it splits the
-            // CENTRE COLUMN instead. That ordering is the layout every editor uses - sides first, the band gets what is
+            // CENTER COLUMN instead. That ordering is the layout every editor uses - sides first, the band gets what is
             // left - and stating it here makes it independent of the order the author happens to declare the zones in.
-            var target = zone is DockZone.Top or DockZone.Bottom ? centre : root.Content;
+            var target = zone is DockZone.Top or DockZone.Bottom ? center : root.Content;
             layout.Split(target, zone, group);
 
-            // The band is now part of the centre column, so the NEXT band splits that column, not the group inside it.
-            if (zone is DockZone.Top or DockZone.Bottom) centre = group.Parent ?? centre;
+            // The band is now part of the center column, so the NEXT band splits that column, not the group inside it.
+            if (zone is DockZone.Top or DockZone.Bottom) center = group.Parent ?? center;
 
             // AFTER the split, which hands both sides a share of the target - right for a dropped pane, wrong for one
             // the author sized. A number in markup is PIXELS along the zone's own axis.
@@ -353,7 +353,7 @@ public class DockingLayout
     {
         if (group is not { State: PaneGroupState.Docked } || group.IsEmpty) return false;
         if (group.Parent == null) return false;   // the only group in its root
-        if (IsDocument(group)) return false;      // a document group folds to nothing: the centre has no edge to fold against
+        if (IsDocument(group)) return false;      // a document group folds to nothing: the center has no edge to fold against
 
         // A panel in the MIDDLE of a row has no edge to be put away against, and inventing one puts its strip somewhere
         // it never was.
@@ -364,7 +364,7 @@ public class DockingLayout
         if (root == null) return false;
 
         // OUT of the tree, INTO the edge's bar: a panel that is not part of the layout is not
-        // part of its structure either, so no split, divider or normalise can reach it.
+        // part of its structure either, so no split, divider or normalize can reach it.
         group.RestoreLength = group.Length;
         group.Length = PaneLength.Auto;
         group.State = PaneGroupState.Collapsed;
@@ -384,7 +384,7 @@ public class DockingLayout
         if (group is not { State: PaneGroupState.Collapsed }) return false;
 
         // The LENGTH does not change: in the tree a revealed panel is still just its strip. Its body is shown OVER the
-        // neighbours (a flyout), not by pushing them aside. Giving it back its docked length here is what
+        // neighbors (a flyout), not by pushing them aside. Giving it back its docked length here is what
         // made it shove the layout about every time anyone glanced at a tool.
         group.State = PaneGroupState.Revealed;
         return true;
@@ -507,8 +507,8 @@ public class DockingLayout
         var from = RootOf(group);
 
         // The MAIN window's document area is a PLACE, and a place may be emptied to nothing: its LAST group leaves like
-        // any other and an empty one takes its spot, so the centre is still there to open a document into. Holding the
-        // last one back instead meant a panel just opened in the centre could not be carried out again.
+        // any other and an empty one takes its spot, so the center is still there to open a document into. Holding the
+        // last one back instead meant a panel just opened in the center could not be carried out again.
         // A FLOATING window keeps no such place - emptied, it is a window of nothing and closes.
         var keepsThePlace = from is { IsMain: true } && IsLastWellGroup(group);
 
@@ -577,7 +577,7 @@ public class DockingLayout
         if (IsWithin(target, node)) return false;
 
         // Only a GROUP can be tabbed into. What is tabbed IN may be a whole split - a window holding two panels side by
-        // side, dropped on a centre indicator, puts every pane it holds into that strip. Refusing it meant a window that
+        // side, dropped on a center indicator, puts every pane it holds into that strip. Refusing it meant a window that
         // had been split could never be docked back whole, only a tab at a time, and nothing said why.
         var tabbed = zone is DockZone.Center or DockZone.Floating;
         if (tabbed && target is not PaneGroupNode) return false;
@@ -652,7 +652,7 @@ public class DockingLayout
     {
         if (root?.Content is not PaneSplitNode split || split.Orientation != Orientation.Horizontal) return root?.Content;
 
-        // The branch holding the documents IS the centre column - the sides are its siblings. THIS window's documents:
+        // The branch holding the documents IS the center column - the sides are its siblings. THIS window's documents:
         // a floating one has an area of its own, and asking the main window about it aimed every band at the whole root.
         foreach (var child in split.Children)
         {
@@ -797,7 +797,7 @@ public class DockingLayout
         switch (node)
         {
             case PaneGroupNode group:
-                // The well survives being emptied - closing the last document must not take the centre of the layout with
+                // The well survives being emptied - closing the last document must not take the center of the layout with
                 // it, or the next document opens wherever it likes and the editing area moves under the user.
                 if (!group.IsEmpty || IsLastWellGroup(root, group)) return group;
 

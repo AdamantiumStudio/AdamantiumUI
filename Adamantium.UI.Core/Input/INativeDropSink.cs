@@ -13,7 +13,7 @@ public interface INativeDropSink
     /// <summary>The pointer moved inside <paramref name="window"/> during a native drag. Returns the effect to show.</summary>
     DragDropEffects DragOver(IWindow window, PixelPoint screenPoint, InputModifiers modifiers, DragDropEffects allowed);
 
-    /// <summary>The pointer left <paramref name="window"/>, or the native drag was cancelled over it.</summary>
+    /// <summary>The pointer left <paramref name="window"/>, or the native drag was canceled over it.</summary>
     void DragLeave(IWindow window);
 
     /// <summary>The payload was released over <paramref name="window"/>. Returns the effect actually applied - the OS

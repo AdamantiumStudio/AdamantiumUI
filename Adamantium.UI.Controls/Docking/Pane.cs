@@ -12,7 +12,7 @@ public class Pane : TabItem
     public static readonly AdamantiumProperty ZoneProperty = AdamantiumProperty.Register(nameof(Zone),
         typeof(DockZone), typeof(Pane), new PropertyMetadata(DockZone.Center));
 
-    /// <summary>Where this pane MAY go. The whole vocabulary of restrictions is data, so it serialises and can be read
+    /// <summary>Where this pane MAY go. The whole vocabulary of restrictions is data, so it serializes and can be read
     /// at a glance; the rare "not here, but only on Tuesdays" case is served by the cancellable docking event instead
     /// of a predicate nobody can see.</summary>
     public static readonly AdamantiumProperty AllowedProperty = AdamantiumProperty.Register(nameof(Allowed),
@@ -77,7 +77,7 @@ public class Pane : TabItem
     }
 
     /// <summary>Identity in a saved layout. The model refers to panes BY ID - holding the object would stop it being
-    /// data, and there would be nothing left to serialise.</summary>
+    /// data, and there would be nothing left to serialize.</summary>
     public string Id { get; set; }
 
     /// <summary>What the application needs to recreate this pane, saved beside its id and handed to

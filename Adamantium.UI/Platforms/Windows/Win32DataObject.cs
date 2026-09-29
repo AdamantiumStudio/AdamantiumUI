@@ -68,7 +68,7 @@ internal sealed class Win32DataObject : ComTypes.IDataObject, IDisposable
 
     /// <summary>Every REGISTERED format this package offers, paired with the id Windows gave its name: the standard
     /// HTML/RTF pair plus anything the source named itself. A live CLR object is stored under its type's full name and
-    /// must NOT be offered to other processes - it is recognised by the value being neither bytes nor a promise, which
+    /// must NOT be offered to other processes - it is recognized by the value being neither bytes nor a promise, which
     /// also keeps a promise from being redeemed just to answer "what do you have?".</summary>
     private IEnumerable<(string Name, short Id)> CustomFormats()
     {

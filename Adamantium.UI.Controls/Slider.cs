@@ -283,10 +283,10 @@ public class Slider : RangeBase
         if (full <= 0) return;
 
         // The fill ends at the thumb center, asked of the Track; before its first arrange the fraction seeds it.
-        var centre = _track.ThumbCentreFromFraction(fraction);
-        var length = double.IsNaN(centre)
+        var center = _track.ThumbCenterFromFraction(fraction);
+        var length = double.IsNaN(center)
             ? fraction * full
-            : Orientation == Orientation.Horizontal ? centre : full - centre;
+            : Orientation == Orientation.Horizontal ? center : full - center;
 
         if (Orientation == Orientation.Horizontal)
             SetIfChanged(WidthProperty, length, _selectionRange.Width);
@@ -349,10 +349,10 @@ public class Slider : RangeBase
             {
                 Foreground = new SolidColorBrush(Colors.White),
                 FontSize = 12,
-                // Centre the BLOCK in the badge via layout alignment (both axes). VerticalTextAlignment DEFAULTS to
+                // Center the BLOCK in the badge via layout alignment (both axes). VerticalTextAlignment DEFAULTS to
                 // Bottom, which sits the glyphs' ink on the block's baseline - so the value looked low/offset in the
-                // badge even though the block itself was centred. Center centres the INK inside the block's line box,
-                // so the digit lands on the badge's true vertical centre.
+                // badge even though the block itself was centered. Center centers the INK inside the block's line box,
+                // so the digit lands on the badge's true vertical center.
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 VerticalTextAlignment = VerticalTextAlignment.Center

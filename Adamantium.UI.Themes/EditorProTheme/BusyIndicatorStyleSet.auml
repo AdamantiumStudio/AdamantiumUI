@@ -15,16 +15,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
                     <Grid>
-                        <!-- The track the arc travels over. A STROKE colour, not a fill one: it is the same hairline
-                             grey every other outline in this theme uses, so an indicator dropped into a panel is
+                        <!-- The track the arc travels over. A STROKE color, not a fill one: it is the same hairline
+                             gray every other outline in this theme uses, so an indicator dropped into a panel is
                              drawn in the panel's own line weight rather than in a wash of its own. -->
                         <Ellipse Stroke="{ResourceReference ControlStrokeColorDefault}"
                                  StrokeThickness="{ResourceReference BusyArcThickness}"
                                  Fill="Transparent"
                                  EllipseType="EdgeToEdge"/>
                         <!-- The accent arc; it is the ARC that spins. RenderTransformOrigin is a FRACTION of the
-                             element's own size, so it turns about its centre at ANY size the control is given - an
-                             absolute pixel centre would be right only at the one size this was written for. -->
+                             element's own size, so it turns about its center at ANY size the control is given - an
+                             absolute pixel center would be right only at the one size this was written for. -->
                         <Ellipse Stroke="{ThemeResource AccentFillColorDefault}"
                                  StrokeThickness="{ResourceReference BusyArcThickness}"
                                  Fill="Transparent"
@@ -99,8 +99,8 @@
         </Setter>
     </Style>
 
-    <!-- ONE animation played by three dots at three Delays - that is what makes it read as a travelling wave rather
-         than three things blinking. Scale, not opacity: a scaled dot keeps its colour and stays legible on any ground.
+    <!-- ONE animation played by three dots at three Delays - that is what makes it read as a traveling wave rather
+         than three things blinking. Scale, not opacity: a scaled dot keeps its color and stays legible on any ground.
          The floor is 0.65, not Fluent's 0.5: a dot that halves is a dot that flickers. -->
     <Style Selector="BusyIndicator.Dots">
         <PropertyTrigger Property="IsActive" Value="True">
@@ -180,7 +180,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- ============================== Ripple: two rings expanding out of the centre ============================== -->
+    <!-- ============================== Ripple: two rings expanding out of the center ============================== -->
     <Style Selector="BusyIndicator.Ripple">
         <Setter Property="Width" Value="{ResourceReference BusySize}"/>
         <Setter Property="Height" Value="{ResourceReference BusySize}"/>
@@ -416,7 +416,7 @@
                 <ControlTemplate TargetType="BusyIndicator">
                     <StackPanel Orientation="Horizontal">
                         <!-- Perspective is what makes this a TURN rather than a squeeze: without it, foreshortening a
-                             Y-rotation is just a width scale. Origin at the centre so each card turns about itself. -->
+                             Y-rotation is just a width scale. Origin at the center so each card turns about itself. -->
                         <Border Width="{ResourceReference BusyFlipWidth}" Height="{ResourceReference BusyFlipHeight}"
                                 Margin="{ResourceReference BusyFlipGap}"
                                 CornerRadius="{ResourceReference BusyPieceRadiusLarge}"
@@ -488,7 +488,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
                     <!-- Bottom-aligned, and every origin is 0.5,1: the bars grow UPWARD out of a shared floor. With a
-                         centred origin they would swell in both directions and the floor line would break up. -->
+                         centered origin they would swell in both directions and the floor line would break up. -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                         <Border Width="{ResourceReference BusyEqualizerBarWidth}" Height="{ResourceReference BusyEqualizerBarHeight}"
                                 Margin="{ResourceReference BusyEqualizerGap}" CornerRadius="{ResourceReference BusyPieceRadius}"

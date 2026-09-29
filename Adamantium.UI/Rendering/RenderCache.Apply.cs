@@ -90,7 +90,7 @@ public partial class RenderCache
 
         var text = _glyphWarmBuf.ToString();
         // ASKED for, not waited on: the batch goes to a worker and this frame goes out with whatever the atlas
-        // already holds. Pooling the packet's characters still matters - the generator parallelises across the glyphs it is
+        // already holds. Pooling the packet's characters still matters - the generator parallelizes across the glyphs it is
         // handed, so one batch keeps every core busy where fifty single-glyph requests would not.
         foreach (var atlas in _warmAtlases) atlas.RequestAsync(text);
     }

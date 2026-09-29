@@ -27,7 +27,7 @@
                                 VerticalAlignment="Center">
                             <Grid>
                                 <!-- Geometry starting at (0,0): a Path's box is its geometry bounds, so leading empty
-                                     space pushes the centred glyph off its own centre. -->
+                                     space pushes the centered glyph off its own center. -->
                                 <Path x:Name="CheckGlyph"
                                         Data="M0,3.5 L2.5,6 L7.5,0"
                                         Stroke="{ThemeResource AccentForegroundColor}"

@@ -134,7 +134,7 @@ public class CanvasNodePalette : Control, ICanvasPart
     }
 
     // THE WHOLE LIST, in sections, narrowed by what has been typed. Rebuilt rather than filtered in place: the list is
-    // a catalogue of a few dozen entries read once when the palette opens, and a rebuilt list is one that cannot go
+    // a catalog of a few dozen entries read once when the palette opens, and a rebuilt list is one that cannot go
     // stale.
     private void Gather()
     {

@@ -757,15 +757,15 @@ public class TabControl : Selector
         if (!IsTearingOff)
             UpdateIndicator(animate: false);
 
-        var centre = along - _grabOffset + _draggedExtent / 2;
+        var center = along - _grabOffset + _draggedExtent / 2;
         var target = _dragStartIndex;
         for (var i = 0; i < Items.Count; i++)
         {
             if (i == _dragStartIndex || Reorders(i) is not { } other) continue;
             if (!SlotOfIndex(i, other, out var otherStart, out var otherExtent)) continue;
-            var otherCentre = otherStart + otherExtent / 2;
-            if (i > _dragStartIndex && centre > otherCentre) target = Math.Max(target, i);
-            else if (i < _dragStartIndex && centre < otherCentre) target = Math.Min(target, i);
+            var otherCenter = otherStart + otherExtent / 2;
+            if (i > _dragStartIndex && center > otherCenter) target = Math.Max(target, i);
+            else if (i < _dragStartIndex && center < otherCenter) target = Math.Min(target, i);
         }
 
         if (target != _targetIndex)

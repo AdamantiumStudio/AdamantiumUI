@@ -4,7 +4,7 @@
 /// by meaning, since the same word appears in several roles.</summary>
 public static class GraphWords
 {
-    /// <summary>WHAT FLOWS through a socket. Two sockets join when these agree, and the pin takes its colour from
+    /// <summary>WHAT FLOWS through a socket. Two sockets join when these agree, and the pin takes its color from
     /// this - see <see cref="GraphSocketKind"/>, which must offer every one of them.</summary>
     public static class Flows
     {
@@ -19,7 +19,7 @@ public static class GraphWords
         public const string Bool = "Bool";
     }
 
-    /// <summary>WHAT A NODE IS. The word the palette, the drop-down and the loader all look the catalogue up with.
+    /// <summary>WHAT A NODE IS. The word the palette, the drop-down and the loader all look the catalog up with.
     /// </summary>
     public static class Kinds
     {

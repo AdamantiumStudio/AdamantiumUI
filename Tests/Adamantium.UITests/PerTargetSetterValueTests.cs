@@ -28,7 +28,7 @@ public class PerTargetSetterValueTests
         return (first, second);
     }
 
-    // The control arm: this is the behaviour x:Shared="False" exists to change, and it has to keep working - sharing is
+    // The control arm: this is the behavior x:Shared="False" exists to change, and it has to keep working - sharing is
     // right for a brush and stays the default.
     [Test]
     public void APlainSetterValueIsSharedBetweenTargets()

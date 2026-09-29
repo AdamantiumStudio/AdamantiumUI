@@ -27,7 +27,7 @@ public sealed class PolygonSettings : PropertyChangedBase
 
     public double StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
 
-    /// <summary>The outline's own brush, MUTATED rather than replaced when the alpha moves - recolouring re-bakes the
+    /// <summary>The outline's own brush, MUTATED rather than replaced when the alpha moves - recoloring re-bakes the
     /// instances that paint with it instead of re-recording the element.</summary>
     public SolidColorBrush StrokeBrush { get; } = new(new Color((byte)248, (byte)250, (byte)252, (byte)255));
 

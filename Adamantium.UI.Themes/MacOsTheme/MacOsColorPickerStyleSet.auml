@@ -9,7 +9,7 @@
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeChrome}"/>
         <!-- The surface, and it is a PROPERTY rather than a fixed resource in the template because this control lives
-             in two places. Standing on a page it is a solid panel; opened from a colour well it is a FLYOUT, and a
+             in two places. Standing on a page it is a solid panel; opened from a color well it is a FLYOUT, and a
              flyout on this platform is glass. The button's popup hands it the material (see
              MacOsColorPickerButtonStyleSet); this is the standalone value. -->
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
@@ -66,7 +66,7 @@
                                             </LinearGradientBrush>
                                         </Border.Background>
                                     </Border>
-                                    <!-- A RING, so the colour under it is what is read rather than the marker: the
+                                    <!-- A RING, so the color under it is what is read rather than the marker: the
                                          whole point of this square is the pixel the grip is standing on. -->
                                     <Border x:Name="PART_SVThumb"
                                             Width="16"
@@ -133,8 +133,8 @@
                                 <TextBlock Text="Preview"
                                         Foreground="{ObservableResource TextFillColorSecondary}"
                                         MarginBottom="4"/>
-                                <!-- A checkerboard backdrop so a colour's alpha reads truthfully. It is INSET 2px inside
-                                     PART_Preview so the colour layer always covers the pattern's 1px SDF AA fringe - a
+                                <!-- A checkerboard backdrop so a color's alpha reads truthfully. It is INSET 2px inside
+                                     PART_Preview so the color layer always covers the pattern's 1px SDF AA fringe - a
                                      coincident-size checkerboard bled its bright edge past the rounded border. -->
                                 <Border CornerRadius="{ResourceReference CornerRadiusDefault}"
                                         BorderBrush="{ResourceReference ControlStrokeColorDefault}"

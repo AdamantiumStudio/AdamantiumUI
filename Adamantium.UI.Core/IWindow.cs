@@ -26,7 +26,7 @@ public interface IWindow : IRootVisualComponent, IContentControl
 
     /// <summary>Record where the OS just put this window, callable from ANY thread - see
     /// <see cref="IRootVisualComponent.LivePosition"/>. Separate from
-    /// <see cref="UpdatePositionFromPlatform"/> because that one writes bindable properties and must be marshalled to
+    /// <see cref="UpdatePositionFromPlatform"/> because that one writes bindable properties and must be marshaled to
     /// the loop thread, which is exactly the delay anything drawn from the position cannot afford.</summary>
     void UpdateLivePosition(double left, double top);
         
@@ -51,7 +51,7 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// the drop shadow and maximize-to-work-area still work. Read by the platform worker.</summary>
     bool UseCustomChrome { get; }
 
-    /// <summary>How the user may resize the window (honoured by the custom-chrome hit-test). Default CanResize.</summary>
+    /// <summary>How the user may resize the window (honored by the custom-chrome hit-test). Default CanResize.</summary>
     WindowResizeMode ResizeMode { get; }
 
     // Overlay traits. Settable, and they take effect on a window that is already open: a property that can only be set

@@ -35,7 +35,7 @@ public sealed class BorderSettings : PropertyChangedBase
     // swatch). Mutated in place, exercising the AffectsPaint path.
     public SolidColorBrush BorderBrush { get; } = new(new Color((byte)245, (byte)158, (byte)11, (byte)128));
 
-    /// <summary>Same colour and alpha as the border, with nothing drawn under or over it - drag the alpha and the
+    /// <summary>Same color and alpha as the border, with nothing drawn under or over it - drag the alpha and the
     /// border's corner has to keep matching this.</summary>
     public SolidColorBrush SwatchBrush { get; } = new(new Color((byte)245, (byte)158, (byte)11, (byte)128));
 

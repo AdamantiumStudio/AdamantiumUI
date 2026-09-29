@@ -33,7 +33,7 @@ public class VisualChildDetachTests
         {
             Assert.That(removed.VisualParent, Is.Null, "a removed child must not still point at the panel");
             Assert.That(panel.VisualChildren, Does.Not.Contain(removed));
-            Assert.That(kept.VisualParent, Is.SameAs(panel), "its neighbour is untouched");
+            Assert.That(kept.VisualParent, Is.SameAs(panel), "its neighbor is untouched");
         });
     }
 

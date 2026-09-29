@@ -79,7 +79,7 @@ public class ListBoxItem : ContentControl, ISelectable
 
     // Multi-select drag support: a plain click on an ALREADY-selected item defers the selection COLLAPSE until mouse-up, so
     // the whole selection survives long enough to be dragged. If the pointer moves first (a drag begins) the collapse is
-    // cancelled and the selection is kept; a release without moving applies it (the ordinary "click picks just this one").
+    // canceled and the selection is kept; a release without moving applies it (the ordinary "click picks just this one").
     private bool _deferSelect;
     private Vector2 _downPoint;
 

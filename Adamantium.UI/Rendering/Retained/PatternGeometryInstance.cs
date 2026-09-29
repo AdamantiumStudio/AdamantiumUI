@@ -20,18 +20,18 @@ public struct PatternGeometryInstance
     /// (same place the SDF pattern keeps it). .x unused.</summary>
     public Vector4F Params;
 
-    /// <summary>The shape's local-space bounds (minX, minY, sizeX, sizeY): the pattern origin is minXY; combustible centres on it.</summary>
+    /// <summary>The shape's local-space bounds (minX, minY, sizeX, sizeY): the pattern origin is minXY; combustible centers on it.</summary>
     public Vector4F LocalBounds;
 
     /// <summary>Primary color, straight RGBA, opacity folded. Float4 because the mesh material reuses this record for
     /// values outside 0..1.</summary>
     public Vector4F Color1;
 
-    /// <summary>Secondary colour, straight RGBA, opacity folded. Carries the mesh material's response - see
+    /// <summary>Secondary color, straight RGBA, opacity folded. Carries the mesh material's response - see
     /// <see cref="Color1"/> for why this one cannot be packed either.</summary>
     public Vector4F Color2;
 
-    /// <summary>Optional MID colour for the 3-colour noise gradient-map (.w == 0 = off). Also the combustible custom
+    /// <summary>Optional MID color for the 3-color noise gradient-map (.w == 0 = off). Also the combustible custom
     /// ramp mid, and the mesh material's light - see <see cref="Color1"/>.</summary>
     public Vector4F Color3;
 

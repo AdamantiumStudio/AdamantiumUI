@@ -3,7 +3,7 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Core;
 
-/// <summary>Input settings the USER configured in the OS. Honouring them is what keeps the app feeling native, so they
+/// <summary>Input settings the USER configured in the OS. Honoring them is what keeps the app feeling native, so they
 /// are queried from the platform rather than guessed.</summary>
 public static class PlatformSettings
 {

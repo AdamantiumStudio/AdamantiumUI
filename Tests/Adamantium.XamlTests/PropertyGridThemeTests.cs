@@ -290,7 +290,7 @@ public class PropertyGridThemeTests
     }
 
     // ...and the same inside an inspector ROW, which is where it was seen: the editor is stretched to the row's height
-    // there, and a list that centres its words when it is 26 pixels tall need not when it is told to fill.
+    // there, and a list that centers its words when it is 26 pixels tall need not when it is told to fill.
     [TestCase("MacOs")]
     [TestCase("Fluent")]
     [TestCase("EditorPro")]

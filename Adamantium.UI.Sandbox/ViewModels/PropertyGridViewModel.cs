@@ -28,8 +28,8 @@ public partial class InspectedEntity
     [Bindable] private string _material = "Steel";
     [Bindable] private Color _tint = Colors.CornflowerBlue;
 
-    /// <summary>A BRUSH, not a colour, and the same instance the swatch beside the inspector paints with. The line for
-    /// it changes the colour INSIDE it rather than putting a new brush here - which is why the swatch follows without
+    /// <summary>A BRUSH, not a color, and the same instance the swatch beside the inspector paints with. The line for
+    /// it changes the color INSIDE it rather than putting a new brush here - which is why the swatch follows without
     /// being told anything: it is holding that brush.</summary>
     public Brush Fill { get; } = new SolidColorBrush(Colors.Tomato);
 

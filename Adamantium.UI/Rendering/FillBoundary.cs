@@ -9,7 +9,7 @@ namespace Adamantium.UI.Rendering;
 // fringe also feathers holes and self-intersections.
 internal static class FillBoundary
 {
-    // Positions are quantised (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -
+    // Positions are quantized (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -
     // otherwise a shared edge would look like two single-use edges and every interior edge would be mis-flagged boundary.
     private static (long, long) Q(Vector3 p) => ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
 
@@ -26,7 +26,7 @@ internal static class FillBoundary
         var triCount = idx != null ? idx.Length / 3 : pts.Length / 3;
         if (triCount == 0) return null;
 
-        // Count each undirected edge; keep a representative real position per quantised vertex.
+        // Count each undirected edge; keep a representative real position per quantized vertex.
         var edgeCount = new Dictionary<(long, long, long, long), int>();
         var rep = new Dictionary<(long, long), Vector2>();
 

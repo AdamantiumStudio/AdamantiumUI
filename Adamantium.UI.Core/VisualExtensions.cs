@@ -5,7 +5,7 @@ namespace Adamantium.UI.Core;
 
 /// <summary>
 /// Coordinate-space conversions between elements - the WPF <c>TransformToVisual</c>/<c>TranslatePoint</c> analogs. Built on
-/// each element's <see cref="IUIComponent.WorldTransform"/> (local -> world), so they honour the FULL transform chain
+/// each element's <see cref="IUIComponent.WorldTransform"/> (local -> world), so they honor the FULL transform chain
 /// (offsets + RenderTransforms, and a ScrollViewer's transform-only scroll) and work between ANY two elements, not just an
 /// element and its ancestor.
 /// </summary>

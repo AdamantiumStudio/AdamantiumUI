@@ -18,8 +18,8 @@ public enum MaterialTreatment
     /// procedural studio environment rather than anything captured.</summary>
     Metal,
 
-    /// <summary>A lit surface whose appearance is mostly FIGURE: annual rings drawn as colour, with the light doing
+    /// <summary>A lit surface whose appearance is mostly FIGURE: annual rings drawn as color, with the light doing
     /// no more than varnishing them. The odd one of the branch - the other two are lighting models over a plain
-    /// colour, this one is a pattern that happens to be lit.</summary>
+    /// color, this one is a pattern that happens to be lit.</summary>
     Wood
 }

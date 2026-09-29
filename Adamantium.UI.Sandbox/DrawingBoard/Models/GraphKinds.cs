@@ -66,7 +66,7 @@ public sealed class GraphNodeKind : ICanvasNodeKind
             Kind = Kind,
             Title = Title,
 
-            // BORN WITH ITS KIND'S COLOUR, so a node has one from the start and the line that edits it has something to
+            // BORN WITH ITS KIND'S COLOR, so a node has one from the start and the line that edits it has something to
             // show.
             Accent = Accent
         };
@@ -116,7 +116,7 @@ public sealed class GraphNodeKind : ICanvasNodeKind
 
     public static IReadOnlyList<ICanvasNodeKind> All => Set.Kinds;
 
-    // ONE COLOUR PER FAMILY OF WORK - where a value comes from, what is done to it, where it ends. What makes a
+    // ONE COLOR PER FAMILY OF WORK - where a value comes from, what is done to it, where it ends. What makes a
     // screenful of nodes readable without reading a single title.
     private static Color Maths => Color.FromRgba(58, 120, 210, 255);
 

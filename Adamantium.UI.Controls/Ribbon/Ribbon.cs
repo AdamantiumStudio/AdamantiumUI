@@ -79,7 +79,7 @@ public class Ribbon : Selector
         typeof(RibbonCollapseThreshold), typeof(AdamantiumComponent),
         new PropertyMetadata(RibbonCollapseThreshold.WhenGroupIsMedium, PropertyMetadataOptions.AffectsMeasure));
 
-    /// <summary>...and at which step it drops the label too. A command nobody recognises without its words says
+    /// <summary>...and at which step it drops the label too. A command nobody recognizes without its words says
     /// <see cref="RibbonCollapseThreshold.Never"/> here.</summary>
     public static readonly AdamantiumProperty CollapseToSmallProperty = AdamantiumProperty.RegisterAttached("CollapseToSmall",
         typeof(RibbonCollapseThreshold), typeof(AdamantiumComponent),
@@ -127,7 +127,7 @@ public class Ribbon : Selector
         element.SetValue(CommandContextMenuTemplateProperty, value);
 
     /// <summary>States outright that this visual stands for a command already in the bar - what the bar's OWN buttons
-    /// say, being in it. A command in the ribbon does not need it: it is recognised by its
+    /// say, being in it. A command in the ribbon does not need it: it is recognized by its
     /// <see cref="QuickAccessKeyProperty"/> in <see cref="QuickAccessItemsProperty"/>.</summary>
     public static readonly AdamantiumProperty IsInQuickAccessProperty = AdamantiumProperty.RegisterAttached(
         "IsInQuickAccess", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
@@ -238,8 +238,8 @@ public class Ribbon : Selector
     }
 
     /// <summary>Puts the command given as its parameter in the bar, or takes it out - whichever it is not. This is what
-    /// a customisation page's rows run, so that asking is BINDABLE: without it the only way to ask from markup would be
-    /// a view model reaching for control types, or a behaviour, and neither is a thing an ordinary screen should need.</summary>
+    /// a customization page's rows run, so that asking is BINDABLE: without it the only way to ask from markup would be
+    /// a view model reaching for control types, or a behavior, and neither is a thing an ordinary screen should need.</summary>
     public ICommand ToggleQuickAccess => _toggleQuickAccess ??= new ToggleQuickAccessCommand();
 
     private ICommand _toggleQuickAccess;
@@ -403,7 +403,7 @@ public class Ribbon : Selector
         set => SetValue(ContentTemplateProperty, value);
     }
 
-    // A ribbon always has a tab open. Honours a selection the source named before the items existed.
+    // A ribbon always has a tab open. Honors a selection the source named before the items existed.
     private void OnItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         var pending = TakePendingSelectionIndex();
@@ -716,7 +716,7 @@ public class Ribbon : Selector
         }
 
         // Both readings of the same keystroke: what it typed, and the letter that key carries on a Latin keyboard. On a
-        // Russian layout the first is "р" and the second "H" - and a band labelled in English answers only to the
+        // Russian layout the first is "р" and the second "H" - and a band labeled in English answers only to the
         // second, so without it the key tips could not be reached at all.
         e.Handled = _keyTips.Press(e.Text[0], _lastKeyLetter);
         _lastKeyLetter = null;
@@ -771,7 +771,7 @@ public class Ribbon : Selector
             return;
         }
 
-        // Letters are acted on in the text stream (see OnKeyTipText), which is where the LAYOUT is honoured - but the
+        // Letters are acted on in the text stream (see OnKeyTipText), which is where the LAYOUT is honored - but the
         // Latin letter this key carries is remembered here, as the second reading of the same keystroke. The key itself
         // must not travel further, or a key tip would also type into whatever holds the keyboard.
         _lastKeyLetter = KeyChar(e.Key);
@@ -888,8 +888,8 @@ public class Ribbon : Selector
                 KeyTipService.SetKeyTip(header, stated);
         }
 
-        // The STRIP needs to know the context: the panel cuts its ledges from neighbouring headers and the theme paints
-        // the header in the group's colour. The strip holds headers, so the tab's group is copied onto its header.
+        // The STRIP needs to know the context: the panel cuts its ledges from neighboring headers and the theme paints
+        // the header in the group's color. The strip holds headers, so the tab's group is copied onto its header.
         header.ContextualGroup = GroupOf(item as RibbonTab);
         Watch(header.ContextualGroup);
         header.Visibility = IsShown(header.ContextualGroup) ? Visibility.Visible : Visibility.Collapsed;
@@ -1035,7 +1035,7 @@ public class Ribbon : Selector
     {
         if (sender is not RibbonContextualGroup group) return;
 
-        // What the STRIP draws from the group - its title, its colour, whether it has a ledge at all - is read during
+        // What the STRIP draws from the group - its title, its color, whether it has a ledge at all - is read during
         // the panel's own measure, so a change to any of it has to ask for one. Nothing else would: the group is not in
         // the tree, and a property on it invalidates nothing by itself.
         if (e.Property == RibbonContextualGroup.ShowHeaderProperty ||
@@ -1075,7 +1075,7 @@ public class Ribbon : Selector
         (ItemsHostPanel as IMeasurableComponent)?.InvalidateMeasure();
 
         // Appearing is an OFFER, not an order: a group switching on must not pull the open tab out from under someone
-        // mid-edit. Only losing the open tab forces a move - and to the last ORDINARY tab, never to a neighbouring
+        // mid-edit. Only losing the open tab forces a move - and to the last ORDINARY tab, never to a neighboring
         // contextual one, which may be the next to go.
         if (selectionLost) SelectedIndex = LastOrdinaryTab();
     }

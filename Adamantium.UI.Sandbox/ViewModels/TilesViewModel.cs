@@ -5,7 +5,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Tiles 3D tab: the WPF-classic flip-tile mosaic (the transform-table acceptance demo). The board mechanics
 /// (tilt field, flip wave, shared photo + per-tile UV fragments) live in the TilesHost control - the view-model only
-/// supplies the tiles' front colours and the flip-all switch.</summary>
+/// supplies the tiles' front colors and the flip-all switch.</summary>
 [ViewModel]
 public partial class TilesViewModel : TabPageViewModel
 {
@@ -40,7 +40,7 @@ public partial class TilesViewModel : TabPageViewModel
     }
 }
 
-/// <summary>One board tile: just its front colour - geometry, photo fragment and wave timing come from the host.</summary>
+/// <summary>One board tile: just its front color - geometry, photo fragment and wave timing come from the host.</summary>
 public sealed class TileItem(string color)
 {
     public string Color { get; } = color;

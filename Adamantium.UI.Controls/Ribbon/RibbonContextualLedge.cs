@@ -19,7 +19,7 @@ public class RibbonContextualLedge : ContentControl
         set => SetValue(TitleHeightProperty, value);
     }
 
-    /// <summary>The group's colour. Its own property rather than Background, so the theme decides how the colour is
+    /// <summary>The group's color. Its own property rather than Background, so the theme decides how the color is
     /// used - a solid ledge, a rule, a wash.</summary>
     public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
         typeof(Brush), typeof(RibbonContextualLedge), new PropertyMetadata(default(Brush), PropertyMetadataOptions.AffectsRender));

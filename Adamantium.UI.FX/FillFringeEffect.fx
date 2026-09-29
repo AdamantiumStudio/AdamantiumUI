@@ -6,8 +6,8 @@ float4 FillColor;
 float2 ViewportSize;      // render target size in DEVICE pixels - the NDC <-> pixel basis for the fringe offset
 float FringePixels;       // fringe width in DEVICE pixels (1 = the analytic-AA edge is exactly one pixel wide)
 
-// Gradient-aware fringe: when IsGradient != 0 the ring is coloured by the SAME linear/radial gradient as the fill (so the
-// feathered edge matches the fill colour there, not one flat colour) - the fix for aliased gradient-shape edges. The
+// Gradient-aware fringe: when IsGradient != 0 the ring is colored by the SAME linear/radial gradient as the fill (so the
+// feathered edge matches the fill color there, not one flat color) - the fix for aliased gradient-shape edges. The
 // gradient is passed as plain uniforms (per-draw, no BDA / heavy interpolators). Mirrors BatchEffect's GradParam/GradColor.
 int IsGradient;
 float4 GParams;       // (_, type[1 linear/2 radial], stopCount, spread)
@@ -105,7 +105,7 @@ PSInput FillFringeVS(VSInput input)
 [shader("fragment")]
 float4 FillFringePS(PSInput input) : SV_Target
 {
-    // Gradient fills colour the ring by the gradient at this fragment (matching the fill); solid fills use FillColor.
+    // Gradient fills color the ring by the gradient at this fragment (matching the fill); solid fills use FillColor.
     float4 c;
     if (IsGradient != 0)
     {

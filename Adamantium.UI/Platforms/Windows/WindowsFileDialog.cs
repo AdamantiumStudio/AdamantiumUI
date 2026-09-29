@@ -25,7 +25,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         {
             Prepare(dialog, request);
 
-            // Every non-zero answer means no file, and cancelling is the usual one. Nothing to report either way: the
+            // Every non-zero answer means no file, and canceling is the usual one. Nothing to report either way: the
             // user closing a dialog is not a failure, and neither is a shell that refused to open one.
             if (dialog.Show(Owner(request?.Owner ?? IntPtr.Zero)) != 0) return null;
             if (dialog.GetResult(out var item) != 0) return null;
@@ -113,7 +113,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
     }
 
     // A NAME TURNED INTO THE IDENTIFIER THE SHELL WANTS, and the same name always gives the same one - which is the
-    // whole point: the size and place a person dragged a dialog into come back because it is recognised as the same
+    // whole point: the size and place a person dragged a dialog into come back because it is recognized as the same
     // dialog. Built from the name's own bytes rather than kept in a table, so a name coined in an application nobody
     // here knows about works exactly as well as one of ours.
     private static Guid? Named(string key)

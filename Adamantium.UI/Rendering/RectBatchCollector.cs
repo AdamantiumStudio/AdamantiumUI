@@ -33,9 +33,9 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         if (!Enabled) return false;
         if (p.Brush is not (null or SolidColorBrush)) return false;   // gradient/image FILL -> fallback
         if (!IsPenBatchable(p.Pen)) return false;
-        // A BORDER (per-side thickness) and a PEN share one colour slot in the instance, so a payload carrying both is
+        // A BORDER (per-side thickness) and a PEN share one color slot in the instance, so a payload carrying both is
         // not something this record can express. Nothing produces that pair - the check is here so a future caller
-        // finds the per-unit path instead of a border drawn in the pen's colour.
+        // finds the per-unit path instead of a border drawn in the pen's color.
         if (p.HasFrame && (p.BorderBrush is not SolidColorBrush || p.Pen != null)) return false;
         // Need at least a visible fill OR a visible stroke (a hollow stroked rect batches too - fill just alpha 0).
         var hasFill = p.Brush is SolidColorBrush { Color.A: > 0 };
@@ -46,7 +46,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
 
     public bool CanBatch(RectanglePayload p) => WantsBatch(p);
 
-    // A pen the SDF stroke shader can draw analytically: none, or a SOLID-colour stroke. Dashes are supported up to a
+    // A pen the SDF stroke shader can draw analytically: none, or a SOLID-color stroke. Dashes are supported up to a
     // SIX-run pattern (an even count - runs 0,1 in Stroke0.zw, 2..5 in Dash); longer falls back to the compute expander. Trim, dash
     // offset and thickness are all handled per-fragment (see BatchEffect.fx), so a dashed/trimmed stroke still BATCHES -
     // which is what lets the whole virtualized grid dash without per-tile GPU buffers (the device-memory OOM).
@@ -70,9 +70,9 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     internal static bool IsDashPatternBatchable(IReadOnlyList<double> dash)
         => dash.Count is >= 2 and <= 6 && dash.Count % 2 == 0;
 
-    // Bake a pen into the instance's stroke fields (shared by the rect + ellipse batches). Colour with opacity folded;
+    // Bake a pen into the instance's stroke fields (shared by the rect + ellipse batches). Color with opacity folded;
     // width/dash/offset scale by the world device scale (sx) into device px, matching the arc-length `s` the shader
-    // computes; trim is a 0..1 fraction. CENTRE-aligned (half in / half out). No pen -> a zero stroke (fill only).
+    // computes; trim is a 0..1 fraction. CENTER-aligned (half in / half out). No pen -> a zero stroke (fill only).
     /// <param name="contourLength">Length of the outline being stroked, in LOCAL units, or 0 when the caller cannot say.
     /// Only <see cref="Pen.FitDashesToContour"/> needs it: the pattern is stretched so a whole number of periods goes
     /// round, which is what keeps a closed dashed ring from carrying one long dash at its seam.</param>
@@ -172,18 +172,18 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     /// <summary>The largest of the four - what the quad has to make room for, and all the vertex stage needs.</summary>
     internal static float MaxOf(Vector4F radii) => Math.Max(Math.Max(radii.X, radii.Y), Math.Max(radii.Z, radii.W));
 
-    /// <summary>A colour with an opacity folded into its ALPHA, staying in the four BYTES a record carries the whole
-    /// way. THE one place that fold happens: a colour is bytes to begin with, so taking it through a
+    /// <summary>A color with an opacity folded into its ALPHA, staying in the four BYTES a record carries the whole
+    /// way. THE one place that fold happens: a color is bytes to begin with, so taking it through a
     /// <see cref="Vector4F"/> and back only rounds it twice for nothing.</summary>
-    internal static Color WithOpacity(Color colour, double opacity)
+    internal static Color WithOpacity(Color color, double opacity)
     {
-        colour.A = Color.ToByte((int)(colour.A * opacity));
-        return colour;
+        color.A = Color.ToByte((int)(color.A * opacity));
+        return color;
     }
 
     /// <summary>The fill a solid brush contributes. Anything but a solid brush contributes nothing - alpha 0, which is
     /// how these batches say "no fill".</summary>
-    internal static Color FillColour(Brush brush, double opacity)
+    internal static Color FillColor(Brush brush, double opacity)
         => brush is SolidColorBrush solid ? WithOpacity(solid.Color, opacity * solid.Opacity) : default;
 
     // All six caps, drawn analytically by CapReach in BatchEffect.fx. Codes MATCH the geometry stroker's MapCap so the two
@@ -206,9 +206,9 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         _ => 0f
     };
 
-    // Bake one solid rounded-rect fill (position -> world, colour straight with opacity folded in) into an instance.
+    // Bake one solid rounded-rect fill (position -> world, color straight with opacity folded in) into an instance.
     // False = not bakeable this way (rotated/sheared world). Shared by TryAdd (append) AND the partial-replay UpdateSlot
-    // path, which re-bakes ONE dirty tile in place (a hover recolour) without re-walking the scene.
+    // path, which re-bakes ONE dirty tile in place (a hover recolor) without re-walking the scene.
     public static bool BakeItem(RectanglePayload p, Matrix4x4F world, double opacity, out RectItem item)
         => BakeItem(p, world, opacity, 0, -1, out item);
 
@@ -220,10 +220,10 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         const float eps = 1e-4f;
         if (Math.Abs(world.M12) > eps || Math.Abs(world.M21) > eps) return false;   // rotation/shear -> per-unit
 
-        var color = FillColour(p.Brush, opacity);
+        var color = FillColor(p.Brush, opacity);
 
-        // Stroke (optional): the full pen baked to the instance (colour + device-px width, dash on/gap, dash offset,
-        // trim), CENTRE-aligned (half in / half out). Solid, dashed and trimmed strokes all draw analytically in the SDF
+        // Stroke (optional): the full pen baked to the instance (color + device-px width, dash on/gap, dash offset,
+        // trim), CENTER-aligned (half in / half out). Solid, dashed and trimmed strokes all draw analytically in the SDF
         // shader, so a stroked tile stays in the batch (no per-tile GPU buffers) - the whole grid can dash without OOM.
         var sx = world.M11; var sy = world.M22; var tx = world.M41; var ty = world.M42;
         BakeStroke(p.Pen, opacity, (float)sx, out var strokeColor, out var stroke0, out var stroke1, out var dash,
@@ -233,7 +233,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         var radii = BakeRadii(p.CornerRadius, r, sx);
 
         // A BORDER instead of a pen: its four sides ride in Inset (device px, x/z horizontal so they take sx, y/w
-        // vertical so they take sy) and its colour takes the stroke slot - a payload never carries both (WantsBatch).
+        // vertical so they take sy) and its color takes the stroke slot - a payload never carries both (WantsBatch).
         var inset = Vector4F.Zero;
         if (p.HasFrame && p.BorderBrush is SolidColorBrush border)
         {

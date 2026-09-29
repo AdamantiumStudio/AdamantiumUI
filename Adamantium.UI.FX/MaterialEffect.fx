@@ -24,8 +24,8 @@ struct MaterialRectData
     float4 Stroke0;      // .x width (LOGICAL units - scaled by Scale below), .y alignment
     float4 Stroke1;      // dash offset / trim / flags: this batch bakes only whole solid pens, so they stay at default
     float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
-    float4 Surface;      // SURFACES: .rgb what it is made of (cloth colour / metal F0), .a grain scale in device px
-    float4 Response;     // SURFACES: .rgb what it answers light with (sheen colour / environment), .a roughness
+    float4 Surface;      // SURFACES: .rgb what it is made of (cloth color / metal F0), .a grain scale in device px
+    float4 Response;     // SURFACES: .rgb what it answers light with (sheen color / environment), .a roughness
     float4 Light;        // SURFACES: .x grain direction (rad), .y light angle (rad), .z elevation, .w the WOOD's figure
                          // code - cut, plus 4 when varnished. Spare here (the anisotropy that sat in it is read by
                          // nobody); on the MESH carrier the same component is the clip slot, hence the pinned figure
@@ -66,7 +66,7 @@ float3 NoiseD(float2 p)
 // TWO RELIEFS, ON PURPOSE. Velvet and metal may share the RECORD; they must not share how they look. One field for both
 // was tried and velvet came out looking like brushed metal.
 
-/// VELVET's nap: an irregular field stretched 4:1 so the fibres lie combed. Simplex, because cloth wants a field with
+/// VELVET's nap: an irregular field stretched 4:1 so the fibers lie combed. Simplex, because cloth wants a field with
 /// no period in it at all - a cheaper wave sum reads as corduroy at once.
 float NapHeight(float2 p, float scale, float dir)
 {
@@ -84,7 +84,7 @@ float3 NapNormal(float2 p, float scale, float dir)
     return normalize(float3(-dx * 2.2, -dy * 2.2, 1.0));
 }
 
-/// METAL's grinding: scratches, not fibres - far more stretched and far shallower. DAMPED where they fall below a
+/// METAL's grinding: scratches, not fibers - far more stretched and far shallower. DAMPED where they fall below a
 /// pixel, or fine grinding on a scrolling panel boils.
 float3 MetalNormal(float2 p, float scale, float dir)
 {
@@ -146,7 +146,7 @@ float4 SheenSurface(float2 p, float4 surface, float4 response, float4 light)
     float ndotv = saturate(dot(n, v));
     float ndoth = saturate(dot(n, h));
 
-    // A soft wrap rather than a hard Lambert: a nap scatters light round its own fibres.
+    // A soft wrap rather than a hard Lambert: a nap scatters light round its own fibers.
     float wrap = saturate((dot(n, l) + 0.6) / 1.6);
     float3 body = surface.rgb * (0.25 + 0.75 * wrap);
 
@@ -172,7 +172,7 @@ float3 StudioEnvironment(float h, float3 sky)
 
 // ---- A METAL'S BRDF ------------------------------------------------------------------------------------------
 // Cook-Torrance with anisotropic GGX, in Filament's forms. A metal has NO diffuse lobe: everything it returns is a
-// specular reflection and its colour IS its reflectance at normal incidence. D, G and F over one light plus the room,
+// specular reflection and its color IS its reflectance at normal incidence. D, G and F over one light plus the room,
 // with no tuning constants.
 
 /// Anisotropic GGX distribution: two roughnesses, along the grinding and across it.
@@ -194,14 +194,14 @@ float MetalVisibility(float at, float ab, float ToV, float BoV, float NoV, float
     return 0.5 / max(lambdaV + lambdaL, 1e-5);
 }
 
-/// Schlick's Fresnel over a metal's F0 - for a conductor that is its colour, which is why gold reflects gold.
+/// Schlick's Fresnel over a metal's F0 - for a conductor that is its color, which is why gold reflects gold.
 float3 MetalFresnel(float3 f0, float u)
 {
     float f = pow(1.0 - u, 5.0);
     return f0 + (1.0 - f0) * f;
 }
 
-/// Back into the display's range WITHOUT losing the colour. Per-channel clipping is colour-blind: gold reflects nearly
+/// Back into the display's range WITHOUT losing the color. Per-channel clipping is color-blind: gold reflects nearly
 /// all of its red and under half its blue, so as it brightens the red pins at white while the blue still climbs, and
 /// every metal converges on the same pale plate. Scaling all three by the SAME factor keeps the ratio, which is the
 /// whole of what makes gold gold. Below the knee nothing is touched.
@@ -278,7 +278,7 @@ float4 MetalSurface(float2 p, float2 halfExtent, float2 bevelTilt, float4 surfac
 
     // Roll the highlight off rather than clip it: a GGX peak at low roughness is worth hundreds and a display holds one,
     // so without this the light has a knife-edge range - blown white for a few degrees, no highlight outside them.
-    // Only the SPECULAR: the environment is already in range and compressing it drags the whole plate grey.
+    // Only the SPECULAR: the environment is already in range and compressing it drags the whole plate gray.
     spec = spec / (1.0 + max(spec.r, max(spec.g, spec.b)));
 
     return float4(ToneRollOff(env + spec), 1.0);
@@ -333,9 +333,9 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
         // PLAIN SAWN: the plane runs BESIDE the core. A trunk leans and bends, so its axis wanders relative to the
         // face, and the arches are where that wandering axis comes closest and the rings close into a nest. A straight
         // axis gives dead parallel bands.
-        float centre = wander.x * 7.0 - 3.5;
+        float center = wander.x * 7.0 - 3.5;
         float depth = 1.2 + wander.x * 3.0;
-        r = length(float2(v - centre, depth)) + rough.x * 0.75;
+        r = length(float2(v - center, depth)) + rough.x * 0.75;
     }
     else if (cut < 1.5)
     {
@@ -365,16 +365,16 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
     // or the rings alias into moire.
     late = lerp(late, 0.28, saturate(w * 2.0 - 0.35));
 
-    // THE FIBRE: cells run ALONG the trunk, so the streaks are long that way and fine across it - the same field with
+    // THE FIBER: cells run ALONG the trunk, so the streaks are long that way and fine across it - the same field with
     // the axes swapped in scale, which is all "grain" means here.
-    float3 fibre = NoiseD(float2(u * 0.30, v * 8.0));
+    float3 fiber = NoiseD(float2(u * 0.30, v * 8.0));
 
-    float3 colour = lerp(surface.rgb, response.rgb, saturate(late));
-    colour *= 0.88 + fibre.x * 0.24;
+    float3 color = lerp(surface.rgb, response.rgb, saturate(late));
+    color *= 0.88 + fiber.x * 0.24;
 
-    // The relief is the FIBRE, not the rings: on a planed board the rings are colour, while the open pores of spring
-    // growth are what a fingernail catches. Shallower still where the fibre is finer than the pixel.
-    float2 g = axis * (fibre.y * 0.30) + across * (fibre.z * 8.0);
+    // The relief is the FIBER, not the rings: on a planed board the rings are color, while the open pores of spring
+    // growth are what a fingernail catches. Shallower still where the fiber is finer than the pixel.
+    float2 g = axis * (fiber.y * 0.30) + across * (fiber.z * 8.0);
     float damp = saturate(1.0 / (1.0 + length(fwidth(float2(u * 0.30, v * 8.0))) * 3.0));
     float3 n = normalize(float3(-g * 0.035 * damp, 1.0));
 
@@ -389,7 +389,7 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
     float3 h = normalize(l + vdir);
 
     float wrap = saturate((dot(n, l) + 0.35) / 1.35);
-    float3 body = colour * (0.55 + 0.45 * wrap);
+    float3 body = color * (0.55 + 0.45 * wrap);
 
     // Outside the finish branch below, for the same reason the ring's footprint is taken before the cut is chosen.
     float nVariance = length(fwidth(coatN));
@@ -414,7 +414,7 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
     float a = saturate(perceptual * perceptual + nVariance * 0.5);
     float at = max(a, 0.002);
 
-    // A DIELECTRIC keeps BOTH lobes, unlike metal: the colour above is what the body scatters back, and the coat sits
+    // A DIELECTRIC keeps BOTH lobes, unlike metal: the color above is what the body scatters back, and the coat sits
     // on top at F0 0.04 - the same for every finish, because gloss and satin differ in roughness, not reflectance.
     const float3 coatF0 = float3(0.04, 0.04, 0.04);
 
@@ -447,7 +447,7 @@ float4 WoodSurface(float2 p, float2 halfExtent, float3 bevel, float4 surface, fl
 struct MaterialPSInput
 {
     float4 Position : SV_Position;
-    float2 Local    : TEXCOORD0;   // fragment relative to the shape CENTRE (SDF space, device px)
+    float2 Local    : TEXCOORD0;   // fragment relative to the shape CENTER (SDF space, device px)
     float2 Half     : TEXCOORD1;
     float4 Radii    : TEXCOORD2;
     nointerpolation uint InstId : TEXCOORD3;
@@ -536,15 +536,15 @@ float4 MaterialFrostedPS(MaterialPSInput input) : SV_Target
 
     // Tint over the capture, then grain. The grain is what keeps a large pane from banding - the capture came from an
     // 8-bit target and was smoothed twice, so its gradients are flatter than the eye tolerates at this size.
-    float3 colour = lerp(behind.rgb, it.Tint.rgb, saturate(it.Tint.a));
+    float3 color = lerp(behind.rgb, it.Tint.rgb, saturate(it.Tint.a));
     float grain = (Hash21(input.Position.xy) - 0.5) * it.Knobs.y;
-    colour = saturate(colour + grain);
+    color = saturate(color + grain);
 
     // Fill and pen composited by the shared helper, exactly as the gradient and pattern passes do it - which is also
     // where the self-anti-aliased edge comes from. A pen of zero width degrades to the fill alone.
     // Params.z is the element's own alpha, Fade the slot chain above it. The pen already carries the element's alpha
     // from the bake, so only the chain is applied to the composited result.
-    float4 painted = CompositeFillStroke(d, float4(colour, it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, float4(color, it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -563,11 +563,11 @@ float2 GlassSlope(float d, float2 local)
     return len > 1e-5 ? slope / len : float2(0.0, 0.0);
 }
 
-// Where the curvature is: flat across the middle, rising steeply within `rim` pixels of the edge. Squared so the centre
+// Where the curvature is: flat across the middle, rising steeply within `rim` pixels of the edge. Squared so the center
 // stays honestly flat instead of bulging slightly everywhere.
 float GlassCurve(float d, float rim)
 {
-    float t = saturate(1.0 + d / max(rim, 1.0));   // d is negative inside; 0 at the centre, 1 at the edge
+    float t = saturate(1.0 + d / max(rim, 1.0));   // d is negative inside; 0 at the center, 1 at the edge
     return t * t;
 }
 
@@ -613,20 +613,20 @@ float4 MaterialGlassPS(MaterialPSInput input) : SV_Target
         behind = lerp(blurred, sharp, saturate(curve));
     }
 
-    // A LIGHT tint only: glass takes its colour from what is behind it, and a heavy tint turns it back into a panel.
-    float3 colour = lerp(behind, it.Tint.rgb, saturate(it.Tint.a) * 0.5);
+    // A LIGHT tint only: glass takes its color from what is behind it, and a heavy tint turns it back into a panel.
+    float3 color = lerp(behind, it.Tint.rgb, saturate(it.Tint.a) * 0.5);
 
     // The rim highlight, brightest where the surface turns over. Weighted towards the upper-left because that is where
     // light is assumed to come from throughout this engine's shading.
     float facing = saturate(dot(slope, normalize(float2(-0.7, -0.7))));
-    colour += curve * curve * facing * 0.35;
+    color += curve * curve * facing * 0.35;
 
     float grain = (Hash21(input.Position.xy) - 0.5) * it.Knobs.y;
-    colour = saturate(colour + grain);
+    color = saturate(color + grain);
 
     // Params.z is the element's own alpha, Fade the slot chain above it. The pen already carries the element's alpha
     // from the bake, so only the chain is applied to the composited result.
-    float4 painted = CompositeFillStroke(d, float4(colour, it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, float4(color, it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -760,11 +760,11 @@ float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
     // logical radius as if the display were at 100%; the rectangle paths above follow the DPI properly.
     float4 behind = BlurCapture(uv, BlurLevelOf(it.Color3.x, 1.0));
 
-    float3 colour = lerp(behind.rgb, it.Color1.rgb, saturate(it.Color1.a));
+    float3 color = lerp(behind.rgb, it.Color1.rgb, saturate(it.Color1.a));
     float grain = (Hash21(input.Position.xy) - 0.5) * it.Color3.y;
-    colour = saturate(colour + grain);
+    color = saturate(color + grain);
 
-    return float4(colour, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
+    return float4(color, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
 [shader("fragment")]
@@ -798,15 +798,15 @@ float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
     behind.g = SourceTexture.Sample(SourceSampler, saturate(uv + push)).g;
     behind.b = SourceTexture.Sample(SourceSampler, saturate(uv + push * 0.94)).b;
 
-    float3 colour = lerp(behind, it.Color1.rgb, saturate(it.Color1.a) * 0.5);
+    float3 color = lerp(behind, it.Color1.rgb, saturate(it.Color1.a) * 0.5);
 
     float facing = saturate(dot(slope, normalize(float2(-0.7, -0.7))));
-    colour += curve * curve * facing * 0.35;
+    color += curve * curve * facing * 0.35;
 
     float grain = (Hash21(input.Position.xy) - 0.5) * it.Color3.y;
-    colour = saturate(colour + grain);
+    color = saturate(color + grain);
 
-    return float4(colour, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
+    return float4(color, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
 
@@ -820,8 +820,8 @@ float4 MaterialSheenMeshPS(MaterialMeshPSInput input) : SV_Target
     // wear the same cloth. Color2 / Noise / Anim.xyz carry the nap here - this carrier shares its record with the
     // pattern fill, and those are the fields a material leaves untouched.
     float2 halfSize = max(it.LocalBounds.zw * 0.5, float2(1.0, 1.0));
-    float2 centred = input.Local - (it.LocalBounds.xy + halfSize);
-    float4 surface = SheenSurface(centred, it.Color2, it.Noise, it.Anim);
+    float2 centered = input.Local - (it.LocalBounds.xy + halfSize);
+    float4 surface = SheenSurface(centered, it.Color2, it.Noise, it.Anim);
 
     // No film grain - see MaterialMetalPS.
     return float4(saturate(surface.rgb), input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
@@ -834,16 +834,16 @@ float4 MaterialMetalMeshPS(MaterialMeshPSInput input) : SV_Target
     PatternGeomData it = items[input.InstId];
 
     float2 halfSize = max(it.LocalBounds.zw * 0.5, float2(1.0, 1.0));
-    float2 centred = input.Local - (it.LocalBounds.xy + halfSize);
+    float2 centered = input.Local - (it.LocalBounds.xy + halfSize);
 
     // The chamfer again, but from the bounding box: an authored outline has no distance field here, so the turn follows
     // the box rather than the true edge - the same approximation the glass mesh pass already makes.
-    float2 fromCentre = centred / halfSize;
-    float edge = saturate(max(abs(fromCentre.x), abs(fromCentre.y)));
+    float2 fromCenter = centered / halfSize;
+    float edge = saturate(max(abs(fromCenter.x), abs(fromCenter.y)));
     float rise = saturate((edge - 0.82) / 0.18);
-    float len = length(fromCentre);
-    float2 outward = len > 1e-5 ? fromCentre / len : float2(0.0, 0.0);
-    float4 surface = MetalSurface(centred, halfSize, outward * rise * rise * 0.9, it.Color2, it.Noise, it.Anim);
+    float len = length(fromCenter);
+    float2 outward = len > 1e-5 ? fromCenter / len : float2(0.0, 0.0);
+    float4 surface = MetalSurface(centered, halfSize, outward * rise * rise * 0.9, it.Color2, it.Noise, it.Anim);
 
     // No film grain - see MaterialMetalPS.
     return float4(saturate(surface.rgb), input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
@@ -857,16 +857,16 @@ float4 MaterialWoodMeshPS(MaterialMeshPSInput input) : SV_Target
     PatternGeomData it = items[input.InstId];
 
     float2 halfSize = max(it.LocalBounds.zw * 0.5, float2(1.0, 1.0));
-    float2 centred = input.Local - (it.LocalBounds.xy + halfSize);
+    float2 centered = input.Local - (it.LocalBounds.xy + halfSize);
 
     // The chamfer from the bounding box, as the sibling mesh passes take it: no distance field here, so the facet
     // follows the box rather than the true edge.
-    float2 fromCentre = centred / halfSize;
-    float edge = saturate(max(abs(fromCentre.x), abs(fromCentre.y)));
+    float2 fromCenter = centered / halfSize;
+    float edge = saturate(max(abs(fromCenter.x), abs(fromCenter.y)));
     float facet = smoothstep(0.90, 0.93, edge);
     float across = saturate((edge - 0.90) / 0.10);
-    float len = length(fromCentre);
-    float2 outward = len > 1e-5 ? fromCentre / len : float2(0.0, 0.0);
+    float len = length(fromCenter);
+    float2 outward = len > 1e-5 ? fromCenter / len : float2(0.0, 0.0);
 
     // ONE FIGURE ONLY on this carrier, pinned on purpose: the figure code rides the light's fourth component, and on
     // THIS record that component is the clip slot - a number that would decode into a nonsense cut and finish. So a
@@ -874,7 +874,7 @@ float4 MaterialWoodMeshPS(MaterialMeshPSInput input) : SV_Target
     // record has nothing spare, and giving it a field of its own is what loses the device.
     float4 pinnedLight = float4(it.Anim.xyz, 4.0);   // Flat + varnished
 
-    float4 surface = WoodSurface(centred, halfSize, float3(outward * facet, across * facet),
+    float4 surface = WoodSurface(centered, halfSize, float3(outward * facet, across * facet),
                                  it.Color2, it.Noise, pinnedLight);
 
     // No film grain - see MaterialMetalPS.

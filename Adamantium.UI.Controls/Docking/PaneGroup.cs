@@ -21,14 +21,14 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         min = System.Math.Max(min, StripExtent(orientation));
 
         // The DOCUMENT area has a floor of its own along both axes: it pays for every tool docked against
-        // it, and its panes cannot state this - documents come and go, the centre outlives all of them.
+        // it, and its panes cannot state this - documents come and go, the center outlives all of them.
         if (Kind == PaneKind.Document && Area is { } area) min = System.Math.Max(min, area.DocumentMinSize);
 
         return min;
     }
 
     // A pane's MinSize is its smallest useful size ALONG THE AXIS IT IS DOCKED ON. Letting it answer for both meant the
-    // inspector's width forbade the console below from being dragged taller. A centre group has no single axis.
+    // inspector's width forbade the console below from being dragged taller. A center group has no single axis.
     private bool MinSizeAppliesAlong(Panels.Orientation orientation)
     {
         return Zone switch

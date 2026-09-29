@@ -244,7 +244,7 @@ public class DataGridHeadersPresenter : Panel
         _pressAt = e.GetPosition(this);
 
         // CAPTURED from the press, not from the threshold: a header carried UP into the grouping strip leaves this
-        // strip before it has travelled far enough to count as a drag, and without the capture the moves that would
+        // strip before it has traveled far enough to count as a drag, and without the capture the moves that would
         // have started it go to whatever is up there instead. Measured - eight moves, then LEAVE, and the gesture
         // simply stopped until the pointer came back.
         CaptureMouse();
@@ -266,7 +266,7 @@ public class DataGridHeadersPresenter : Panel
                 return;
             }
 
-            // HOW FAR the pointer has travelled, not how far ALONG the strip: a header dragged straight up into the
+            // HOW FAR the pointer has traveled, not how far ALONG the strip: a header dragged straight up into the
             // grouping panel moves no distance in x at all, and a threshold that only watched x left that gesture
             // doing nothing until the hand happened to waver sideways.
             if (_pressed >= 0 && (e.GetPosition(this) - _pressAt).Length() > DragThreshold

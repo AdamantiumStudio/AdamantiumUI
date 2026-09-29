@@ -9,7 +9,7 @@ namespace Adamantium.UI.Rendering;
 // widened AA ring cannot do it: large offsets change topology and self-overlap at concave corners.
 internal static class HaloField
 {
-    /// <summary>Texels per side. Fixed rather than scaled to the shape: the field is sampled in normalised space, so a
+    /// <summary>Texels per side. Fixed rather than scaled to the shape: the field is sampled in normalized space, so a
     /// bigger shape simply spreads the same texels over more pixels - and a soft band hides that.</summary>
     public const int Resolution = 128;
 

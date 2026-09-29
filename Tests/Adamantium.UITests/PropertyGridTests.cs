@@ -238,7 +238,7 @@ public class PropertyGridTests
         Assert.That(RowOf(grid, accent)?.Value, Is.SameAs(node.Accent));
     }
 
-    // ...and the swatch has to END UP wearing it. Reading the right brush and showing the wrong colour is the same
+    // ...and the swatch has to END UP wearing it. Reading the right brush and showing the wrong color is the same
     // thing to the person looking at the row.
     [Test]
     public void ASwatchWearsTheBrushItWasPointedAt()
@@ -256,9 +256,9 @@ public class PropertyGridTests
         Assert.That(swatch.SelectedColor, Is.EqualTo(Colors.Red));
     }
 
-    // A colour row writes INTO the brush it finds, so that everything painting with that brush follows - right when the
+    // A color row writes INTO the brush it finds, so that everything painting with that brush follows - right when the
     // object owns it, and wrong when it is the theme's. The theme hands one brush to everything that asks for that
-    // colour, so recolouring one node's title strip repainted every accent in the application. An edit there means the
+    // color, so recoloring one node's title strip repainted every accent in the application. An edit there means the
     // object OVERRIDES the theme: a new brush on the object, and the theme's left alone.
     [Test]
     public void EditingAThemeBrushLeavesTheThemesOwnBrushAlone()
@@ -282,7 +282,7 @@ public class PropertyGridTests
     }
 
     // ...and a brush the object owns is still written into, which is what lets two shapes deliberately sharing one
-    // brush be recoloured together.
+    // brush be recolored together.
     [Test]
     public void EditingAnOwnedBrushStillWritesIntoIt()
     {
@@ -475,10 +475,10 @@ public class PropertyGridTests
         });
     }
 
-    // A COLOUR NOBODY HAS SET is still a line you can press. The node's accent is empty until somebody picks one - the
-    // theme's is what it wears meanwhile - and a blank cell there is a colour that can never be chosen.
+    // A COLOR NOBODY HAS SET is still a line you can press. The node's accent is empty until somebody picks one - the
+    // theme's is what it wears meanwhile - and a blank cell there is a color that can never be chosen.
     [Test]
-    public void AColourLineWithNoValueStillOffersItsSwatch()
+    public void AColorLineWithNoValueStillOffersItsSwatch()
     {
         var node = new Graph.GraphNode { Kind = "Add", Title = "Add" };
         var item = new ElementItem(new CanvasNode(), new Rect(0, 0, 190, 110)) { Model = node };
@@ -489,8 +489,8 @@ public class PropertyGridTests
 
         var row = RowOf(grid, accent);
 
-        Assert.That(row.Value, Is.Null, "the node has a colour already, so this proves nothing");
-        Assert.That(row.Editor, Is.Not.Null, "the line is blank, so there is nothing to pick a colour with");
+        Assert.That(row.Value, Is.Null, "the node has a color already, so this proves nothing");
+        Assert.That(row.Editor, Is.Not.Null, "the line is blank, so there is nothing to pick a color with");
     }
 
     // SHOWING a line must not set what it shows. The inspector's "Folded" box appeared the first time nodes were
@@ -1206,9 +1206,9 @@ public class PropertyGridTests
         Assert.That(RowOf(grid, name).Value, Is.EqualTo("two"), "the section follows the selection");
     }
 
-    // A colour is a value like any other: the line reads one and writes one back.
+    // A color is a value like any other: the line reads one and writes one back.
     [Test]
-    public void AColourLineReadsAndWritesAColour()
+    public void AColorLineReadsAndWritesAColor()
     {
         var target = new Target();
         var tint = new ColorProperty { Header = "Tint", Binding = new Binding("Tint") };
@@ -1220,11 +1220,11 @@ public class PropertyGridTests
         Assert.That(target.Tint, Is.EqualTo(Colors.Goldenrod));
     }
 
-    // The point of the brush line: it does NOT put a new brush on the object, it changes the colour inside the one
+    // The point of the brush line: it does NOT put a new brush on the object, it changes the color inside the one
     // already there. Everything else painting with that brush follows, and nothing had to be told. Note the binding is
     // one-way and the write still lands - nothing is written back through it.
     [Test]
-    public void ABrushLineChangesTheColourInsideTheBrushItWasGiven()
+    public void ABrushLineChangesTheColorInsideTheBrushItWasGiven()
     {
         var target = new Target();
         var before = target.Fill;
@@ -1245,7 +1245,7 @@ public class PropertyGridTests
     }
 
     // A frozen brush is shared and cannot be painted into. Then the line falls back to putting a new brush there, which
-    // is the only thing left that can work - silently doing nothing would leave the inspector showing a colour the
+    // is the only thing left that can work - silently doing nothing would leave the inspector showing a color the
     // object never took.
     [Test]
     public void AFrozenBrushIsReplacedRatherThanPainted()
@@ -1360,11 +1360,11 @@ public class PropertyGridTests
         Assert.That(RowOf(grid, tag).RunAction(), Is.False);
     }
 
-    // Two objects each holding their OWN brush of the same colour hold, as far as the line is concerned, the same
+    // Two objects each holding their OWN brush of the same color hold, as far as the line is concerned, the same
     // value - a brush has no equality of its own, so comparing them by reference would have the row reporting a
     // difference nobody can see.
     [Test]
-    public void TwoBrushesOfOneColourAreNotADifference()
+    public void TwoBrushesOfOneColorAreNotADifference()
     {
         var fill = new SolidColorBrushProperty { Header = "Fill", Binding = new Binding("Fill") };
         var grid = MultiGrid(fill, new Target(), new Target());
@@ -1375,12 +1375,12 @@ public class PropertyGridTests
             Assert.That(row.Target, Is.Not.SameAs(row.Targets[1]));
             Assert.That(((Target)row.Targets[0]).Fill, Is.Not.SameAs(((Target)row.Targets[1]).Fill),
                 "two brushes, not one - which is what makes this worth asserting");
-            Assert.That(row.IsMixed, Is.False, "and the line shows the colour they agree on");
+            Assert.That(row.IsMixed, Is.False, "and the line shows the color they agree on");
         });
     }
 
     [Test]
-    public void TwoBrushesOfDifferentColoursStillDisagree()
+    public void TwoBrushesOfDifferentColorsStillDisagree()
     {
         var second = new Target();
         ((SolidColorBrush)second.Fill).Color = Colors.Goldenrod;
@@ -1436,10 +1436,10 @@ public class PropertyGridTests
         });
     }
 
-    // A colour swatch has no empty state - it is a colour or it is nothing. So that one row stays blank rather than
-    // standing there showing a colour neither object holds.
+    // A color swatch has no empty state - it is a color or it is nothing. So that one row stays blank rather than
+    // standing there showing a color neither object holds.
     [Test]
-    public void AColourRowTheObjectsDisagreeOnStaysBlank()
+    public void AColorRowTheObjectsDisagreeOnStaysBlank()
     {
         var second = new Target { Tint = Colors.Goldenrod };
         var tint = new ColorProperty { Header = "Tint", Binding = new Binding("Tint") };
@@ -1451,7 +1451,7 @@ public class PropertyGridTests
         Assert.Multiple(() =>
         {
             Assert.That(row.IsMixed, Is.True);
-            Assert.That(row.Editor, Is.Null, "no swatch, because there is no colour it could honestly show");
+            Assert.That(row.Editor, Is.Null, "no swatch, because there is no color it could honestly show");
         });
     }
 

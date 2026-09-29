@@ -7,7 +7,7 @@ using Adamantium.UI.Core.Media;
 namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Shared stroke ("кайма") parameters for the Shapes-tab pen playground. ONE instance drives the stroke of
-/// EVERY shape in the tab: thickness, dashes, trim, corner, cap/join (bound to <c>DropDown</c>s) and colour (bound to a
+/// EVERY shape in the tab: thickness, dashes, trim, corner, cap/join (bound to <c>DropDown</c>s) and color (bound to a
 /// <c>ColorPicker</c>). Sliders/dropdowns/picker mutate this one object; each shape binds its stroke off <c>Stroke.*</c>.</summary>
 public sealed class StrokeSettings : PropertyChangedBase
 {
@@ -82,10 +82,10 @@ public sealed class StrokeSettings : PropertyChangedBase
     private PenLineJoin _join = PenLineJoin.Round;
     public PenLineJoin Join { get => _join; set => SetProperty(ref _join, value); }
 
-    // Stroke colour, driven by a ColorPicker. StrokeBrush is ONE cached brush every shape binds its Stroke to - a colour
+    // Stroke color, driven by a ColorPicker. StrokeBrush is ONE cached brush every shape binds its Stroke to - a color
     // change mutates its Color in place (AffectsPaint re-bakes the users), NOT a new brush per read. Creating a fresh
     // SolidColorBrush (an AdamantiumComponent) on every read churned the property system and deadlocked the render thread
-    // (which reads brush colours under a per-component Monitor lock) against the pump thread on a colour change.
+    // (which reads brush colors under a per-component Monitor lock) against the pump thread on a color change.
     private readonly SolidColorBrush _strokeBrush = new(new Color(255, 136, 0));   // orange, matching the old default hue 32
     private Color _selectedColor = new(255, 136, 0);
     public Color SelectedColor { get => _selectedColor; set { if (SetProperty(ref _selectedColor, value)) _strokeBrush.Color = value; } }

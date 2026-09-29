@@ -17,12 +17,12 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
    /// <summary>Tab and arrow navigation for a panel without a layout shape: children in tab-index or child order, forward
    /// on Next/Down/Right. Panels with rows or columns override this.</summary>
    public virtual IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction) =>
-      TabNeighbour(from, IsForward(direction));
+      TabNeighbor(from, IsForward(direction));
 
-   /// <summary>The neighbour in TAB order: by <see cref="KeyboardNavigation.TabIndex"/> first, and by the order the
+   /// <summary>The neighbor in TAB order: by <see cref="KeyboardNavigation.TabIndex"/> first, and by the order the
    /// children stand in for the ties. The arrows deliberately do NOT use this - they are a question about the layout,
    /// and an explicit tab order says nothing about which control is physically to the left of another.</summary>
-   private IUIComponent TabNeighbour(IUIComponent from, bool forward)
+   private IUIComponent TabNeighbor(IUIComponent from, bool forward)
    {
       List<IUIComponent> ordered = null;
       var position = 0;
@@ -36,7 +36,7 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
       }
 
       // Nobody asked for an order: the children's own is the answer, and there is nothing to sort.
-      if (ordered == null || position == 0) return Neighbour(from, forward);
+      if (ordered == null || position == 0) return Neighbor(from, forward);
 
       foreach (var child in VisualChildren)
       {
@@ -61,7 +61,7 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
 
    /// <summary>The next or previous visual child, or null at either end. Visual rather than <see cref="Children"/>,
    /// since a virtualizing host's containers are visual children only.</summary>
-   protected IUIComponent Neighbour(IUIComponent from, bool forward)
+   protected IUIComponent Neighbor(IUIComponent from, bool forward)
    {
       IUIComponent previous = null;
       var passed = false;

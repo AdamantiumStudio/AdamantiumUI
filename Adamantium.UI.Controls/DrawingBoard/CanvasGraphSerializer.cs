@@ -182,8 +182,8 @@ public static class CanvasGraphSerializer
             writer.WriteStartObject();
             writer.WriteString("name", pin.Name ?? string.Empty);
 
-            var colour = Hex(pin.Color);
-            if (!string.IsNullOrEmpty(colour)) writer.WriteString("color", colour);
+            var color = Hex(pin.Color);
+            if (!string.IsNullOrEmpty(color)) writer.WriteString("color", color);
 
             writer.WriteEndObject();
         }
@@ -262,7 +262,7 @@ public static class CanvasGraphSerializer
     private static CanvasNode Plain(CanvasNodeSeed seed) => new();
 
     // The shape the file recorded, put onto whatever node came back - the application's or the engine's. Sockets it
-    // already has KEEP their names and colours only where the file had nothing to say, so a node the application built
+    // already has KEEP their names and colors only where the file had nothing to say, so a node the application built
     // with its own sockets is not flattened by being loaded.
     private static void Dress(CanvasNode node, CanvasNodeSeed seed)
     {
@@ -289,7 +289,7 @@ public static class CanvasGraphSerializer
             pins[i].IsInput = input;
             if (!string.IsNullOrEmpty(seeds[i].Name)) pins[i].Name = seeds[i].Name;
 
-            if (Colour(seeds[i].Color) is { } colour) pins[i].Color = new SolidColorBrush(colour);
+            if (Color(seeds[i].Color) is { } color) pins[i].Color = new SolidColorBrush(color);
         }
     }
 
@@ -334,7 +334,7 @@ public static class CanvasGraphSerializer
     private static double Number(JsonElement owner, string name) =>
         owner.TryGetProperty(name, out var value) && value.TryGetDouble(out var number) ? number : 0;
 
-    // INVARIANT hex, because a colour written under one language must read back under another - see the note on
+    // INVARIANT hex, because a color written under one language must read back under another - see the note on
     // markup numbers.
     private static string Hex(Brush brush) =>
         brush is SolidColorBrush solid
@@ -344,7 +344,7 @@ public static class CanvasGraphSerializer
                   + solid.Color.B.ToString("X2", CultureInfo.InvariantCulture)
             : string.Empty;
 
-    private static Color? Colour(string hex)
+    private static Color? Color(string hex)
     {
         if (string.IsNullOrEmpty(hex) || hex[0] != '#' || hex.Length != 9) return null;
 

@@ -13,6 +13,6 @@ public partial class ListBoxDemoViewModel
     public ObservableCollection<string> Fruits { get; } =
         new(Enumerable.Range(1, 3000).Select(i => $"Item {i}"));
 
-    // The control mutates this same instance as the user (multi-)selects; we just observe it. No attached behaviour.
+    // The control mutates this same instance as the user (multi-)selects; we just observe it. No attached behavior.
     public ObservableCollection<string> SelectedFruits { get; } = new();
 }

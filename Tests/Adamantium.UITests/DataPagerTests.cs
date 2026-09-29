@@ -73,7 +73,7 @@ public class DataPagerTests
         yield return new List<int> { 1, 2, 3, 4 };
         yield return new ObservableCollection<int> { 1, 2, 3, 4 };
         yield return new System.Collections.ArrayList { 1, 2, 3, 4 };
-        yield return Enumerable.Range(1, 4);                        // lazy, never materialised by the caller
+        yield return Enumerable.Range(1, 4);                        // lazy, never materialized by the caller
         yield return new[] { "1", "2", "3", "4" };
     }
 
@@ -240,9 +240,9 @@ public class DataPagerTests
         Assert.That(Pager(2, 0).PageItems.All(i => i.IsEnabled), Is.True);
     }
 
-    /// <summary>In the middle of a long run: the current page with a neighbour each side, and a gap at each end.</summary>
+    /// <summary>In the middle of a long run: the current page with a neighbor each side, and a gap at each end.</summary>
     [Test]
-    public void InTheMiddleOfALongRun_TheWindowIsCentredWithAGapEachSide()
+    public void InTheMiddleOfALongRun_TheWindowIsCenteredWithAGapEachSide()
     {
         Assert.That(Row(Pager(10000, 10)), Is.EqualTo("… 10 11 12 …"));
     }

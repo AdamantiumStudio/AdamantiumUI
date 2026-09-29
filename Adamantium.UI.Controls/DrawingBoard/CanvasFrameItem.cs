@@ -49,7 +49,7 @@ public class CanvasFrameItem : ICanvasItem
     /// </summary>
     public CanvasMode Mode => CanvasMode.Nodes;
 
-    /// <summary>UNDER the nodes. Over them it would be a sheet of colour across the thing it is about.</summary>
+    /// <summary>UNDER the nodes. Over them it would be a sheet of color across the thing it is about.</summary>
 
     /// <summary>Where it stands in paint order - stamped by the scene. See ICanvasItem.Order.</summary>
     public int Order { get; set; }

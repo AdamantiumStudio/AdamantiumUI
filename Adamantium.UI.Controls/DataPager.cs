@@ -559,7 +559,7 @@ public class DataPager : Control
         PagerDisplayMode.PageSizeSelector,
         // Two jumps that are reachable by typing a page number, which is still on the line.
         PagerDisplayMode.FirstLast,
-        // The numbers say where you are AMONG NEIGHBOURS; "Page 5 of 800" says it outright and costs a fifth of the room.
+        // The numbers say where you are AMONG NEIGHBORS; "Page 5 of 800" says it outright and costs a fifth of the room.
         PagerDisplayMode.Numeric
     ];
 

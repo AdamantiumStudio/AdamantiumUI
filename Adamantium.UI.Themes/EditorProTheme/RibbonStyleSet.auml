@@ -41,8 +41,8 @@
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run: the group's own colour carrying its title. This is the ONE place the ribbon
-         is allowed a coloured plate, and it earns it - the colour is what ties a run of tabs to the object that
+    <!-- The ledge over a contextual run: the group's own color carrying its title. This is the ONE place the ribbon
+         is allowed a colored plate, and it earns it - the color is what ties a run of tabs to the object that
          summoned them, and there is no smaller mark that can say "these three tabs belong to that selection". -->
     <Style Selector="RibbonContextualLedge">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -268,7 +268,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- Open AND contextual: the ordinary open fill; what marks it is the rule under it, in the context's colour. -->
+    <!-- Open AND contextual: the ordinary open fill; what marks it is the rule under it, in the context's color. -->
     <Style Selector="RibbonTabHeader">
         <MultiTrigger>
             <MultiTrigger.Conditions>
@@ -652,7 +652,7 @@
 
     <!-- One choice. No background at rest, like a list row: a gallery of forty cells would otherwise be forty fills.
          The chosen one is marked by an accent OUTLINE rather than a fill, so the swatch inside still shows its own
-         colour truthfully - which in a gallery of colours or styles is the entire point of the cell. -->
+         color truthfully - which in a gallery of colors or styles is the entire point of the cell. -->
     <Style Selector="RibbonGalleryItem">
         <Setter Property="Background" Value="Transparent"/>
         <!-- STATED, not left to inheritance. A ContentPresenter STAMPS its Foreground onto the content it builds, so a
@@ -721,7 +721,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
-        <!-- Large centres (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
+        <!-- Large centers (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
              another, and a ragged left edge is the first thing the eye catches. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -734,7 +734,7 @@
         <Setter Property="MinWidth" Value="{ResourceReference RibbonButtonMinWidth}"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeCaption}"/>
-        <!-- Default icon drawing: path data stroked in whatever colour the icon slot carries. `{Binding}` is the icon
+        <!-- Default icon drawing: path data stroked in whatever color the icon slot carries. `{Binding}` is the icon
              itself - a string converts to a Geometry on the way in, as it does when written as an attribute. -->
         <Setter Property="IconTemplate">
             <Setter.Value>
@@ -767,8 +767,8 @@
                         <Grid x:Name="Layout" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                            <!-- The icon is DATA drawn by IconTemplate. Its colour travels through the presenter's
-                                 Foreground, so states recolour it without reaching into that template. -->
+                            <!-- The icon is DATA drawn by IconTemplate. Its color travels through the presenter's
+                                 Foreground, so states recolor it without reaching into that template. -->
                             <Viewbox x:Name="IconBox" Grid.Row="0" Grid.Column="0"
                                     Width="{ResourceReference RibbonIconBoxLarge}"
                                     Height="{ResourceReference RibbonIconBoxLarge}"
@@ -800,7 +800,7 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
-        <!-- The ICON greys out with the label - it is the part a person aims at. -->
+        <!-- The ICON grays out with the label - it is the part a person aims at. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
             <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
@@ -1026,9 +1026,9 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- The File tab is a TAB, not a coloured slab at the head of the strip. It carries the same accent underline as
-         its neighbours while the backstage is open, so "which of these is showing" is answered by one mark everywhere
-         in the strip rather than by a colour here and a line there. -->
+    <!-- The File tab is a TAB, not a colored slab at the head of the strip. It carries the same accent underline as
+         its neighbors while the backstage is open, so "which of these is showing" is answered by one mark everywhere
+         in the strip rather than by a color here and a line there. -->
     <Style Selector="ToggleButton.RibbonFileTab">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
@@ -1090,7 +1090,7 @@
     </Style>
 
     <!-- The arrow out of the backstage, at the head of the rail. No ring around it: the rail is a panel here, and a
-         circled arrow on a plain panel reads as a badge that fell off a coloured header. -->
+         circled arrow on a plain panel reads as a badge that fell off a colored header. -->
     <Style Selector="Button.RibbonBackstageBack">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
@@ -1397,7 +1397,7 @@
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                             <!-- The command's OWN padding, not a fixed one: the size triggers tighten Padding for
                                  Medium and Small, and a hardcoded value here made the split button far bigger than its
-                                 neighbours - the column stretched to fit it, and the icons beside it floated in the
+                                 neighbors - the column stretched to fit it, and the icons beside it floated in the
                                  slack. -->
                             <Border x:Name="ActionArea" Grid.Row="0" Grid.Column="0"
                                     Padding="{TemplateBinding Padding}"
@@ -1500,8 +1500,8 @@
         <!-- The icon ink commands read via {Ancestor RibbonQuickAccess, Foreground}; the caption instance overrides it,
              the one under the ribbon relies on it. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centres what it is given,
-             and something that fills the slot has nothing left to centre. -->
+        <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centers what it is given,
+             and something that fills the slot has nothing left to center. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <!-- The caption is finite and shared with the window title, so the bar is given a budget rather than allowed
              to grow: what does not fit goes under the chevron instead of pushing the title off the edge. -->
@@ -1590,7 +1590,7 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                         <!-- The BAR's foreground, not the caption's: below the ribbon there is no TitleBar to ask, and
-                             the icons would come out with no stroke at all. The caption instance takes its colour from
+                             the icons would come out with no stroke at all. The caption instance takes its color from
                              the title bar, so they still follow its active/inactive state. -->
                         <Path Data="{Binding Icon}"
                                 Stroke="{Ancestor RibbonQuickAccess, Foreground}"
@@ -1638,7 +1638,7 @@
         <Setter Property="Height" Value="{ResourceReference RibbonChipHeight}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
-        <!-- The row it sits in claims the caption's FULL height, so centring the bar centres nothing - the button is
+        <!-- The row it sits in claims the caption's FULL height, so centering the bar centers nothing - the button is
              what has to stand in the middle, level with the window title. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

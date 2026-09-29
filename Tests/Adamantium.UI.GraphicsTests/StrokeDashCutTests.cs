@@ -70,7 +70,7 @@ public class StrokeDashCutTests
 
         // The join is the 6 verts right after seg0's quad, VertexFloats each:
         // (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | pieceId).
-        // Corner (100,0), h = 5: plus side (100,5) & (95,0), centre (100,0), then the mirrored minus side.
+        // Corner (100,0), h = 5: plus side (100,5) & (95,0), center (100,0), then the mirrored minus side.
         float[] expectedWedge =
         {
             100f, 5f, 5f,   95f, 0f, 5f,   100f, 0f, 0f,

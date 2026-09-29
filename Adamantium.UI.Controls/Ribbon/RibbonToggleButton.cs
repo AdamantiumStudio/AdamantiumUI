@@ -50,7 +50,7 @@ public class RibbonToggleButton : ToggleButton
         set => SetValue(CollapseToMediumProperty, value);
     }
 
-    /// <summary>...and at which step it drops the label too. A command nobody recognises without its words says Never.</summary>
+    /// <summary>...and at which step it drops the label too. A command nobody recognizes without its words says Never.</summary>
     public RibbonCollapseThreshold CollapseToSmall
     {
         get => GetValue<RibbonCollapseThreshold>(CollapseToSmallProperty);

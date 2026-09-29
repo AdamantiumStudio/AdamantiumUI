@@ -3,7 +3,7 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Navigation;
 
-/// <summary>Resolves a View for a view model (the reverse of the view-first <c>x:ViewModel</c>). Generalises the sandbox
+/// <summary>Resolves a View for a view model (the reverse of the view-first <c>x:ViewModel</c>). Generalizes the sandbox
 /// TabViewSelector convention: explicit factory -&gt; explicit map -&gt; naming convention (<c>FooViewModel</c> -&gt;
 /// <c>FooView</c>). View instances are DI-resolved (so a View may take constructor injection).</summary>
 public interface IViewLocator

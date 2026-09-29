@@ -27,13 +27,13 @@ public class DockingAreaTests
     }
 
     [Test]
-    public void ZonesBecomeRectangles_SidesFullHeight_BandInsideTheCentreColumn()
+    public void ZonesBecomeRectangles_SidesFullHeight_BandInsideTheCenterColumn()
     {
         var area = new DockingArea { DividerThickness = 0 };
-        var centre = Group("scene", DockZone.Center);
+        var center = Group("scene", DockZone.Center);
         var right = Group("inspector", DockZone.Right);
         var bottom = Group("console", DockZone.Bottom);
-        area.Children.Add(centre);
+        area.Children.Add(center);
         area.Children.Add(right);
         area.Children.Add(bottom);
 
@@ -48,13 +48,13 @@ public class DockingAreaTests
             Assert.That(right.Bounds.Y, Is.EqualTo(0).Within(0.5), "from the very top");
             Assert.That(right.Bounds.X + right.Bounds.Width, Is.EqualTo(1000).Within(0.5), "and ends at the edge");
 
-            // The band lives INSIDE the centre column: under the documents, stopping where the side begins.
+            // The band lives INSIDE the center column: under the documents, stopping where the side begins.
             Assert.That(bottom.Bounds.X, Is.EqualTo(0).Within(0.5));
             Assert.That(bottom.Bounds.Width, Is.EqualTo(right.Bounds.X).Within(0.5), "it stops at the side, not under it");
             Assert.That(bottom.Bounds.Y + bottom.Bounds.Height, Is.EqualTo(800).Within(0.5), "and reaches the bottom edge");
 
-            Assert.That(centre.Bounds.X, Is.EqualTo(0).Within(0.5));
-            Assert.That(centre.Bounds.Width, Is.EqualTo(bottom.Bounds.Width).Within(0.5), "documents and band share one column");
+            Assert.That(center.Bounds.X, Is.EqualTo(0).Within(0.5));
+            Assert.That(center.Bounds.Width, Is.EqualTo(bottom.Bounds.Width).Within(0.5), "documents and band share one column");
         });
     }
 
@@ -82,10 +82,10 @@ public class DockingAreaTests
     public void APixelSizeStatedForOneAxis_IsNotSpentOnTheOther()
     {
         var area = new DockingArea { DividerThickness = 0 };
-        var centre = Group("scene", DockZone.Center);
-        centre.Items.Add(new Pane { Header = "game", Id = "game" });
+        var center = Group("scene", DockZone.Center);
+        center.Items.Add(new Pane { Header = "game", Id = "game" });
         var console = Group("console", DockZone.Bottom, size: 160);
-        area.Children.Add(centre);
+        area.Children.Add(center);
         area.Children.Add(console);
 
         area.Measure(new Size(1000, 800));
@@ -139,9 +139,9 @@ public class DockingAreaTests
     public void DismissingARevealedPanel_PutsItAway()
     {
         var area = new DockingArea { DividerThickness = 0 };
-        var centre = Group("scene", DockZone.Center);
+        var center = Group("scene", DockZone.Center);
         var right = Group("inspector", DockZone.Right, 240);
-        area.Children.Add(centre);
+        area.Children.Add(center);
         area.Children.Add(right);
 
         var root = new TestWindowRoot { Width = 1000, Height = 800, ClientWidth = 1000, ClientHeight = 800 };

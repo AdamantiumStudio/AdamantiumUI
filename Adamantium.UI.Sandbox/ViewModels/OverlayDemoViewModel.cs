@@ -52,7 +52,7 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
         }
     };
 
-    // Open at Left/Top (below) rather than centred, to show explicit positioning.
+    // Open at Left/Top (below) rather than centered, to show explicit positioning.
     public OverlayStartupLocation StartupLocation => OverlayStartupLocation.Manual;
 
     public void OnOverlayOpened(NavigationParameters parameters)

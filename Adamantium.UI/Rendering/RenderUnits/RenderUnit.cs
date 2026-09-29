@@ -119,7 +119,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
         StrokeRenderer?.DeferDispose();
 
-        // The GPU path handles any solid-colour stroke: one OR many contours (combined/group geometry, shapes with
+        // The GPU path handles any solid-color stroke: one OR many contours (combined/group geometry, shapes with
         // holes), open or closed, with dashes/trim and every cap/join - all as real geometry. Only a non-solid brush
         // (e.g. a gradient stroke) still falls back to the CPU StrokeGeometry path.
         if (UseGpuStroke && StrokeEffect != null && TryGetSolidContours(pen, geometry, out var contours))
@@ -134,7 +134,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         StrokeRenderer.RenderData = DrawCommand.RenderData;
     }
 
-    // Every outline contour of a solid-colour stroke (combined/group geometry yields several), each as its raw points
+    // Every outline contour of a solid-color stroke (combined/group geometry yields several), each as its raw points
     // plus whether it is a closed loop. False (CPU fallback) only for a non-solid brush or a geometry with no contour.
     private static bool TryGetSolidContours(Pen pen, Geometry geometry, out List<(Adamantium.Mathematics.Vector2[] Points, bool IsClosed)> contours)
     {
@@ -193,7 +193,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     }
 
     // Analytic AA: build a GPU coverage fringe around a SOLID fill's CLOSED contours, drawn over the body for a soft
-    // ~1px edge. Only a solid-colour fill with a real closed contour gets it; otherwise no fringe (no fill AA).
+    // ~1px edge. Only a solid-color fill with a real closed contour gets it; otherwise no fringe (no fill AA).
     /// <summary>True when this unit's fringe is drawn by the INSTANCED path (one shared ring per mesh, drawn with the
     /// body's instance buffer), so building a per-unit one would draw it twice. See InstancedFillCollector.</summary>
     protected virtual bool FringeInstanced => false;
@@ -203,8 +203,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         FillFringeRenderer?.DeferDispose();
         FillFringeRenderer = null;
         if (FringeInstanced) return;
-        // A solid/gradient/pattern/noise fill gets an analytic-AA fringe (the ring is coloured by the gradient, or a flat
-        // representative colour for a procedural pattern/noise - so a tessellated procedural shape no longer has aliased
+        // A solid/gradient/pattern/noise fill gets an analytic-AA fringe (the ring is colored by the gradient, or a flat
+        // representative color for a procedural pattern/noise - so a tessellated procedural shape no longer has aliased
         // edges). Image/null fills still don't.
         if (!UseGpuFill || FillFringeEffect == null || brush is not (SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush)) return;
 
@@ -398,7 +398,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         key = fm.Key;
         mesh = fm;
         var c = solid.Color.ToVector4();
-        // same bake as the per-unit fill: colour x brush opacity x element opacity
+        // same bake as the per-unit fill: color x brush opacity x element opacity
         c.W *= (float)(solid.Opacity * (DrawCommand?.RenderData?.Opacity ?? 1.0f));
         color = c;
         return true;
@@ -523,11 +523,11 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
             GeometryRenderer.Owner = DrawCommand.Component;
         }
 
-        // Analytic-AA fringe follows the fill: cheap brush/colour change repoints it, a geometry change rebuilds it.
+        // Analytic-AA fringe follows the fill: cheap brush/color change repoints it, a geometry change rebuilds it.
         UpdateFillFringe(inputPayload.Geometry, inputPayload.Brush, rebuild, !Equals(oldBrush, inputPayload.Brush));
 
         // Stroke: geometry change -> full rebuild; pen-only change -> try a cheap uniform repoint (dash offset /
-        // thickness / colour / trim animation) on the existing GPU stroke, rebuilding only if the buffer sizes change.
+        // thickness / color / trim animation) on the existing GPU stroke, rebuilding only if the buffer sizes change.
         if (rebuild)
         {
             if (!TryUpdateStroke(inputPayload.Pen, inputPayload.Geometry)) ProcessStrokeData(inputPayload.Pen, inputPayload.Geometry);
@@ -558,7 +558,7 @@ public class LineRenderUnit : RenderUnit<LinePayload>
 
         // A line is pure stroke. RequiresBufferRebuild bundles endpoints AND pen, which would rebuild the buffers every
         // frame of a dash-offset animation. Split them: only an ENDPOINT move changes the ribbon geometry (rebuild);
-        // a pen-only change (offset/thickness/colour/trim) tries a cheap uniform repoint, rebuilding only on a size change.
+        // a pen-only change (offset/thickness/color/trim) tries a cheap uniform repoint, rebuilding only on a size change.
         var geometryChanged = !oldPayload.LineStart.Equals(inputPayload.LineStart)
                               || !oldPayload.LineEnd.Equals(inputPayload.LineEnd);
 
@@ -966,7 +966,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         }
     }
 
-    // A mosaic tile samples just its normalised sub-rect of the shared photo: squeeze the quad's 0..1 UVs into it.
+    // A mosaic tile samples just its normalized sub-rect of the shared photo: squeeze the quad's 0..1 UVs into it.
     private static void RemapSourceUv(Adamantium.Graphics.Core.Models.Mesh mesh, Rect? sourceUv)
     {
         if (sourceUv is not { } src || mesh?.UV0 == null || mesh.UV0.Length == 0) return;
@@ -980,7 +980,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
     }
 
     // BitmapSource (not just BitmapImage) so SharedSurfaceImage / RenderTargetImage also render. A live shared
-    // surface (universe→panel) is sampled directly and synchronised via its Produce/Consume timeline (see
+    // surface (universe→panel) is sampled directly and synchronized via its Produce/Consume timeline (see
     // ImageRenderComponent.SharedSource/PreRender); a regular bitmap is sampled directly.
     private ImageRenderComponent CreateImageRenderer(Adamantium.Graphics.Core.Models.Mesh mesh, BitmapSource image)
     {
@@ -1114,7 +1114,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         Payload.TextLayout.Update(GraphicsDevice);
         // Pad the text quad/RT so glyph effects (outline/glow) that reach beyond the body aren't clipped at
         // the block edges. The body stays put: the rect is grown symmetrically (origin shifted by -pad), so
-        // its centre - and thus mesh-local (0,0) where the text is anchored - is unchanged.
+        // its center - and thus mesh-local (0,0) where the text is anchored - is unchanged.
         var pad = Payload.TextLayout.EffectPadding;
         var ds = Payload.DesiredSize;
         var rectangleGeometry = new RectangleGeometry(new Rect(-pad, -pad, ds.Width + 2 * pad, ds.Height + 2 * pad));
@@ -1145,7 +1145,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
             // Same size, same params, same (re-shaped-in-place) layout instance: only the text content changed, so the
             // render target is the same size - reuse it and just re-rasterize, instead of disposing the component and
             // allocating a fresh render target. The live-text (counters/clocks) + recycled-list-row fast path; the RT
-            // allocation it skips is the dominant per-change cost. Mirrors the colour-only UpdateColors path below.
+            // allocation it skips is the dominant per-change cost. Mirrors the color-only UpdateColors path below.
             if (GeometryRenderer is TextRenderComponent reuse
                 && Payload.DesiredSize == inputPayload.DesiredSize
                 && Payload.TextLayout == inputPayload.TextLayout
@@ -1178,9 +1178,9 @@ public class TextRenderUnit : RenderUnit<TextPayload>
                  !Equals(Payload.Foreground, inputPayload.Foreground) ||
                  !Equals(Payload.Stroke, inputPayload.Stroke))
         {
-            // Geometry/layout unchanged - only the colours differ. Swap brushes and force a re-raster,
-            // reusing the existing render target (RequiresBufferRebuild ignores colours, so without this
-            // a colour-only change would never repaint). Compared against the old Payload, before reassign.
+            // Geometry/layout unchanged - only the colors differ. Swap brushes and force a re-raster,
+            // reusing the existing render target (RequiresBufferRebuild ignores colors, so without this
+            // a color-only change would never repaint). Compared against the old Payload, before reassign.
             ((TextRenderComponent)GeometryRenderer).UpdateColors(
                 inputPayload.Background, inputPayload.Foreground, inputPayload.Stroke);
         }

@@ -43,7 +43,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    /// <summary>When that ground is painted: while there is no picture (the default), under the picture as well, or
    /// never. A switch rather than a rule decided here, because both answers are wanted - a placeholder gets out of the
-   /// way when the picture arrives, a letterbox colour must not.</summary>
+   /// way when the picture arrives, a letterbox color must not.</summary>
    public static readonly AdamantiumProperty BackgroundStateProperty = AdamantiumProperty.Register(
       nameof(BackgroundState), typeof(ImageBackgroundState), typeof(Image),
       new PropertyMetadata(ImageBackgroundState.WhenEmpty, PropertyMetadataOptions.AffectsRender));
@@ -185,7 +185,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    }
 
    // A DRAWING source only. It is MUTABLE and nobody else is watching it: the property system re-renders when a
-   // BRUSH-valued property changes, but Source is an ImageSource, so recolouring a shape three levels down inside the
+   // BRUSH-valued property changes, but Source is an ImageSource, so recoloring a shape three levels down inside the
    // drawing would otherwise never reach this element. Every other source kind is immutable and needs none of this.
    private void WatchDrawing(object oldSource, object newSource)
    {
@@ -200,7 +200,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       }
    }
 
-   // A drawing changing is a SHAPE change, not a recolour of the same commands - the replay emits different geometry -
+   // A drawing changing is a SHAPE change, not a recolor of the same commands - the replay emits different geometry -
    // so this re-records rather than re-baking the paint.
    private void OnDrawingChanged(object sender, EventArgs e) => InvalidateRender(false);
 
@@ -374,7 +374,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          {
             // In the headless designer there is no real clock, so register with the design-time clock the live previewer
             // ticks (a static shot leaves it un-ticked -> frame 0). At runtime, register the frame ticker with the
-            // loop-thread heartbeat (AnimationManager) - marshalled via Dispatcher.Post because this async continuation
+            // loop-thread heartbeat (AnimationManager) - marshaled via Dispatcher.Post because this async continuation
             // may resume on a thread-pool thread and AnimationManager, like the render loop, is single-threaded.
             if (Design.IsDesignMode)
                DesignTimeMediaClock.Register(this);
@@ -633,7 +633,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       var session = context.ForControl(this);
 
       // A DRAWING source draws itself: its shapes are replayed into this session through the viewbox-to-destination
-      // mapping, so it stays sharp at any size and nothing is rasterised. The cropping the raster paths do below has
+      // mapping, so it stays sharp at any size and nothing is rasterized. The cropping the raster paths do below has
       // nothing to crop here - the fitted rect already carries the Stretch decision.
       if (image is DrawingImage drawing)
       {
@@ -687,9 +687,9 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       _tiling.Viewport = Viewport;
       _tiling.ViewportUnits = ViewportUnits;
 
-      // The FILTER is what this control has always called its tint - a colour multiplied into every sampled pixel -
+      // The FILTER is what this control has always called its tint - a color multiplied into every sampled pixel -
       // and the brush says the same thing in its own words. White is "leave it alone", which is both defaults.
-      _tiling.Tint = FilterBrush is SolidColorBrush colour ? colour.Color : Colors.White;
+      _tiling.Tint = FilterBrush is SolidColorBrush color ? color.Color : Colors.White;
 
       return _tiling;
    }

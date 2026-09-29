@@ -5,10 +5,10 @@
     <!-- DataContext is the InstancingViewModel. A big virtualized grid of star polygons (arbitrary tessellated fill = NOT
          an SDF batch, unlike the Layout tab's rounded rectangles). Every star is authored with the SAME local Points at
          the SAME size, so all their meshes are byte-identical: with RETAINED_INSTANCING=1 the visible window collapses to
-         ONE instanced draw (shared mesh + per-instance world/colour), which is the whole point being validated here. -->
+         ONE instanced draw (shared mesh + per-instance world/color), which is the whole point being validated here. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="600 star polygons — identical tessellated mesh, per-item colour (non-SDF fill)."/>
+            <TextBlock Text="600 star polygons — identical tessellated mesh, per-item color (non-SDF fill)."/>
             <TextBlock Text="Identical star meshes batch automatically into ONE instanced draw (geometry-identity instancing)."
                        Foreground="#94A3B8" Margin="0,4,0,0"/>
         </StackPanel>
@@ -29,7 +29,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <!-- Fixed 5-point star in a 48x48 local box (Points are element-local, so the mesh is identical for
-                         every item; the grid position is the per-instance world transform, the colour the per-instance tint). -->
+                         every item; the grid position is the per-instance world transform, the color the per-instance tint). -->
                     <Polygon Points="24,2 29.3,16.7 44.9,17.2 32.6,26.8 36.9,41.8 24,33 11.1,41.8 15.4,26.8 3.1,17.2 18.7,16.7"
                              Fill="{Binding Color, Converter={conv:StringToBrushConverter}}"
                              Width="48" Height="48"

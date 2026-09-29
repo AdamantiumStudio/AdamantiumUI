@@ -524,10 +524,10 @@ public class InfiniteCanvasTests
         Assert.That(stroke.Points, Has.Count.EqualTo(2));
     }
 
-    // Going TO something: centred and filling the viewport. This is how a list of what is on the plane finds an item
+    // Going TO something: centered and filling the viewport. This is how a list of what is on the plane finds an item
     // that was left far outside it.
     [Test]
-    public void ZoomingToAnItemCentresItAndFillsTheView()
+    public void ZoomingToAnItemCentersItAndFillsTheView()
     {
         var canvas = Sized();
         var item = new ShapeItem(CanvasShape.Rectangle, new Rect(4000, 4000, 100, 100), Brushes.White, 1);

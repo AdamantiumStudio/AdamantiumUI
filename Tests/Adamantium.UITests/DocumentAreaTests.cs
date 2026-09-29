@@ -7,7 +7,7 @@ namespace Adamantium.UITests;
 
 /// <summary>
 /// The document area splits WITHIN ITSELF and every part of it stays a document. A tool may be dropped into
-/// the area, but the area itself is never dragged into a tool - the centre of editing is a PLACE, not a panel.
+/// the area, but the area itself is never dragged into a tool - the center of editing is a PLACE, not a panel.
 /// </summary>
 [TestFixture]
 public class DocumentAreaTests
@@ -106,7 +106,7 @@ public class DocumentAreaTests
         });
     }
 
-    /// <summary>No part of the document area folds away: there is no edge in the centre to fold against.</summary>
+    /// <summary>No part of the document area folds away: there is no edge in the center to fold against.</summary>
     [Test]
     public void NoPartOfTheArea_CanBeFoldedAway()
     {
@@ -155,7 +155,7 @@ public class DocumentAreaTests
         {
             Assert.That(layout.ActiveWellGroup("right"), Is.SameAs(rightGroup), "active on the right -> the right half");
             Assert.That(layout.ActiveWellGroup("left"), Is.SameAs(leftGroup), "active on the left -> the left half");
-            // A tool (or nothing) is active: no half is being worked in, so the old behaviour stands.
+            // A tool (or nothing) is active: no half is being worked in, so the old behavior stands.
             Assert.That(layout.ActiveWellGroup(null), Is.SameAs(leftGroup), "nothing active -> the first group");
             Assert.That(layout.ActiveWellGroup("inspector"), Is.SameAs(leftGroup), "a TOOL active -> the first group");
         });
@@ -185,7 +185,7 @@ public class DocumentAreaTests
     // A tool alone in its own window's center is dressed as a document, as is anything dropped beside it; docking to its
     // side makes both tools again.
     [Test]
-    public void ATOOLCarriedIntoItsOwnWindow_StandsInThatWindowsCentre()
+    public void ATOOLCarriedIntoItsOwnWindow_StandsInThatWindowsCenter()
     {
         var layout = Editor("scene", "game");
 
@@ -198,13 +198,13 @@ public class DocumentAreaTests
             Assert.That(layout.IsDocument(layout.FindGroup("scene")), Is.True, "and home is unchanged");
         });
 
-        // Something docked BESIDE it out there: now there is a centre and a side, and the side is a tool.
+        // Something docked BESIDE it out there: now there is a center and a side, and the side is a tool.
         Assert.That(layout.MovePane("game", torn.Content, DockZone.Right, size: PaneLength.Pixels(240), beside: true),
             Is.True);
 
         Assert.Multiple(() =>
         {
-            Assert.That(layout.IsDocument(layout.FindGroup("inspector")), Is.True, "the centre is still the centre");
+            Assert.That(layout.IsDocument(layout.FindGroup("inspector")), Is.True, "the center is still the center");
             Assert.That(layout.IsDocument(layout.FindGroup("game")), Is.False, "what went to the side is a tool");
         });
     }
@@ -235,10 +235,10 @@ public class DocumentAreaTests
         });
     }
 
-    /// <summary>A floating window that has been SPLIT docks back whole: dropped on a centre indicator, everything it
+    /// <summary>A floating window that has been SPLIT docks back whole: dropped on a center indicator, everything it
     /// holds becomes tabs of the target. Refused, the only way back was one tab at a time.</summary>
     [Test]
-    public void AWindowHoldingASplit_DocksBackWholeOntoTheCentre()
+    public void AWindowHoldingASplit_DocksBackWholeOntoTheCenter()
     {
         var layout = Editor("scene", "game", "console");
         var documents = layout.FindGroup("scene");

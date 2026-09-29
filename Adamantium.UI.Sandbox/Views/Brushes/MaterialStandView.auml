@@ -4,7 +4,7 @@
     <!-- Navigated into the brushes tab's region under the key "Material"; the DataContext is the tab's own view-model.
          Unlike every other brush here these have nothing of their own to show: they are made of what is BEHIND them. So
          the stand is built the other way round - the controls change not only the material but WHAT IT SITS OVER,
-         because a backdrop over a flat colour proves nothing at all. -->
+         because a backdrop over a flat color proves nothing at all. -->
     <StackPanel Orientation="Vertical">
         <TextBlock Text="Material brush — the fill is what is behind it" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" MarginBottom="24">
@@ -143,7 +143,7 @@
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Tint}">
-                    <TextBlock Text="Tint strength — glass takes its colour from behind, so keep it low there"
+                    <TextBlock Text="Tint strength — glass takes its color from behind, so keep it low there"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Minimum="0" Maximum="1" Value="{Binding MaterialTintOpacity, Mode=TwoWay}" Width="240"/>
@@ -157,7 +157,7 @@
                      there, turning the light changes nothing. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Surface}">
-                    <TextBlock Text="Grain scale — px per fibre clump, per scratch of the grinding, or per annual ring"
+                    <TextBlock Text="Grain scale — px per fiber clump, per scratch of the grinding, or per annual ring"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Minimum="1" Maximum="40" Value="{Binding MaterialGrainScale, Mode=TwoWay}" Width="240"/>
@@ -196,10 +196,10 @@
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Nap}">
-                    <TextBlock Text="Cloth colour" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="Cloth color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialNapColor, Mode=TwoWay}" MarginBottom="10"/>
 
-                    <TextBlock Text="Sheen colour — the light caught on the tips of the fibres"
+                    <TextBlock Text="Sheen color — the light caught on the tips of the fibers"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialSheenColor, Mode=TwoWay}" MarginBottom="10"/>
                 </StackPanel>
@@ -213,7 +213,7 @@
                     <DropDown ItemsSource="{Binding MetalPresets}" SelectedItem="{Binding MetalPreset, Mode=TwoWay}"
                               Width="270" MarginBottom="10"/>
 
-                    <TextBlock Text="Metal colour — grey is steel, yellow is gold, pink is copper"
+                    <TextBlock Text="Metal color — gray is steel, yellow is gold, pink is copper"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialMetalColor, Mode=TwoWay}" MarginBottom="10"/>
 
@@ -222,7 +222,7 @@
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialEnvironmentColor, Mode=TwoWay}" MarginBottom="10"/>
                 </StackPanel>
 
-                <!-- WOOD. Two colours rather than one: a ring is a broad pale band closed by a narrow dark one, and the
+                <!-- WOOD. Two colors rather than one: a ring is a broad pale band closed by a narrow dark one, and the
                      contrast between them is what tells oak from walnut. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Wood}">
@@ -277,7 +277,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="Tint colour" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="Tint color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialTint, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>

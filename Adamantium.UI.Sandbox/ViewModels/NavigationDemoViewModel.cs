@@ -58,7 +58,7 @@ public partial class NavigationDemoViewModel : TabPageViewModel
             new NavigationParameters().Add("title", $"Overlay window {++_overlayCounter}"));
 
     // A modal dialog on the overlay (dims + blocks the content behind), draggable by its title bar. Awaited: the button
-    // stays disabled while the modal is up, which is the intended modal behaviour.
+    // stays disabled while the modal is up, which is the intended modal behavior.
     [Command]
     private Task ShowOverlayModal() =>
         _dialogService.ShowDialogAsync<ConfirmDialogViewModel>(

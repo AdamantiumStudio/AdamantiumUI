@@ -15,7 +15,7 @@ public class TextPayload(
     Brush stroke,
     Matrix4x4F? localTransform = null) : IEquatable<TextPayload>, IRenderCachePolicy
 {
-    /// <summary>Where this run sits ON TOP of the element's world transform. The text quad is anchored at its own CENTRE
+    /// <summary>Where this run sits ON TOP of the element's world transform. The text quad is anchored at its own CENTER
     /// in mesh-local space and placed by the unit's transform - the text AREA only aligns the run inside the layout - so
     /// a drawing putting several runs at their own spots inside one element has nowhere else to say where they go.</summary>
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;

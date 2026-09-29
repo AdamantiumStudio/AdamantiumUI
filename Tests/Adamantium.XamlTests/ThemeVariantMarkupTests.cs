@@ -77,7 +77,7 @@ public class ThemeVariantMarkupTests
     }
 
     [Test]
-    public void ColoursReadFromMarkupAreTheOnesWritten()
+    public void ColorsReadFromMarkupAreTheOnesWritten()
     {
         var theme = AumlLoader.Load(TwoVariants).Root as Theme;
         theme!.ApplyVariant(ThemeVariant.Dark);

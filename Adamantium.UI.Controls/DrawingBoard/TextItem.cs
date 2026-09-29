@@ -45,7 +45,7 @@ public class TextItem : ICanvasItem
 
     public Brush Brush { get; set; }
 
-    /// <summary>The colour the letters are drawn in.</summary>
+    /// <summary>The color the letters are drawn in.</summary>
     public Color? Paint => (Brush as SolidColorBrush)?.Color;
 
     public void PaintWith(Color color) => Brush = new SolidColorBrush(color);

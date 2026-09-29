@@ -60,7 +60,7 @@ internal sealed class CanvasStep : ICanvasStep
         if (Same(now, box)) return;
 
         // A MOVE is exact and a resize is not always - a stroke resized back is scaled back, not restored point by
-        // point - so anything that only travelled is put back by travelling.
+        // point - so anything that only traveled is put back by traveling.
         if (Math.Abs(now.Width - box.Width) < 1e-9 && Math.Abs(now.Height - box.Height) < 1e-9)
         {
             item.Move(new Vector2(box.X - now.X, box.Y - now.Y));

@@ -76,7 +76,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     }
 
     /// <summary>The ordering levels, in priority order. Empty leaves the source's own order alone.
-    /// <para>Ignored while <see cref="CustomSort"/> is set - a comparer is the whole answer, and honouring both would
+    /// <para>Ignored while <see cref="CustomSort"/> is set - a comparer is the whole answer, and honoring both would
     /// mean guessing which one the author meant.</para></summary>
     public SortDescriptionCollection SortDescriptions { get; }
 
@@ -390,7 +390,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     int? IPagedSource.PageCount => PageCount;
 
-    /// <summary>Turns to <paramref name="pageIndex"/>, honouring a <see cref="PageChanging"/> veto. Completed by the
+    /// <summary>Turns to <paramref name="pageIndex"/>, honoring a <see cref="PageChanging"/> veto. Completed by the
     /// time it returns: the same contract as a server source, so a pager has ONE path rather than one per kind.</summary>
     public Task<bool> MoveToPageAsync(int pageIndex)
     {

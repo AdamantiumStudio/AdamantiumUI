@@ -221,7 +221,7 @@ public class KeyTipSessionTests
         session.Begin();
         session.Press('р', 'H');
 
-        Assert.That(session.Scope, Is.SameAs(typed), "a band labelled in the user's own language wins");
+        Assert.That(session.Scope, Is.SameAs(typed), "a band labeled in the user's own language wins");
     }
 
     [Test]

@@ -39,7 +39,7 @@ public sealed class OverlayWindowManager
     public Task<object> ShowAsync(OverlayWindow window)
     {
         // Where the window opens: Manual -> its explicit Left/Top (Relative anchors the card's top-left at the offset);
-        // CenterOwner (default) -> centred, cascaded so several don't stack exactly. After opening, any Left/Top change
+        // CenterOwner (default) -> centered, cascaded so several don't stack exactly. After opening, any Left/Top change
         // (a drag or a bound view model) re-places the card via OverlayWindow.OnPositionChanged.
         var manual = window.StartupLocation == OverlayStartupLocation.Manual;
         var placement = manual ? PlacementMode.Relative : PlacementMode.Center;
@@ -56,7 +56,7 @@ public sealed class OverlayWindowManager
             _host.PopupLayer.Add(window.ScrimPopup);
         }
 
-        // The card popup: centred on the parent window, then offset for the cascade (and, later, the drag).
+        // The card popup: centered on the parent window, then offset for the cascade (and, later, the drag).
         window.HostPopup = new Popup
         {
             PlacementTarget = (UIComponent)_host,

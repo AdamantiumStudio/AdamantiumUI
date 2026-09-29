@@ -64,7 +64,7 @@ public partial class TreeDataGrid : Selector
 
     /// <summary>What the rules are painted with, or null to leave it to the theme. ONE brush for both directions: the
     /// rules ride on the cell's own border, and a border has one brush. Two would have to be two elements per cell,
-    /// which measured a third of everything the table drew - too much for a colour nobody asked to split.</summary>
+    /// which measured a third of everything the table drew - too much for a color nobody asked to split.</summary>
     public static readonly AdamantiumProperty GridLinesBrushProperty = AdamantiumProperty.Register(
         nameof(GridLinesBrush), typeof(Brush), typeof(TreeDataGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGridLinesChanged));
@@ -81,7 +81,7 @@ public partial class TreeDataGrid : Selector
         set => SetValue(GridLinesBrushProperty, value);
     }
 
-    /// <summary>What marks where a dragged column would land, or null to fall back to the table's own edge colour. The
+    /// <summary>What marks where a dragged column would land, or null to fall back to the table's own edge color. The
     /// theme names the accent: a reorder that says nothing until the column has already moved is a gesture the user has
     /// to perform twice to understand.</summary>
     public static readonly AdamantiumProperty DropIndicatorBrushProperty = AdamantiumProperty.Register(
@@ -1144,7 +1144,7 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>What a cell the search found is washed with, or null to leave it to the theme. A WASH, never a plate:
-    /// a cell holds a check box and a meaning, and a solid colour swallows both.</summary>
+    /// a cell holds a check box and a meaning, and a solid color swallows both.</summary>
     public static readonly AdamantiumProperty SearchMatchBrushProperty = AdamantiumProperty.Register(
         nameof(SearchMatchBrush), typeof(Brush), typeof(TreeDataGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSearchBrushChanged));
@@ -1167,7 +1167,7 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>What a cell holding a value its column will not accept is washed with. Named by the page like the
-    /// search washes are; unset, the theme's own colour stands.</summary>
+    /// search washes are; unset, the theme's own color stands.</summary>
     public static readonly AdamantiumProperty ValidationErrorBrushProperty = AdamantiumProperty.Register(
         nameof(ValidationErrorBrush), typeof(Brush), typeof(TreeDataGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSearchBrushChanged));
@@ -1234,7 +1234,7 @@ public partial class TreeDataGrid : Selector
         return RowValidationRule is { } rule ? rule.Validate(item) : null;
     }
 
-    // The cells take their colours when they are attached, so the ones already built have to be told.
+    // The cells take their colors when they are attached, so the ones already built have to be told.
     private static void OnSearchBrushChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) =>
         (d as TreeDataGrid)?.RefreshRealizedRows();
 
@@ -2234,7 +2234,7 @@ public partial class TreeDataGrid : Selector
 
         // Leaving a cell IS leaving its editor, so a refused value has to be answered HERE as well as on the commit.
         // Asked only at the funnel every gesture passes through - a press, a drag, an arrow key - because a block
-        // honoured by some of them and not others is a table with two current cells at once. Focus goes back to the
+        // honored by some of them and not others is a table with two current cells at once. Focus goes back to the
         // editor: the pointer took it on its way out, and an open editor without the caret cannot be answered.
         if (IsEditing && (row != EditingRow || column != EditingColumn) && !CommitEdit())
         {
@@ -2368,7 +2368,7 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>Moves the keyboard by a step, optionally dragging the selection with it (Shift+arrows); clamped at the
-    /// edges. By INDEX, not by walking realized containers - the neighbour at the edge of the window has none.</summary>
+    /// edges. By INDEX, not by walking realized containers - the neighbor at the edge of the window has none.</summary>
     public void MoveActive(int rowStep, int columnStep, bool extend = false)
     {
         var rows = Rows;

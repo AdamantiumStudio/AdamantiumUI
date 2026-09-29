@@ -389,7 +389,7 @@ public class TreeView : ItemsControl
                 return;   // not the tree's key - leave it for whoever wants it
         }
 
-        // Claimed whether or not it led anywhere: running out of rows must not hand the focus to a neighbouring control,
+        // Claimed whether or not it led anywhere: running out of rows must not hand the focus to a neighboring control,
         // and one arrow too many should not cost you your place in the tree.
         e.Handled = true;
     }
@@ -448,7 +448,7 @@ public class TreeView : ItemsControl
     }
 
     /// <summary>Put the focus on the row and bring it into view. A row the panel has not realized has no visual to focus
-    /// - but the panel can still say where it WILL be, and scrolling there materialises it (the same two-step the list
+    /// - but the panel can still say where it WILL be, and scrolling there materializes it (the same two-step the list
     /// makes, and for the same reason: a selection scrolled far out of the window otherwise goes unreachable).</summary>
     private void ShowRow(int index)
     {

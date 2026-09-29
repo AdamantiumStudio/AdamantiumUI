@@ -44,7 +44,7 @@ public class StrokeItem : ICanvasItem
 
     public Brush Brush { get; set; }
 
-    /// <summary>The colour of the ink - the stroke's brush, when it is a plain one.</summary>
+    /// <summary>The color of the ink - the stroke's brush, when it is a plain one.</summary>
     public Color? Paint => (Brush as SolidColorBrush)?.Color;
 
     public void PaintWith(Color color) => Brush = new SolidColorBrush(color);
@@ -354,7 +354,7 @@ public class StrokeItem : ICanvasItem
                     (-p0.Y + 3 * p1.Y - 3 * p2.Y + p3.Y) * t3));
     }
 
-    // TREMOR first: each point pulled toward the mean of its neighbours, twice. Not a curve through the points - a curve
+    // TREMOR first: each point pulled toward the mean of its neighbors, twice. Not a curve through the points - a curve
     // through them keeps every wobble and merely rounds it. The ends stay exactly where the pen started and stopped.
     private static StrokePoint[] Ease(List<StrokePoint> source)
     {

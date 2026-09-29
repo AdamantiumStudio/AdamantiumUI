@@ -174,7 +174,7 @@
         </StackPanel>
 
         <!-- The overlay menu: collapsed when IsMenuVisible is false (declarative DataTrigger). Themed - a card surface with
-             an accent outline, so it follows a theme/accent swap instead of hardcoded colours. -->
+             an accent outline, so it follows a theme/accent swap instead of hardcoded colors. -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Center"
                 Width="280"
                 Background="{ResourceReference CardBackgroundFillColorDefault}"

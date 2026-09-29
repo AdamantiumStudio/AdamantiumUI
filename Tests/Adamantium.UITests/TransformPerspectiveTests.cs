@@ -19,7 +19,7 @@ public class TransformPerspectiveTests
 
         Assert.That(transform.Matrix.M34, Is.Not.EqualTo(0).Within(1e-9),
             $"Perspective term lost: M34={transform.Matrix.M34}");
-        // -cos(30°)/900 ≈ -0.000962 (row-vector composition: affine rotation, then the centre-anchored w-divide).
+        // -cos(30°)/900 ≈ -0.000962 (row-vector composition: affine rotation, then the center-anchored w-divide).
         Assert.That(transform.Matrix.M34, Is.EqualTo(-0.000962).Within(1e-4));
     }
 

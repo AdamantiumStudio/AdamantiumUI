@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 // Pure, GPU-free tests of each payload's rebuild-vs-cheap-update policy. The rule everywhere:
-// a GEOMETRY change forces a buffer rebuild; colour (and, for filled shapes, pen) changes do not. Lines are
+// a GEOMETRY change forces a buffer rebuild; color (and, for filled shapes, pen) changes do not. Lines are
 // pure stroke, so their endpoints AND pen feed the rebuild decision.
 [TestFixture]
 public class PayloadPolicyTests
@@ -19,7 +19,7 @@ public class PayloadPolicyTests
     private static readonly Rect BoxB = new Rect(0, 0, 20, 20);
 
     [Test]
-    public void Rectangle_ColourOrPen_Change_IsCheapUpdate()
+    public void Rectangle_ColorOrPen_Change_IsCheapUpdate()
     {
         var a = new RectanglePayload(Brushes.Red, BoxA, new CornerRadius(0), null);
         var brushOnly = new RectanglePayload(Brushes.Blue, BoxA, new CornerRadius(0), null);
@@ -41,7 +41,7 @@ public class PayloadPolicyTests
     }
 
     [Test]
-    public void Ellipse_ColourOrPen_Change_IsCheapUpdate()
+    public void Ellipse_ColorOrPen_Change_IsCheapUpdate()
     {
         var a = new EllipsePayload(Brushes.Red, BoxA, 0, 360, EllipseType.Sector, null);
         var brushOnly = new EllipsePayload(Brushes.Blue, BoxA, 0, 360, EllipseType.Sector, null);
@@ -91,16 +91,16 @@ public class PayloadPolicyTests
     }
 
     [Test]
-    public void Text_ColourChange_IsCheapUpdate_SizeChange_Rebuilds()
+    public void Text_ColorChange_IsCheapUpdate_SizeChange_Rebuilds()
     {
         var prms = new TextRenderingParameters();
         var size = new Size(100, 20);
 
         var a = new TextPayload(prms, size, null, Brushes.Red, Brushes.Transparent, Brushes.Black);
-        var colourOnly = new TextPayload(prms, size, null, Brushes.Blue, Brushes.Yellow, Brushes.White);
+        var colorOnly = new TextPayload(prms, size, null, Brushes.Blue, Brushes.Yellow, Brushes.White);
         var sizeChanged = new TextPayload(prms, new Size(200, 20), null, Brushes.Red, Brushes.Transparent, Brushes.Black);
 
-        Assert.That(a.RequiresBufferRebuild(colourOnly), Is.False, "colour-only change must use the cheap re-raster path");
+        Assert.That(a.RequiresBufferRebuild(colorOnly), Is.False, "color-only change must use the cheap re-raster path");
         Assert.That(a.RequiresBufferRebuild(sizeChanged), Is.True);
     }
 }

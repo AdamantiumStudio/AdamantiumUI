@@ -418,7 +418,7 @@ public class PropertyGrid : Control
 
     /// <summary>Writes one value to ONE object through a definition's binding - the mirror of <see cref="ValueOf"/>,
     /// and for the same kind of caller: something that knows what it wants written and has no row to write it through.
-    /// <para>Undo is that caller. A step that puts a colour back cannot go through a ROW, because by then the rows may
+    /// <para>Undo is that caller. A step that puts a color back cannot go through a ROW, because by then the rows may
     /// be showing something else entirely - or nothing.</para></summary>
     public bool WriteTo(object target, PropertyDefinition definition, object value)
     {
@@ -462,7 +462,7 @@ public class PropertyGrid : Control
             row.Definition, row.Targets);
 
         // BEFORE anything is written, because that is the only moment the previous value still exists. Whoever wants to
-        // take the edit back needs it: a colour or a width leaves no trace in a comparison of where things are, so the
+        // take the edit back needs it: a color or a width leaves no trace in a comparison of where things are, so the
         // only way to undo one is to have read it while it was still there. The grid says so and keeps nothing - what
         // becomes of it is not an inspector's business.
         ValueChanging?.Invoke(this, about);

@@ -40,7 +40,7 @@ public class ScrollViewer : ContentControl
 
     // Scroll chaining (attached, default ON): when the wheel reaches this viewer's edge in the scroll direction, DON'T
     // swallow the event - leave it unhandled so it bubbles to a parent ScrollViewer (nested lists hand off instead of
-    // dead-ending under the cursor, the classic nested-scroll annoyance). Set False for the isolated WPF behaviour.
+    // dead-ending under the cursor, the classic nested-scroll annoyance). Set False for the isolated WPF behavior.
     public static readonly AdamantiumProperty ScrollChainingProperty = AdamantiumProperty.RegisterAttached(
         "ScrollChaining", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(true));
 

@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The strip's own panel: headers in a row, and over any run of NEIGHBOURING tabs
+/// <summary>The strip's own panel: headers in a row, and over any run of NEIGHBORING tabs
 /// sharing a contextual group, that group's ledge. It replaces the TabPanel the strip borrowed until the ledges
 /// existed, so it also has to keep what that one did - above all sizing headers to their content rather than to the
 /// slot.</summary>
@@ -99,7 +99,7 @@ public class RibbonTabPanelTests
             Assert.That(a.Bounds.X, Is.EqualTo(70));
             Assert.That(b.Bounds.X, Is.EqualTo(120), "and the group's tabs are brought together");
             Assert.That(Ledges(panel), Has.Count.EqualTo(1), "one run, one ledge");
-            // The ledge is the TITLE BAND over its run; the tabs below carry their own colour and stand as tabs.
+            // The ledge is the TITLE BAND over its run; the tabs below carry their own color and stand as tabs.
             Assert.That(Ledges(panel)[0].Bounds, Is.EqualTo(new Rect(70, 0, 110, LedgeHeight)));
         });
     }

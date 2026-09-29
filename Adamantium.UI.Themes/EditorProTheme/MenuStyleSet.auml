@@ -43,7 +43,7 @@
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
                                         HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                                <!-- The shortcut, a step down in size and colour: it is a reminder, not a label. -->
+                                <!-- The shortcut, a step down in size and color: it is a reminder, not a label. -->
                                 <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorTertiary}"
                                         FontSize="{ResourceReference FontSizeCaption}"

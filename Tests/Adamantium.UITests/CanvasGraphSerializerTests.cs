@@ -39,7 +39,7 @@ public class CanvasGraphSerializerTests
 
     // WHAT A NODE IS survives the round trip on its own, with no callback at all: the kind rides on the node, so a
     // graph comes back knowing what its nodes were even where the application that opens it builds nothing itself.
-    // Without it only the SHAPE returns and every node comes back a stranger - the look restored and the behaviour not.
+    // Without it only the SHAPE returns and every node comes back a stranger - the look restored and the behavior not.
     [Test]
     public void ANodesKindComesBackWithIt()
     {

@@ -467,7 +467,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// <summary>True if this unit's fill can join the instanced batch (solid arbitrary geometry with a drawable mesh).</summary>
     public bool CanBatch(GeometryRenderUnit unit) => unit.TryGetInstancedFill(out _, out _, out _);
 
-    /// <summary>Collect one instanceable fill: append its per-instance world+colour to its key's buffer and register the
+    /// <summary>Collect one instanceable fill: append its per-instance world+color to its key's buffer and register the
     /// unit for a deferred fringe/stroke draw. False only if it can't be batched (no drawable mesh, or the instance buffer
     /// overflowed this frame) - the caller then draws that unit per-unit (fill included).</summary>
     public bool TryAdd(GeometryRenderUnit unit, Matrix4x4F local, Rect2D scissor, Rect logicalBounds, int transformSlot,
@@ -1231,7 +1231,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             _device.SetScissors(fullScissor);
         }
 
-        // The gradient instances' fringe: shared ring, same instance buffer, coloured by the gradient per fragment.
+        // The gradient instances' fringe: shared ring, same instance buffer, colored by the gradient per fragment.
         if (rec.GradKeys.Count > 0 && AnalyticAa.Enabled && AnyRing(rec.GradKeys))
         {
             SetupFringeState(projection);
@@ -1252,10 +1252,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (rec.PatKeys.Count > 0 && AnalyticAa.Enabled && AnyRing(rec.PatKeys))
         {
             // Drawn through the SHAPE effect, not the brush one: a flat ring is the solid fringe with the brush's low
-            // colour, so the address goes where the pass does.
+            // color, so the address goes where the pass does.
             SetupFringeState(projection);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, _) in rec.PatKeys)   // the ring is flat-coloured: kind does not change the pass
+            foreach (var (seg, first, count, _) in rec.PatKeys)   // the ring is flat-colored: kind does not change the pass
             {
                 if (seg.RingBuffer == null) continue;
                 _effect.InstancesAddress.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
@@ -1267,7 +1267,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         }
 
         // The textured instances' fringe: same ring, same instance buffer, and the SAME texture the body sampled - the
-        // ring samples the picture rather than taking one flat colour, so the edge is the shape's own edge.
+        // ring samples the picture rather than taking one flat color, so the edge is the shape's own edge.
         if (rec.TexKeys.Count > 0 && AnalyticAa.Enabled && AnyDrawableRing(rec.TexKeys))
         {
             SetupFringeState(projection);
@@ -1510,7 +1510,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     }
 
     /// <summary>Make this key's slots draw nothing, in place. A zeroed instance carries a zero transform slot and a zero
-    /// colour, so it covers no pixel - the same answer BlankRun gives every other family.</summary>
+    /// color, so it covers no pixel - the same answer BlankRun gives every other family.</summary>
     internal void BlankKeySlots(object key, int first, int count)
     {
         if (key is not KeySegment seg || first < 0 || count <= 0 || first + count > seg.Count) return;
@@ -1535,7 +1535,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
     /// <summary>The opacity slot this instance reads. Every unit reads one now, per-unit overlay or not: an overlay is
     /// re-issued by the CPU on each frame and is handed the current alpha before it draws (RenderCache's
-    /// RefreshOverlayFade), so the chain no longer has to sit in the baked colour to reach it.</summary>
+    /// RefreshOverlayFade), so the chain no longer has to sit in the baked color to reach it.</summary>
     private static int FadeSlotFor(GeometryRenderUnit unit) => unit.FadeSlot;
 
     /// <summary>Replace [at, at+replaced) of this key's run in that flush with a staged range: the tail of the key's own

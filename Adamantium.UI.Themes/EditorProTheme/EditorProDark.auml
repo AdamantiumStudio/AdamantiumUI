@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<!-- Editor Pro dark: muted blue-grey chrome where only the accent carries saturation. Keys match Fluent's, since
+<!-- Editor Pro dark: muted blue-gray chrome where only the accent carries saturation. Keys match Fluent's, since
      Fluent style sets are included for controls not yet redesigned. -->
 
 <ThemeVariantDefinition xmlns="http://adamantium/ui"
@@ -14,7 +14,7 @@
   </ThemeVariantDefinition.Values>
 
   <ThemeVariantDefinition.Colors>
-    <!-- Grounds: three steps, all blue-grey, all close together - depth comes from the hairlines, not from contrast. -->
+    <!-- Grounds: three steps, all blue-gray, all close together - depth comes from the hairlines, not from contrast. -->
     <PaletteColor Key="SolidBackgroundFillColorBase" Color="#14181D"/>
     <PaletteColor Key="SolidBackgroundFillColorSecondary" Color="#11151A"/>
     <PaletteColor Key="SolidBackgroundFillColorTertiary" Color="#1A1F26"/>
@@ -67,7 +67,7 @@
     <PaletteColor Key="SystemFillColorCritical" Color="#FF8A93"/>
 
     <!-- The close button's own fills. Its hover has to be a SATURATED ground - the one place in the chrome that shouts,
-         because the cost of the click is losing the session. The signal colour above is text on a dark ground and is
+         because the cost of the click is losing the session. The signal color above is text on a dark ground and is
          far too pale to be a fill; these are separate for that reason, not a duplicate. -->
     <PaletteColor Key="CloseButtonFillPointerOver" Color="#C42B1C"/>
     <PaletteColor Key="CloseButtonFillPressed" Color="#8E2018"/>
@@ -78,7 +78,7 @@
     <PaletteColor Key="KeyTipPlateStroke" Color="#4A525B"/>
     <PaletteColor Key="KeyTipForeground" Color="#0E1116"/>
 
-    <!-- Served as raw COLOURS, not brushes: a gradient stop takes a colour. -->
+    <!-- Served as raw COLORS, not brushes: a gradient stop takes a color. -->
     <PaletteColor Key="ShimmerPeakColor" Color="#80FFFFFF" As="Color"/>
     <PaletteColor Key="ShimmerTrackColor" Color="#12FFFFFF" As="Color"/>
     <PaletteColor Key="EdgeFadeColor" Color="#E614181D" As="Color"/>

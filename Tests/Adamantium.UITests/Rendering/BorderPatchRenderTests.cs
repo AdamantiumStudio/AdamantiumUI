@@ -138,7 +138,7 @@ public class BorderPatchRenderTests
     // A paint-only change on the bordered card itself: its slot is rewritten in place. The ring has to survive being
     // re-baked through the patch path, not just through a walk.
     [Test]
-    public void RecolouringABorderedCard_KeepsItsRing()
+    public void RecoloringABorderedCard_KeepsItsRing()
     {
         using var scene = NewScene();
         var ringBefore = BorderPixels(Pixels(scene.Renderer));
@@ -158,7 +158,7 @@ public class BorderPatchRenderTests
     // A neighbor's unit count going 0 -> 1 takes the splice path; a newcomer ranked inside a segment's span needs the
     // segment cut at its rank.
     [Test]
-    public void ANeighbourAppearing_LandsOnTopOfTheCard_NotUnderIt()
+    public void ANeighborAppearing_LandsOnTopOfTheCard_NotUnderIt()
     {
         using var scene = NewScene();
         Assert.That(BorderPixels(Pixels(scene.Renderer)), Is.GreaterThan(0), "the setup must actually draw rings");
@@ -204,7 +204,7 @@ public class BorderPatchRenderTests
     // ...and again, with the newcomer VANISHING - the other half of the splice, where a run is excised and what follows
     // is renumbered down. Repeated on purpose: the arena reuses freed blocks, so the second lap hands out a USED slot.
     [Test]
-    public void ANeighbourComingAndGoing_LeavesEveryRingIntact()
+    public void ANeighborComingAndGoing_LeavesEveryRingIntact()
     {
         using var scene = NewScene();
         var ringBefore = BorderPixels(Pixels(scene.Renderer));

@@ -16,7 +16,7 @@
         <Setter Property="BackgroundPressed" Value="{ResourceReference ControlFillColorTertiary}"/>
         <!-- The accent as a WASH: a row draws its own tile, and in a layered interface that tile is translucent - under
              a solid accent it has nothing to survive with, so every selected row read as a plain slab. The label keeps
-             its ordinary colour for the same reason: the ground under it is now tinted, not replaced. -->
+             its ordinary color for the same reason: the ground under it is now tinted, not replaced. -->
         <Setter Property="BackgroundSelected" Value="{ThemeResource AccentFillColorSelection}"/>
         <Setter Property="ForegroundSelected" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>

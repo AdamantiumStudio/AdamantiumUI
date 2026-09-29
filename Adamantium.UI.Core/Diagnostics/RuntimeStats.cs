@@ -221,7 +221,7 @@ public static class RuntimeStats
 
     /// <summary>What the placement actually TOUCHED. A frame that placed TWO structural marks and spent 77ms doing it is
     /// not paying per mark, so the question is how many sibling lists it walked - the same "runs x children" shape a
-    /// neighbour-map rewrite already fixed once in this file. Scans is the sum of every child list re-read.</summary>
+    /// neighbor-map rewrite already fixed once in this file. Scans is the sum of every child list re-read.</summary>
     public static long LastRecordPlanScans;
 
     /// <summary>...and WHICH of the three sibling-list readers did it. One counter said a million children were re-read

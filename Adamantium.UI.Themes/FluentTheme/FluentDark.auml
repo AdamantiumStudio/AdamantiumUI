@@ -67,13 +67,13 @@
     <PaletteColor Key="KeyTipPlateFill" Color="#F2F2F2"/>
     <PaletteColor Key="KeyTipPlateStroke" Color="#5A5A5A"/>
     <PaletteColor Key="KeyTipForeground" Color="#101010"/>
-    <!-- Served as raw COLOURS, not brushes: a gradient stop takes a colour. As brushes they would not
+    <!-- Served as raw COLORS, not brushes: a gradient stop takes a color. As brushes they would not
          resolve at all, and the surfaces using them would paint nothing. -->
     <PaletteColor Key="ShimmerPeakColor" Color="#99FFFFFF" As="Color"/>
     <PaletteColor Key="ShimmerTrackColor" Color="#14FFFFFF" As="Color"/>
     <PaletteColor Key="EdgeFadeColor" Color="#E6161616" As="Color"/>
     <PaletteColor Key="EdgeFadeColorTransparent" Color="#00161616" As="Color"/>
-    <!-- What ACRYLIC is tinted with. A colour and not a brush because it goes into MaterialBrush.TintColor, and darker
+    <!-- What ACRYLIC is tinted with. A color and not a brush because it goes into MaterialBrush.TintColor, and darker
          than the solid surfaces it replaces on purpose: the tint is laid over whatever the surface happens to be
          standing on, so it has to carry the contrast a menu's text needs even above a pale document. -->
     <PaletteColor Key="AcrylicFillColorDefault" Color="#2C2C2C" As="Color"/>

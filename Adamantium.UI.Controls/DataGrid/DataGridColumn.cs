@@ -23,7 +23,7 @@ public abstract class DataGridColumn : FundamentalUIComponent
         typeof(BindingBase), typeof(DataGridColumn), new PropertyMetadata(null, OnRowBindingChanged));
 
     /// <summary>What a cell of this column MEANS for a given row - an error, a warning, whatever the application
-    /// distinguishes. A meaning, never a colour: the theme decides what "error" looks like, and a model that handed out
+    /// distinguishes. A meaning, never a color: the theme decides what "error" looks like, and a model that handed out
     /// brushes would break the moment the theme changed.</summary>
     public static readonly AdamantiumProperty StateBindingProperty = AdamantiumProperty.Register(nameof(StateBinding),
         typeof(BindingBase), typeof(DataGridColumn), new PropertyMetadata(null, OnRowBindingChanged));
@@ -95,7 +95,7 @@ public abstract class DataGridColumn : FundamentalUIComponent
         if (d is DataGridColumn column) column.Owner?.RefreshTotals();
     }
 
-    /// <summary>Which edge this column is pinned to, if any. A pinned column LEAVES its neighbours and joins the zone
+    /// <summary>Which edge this column is pinned to, if any. A pinned column LEAVES its neighbors and joins the zone
     /// at that edge, in declaration order - the zone is a place in the layout, not a prefix of what was declared.</summary>
     public static readonly AdamantiumProperty FrozenSideProperty = AdamantiumProperty.Register(nameof(FrozenSide),
         typeof(DataGridFrozenSide), typeof(DataGridColumn),

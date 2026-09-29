@@ -61,7 +61,7 @@ internal static class FringeGeometry
     private static FringeVertex Outer(Vector2F pos, Vector2F d0, Vector2F d1) => new() { Position = pos, Dir0 = d0, Dir1 = d1 };
 
     // The two adjacent edge directions at contour point i, with Winding folded into their sign (reversing a direction
-    // reverses its 90-degree normal, which is how a hole feathers inward). Closed loop => i always has both neighbours.
+    // reverses its 90-degree normal, which is how a hole feathers inward). Closed loop => i always has both neighbors.
     private static void EdgeDirs(Vector2[] points, int i, float winding, out Vector2F d0, out Vector2F d1)
     {
         var n = points.Length;

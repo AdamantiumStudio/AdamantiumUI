@@ -21,8 +21,8 @@ public class ColorPickerButton : Control
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.Register(nameof(IsOpen),
         typeof(bool), typeof(ColorPickerButton), new PropertyMetadata(false, OnIsOpenChanged));
 
-    /// <summary>NO ONE COLOUR TO SHOW - the things this stands for hold different ones. The swatch says so instead of
-    /// painting a colour none of them has, and picking one puts that colour on all of them.</summary>
+    /// <summary>NO ONE COLOR TO SHOW - the things this stands for hold different ones. The swatch says so instead of
+    /// painting a color none of them has, and picking one puts that color on all of them.</summary>
     public static readonly AdamantiumProperty IsIndeterminateProperty = AdamantiumProperty.Register(
         nameof(IsIndeterminate), typeof(bool), typeof(ColorPickerButton), new PropertyMetadata(false));
 
@@ -41,7 +41,7 @@ public class ColorPickerButton : Control
         SelectedBrush = _swatchBrush;
     }
 
-    /// <summary>The chosen colour. Two-way: bind it to your model; the swatch and the inner picker track it and it tracks them.</summary>
+    /// <summary>The chosen color. Two-way: bind it to your model; the swatch and the inner picker track it and it tracks them.</summary>
     public Color SelectedColor
     {
         get => GetValue<Color>(SelectedColorProperty);
@@ -55,7 +55,7 @@ public class ColorPickerButton : Control
         set => SetValue(SelectedBrushProperty, value);
     }
 
-    /// <summary>Whether the colour flyout is open. Toggled by clicking the swatch; closed on an outside click.</summary>
+    /// <summary>Whether the color flyout is open. Toggled by clicking the swatch; closed on an outside click.</summary>
     public bool IsOpen
     {
         get => GetValue<bool>(IsOpenProperty);
@@ -105,7 +105,7 @@ public class ColorPickerButton : Control
 
         b._swatchBrush.Color = (Color)e.NewValue;
 
-        // A colour was chosen, so there is one to show - whoever is standing for several things has just been told to
+        // A color was chosen, so there is one to show - whoever is standing for several things has just been told to
         // put this on all of them.
         b.IsIndeterminate = false;
     }

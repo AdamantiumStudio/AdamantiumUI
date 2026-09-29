@@ -161,7 +161,7 @@ public class RibbonSizeAcrossSwapTests
     }
 
     /// <summary>
-    /// A command's icon is DATA: the shape comes from IconTemplate and the colour from the presenter's Foreground,
+    /// A command's icon is DATA: the shape comes from IconTemplate and the color from the presenter's Foreground,
     /// which a template binding takes from the button. So a button whose Foreground is transparent after a theme swap
     /// is a button you can still hover and still press, drawn at its right size, showing nothing at all.
     /// </summary>

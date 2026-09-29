@@ -90,7 +90,7 @@ public class DockRedockLayoutTests
     }
 
     /// <summary>The dock-back itself: a pane living in its own group joins another group's tabs - the very move the
-    /// compass's centre drop performs. All three tabs must then have their own place on the strip.</summary>
+    /// compass's center drop performs. All three tabs must then have their own place on the strip.</summary>
     [Test]
     public void AfterAPaneIsDockedBack_TheTabsDoNotOverlap()
     {

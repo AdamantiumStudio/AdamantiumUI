@@ -39,7 +39,7 @@ float DashTrimMask(float sTrim, float sDash, float perimeter, float dashOn, floa
     }
 
     // Distance to the two ends of the dash run this fragment belongs to. Inside a run it is that run; inside a gap it is
-    // whichever neighbouring run is nearer, so a convex cap still bulges out into the gap it faces.
+    // whichever neighboring run is nearer, so a convex cap still bulges out into the gap it faces.
     float dS = 1e9;
     float dE = 1e9;
     int dashCount = int(floor(capFlags / 32768.0));   // how many runs the pattern has; 2 is the plain ON/GAP

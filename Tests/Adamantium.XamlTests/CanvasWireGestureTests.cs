@@ -38,7 +38,7 @@ public class CanvasWireGestureTests
         themes.SetTheme(theme);
     }
 
-    private static readonly IReadOnlyList<ICanvasNodeKind> Catalogue = [new Sort("source"), new Sort("sink")];
+    private static readonly IReadOnlyList<ICanvasNodeKind> Catalog = [new Sort("source"), new Sort("sink")];
 
     private static readonly IReadOnlyList<ICanvasSocketKind> Flows = [new Carries(string.Empty), new Carries("Number")];
 
@@ -92,7 +92,7 @@ public class CanvasWireGestureTests
         {
             Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
-            NodeKinds = Catalogue,
+            NodeKinds = Catalog,
             SocketKinds = Flows
         };
 

@@ -426,12 +426,12 @@ public class ChoiceProperty : PropertyDefinition
         typeof(Type), typeof(ChoiceProperty), new PropertyMetadata(null, OnChoicesChanged));
 
     /// <summary>The property of an item that IS the value, when the list is of objects and the line binds one of their
-    /// fields - a catalogue of node kinds against a node's own word for its kind. Empty means the item itself is the
+    /// fields - a catalog of node kinds against a node's own word for its kind. Empty means the item itself is the
     /// value, which is the ordinary case.</summary>
     public static readonly AdamantiumProperty ValuePathProperty = AdamantiumProperty.Register(nameof(ValuePath),
         typeof(String), typeof(ChoiceProperty), new PropertyMetadata(null, OnChoicesChanged));
 
-    // The list a line offers ARRIVES - a page states its catalogue with a binding, and a binding is pushed after the
+    // The list a line offers ARRIVES - a page states its catalog with a binding, and a binding is pushed after the
     // panel holding the line has been built. A row made over an empty list keeps offering nothing and shows nothing for
     // the value it holds, which is a drop-down standing blank beside an object that plainly has one.
     private static void OnChoicesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
@@ -500,7 +500,7 @@ public class ChoiceProperty : PropertyDefinition
         item?.GetType().GetProperty(ValuePath)?.GetValue(item);
 }
 
-/// <summary>A <see cref="Color"/>, edited by the swatch button that opens the full picker. A colour is the one value
+/// <summary>A <see cref="Color"/>, edited by the swatch button that opens the full picker. A color is the one value
 /// nobody can type: "#3A6EA5" says nothing to the eye and three numbers say less, so the editor has to SHOW it.</summary>
 public class ColorProperty : PropertyDefinition
 {
@@ -513,7 +513,7 @@ public class ColorProperty : PropertyDefinition
 
     protected internal override void PrepareEditor(IUIComponent editor, object value)
     {
-        if (editor is ColorPickerButton swatch && value is Color colour) swatch.SelectedColor = colour;
+        if (editor is ColorPickerButton swatch && value is Color color) swatch.SelectedColor = color;
     }
 
     protected internal override object ReadEditor(IUIComponent editor) => (editor as ColorPickerButton)?.SelectedColor;
@@ -529,8 +529,8 @@ public class SolidColorBrushProperty : PropertyDefinition
         _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Swatch() });
 
     // A SWATCH SHOWING NOTHING IS STILL A SWATCH TO PRESS. Refused, the line lost its editor the moment the selected
-    // objects disagreed - and putting ONE colour on several is exactly what a colour line of a multiple selection is
-    // for. What it must not do is show a colour none of them holds, which is what IsIndeterminate says.
+    // objects disagreed - and putting ONE color on several is exactly what a color line of a multiple selection is
+    // for. What it must not do is show a color none of them holds, which is what IsIndeterminate says.
     protected internal override bool EditorCanShowNothing => true;
 
     protected internal override void PrepareEditor(IUIComponent editor, object value)
@@ -544,8 +544,8 @@ public class SolidColorBrushProperty : PropertyDefinition
 
     protected internal override object ReadEditor(IUIComponent editor) => (editor as ColorPickerButton)?.SelectedColor;
 
-    // What the line shows of a brush is its COLOUR, so that is what "the same" means here. Two objects each holding
-    // their own brush of the same colour agree as far as this line is concerned, and a row reporting otherwise would be
+    // What the line shows of a brush is its COLOR, so that is what "the same" means here. Two objects each holding
+    // their own brush of the same color agree as far as this line is concerned, and a row reporting otherwise would be
     // reporting a difference nobody can see.
     protected internal override bool SameValue(object left, object right) =>
         left is SolidColorBrush first && right is SolidColorBrush second
@@ -556,22 +556,22 @@ public class SolidColorBrushProperty : PropertyDefinition
     {
         // Never into a shared (theme) brush, which would recolor everything using it; that edit gets a new brush.
         if (current is not SolidColorBrush { IsFrozen: false, IsShared: false } brush ||
-            edited is not Color colour)
+            edited is not Color color)
         {
             return false;
         }
 
-        brush.Color = colour;
+        brush.Color = color;
         return true;
     }
 
-    // Reached only when the brush would not take the colour - it is frozen, it belongs to the theme, or there was no
+    // Reached only when the brush would not take the color - it is frozen, it belongs to the theme, or there was no
     // brush there at all. A new one then, because refusing here would be the line quietly doing nothing.
     protected internal override bool TryConvert(object edited, Type target, out object value)
     {
-        if (edited is Color colour)
+        if (edited is Color color)
         {
-            value = new SolidColorBrush(colour);
+            value = new SolidColorBrush(color);
             return true;
         }
 
@@ -676,7 +676,7 @@ public class ImageSourceProperty : PropertyDefinition
                 Owner = Owner(_line)
             });
 
-            if (path == null) return;   // cancelled is an answer, and nothing is written
+            if (path == null) return;   // canceled is an answer, and nothing is written
 
             _line.Pick(path);
         }
@@ -713,7 +713,7 @@ public class ImageSourceProperty : PropertyDefinition
     ];
 }
 
-/// <summary>A property that holds other properties: a vector, a colour, a nested object. It has no value of its own -
+/// <summary>A property that holds other properties: a vector, a color, a nested object. It has no value of its own -
 /// it opens.</summary>
 public class CompositeProperty : PropertyDefinition
 {
@@ -834,7 +834,7 @@ internal static class PropertyEditors
         HorizontalAlignment = HorizontalAlignment.Stretch
     };
 
-    // No border of its own: the swatch IS the control, and a frame around a colour changes how the colour reads.
+    // No border of its own: the swatch IS the control, and a frame around a color changes how the color reads.
     public static ColorPickerButton Swatch() => new()
     {
         MinWidth = 0,

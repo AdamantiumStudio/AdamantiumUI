@@ -126,9 +126,9 @@ public class PathItemRenderTests
 
         var at = canvas.WorldToScreen(cell);
         var i = ((int)at.Y * Dim + (int)at.X) * 4;
-        var colour = (R: pixels[i + 2], G: pixels[i + 1], B: pixels[i + 0]);
+        var color = (R: pixels[i + 2], G: pixels[i + 1], B: pixels[i + 0]);
 
-        Assert.That(colour.G, Is.LessThan(60), $"a cell of the grid came out filled: {colour}");
+        Assert.That(color.G, Is.LessThan(60), $"a cell of the grid came out filled: {color}");
     }
 
     [Test]
@@ -169,7 +169,7 @@ public class PathItemRenderTests
             return (pixels[i + 2], pixels[i + 1], pixels[i + 0]);
         }
 
-        // The world's origin is the middle of the viewport, so the ring sits centred: its body is a quarter of the way
+        // The world's origin is the middle of the viewport, so the ring sits centered: its body is a quarter of the way
         // out, its hole is the middle.
         var body = At(Dim / 2, Dim / 2 - 35);
         var hole = At(Dim / 2, Dim / 2);

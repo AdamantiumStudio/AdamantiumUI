@@ -38,7 +38,7 @@ public class MergedFluentThemeTests
     {
         // Window sets Foreground = {ResourceReference TextFillColorPrimary} and every plain TextBlock INHERITS it. If
         // that one key does not resolve, every such TextBlock has a null Foreground and the render walk throws on it -
-        // which is a blank tab, not a wrong colour. (Text inside a template survives, because a template names its own
+        // which is a blank tab, not a wrong color. (Text inside a template survives, because a template names its own
         // Foreground; that is why the tab STRIP looked fine while the tab CONTENT was empty.)
         var themes = new ThemeManager(new Adamantium.Core.DependencyInjection.AdamantiumDependencyContainer());
         _app.ThemeManager = themes;
@@ -56,7 +56,7 @@ public class MergedFluentThemeTests
     }
 
     [Test]
-    public void AnInitialisedTheme_ALREADYHASAVariant()
+    public void AnInitializedTheme_ALREADYHASAVariant()
     {
         // A new theme applies a variant itself, so accent and focus properties are never null (no manual ApplyVariant).
         var theme = new Fluent();
@@ -64,7 +64,7 @@ public class MergedFluentThemeTests
 
         Assert.That(theme.CurrentVariant, Is.EqualTo(theme.DefaultVariant));
         Assert.That(theme.AccentColor, Is.Not.Null, "the accent seed the whole ramp derives from");
-        Assert.That(theme.AccentForegroundColor, Is.Not.Null, "the colour text on an accent is drawn in");
+        Assert.That(theme.AccentForegroundColor, Is.Not.Null, "the color text on an accent is drawn in");
         Assert.That(theme.AccentFillColorDefault, Is.Not.Null);
         Assert.That(theme.FocusStrokeColorOuter, Is.Not.Null);
     }
@@ -78,7 +78,7 @@ public class MergedFluentThemeTests
     }
 
     /// <summary>Each variant is written in its OWN markup file and named by the theme as an element. That is a compiler
-    /// capability, not just a file layout: a variant root has to be recognised as something that GENERATES a class (a
+    /// capability, not just a file layout: a variant root has to be recognized as something that GENERATES a class (a
     /// fragment root generates none), and the class has to exist before the theme that names it is generated - which is
     /// not file order, since "Fluent" sorts before "FluentDark".</summary>
     [Test]
@@ -111,7 +111,7 @@ public class MergedFluentThemeTests
     }
 
     [Test]
-    public void ThePaletteCarriesEveryColourTheOldPairDeclared()
+    public void ThePaletteCarriesEveryColorTheOldPairDeclared()
     {
         var theme = new Fluent();
 
@@ -129,7 +129,7 @@ public class MergedFluentThemeTests
     }
 
     [Test]
-    public void SwitchingItsVariant_KeepsEveryBrushAndOnlyRecolours()
+    public void SwitchingItsVariant_KeepsEveryBrushAndOnlyRecolors()
     {
         var theme = new Fluent();
         theme.ApplyVariant(ThemeVariant.Dark);
@@ -146,7 +146,7 @@ public class MergedFluentThemeTests
         }
 
         var lightBackground = (theme.GetResource("SolidBackgroundFillColorBase") as SolidColorBrush)!.Color;
-        Assert.That(lightBackground, Is.Not.EqualTo(darkBackground), "...and the colours must actually have changed");
+        Assert.That(lightBackground, Is.Not.EqualTo(darkBackground), "...and the colors must actually have changed");
     }
 
     [Test]
@@ -198,7 +198,7 @@ public class MergedFluentThemeTests
     }
 
     [Test]
-    public void ARawColourFollowsTheVariantToo()
+    public void ARawColorFollowsTheVariantToo()
     {
         var theme = new Fluent();
 

@@ -264,8 +264,8 @@
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
     </Style>
 
-    <!-- A group row takes the BAND's colour, not a stripe of the zebra: it is a header for the rows under it, and the
-         stripes count the data. The colour is set on the ROW, so the pinned zone - which paints itself from the row's
+    <!-- A group row takes the BAND's color, not a stripe of the zebra: it is a header for the rows under it, and the
+         stripes count the data. The color is set on the ROW, so the pinned zone - which paints itself from the row's
          own background - follows it without knowing what a group is. -->
     <Style Selector="DataGridRow[IsGroup=true]">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
@@ -279,7 +279,7 @@
 
     <!-- A fault in the RECORD, not in any one of its cells - a "from" later than a "to". It washes the whole row for
          exactly that reason: marking one of the cells involved would name the wrong culprit. Through the row's own
-         brush, so a page that names its colour is obeyed here as it is on the cells. -->
+         brush, so a page that names its color is obeyed here as it is on the cells. -->
     <Style Selector="DataGridRow[HasValidationError=true]">
         <Setter Property="Background" Value="{Self ValidationErrorBrush}"/>
     </Style>
@@ -510,12 +510,12 @@
                             <Setter TargetName="Expander" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
                         </PropertyTrigger>
                         <!-- The accent the list uses for a selected row, so a selected cell and a selected row are the
-                             same colour. Keys are taken from the palette by NAME and an invented one resolves to
+                             same color. Keys are taken from the palette by NAME and an invented one resolves to
                              nothing, silently - which is how a selection can end up drawing no selection at all. -->
                         <!-- The selection is a WASH of the accent, not a plate: a cell holds controls and meanings - a
                              check box, a state painted red - and a solid accent swallows both. -->
                         <!-- FOUND by the search. A wash of its own, so a hit reads as a hit and not as a selection,
-                             and the cell the search is ON takes the solid colour - the way a browser marks the hit you
+                             and the cell the search is ON takes the solid color - the way a browser marks the hit you
                              are standing on apart from the rest it found. Declared BEFORE the selection so a cell that
                              is both still reads as selected. -->
                         <PropertyTrigger Property="IsSearchMatch" Value="true">
@@ -529,7 +529,7 @@
 
                         <!-- ...and the one the search is ON wins even over that: stepping to a match SELECTS it - that
                              is what takes the keyboard there and scrolls it into view - so a current match is always
-                             selected, and behind the selection its own colour would never once be seen. -->
+                             selected, and behind the selection its own color would never once be seen. -->
                         <PropertyTrigger Property="IsCurrentSearchMatch" Value="true">
                             <Setter TargetName="CellBorder" Property="Background"
                                     Value="{TemplateBinding SearchCurrentBrush}"/>
@@ -554,10 +554,10 @@
                             <!-- ...the whole of it, top to bottom - see Fluent's set. -->
                             <Setter TargetName="PART_ContentPresenter" Property="VerticalAlignment" Value="Stretch"/>
                         </PropertyTrigger>
-                        <!-- What the view-model called an error. A MEANING from the model, a colour from here. -->
+                        <!-- What the view-model called an error. A MEANING from the model, a color from here. -->
                         <!-- The three meanings a table normally distinguishes. A column states them through
                              StateBinding or works them out with a StateRule; what they LOOK like is decided here, which
-                             is the whole reason a rule returns a meaning and not a colour. -->
+                             is the whole reason a rule returns a meaning and not a color. -->
                         <PropertyTrigger Property="State" Value="Error">
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                                     Value="{ObservableResource SystemFillColorCritical}"/>
@@ -741,7 +741,7 @@
         </Setter>
     </Style>
 
-    <!-- The row that stands for a group. NOT tinted: the pinned zone is painted from the ROW's own colour, and a
+    <!-- The row that stands for a group. NOT tinted: the pinned zone is painted from the ROW's own color, and a
          caption with a plate of its own would break in two at the zone's edge. Weight and the glyph carry it instead. -->
     <!-- The sorting strip. Built like the grouping one because it IS the same act - a header is carried into a band and
          the band says what the table now does - and because a user who has learned one has learned the other. What it
@@ -897,7 +897,7 @@
     </Style>
 
     <!-- A total, in the strip under the table and in a group's header. Right-aligned and set apart from a cell by
-         COLOUR: it is a conclusion about the column, not one more of its values, and this engine has no font weight to
+         COLOR: it is a conclusion about the column, not one more of its values, and this engine has no font weight to
          say so with. -->
     <Style Selector="DataGridFooterCell">
         <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>

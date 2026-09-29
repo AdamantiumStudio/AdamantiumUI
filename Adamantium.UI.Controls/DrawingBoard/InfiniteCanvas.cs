@@ -479,7 +479,7 @@ public partial class InfiniteCanvas : Control
         set => SetValue(NodeKindsProperty, value);
     }
 
-    /// <summary>The catalogue of node kinds changed - what the palette rebuilds its sections on.</summary>
+    /// <summary>The catalog of node kinds changed - what the palette rebuilds its sections on.</summary>
     public event EventHandler NodeKindsChanged;
 
     private static void OnNodeKindsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -501,7 +501,7 @@ public partial class InfiniteCanvas : Control
         set => SetValue(SocketKindsProperty, value);
     }
 
-    /// <summary>The catalogue of socket kinds changed - what the line that names what a socket carries offers.</summary>
+    /// <summary>The catalog of socket kinds changed - what the line that names what a socket carries offers.</summary>
     public event EventHandler SocketKindsChanged;
 
     private static void OnSocketKindsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -547,7 +547,7 @@ public partial class InfiniteCanvas : Control
     private static readonly IReadOnlyList<CanvasCurve> Curving =
         [CanvasCurve.Bezier, CanvasCurve.BSpline, CanvasCurve.Nurbs];
 
-    // A PICTURE's own catalogues. Every one of them is a brush's property: what is offered is the whole of what the
+    // A PICTURE's own catalogs. Every one of them is a brush's property: what is offered is the whole of what the
     // engine can paint a picture with, so a plane is not a poorer place to use a texture than a window is.
     private static readonly IReadOnlyList<Stretch> Filling =
         [Stretch.Fill, Stretch.Uniform, Stretch.UniformToFill, Stretch.None];
@@ -688,8 +688,8 @@ public partial class InfiniteCanvas : Control
     }
 
     // ...and the plane is DRAWN AGAIN. Something was done, undone or put back, and the only thing every one of those
-    // has in common is that the memory moved: an inspector writing a colour leaves no trace in where anything is, so
-    // this is what makes the wire hanging off a recoloured socket follow it without anybody wiring the two together.
+    // has in common is that the memory moved: an inspector writing a color leaves no trace in where anything is, so
+    // this is what makes the wire hanging off a recolored socket follow it without anybody wiring the two together.
     private void OnHistoryMoved(object sender, EventArgs e)
     {
         Refresh();
@@ -1230,7 +1230,7 @@ public partial class InfiniteCanvas : Control
         {
             var item = forward ? _selection[_selection.Count - 1 - i] : _selection[i];
 
-            if (Neighbour(shown, item, forward) is { } neighbour) scene.MoveNextTo(item, neighbour, forward);
+            if (Neighbor(shown, item, forward) is { } neighbor) scene.MoveNextTo(item, neighbor, forward);
         }
     }
 
@@ -1244,14 +1244,14 @@ public partial class InfiniteCanvas : Control
 
         foreach (var item in _selection)
         {
-            if (Neighbour(shown, item, forward) != null) return true;
+            if (Neighbor(shown, item, forward) != null) return true;
         }
 
         return false;
     }
 
     // The nearest item on that side of the paint order whose box overlaps this one - not simply the next in the list.
-    private static ICanvasItem Neighbour(List<ICanvasItem> shown, ICanvasItem item, bool forward)
+    private static ICanvasItem Neighbor(List<ICanvasItem> shown, ICanvasItem item, bool forward)
     {
         var at = shown.IndexOf(item);
 
@@ -1402,7 +1402,7 @@ public partial class InfiniteCanvas : Control
             Owner = GetWindow()?.Handle ?? IntPtr.Zero
         });
 
-        if (chosen == null) return;   // cancelled is an answer
+        if (chosen == null) return;   // canceled is an answer
 
         var wanted = new List<ICanvasItem>();
 
@@ -1525,7 +1525,7 @@ public partial class InfiniteCanvas : Control
 
     // What a command's answer depends on has just moved, so every bound button asks again. EVERY command that answers
     // from the selection or from the plane belongs in this list: one left out is a button that was asked once, while
-    // nothing was selected, and stays grey for the rest of the session however much is picked afterwards.
+    // nothing was selected, and stays gray for the rest of the session however much is picked afterwards.
     private void Refresh()
     {
         _undo?.RaiseCanExecuteChanged();

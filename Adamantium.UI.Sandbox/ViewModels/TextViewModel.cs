@@ -21,7 +21,7 @@ public partial class TextViewModel : TabPageViewModel
     // Toggles the floating-label (watermark) effect on the editable TextBoxes live.
     [Bindable] private bool _floatingWatermark = true;
 
-    // Bound by a Run's Foreground - demonstrates that a Run's colour is bindable too, not just its text.
+    // Bound by a Run's Foreground - demonstrates that a Run's color is bindable too, not just its text.
     [Bindable] private Brush _accentBrush = new SolidColorBrush("#22D3EE");
 
     public string CharInfo => $"  ({Message?.Length ?? 0} chars)";

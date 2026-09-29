@@ -207,7 +207,7 @@ public sealed class CanvasGraphRunner : IDisposable
 
     private void OnNode(object sender, PropertyChangedEventArgs e)
     {
-        // WHERE a node sits, what it is called and what colour it wears are not what it computes. Hearing those would
+        // WHERE a node sits, what it is called and what color it wears are not what it computes. Hearing those would
         // work the graph out at every pixel of a drag across the plane.
         if (e.PropertyName != nameof(ICanvasNode.Specialization) || sender is not ICanvasNode node) return;
 
@@ -277,7 +277,7 @@ public sealed class CanvasGraphRunner : IDisposable
         return narrowed;
     }
 
-    // A NODE'S OWN STATE: a number typed, a colour picked. That node is worth working out again, and what it feeds
+    // A NODE'S OWN STATE: a number typed, a color picked. That node is worth working out again, and what it feeds
     // follows from it.
     private void OnState(ICanvasNode node)
     {

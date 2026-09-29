@@ -46,7 +46,7 @@ public sealed class Aura : AdamantiumComponent
         set => SetValue(RadiusProperty, value);
     }
 
-    /// <summary>Pixels of FULL-strength colour before the fade starts - a solid rim the falloff begins outside of.</summary>
+    /// <summary>Pixels of FULL-strength color before the fade starts - a solid rim the falloff begins outside of.</summary>
     public double Spread
     {
         get => GetValue<double>(SpreadProperty);
@@ -59,7 +59,7 @@ public sealed class Aura : AdamantiumComponent
         set => SetValue(ColorProperty, value);
     }
 
-    /// <summary>Multiplies the colour's own alpha - the knob to reach for when animating the glow on and off.</summary>
+    /// <summary>Multiplies the color's own alpha - the knob to reach for when animating the glow on and off.</summary>
     public double Opacity
     {
         get => GetValue<double>(OpacityProperty);
@@ -75,8 +75,8 @@ public sealed class Aura : AdamantiumComponent
     }
 
     // --- Living aura -------------------------------------------------------------------------------------------------
-    // A still glow is a rim of colour; a LIVING one breathes - the reach wanders along the outline and drifts over time,
-    // and the colour travels a palette. Opt-in by setting Turbulence (and usually Flow): at zero this is exactly the
+    // A still glow is a rim of color; a LIVING one breathes - the reach wanders along the outline and drifts over time,
+    // and the color travels a palette. Opt-in by setting Turbulence (and usually Flow): at zero this is exactly the
     // cheap band above, drawn by the plain pass, paying nothing for a feature it is not using.
 
     public static readonly AdamantiumProperty TurbulenceProperty = AdamantiumProperty.Register(nameof(Turbulence),
@@ -128,7 +128,7 @@ public sealed class Aura : AdamantiumComponent
         set => SetValue(DetailProperty, value);
     }
 
-    /// <summary>The colours it travels through, sampled by the wander rather than by any direction - which is what makes
+    /// <summary>The colors it travels through, sampled by the wander rather than by any direction - which is what makes
     /// it read as ALIVE rather than as a gradient. Empty (the default) means the single <see cref="Color"/>.</summary>
     public GradientStopCollection Palette
     {

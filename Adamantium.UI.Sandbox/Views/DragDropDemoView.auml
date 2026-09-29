@@ -16,7 +16,7 @@
             <Button Content="Open drop window (cross-window test)" Command="{Binding OpenDropWindowCommand}"
                     Width="280" Height="32"/>
             <!-- DragCursor: Animals' DragOverCommand overrides the shape the engine picks from Effects. Tick it, pick a
-                 shape, and drag anything over Animals - the whole standard catalogue is in the list. -->
+                 shape, and drag anything over Animals - the whole standard catalog is in the list. -->
             <CheckBox Content="Override cursor over Animals" IsChecked="{Binding OverrideDragCursor, Mode=TwoWay}"
                       MarginLeft="24" VerticalAlignment="Center"/>
             <DropDown ItemsSource="{Binding CursorTypes}" SelectedItem="{Binding DragCursorType, Mode=TwoWay}"

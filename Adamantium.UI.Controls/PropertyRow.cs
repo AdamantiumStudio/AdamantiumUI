@@ -201,7 +201,7 @@ public class PropertyRow : Control
     }
 
     // EVERY OBJECT'S OWN VALUE, not the row's. A write INTO a value edits the object that holds it and nothing else -
-    // the row's copy belongs to the first of them, so a colour written that way landed on one shape of a selection and
+    // the row's copy belongs to the first of them, so a color written that way landed on one shape of a selection and
     // left the rest as they were.
     internal bool WriteInto(object edited)
     {
@@ -371,7 +371,7 @@ public class PropertyRow : Control
         var first = _values[0].Value;
         for (var i = 1; i < _values.Count; i++)
         {
-            // The DEFINITION says what "the same" means: two brushes of one colour are two instances, and comparing
+            // The DEFINITION says what "the same" means: two brushes of one color are two instances, and comparing
             // them here would make the row report a difference nobody can see.
             if (Definition?.SameValue(_values[i].Value, first) ?? Equals(_values[i].Value, first)) continue;
 
@@ -651,8 +651,8 @@ public class PropertyRow : Control
         else Commit();
     }
 
-    // A colour is chosen by DRAGGING inside the picker, so this fires all the way through the gesture rather than once
-    // at the end. That is wanted: the object being inspected follows the pointer, which is the whole reason a colour is
+    // A color is chosen by DRAGGING inside the picker, so this fires all the way through the gesture rather than once
+    // at the end. That is wanted: the object being inspected follows the pointer, which is the whole reason a color is
     // picked visually instead of typed.
     private void OnSwatchPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {

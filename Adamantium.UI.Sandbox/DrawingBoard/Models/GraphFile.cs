@@ -19,7 +19,7 @@ public static class GraphFile
     {
         public int Version { get; set; }
 
-        /// <summary>WHICH CATALOGUE this graph was made with. A file read back with somebody else's kinds finds nothing
+        /// <summary>WHICH CATALOG this graph was made with. A file read back with somebody else's kinds finds nothing
         /// by those words and comes back as a plane of blank nodes, which reads as a broken file rather than as the
         /// wrong one - so the set is written down and checked.</summary>
         public string Set { get; set; } = string.Empty;
@@ -99,7 +99,7 @@ public static class GraphFile
         return JsonSerializer.Serialize(saved, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    /// <summary>Reads one back with the given catalogue, replacing what is there. Says what stopped it and changes
+    /// <summary>Reads one back with the given catalog, replacing what is there. Says what stopped it and changes
     /// nothing when it cannot: text this version does not understand, or a graph made with another set of kinds.
     /// </summary>
     public static string Read(string text, TrackingCollection<ICanvasNode> nodes, GraphNodeSet set)
@@ -116,7 +116,7 @@ public static class GraphFile
 
         if (saved == null || saved.Version != Version) return "that file is not a graph this version can read";
 
-        // THE WRONG CATALOGUE is not a broken file, and saying so is the difference between "this needs the shading
+        // THE WRONG CATALOG is not a broken file, and saying so is the difference between "this needs the shading
         // nodes" and a plane of nodes that are blank for no visible reason.
         if (!string.IsNullOrEmpty(saved.Set) && set != null && saved.Set != set.Name)
         {
@@ -138,10 +138,10 @@ public static class GraphFile
                 Width = written.Width,
                 IsCollapsed = written.Collapsed,
                 // The file's own color, and the kind's when the file has none - a graph written before colors existed
-                // comes back looking like a new one rather than grey.
+                // comes back looking like a new one rather than gray.
                 Accent = Paint(written.Accent) ?? set?.Named(written.Kind)?.Accent,
 
-                // The catalogue makes the inside, the same as a pick from the palette does, and the file's own state is
+                // The catalog makes the inside, the same as a pick from the palette does, and the file's own state is
                 // read into it. Sockets come with it and are then replaced by the ones written down, which carry names
                 // a person may have changed.
                 Specialization = State(written, set)
@@ -233,7 +233,7 @@ public static class GraphFile
             }
 
             // The SHAPE is this version's, not the file's - the file carries what a person set, and what sockets a Mix
-            // has is what the catalogue says today.
+            // has is what the catalog says today.
             read.In = fresh.In;
             read.Out = fresh.Out;
             read.Takes = fresh.Takes;

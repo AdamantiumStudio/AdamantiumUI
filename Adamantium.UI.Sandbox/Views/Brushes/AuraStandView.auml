@@ -118,7 +118,7 @@
                                    Value="{Binding AuraOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
                 <CheckBox Content="Inner (glow inward — needs no margin at all)" IsChecked="{Binding AuraInner, Mode=TwoWay}" MarginBottom="6"/>
-                <TextBlock Text="Colour" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="Color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding AuraColor, Mode=TwoWay}" MarginBottom="14"/>
 
                 <!-- LIVING: at Turbulence 0 this is the still band above and the living pass is never reached, so a
@@ -149,7 +149,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraDetail, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <CheckBox Content="Palette — travel four colours instead of one" IsChecked="{Binding AuraPalette, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox Content="Palette — travel four colors instead of one" IsChecked="{Binding AuraPalette, Mode=TwoWay}" MarginBottom="6"/>
                 <StackPanel Orientation="Vertical" Visibility="{Binding AuraPalette, Converter={conv:BoolToVisibilityConverter}}">
                     <TextBlock Text="The four it travels through" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
@@ -205,7 +205,7 @@
                                    Value="{Binding ShadowOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
                 <CheckBox Content="Inner (inset — the pressed look)" IsChecked="{Binding ShadowInner, Mode=TwoWay}" MarginBottom="6"/>
-                <TextBlock Text="Colour" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="Color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding ShadowColor, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>

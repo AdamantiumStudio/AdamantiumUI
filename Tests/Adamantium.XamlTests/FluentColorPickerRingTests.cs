@@ -59,12 +59,12 @@ public class FluentColorPickerRingTests
         return picker;
     }
 
-    // Grey stands on the left edge, so half of the ring is outside the square - the half that has to take a press too.
+    // Gray stands on the left edge, so half of the ring is outside the square - the half that has to take a press too.
     [Test]
     public void TheHalfOfTheRingOutsideTheSquare_CanBeTaken()
     {
-        var grey = new Color(128, 128, 128, 255);
-        var picker = Built(grey);
+        var gray = new Color(128, 128, 128, 255);
+        var picker = Built(gray);
         var area = (MeasurableUIComponent)picker.GetTemplateChild("PART_SVArea");
         var ring = (MeasurableUIComponent)picker.GetTemplateChild("PART_SVThumb");
 
@@ -82,7 +82,7 @@ public class FluentColorPickerRingTests
             RoutedEvent = Mouse.MouseMoveEvent
         });
 
-        Assert.That(picker.SelectedColor, Is.Not.EqualTo(grey), "the press on the ring did not start a drag");
+        Assert.That(picker.SelectedColor, Is.Not.EqualTo(gray), "the press on the ring did not start a drag");
     }
 
     private static Vector2 Origin(IUIComponent element, IUIComponent within)
@@ -106,8 +106,8 @@ public class FluentColorPickerRingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(ring.Bounds.X, Is.EqualTo(area.Bounds.X - ring.ActualWidth / 2).Within(0.5), "not centred on the left edge");
-            Assert.That(ring.Bounds.Y, Is.EqualTo(area.Bounds.Y - ring.ActualHeight / 2).Within(0.5), "not centred on the top edge");
+            Assert.That(ring.Bounds.X, Is.EqualTo(area.Bounds.X - ring.ActualWidth / 2).Within(0.5), "not centered on the left edge");
+            Assert.That(ring.Bounds.Y, Is.EqualTo(area.Bounds.Y - ring.ActualHeight / 2).Within(0.5), "not centered on the top edge");
 
             for (var parent = ring.VisualParent; parent != null && parent != picker; parent = parent.VisualParent)
             {

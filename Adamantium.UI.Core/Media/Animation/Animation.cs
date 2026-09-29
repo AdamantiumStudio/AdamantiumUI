@@ -5,7 +5,7 @@ namespace Adamantium.UI.Core.Media.Animation;
 
 /// <summary>
 /// A keyframe animation (CSS <c>@keyframes</c> analog, own implementation): interpolates the double properties named in
-/// its <see cref="KeyFrames"/>' setters through those keyframes over <see cref="Duration"/>, honouring
+/// its <see cref="KeyFrames"/>' setters through those keyframes over <see cref="Duration"/>, honoring
 /// <see cref="Delay"/>, <see cref="IterationCount"/> (<see cref="double.PositiveInfinity"/> = loop) and
 /// <see cref="AutoReverse"/> (ping-pong). Start it with <see cref="Apply"/>.
 /// </summary>
@@ -25,7 +25,7 @@ public class Animation
     /// <summary>Easing applied across the iteration's timeline; null means linear.</summary>
     public IEasingFunction Easing { get; set; }
 
-    /// <summary>The keyframes, by <see cref="KeyFrame.Cue"/> (order is normalised at run time). Markup content, so
+    /// <summary>The keyframes, by <see cref="KeyFrame.Cue"/> (order is normalized at run time). Markup content, so
     /// they are written directly inside &lt;Animation&gt;.</summary>
     [Content]
     public List<KeyFrame> KeyFrames { get; } = new();

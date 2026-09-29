@@ -110,7 +110,7 @@
                                         Content="{TemplateBinding Title}"
                                         FontSize="{ResourceReference FontSizeCaption}"
                                         Foreground="{ObservableResource TextFillColorSecondary}"/>
-                                <!-- Square, so the two line up with each other and sit centred in the header without
+                                <!-- Square, so the two line up with each other and sit centered in the header without
                                      anyone counting paddings - but at this theme's size, not a finger's. -->
                                 <Button x:Name="PART_AutoHideButton" Grid.Column="1"
                                         Width="{ResourceReference DockHeaderButtonSize}"
@@ -433,7 +433,7 @@
     </Style>
 
     <!-- The compass shown while a pane is being dragged. Its brushes live here rather than in the control: which of the
-         five targets is armed is said with COLOUR, and colour is the theme's business. -->
+         five targets is armed is said with COLOR, and color is the theme's business. -->
     <Style Selector="DockCompass">
         <Setter Property="IndicatorBrush" Value="{ResourceReference DockCompassFillColor}"/>
         <Setter Property="IndicatorStroke" Value="{ResourceReference DockCompassStrokeColor}"/>

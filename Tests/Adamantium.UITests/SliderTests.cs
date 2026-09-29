@@ -143,7 +143,7 @@ public class SliderTests
         {
             Assert.That(track.ActualHeight, Is.GreaterThan(0), "sanity: the track got a height");
             Assert.That(fill.RenderSize.Height, Is.GreaterThan(0), "the fill must be arranged once layout settles");
-            // Upright and reversed: the fill grows from the BOTTOM up to the thumb, so it ends where the thumb's centre is.
+            // Upright and reversed: the fill grows from the BOTTOM up to the thumb, so it ends where the thumb's center is.
             Assert.That(fill.RenderSize.Height, Is.EqualTo(track.ActualHeight - (thumb.Y + thumb.Height / 2)).Within(1.0),
                 "the accent fill must end at the thumb");
         });

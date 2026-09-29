@@ -20,7 +20,7 @@ public class CanvasNodeGroup : INotifyPropertyChanged
     /// <summary>The family's name.</summary>
     public string Title { get; }
 
-    /// <summary>The kinds in it, in the order the catalogue gave them.</summary>
+    /// <summary>The kinds in it, in the order the catalog gave them.</summary>
     public IReadOnlyList<ICanvasNodeKind> Kinds { get; }
 
     /// <summary>Whether the section is open. Open to begin with: a palette that has to be unfolded before anything can

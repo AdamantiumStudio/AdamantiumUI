@@ -62,7 +62,7 @@
             <TextBlock Text="{Binding PriorityStatus}" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </StackPanel>
 
-        <!-- ItemTemplate DropDown: each row (and the header) renders a colour swatch + name, not plain text. -->
+        <!-- ItemTemplate DropDown: each row (and the header) renders a color swatch + name, not plain text. -->
         <StackPanel Orientation="Horizontal">
             <DropDown ItemsSource="{Binding Palette}"
                       SelectedItem="{Binding SelectedColor, Mode=TwoWay}"

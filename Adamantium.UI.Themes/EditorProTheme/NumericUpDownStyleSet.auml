@@ -153,8 +153,8 @@
         <PropertyTrigger Property="IsManualEntryEnabled" Value="false">
             <Setter TargetName="PART_TextBox" Property="IsReadOnly" Value="true"/>
         </PropertyTrigger>
-        <!-- Disabled dims the VALUE and greys the rule. In this theme the rule is the whole frame, so it is the rule
-             that has to say it - there is no box to grey out. -->
+        <!-- Disabled dims the VALUE and grays the rule. In this theme the rule is the whole frame, so it is the rule
+             that has to say it - there is no box to gray out. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorDisabled}"/>
             <Setter TargetName="PART_TextBox" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>

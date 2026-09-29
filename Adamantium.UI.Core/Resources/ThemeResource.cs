@@ -53,7 +53,7 @@ public class ThemeResource : MarkupExtension
         expression.CloseConnection();
 
         // A TOKEN owns one contribution on the trigger stack and nothing else, so it always takes that contribution
-        // with it - a survivor on the same slot keeps its own. Standing aside here is what left a colour on a part
+        // with it - a survivor on the same slot keeps its own. Standing aside here is what left a color on a part
         // with no owner: two accent triggers share a checkbox's box, and whichever left first refreshed the other and
         // returned, so its own value stayed on the stack for good (an unticked box keeping the accent fill).
         if (priority == ValuePriority.Trigger && token != null)

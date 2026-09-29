@@ -22,11 +22,11 @@
     <sys:Double x:Key="TrafficLightsInset">20</sys:Double>
     <CornerRadius x:Key="TrafficLightRadius">6</CornerRadius>
 
-    <!-- The symbol inside a light: near-black and TRANSLUCENT, so it reads on all three colours without a per-light
-         glyph colour. Not a palette key - the lights it sits on are platform constants, so this is one too. -->
+    <!-- The symbol inside a light: near-black and TRANSLUCENT, so it reads on all three colors without a per-light
+         glyph color. Not a palette key - the lights it sits on are platform constants, so this is one too. -->
     <SolidColorBrush x:Key="TrafficLightGlyph" Color="#99000000"/>
 
-    <!-- WINDOW CORNERS. The single most recognisable number in the whole theme: a Mac window is generously rounded
+    <!-- WINDOW CORNERS. The single most recognizable number in the whole theme: a Mac window is generously rounded
          where a Windows one is barely. -->
     <CornerRadius x:Key="WindowCornerRadius">10</CornerRadius>
 

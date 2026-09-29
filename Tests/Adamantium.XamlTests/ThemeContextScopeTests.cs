@@ -161,7 +161,7 @@ public class ThemeContextScopeTests
 
         // Handing back the theme itself here looks free and is a bug: the subtree would then hold the APPLICATION's
         // brushes, so the moment the application switched variant the pinned subtree would switch with it - a pane
-        // labelled "Dark" going light because something elsewhere changed. Naming a variant has to mean nobody else
+        // labeled "Dark" going light because something elsewhere changed. Naming a variant has to mean nobody else
         // can change it, and that is only true of brushes nobody else holds.
         Assert.That(pinned, Is.Not.SameAs(theme));
 
@@ -249,7 +249,7 @@ public class ThemeContextScopeTests
     public void StylesInsideAScopeComeFromTheScopesTheme_NotTheApplications()
     {
         // Resources were the visible half; styles are the half that decides what a control IS - its template, its
-        // metrics. A scope that re-coloured a subtree but still templated it from the application's theme would be a
+        // metrics. A scope that re-colored a subtree but still templated it from the application's theme would be a
         // half-scope, and the half that was missing would be the expensive one to discover later.
         var appTheme = TwoVariantTheme("App");
         var appStyle = new Style();

@@ -320,15 +320,15 @@
 
                 <!-- WHEN THE GROUND SHOWS. A picture that leaves room - fitted by Uniform, or not chosen yet - has
                      something behind it, and whether that something is seen is not a decision to make once for
-                     everybody: a placeholder gets out of the way when the picture arrives, a letterbox colour must
+                     everybody: a placeholder gets out of the way when the picture arrives, a letterbox color must
                      not. -->
                 <ChoiceProperty Header="Ground" Binding="{Binding Painted.BackgroundState}"
                                 ItemsSource="{Ancestor CanvasInspector, Canvas.Grounds}"
-                                Description="When the background colour is painted: only while there is no picture, under it as well, or never"/>
+                                Description="When the background color is painted: only while there is no picture, under it as well, or never"/>
 
-                <!-- Multiplied into every pixel, so one grey skin serves several themes. -->
+                <!-- Multiplied into every pixel, so one gray skin serves several themes. -->
                 <SolidColorBrushProperty Header="Tint" Binding="{Binding Painted.FilterBrush}"
-                                         Description="A colour multiplied into the picture; white leaves it alone"/>
+                                         Description="A color multiplied into the picture; white leaves it alone"/>
 
                 <!-- ITS OWN SIZE, which is the one thing about a picture nobody can type: a file is 1024 by 768 and
                      there is no way to know that until it is on the plane. The lines read it; the button takes it. -->
@@ -351,8 +351,8 @@
              changes nothing. -->
         <CanvasSectionSet For="CanvasNode">
             <PropertySection Header="Node" IsExpanded="True">
-                <!-- Picked from the catalogue rather than typed: a kind is a key the loader looks up, so a typo in it
-                     is a node that comes back with its behaviour gone. The list is the same one the palette offers, so
+                <!-- Picked from the catalog rather than typed: a kind is a key the loader looks up, so a typo in it
+                     is a node that comes back with its behavior gone. The list is the same one the palette offers, so
                      the two cannot drift apart. -->
                 <ChoiceProperty Header="Kind" Binding="{Binding Model.Kind}"
                                 ItemsSource="{Ancestor CanvasInspector, Canvas.NodeKinds}" ValuePath="Kind"
@@ -360,7 +360,7 @@
                 <!-- ...and what it is CALLED, which is a label a person writes for themselves. The two are separate on
                      purpose: renaming a node must not change what it is. -->
                 <StringProperty Header="Title" Binding="{Binding Model.Title}"/>
-                <!-- A COLOUR, not a brush: what a person picks is a value the node keeps and the file saves, and the
+                <!-- A COLOR, not a brush: what a person picks is a value the node keeps and the file saves, and the
                      brush that paints the strip is made by the binding. -->
                 <ColorProperty Header="Accent" Binding="{Binding Model.Accent}"/>
                 <BooleanProperty Header="Folded" Binding="{Binding Model.IsCollapsed}"

@@ -68,8 +68,8 @@ public class GeometryDrawing : Drawing
     }
 
     // The stroke brush is watched exactly as the fill brush is below, and for the same reason: half an icon set IS a
-    // stroke - a cross, a checkmark, an arrow - and recolouring one changes the picture just as much. Only Brush was
-    // hooked, so a recoloured stroke told nobody, and whoever holds PIXELS of the drawing (a baked tile brush, a
+    // stroke - a cross, a checkmark, an arrow - and recoloring one changes the picture just as much. Only Brush was
+    // hooked, so a recolored stroke told nobody, and whoever holds PIXELS of the drawing (a baked tile brush, a
     // nine-slice) kept the old ones for good - a bake is only ever thrown away on this event.
     private static void StrokeBrushChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -88,7 +88,7 @@ public class GeometryDrawing : Drawing
         StrokeChangedCallback(a, e);
     }
 
-    // A brush mutating INTERNALLY (a recoloured fill, an animated gradient stop) changes the picture just as much as
+    // A brush mutating INTERNALLY (a recolored fill, an animated gradient stop) changes the picture just as much as
     // swapping the brush does, and the drawing is not an element, so nothing else is listening on its behalf.
     private static void BrushChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {

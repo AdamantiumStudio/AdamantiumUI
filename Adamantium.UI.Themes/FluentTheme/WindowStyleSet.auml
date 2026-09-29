@@ -2,21 +2,21 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Caption/border colours: theme defaults the user can override on the window (accent when focused, neutral when not). -->
+    <!-- Caption/border colors: theme defaults the user can override on the window (accent when focused, neutral when not). -->
     <Style Selector="Window">
         <!-- Default window background so any window (incl. a code-created custom shell) is themed, not the black clear
-             colour. An explicit Background on the window instance (e.g. MainWindow) overrides this. -->
-        <!-- COLOURS live, metrics one-shot: a resource swapped for a NEW brush (what a colour picker does) is re-resolved
+             color. An explicit Background on the window instance (e.g. MainWindow) overrides this. -->
+        <!-- COLORS live, metrics one-shot: a resource swapped for a NEW brush (what a color picker does) is re-resolved
              by {ObservableResource} and ignored by {ResourceReference}. -->
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
-        <!-- The window's own text colour. It does NOT seed the tree any more: a bare-type selector setting an
+        <!-- The window's own text color. It does NOT seed the tree any more: a bare-type selector setting an
              inheritable property is filed as a default FOR THE TYPE (ValuePriority.TypeDefault) and does not travel
-             downwards - which is what stops a window from overruling every control's own colour. Loose text is dressed
+             downwards - which is what stops a window from overruling every control's own color. Loose text is dressed
              by TextBlockStyleSet, which is where someone looking for it would look. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="TitleBarBackground" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="InactiveTitleBarBackground" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
-        <!-- Caption foreground: active = the theme's on-accent contrast colour (so title text + button glyphs read on the
+        <!-- Caption foreground: active = the theme's on-accent contrast color (so title text + button glyphs read on the
              accent-painted bar), inactive = neutral primary text. Both overridable on the window. -->
         <Setter Property="TitleBarForeground" Value="{ThemeResource AccentForegroundColor}"/>
         <Setter Property="InactiveTitleBarForeground" Value="{ObservableResource TextFillColorPrimary}"/>

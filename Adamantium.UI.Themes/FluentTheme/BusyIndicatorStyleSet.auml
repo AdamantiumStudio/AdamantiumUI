@@ -19,8 +19,8 @@
                                           Fill="Transparent"
                                           EllipseType="EdgeToEdge"/>
                         <!-- The accent arc; it is the ARC that spins. RenderTransformOrigin is a FRACTION of the element's
-                             own size, so the arc turns about its centre at ANY size the control is given - an absolute
-                             pixel centre would be correct only at the one size this template happened to be written for. -->
+                             own size, so the arc turns about its center at ANY size the control is given - an absolute
+                             pixel center would be correct only at the one size this template happened to be written for. -->
                         <Ellipse Stroke="{ThemeResource AccentFillColorDefault}"
                                           StrokeThickness="{ResourceReference BusyArcThickness}"
                                           Fill="Transparent"

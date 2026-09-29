@@ -106,7 +106,7 @@ public class BindingFallbackTests
     // "The path did not resolve" and "the source HOLDS null" are two different answers, and only the first one has
     // nothing to say. They used to arrive as the same null and both were dropped - so a source could never hand a
     // property its default back, and every "null means let the theme decide" property (a grid's rules, its search
-    // washes) was one-way in practice: a page could take the theme's colour over but never give it back.
+    // washes) was one-way in practice: a page could take the theme's color over but never give it back.
     [Test]
     public void ASourceThatHoldsNull_HandsTheTargetItsDefaultBack()
     {

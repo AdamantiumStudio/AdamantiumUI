@@ -88,7 +88,7 @@ public class RibbonGroupPanel : Panel
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        // The BLOCK is centred and every column starts on that one line - centring each column separately left a
+        // The BLOCK is centered and every column starts on that one line - centering each column separately left a
         // one-command column floating at the middle beside a three-command one.
         double tallest = 0;
         for (var i = 0; i < _columns.Count; i++)

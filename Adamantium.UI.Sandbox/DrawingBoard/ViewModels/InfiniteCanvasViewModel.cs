@@ -664,7 +664,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     /// the canvas needs no factory handed to it.</summary>
     public IReadOnlyList<ICanvasNodeKind> NodeKinds => NodeSet.Kinds;
 
-    /// <summary>WHICH CATALOGUE this page is holding. A page doing two jobs holds two of these and binds the one it
+    /// <summary>WHICH CATALOG this page is holding. A page doing two jobs holds two of these and binds the one it
     /// wants - the canvas is handed a list of kinds and knows nothing about sets; a saved graph records the name.
     /// </summary>
     public Models.GraphNodeSet NodeSet { get; } = Models.GraphNodeKind.Set;
@@ -933,7 +933,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
     private static readonly IReadOnlyList<FileType> GraphFiles = [new FileType("Graph", "json")];
 
-    // A dialog that cannot be shown is not a cancelled one, and the difference matters: cancelling is the user's
+    // A dialog that cannot be shown is not a canceled one, and the difference matters: canceling is the user's
     // answer and needs no report, while a platform with no dialog would leave the button doing nothing at all. Then
     // the path that was remembered stands in for the question.
     private string Asked(string chosen)

@@ -17,8 +17,8 @@ public class ColorWheel : Control
     private double _hue;
     private double _sat = 1;
     private double _val = 1;
-    private double _alpha = 1;   // the wheel doesn't EDIT alpha, but it PRESERVES it - so binding to an alpha-carrying colour (an alpha bar on the same colour) isn't clobbered opaque
-    private bool _syncing;   // guards the colour <-> hsv <-> Value fan-out from re-entering itself
+    private double _alpha = 1;   // the wheel doesn't EDIT alpha, but it PRESERVES it - so binding to an alpha-carrying color (an alpha bar on the same color) isn't clobbered opaque
+    private bool _syncing;   // guards the color <-> hsv <-> Value fan-out from re-entering itself
     private bool _dragging;
 
     private Border _wheel;
@@ -33,7 +33,7 @@ public class ColorWheel : Control
         typeof(double), typeof(ColorWheel),
         new PropertyMetadata(1.0, PropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged));
 
-    /// <summary>The picked colour. Two-way; also driven by the wheel drag and <see cref="Value"/>. The clean binding target.</summary>
+    /// <summary>The picked color. Two-way; also driven by the wheel drag and <see cref="Value"/>. The clean binding target.</summary>
     public Color SelectedColor { get => GetValue<Color>(SelectedColorProperty); set => SetValue(SelectedColorProperty, value); }
 
     /// <summary>Brightness 0..1 (the wheel only picks hue + saturation). Two-way - bind a slider to it. Dims the wheel.</summary>
@@ -112,7 +112,7 @@ public class ColorWheel : Control
         return p.X >= 0 && p.Y >= 0 && p.X <= area.ActualWidth && p.Y <= area.ActualHeight;
     }
 
-    // Pointer -> (hue, saturation): angle from the centre (0 at top, clockwise, matching the conic gradient) is hue;
+    // Pointer -> (hue, saturation): angle from the center (0 at top, clockwise, matching the conic gradient) is hue;
     // distance / radius is saturation, clamped so a drag past the rim pins saturation at 1.
     private void UpdateFromPointer()
     {
@@ -134,7 +134,7 @@ public class ColorWheel : Control
         Commit();
     }
 
-    // ---- The colour <-> hsv <-> Value fan-out --------------------------------------------------------------------
+    // ---- The color <-> hsv <-> Value fan-out --------------------------------------------------------------------
 
     private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -158,13 +158,13 @@ public class ColorWheel : Control
         wheel.Commit();
     }
 
-    // Adopt an externally-set colour into the HSV state. Hue is KEPT at grey/black (RGB can't tell it there) so the thumb
-    // doesn't snap as saturation is dragged to the centre.
+    // Adopt an externally-set color into the HSV state. Hue is KEPT at gray/black (RGB can't tell it there) so the thumb
+    // doesn't snap as saturation is dragged to the center.
     private void ApplyColor(Color color)
     {
-        // If the incoming colour is exactly what our current HSV already produces, this is the round-trip of our OWN commit
+        // If the incoming color is exactly what our current HSV already produces, this is the round-trip of our OWN commit
         // (SelectedColor -> here), not an external set - KEEP the HSV state. Re-deriving from RGB loses info the RGB can't
-        // carry (saturation is undefined at value 0 -> collapses to 0), which snapped the thumb from the rim to the centre.
+        // carry (saturation is undefined at value 0 -> collapses to 0), which snapped the thumb from the rim to the center.
         var current = HsvToColor(_hue, _sat, _val, _alpha);
         if (color.R == current.R && color.G == current.G && color.B == current.B && color.A == current.A)
         {
@@ -181,7 +181,7 @@ public class ColorWheel : Control
         }
     }
 
-    // Recompute the colour from HSV and push it to SelectedColor + Value + the visuals, guarded so none re-enters the fan-out.
+    // Recompute the color from HSV and push it to SelectedColor + Value + the visuals, guarded so none re-enters the fan-out.
     private void Commit()
     {
         var color = HsvToColor(_hue, _sat, _val, _alpha);
@@ -193,13 +193,13 @@ public class ColorWheel : Control
         if (_valueOverlay != null)
         {
             _valueOverlay.Opacity = (1 - _val) * 0.7;   // dim toward (but never fully to) black as value drops, so the hue
-                                                         // wheel stays visible/usable even when the picked colour is black
+                                                         // wheel stays visible/usable even when the picked color is black
         }
 
         UpdateThumb();
     }
 
-    // Centre the thumb on the (hue, saturation) point: hue is the angle from the top (clockwise), saturation the fraction of
+    // Center the thumb on the (hue, saturation) point: hue is the angle from the top (clockwise), saturation the fraction of
     // the radius. Uses the thumb's own measured size so the marker sits ON the point whatever size the theme gives it.
     private void UpdateThumb()
     {

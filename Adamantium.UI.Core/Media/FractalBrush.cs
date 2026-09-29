@@ -12,7 +12,7 @@ public sealed class FractalBrush : Brush
     // LIVE brush is a real owner. Set true FIRST in CreateClone, before the clone's Animate is assigned.
     private bool _suppressClock;
 
-    // PAINT, all of them: the fractal is fill-relative, so changing any of these re-colours the same pixels - never a
+    // PAINT, all of them: the fractal is fill-relative, so changing any of these re-colors the same pixels - never a
     // shape or layout change (see Brush.Opacity).
     public static readonly AdamantiumProperty FractalProperty = AdamantiumProperty.Register(nameof(Fractal),
         typeof(FractalType), typeof(FractalBrush), new PropertyMetadata(FractalType.Julia, PropertyMetadataOptions.AffectsPaint));
@@ -87,7 +87,7 @@ public sealed class FractalBrush : Brush
         }
     }
 
-    /// <summary>Complex-plane point at the centre of the fill (pan). Default origin.</summary>
+    /// <summary>Complex-plane point at the center of the fill (pan). Default origin.</summary>
     public Vector2 Center
     {
         get => GetValue<Vector2>(CenterProperty);
@@ -143,7 +143,7 @@ public sealed class FractalBrush : Brush
         }
     }
 
-    /// <summary>Colour at low escape counts (near/inside the set edge).</summary>
+    /// <summary>Color at low escape counts (near/inside the set edge).</summary>
     public Color Color1
     {
         get => GetValue<Color>(Color1Property);
@@ -154,7 +154,7 @@ public sealed class FractalBrush : Brush
         }
     }
 
-    /// <summary>Colour at high escape counts (the fast-escaping outside).</summary>
+    /// <summary>Color at high escape counts (the fast-escaping outside).</summary>
     public Color Color2
     {
         get => GetValue<Color>(Color2Property);

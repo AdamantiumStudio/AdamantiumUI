@@ -14,9 +14,9 @@ public sealed class MaterialBrush : Brush
     public static readonly AdamantiumProperty MaterialProperty = AdamantiumProperty.Register(nameof(Material),
         typeof(MaterialType), typeof(MaterialBrush), new PropertyMetadata(MaterialType.Acrylic, PropertyMetadataOptions.AffectsPaint));
 
-    // PAINT, all of them: they re-colour the same pixels and never touch shape or layout (see Brush.Opacity).
+    // PAINT, all of them: they re-color the same pixels and never touch shape or layout (see Brush.Opacity).
 
-    /// <summary>Colour laid over the blurred capture. Without it a material is just a smeared copy of the wall behind
+    /// <summary>Color laid over the blurred capture. Without it a material is just a smeared copy of the wall behind
     /// it - the tint is what gives the pane its own identity and keeps text on top readable.</summary>
     public static readonly AdamantiumProperty TintColorProperty = AdamantiumProperty.Register(nameof(TintColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(32, 34, 40, 255), PropertyMetadataOptions.AffectsPaint));
@@ -56,18 +56,18 @@ public sealed class MaterialBrush : Brush
 
     // ---- THE NAP: velvet only, and the first material properties that describe a SURFACE rather than a capture ----
 
-    /// <summary>The cloth's own colour - what velvet looks like where no light is grazing it. Deep and desaturated is
+    /// <summary>The cloth's own color - what velvet looks like where no light is grazing it. Deep and desaturated is
     /// what reads as fabric; the sheen supplies all the brightness.</summary>
     public static readonly AdamantiumProperty NapColorProperty = AdamantiumProperty.Register(nameof(NapColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(38, 20, 54, 255), PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>The colour of the grazing-angle sheen - the light caught on the tips of the fibres. Keeping it apart
+    /// <summary>The color of the grazing-angle sheen - the light caught on the tips of the fibers. Keeping it apart
     /// from <see cref="NapColor"/> is what separates dyed silk velvet from wool: the same cloth lit differently.
     /// </summary>
     public static readonly AdamantiumProperty SheenColorProperty = AdamantiumProperty.Register(nameof(SheenColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(228, 214, 255, 255), PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>How coarse the surface's grain is, in device pixels. For velvet it is the fibre clump - small is silk,
+    /// <summary>How coarse the surface's grain is, in device pixels. For velvet it is the fiber clump - small is silk,
     /// large is wool; for brushed metal it is the width of the grinding. One property for the whole surface branch,
     /// because it is one thing: the scale of the noise field whose gradient becomes the normal.</summary>
     public static readonly AdamantiumProperty GrainScaleProperty = AdamantiumProperty.Register(nameof(GrainScale),
@@ -85,7 +85,7 @@ public sealed class MaterialBrush : Brush
     public static readonly AdamantiumProperty RoughnessProperty = AdamantiumProperty.Register(nameof(Roughness),
         typeof(double), typeof(MaterialBrush), new PropertyMetadata(0.08, PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>The metal itself, as the colour it reflects at face-on incidence (F0). Grey is steel and aluminium;
+    /// <summary>The metal itself, as the color it reflects at face-on incidence (F0). Gray is steel and aluminium;
     /// warm yellows are gold and brass; pink-orange is copper. Metal only.</summary>
     public static readonly AdamantiumProperty MetalColorProperty = AdamantiumProperty.Register(nameof(MetalColor),
         typeof(Color), typeof(MaterialBrush), new PropertyMetadata(new Color(196, 200, 208, 255), PropertyMetadataOptions.AffectsPaint));

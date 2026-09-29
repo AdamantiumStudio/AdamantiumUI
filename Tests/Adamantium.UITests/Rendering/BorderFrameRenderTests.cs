@@ -57,7 +57,7 @@ public class BorderFrameRenderTests
 
     // BGRA on this target: the border is red, the fill blue, the ground black. Named rather than compared by channel at
     // each site - a test that says "red" and means "channel 2 above 128" is a test nobody can check.
-    private static string ColourAt(byte[] px, int x, int y)
+    private static string ColorAt(byte[] px, int x, int y)
     {
         var i = (y * Dim + x) * 4;
         var b = px[i]; var g = px[i + 1]; var r = px[i + 2];
@@ -71,14 +71,14 @@ public class BorderFrameRenderTests
     private static int BorderRunFromLeft(byte[] px, int y)
     {
         var run = 0;
-        while (run < Dim && ColourAt(px, run, y) == "border") run++;
+        while (run < Dim && ColorAt(px, run, y) == "border") run++;
         return run;
     }
 
     private static int BorderRunFromTop(byte[] px, int x)
     {
         var run = 0;
-        while (run < Dim && ColourAt(px, x, run) == "border") run++;
+        while (run < Dim && ColorAt(px, x, run) == "border") run++;
         return run;
     }
 
@@ -89,11 +89,11 @@ public class BorderFrameRenderTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(ColourAt(px, Dim / 2, 2), Is.EqualTo("border"), "top edge");
-            Assert.That(ColourAt(px, Dim / 2, Dim - 3), Is.EqualTo("border"), "bottom edge");
-            Assert.That(ColourAt(px, 2, Dim / 2), Is.EqualTo("border"), "left edge");
-            Assert.That(ColourAt(px, Dim - 3, Dim / 2), Is.EqualTo("border"), "right edge");
-            Assert.That(ColourAt(px, Dim / 2, Dim / 2), Is.EqualTo("fill"), "and the middle is the fill, not the border");
+            Assert.That(ColorAt(px, Dim / 2, 2), Is.EqualTo("border"), "top edge");
+            Assert.That(ColorAt(px, Dim / 2, Dim - 3), Is.EqualTo("border"), "bottom edge");
+            Assert.That(ColorAt(px, 2, Dim / 2), Is.EqualTo("border"), "left edge");
+            Assert.That(ColorAt(px, Dim - 3, Dim / 2), Is.EqualTo("border"), "right edge");
+            Assert.That(ColorAt(px, Dim / 2, Dim / 2), Is.EqualTo("fill"), "and the middle is the fill, not the border");
         });
     }
 
@@ -155,7 +155,7 @@ public class BorderFrameRenderTests
             {
                 foreach (var y in ys)
                 {
-                    Assert.That(ColourAt(batched, x, y), Is.EqualTo(ColourAt(perUnit, x, y)), $"at ({x},{y})");
+                    Assert.That(ColorAt(batched, x, y), Is.EqualTo(ColorAt(perUnit, x, y)), $"at ({x},{y})");
                 }
             }
         });

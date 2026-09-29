@@ -144,7 +144,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
         var families = new Dictionary<string, List<ICanvasTool>>();
         var order = new List<object>();
 
-        // Only what this MODE admits. A rail is the list of what the canvas can do, and half of it greyed out or doing
+        // Only what this MODE admits. A rail is the list of what the canvas can do, and half of it grayed out or doing
         // nothing says less than a shorter list that is all true.
         var mode = _canvas.Mode;
 
@@ -193,7 +193,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
                 ToolTip = Tip(tool)
             };
 
-            // On the TRAILING sides only. Two neighbours still make exactly one gap between them, whichever way the
+            // On the TRAILING sides only. Two neighbors still make exactly one gap between them, whichever way the
             // rail runs and wherever it wraps - but the first button's left and top edges stay flush, so the column of
             // tools lines up with the pane's own handles above it. Half a gap on every side put the tools two pixels
             // right of the handles, which reads as crooked and is.

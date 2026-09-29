@@ -84,7 +84,7 @@ public class RibbonAdaptiveLayoutTests
         return group;
     }
 
-    /// <summary>The shape whose ladder does NOT narrow step by step: one large command beside long-labelled mediums.
+    /// <summary>The shape whose ladder does NOT narrow step by step: one large command beside long-labeled mediums.
     /// Drop the large one and the run gains a column instead of losing width - measured on the live ribbon's "Scene"
     /// group, whose rungs cost 165, 183, 183.</summary>
     private static RibbonGroup NonMonotonicGroup()

@@ -354,7 +354,7 @@ public class CanvasConnectionTests
         canvas.Nodes = nodes;
 
         // HOW MANY SOCKETS a kind has is the application's knowledge and nobody else's - and it says so in the
-        // catalogue, which is also what makes the inside of the node that gets picked.
+        // catalog, which is also what makes the inside of the node that gets picked.
         var lerp = new Sort("Lerp");
         canvas.NodeKinds = new Adamantium.Core.Collections.TrackingCollection<ICanvasNodeKind>
         {
@@ -417,7 +417,7 @@ public class CanvasConnectionTests
         var nodes = new Adamantium.Core.Collections.TrackingCollection<ICanvasNode>();
         canvas.Nodes = nodes;
 
-        // WITH KINDS, as an application has them: what a socket carries decides its colour, and the colour is what a
+        // WITH KINDS, as an application has them: what a socket carries decides its color, and the color is what a
         // filled-in socket is filled with.
         canvas.SocketKinds = new Adamantium.Core.Collections.TrackingCollection<ICanvasSocketKind>
         {
@@ -489,7 +489,7 @@ public class CanvasConnectionTests
                 "the socket it changed places with came out drawn as empty");
             Assert.That(node.InputPins[2].IsConnected, Is.False, "a socket with no wire was filled in");
 
-            // ...and what a taken socket is filled WITH is its own colour, which is what is actually SEEN.
+            // ...and what a taken socket is filled WITH is its own color, which is what is actually SEEN.
             Assert.That(node.InputPins[0].Fill, Is.Not.Null, "the socket that moved lost its middle");
             Assert.That(node.InputPins[1].Fill, Is.Not.Null, "the one it changed places with lost its middle");
             Assert.That(node.InputPins[2].Fill, Is.Null, "an empty socket was given a middle");
@@ -499,10 +499,10 @@ public class CanvasConnectionTests
     // What a socket may carry, as an application says it: a word and what it looks like.
     private sealed class Carries : ICanvasSocketKind
     {
-        public Carries(string kind, Color? colour)
+        public Carries(string kind, Color? color)
         {
             Kind = kind;
-            Color = colour;
+            Color = color;
         }
 
         public string Kind { get; }
@@ -601,7 +601,7 @@ public class CanvasConnectionTests
         }
     }
 
-    // The application's catalogue of kinds, as a page would hand it over: a word and what a node of that sort is made
+    // The application's catalog of kinds, as a page would hand it over: a word and what a node of that sort is made
     // of.
     private sealed class Sort : ICanvasNodeKind
     {
@@ -774,10 +774,10 @@ public class CanvasConnectionTests
         return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
     }
 
-    // A wire is the colour of the socket it LEAVES, read when it is drawn and not remembered from when it was made -
-    // so recolouring the socket recolours the wire, with nothing to keep in step.
+    // A wire is the color of the socket it LEAVES, read when it is drawn and not remembered from when it was made -
+    // so recoloring the socket recolors the wire, with nothing to keep in step.
     [Test]
-    public void AWireTakesTheColourOfTheSocketItLeaves()
+    public void AWireTakesTheColorOfTheSocketItLeaves()
     {
         Use(ThemeNamed("Fluent"));
         var (left, right, _, _) = Graph();
@@ -800,7 +800,7 @@ public class CanvasConnectionTests
         wire.Render(session, canvas);
 
         Assert.That(((InkBrush)session.Rectangles[1].Brush).Color, Is.EqualTo(Colors.Lime),
-            "the wire kept the colour it was made with");
+            "the wire kept the color it was made with");
     }
 
     // Pointing AT the wire finds it, and pointing near it does not. It is a curve, so what answers is the curve and not
@@ -924,7 +924,7 @@ public class CanvasConnectionTests
         });
     }
 
-    // WHAT FLOWS decides what may be joined. A word and not the colour: the colour is how a person tells types apart
+    // WHAT FLOWS decides what may be joined. A word and not the color: the color is how a person tells types apart
     // at a glance, but two shades of one idea and one shade shared by two are both things an application may do.
     [Test]
     public void SocketsThatDisagreeAboutWhatFlowsAreNotJoined()

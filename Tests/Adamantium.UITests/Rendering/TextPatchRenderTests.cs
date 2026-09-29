@@ -129,10 +129,10 @@ public class TextPatchRenderTests
     }
 
     [Test]
-    public void PatchingOneBlock_DoesNotDisturbItsNeighbour()
+    public void PatchingOneBlock_DoesNotDisturbItsNeighbor()
     {
         // The failure this guards: a run written at the wrong offset lands in the NEXT block's glyphs. Both blocks share
-        // one batch, so a neighbour is exactly what a bad offset hits - and it looks like a font bug, not a cache bug.
+        // one batch, so a neighbor is exactly what a bad offset hits - and it looks like a font bug, not a cache bug.
         using var scene = NewScene("600 fps", "layout 0.02");
 
         scene.Blocks[0].Text = "598 fps";
@@ -140,27 +140,27 @@ public class TextPatchRenderTests
 
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the patch must be taken for this frame");
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer),
-            "the untouched neighbour must be drawn exactly as a full walk draws it");
+            "the untouched neighbor must be drawn exactly as a full walk draws it");
     }
 
-    // The count change with a NEIGHBOUR in the same batch - which is what a diagnostics plate always has, and what an
+    // The count change with a NEIGHBOR in the same batch - which is what a diagnostics plate always has, and what an
     // app always has. Re-issuing a run means everything after it in that segment shifts, so this is where an offset that
     // is right for one block on its own goes wrong: the frame keeps showing the text it had, and only something that
     // forces a walk (moving the mouse) puts the new one up.
     [Test]
-    public void GlyphCountChange_WithANeighbour_StillShowsTheNewText()
+    public void GlyphCountChange_WithANeighbor_StillShowsTheNewText()
     {
         using var scene = NewScene("600 fps", "layout 0.02");
 
         scene.Blocks[0].Text = "1200 fps";
         scene.Draw();
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "it must be spliced, not walked");
-        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the longer text AND its neighbour must be what a walk draws");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the longer text AND its neighbor must be what a walk draws");
 
         scene.Blocks[0].Text = "6 fps";
         scene.Draw();
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "...and so must the shrink");
-        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the shorter text must not leave a tail, nor move its neighbour");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the shorter text must not leave a tail, nor move its neighbor");
     }
 
     [Test]
@@ -183,9 +183,9 @@ public class TextPatchRenderTests
     }
 
     [Test]
-    public void ColourChangeAlone_IsPatched()
+    public void ColorChangeAlone_IsPatched()
     {
-        // Same glyphs, different per-instance colour: the whole point of baking foreground per instance. If this walks,
+        // Same glyphs, different per-instance color: the whole point of baking foreground per instance. If this walks,
         // every hover/selection highlight over text costs the scene a redraw.
         using var scene = NewScene("600 fps");
         var white = Pixels(scene.Renderer);
@@ -194,10 +194,10 @@ public class TextPatchRenderTests
         scene.Draw();
         var red = Pixels(scene.Renderer);
 
-        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "a colour-only text change must patch");
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "a color-only text change must patch");
         Assert.That(DifferingPixels(white, red), Is.Not.Zero,
-            "the colour really did change - otherwise this would pass on a frame that drew nothing");
-        AssertMatchesAFullWalk(scene, red, "the recoloured glyphs must match what a full walk bakes");
+            "the color really did change - otherwise this would pass on a frame that drew nothing");
+        AssertMatchesAFullWalk(scene, red, "the recolored glyphs must match what a full walk bakes");
     }
     [Test]
     public void ZZ_ProbeGlyphSplice()

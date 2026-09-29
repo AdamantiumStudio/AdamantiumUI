@@ -82,7 +82,7 @@ public class DataGridRow : Panel
         set => SetValue(AlternationIndexProperty, value);
     }
 
-    /// <summary>This row stands for a GROUP rather than for a record. A theme gives it its own colour through this -
+    /// <summary>This row stands for a GROUP rather than for a record. A theme gives it its own color through this -
     /// a caption is a header for the rows under it, not one of them.</summary>
     public static readonly AdamantiumProperty IsGroupProperty = AdamantiumProperty.Register(nameof(IsGroup),
         typeof(bool), typeof(DataGridRow), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
@@ -142,7 +142,7 @@ public class DataGridRow : Panel
 
         // A group row takes NO stripe of the zebra. The stripes count the rows of the data, so a caption that landed on
         // one band or the other by where it happened to fall in the flat list read as a mistake - and the theme gives a
-        // group its own colour anyway, which the pinned zone then follows like any other row colour.
+        // group its own color anyway, which the pinned zone then follows like any other row color.
         AlternationIndex = IsGroup ? 0 : alternationIndex;
         Number = number;
 
@@ -596,8 +596,8 @@ public class DataGridRow : Panel
     }
 
     // What scrolls passes UNDER the pinned zone and a cell is transparent, so the zone paints: the table's SURFACE,
-    // opaque, and this row's own band brush laid over it. TWO layers and not one blended colour - a blend is a
-    // SNAPSHOT, and a brush whose colour is changed in place (which is what a colour picker does to one brush object)
+    // opaque, and this row's own band brush laid over it. TWO layers and not one blended color - a blend is a
+    // SNAPSHOT, and a brush whose color is changed in place (which is what a color picker does to one brush object)
     // would leave the zone painted in the shade it was mixed at while every other row followed.
     private void SyncFrozenBackdrop()
     {

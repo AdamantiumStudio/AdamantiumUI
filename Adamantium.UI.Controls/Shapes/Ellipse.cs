@@ -112,7 +112,7 @@ public class Ellipse : Shape
    }
 
    // Tight hit test: inside the ellipse (the bounding-box corners are excluded - the main false positive), and for an
-   // unfilled ellipse only the stroke ring, not the hollow centre.
+   // unfilled ellipse only the stroke ring, not the hollow center.
    public override bool HitTestCore(Vector2 localPoint)
    {
       double rx = Rect.Width / 2.0, ry = Rect.Height / 2.0;

@@ -99,7 +99,7 @@ internal static class ImageTiling
         var sin = Math.Sin(radians);
 
         // A(-1) * R(-angle) * A, with A = diag(width, height): the turn happens in PIXELS, so it is conjugated by the
-        // shape's size on the way in and out of normalised space. Swap the two aspect factors and it shears instead.
+        // shape's size on the way in and out of normalized space. Swap the two aspect factors and it shears instead.
         var aspect = bounds.Height / bounds.Width;
 
         var m00 = cos;
@@ -107,17 +107,17 @@ internal static class ImageTiling
         var m10 = -sin / aspect;
         var m11 = cos;
 
-        // The stated centre is a fraction of the TILE; the matrix works in fractions of the SHAPE, so it is placed
+        // The stated center is a fraction of the TILE; the matrix works in fractions of the SHAPE, so it is placed
         // through the viewport first.
         var stated = brush.RotationCenter;
-        var centreX = (viewport.X - bounds.X + stated.X * viewport.Width) / bounds.Width;
-        var centreY = (viewport.Y - bounds.Y + stated.Y * viewport.Height) / bounds.Height;
+        var centerX = (viewport.X - bounds.X + stated.X * viewport.Width) / bounds.Width;
+        var centerY = (viewport.Y - bounds.Y + stated.Y * viewport.Height) / bounds.Height;
 
         tile = new Vector4F(
             tile.X,
             tile.Y,
-            (float)(tile.Z - (centreX - (m00 * centreX + m01 * centreY)) * tile.X),
-            (float)(tile.W - (centreY - (m10 * centreX + m11 * centreY)) * tile.Y));
+            (float)(tile.Z - (centerX - (m00 * centerX + m01 * centerY)) * tile.X),
+            (float)(tile.W - (centerY - (m10 * centerX + m11 * centerY)) * tile.Y));
 
         return new Vector4F((float)m00, (float)m01, (float)m10, (float)m11);
     }
@@ -175,7 +175,7 @@ internal static class ImageTiling
     }
 
     // The part of the source a tile shows, always as a 0..1 sub-rectangle - absolute units are stated in the content's
-    // own units (a picture's texels), so they are divided by its size here and the shader only ever sees normalised uv.
+    // own units (a picture's texels), so they are divided by its size here and the shader only ever sees normalized uv.
     private static Vector4F Viewbox(TileBrush brush, Size content)
     {
         var viewbox = brush.Viewbox;

@@ -40,7 +40,7 @@
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run. Its colour is the GROUP's, and that stays: it is data - which run a tab
+    <!-- The ledge over a contextual run. Its color is the GROUP's, and that stays: it is data - which run a tab
          belongs to - and not the theme's accent. -->
     <Style Selector="RibbonContextualLedge">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -121,7 +121,7 @@
                             <ContentPresenter Grid.Row="2" Content="{TemplateBinding FooterContent}"/>
 
                             <!-- An OVERLAY, not a row: a row would push the content down. The width also aligns it -
-                                 Bottom placement centres on its target. -->
+                                 Bottom placement centers on its target. -->
                             <Popup x:Name="PART_Flyout" Grid.Row="1" Placement="Bottom">
                                 <Border Width="{TemplateBinding ActualWidth}"
                                         Height="{TemplateBinding GroupsAreaHeight}"
@@ -198,7 +198,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- The label in the strip. The open one takes the BAND's own colour, so tab and band read as one surface with the
+    <!-- The label in the strip. The open one takes the BAND's own color, so tab and band read as one surface with the
          closed tabs on the window behind it - which is what a paper tab is, and it needs no rule under it to say so.
          Fluent draws an accent underline there; here the accent would be the loudest thing in the whole window and
          would be saying only "this tab is open", which the surface has already said. -->
@@ -250,8 +250,8 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- A CONTEXTUAL tab wears its run's colour, ledge AND tabs. The colour is the only thing tying a tab to the set
-         that appeared with it, and a run whose ledge alone is coloured leaves its tabs indistinguishable from the
+    <!-- A CONTEXTUAL tab wears its run's color, ledge AND tabs. The color is the only thing tying a tab to the set
+         that appeared with it, and a run whose ledge alone is colored leaves its tabs indistinguishable from the
          permanent ones the moment the eye drops a row.
          AFTER the state triggers above, so the open contextual tab keeps its context. -->
     <Style Selector="RibbonTabHeader">
@@ -262,7 +262,7 @@
     </Style>
 
     <!-- Open AND contextual: the band's own surface, like any open tab. What still says which run it belongs to is the
-         ledge directly above it and its coloured neighbours on either side - so no accent rule is added underneath,
+         ledge directly above it and its colored neighbors on either side - so no accent rule is added underneath,
          which is the one Windows mark this theme does without. -->
     <Style Selector="RibbonTabHeader">
         <MultiTrigger>
@@ -276,7 +276,7 @@
     </Style>
 
     <!-- The scroll arrows OVERLAY the row rather than taking width from it: reserving space would make the width
-         depend on the answer it produces. Each rides an opaque plate in the band's colour. -->
+         depend on the answer it produces. Each rides an opaque plate in the band's color. -->
     <Style Selector="RibbonTab">
         <Setter Property="ItemsPanel">
             <Setter.Value>
@@ -725,7 +725,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
-        <!-- Large centres (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
+        <!-- Large centers (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
              another, and a ragged left edge is the first thing the eye catches. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -768,8 +768,8 @@
                         <Grid x:Name="Layout" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                            <!-- The icon is DATA drawn by IconTemplate. Its colour travels through the presenter's
-                                 Foreground, so states recolour it without reaching into that template. -->
+                            <!-- The icon is DATA drawn by IconTemplate. Its color travels through the presenter's
+                                 Foreground, so states recolor it without reaching into that template. -->
                             <Viewbox x:Name="IconBox" Grid.Row="0" Grid.Column="0"
                                     Width="32" Height="32"
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -800,7 +800,7 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
-        <!-- The ICON greys out with the label - it is the part a person aims at. -->
+        <!-- The ICON grays out with the label - it is the part a person aims at. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
             <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
@@ -887,7 +887,7 @@
     </Style>
 
     <!-- The FILE TAB and the backstage behind it. QUIET, not accent-filled: it is the head of the row of tabs, and on
-         this platform a piece of chrome does not announce itself in the application's colour. -->
+         this platform a piece of chrome does not announce itself in the application's color. -->
     <Style Selector="RibbonApplicationMenu">
         <Setter Property="RailWidth" Value="200"/>
         <Setter Property="ItemsPanel">
@@ -924,7 +924,7 @@
                                         <!-- The rail is a SOURCE LIST - the sidebar this platform puts beside a page -
                                              so it takes the window's own surface with a hairline dividing it from the
                                              page, and its rows carry the selection. Filled with the accent it would be
-                                             a 200px slab of colour down the side of every File page. -->
+                                             a 200px slab of color down the side of every File page. -->
                                         <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto"
                                                 Width="{Ancestor RibbonApplicationMenu, RailWidth, Logical=True}"
                                                 Background="{ResourceReference SolidBackgroundFillColorBase}">
@@ -1011,7 +1011,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- The head of the strip, dressed like the tabs beside it rather than as a coloured slab. -->
+    <!-- The head of the strip, dressed like the tabs beside it rather than as a colored slab. -->
     <Style Selector="ToggleButton.RibbonFileTab">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
@@ -1063,7 +1063,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- The arrow out of the backstage, at the head of the rail. Its ring and glyph take the ordinary text colours now
+    <!-- The arrow out of the backstage, at the head of the rail. Its ring and glyph take the ordinary text colors now
          that the rail is no longer accent-filled. -->
     <Style Selector="Button.RibbonBackstageBack">
         <Setter Property="Background" Value="Transparent"/>
@@ -1145,7 +1145,7 @@
                     <Border x:Name="Chrome"
                             Background="{TemplateBinding Background}"
                             Padding="{TemplateBinding Padding}">
-                        <!-- Icon and label travel as ONE block, so centring the row centres the pair rather than
+                        <!-- Icon and label travel as ONE block, so centering the row centers the pair rather than
                              leaving the icon pinned to the edge with the label adrift. -->
                         <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -1355,7 +1355,7 @@
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                             <!-- The command's OWN padding, not a fixed one: the size triggers tighten Padding for
                                  Medium and Small, and a hardcoded value here made the split button far taller than its
-                                 neighbours - a column stretched to fit it, and the icons beside it floated in the
+                                 neighbors - a column stretched to fit it, and the icons beside it floated in the
                                  slack. -->
                             <Border x:Name="ActionArea" Grid.Row="0" Grid.Column="0"
                                     Padding="{TemplateBinding Padding}"
@@ -1452,8 +1452,8 @@
         <!-- STATED: every command strokes itself with {Ancestor RibbonQuickAccess, Foreground}, and the instance under
              the ribbon has no title bar to inherit from - without this it draws a row of invisible buttons. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <!-- Stretched, its row would sit against the TOP of the caption: the slot centres what it is given, and
-             something that fills the slot has nothing left to centre. -->
+        <!-- Stretched, its row would sit against the TOP of the caption: the slot centers what it is given, and
+             something that fills the slot has nothing left to center. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <!-- The caption is finite and shared with the window title, so the bar is given a budget rather than allowed to
              grow: what does not fit goes under the chevron instead of pushing the title off the edge. -->
@@ -1553,7 +1553,7 @@
     <!-- The bar's buttons. Fluent darkens them, because there they stand on an ACCENT caption; this theme's caption is
          the window's own surface, so they take the ordinary washes every other piece of chrome here uses. A TOGGLE
          still needs its own checked plate rather than the default accent one: at the size of a caption chip an accent
-         fill is a coloured dot with no room to say what it means. -->
+         fill is a colored dot with no room to say what it means. -->
     <Style Selector="ToggleButton.QuickAccessButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
@@ -1568,7 +1568,7 @@
     </Style>
 
     <!-- Hover in this theme is OPT-IN per class: the plain button and the plain toggle both state its absence as a
-         decision (see MacOsButtonStyleSet), so a chip that names a hover brush and no trigger names a colour nothing
+         decision (see MacOsButtonStyleSet), so a chip that names a hover brush and no trigger names a color nothing
          ever reads. Checked stays in its own style below - the two states are separate questions. -->
     <Style Selector="ToggleButton.QuickAccessButton">
         <PropertyTrigger Property="IsMouseOver" Value="true">
@@ -1595,7 +1595,7 @@
         <Setter Property="Height" Value="{ResourceReference RibbonChipHeight}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
-        <!-- The row it sits in claims the caption's FULL height, so centring the bar centres nothing - the button is
+        <!-- The row it sits in claims the caption's FULL height, so centering the bar centers nothing - the button is
              what has to stand in the middle, level with the window title. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

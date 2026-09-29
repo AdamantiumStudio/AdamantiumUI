@@ -184,7 +184,7 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>A second context, so the strip has to order two of them and draw two ledges.</summary>
     [Bindable] private bool _hasLightSelection;
 
-    /// <summary>Whether the contexts draw their ledge. Off, the colour of the tabs is the only thing saying which
+    /// <summary>Whether the contexts draw their ledge. Off, the color of the tabs is the only thing saying which
     /// belong together - and the strip stops paying the ledge row's height.</summary>
     [Bindable] private bool _showContextHeader = true;
 
@@ -192,7 +192,7 @@ public partial class RibbonShellViewModel : IWindowAware
     // collapsed and it still does not fit - is reachable by dragging the window narrow.
     [Command] private void AlignLeft() => Status = "Aligned to the left.";
 
-    [Command] private void AlignCenter() => Status = "Centred.";
+    [Command] private void AlignCenter() => Status = "Centered.";
 
     [Command] private void Distribute() => Status = "Distributed evenly.";
 
@@ -244,7 +244,7 @@ public partial class RibbonShellViewModel : IWindowAware
         QuickAccess.Add(item);
 
         // Nothing is written back to the ribbon: it is pointed at this collection (Ribbon.QuickAccessItems in the view)
-        // and recognises its own commands in it by key. A view model that kept the ribbon's control to mark it would be
+        // and recognizes its own commands in it by key. A view model that kept the ribbon's control to mark it would be
         // holding a control.
         Status = "Added to the quick-access bar.";
     }

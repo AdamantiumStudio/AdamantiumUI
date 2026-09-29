@@ -202,7 +202,7 @@ public class DockingArea : Panel
         }
     }
 
-    // Where a put-away panel would come back to, in this area's coordinates: the centre column for a band, the whole
+    // Where a put-away panel would come back to, in this area's coordinates: the center column for a band, the whole
     // tree for a side - the same targets ExpandGroup pins against, so the flyout shows the shape it will take.
     private Rect ZoneBounds(DockZone edge)
     {
@@ -273,7 +273,7 @@ public class DockingArea : Panel
     }
 
     /// <summary>Shows a put-away group's body without pinning it back - the strip stays and the body is drawn over the
-    /// neighbours. Clicking a tab in a folded strip lands here.</summary>
+    /// neighbors. Clicking a tab in a folded strip lands here.</summary>
     internal void Reveal(PaneGroup group)
     {
         var node = NodeOf(group);
@@ -596,7 +596,7 @@ public class DockingArea : Panel
         }
 
         // No room for a band down that side and no panel there to join: the well takes it. A place that always exists
-        // beats carving a sliver out of a centre already at its floor.
+        // beats carving a sliver out of a center already at its floor.
         if (zone is not DockZone.Center && (RoomFor() & zone) == 0
             && Layout.GroupAt(_root ?? Layout.Main, zone) == null)
         {
@@ -612,7 +612,7 @@ public class DockingArea : Panel
         else if (Layout.GroupAt(_root ?? Layout.Main, zone) is { } side)
         {
             // That side already has a panel: this becomes a TAB in it. Opening from code cannot see what a new column
-            // would cost, and each one took its band off the centre until the layout was a row of slivers.
+            // would cost, and each one took its band off the center until the layout was a row of slivers.
             side.Add(id);
             side.ActiveIndex = side.PaneIds.Count - 1;
 
@@ -1097,11 +1097,11 @@ public class DockingArea : Panel
 
         // EDGE anchors first: they belong to the AREA and win where they could overlap a group's cross. Asked of the
         // area, not from inside the group loop - the edges are where the put-away strips are, and tying anchors to
-        // "found a group here" hid the area's own edge behind one. Offered only while the centre can pay.
+        // "found a group here" hid the area's own edge behind one. Offered only while the center can pay.
         var edge = DockCompass.EdgeZoneAt(area, point, _compass.IndicatorSize, _compass.EdgeIndicatorInset);
         if (edge != DockZone.None && (allowed & edge) != 0 && (RoomFor() & edge) != 0)
         {
-            // A SIDE anchor splits the whole root; a TOP/BOTTOM band splits the centre column only, so it does not run
+            // A SIDE anchor splits the whole root; a TOP/BOTTOM band splits the center column only, so it does not run
             // under the sides.
             var anchor = edge is DockZone.Top or DockZone.Bottom
                 ? Layout.BandTarget(_root ?? Layout.Main)
@@ -1119,9 +1119,9 @@ public class DockingArea : Panel
         // that would then be undone.
         if ((allowed & zone) == 0) zone = DockZone.None;
 
-        // The centre's floor is NOT asked here. A cross aimed inside the document area divides the AREA
+        // The center's floor is NOT asked here. A cross aimed inside the document area divides the AREA
         // ITSELF and both halves stay documents, so the area is worth exactly what it was; a cross aimed at a
-        // tool costs that tool, which the centre has no say in. What does cost the centre is a band arriving from
+        // tool costs that tool, which the center has no say in. What does cost the center is a band arriving from
         // OUTSIDE it - that is the edge anchors above, and they are where the floor is spent.
         return new DockTarget(node, bounds, zone, DockCompass.PreviewOf(bounds, zone));
     }
@@ -1173,8 +1173,8 @@ public class DockingArea : Panel
         var node = new PaneGroupNode();
         node.Add(pane.Id);
 
-        // The new window's CENTRE is what was carried into it, whatever it was where it came from - see
-        // DockingLayout.TearOffGroup. Alone in a window, a pane stands in that window's centre and is a document there.
+        // The new window's CENTER is what was carried into it, whatever it was where it came from - see
+        // DockingLayout.TearOffGroup. Alone in a window, a pane stands in that window's center and is a document there.
         var root = new DockingRoot(node, isMain: false) { DocumentWell = node };
         Layout.Roots.Add(root);
 
@@ -1307,7 +1307,7 @@ public class DockingArea : Panel
         group.Add(id);
         group.ActiveIndex = 0;
 
-        // Standing alone in a window means standing in that window's centre, exactly as a torn-off pane does.
+        // Standing alone in a window means standing in that window's center, exactly as a torn-off pane does.
         var root = new DockingRoot(group, isMain: false) { DocumentWell = group };
         Layout.Roots.Add(root);
 
@@ -1567,7 +1567,7 @@ public class DockingArea : Panel
         }
 
         // The same answers Resolve arms the drop with, so no indicator promises what a drop then declines. The floor
-        // speaks only for the EDGE anchors: those are bands taken OUT of the centre. The cross always offers all four
+        // speaks only for the EDGE anchors: those are bands taken OUT of the center. The cross always offers all four
         // sides - over the document area it divides the area into strictly-document parts, over a tool it
         // costs that tool.
         _compass.AllowedZones = Owner._dragAllowed;
@@ -1575,8 +1575,8 @@ public class DockingArea : Panel
         _compass.AimAt(target.Bounds, target.Zone, target.IsEdge, EdgeDockSize);
     }
 
-    // Which zones there is still ROOM for: a side is not offered once it would push the centre under DocumentMinSize
-    //. Tabbing into a group and floating cost the centre nothing, so they are always on offer.
+    // Which zones there is still ROOM for: a side is not offered once it would push the center under DocumentMinSize
+    //. Tabbing into a group and floating cost the center nothing, so they are always on offer.
     private DockZone RoomFor()
     {
         // The area as a whole, however many groups it has been split into: what a tool costs is taken from
@@ -1623,7 +1623,7 @@ public class DockingArea : Panel
         // BEFORE the model is touched, and of the RECEIVING area: a veto found afterwards would mean undoing a move.
         if (area.Refuses(new PaneDockingEventArgs([..DockingLayout.PanesIn(root.Content)], target.Node, target.Zone))) return;
 
-        // Read BEFORE the move: dropping onto a centre indicator merges the dragged group away entirely (its panes
+        // Read BEFORE the move: dropping onto a center indicator merges the dragged group away entirely (its panes
         // become tabs of the target), and afterwards there is no node left to ask what was being carried.
         var carried = ActivePaneOf(root.Content as PaneGroupNode)
                       ?? DockingLayout.PanesIn(root.Content).FirstOrDefault();
@@ -1798,7 +1798,7 @@ public class DockingArea : Panel
             case PaneGroupNode group:
             {
                 // An empty group is gone - except the LAST one of the document area, which stays as empty space: closing
-                // the last document must not take the centre of the layout with it. One of two editors side
+                // the last document must not take the center of the layout with it. One of two editors side
                 // by side is ordinary and does die when emptied.
                 var isDocument = Layout.IsDocument(group);
                 if (group.IsEmpty && !ReferenceEquals(group, Well)) return null;
@@ -1928,7 +1928,7 @@ public class DockingArea : Panel
 
         for (var i = 0; i < wanted.Count; i++)
         {
-            // Splitters are interchangeable - they carry no identity, only a position between two neighbours.
+            // Splitters are interchangeable - they carry no identity, only a position between two neighbors.
             if (wanted[i] is PaneSplitter && children[i] is PaneSplitter) continue;
             if (!ReferenceEquals(children[i], wanted[i])) return false;
         }
@@ -2012,7 +2012,7 @@ public class DockingArea : Panel
         control.InvalidateMeasure();
     }
 
-    /// <summary>Space left between two neighbours for the divider that will sit there.</summary>
+    /// <summary>Space left between two neighbors for the divider that will sit there.</summary>
     public double DividerThickness { get; set; } = 4.0;
 
     // --- Tab policy -------------------------------------------------------------------------------------------------
@@ -2129,7 +2129,7 @@ public class DockingArea : Panel
         set => SetValue(EdgeDockSizeProperty, value);
     }
 
-    /// <summary>The floor under the DOCUMENT WELL along either axis: the centre pays for every tool that
+    /// <summary>The floor under the DOCUMENT WELL along either axis: the center pays for every tool that
     /// docks against it, and without a floor enough of them squeeze it out of existence.</summary>
     public static readonly AdamantiumProperty DocumentMinSizeProperty = AdamantiumProperty.Register(
         nameof(DocumentMinSize), typeof(double), typeof(DockingArea), new PropertyMetadata(200.0));

@@ -106,7 +106,7 @@ public class ImageCornerRenderTests
         });
     }
 
-    // THE GROUND IS A BRUSH, not a colour. It is drawn as an ordinary rounded-rect fill, so whatever the engine can
+    // THE GROUND IS A BRUSH, not a color. It is drawn as an ordinary rounded-rect fill, so whatever the engine can
     // fill a rect with belongs there - a gradient here, and by the same route a picture, a nine-slice, a material.
     // Worth pinning: the control's old ground handling took a SolidColorBrush and nothing else.
     [Test]
@@ -144,12 +144,12 @@ public class ImageCornerRenderTests
         {
             Assert.That(near.R + near.G + near.B, Is.GreaterThan(60), "the ground was not painted at all");
             Assert.That(near.R, Is.Not.EqualTo(far.R),
-                $"both ends of the ground are the same colour - a gradient was flattened: {near} / {far}");
+                $"both ends of the ground are the same color - a gradient was flattened: {near} / {far}");
         });
     }
 
     // ...AND THE CUT IS FADED, not stepped. Walked diagonally across the rounding: a mesh's edge jumps from nothing to
-    // the picture between two neighbouring pixels, an analytic one spends a pixel or two on the way. At least one
+    // the picture between two neighboring pixels, an analytic one spends a pixel or two on the way. At least one
     // in-between value is what separates them, and a stepped edge has none.
     [Test]
     public void AndItsEdgeIsFadedRatherThanStepped()
@@ -158,7 +158,7 @@ public class ImageCornerRenderTests
         var between = 0;
 
         // OUT FROM THE MIDDLE OF THE ROUNDING at 45 degrees, which is the one direction that certainly crosses the arc
-        // (it meets it at Radius/sqrt(2) from the centre). A walk along the corner's chord never crosses it at all -
+        // (it meets it at Radius/sqrt(2) from the center). A walk along the corner's chord never crosses it at all -
         // the arc bows away inside - and reads black the whole way, which is a test that proves nothing.
         for (var s = 0; s < Radius; s++)
         {

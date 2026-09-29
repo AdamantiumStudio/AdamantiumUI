@@ -40,12 +40,12 @@ public readonly struct LivingBand
     /// <summary>How many tongues run around the outline.</summary>
     public float Detail { get; }
 
-    /// <summary>The colour ramp, packed by the SAME packer gradients use. Null when the aura carries a single colour.</summary>
+    /// <summary>The color ramp, packed by the SAME packer gradients use. Null when the aura carries a single color.</summary>
     public Vector4F[] Palette { get; }
 
     public float[] Offsets { get; }
 
-    /// <summary>Valid entries in <see cref="Palette"/>; 0 means "use the aura's own colour".</summary>
+    /// <summary>Valid entries in <see cref="Palette"/>; 0 means "use the aura's own color".</summary>
     public int StopCount { get; }
 
     /// <summary>How far past the outline this band can reach at its widest - the wander adds to the reach, so the drawn

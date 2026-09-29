@@ -1,6 +1,6 @@
 namespace Adamantium.UI.Controls.DataGrid;
 
-/// <summary>What the table does with a value its rules refuse. Not one behaviour, because the right one depends on the
+/// <summary>What the table does with a value its rules refuse. Not one behavior, because the right one depends on the
 /// application: a form being filled in has to let a half-finished record stand and say what is wrong with it; a ledger
 /// must not take a figure that cannot be true.</summary>
 public enum DataGridValidationMode

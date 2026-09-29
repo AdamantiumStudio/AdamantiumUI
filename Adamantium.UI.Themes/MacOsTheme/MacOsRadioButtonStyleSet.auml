@@ -98,7 +98,7 @@
 
     <!-- The hover is gated on NOT being the current page. A trigger setter carries the BAND of the style that declared
          it and a class style outranks a type style, so an unguarded IsMouseOver here would sit above the inherited
-         IsChecked trigger and the page you are on would go grey the moment you pointed at it. Pressed is left to the
+         IsChecked trigger and the page you are on would go gray the moment you pointed at it. Pressed is left to the
          toggle's own triggers, which this does not contradict. -->
     <Style Selector="RadioButton.PagerPage">
         <MultiTrigger>

@@ -43,7 +43,7 @@ public class CanvasNodesSourceTests
         return node;
     }
 
-    // What an application's catalogue of kinds is: a word, and something that makes the inside of a node of that sort.
+    // What an application's catalog of kinds is: a word, and something that makes the inside of a node of that sort.
     private sealed class Sort : ICanvasNodeKind
     {
         private readonly int _inputs;
@@ -202,10 +202,10 @@ public class CanvasNodesSourceTests
         });
     }
 
-    // ...and what it is MADE of comes from the catalogue the application handed over - the shell is the engine's, the
+    // ...and what it is MADE of comes from the catalog the application handed over - the shell is the engine's, the
     // inside is the kind's. No factory is given to the control: the kinds are data.
     [Test]
-    public void TheCatalogueSaysWhatANodeIsMadeOf()
+    public void TheCatalogSaysWhatANodeIsMadeOf()
     {
         var (canvas, _, nodes) = Stage();
         canvas.NodeKinds = new TrackingCollection<ICanvasNodeKind> { new Sort("Lerp", 3, 1) };
@@ -417,7 +417,7 @@ public class CanvasNodesSourceTests
             Assert.That(to.InputPins[0].IsConnected, Is.False, "an empty socket was filled in");
         });
 
-        // ...and what a taken socket is filled WITH is its own colour, which is the pin's own doing.
+        // ...and what a taken socket is filled WITH is its own color, which is the pin's own doing.
         to.InputPins[1].Color = Adamantium.UI.Core.Media.Brushes.Red;
         Assert.That(to.InputPins[1].Fill, Is.SameAs(to.InputPins[1].Color), "a taken socket with an unpainted middle");
 
@@ -730,7 +730,7 @@ public class CanvasNodesSourceTests
         Assert.That(source.Outputs[0].Connections, Has.Count.EqualTo(2));
     }
 
-    // A PIN TAKES ITS COLOUR FROM WHAT FLOWS THROUGH IT, read off the catalogue - so every socket carrying the same
+    // A PIN TAKES ITS COLOR FROM WHAT FLOWS THROUGH IT, read off the catalog - so every socket carrying the same
     // thing looks the same, and nothing on a socket says what shade it is.
     private sealed class Carries : ICanvasSocketKind
     {
@@ -746,7 +746,7 @@ public class CanvasNodesSourceTests
     }
 
     [Test]
-    public void APinIsColouredByWhatItCarries()
+    public void APinIsColoredByWhatItCarries()
     {
         var (canvas, _, nodes) = Stage();
         canvas.SocketKinds = new TrackingCollection<ICanvasSocketKind>
@@ -809,10 +809,10 @@ public class CanvasNodesSourceTests
         });
     }
 
-    // A COLOUR is a value on the node and a brush on the strip, and the brush is made per node: written into a shared
-    // one, a node's colour took the theme's accent with it and recoloured everything else wearing it.
+    // A COLOR is a value on the node and a brush on the strip, and the brush is made per node: written into a shared
+    // one, a node's color took the theme's accent with it and recolored everything else wearing it.
     [Test]
-    public void ANodeSColourIsAValueOnItAndABrushOnTheStrip()
+    public void ANodeSColorIsAValueOnItAndABrushOnTheStrip()
     {
         var (canvas, _, nodes) = Stage();
         var model = Made("Add", 0, 0);
@@ -820,12 +820,12 @@ public class CanvasNodesSourceTests
 
         var node = (CanvasNode)canvas.ItemsHere().OfType<ElementItem>().Single().Element;
 
-        Assert.That(node.Accent, Is.Null, "a node nobody coloured was painted anyway");
+        Assert.That(node.Accent, Is.Null, "a node nobody colored was painted anyway");
 
         model.Accent = Colors.Red;
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
 
-        Assert.That(node.Accent, Is.TypeOf<Adamantium.UI.Core.Media.SolidColorBrush>(), "the colour never reached the strip");
+        Assert.That(node.Accent, Is.TypeOf<Adamantium.UI.Core.Media.SolidColorBrush>(), "the color never reached the strip");
         Assert.That(((Adamantium.UI.Core.Media.SolidColorBrush)node.Accent).Color, Is.EqualTo(Colors.Red));
     }
 
@@ -897,7 +897,7 @@ public class CanvasNodesSourceTests
         });
     }
 
-    // TOLD IT IS NOW A TEXTURE, a node becomes one: the catalogue says what the word means, the specialization is
+    // TOLD IT IS NOW A TEXTURE, a node becomes one: the catalog says what the word means, the specialization is
     // THE SAME KIND PICKED TWICE PUTS TWO NODES ON THE PLANE. A list is answered by being picked FROM, so the canvas
     // lets go of the choice the moment it has acted on it - and the list has to let go with it, or the second pick of
     // the same row is no change at all and the canvas never hears it.

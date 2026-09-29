@@ -78,7 +78,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     // Default/cancel routing: the window is the root, so unhandled Enter/Esc reach it last, after everything on the way
     // up has had its say. Enter activates the IsDefault button, Escape the IsCancel one - unless the focused element
-    // already claimed the key. WPF Window default/cancel behaviour.
+    // already claimed the key. WPF Window default/cancel behavior.
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -458,7 +458,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     // Caption background for the ACTIVE (focused) and INACTIVE window - the default template paints the TitleBar with
     // InactiveTitleBarBackground and swaps to TitleBarBackground while IsActive. Theme sets the defaults (accent / neutral);
-    // a user can override either on the window (e.g. a brand colour when focused, a custom dim when not).
+    // a user can override either on the window (e.g. a brand color when focused, a custom dim when not).
     /// <summary>Height of the custom-chrome caption. The WINDOW owns this number and the theme's title bar measures
     /// itself by it - not the other way round: code that needs the caption (positioning a window under the cursor that
     /// grabbed it, hit-testing the drag area) must not have to reach into a template part, and a restyle must not be
@@ -504,8 +504,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     }
 
     // Caption FOREGROUND (title text + caption-button glyphs) for the ACTIVE and INACTIVE window - mirrors the background
-    // pair. Default active = the theme's on-accent contrast colour (white on a dark accent, black on a light one) so the
-    // caption reads on an accent-painted bar; inactive = the neutral primary text colour. Overridable per window.
+    // pair. Default active = the theme's on-accent contrast color (white on a dark accent, black on a light one) so the
+    // caption reads on an accent-painted bar; inactive = the neutral primary text color. Overridable per window.
     public static readonly AdamantiumProperty TitleBarForegroundProperty = AdamantiumProperty.Register(nameof(TitleBarForeground),
         typeof(Brush), typeof(WindowBase), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
@@ -677,7 +677,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>Restores a maximized/minimized window to its normal size (title bar restore button).</summary>
     public void RestoreDown() => State = WindowState.Normal;
 
-    /// <summary>Toggles between maximized and normal - the caption double-click / maximize button behaviour.</summary>
+    /// <summary>Toggles between maximized and normal - the caption double-click / maximize button behavior.</summary>
     public void ToggleMaximizeRestore() =>
         State = State == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
@@ -804,7 +804,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <see cref="Activate"/>, which would cost the drag its mouse capture.</summary>
     public void BringToFront() => WindowWorkerService?.RaiseWithoutActivation();
 
-    /// <summary>Enter/leave RELATIVE mouse mode (hidden, centred cursor + synthesized raw delta) for a hosted universe's
+    /// <summary>Enter/leave RELATIVE mouse mode (hidden, centered cursor + synthesized raw delta) for a hosted universe's
     /// mouse-look. Driven by a <see cref="Panels.RenderTargetPanel"/> per its <c>MouseLookMode</c>; delegates to the
     /// platform worker.</summary>
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen) =>

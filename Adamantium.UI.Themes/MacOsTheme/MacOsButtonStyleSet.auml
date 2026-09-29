@@ -110,7 +110,7 @@
         <Setter Property="MinWidth" Value="{ResourceReference PagerButtonMinWidth}"/>
         <Setter Property="Height" Value="{ResourceReference PagerButtonHeight}"/>
 
-        <!-- Centred in the row and centred in itself, both said outright: the height is fixed, so an arrow left to
+        <!-- Centered in the row and centered in itself, both said outright: the height is fixed, so an arrow left to
              stretch or to sit at the top would stand at a different level from the numbers beside it. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

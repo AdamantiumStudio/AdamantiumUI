@@ -111,15 +111,15 @@ public class CanvasScene : ICanvasScene
 
     /// <summary>Puts an item straight after or before a named neighbor in paint order; named, since "one place along" may
     /// pass an item the current mode does not show.</summary>
-    public bool MoveNextTo(ICanvasItem item, ICanvasItem neighbour, bool after)
+    public bool MoveNextTo(ICanvasItem item, ICanvasItem neighbor, bool after)
     {
         var at = item == null ? -1 : _items.IndexOf(item);
-        var to = neighbour == null ? -1 : _items.IndexOf(neighbour);
+        var to = neighbor == null ? -1 : _items.IndexOf(neighbor);
 
-        if (at < 0 || to < 0 || ReferenceEquals(item, neighbour)) return false;
+        if (at < 0 || to < 0 || ReferenceEquals(item, neighbor)) return false;
 
         // WHERE IT LANDS once it has been taken out. Removing the item first shifts everything above it down by one,
-        // so an item moving UP lands on the neighbour's own index and one moving DOWN lands just past it - the off-by-
+        // so an item moving UP lands on the neighbor's own index and one moving DOWN lands just past it - the off-by-
         // one that puts a shape on the wrong side of the very thing it was sent to.
         var wanted = at < to
             ? after ? to : to - 1

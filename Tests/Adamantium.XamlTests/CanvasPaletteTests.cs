@@ -38,7 +38,7 @@ public class CanvasPaletteTests
         themes.SetTheme(theme);
     }
 
-    private static readonly IReadOnlyList<ICanvasNodeKind> Catalogue = [new Sort("mix", "Blend"), new Sort("add", "Blend")];
+    private static readonly IReadOnlyList<ICanvasNodeKind> Catalog = [new Sort("mix", "Blend"), new Sort("add", "Blend")];
 
     private static void Settle(Window window)
     {
@@ -62,7 +62,7 @@ public class CanvasPaletteTests
     }
 
     // PICKING A KIND PUTS THE NODE DOWN. The list's selection is the answer the gesture was waiting for, and the whole
-    // path - tree selection, the canvas's PickedKind, the catalogue's Make - has to carry it.
+    // path - tree selection, the canvas's PickedKind, the catalog's Make - has to carry it.
     [Test]
     public void PickingAKindPutsThatNodeOnThePlane()
     {
@@ -72,7 +72,7 @@ public class CanvasPaletteTests
         {
             Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
-            NodeKinds = Catalogue
+            NodeKinds = Catalog
         };
 
         var nodes = new TrackingCollection<ICanvasNode>();
@@ -95,7 +95,7 @@ public class CanvasPaletteTests
 
         // WHAT A CLICK ON A ROW LEAVES BEHIND, and nothing else: the row is selected, and everything after that is the
         // control's own business.
-        tree.SelectedItem = Catalogue[0];
+        tree.SelectedItem = Catalog[0];
 
         Settle(window);
 
@@ -117,7 +117,7 @@ public class CanvasPaletteTests
         {
             Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
-            NodeKinds = Catalogue
+            NodeKinds = Catalog
         };
 
         var nodes = new TrackingCollection<ICanvasNode>();
@@ -129,7 +129,7 @@ public class CanvasPaletteTests
         canvas.AskForNode(new Vector2(120, 80));
         Settle(window);
 
-        canvas.PickedKind = Catalogue[0];
+        canvas.PickedKind = Catalog[0];
         Settle(window);
 
         Assert.That(nodes, Has.Count.EqualTo(1), "the canvas itself did not put the node down");

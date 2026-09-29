@@ -11,9 +11,9 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>THE DROP-DOWN LINES OF THE INSPECTOR. A node's kind and a socket's kind are chosen from the catalogues the
+/// <summary>THE DROP-DOWN LINES OF THE INSPECTOR. A node's kind and a socket's kind are chosen from the catalogs the
 /// canvas was handed, and a line offering an empty list can neither say what a node is nor change it.
-/// <para>The catalogues arrive through BINDINGS on the page, which is to say AFTER the canvas has been templated and
+/// <para>The catalogs arrive through BINDINGS on the page, which is to say AFTER the canvas has been templated and
 /// its panels have taken it up - so a panel that read them once, when it was handed the canvas, reads null for ever.
 /// </para></summary>
 [TestFixture]
@@ -41,7 +41,7 @@ public class CanvasInspectorChoiceTests
         themes.SetTheme(theme);
     }
 
-    private static readonly IReadOnlyList<ICanvasNodeKind> Catalogue = [new Sort("mix"), new Sort("add")];
+    private static readonly IReadOnlyList<ICanvasNodeKind> Catalog = [new Sort("mix"), new Sort("add")];
 
     private static readonly IReadOnlyList<ICanvasSocketKind> Flows =
         [new Carries(string.Empty), new Carries("Number"), new Carries("Color")];
@@ -58,7 +58,7 @@ public class CanvasInspectorChoiceTests
     }
 
     // A CANVAS WEARING ITS OWN CHROME, with one node on it and that node selected - which is when the inspector shows
-    // a node's lines at all. The catalogues come LAST, the way a page's bindings hand them over.
+    // a node's lines at all. The catalogs come LAST, the way a page's bindings hand them over.
     private static InfiniteCanvas WithNodeSelected()
     {
         var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
@@ -81,7 +81,7 @@ public class CanvasInspectorChoiceTests
 
         Settle(canvas);
 
-        canvas.NodeKinds = Catalogue;
+        canvas.NodeKinds = Catalog;
         canvas.SocketKinds = Flows;
 
         Settle(canvas);
@@ -130,10 +130,10 @@ public class CanvasInspectorChoiceTests
         return found;
     }
 
-    // THE CATALOGUES REACH THE PANEL, WHENEVER THEY ARRIVE. The panel is not the canvas: it is handed one by the pane
-    // it rides in, and a page states its catalogues with bindings that are pushed after all of that.
+    // THE CATALOGS REACH THE PANEL, WHENEVER THEY ARRIVE. The panel is not the canvas: it is handed one by the pane
+    // it rides in, and a page states its catalogs with bindings that are pushed after all of that.
     [Test]
-    public void TheInspectorFollowsTheCanvassCatalogues()
+    public void TheInspectorFollowsTheCanvassCatalogs()
     {
         Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
@@ -144,7 +144,7 @@ public class CanvasInspectorChoiceTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(inspector.NodeKinds, Is.SameAs(Catalogue), "the node kinds never reached the panel");
+            Assert.That(inspector.NodeKinds, Is.SameAs(Catalog), "the node kinds never reached the panel");
             Assert.That(inspector.SocketKinds, Is.SameAs(Flows), "the socket kinds never reached the panel");
         });
     }
@@ -152,7 +152,7 @@ public class CanvasInspectorChoiceTests
     // ...AND A LINE THAT CHOOSES ONE OFFERS IT. A drop-down with nothing in it cannot say what a node is, and cannot be
     // used to change it either - which is a line standing blank beside a node that plainly has a kind.
     [Test]
-    public void EveryKindLineOffersTheCatalogueAndShowsWhatIsSet()
+    public void EveryKindLineOffersTheCatalogAndShowsWhatIsSet()
     {
         Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
@@ -232,7 +232,7 @@ public class CanvasInspectorChoiceTests
         public Color? Color => null;
     }
 
-    // The application's catalogue of node kinds.
+    // The application's catalog of node kinds.
     private sealed class Sort : ICanvasNodeKind
     {
         public Sort(string kind) => Kind = kind;

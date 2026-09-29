@@ -16,7 +16,7 @@ public struct GeometryInstance
     public Matrix4x4F Local;
 
     /// <summary>Straight-alpha RGBA (opacity already folded into the alpha by the producer). Four BYTES - the form the
-    /// colour arrived in - read by the shader as a <c>uint8_t4</c>.</summary>
+    /// color arrived in - read by the shader as a <c>uint8_t4</c>.</summary>
     public Color Color;
 
     /// <summary>.x = transform-table slot; .y = opacity slot, sent but not yet read (the opacity chain is folded into the

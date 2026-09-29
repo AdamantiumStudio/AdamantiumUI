@@ -11,7 +11,7 @@ namespace Adamantium.UITests;
 
 // Two triggers writing the SAME property resolve by where they stand in the markup - the one written LOWER wins.
 // Resolving by which fired last made the look depend on the history of events: a drop-down row that was both selected
-// and keyboard-highlighted came out accent on its first showing and grey on the next, because closing dropped the
+// and keyboard-highlighted came out accent on its first showing and gray on the next, because closing dropped the
 // highlight and reopening pushed it back on top of the selection.
 [TestFixture]
 public class TriggerDeclarationOrderTests

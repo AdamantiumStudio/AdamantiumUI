@@ -27,7 +27,7 @@ internal class SocketKindToBrushConverter : IValueConverter
         {
             if (item is not ICanvasSocketKind entry || entry.Kind != kind) continue;
 
-            return entry.Color is { } colour ? new SolidColorBrush(colour) : AdamantiumProperty.UnsetValue;
+            return entry.Color is { } color ? new SolidColorBrush(color) : AdamantiumProperty.UnsetValue;
         }
 
         return AdamantiumProperty.UnsetValue;

@@ -335,7 +335,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // A callback on the PROPERTY is not the question "does this ELEMENT need telling" - DataContext carries one for
         // everybody, and three quarters of them have no binding to re-resolve. An element whose LOOK depends on the
         // value must be told too: the write is what invalidates, and skipping it froze a tab's label at the resting
-        // colour while every probe reported the selected one.
+        // color while every probe reported the selected one.
         if ((metadata.PropertyChangedCallback != null && NeedsInheritedCallback(e.Property)) || PropertyChanged != null
             || metadata.AffectsRender || metadata.AffectsPaint || metadata.AffectsMeasure || metadata.AffectsArrange
             || metadata.AffectsParentMeasure || metadata.AffectsParentArrange)
@@ -528,7 +528,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         }
 
         // This fill raises nothing (the property already read as this value), so the Changed hook never took the
-        // brush's owner link: 724 of 1028 elements painting with a palette brush were not owners, and a recolour had
+        // brush's owner link: 724 of 1028 elements painting with a palette brush were not owners, and a recolor had
         // nobody to tell. Taken HERE and not on the inheritance walk, whose cheap path must keep stepping over.
         var attachable = property.CanAttachToOwner;
         var before = attachable ? container.Effective : null;
@@ -786,7 +786,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         if (adamantiumProperty == null)
             return;
 
-        // Honour the caller's priority - this dropped it (always Local), which is why a ControlTemplate literal
+        // Honor the caller's priority - this dropped it (always Local), which is why a ControlTemplate literal
         // set via this overload at Template priority could not be overridden by a Trigger (Local outranks Trigger).
         SetValue(adamantiumProperty, value, priority);
     }
@@ -964,9 +964,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         {
             element?.InvalidateRender(false);
         }
-        // Paint-only: same shape, same draw commands, a different colour. Re-bake what is already recorded instead of
+        // Paint-only: same shape, same draw commands, a different color. Re-bake what is already recorded instead of
         // re-recording the element. Checked as an ELSE of AffectsRender - a property declaring both would mean "the shape
-        // changed AND only the colour changed", which is a contradiction; the stronger (geometry) claim wins.
+        // changed AND only the color changed", which is a contradiction; the stronger (geometry) claim wins.
         else if (metadata.AffectsPaint)
         {
             element?.InvalidatePaint();

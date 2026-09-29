@@ -7,14 +7,14 @@
 
     <Style Selector="Window">
         <!-- Default window background so any window (incl. a code-created custom shell) is themed, not the black clear
-             colour. An explicit Background on the window instance overrides this. -->
-        <!-- COLOURS are live links ({ObservableResource}), metrics are one-shot ({ResourceReference}). The difference is
-             not stylistic: a resource swapped for a NEW brush - which is what a colour picker does - is re-resolved by an
+             color. An explicit Background on the window instance overrides this. -->
+        <!-- COLORS are live links ({ObservableResource}), metrics are one-shot ({ResourceReference}). The difference is
+             not stylistic: a resource swapped for a NEW brush - which is what a color picker does - is re-resolved by an
              observable link and ignored by a one-shot one. The window's frame kept its original hairline for exactly
-             that reason while everything around it recoloured. -->
+             that reason while everything around it recolored. -->
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
-        <!-- The window's own text colour; it no longer seeds the tree - see the Fluent window set for the long version.
-             This theme's body size (12 against Fluent's 14) now lives in TextBlockStyleSet with the colour. -->
+        <!-- The window's own text color; it no longer seeds the tree - see the Fluent window set for the long version.
+             This theme's body size (12 against Fluent's 14) now lives in TextBlockStyleSet with the color. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <!-- Both grounds the same on purpose - see the note above; the state is carried by the foregrounds. -->
         <Setter Property="TitleBarBackground" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>

@@ -62,7 +62,7 @@ public class DockingGestureTests
     }
 
     /// <summary>A pane that may not float does not tear off at all - the strip keeps it. Data (Pane.Allowed), not an
-    /// event: where a pane may go is stated once and serialises with the layout.</summary>
+    /// event: where a pane may go is stated once and serializes with the layout.</summary>
     [Test]
     public void APaneThatMayNotFloat_DoesNotTearOff()
     {

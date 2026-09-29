@@ -87,9 +87,9 @@ public class CanvasArrowTests
         });
     }
 
-    // The colour is the LINE's - a head belongs to the line it sits on and not to whatever the shape is filled with.
+    // The color is the LINE's - a head belongs to the line it sits on and not to whatever the shape is filled with.
     [Test]
-    public void TheArrowIsPaintedInTheLineColour()
+    public void TheArrowIsPaintedInTheLineColor()
     {
         var canvas = Sized();
         var session = new RecordingDrawingSession();

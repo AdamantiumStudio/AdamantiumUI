@@ -122,7 +122,7 @@ public class CanvasElementLookTests
     }
 
     // A BUTTON ON THE PLANE, selected, with the panel showing its rows - the state a person is in when they go to
-    // recolour it.
+    // recolor it.
     private static (InfiniteCanvas Canvas, Button Button, PropertyGrid Grid) WithButtonSelected(Window window,
         InfiniteCanvas canvas)
     {
@@ -158,7 +158,7 @@ public class CanvasElementLookTests
         return (window, canvas);
     }
 
-    // WRITING A VALUE DOES NOT REBUILD THE PANEL. A row is what a popup hangs off - a colour surface is dragged across
+    // WRITING A VALUE DOES NOT REBUILD THE PANEL. A row is what a popup hangs off - a color surface is dragged across
     // and writes continuously - so a panel that rebuilt itself on every write would take the row out from under the
     // gesture, and the popup would shut the moment it was touched. The rows a write leaves behind must be the SAME
     // objects.
@@ -194,9 +194,9 @@ public class CanvasElementLookTests
             "the row was rebuilt by its own write - a popup hanging off it would have been shut");
     }
 
-    // WHAT THE THREE COLOUR ROWS ARE ABOUT, and whether writing one reaches the control at all.
+    // WHAT THE THREE COLOR ROWS ARE ABOUT, and whether writing one reaches the control at all.
     [Test]
-    public void TheColourRowsReachTheControl()
+    public void TheColorRowsReachTheControl()
     {
         Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
@@ -224,7 +224,7 @@ public class CanvasElementLookTests
             Assert.That(border, Is.Not.Null, "no Border row");
         });
 
-        // WHAT THE SWATCH PRODUCES IS A COLOUR - that is the path a person actually takes, and the one that has to
+        // WHAT THE SWATCH PRODUCES IS A COLOR - that is the path a person actually takes, and the one that has to
         // land on the control.
         grid.Write(background, Colors.Tomato);
         grid.Write(foreground, Colors.Lime);
@@ -246,7 +246,7 @@ public class CanvasElementLookTests
     // AN APPLICATION'S OWN OBJECT is put on the plane inside a ContentPresenter with its template in it, so the button
     // a person points at is the presenter's CHILD. The panel's lines have to reach THAT: written on the presenter, a
     // background is painted under an opaque button and a corner radius belongs to something with no corners - which is
-    // "the colour picker does nothing, and only the text colour ever changes".
+    // "the color picker does nothing, and only the text color ever changes".
     [Test]
     public void TheLookRowsReachTheControlInsideAHostedObject()
     {

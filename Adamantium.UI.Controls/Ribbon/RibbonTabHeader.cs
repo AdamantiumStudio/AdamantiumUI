@@ -33,13 +33,13 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
         nameof(ForegroundSelected), typeof(Brush), typeof(RibbonTabHeader), new PropertyMetadata(default(Brush)));
 
     /// <summary>The context its tab belongs to, copied here by the ribbon when the container is prepared. The STRIP is
-    /// what needs it - the panel cuts its runs from neighbouring headers, and the theme paints the header in the
-    /// group's colour - and the strip holds headers, not tabs.</summary>
+    /// what needs it - the panel cuts its runs from neighboring headers, and the theme paints the header in the
+    /// group's color - and the strip holds headers, not tabs.</summary>
     public static readonly AdamantiumProperty ContextualGroupProperty = AdamantiumProperty.Register(
         nameof(ContextualGroup), typeof(RibbonContextualGroup), typeof(RibbonTabHeader),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsParentMeasure, OnContextualGroupChanged));
 
-    /// <summary>The group's colour, projected onto this header. Its own property, so a theme trigger can use it while
+    /// <summary>The group's color, projected onto this header. Its own property, so a theme trigger can use it while
     /// an ordinary header (null group, null accent) keeps the plain look.</summary>
     public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
         typeof(Brush), typeof(RibbonTabHeader), new PropertyMetadata(default(Brush), PropertyMetadataOptions.AffectsRender));
@@ -57,7 +57,7 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
     }
 
     /// <summary>Whether this header stands for a contextual tab. A trigger cannot ask "is <see cref="Accent"/> set", so
-    /// the fact is stated as its own flag - and it is the ONE thing the colouring hangs on, which is what tells at a
+    /// the fact is stated as its own flag - and it is the ONE thing the coloring hangs on, which is what tells at a
     /// glance which tabs belong together even when their ledge is turned off.</summary>
     public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsContextual), typeof(bool), typeof(RibbonTabHeader),

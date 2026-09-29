@@ -122,7 +122,7 @@
     </DrawingImage>
 
     <!-- UNDO and REDO: an arrow that goes back over a STEP - a straight shaft, a right-angled drop, and a chunky head.
-         Not an arc. An arc round an implied centre is what ROTATION is drawn as everywhere, and these two sat beside
+         Not an arc. An arc round an implied center is what ROTATION is drawn as everywhere, and these two sat beside
          the zoom controls, where a turn is exactly what the eye expects - so they were read as rotating the drawing.
          The corner is square on purpose: it is the one line in the glyph that a rotation icon never has. -->
     <DrawingImage x:Key="UndoIcon">
@@ -163,7 +163,7 @@
     </DrawingImage>
 
     <!-- FOLDING a node down to its strip. A chevron, which is the one mark everybody already reads as "there is more
-         under this" - and it is drawn in the strip's own foreground rather than the text colour, because the strip
+         under this" - and it is drawn in the strip's own foreground rather than the text color, because the strip
          wears the accent and the accent decides what is legible on it. -->
     <!-- The node's FOLD chevron is NOT here, and deliberately. It is drawn on the accent strip, so it has to take the
          accent's own foreground - and that family is resolved by ThemeResource, which a DrawingImage cannot carry: the

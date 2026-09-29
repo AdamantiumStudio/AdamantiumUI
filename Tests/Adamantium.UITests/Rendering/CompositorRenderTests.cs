@@ -89,7 +89,7 @@ public class CompositorRenderTests
     }
 
     [Test]
-    public void ItTurnsTheElementAboutItsOwnCentre_NotTheWindowOrigin()
+    public void ItTurnsTheElementAboutItsOwnCenter_NotTheWindowOrigin()
     {
         // The compositor composes the element's matrix ITSELF - render transform about the origin, then the layout offset.
         // Get that composition wrong and the spinner does not merely stutter: it flies to the corner of the window, or turns
@@ -101,9 +101,9 @@ public class CompositorRenderTests
         var control = new TestControl
         {
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 24, 8)),
-            RenderTransformOrigin = new Vector2(0.5, 0.5)   // its own centre
+            RenderTransformOrigin = new Vector2(0.5, 0.5)   // its own center
         };
-        control.Bounds = new Rect(20, 28, 24, 8);           // a 24x8 bar centred at (32,32) - NOT at the window origin
+        control.Bounds = new Rect(20, 28, 24, 8);           // a 24x8 bar centered at (32,32) - NOT at the window origin
         control.RenderSize = new Size(24, 8);
 
         var transform = new Transform();
@@ -126,8 +126,8 @@ public class CompositorRenderTests
         // Horizontal: (22,32) is inside the bar, (32,22) is above it.
         Assert.That(renderer.RenderFrame(root), Is.True);
         var flat = Probe(renderer, out var bg);
-        Assert.That(flat.LeftOfCentre, Is.Not.EqualTo(bg), "the bar starts horizontal");
-        Assert.That(flat.AboveCentre, Is.EqualTo(bg));
+        Assert.That(flat.LeftOfCenter, Is.Not.EqualTo(bg), "the bar starts horizontal");
+        Assert.That(flat.AboveCenter, Is.EqualTo(bg));
 
         // Wait for the ANGLE, not for a duration. Rendering a frame and reading it back costs a couple of hundred
         // milliseconds here, and pinning the test to a sleep instead of to the thing it asserts about is how a test starts
@@ -137,15 +137,15 @@ public class CompositorRenderTests
 
         Assert.That(renderer.RenderFrame(root), Is.True);
         var upright = Probe(renderer, out _);
-        Assert.That(upright.AboveCentre, Is.Not.EqualTo(bg), "a quarter turn later the bar stands upright");
-        Assert.That(upright.LeftOfCentre, Is.EqualTo(bg), "...and no longer reaches to its left");
+        Assert.That(upright.AboveCenter, Is.Not.EqualTo(bg), "a quarter turn later the bar stands upright");
+        Assert.That(upright.LeftOfCenter, Is.EqualTo(bg), "...and no longer reaches to its left");
     }
 
     [Test]
     public void TheRenderThreadRepaintsABrushOpacityWhileTheLoopThreadDoesNothing()
     {
         // The skeleton pulse, proven on the GPU: a shared brush's Opacity animates, and the units painting with it must be
-        // re-baked - all on the render thread. Nothing about the element changes; the colour lives entirely in the brush.
+        // re-baked - all on the render thread. Nothing about the element changes; the color lives entirely in the brush.
         var factory = new RenderUnitFactory(_device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.CornflowerBlue };
 
@@ -162,7 +162,7 @@ public class CompositorRenderTests
         Assert.That(Compositor.EntryFor(brush), Is.Not.Null, "a brush-opacity pulse must be composited");
 
         Assert.That(renderer.RenderFrame(root), Is.True);
-        var early = Centre(renderer);
+        var early = Center(renderer);
 
         // Wait for the opacity to climb toward its peak - by ELAPSED, not a fixed sleep, so the test isn't hostage to how
         // long a frame takes. The loop thread is never ticked.
@@ -170,7 +170,7 @@ public class CompositorRenderTests
         while (entry.Elapsed < 1.8) Thread.Sleep(5);   // ~0.9 of a 4-second pulse to Max: near the top
 
         Assert.That(renderer.RenderFrame(root), Is.True);
-        var high = Centre(renderer);
+        var high = Center(renderer);
 
         Assert.That(high, Is.Not.EqualTo(early),
             "a higher brush opacity must blend a redder pixel - re-baked by the render thread with the loop thread idle");
@@ -178,7 +178,7 @@ public class CompositorRenderTests
             "and the LIVE brush opacity is untouched: paint is not mirrored, so only the compositor changed the picture");
     }
 
-    private static uint Centre(OffscreenTestRenderer renderer)
+    private static uint Center(OffscreenTestRenderer renderer)
     {
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
         renderer.Save(path, ImageFileType.Png);
@@ -186,7 +186,7 @@ public class CompositorRenderTests
         finally { System.IO.File.Delete(path); }
     }
 
-    private static (uint LeftOfCentre, uint AboveCentre) Probe(OffscreenTestRenderer renderer, out uint background)
+    private static (uint LeftOfCenter, uint AboveCenter) Probe(OffscreenTestRenderer renderer, out uint background)
     {
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
         renderer.Save(path, ImageFileType.Png);

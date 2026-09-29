@@ -2,7 +2,7 @@
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
     <!-- An editor shell: a ribbon band, a document surface, a status line. Exercises the three command sizes, commands
-         greying out on CanExecute, two-way toggles, ordinary controls inside a group, a separator breaking a column,
+         graying out on CanExecute, two-way toggles, ordinary controls inside a group, a separator breaking a column,
          and the quick-access bar in the caption reading the SAME view model (see RibbonWindow.auml). -->
     <Grid RowDefinitions="Auto,*,Auto">
 
@@ -47,7 +47,7 @@
                     <RibbonApplicationMenuItem Content="Save" Command="{Binding SaveCommand}"
                                                Icon="M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2"/>
 
-                    <!-- The rows the pane-follows-the-pointer behaviour is worth seeing on: run the pointer down
+                    <!-- The rows the pane-follows-the-pointer behavior is worth seeing on: run the pointer down
                          Import / Export / Print and the right half changes under it, with nothing clicked. -->
                     <RibbonApplicationMenuItem Content="Import" Icon="M8,2 L8,10 M5,7 L8,10 L11,7 M3,13 L13,13">
                         <RibbonApplicationMenuItem.PageContent>
@@ -247,7 +247,7 @@
                 <RibbonGroup Header="Arrange" ShrinkSteps="None" Icon="M2,3 L14,3 M2,8 L10,8 M2,13 L14,13">
                     <RibbonButton Content="Align left" MaxSize="Medium" Command="{Binding AlignLeftCommand}"
                                   Icon="M2,2 L2,14 M4,5 L12,5 M4,11 L9,11"/>
-                    <RibbonButton Content="Centre" MaxSize="Medium" Command="{Binding AlignCenterCommand}"
+                    <RibbonButton Content="Center" MaxSize="Medium" Command="{Binding AlignCenterCommand}"
                                   Icon="M8,2 L8,14 M4,5 L12,5 M6,11 L10,11"/>
                     <RibbonButton Content="Distribute" MaxSize="Medium" Command="{Binding DistributeCommand}"
                                   Icon="M2,2 L2,14 M14,2 L14,14 M8,5 L8,11"/>
@@ -289,7 +289,7 @@
                                         Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"/>
                     <RibbonToggleButton Content="Ledge" MaxSize="Medium"
                                         IsChecked="{Binding ShowContextHeader, Mode=TwoWay}"
-                                        ToolTip="The ledge over a context's tabs - off, their colour carries it and the strip stops paying its height"
+                                        ToolTip="The ledge over a context's tabs - off, their color carries it and the strip stops paying its height"
                                         Icon="M2,4 L14,4 L14,7 L2,7 Z M2,10 L6,10 M8,10 L14,10"/>
                 </RibbonGroup>
 
@@ -375,11 +375,11 @@
                     <RibbonButton Content="New" Command="{Binding NewMaterialCommand}"
                                   ToolTip="Create a material"
                                   Icon="{Binding MaterialIcon}"/>
-                    <!-- ...and an icon that is not path data at all: a COLOUR, drawn as a disc by the command's own
+                    <!-- ...and an icon that is not path data at all: a COLOR, drawn as a disc by the command's own
                          template. -->
                     <RibbonButton Content="Swatch" MaxSize="Medium" Icon="Coral"
                                   Command="{Binding NewMaterialCommand}"
-                                  ToolTip="A command whose icon is a colour, drawn by its own template">
+                                  ToolTip="A command whose icon is a color, drawn by its own template">
                         <RibbonButton.IconTemplate>
                             <DataTemplate>
                                 <Ellipse Width="14" Height="14" EllipseType="EdgeToEdge" Fill="{Binding}"/>

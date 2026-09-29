@@ -58,7 +58,7 @@ public sealed class RegularPolygonGeometry : Geometry
     /// <summary>THE statement of what shape a regular polygon is, as geometry. A RING is the outer shape with the inner
     /// one taken out of it - the tessellated twin of the batch subtracting the field's own inward offset. Everything that
     /// needs the polygon as a mesh asks here: the per-unit fallback, the distance field a halo reads, and the brush path
-    /// (a gradient, a pattern or a picture is painted on geometry, and the polygon pass paints one colour).</summary>
+    /// (a gradient, a pattern or a picture is painted on geometry, and the polygon pass paints one color).</summary>
     public static Geometry Build(Rect rect, int corners, double startAngle = 0, double ringThickness = 0)
     {
         var outer = new RegularPolygonGeometry(rect, corners, startAngle);
@@ -93,7 +93,7 @@ public sealed class RegularPolygonGeometry : Geometry
         var rect = Rect;
         bounds = rect;
 
-        // Shapes.Polygon takes RADII (it multiplies cos/sin by them), and centres the shape on the origin - so the mesh
+        // Shapes.Polygon takes RADII (it multiplies cos/sin by them), and centers the shape on the origin - so the mesh
         // is moved to the rect the same way the ellipse's is.
         var radii = new Vector2(rect.Width / 2, rect.Height / 2);
         var translation = Matrix4x4.Translation((float)(rect.X + rect.Width / 2), (float)(rect.Y + rect.Height / 2), 0);

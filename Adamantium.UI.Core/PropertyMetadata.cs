@@ -20,7 +20,7 @@ public class PropertyMetadata
    public bool AffectsArrange { get; set; }
    public bool AffectsRender { get; set; }
 
-   /// <summary>See <see cref="PropertyMetadataOptions.AffectsPaint"/>: this property only re-COLOURS, so it re-bakes
+   /// <summary>See <see cref="PropertyMetadataOptions.AffectsPaint"/>: this property only re-COLORS, so it re-bakes
    /// instead of re-recording - and its animation can run on the compositor.</summary>
    public bool AffectsPaint { get; set; }
 

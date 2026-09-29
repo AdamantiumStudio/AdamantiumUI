@@ -114,7 +114,7 @@ public class CanvasGridFarRenderTests
     }
 
     // ...AND THE MARKS ARE STILL MARKS. A smeared grid does not merely differ - it covers far MORE of the surface,
-    // because each dot has run into its neighbours along a row. Counting what is lit says so without an eye.
+    // because each dot has run into its neighbors along a row. Counting what is lit says so without an eye.
     [Test]
     public void TheMarksDoNotSmearIntoLines()
     {

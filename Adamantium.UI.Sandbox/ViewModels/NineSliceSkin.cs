@@ -37,12 +37,12 @@ public sealed class NineSliceSkin
     public static NineSliceSkin Vector()
     {
         var edge = new SolidColorBrush(Colors.SteelBlue);
-        var centre = new SolidColorBrush(Colors.Black);
+        var center = new SolidColorBrush(Colors.Black);
         var ornament = new SolidColorBrush(Colors.Orange);
 
         var group = new DrawingGroup();
         group.Children.Add(Filled(new Rect(0, 0, 64, 64), edge));
-        group.Children.Add(Filled(new Rect(16, 16, 32, 32), centre));
+        group.Children.Add(Filled(new Rect(16, 16, 32, 32), center));
 
         // One in each 16x16 corner cell - the pieces that are drawn at Border and never stretched.
         foreach (var (x, y) in new[] { (8.0, 8.0), (56.0, 8.0), (8.0, 56.0), (56.0, 56.0) })

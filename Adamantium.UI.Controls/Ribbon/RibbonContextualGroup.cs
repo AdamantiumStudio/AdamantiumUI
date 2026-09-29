@@ -24,12 +24,12 @@ public class RibbonContextualGroup : AdamantiumComponent
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
         typeof(object), typeof(RibbonContextualGroup), new PropertyMetadata(null));
 
-    /// <summary>The colour that marks everything belonging to this context: the ledge, its tabs' headers, and the top
+    /// <summary>The color that marks everything belonging to this context: the ledge, its tabs' headers, and the top
     /// edge of the groups area - so an open page still says which context it belongs to once the ledge is out of view.</summary>
     public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
         typeof(Brush), typeof(RibbonContextualGroup), new PropertyMetadata(default(Brush)));
 
-    /// <summary>Whether the ledge over the group's tabs is drawn at all. Off, the context is carried by the COLOUR of
+    /// <summary>Whether the ledge over the group's tabs is drawn at all. Off, the context is carried by the COLOR of
     /// its tabs alone - which is what actually says which tabs belong together - and the strip costs no extra height.
     /// Microsoft dropped the ledge in current M365 for the same reason.</summary>
     public static readonly AdamantiumProperty ShowHeaderProperty = AdamantiumProperty.Register(nameof(ShowHeader),

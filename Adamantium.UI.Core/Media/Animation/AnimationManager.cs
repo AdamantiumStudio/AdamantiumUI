@@ -15,7 +15,7 @@ public static class AnimationManager
 {
     private static readonly List<IRunningAnimation> Active = new();
 
-    // Membership mirror of Active, for the O(1) "was this cancelled mid-tick?" check. Tick used List.Contains, which is
+    // Membership mirror of Active, for the O(1) "was this canceled mid-tick?" check. Tick used List.Contains, which is
     // a LINEAR scan - so a scene with N running animations cost O(N^2) comparisons PER FRAME (measured: 4606 pulsing
     // loading cards -> ~21M comparisons -> ~143 ms/frame, the bulk of the 60k-grid stall). Every mutation of Active goes
     // through the two helpers below so the two stay in lock-step.
@@ -78,13 +78,13 @@ public static class AnimationManager
         // Advance a SNAPSHOT: a finishing animation's completion callback may start OR cancel animations (e.g. a tab
         // drag settling then committing the reorder + clearing transforms), which mutates Active. Iterating Active
         // directly would corrupt the loop (skip/re-advance/out-of-range). A finished animation is removed via Remove
-        // (a no-op if a callback already cancelled it); animations started during a callback are advanced next tick.
+        // (a no-op if a callback already canceled it); animations started during a callback are advanced next tick.
         TickBuffer.Clear();
         TickBuffer.AddRange(Active);
         foreach (var animation in TickBuffer)
         {
-            // An earlier animation's completion callback may have CANCELLED this one (removed it from Active). Don't
-            // advance a cancelled animation: its Advance would re-write the Animation-priority value the cancel just
+            // An earlier animation's completion callback may have CANCELED this one (removed it from Active). Don't
+            // advance a canceled animation: its Advance would re-write the Animation-priority value the cancel just
             // cleared, and - being gone from Active - nothing would clear it again (a stuck offset). O(1) via the set
             // mirror: this ran on EVERY animation of every frame, so a linear scan made the tick quadratic.
             if (!ActiveSet.Contains(animation)) continue;
@@ -179,9 +179,9 @@ public static class AnimationManager
     /// firing its completion callback. Returns true if one was running. The caller releases the held animation value.</summary>
     internal static bool Cancel(AdamantiumComponent target, AdamantiumProperty property)
     {
-        var cancelled = RemoveWhere(a => a.Animates(target, property)) > 0;
-        if (cancelled) Compositor.Release(target);   // the render thread must stop playing what the loop just stopped
-        return cancelled;
+        var canceled = RemoveWhere(a => a.Animates(target, property)) > 0;
+        if (canceled) Compositor.Release(target);   // the render thread must stop playing what the loop just stopped
+        return canceled;
     }
 
     /// <summary>Stops EVERY animation running on <paramref name="target"/> (any property), without firing completions -

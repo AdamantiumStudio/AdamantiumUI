@@ -2,7 +2,7 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A 4-corner BILINEAR (mesh) gradient: one colour per corner, smoothly blended across the fill. Beyond WPF
+/// <summary>A 4-corner BILINEAR (mesh) gradient: one color per corner, smoothly blended across the fill. Beyond WPF
 /// (which has no mesh gradient); evaluated per fragment in the SDF batch, so it stays crisp at any size. Reuses the
 /// gradient batch - packed as gradient type 4 with the four corners in the first four stop slots; <see cref="GradientBrush"/>
 /// stops / spread / interpolation are unused (the shader bilinearly blends the corners by the fragment's 0..1 uv).</summary>
@@ -22,16 +22,16 @@ public sealed class MeshGradientBrush : GradientBrush
     public static readonly AdamantiumProperty BottomRightProperty = AdamantiumProperty.Register(nameof(BottomRight),
         typeof(Color), typeof(MeshGradientBrush), new PropertyMetadata(new Color(34, 197, 94, 255), PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>Top-left corner colour.</summary>
+    /// <summary>Top-left corner color.</summary>
     public Color TopLeft { get => GetValue<Color>(TopLeftProperty); set { if (IsFrozen) return; SetValue(TopLeftProperty, value); } }
 
-    /// <summary>Top-right corner colour.</summary>
+    /// <summary>Top-right corner color.</summary>
     public Color TopRight { get => GetValue<Color>(TopRightProperty); set { if (IsFrozen) return; SetValue(TopRightProperty, value); } }
 
-    /// <summary>Bottom-left corner colour.</summary>
+    /// <summary>Bottom-left corner color.</summary>
     public Color BottomLeft { get => GetValue<Color>(BottomLeftProperty); set { if (IsFrozen) return; SetValue(BottomLeftProperty, value); } }
 
-    /// <summary>Bottom-right corner colour.</summary>
+    /// <summary>Bottom-right corner color.</summary>
     public Color BottomRight { get => GetValue<Color>(BottomRightProperty); set { if (IsFrozen) return; SetValue(BottomRightProperty, value); } }
 
     protected override Brush CreateClone() =>

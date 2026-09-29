@@ -298,7 +298,7 @@ public class CanvasPaintOrderTests
     // A LAYER PER RUN, and no more than that: the affordability of the whole thing rests on it. Two pictures with a
     // stroke between them is three layers; a hundred nodes in a row is one.
     [Test]
-    public void OneLayerPerRunOfNeighboursAndNoMore()
+    public void OneLayerPerRunOfNeighborsAndNoMore()
     {
         var (root, canvas, scene, cache) = Stage();
 

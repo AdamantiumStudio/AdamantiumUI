@@ -10,11 +10,11 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>
-/// A segment sits in the middle of its groove. Off-centre by a pixel or two is the kind of thing that has no name on
+/// A segment sits in the middle of its groove. Off-center by a pixel or two is the kind of thing that has no name on
 /// screen - it just looks wrong - so it is measured here rather than looked at.
 /// </summary>
 [TestFixture]
-public class MacOsTabCapsuleCentringTests
+public class MacOsTabCapsuleCenteringTests
 {
     private FakeApp _app;
     private ThemeManager _themes;
@@ -44,7 +44,7 @@ public class MacOsTabCapsuleCentringTests
     public void TheCapsuleSitsInTheMiddleOfTheGroove()
     {
         // Mirrors the gallery, which is where this was seen: close buttons ON, which is what makes a tab taller than
-        // its label and is the difference between a strip that centres and one that does not.
+        // its label and is the difference between a strip that centers and one that does not.
         var control = new TabControl { ShowCloseButton = true };
         control.Items.Add(new TabItem { Header = "One" });
         control.Items.Add(new TabItem { Header = "Two" });
@@ -95,7 +95,7 @@ public class MacOsTabCapsuleCentringTests
 
             // The invariant behind it, stated so a future change cannot bring the symptom back by another route: the
             // chevron is chrome standing IN the groove, and anything in there that is taller than a segment takes the
-            // row's height with it and pushes the segments off centre.
+            // row's height with it and pushes the segments off center.
             Assert.That(chevron.RenderSize.Height, Is.LessThanOrEqualTo(capsule.RenderSize.Height),
                 "nothing in the groove may be taller than the segments it holds");
 

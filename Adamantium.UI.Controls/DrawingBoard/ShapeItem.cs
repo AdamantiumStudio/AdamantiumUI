@@ -33,7 +33,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     public ShapeItem(CanvasShape shape, Rect world, Brush stroke, double thickness, Brush fill = null)
     {
         Shape = shape;
-        World = Normalise(world);
+        World = Normalize(world);
         Stroke = stroke;
         Thickness = thickness;
         Fill = fill;
@@ -44,8 +44,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     /// <summary>A second shape just like this one. Everything that makes it what it is, including the two bits that say
     /// which way a run leans and which end it starts at - a copied arrow that pointed the other way would be a copy of
     /// something else.</summary>
-    // ...WITH PAINT OF ITS OWN. A copy handed the original's brushes is the same object as far as a colour written
-    // into one goes: recolouring the copy recoloured what it was copied from. See Brush.Copy.
+    // ...WITH PAINT OF ITS OWN. A copy handed the original's brushes is the same object as far as a color written
+    // into one goes: recoloring the copy recolored what it was copied from. See Brush.Copy.
     public ICanvasItem Copy() => new ShapeItem(Shape, World, Stroke?.Copy(), Thickness, Fill?.Copy())
     {
         Flipped = Flipped,
@@ -69,7 +69,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         get => Model == null ? _world : new Rect(Model.Left, Model.Top, Model.Width, Model.Height);
         set
         {
-            _world = Normalise(value);
+            _world = Normalize(value);
 
             if (Model == null) return;
 
@@ -80,7 +80,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         }
     }
 
-    /// <summary>Which DIAGONAL of its box a <see cref="CanvasShape.Line"/> lies on. The box is normalised, so without
+    /// <summary>Which DIAGONAL of its box a <see cref="CanvasShape.Line"/> lies on. The box is normalized, so without
     /// this a line dragged up and to the right would come back leaning the other way.</summary>
     public bool Flipped { get; set; }
 
@@ -95,8 +95,8 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
 
     public Brush Fill { get; set; }
 
-    /// <summary>The OUTLINE's colour and not the fill's: a shape is drawn by its edge - an unfilled one has nothing
-    /// else - so the outline is the colour it reads as.</summary>
+    /// <summary>The OUTLINE's color and not the fill's: a shape is drawn by its edge - an unfilled one has nothing
+    /// else - so the outline is the color it reads as.</summary>
     public Color? Paint => (Stroke as SolidColorBrush)?.Color;
 
     public void PaintWith(Color color) => Stroke = new SolidColorBrush(color);
@@ -319,7 +319,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     {
         if (world.Width <= 0 || world.Height <= 0) return;
 
-        var box = Normalise(world);
+        var box = Normalize(world);
 
         // What comes in is the FRAME, and for a line or an arrow the frame is not the box: it holds the stroke and the
         // heads as well. Assigned straight across, an arrow took its own head's width as new length every time anybody
@@ -470,7 +470,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
 
                 Ends(box, out var from, out var to);
 
-                // THROUGH THE ARROW PASS when the colour is a plain one, which is what a line on a plane always is: the
+                // THROUGH THE ARROW PASS when the color is a plain one, which is what a line on a plane always is: the
                 // whole shape - shaft and both heads - is then decided per pixel from these two points, with no
                 // geometry built, kept or handed over. A line is the same thing with nothing on its ends.
                 if (PaintRun(session, from, to, width)) return;
@@ -594,7 +594,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
 
     // The whole run - shaft and both heads - as ONE quad whose fragments decide the shape. Returns false when the run
     // cannot be painted that way and the geometry below has to draw it after all: a turn is applied to a geometry and a
-    // fill that is not a plain colour says nothing about where a line is.
+    // fill that is not a plain color says nothing about where a line is.
     /// <summary>Whether lines and arrows draw through the one-quad arrow pass rather than a stroked line plus a mesh per head.</summary>
     public static bool PaintsRuns = true;
 
@@ -691,7 +691,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     }
 
     // The box to hand the session so a polygon's OWN bounds land on `box`. The corners sit on the ellipse the box holds,
-    // and only a shape with a corner in every quadrant fills it; the rest need a bigger ellipse, off-centre by however
+    // and only a shape with a corner in every quadrant fills it; the rest need a bigger ellipse, off-center by however
     // lopsided they are. Written as the box that carries that ellipse, because that is what the session takes.
     private static Rect Fit(Rect box, int sides)
     {
@@ -745,7 +745,7 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
 
     // A box dragged up and to the left has a negative width, and everything that reads a box - hit tests, grips, the
     // renderer - would have to cope with that everywhere instead of here once.
-    private static Rect Normalise(Rect rect) =>
+    private static Rect Normalize(Rect rect) =>
         new(Math.Min(rect.X, rect.X + rect.Width), Math.Min(rect.Y, rect.Y + rect.Height),
             Math.Abs(rect.Width), Math.Abs(rect.Height));
 

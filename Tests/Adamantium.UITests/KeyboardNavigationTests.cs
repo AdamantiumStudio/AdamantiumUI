@@ -498,10 +498,10 @@ public class KeyboardNavigationTests
     }
 
     /// <summary>A virtualizing panel PARKS an off-screen child - hidden, but still a child, still carrying the bounds it
-    /// had when it was last on screen. Offering one as a neighbour put the focus nowhere and left the search carrying on
+    /// had when it was last on screen. Offering one as a neighbor put the focus nowhere and left the search carrying on
     /// from a position that no longer exists: a wall in the middle of a visible row, forwards only.</summary>
     [Test]
-    public void AParkedChildIsNotOfferedAsANeighbour()
+    public void AParkedChildIsNotOfferedAsANeighbor()
     {
         var a = NewButton("a");
         var parked = NewButton("parked");
@@ -626,7 +626,7 @@ public class KeyboardNavigationTests
     }
 
     /// <summary>A list laid out in WRAPPED LINES: down means the row below, not the next chip along. The list has to ask
-    /// its host panel which item comes next - stepping its own index by one made "down" mean "the neighbour", which in
+    /// its host panel which item comes next - stepping its own index by one made "down" mean "the neighbor", which in
     /// a grid of chips is the one to the RIGHT of it.</summary>
     [Test]
     public void ArrowsInAWrappedListFollowTheGridNotTheItemOrder()
@@ -1161,7 +1161,7 @@ public class KeyboardNavigationTests
         });
     }
 
-    /// <summary>A modal declares its trap once - as a Tab cycle - and Ctrl+Tab honours the same declaration. Everything
+    /// <summary>A modal declares its trap once - as a Tab cycle - and Ctrl+Tab honors the same declaration. Everything
     /// outside a modal is unreachable by mouse, so it must not become reachable by an area step.</summary>
     [Test]
     public void CtrlTabDoesNotLeaveAModalCycle()

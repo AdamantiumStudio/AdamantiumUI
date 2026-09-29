@@ -19,7 +19,7 @@ public class ColorPicker : Control
     private double _sat = 1;
     private double _val = 1;
     private double _alpha = 1;
-    private bool _syncing;   // guards the colour <-> hsv <-> RGBA/hex fan-out from re-entering itself
+    private bool _syncing;   // guards the color <-> hsv <-> RGBA/hex fan-out from re-entering itself
     private DragTarget _drag = DragTarget.None;
 
     private Border _svArea;
@@ -31,8 +31,8 @@ public class ColorPicker : Control
     private MeasurableUIComponent _hueThumb;
     private MeasurableUIComponent _alphaThumb;
     private readonly SolidColorBrush _hueBrush = new(Colors.Red);   // SV square background = the pure hue
-    private readonly SolidColorBrush _previewBrush = new(Colors.Red);   // preview swatch = the picked colour (with its alpha)
-    // Alpha bar overlay: the current colour opaque (top) -> transparent (bottom), over the theme's checkerboard.
+    private readonly SolidColorBrush _previewBrush = new(Colors.Red);   // preview swatch = the picked color (with its alpha)
+    // Alpha bar overlay: the current color opaque (top) -> transparent (bottom), over the theme's checkerboard.
     private readonly LinearGradientBrush _alphaBrush = new(new GradientStopCollection(
         [new GradientStop(Colors.Red, 0), new GradientStop(Colors.Transparent, 1)]))
     { StartPoint = new Vector2(0, 0), EndPoint = new Vector2(0, 1) };
@@ -69,10 +69,10 @@ public class ColorPicker : Control
         typeof(string), typeof(ColorPicker),
         new PropertyMetadata("255", PropertyMetadataOptions.BindsTwoWayByDefault, OnChannelChanged));
 
-    /// <summary>The picked colour (ARGB). Two-way; also driven by the square/bars and the fields. The clean binding target.</summary>
+    /// <summary>The picked color (ARGB). Two-way; also driven by the square/bars and the fields. The clean binding target.</summary>
     public Color SelectedColor { get => GetValue<Color>(SelectedColorProperty); set => SetValue(SelectedColorProperty, value); }
 
-    /// <summary>The colour as <c>#AARRGGBB</c>. Two-way - edit the hex field to set the colour.</summary>
+    /// <summary>The color as <c>#AARRGGBB</c>. Two-way - edit the hex field to set the color.</summary>
     public string Hex { get => GetValue<string>(HexProperty); set => SetValue(HexProperty, value); }
 
     /// <summary>Red channel as editable text 0..255. Two-way.</summary>
@@ -269,7 +269,7 @@ public class ColorPicker : Control
         Commit();
     }
 
-    // ---- The colour <-> hsv <-> RGBA/hex fan-out -----------------------------------------------------------------
+    // ---- The color <-> hsv <-> RGBA/hex fan-out -----------------------------------------------------------------
 
     private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -303,7 +303,7 @@ public class ColorPicker : Control
             return;
         }
 
-        // Commit only when all four fields parse - a field mid-edit (empty / non-numeric) leaves the colour untouched
+        // Commit only when all four fields parse - a field mid-edit (empty / non-numeric) leaves the color untouched
         // until it's valid again, rather than zeroing a channel per keystroke.
         if (TryByte(picker.Red, out var r) && TryByte(picker.Green, out var g)
             && TryByte(picker.Blue, out var b) && TryByte(picker.Alpha, out var alpha))
@@ -313,11 +313,11 @@ public class ColorPicker : Control
         }
     }
 
-    // Adopt an externally-set colour into the HSV state. Hue is KEPT when the colour is greyscale/black (RGB can't tell the
+    // Adopt an externally-set color into the HSV state. Hue is KEPT when the color is grayscale/black (RGB can't tell the
     // hue there), so the hue thumb doesn't jump to red as the value/saturation is dragged to an edge.
     private void ApplyColor(Color color)
     {
-        // If the incoming colour is exactly what our current HSV already produces, this is the round-trip of our OWN commit
+        // If the incoming color is exactly what our current HSV already produces, this is the round-trip of our OWN commit
         // (SelectedColor -> here), not an external set - so KEEP the HSV state. Re-deriving HSV from RGB loses information the
         // RGB can't carry and makes the thumb jump AT THE EDGES: saturation is undefined at value 0 (a black bottom row) so
         // it collapses to 0 (the SV thumb darts left/jitters), and hue 360 == hue 0 in RGB so the hue thumb snaps to the top.
@@ -337,7 +337,7 @@ public class ColorPicker : Control
         }
     }
 
-    // Recompute the colour from the HSV state and push it to SelectedColor + the RGBA/hex fields + the visuals, guarded so
+    // Recompute the color from the HSV state and push it to SelectedColor + the RGBA/hex fields + the visuals, guarded so
     // none of those writes re-enters this fan-out.
     private void Commit()
     {
@@ -358,8 +358,8 @@ public class ColorPicker : Control
         UpdateThumbs();
     }
 
-    // Centre each thumb on its value point using the thumb's OWN measured size (so the marker sits ON the value, whatever
-    // size the theme gives it). The bars stretch their thumb horizontally, so only the vertical centre is offset there.
+    // Center each thumb on its value point using the thumb's OWN measured size (so the marker sits ON the value, whatever
+    // size the theme gives it). The bars stretch their thumb horizontally, so only the vertical center is offset there.
     private void UpdateThumbs()
     {
         if (_svThumb != null && _svArea != null)

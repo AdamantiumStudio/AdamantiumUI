@@ -14,7 +14,7 @@ namespace Adamantium.UI.Controls.DataGrid;
 /// up while that column is narrowing the table.</para></summary>
 public class DataGridColumnHeader : ContentControl
 {
-    /// <summary>A header is cut at its column's edge, or its caption and funnel hang over the neighbour. Kept even
+    /// <summary>A header is cut at its column's edge, or its caption and funnel hang over the neighbor. Kept even
     /// though a clip is a scissor (see <see cref="DataGridCell"/>): there are as many headers as COLUMNS.
     /// <para>Set HERE, not through <c>OverrideMetadata</c>: a type default raises no change, so the callback that
     /// writes the hot field behind this property never runs and the clip simply does not happen.</para></summary>
@@ -37,7 +37,7 @@ public class DataGridColumnHeader : ContentControl
         typeof(bool), typeof(DataGridColumnHeader), new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
 
     /// <summary>This header's column is pinned: it stands still while the strip scrolls under it, so unlike every other
-    /// header it has to be OPAQUE - the band's own colour, which is a constant of the theme.</summary>
+    /// header it has to be OPAQUE - the band's own color, which is a constant of the theme.</summary>
     public static readonly AdamantiumProperty IsFrozenProperty = AdamantiumProperty.Register(nameof(IsFrozen),
         typeof(bool), typeof(DataGridColumnHeader), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
 
@@ -173,8 +173,8 @@ public class DataGridColumnHeader : ContentControl
 
         if (_popup != null)
         {
-            // Anchored to the FUNNEL, not to the header: Bottom placement centres the flyout on its target, and on a wide
-            // column the header's centre is nowhere near the button that was pressed.
+            // Anchored to the FUNNEL, not to the header: Bottom placement centers the flyout on its target, and on a wide
+            // column the header's center is nowhere near the button that was pressed.
             _popup.PlacementTarget = _filterButton as UIComponent ?? this;
             _popup.KeepOpen = false;
             _popup.IgnoreTargetPress = true;

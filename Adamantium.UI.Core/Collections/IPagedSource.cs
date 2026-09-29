@@ -37,7 +37,7 @@ public interface IPagedSource : INotifyPropertyChanged
     /// later request, or the fetch failed).</summary>
     Task<bool> MoveToPageAsync(int pageIndex);
 
-    /// <summary>Raised before a page is turned to; cancelling it refuses the turn - which is how a view holding an
+    /// <summary>Raised before a page is turned to; canceling it refuses the turn - which is how a view holding an
     /// unsaved edit keeps the reader where they are.</summary>
     event EventHandler<PageChangingEventArgs> PageChanging;
 
@@ -80,5 +80,5 @@ public readonly struct PageResult(IReadOnlyList<object> items, int? totalItemCou
     public int? TotalItemCount { get; } = totalItemCount;
 }
 
-/// <summary>Fetches one page. The token is cancelled when a later request supersedes this one.</summary>
+/// <summary>Fetches one page. The token is canceled when a later request supersedes this one.</summary>
 public delegate Task<PageResult> PageFetch(PageRequest request, CancellationToken cancellation);

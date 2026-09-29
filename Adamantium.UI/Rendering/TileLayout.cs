@@ -7,7 +7,7 @@ namespace Adamantium.UI.Rendering;
 /// numbers only mean anything together.</summary>
 internal readonly struct TileLayout
 {
-    /// <summary>The part of the SOURCE one tile samples, normalised: x, y, w, h. The viewbox, already cropped if
+    /// <summary>The part of the SOURCE one tile samples, normalized: x, y, w, h. The viewbox, already cropped if
     /// <see cref="Core.Media.Stretch.UniformToFill"/> asked for it.</summary>
     public readonly Vector4F UvRect;
 
@@ -21,8 +21,8 @@ internal readonly struct TileLayout
     public readonly Vector4F Drawn;
 
     /// <summary>The 2x2 that maps a fragment (0..1 of the shape) back into the UNTURNED grid, row-major. It is the
-    /// inverse rotation with the shape's aspect folded in - rotating normalised coordinates of a non-square shape would
-    /// shear it - and the turn's centre is folded into <see cref="Tile"/>'s origin, so the pixel shader does one 2x2
+    /// inverse rotation with the shape's aspect folded in - rotating normalized coordinates of a non-square shape would
+    /// shear it - and the turn's center is folded into <see cref="Tile"/>'s origin, so the pixel shader does one 2x2
     /// multiply.</summary>
     public readonly Vector4F Rotation;
 

@@ -16,7 +16,7 @@ public partial class OpacityViewModel : TabPageViewModel
     [Bindable] private double _containerOpacity = 0.5;
 
     /// <summary>Fades one swatch inside that container ON TOP of the container's own fade. The product is what should
-    /// reach the screen; a family that reads the slot AND keeps the chain in its colour shows here as too dark.</summary>
+    /// reach the screen; a family that reads the slot AND keeps the chain in its color shows here as too dark.</summary>
     [Bindable] private double _elementOpacity = 1;
 
     /// <summary>The MESH family's swatch - tessellated triangles rather than a shader-side shape, which is a different

@@ -11,10 +11,10 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>
-/// Text colour reaches text by INHERITANCE: the window sets <c>Foreground</c> once and every plain TextBlock under it
+/// Text color reaches text by INHERITANCE: the window sets <c>Foreground</c> once and every plain TextBlock under it
 /// takes that value. Nothing else does - a TextBlock has a white default of its own, so the moment inheritance stops
 /// delivering, every piece of text quietly falls back to white and stays white through any theme change. It looks like
-/// "the colours did not update" and says nothing about inheritance.
+/// "the colors did not update" and says nothing about inheritance.
 /// </summary>
 [TestFixture]
 public class ForegroundInheritanceTests
@@ -73,7 +73,7 @@ public class ForegroundInheritanceTests
         outer.Foreground = ink;
 
         Assert.That(text.Foreground, Is.SameAs(ink),
-            "the window is several levels above the text that takes its colour from it");
+            "the window is several levels above the text that takes its color from it");
     }
 
     // An ancestor clearing its value must clear descendants' Inherited slots, not pin its default above their TypeDefault.
@@ -91,6 +91,6 @@ public class ForegroundInheritanceTests
         parent.ClearValue(UIComponent.ForegroundProperty);
 
         Assert.That(child.Foreground, Is.SameAs(themeInk),
-            "with no ancestor stating a colour, the control's own type default is what it wears again");
+            "with no ancestor stating a color, the control's own type default is what it wears again");
     }
 }

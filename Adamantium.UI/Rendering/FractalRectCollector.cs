@@ -53,7 +53,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
 
     /// <summary>Ceiling on iterations, mirrored by the same bound in the shader's loops. It is what a DEEP zoom spends
     /// its detail on: past ~1e10 a point needs thousands of iterations before it escapes, and a lower cap paints the
-    /// whole neighbourhood as interior - a flat blob, which reads as "the shader stopped resolving the fractal".</summary>
+    /// whole neighborhood as interior - a flat blob, which reads as "the shader stopped resolving the fractal".</summary>
     public const int MaxIterations = 2000;
 
     // ONE KIND PER SEGMENT, exactly as the pattern batch does it - each formula is its own pass now, so a segment has to
@@ -205,7 +205,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         refY = System.Math.Round((f.Center.Y + f.CenterFine.Y) / gridStep) * gridStep;
         // The OFFSET is where the precision has to survive: subtract the coarse part first - two nearby doubles subtract
         // EXACTLY - and only then add the fine part, which keeps every digit it has.
-        offX = (f.Center.X - refX) + f.CenterFine.X;   // viewCentre - reference; rides to the shader in Ref.zw
+        offX = (f.Center.X - refX) + f.CenterFine.X;   // viewCenter - reference; rides to the shader in Ref.zw
         offY = (f.Center.Y - refY) + f.CenterFine.Y;
         return true;
     }
@@ -217,7 +217,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         if (p.Brush is not FractalBrush f) return;
         if (!DeepReference(f, out var refX, out var refY, out var offX, out var offY)) return;
 
-        bool mandelbrot = (int)f.Fractal == 1;   // Mandelbrot: z0 = 0, c = centre. Julia: z0 = centre, c = the constant.
+        bool mandelbrot = (int)f.Fractal == 1;   // Mandelbrot: z0 = 0, c = center. Julia: z0 = center, c = the constant.
 
         DoubleDouble cx, cy, zx, zy;
         if (mandelbrot) { cx = refX; cy = refY; zx = default; zy = default; }
@@ -241,13 +241,13 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
             if (zx.Hi * zx.Hi + zy.Hi * zy.Hi > 1e12) break;   // diverged - stop before the squared value overflows float
         }
         _orbitCount = start + len;
-        item.Ref = new Vector4F(start, len, (float)offX, (float)offY);   // start, length, (viewCentre - ref) offset. Length > 0 arms deep path.
+        item.Ref = new Vector4F(start, len, (float)offX, (float)offY);   // start, length, (viewCenter - ref) offset. Length > 0 arms deep path.
         _orbitSlices[Count] = new OrbitSlice(start, len, refX, refY, cx.Hi, cy.Hi, maxN);   // Count is the slot this item is about to take
     }
 
     /// <summary>Stamp a PATCHED record's Ref from the orbit this slot already owns, or false when that orbit no longer
     /// describes it and only a walk can rebuild one. Panning inside a reference cell is the case worth keeping cheap:
-    /// the orbit is unchanged and only the offset moves, which is exactly what the grid quantisation buys.</summary>
+    /// the orbit is unchanged and only the offset moves, which is exactly what the grid quantization buys.</summary>
     public bool TryStampOrbit(int slot, RectanglePayload p, ref FractalRectItem item)
     {
         if (p.Brush is not FractalBrush f) return true;
@@ -273,7 +273,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
     }
 
     // Bake a fractal fill into an instance record. Position -> world; the fractal maps the fragment to the complex plane
-    // (centre/zoom are complex-plane values, NOT scaled by the device scale - only the corner radius + stroke are px).
+    // (center/zoom are complex-plane values, NOT scaled by the device scale - only the corner radius + stroke are px).
     public static bool BakeItem(RectanglePayload p, Matrix4x4F world, double opacity, int transformSlot, int clipSlot, int fadeSlot, out FractalRectItem item)
     {
         item = default;
@@ -302,7 +302,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
             Bounds = new Vector4F((float)(r.X * sx + tx), (float)(r.Y * sy + ty), (float)(r.Width * sx), (float)(r.Height * sy)),
             Params = new Vector4F(RectBatchCollector.MaxOf(radii), (int)f.Fractal, transformSlot, f.Iterations),
             Radii = radii,
-            // The centre the FLOAT path maps fragments through is the WHOLE centre - coarse plus fine. It is the only
+            // The center the FLOAT path maps fragments through is the WHOLE center - coarse plus fine. It is the only
             // reader that wants them added: this path lives at shallow zoom, where the sum loses nothing, while the deep
             // path deliberately keeps them apart and sends the small one on its own in Ref.zw.
             Geom = new Vector4F((float)(f.Center.X + f.CenterFine.X), (float)(f.Center.Y + f.CenterFine.Y),
@@ -316,7 +316,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
             Dash = dash,
             // .x the rounded ancestor clip, .y the opacity slot its alpha comes from (-1 = none for either). Until the
             // slot was read here a faded ancestor reached a fractal only through a full re-bake, so it lagged behind
-            // every neighbour on the Opacity stand until something forced a walk.
+            // every neighbor on the Opacity stand until something forced a walk.
             Clip = new Vector4F(clipSlot, fadeSlot, 0, 0)
         };
         return true;

@@ -88,7 +88,7 @@ public class InheritedBrushRepaintTests
         return scene;
     }
 
-    // The same scene with the brush further UP. The application never holds a text colour one level above the text: the
+    // The same scene with the brush further UP. The application never holds a text color one level above the text: the
     // window sets Foreground once and the block that draws with it is a dozen panels, presenters and templates below.
     // If the link that tells a descendant is only ever established for a DIRECT child, depth is what exposes it.
     private static Scene NewDeeplyInheritedScene(Brush ink, int depth)
@@ -151,21 +151,21 @@ public class InheritedBrushRepaintTests
     }
 
     [Test]
-    public void RecolouringTheBrush_RepaintsTheInheritedText()
+    public void RecoloringTheBrush_RepaintsTheInheritedText()
     {
         var ink = new SolidColorBrush(Colors.White);
         using var scene = NewInheritedScene(ink);
         var before = Pixels(scene.Renderer);
 
         // The precondition the first version of this test never checked: the text has to be ON SCREEN. A frame that is
-        // still the clear colour compares equal to itself after any change, so an empty scene reports "the recolour
+        // still the clear color compares equal to itself after any change, so an empty scene reports "the recolor
         // never arrived" just as loudly as a broken one - and says nothing.
         var painted = 0;
         for (var i = 0; i < before.Length; i += 4)
             if (before[i] != 0 || before[i + 1] != 0 || before[i + 2] != 0) painted++;
-        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recoloured");
+        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recolored");
 
-        // Exactly what a variant switch does: the palette keeps the brush and writes a new colour into it.
+        // Exactly what a variant switch does: the palette keeps the brush and writes a new color into it.
         ink.Color = Colors.Red;
         scene.Draw();
 
@@ -190,7 +190,7 @@ public class InheritedBrushRepaintTests
     [TestCase(2)]
     [TestCase(4)]
     [TestCase(8)]
-    public void RecolouringTheBrush_RepaintsTextInheritingFromDepth(int depth)
+    public void RecoloringTheBrush_RepaintsTextInheritingFromDepth(int depth)
     {
         var ink = new SolidColorBrush(Colors.White);
         using var scene = NewDeeplyInheritedScene(ink, depth);
@@ -199,7 +199,7 @@ public class InheritedBrushRepaintTests
         var painted = 0;
         for (var i = 0; i < before.Length; i += 4)
             if (before[i] != 0 || before[i + 1] != 0 || before[i + 2] != 0) painted++;
-        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recoloured");
+        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recolored");
         Assume.That(scene.Text.Foreground, Is.SameAs(ink), "precondition: the block really does inherit the brush");
 
         ink.Color = Colors.Red;
@@ -211,7 +211,7 @@ public class InheritedBrushRepaintTests
 
     // The recolor survives a frame that walks instead of patching (text bakes from its component there).
     [Test]
-    public void RecolouringTheBrush_RepaintsTheText_EvenOnAFrameThatWALKS()
+    public void RecoloringTheBrush_RepaintsTheText_EvenOnAFrameThatWALKS()
     {
         var ink = new SolidColorBrush(Colors.White);
         using var scene = NewInheritedScene(ink);
@@ -220,11 +220,11 @@ public class InheritedBrushRepaintTests
         var painted = 0;
         for (var i = 0; i < before.Length; i += 4)
             if (before[i] != 0 || before[i + 1] != 0 || before[i + 2] != 0) painted++;
-        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recoloured");
+        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recolored");
 
         // A scene this small always patches successfully, which is precisely how a defect that only ever showed on
         // WALKING frames lived through a green suite. So take the patch away and make the frame walk, as it does in an
-        // application where something structural happens in the same frame as the recolour.
+        // application where something structural happens in the same frame as the recolor.
         RenderCache.PatchDisabled = true;
         RenderCache.ReplayDisabled = true;
         try
@@ -239,12 +239,12 @@ public class InheritedBrushRepaintTests
         }
 
         Assert.That(DifferingPixels(before, Pixels(scene.Renderer)), Is.Not.Zero,
-            "a recolour must reach the text on a walking frame too, not only on a patched one");
+            "a recolor must reach the text on a walking frame too, not only on a patched one");
     }
 
     // A subtree detached during the recolor (a parked tab, a recycled row) returns in the new color.
     [Test]
-    public void RecolouringTheBrush_RepaintsASubtreeThatWasAWAYForIt()
+    public void RecoloringTheBrush_RepaintsASubtreeThatWasAWAYForIt()
     {
         var ink = new SolidColorBrush(Colors.White);
         using var scene = NewInheritedScene(ink);
@@ -253,23 +253,23 @@ public class InheritedBrushRepaintTests
         var painted = 0;
         for (var i = 0; i < before.Length; i += 4)
             if (before[i] != 0 || before[i + 1] != 0 || before[i + 2] != 0) painted++;
-        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recoloured");
+        Assume.That(painted, Is.GreaterThan(0), "precondition: the text has to be drawn before it can be recolored");
 
         scene.Host.Children.Remove(scene.Text);
         scene.Draw();
 
-        ink.Color = Colors.Red;          // recoloured while the block is nowhere
+        ink.Color = Colors.Red;          // recolored while the block is nowhere
         scene.Draw();
 
         scene.Host.Children.Add(scene.Text);
         scene.Draw();
 
         Assert.That(DifferingPixels(before, Pixels(scene.Renderer)), Is.Not.Zero,
-            "a subtree that was away for the recolour must come back wearing the new colour");
+            "a subtree that was away for the recolor must come back wearing the new color");
     }
 
     [Test]
-    public void RecolouringTheBrush_RepaintsAnOWNEDBackgroundToo()
+    public void RecoloringTheBrush_RepaintsAnOWNEDBackgroundToo()
     {
         // The half that already worked, kept as the control: if this ever fails the fault is somewhere else entirely.
         var fill = new SolidColorBrush(Colors.Blue);
@@ -296,12 +296,12 @@ public class InheritedBrushRepaintTests
         var before = Pixels(renderer);
 
         // The precondition every one of these tests silently assumed: the scene has to DRAW the fill. A frame that is
-        // still the clear colour compares equal to itself after any change, and the test would report "the recolour
+        // still the clear color compares equal to itself after any change, and the test would report "the recolor
         // never reached the screen" for a scene that never put anything on it.
         var painted = 0;
         for (var i = 0; i < before.Length; i += 4)
             if (before[i] != 0 || before[i + 1] != 0 || before[i + 2] != 0) painted++;
-        Assume.That(painted, Is.GreaterThan(0), "precondition: the fill has to be on screen before it can be recoloured");
+        Assume.That(painted, Is.GreaterThan(0), "precondition: the fill has to be on screen before it can be recolored");
 
         Assume.That(fill.SubscriberCount, Is.GreaterThan(0),
             "precondition: the element that HOLDS the brush must be registered with it");
@@ -321,6 +321,6 @@ public class InheritedBrushRepaintTests
         }
 
         Assert.That(changedOnFrame, Is.EqualTo(1),
-            $"a recolour has to reach the screen on the very next frame (it took {changedOnFrame} - 0 means never)");
+            $"a recolor has to reach the screen on the very next frame (it took {changedOnFrame} - 0 means never)");
     }
 }

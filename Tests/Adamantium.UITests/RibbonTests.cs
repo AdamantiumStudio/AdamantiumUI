@@ -212,11 +212,11 @@ public class RibbonTests
         });
     }
 
-    // The BLOCK is centred in the band and every column starts on that one line. Centring each column separately looks
+    // The BLOCK is centered in the band and every column starts on that one line. Centering each column separately looks
     // right for two full columns and wrong the moment they differ: a column of one command floats at the middle while
     // the column beside it stacks three from the top, and the rows stop lining up.
     [Test]
-    public void ColumnsShareOneTopLine_AndTheBlockIsCentred()
+    public void ColumnsShareOneTopLine_AndTheBlockIsCentered()
     {
         var large = Command(RibbonSize.Large, 40, 50);
         var a = Command(RibbonSize.Medium, 30, 20);

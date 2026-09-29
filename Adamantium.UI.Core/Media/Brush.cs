@@ -9,7 +9,7 @@ namespace Adamantium.UI.Core.Media;
 public abstract class Brush: AdamantiumComponent, IRenderAttachable
 {
    // Set by RaiseChanged (a genuine property change), consumed by the compositor's per-frame RefreshBases. Lets a paint
-   // animation re-capture its base ONLY when the brush actually changed (a theme recolour) instead of every loop frame -
+   // animation re-capture its base ONLY when the brush actually changed (a theme recolor) instead of every loop frame -
    // so the render thread's dedup (see Compositor's paint tag) is not defeated by a base that is "re-captured" unchanged.
    // Loop-thread only (RaiseChanged and RefreshBases both run there); never touched by the render thread's PublishSnapshot.
    private bool _baseChanged = true;
@@ -29,9 +29,9 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
    private bool _isFrozen;
 
-   // PAINT: a brush's own opacity changes only the colour the units are baked with - never a shape, never a layout. Every
+   // PAINT: a brush's own opacity changes only the color the units are baked with - never a shape, never a layout. Every
    // element painting with this brush re-bakes (via Changed -> InvalidatePaint); the flag STATES that, so an animation of
-   // it can also be recognised as composited (run on the render thread) without the renderer keeping a hardcoded list of
+   // it can also be recognized as composited (run on the render thread) without the renderer keeping a hardcoded list of
    // "known" brush properties. The loading-skeleton pulse animates exactly this.
    public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
       typeof (Double), typeof (Brush), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsPaint));
@@ -97,9 +97,9 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       }
    }
 
-   /// <summary>Is this element in the owner map - the only thing this brush can tell when its colour changes. An
+   /// <summary>Is this element in the owner map - the only thing this brush can tell when its color changes. An
    /// element that PAINTS with a brush and is not in it hears nothing, which is what left every inherited Foreground
-   /// in the previous variant's colour.</summary>
+   /// in the previous variant's color.</summary>
    internal bool IsOwnedBy(AdamantiumComponent component)
    {
       lock (_ownersLock) return _owners?.ContainsKey(component) == true;
@@ -117,7 +117,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       _baseChanged = true;   // a real change to the brush's own values - the compositor re-captures its paint base on it
 
       // A wholesale discard happened since this brush last looked (see SweepGeneration). This is the moment it is worth
-      // looking: a theme swap recolours every theme brush, so the ones that need sweeping are exactly the ones raising
+      // looking: a theme swap recolors every theme brush, so the ones that need sweeping are exactly the ones raising
       // this. One comparison on the hot path when there is nothing to do.
       if (_owners != null && _sweptGeneration != SweepGeneration) SweepOwnersOutOfTheTree();
 
@@ -429,7 +429,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
    /// <summary>A frozen clone of this brush's CURRENT (live, base) values - what the compositor captures on the loop thread
    /// as the base its animated snapshots are built from. Distinct from <see cref="Snapshot"/>, which the compositor itself
-   /// overwrites while it animates: the base must stay the brush's own values so a theme recolour flows through, and reading
+   /// overwrites while it animates: the base must stay the brush's own values so a theme recolor flows through, and reading
    /// Snapshot for it would feed the animated value back in and spiral.</summary>
    public Brush CaptureBase() => AsFrozen(CreateClone());
 

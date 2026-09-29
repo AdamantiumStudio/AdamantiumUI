@@ -9,7 +9,7 @@ namespace Adamantium.UI.Core.Media.Imaging;
 public sealed class BitmapImage : BitmapSource
 {
    private IRawBitmap _rawBitmap;
-   // Initialised HERE, not per-constructor: the IRawBitmap overload chains to base() rather than this(), so it used to
+   // Initialized HERE, not per-constructor: the IRawBitmap overload chains to base() rather than this(), so it used to
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
    private readonly Queue<BitmapFrame> _framesCache = new();
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();

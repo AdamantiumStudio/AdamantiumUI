@@ -145,10 +145,10 @@ public class CanvasOrderTests
         });
     }
 
-    // A RUN IS NEIGHBOURS, not kinds: ten controls in a row are one layer however many they are, which is what keeps a
+    // A RUN IS NEIGHBORS, not kinds: ten controls in a row are one layer however many they are, which is what keeps a
     // graph of ten thousand nodes costing exactly what it always did.
     [Test]
-    public void NeighboursOfOneSortShareALayer()
+    public void NeighborsOfOneSortShareALayer()
     {
         var canvas = Canvas();
 
@@ -159,7 +159,7 @@ public class CanvasOrderTests
 
         var stack = canvas.GetTemplateChild("PART_Layers") as Adamantium.UI.Controls.Panels.Panel;
 
-        if (stack != null) Assert.That(stack.Children.Count, Is.EqualTo(1), "ten neighbours took ten layers");
+        if (stack != null) Assert.That(stack.Children.Count, Is.EqualTo(1), "ten neighbors took ten layers");
     }
 
     // AMONG THEMSELVES. "One order" is worth nothing if it only sorts the two SORTS: a shape has to be able to go over
@@ -278,7 +278,7 @@ public class CanvasOrderTests
     }
 
     // AT THE END IT SAYS SO, rather than doing nothing: a button that looks pressable and changes nothing reads as
-    // broken, and this is what greys it out.
+    // broken, and this is what grays it out.
     [Test]
     public void AtTheEndThereIsNothingToStepPast()
     {
@@ -341,7 +341,7 @@ public class CanvasOrderTests
     }
 
     // ...AND NOTHING IN THE WAY MEANS NOTHING TO DO. A button that is offered and changes nothing reads as broken;
-    // this says "there is nothing in front of this" by going grey.
+    // this says "there is nothing in front of this" by going gray.
     [Test]
     public void WithNothingOverlappingThereIsNothingToStepPast()
     {
@@ -384,7 +384,7 @@ public class CanvasOrderTests
         new(CanvasShape.Rectangle, new Rect(at, at, 40, 40), Brushes.Black, 1);
 
     // A COMMENT FRAME is made at the BOTTOM and stays there. It used to be held down by a band; now the order is the
-    // only thing holding it, so this is what keeps a frame from being a sheet of colour over its own nodes.
+    // only thing holding it, so this is what keeps a frame from being a sheet of color over its own nodes.
     [Test]
     public void ACommentFrameIsMadeAtTheBottom()
     {

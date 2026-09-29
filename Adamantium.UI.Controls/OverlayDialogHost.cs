@@ -54,7 +54,7 @@ public sealed class OverlayDialogHost : IDialogHost
         }
 
         var session = DialogSession.Begin(dialogViewModel, parameters, () => window.Close());
-        // A user-initiated close (x / Escape) routes back through the session as a None result, still honouring
+        // A user-initiated close (x / Escape) routes back through the session as a None result, still honoring
         // CanCloseDialog: veto the window close when the dialog refuses to close.
         window.Closing += (_, args) => { if (aware != null && !aware.CanCloseDialog()) args.Cancel = true; };
         window.Closed += (_, _) => session.RequestClose(new DialogResult(DialogButtonResult.None));

@@ -46,7 +46,7 @@ internal sealed class RunningAnimation : IRunningAnimation
     public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Owner;
 
     /// <summary>Advances by <paramref name="deltaSeconds"/>; returns true once finished (final value applied,
-    /// completion callback fired). Honours Delay, IterationCount (incl. infinite) and AutoReverse (ping-pong).</summary>
+    /// completion callback fired). Honors Delay, IterationCount (incl. infinite) and AutoReverse (ping-pong).</summary>
     public bool Advance(double deltaSeconds)
     {
         _elapsedSeconds += deltaSeconds;

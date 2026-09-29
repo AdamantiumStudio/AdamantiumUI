@@ -13,7 +13,7 @@ namespace Adamantium.UITests;
 // A stretched presenter centers the label it generates from a string by layout, since text alignment only acts inside
 // the label's own box.
 [TestFixture]
-public class GeneratedLabelCentringTests
+public class GeneratedLabelCenteringTests
 {
     private static (TextBlock label, ContentPresenter presenter) Row(VerticalAlignment presenterAlignment, double height)
     {
@@ -34,7 +34,7 @@ public class GeneratedLabelCentringTests
 
     // Equal space above and below, after checking the label is its own ink height (a filling label would pass trivially).
     [Test]
-    public void AStretchedRowCentresItsLabel()
+    public void AStretchedRowCentersItsLabel()
     {
         var (label, presenter) = Row(VerticalAlignment.Stretch, 40);
 

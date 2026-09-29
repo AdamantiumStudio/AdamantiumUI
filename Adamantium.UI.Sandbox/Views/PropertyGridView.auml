@@ -56,7 +56,7 @@
                      row whether the picker is open or not, and dragging inside it moves the object being inspected as
                      the pointer goes. -->
                 <ColorProperty Header="Tint" Binding="{Binding Tint}"/>
-                <!-- A BRUSH. The line paints the colour INTO the brush the object already holds instead of putting a
+                <!-- A BRUSH. The line paints the color INTO the brush the object already holds instead of putting a
                      new one there, so everything else painting with that brush follows - see the square below, which
                      is bound to the same instance and is told nothing. That is also why the binding may be one-way:
                      nothing is written back through it. -->

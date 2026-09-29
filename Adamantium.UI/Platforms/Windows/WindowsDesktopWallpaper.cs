@@ -50,8 +50,8 @@ internal sealed class WindowsDesktopWallpaper : IDesktopWallpaperPlatform
         var background = shell.GetBackgroundColor(out var colorRef) == 0 ? FromColorRef(colorRef) : Colors.Black;
 
         // A path that is empty, or names a file that is no longer there, means "no picture" - a desktop painted with
-        // the background colour, which the slideshow leaves behind between pictures too. That is an ANSWER: the monitor
-        // is known, so a material tints the colour instead of falling back to its own background.
+        // the background color, which the slideshow leaves behind between pictures too. That is an ANSWER: the monitor
+        // is known, so a material tints the color instead of falling back to its own background.
         var known = shell.GetWallpaper(monitorId, out var path) == 0 && !string.IsNullOrEmpty(path) && File.Exists(path);
 
         // The file's write time rides along as the revision. Windows Spotlight turns the page by REWRITING its cache

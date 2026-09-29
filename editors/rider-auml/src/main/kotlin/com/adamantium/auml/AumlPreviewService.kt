@@ -16,7 +16,7 @@ import kotlin.io.path.exists
  * Owns the long-running Adamantium designer host process and talks to it over its line-delimited JSON
  * protocol (see Adamantium.UI.Designer.Host). The host keeps the engine warm between renders, so a render
  * is just one request/response round-trip. One process is shared by every `.auml` editor in the project;
- * requests are serialised. The process is started lazily and restarted automatically if it dies.
+ * requests are serialized. The process is started lazily and restarted automatically if it dies.
  */
 @Service(Service.Level.PROJECT)
 class AumlPreviewService : Disposable {

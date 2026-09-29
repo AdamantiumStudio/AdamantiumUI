@@ -186,7 +186,7 @@ public abstract class TextBoxBase : Control
         set => SetValue(FloatingPlaceholderProperty, value);
     }
 
-    /// <summary>Colour of the floated (raised) label - typically an accent. The label's colour blends from
+    /// <summary>Color of the floated (raised) label - typically an accent. The label's color blends from
     /// <see cref="PlaceholderForeground"/> (resting) to this as it floats up. Falls back to PlaceholderForeground when null.</summary>
     public Brush FloatingPlaceholderForeground
     {
@@ -273,8 +273,8 @@ public abstract class TextBoxBase : Control
     private bool _caretSuppressed;   // an owner has taken the press for something that is not typing - see SuppressCaret
     private bool _blinking;
     private double _blinkAccum;
-    private double _textOy;                     // vertical offset of the text within the surface (float strip + single-line centring)
-    private double? _desiredColumnX;            // sticky X for Up/Down navigation (WPF behaviour); cleared by any horizontal move
+    private double _textOy;                     // vertical offset of the text within the surface (float strip + single-line centering)
+    private double? _desiredColumnX;            // sticky X for Up/Down navigation (WPF behavior); cleared by any horizontal move
 
     private double _floatProgress;             // floating placeholder: 0 = resting (in text), 1 = floated (small, top strip)
     private bool _floatAnimating;
@@ -488,7 +488,7 @@ public abstract class TextBoxBase : Control
         ScrollCaretIntoView();
     }
 
-    // Move the caret one visual line up/down, preserving the sticky column X (WPF behaviour). Past the first/last line
+    // Move the caret one visual line up/down, preserving the sticky column X (WPF behavior). Past the first/last line
     // it snaps to the document start/end.
     private void MoveCaretVertical(int dir, bool extend)
     {
@@ -756,7 +756,7 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         var text = Clipboard.GetText();
         if (string.IsNullOrEmpty(text)) return;
-        text = text.Replace("\r\n", "\n").Replace("\r", "\n");       // normalise line endings
+        text = text.Replace("\r\n", "\n").Replace("\r", "\n");       // normalize line endings
         if (!AcceptsNewLines) text = text.Replace("\n", " ");        // single-line: newlines become spaces
         ReplaceSelection(text);
     }
@@ -862,7 +862,7 @@ public abstract class TextBoxBase : Control
         var hasText = !string.IsNullOrEmpty(Text);
         // Scrolling is owned by the enclosing ScrollViewer (its ScrollContentPresenter translates this whole surface by
         // the offset), so we render the FULL content at our own origin (ox = 0). Text sits below the floating-label strip
-        // (zero when off); single-line content then centres vertically in the surface (which the ScrollContentPresenter
+        // (zero when off); single-line content then centers vertically in the surface (which the ScrollContentPresenter
         // sizes to at least the viewport), multi-line is top-aligned. vOffset is 0 for the multi-line case.
         const double ox = 0;
         var stripH = FloatStripHeight();
@@ -870,7 +870,7 @@ public abstract class TextBoxBase : Control
         var vOffset = !AcceptsNewLines && ContentHeight < textAreaH ? (textAreaH - ContentHeight) / 2 : 0;
         // WHOLE pixels. The glyph pipeline snaps the vertical origin it is handed (it rounds the baseline and the
         // ascender line to whole rows), so a fractional offset moves the caret and the selection while leaving the text
-        // where it was: centring a 15.8-tall line in a 17.4-tall surface handed the text 0.8 it silently dropped and the
+        // where it was: centering a 15.8-tall line in a 17.4-tall surface handed the text 0.8 it silently dropped and the
         // caret 0.8 it kept, and the caret drew a visible row below the letters. One snapped origin for all three.
         var oy = Math.Floor(stripH + vOffset);
         _textOy = oy;
@@ -918,7 +918,7 @@ public abstract class TextBoxBase : Control
     }
 
     // Scroll the enclosing ScrollViewer the minimum needed to keep the caret visible (WPF caret-follow). The caret rect is
-    // in text-layout coords; content coords add the vertical text offset (float strip + single-line centring). Horizontal
+    // in text-layout coords; content coords add the vertical text offset (float strip + single-line centering). Horizontal
     // is 1:1 (ox = 0). No-op until the template's ScrollViewer exists / when the caret already fits.
     private void ScrollCaretIntoView()
     {
@@ -959,7 +959,7 @@ public abstract class TextBoxBase : Control
         session.DrawText(BuildTextParameters(PlaceholderForeground, 0, oy, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
     }
 
-    // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and colour (placeholder ->
+    // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.
     private void RenderFloatingPlaceholder(IDrawingSession session, double textOy, Size size)
     {
@@ -971,7 +971,7 @@ public abstract class TextBoxBase : Control
         session.DrawText(BuildTextParameters(brush, 0, y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
     }
 
-    // Blend the label colour from the resting placeholder colour to the accent (FloatingPlaceholderForeground) as it
+    // Blend the label color from the resting placeholder color to the accent (FloatingPlaceholderForeground) as it
     // rises. Blends only when both are solid; otherwise switches at the half-way point.
     private Brush FloatLabelBrush(double t)
     {

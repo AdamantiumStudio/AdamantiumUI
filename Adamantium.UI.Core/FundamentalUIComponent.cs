@@ -110,7 +110,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    /// <summary>The triggers WITHOUT materialising them - null when this component never declared any. `ApplyTriggers`
+    /// <summary>The triggers WITHOUT materializing them - null when this component never declared any. `ApplyTriggers`
     /// runs on every attach for every node, so reading it through <see cref="Triggers"/> would build a collection for
     /// each one just to find it empty, which is the whole cost this laziness exists to avoid.</summary>
     private TriggerCollection TriggersOrNull => GetValue<TriggerCollection>(TriggersProperty);
@@ -163,7 +163,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private void SyncClassNames()
     {
         // Nothing to mirror INTO and nothing to mirror FROM: don't build the collection just to discover that. The guard
-        // used to be `ClassNames == null` (the default-value callback can fire from the base ctor); a materialising
+        // used to be `ClassNames == null` (the default-value callback can fire from the base ctor); a materializing
         // getter would have made that dead code AND allocated on every component that never names a class.
         if (_classNames == null && Classes.Count == 0)
         {
@@ -263,7 +263,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     public Classes ClassNames => _classNames ??= new Classes();
 
-    /// <summary>Whether this component has any class names, WITHOUT materialising the collection. Style matching and the
+    /// <summary>Whether this component has any class names, WITHOUT materializing the collection. Style matching and the
     /// theme cache ask this per component, and for most of them the answer is no.</summary>
     public bool HasClassNames => _classNames is { Count: > 0 };
 
@@ -282,7 +282,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    /// <summary>The local styles WITHOUT materialising them - null when none were ever added.</summary>
+    /// <summary>The local styles WITHOUT materializing them - null when none were ever added.</summary>
     private StylesCollection StylesOrNull => GetValue<StylesCollection>(StylesProperty);
     
     public bool IsStyleApplied { get; private set; }
@@ -364,18 +364,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         var bindings = Data.BindingEngine.GetBindings(this);
         foreach (var binding in bindings) binding.CloseConnection();
 
-        // ...and the BEHAVIOURS, which carry bindings of their own. A binding is keyed by its TARGET, and a behaviour is
+        // ...and the BEHAVIORS, which carry bindings of their own. A binding is keyed by its TARGET, and a behavior is
         // not a component, so the sweep above cannot see one: a DragSourceBehavior's {Ancestor} binding stayed open, its
-        // source (a live ListBox) went on holding the expression, and the expression held the behaviour's element and
+        // source (a live ListBox) went on holding the expression, and the expression held the behavior's element and
         // everything under it. Clearing the collection detaches each one through the path that already exists.
-        var behaviours = GetValue<Collections.BehaviorCollection>(BehaviorsProperty);
-        if (behaviours == null || behaviours.Count == 0) return;
+        var behaviors = GetValue<Collections.BehaviorCollection>(BehaviorsProperty);
+        if (behaviors == null || behaviors.Count == 0) return;
 
-        foreach (var behaviour in behaviours)
-            foreach (var binding in Data.BindingEngine.GetBindings(behaviour))
+        foreach (var behavior in behaviors)
+            foreach (var binding in Data.BindingEngine.GetBindings(behavior))
                 binding.CloseConnection();
 
-        behaviours.Clear();
+        behaviors.Clear();
     }
 
     // TEMP (leak hunt): every part the teardown has destroyed, held WEAKLY. After a forced collection the ones still
@@ -537,7 +537,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 break;
 
             case NotifyCollectionChangedAction.Reset:
-                throw new NotSupportedException("Reset should not be signalled on LogicalChildren collection");
+                throw new NotSupportedException("Reset should not be signaled on LogicalChildren collection");
         }
     }
 
@@ -742,7 +742,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     // not template parts. Idempotent - skipped if already applied (e.g. a re-attach without an intervening detach).
     private void ApplyTriggers()
     {
-        // TriggersOrNull, not Triggers: this runs on every attach for every node, and the property MATERIALISES.
+        // TriggersOrNull, not Triggers: this runs on every attach for every node, and the property MATERIALIZES.
         var triggers = TriggersOrNull;
         if (_triggerActivators != null || triggers == null || triggers.Count == 0)
             return;

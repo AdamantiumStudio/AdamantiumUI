@@ -23,13 +23,13 @@ public class AsyncPagedSourceTests
 
         public int? Total { get; set; }
         public int Calls { get; private set; }
-        public List<int> Cancelled { get; } = [];
+        public List<int> Canceled { get; } = [];
 
         public PageFetch Fetch => (request, cancellation) =>
         {
             Calls++;
             var completion = new TaskCompletionSource<PageResult>();
-            cancellation.Register(() => Cancelled.Add(request.PageIndex));
+            cancellation.Register(() => Canceled.Add(request.PageIndex));
             _pending[request.PageIndex] = completion;
             return completion.Task;
         };
@@ -82,9 +82,9 @@ public class AsyncPagedSourceTests
         Assert.That(source.PageIndex, Is.EqualTo(2), "the LAST request wins, whatever order the answers come in");
     }
 
-    /// <summary>...and it is cancelled, not merely ignored: the work stops.</summary>
+    /// <summary>...and it is canceled, not merely ignored: the work stops.</summary>
     [Test]
-    public void AnOvertakenRequest_IsCancelled()
+    public void AnOvertakenRequest_IsCanceled()
     {
         var server = new Server { Total = 30 };
         var source = Source(server);
@@ -92,7 +92,7 @@ public class AsyncPagedSourceTests
         _ = source.MoveToPageAsync(1);
         _ = source.MoveToPageAsync(2);
 
-        Assert.That(server.Cancelled, Is.EqualTo(new[] { 1 }));
+        Assert.That(server.Canceled, Is.EqualTo(new[] { 1 }));
     }
 
     /// <summary>A failed fetch leaves the previous page on screen. An emptied list would tell the reader there is

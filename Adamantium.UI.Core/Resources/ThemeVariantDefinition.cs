@@ -14,7 +14,7 @@ public class ThemeVariantDefinition : IThemeVariant
     /// <summary>Which variant this is - <c>Light</c>, <c>Dark</c>, or whatever this theme chooses to call it.</summary>
     public ThemeVariant Key { get; set; }
 
-    /// <summary>Palette colours by resource key - child elements in markup, an indexer in code. Every variant of a
+    /// <summary>Palette colors by resource key - child elements in markup, an indexer in code. Every variant of a
     /// theme must declare the SAME set of keys: a key one variant answers and another does not would make the
     /// subtree's appearance depend on which variant it happened to be switched FROM, which is not a thing anyone can
     /// reason about. See <see cref="Theme.ValidateVariants"/>, which is where that is caught.</summary>
@@ -24,5 +24,5 @@ public class ThemeVariantDefinition : IThemeVariant
     /// this variant becomes current. See <see cref="ThemeValue"/> for why these are not palette entries.</summary>
     public ThemeValueCollection Values { get; } = new();
 
-    public override string ToString() => $"{Key} ({Colors.Count} colours, {Values.Count} values)";
+    public override string ToString() => $"{Key} ({Colors.Count} colors, {Values.Count} values)";
 }

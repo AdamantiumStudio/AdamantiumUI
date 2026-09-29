@@ -41,7 +41,7 @@
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run: the group's colour carrying its title. -->
+    <!-- The ledge over a contextual run: the group's color carrying its title. -->
     <Style Selector="RibbonContextualLedge">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeMicro}"/>
@@ -262,7 +262,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- Open AND contextual: the ordinary open fill; what marks it is the rule under it, in the context's colour. -->
+    <!-- Open AND contextual: the ordinary open fill; what marks it is the rule under it, in the context's color. -->
     <Style Selector="RibbonTabHeader">
         <MultiTrigger>
             <MultiTrigger.Conditions>
@@ -691,7 +691,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
-        <!-- Large centres (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
+        <!-- Large centers (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
              another, and a ragged left edge is the first thing the eye catches. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -704,7 +704,7 @@
         <Setter Property="MinWidth" Value="{ResourceReference RibbonButtonMinWidth}"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeCaption}"/>
-        <!-- Default icon drawing: path data stroked in whatever colour the icon slot carries. `{Binding}` is the icon
+        <!-- Default icon drawing: path data stroked in whatever color the icon slot carries. `{Binding}` is the icon
              itself - a string converts to a Geometry on the way in, as it does when written as an attribute. -->
         <Setter Property="IconTemplate">
             <Setter.Value>
@@ -737,8 +737,8 @@
                         <Grid x:Name="Layout" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                            <!-- The icon is DATA drawn by IconTemplate. Its colour travels through the presenter's
-                                 Foreground, so states recolour it without reaching into that template. -->
+                            <!-- The icon is DATA drawn by IconTemplate. Its color travels through the presenter's
+                                 Foreground, so states recolor it without reaching into that template. -->
                             <Viewbox x:Name="IconBox" Grid.Row="0" Grid.Column="0"
                                     Width="32" Height="32"
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -769,7 +769,7 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
-        <!-- The ICON greys out with the label - it is the part a person aims at. -->
+        <!-- The ICON grays out with the label - it is the part a person aims at. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
             <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
@@ -1110,7 +1110,7 @@
                     <Border x:Name="Chrome"
                             Background="{TemplateBinding Background}"
                             Padding="{TemplateBinding Padding}">
-                        <!-- Icon and label travel as ONE block, so centring the row centres the pair rather than
+                        <!-- Icon and label travel as ONE block, so centering the row centers the pair rather than
                              leaving the icon pinned to the edge with the label adrift. -->
                         <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -1318,7 +1318,7 @@
                         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto"
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                             <!-- The command's OWN padding, not a fixed one: the size triggers tighten Padding for Medium and Small, and a
-                                 hardcoded value here kept the split button 56x30 where its neighbours were 24x22 - a
+                                 hardcoded value here kept the split button 56x30 where its neighbors were 24x22 - a
                                  column stretched to fit it, and the icons beside it floating in the slack. -->
                             <Border x:Name="ActionArea" Grid.Row="0" Grid.Column="0"
                                     Padding="{TemplateBinding Padding}"
@@ -1415,8 +1415,8 @@
         <!-- The icon ink commands read via {Ancestor RibbonQuickAccess, Foreground}; the caption instance overrides it,
              the one under the ribbon relies on it. -->
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centres what it is given,
-             and something that fills the slot has nothing left to centre. -->
+        <!-- Stretched, its row of buttons would sit against the TOP of the caption: the slot centers what it is given,
+             and something that fills the slot has nothing left to center. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <!-- The caption is finite and shared with the window title, so the bar is given a budget rather than allowed to
              grow: what does not fit goes under the chevron instead of pushing the title off the edge. -->
@@ -1506,7 +1506,7 @@
                         </Button.ContextMenu>
                         <!-- The BAR's foreground, not the caption's: below the ribbon there is no TitleBar to
                              ask, and the icons would come out with no stroke at all. The caption instance takes
-                             its colour from the title bar, so they still follow its active/inactive state. -->
+                             its color from the title bar, so they still follow its active/inactive state. -->
                         <Path Data="{Binding Icon}"
                                 Stroke="{Ancestor RibbonQuickAccess, Foreground}" StrokeThickness="1"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -1517,7 +1517,7 @@
     </Style>
 
     <!-- A TOGGLE in the bar wears the same plate as a button, but needs its own checked look: the default one paints
-         AccentFillColorDefault, which is the very colour the active caption is painted with - a checked command would
+         AccentFillColorDefault, which is the very color the active caption is painted with - a checked command would
          disappear into it. Here checked is a standing darker plate, the hover shade one notch deeper. -->
     <Style Selector="ToggleButton.QuickAccessButton">
         <Setter Property="Background" Value="Transparent"/>
@@ -1541,7 +1541,7 @@
 
     <Style Selector="Button.QuickAccessButton">
         <Setter Property="Background" Value="Transparent"/>
-        <!-- DARKENS. These sit on the caption, which is the accent colour while the window is active, and a lightening
+        <!-- DARKENS. These sit on the caption, which is the accent color while the window is active, and a lightening
              overlay on it is all but invisible. -->
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference OnAccentShadePointerOver}"/>
         <Setter Property="BackgroundPressed" Value="{ResourceReference OnAccentShadePressed}"/>
@@ -1553,7 +1553,7 @@
         <Setter Property="Height" Value="{ResourceReference RibbonChipHeight}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
-        <!-- The row it sits in claims the caption's FULL height, so centring the bar centres nothing - the button is what
+        <!-- The row it sits in claims the caption's FULL height, so centering the bar centers nothing - the button is what
              has to stand in the middle, level with the window title. -->
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

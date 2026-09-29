@@ -10,13 +10,13 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>The COMMENT FRAME: a titled box behind a group of nodes. A graph of forty nodes is unreadable as forty
-/// nodes and readable as five labelled areas, and this is the only documentation a graph ever gets.</summary>
+/// nodes and readable as five labeled areas, and this is the only documentation a graph ever gets.</summary>
 public class CanvasFrameTests
 {
     private static CanvasFrameItem Frame(Rect world = default) =>
         new(world.Width > 0 ? world : new Rect(0, 0, 400, 300), "Lighting", Brushes.White);
 
-    // UNDER the nodes. Over them it would be a sheet of colour across the thing it is about.
+    // UNDER the nodes. Over them it would be a sheet of color across the thing it is about.
     [Test]
     public void AFrameIsDrawnBehindTheNodes()
     {

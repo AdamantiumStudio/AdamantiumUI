@@ -14,7 +14,7 @@ public enum CompositorChannel
     /// <summary>A pure matrix change: the render thread rewrites the element's motion-node matrix and draws.</summary>
     Transform,
 
-    /// <summary>A pure colour change: the render thread re-bakes the batch slots the element already owns.</summary>
+    /// <summary>A pure color change: the render thread re-bakes the batch slots the element already owns.</summary>
     Paint,
 
     /// <summary>The ELEMENT's own opacity: the render thread writes one float into its opacity slot, and every instance

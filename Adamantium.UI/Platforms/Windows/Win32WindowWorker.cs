@@ -464,7 +464,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     }
 
     // Z-order only, NO activation: SWP_NOACTIVATE is precisely what keeps the mouse capture alive, so a drag can raise
-    // the window it is heading for instead of being cancelled by the OS revoking capture on a foreground change.
+    // the window it is heading for instead of being canceled by the OS revoking capture on a foreground change.
     public void RaiseWithoutActivation()
     {
         if (window == null || window.Handle == IntPtr.Zero) return;
@@ -544,7 +544,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     // Window input arrives on the OS message thread. Raising the event below routes to controls and mutates/invalidates
     // the visual tree, which must NOT happen concurrently with the measure/arrange/render running on the loop thread.
     // The event args are built synchronously by the caller (capturing the message's transient state); only the raising
-    // is marshalled onto the loop thread (drained at the start of Update). Order is preserved (a single FIFO queue).
+    // is marshaled onto the loop thread (drained at the start of Update). Order is preserved (a single FIFO queue).
     private static void DispatchInput(Action raise)
     {
         var dispatcher = Threading.Dispatcher.CurrentDispatcher;
@@ -566,7 +566,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
 
     // The OS move loop swallows mouse input, so WM_MOVING and WM_EXITSIZEMOVE are the only view of a caption drag (e.g.
-    // dropping a torn-off window onto a tab strip). Marshalled to the loop thread.
+    // dropping a torn-off window onto a tab strip). Marshaled to the loop thread.
     private IntPtr HandleMoving(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         // lParam is the rectangle the OS is about to put the window at, so the position can be kept CURRENT through the
@@ -873,11 +873,11 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             window.Width = w;
             window.Height = h;
             // These writes REPORT what the OS did; they do not ask for anything. Say so, or SetSize takes them for a
-            // request and pushes them back - and since they are marshalled here (a frame or more after the message), the
+            // request and pushes them back - and since they are marshaled here (a frame or more after the message), the
             // number it pushes is already stale, the OS resizes to it, reports THAT, and the window shakes for good.
             _reportingOsSize = true;
             // ClientWidth/Height logical (DIP) = physical / DPI. DpiScale is read on the loop thread (where it's updated
-            // by the marshalled WM_DPICHANGED handler), so a DPI change that precedes this resize is already applied.
+            // by the marshaled WM_DPICHANGED handler), so a DPI change that precedes this resize is already applied.
             window.ClientWidth = cw / window.DpiScale.X;
             window.ClientHeight = ch / window.DpiScale.Y;
             _reportingOsSize = false;
@@ -914,7 +914,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         // Setting this is the whole reaction: SystemAppearance raises its own change, the theme manager re-resolves the
         // application's variant if it is following the system, and the subtrees that asked to follow it are re-styled.
-        // A variant switch, so no template is rebuilt - the OS turning night is a colour write per palette key.
+        // A variant switch, so no template is rebuilt - the OS turning night is a color write per palette key.
         Core.Resources.SystemAppearance.PrefersDark = Win32Interop.SystemPrefersDarkAppearance();
         return IntPtr.Zero;
     }
@@ -997,9 +997,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private IntPtr HandleMouseMove(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
-        // RELATIVE mouse mode (mouse-look): synthesize a RawMouseMove delta from the physical move and re-centre the
+        // RELATIVE mouse mode (mouse-look): synthesize a RawMouseMove delta from the physical move and re-center the
         // cursor, so the universe gets unbounded relative motion (the cursor never reaches the window edge). The normal
-        // MouseMove is suppressed while looking - the cursor is hidden and pinned to the centre.
+        // MouseMove is suppressed while looking - the cursor is hidden and pinned to the center.
         if (_relativeActive)
         {
             Win32Interop.GetCursorPos(out var cur);
@@ -1091,8 +1091,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Messages.PostMessage(window.Handle, RelativeModeMessage, wp, lp);
     }
 
-    // Pump thread. Enter: hide the cursor, hold OS capture (moves keep arriving even at the window edge) and centre it;
-    // HandleMouseMove then feeds the delta and re-centres. Exit: warp the cursor to the panel's restore point (where it
+    // Pump thread. Enter: hide the cursor, hold OS capture (moves keep arriving even at the window edge) and center it;
+    // HandleMouseMove then feeds the delta and re-centers. Exit: warp the cursor to the panel's restore point (where it
     // vanished, in screen coords), show it, and drop the capture unless a button drag still owns it.
     private IntPtr HandleRelativeModeMessage(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
@@ -1104,7 +1104,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             _relativeActive = true;
             Win32Interop.SetCapture(window.Handle);
             Win32Interop.ShowCursor(false);
-            _recenterScreen = ClientCentreScreen();
+            _recenterScreen = ClientCenterScreen();
             Win32Interop.SetCursorPos(_recenterScreen.X, _recenterScreen.Y);
         }
         else if (!enable && _relativeActive)
@@ -1118,12 +1118,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         return IntPtr.Zero;
     }
 
-    private NativePoint ClientCentreScreen()
+    private NativePoint ClientCenterScreen()
     {
         Win32Interop.GetClientRect(window.Handle, out var rc);
-        var centre = new NativePoint((rc.Right - rc.Left) / 2, (rc.Bottom - rc.Top) / 2);
-        Win32Interop.ClientToScreen(window.Handle, ref centre);
-        return centre;
+        var center = new NativePoint((rc.Right - rc.Left) / 2, (rc.Bottom - rc.Top) / 2);
+        Win32Interop.ClientToScreen(window.Handle, ref center);
+        return center;
     }
 
     // Hands a caption drag to the OS move loop; posted, because the handoff must run on the HWND-owning thread.

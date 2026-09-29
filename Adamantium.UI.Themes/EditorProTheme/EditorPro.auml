@@ -9,13 +9,13 @@
        SystemDarkVariant="Dark"
        ResourceContext.Scope="Theme">
 
-  <!-- The editor skin: dense rows, small type, tight radii, hairlines, muted blue-grey. All sizes live in its Metrics and
+  <!-- The editor skin: dense rows, small type, tight radii, hairlines, muted blue-gray. All sizes live in its Metrics and
        all colors come from the palette by key, so its dark and light variants share every template. -->
 
   <!-- Dark first: it is what an editor is usually set to, and order is what says which one it opens on. -->
 
   <ResourceContext.Resources>
-    <!-- Its own numbers, and - for now - Fluent's SHAPES. An icon is geometry; its colour comes from the palette by
+    <!-- Its own numbers, and - for now - Fluent's SHAPES. An icon is geometry; its color comes from the palette by
          key, and this theme answers the same key names. Editor Pro will want sharper, smaller icons of its own, and
          that is a separate piece of work from the skin. -->
     <ResourceLink Source="{x:Type editor:Metrics}"/>

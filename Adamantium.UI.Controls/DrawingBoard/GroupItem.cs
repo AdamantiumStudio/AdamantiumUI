@@ -39,8 +39,8 @@ public class GroupItem : ICanvasItem
 
     private List<ICanvasItem> _inside;
 
-    /// <summary>The colour of what is IN it, when everything in it agrees - and nothing when they do not, because a
-    /// group of a red stroke and a blue one is not any one colour.</summary>
+    /// <summary>The color of what is IN it, when everything in it agrees - and nothing when they do not, because a
+    /// group of a red stroke and a blue one is not any one color.</summary>
     public Color? Paint
     {
         get

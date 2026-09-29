@@ -118,9 +118,9 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- The preview, full width under the square: the colour is what this whole thing is for,
+                            <!-- The preview, full width under the square: the color is what this whole thing is for,
                                  so it gets the widest band available rather than a corner of a side column.
-                                 The checkerboard is INSET inside the preview so the colour layer always covers the
+                                 The checkerboard is INSET inside the preview so the color layer always covers the
                                  pattern's antialiased fringe. -->
                             <Border Height="{ResourceReference ColorPreviewHeight}"
                                     Margin="{ResourceReference ColorStackGap}">
@@ -137,7 +137,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- LABELLED, and inline rather than above: four bare numbers in a row cannot be told
+                            <!-- LABELED, and inline rather than above: four bare numbers in a row cannot be told
                                  apart, and stacking a caption over each would cost four rows in a panel whose whole
                                  point is to be short. Fixed field widths with MinWidth=0 - the field style's minimum
                                  is meant for a form and would push these off the panel. -->

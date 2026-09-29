@@ -12,7 +12,7 @@ namespace Adamantium.UI.Controls.Converters;
 public class ColorToBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is Color colour ? new SolidColorBrush(colour) : AdamantiumProperty.UnsetValue;
+        value is Color color ? new SolidColorBrush(color) : AdamantiumProperty.UnsetValue;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is SolidColorBrush brush ? brush.Color : null;

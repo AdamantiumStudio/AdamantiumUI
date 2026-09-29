@@ -146,7 +146,7 @@ public class ItemsControlTests
     /// The drop gap is a REAL empty slot in the layout, not a nudge applied on top of it: everything from the insertion
     /// index on moves along by one, so a tile pushed past the end of its line WRAPS to the next one. That is the whole
     /// point of putting the gap in layout - a transform-only "spread" cannot make a line reflow, so tiles at a line
-    /// boundary would slide over their neighbours instead.
+    /// boundary would slide over their neighbors instead.
     /// </summary>
     [Test]
     public void DropGap_OpensARealSlot_AndTheLineReflows()

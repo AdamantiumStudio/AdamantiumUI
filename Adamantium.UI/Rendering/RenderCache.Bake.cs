@@ -260,7 +260,7 @@ public partial class RenderCache
     private static Vector4F ClipRadiiOf(IUIComponent c) => c.ClipToBounds ? c.ClipRadii : Vector4F.Zero;
 
     // Record one component's frozen layout into the recorder's map AND this frame's delta (the applier's replica is built
-    // from nothing else). Memoised: an unchanged component is captured once and never re-sent.
+    // from nothing else). Memoized: an unchanged component is captured once and never re-sent.
     private LayoutSnapshot Snap(IUIComponent c)
     {
         if (_snap.TryGetValue(c, out var s)) return s;
@@ -303,7 +303,7 @@ public partial class RenderCache
             _snapFullCapture = false;
         }
 
-        // Element opacity lives IN the snapshot (unlike a brush recolour, which re-bakes from the brush BY REFERENCE), so a
+        // Element opacity lives IN the snapshot (unlike a brush recolor, which re-bakes from the brush BY REFERENCE), so a
         // paint-dirty component whose opacity ACTUALLY changed must re-publish its entry - on any build kind. Gated on a
         // real change so the common brush pulse (~470 cards/frame) re-freezes nothing.
         var opacityStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -399,7 +399,7 @@ public partial class RenderCache
         var s = ApplySnap(element);
         _applySnap[element] = new LayoutSnapshot(Matrix4x4F.Identity, s.RenderSize, s.ClipToBounds, false, null,
             s.Opacity, s.SelfOpacity, s.ClipRadii);
-        _worldCache.Clear();    // drop any absolute transforms/clips memoised during the build so ProcessCommands recomputes rebased
+        _worldCache.Clear();    // drop any absolute transforms/clips memoized during the build so ProcessCommands recomputes rebased
         _relWorldCache.Clear();
         _clipCache.Clear();
         _clipOwnerCache.Clear();
@@ -408,7 +408,7 @@ public partial class RenderCache
         _nodeCache.Clear();
     }
 
-    // Effective alpha the bake folds into a unit's colour: SelfOpacity x the OPACITY chain (own Opacity x every
+    // Effective alpha the bake folds into a unit's color: SelfOpacity x the OPACITY chain (own Opacity x every
     // ancestor's). Reads ONLY the frozen snapshot - no live property, so no lock/box, render-thread safe
     // (see hot-paths-must-not-use-property-system). Cheaper than World (scalar mul, not matrix).
     private float EffectiveOpacity(IUIComponent c)
@@ -461,9 +461,9 @@ public partial class RenderCache
         return slot;
     }
 
-    // This unit's family READS the element's alpha from its opacity slot, so its colour must not carry the chain as
+    // This unit's family READS the element's alpha from its opacity slot, so its color must not carry the chain as
     // well - or the fade lands twice and the element comes out too dark. Called by those branches only; everything else
-    // keeps the chain in its colour.
+    // keeps the chain in its color.
     private void FadeBySlot(Core.Graphics.IRenderUnit u)
     {
         if (u.Component == null) return;
@@ -761,7 +761,7 @@ public partial class RenderCache
         return true;
     }
 
-    // The clip slot a unit under this component must read, or -1. Memoised per frame like CumulativeClip, and for the
+    // The clip slot a unit under this component must read, or -1. Memoized per frame like CumulativeClip, and for the
     // same reason: every unit under one clip asks the same question.
     private readonly Dictionary<IUIComponent, int> _clipSlotCache = new();
 

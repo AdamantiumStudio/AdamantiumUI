@@ -137,7 +137,7 @@ public sealed class DesignerSession : IDisposable
     /// Loads the AUML text into a live tree, lays it out at the window's design size and renders it to
     /// <paramref name="outPath"/> at design size × <paramref name="scale"/>. The window is always laid out at its
     /// design size (declared Width/Height, else <paramref name="requestWidth"/>/<paramref name="requestHeight"/>,
-    /// else a default), and only the render target is scaled - so zooming re-rasterises the same layout crisply
+    /// else a default), and only the render target is scaled - so zooming re-rasterizes the same layout crisply
     /// rather than reflowing it.
     /// </summary>
     public RenderResult Render(string aumlText, uint? requestWidth, uint? requestHeight, double scale, string outPath, string? aumlSourcePath = null, bool live = false)

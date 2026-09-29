@@ -193,7 +193,7 @@ public class LayerPlacementRenderTests
         scene.Over[1].Invalidate();
         scene.Draw();
 
-        // A neighbour EARLIER in paint order changes - the hover that re-issues the layer those instances live in.
+        // A neighbor EARLIER in paint order changes - the hover that re-issues the layer those instances live in.
         scene.Cards[0].RenderAction = s => s.DrawRectangle(Brushes.Green, new Rect(4, 0, Dim - 8, CardHeight));
         scene.Cards[0].Invalidate();
         scene.Draw();
@@ -221,7 +221,7 @@ public class LayerPlacementRenderTests
         scene.Stage.Remove(scene.Over[1]);
         scene.Draw();
 
-        // A neighbour EARLIER in paint order changes - the patch that re-issues the layer those instances live in.
+        // A neighbor EARLIER in paint order changes - the patch that re-issues the layer those instances live in.
         scene.Cards[0].RenderAction = s => s.DrawRectangle(Brushes.Green, new Rect(4, 0, Dim - 8, CardHeight));
         scene.Cards[0].Invalidate();
         scene.Draw();
@@ -247,7 +247,7 @@ public class LayerPlacementRenderTests
         scene.Stage.Remove(view);
         scene.Draw();
 
-        // ...and a neighbour EARLIER in paint order changes - the patch that re-issues the range those instances live in.
+        // ...and a neighbor EARLIER in paint order changes - the patch that re-issues the range those instances live in.
         scene.Cards[0].RenderAction = s => s.DrawRectangle(Brushes.Green, new Rect(4, 0, Dim - 8, CardHeight));
         scene.Cards[0].Invalidate();
         scene.Draw();
@@ -280,7 +280,7 @@ public class LayerPlacementRenderTests
         scene.Renderer.Cache.ApplyFrame();
         scene.Draw();
 
-        // A neighbour EARLIER in paint order changes - the patch that re-issues the range those instances live in.
+        // A neighbor EARLIER in paint order changes - the patch that re-issues the range those instances live in.
         scene.Cards[0].RenderAction = s => s.DrawRectangle(Brushes.Green, new Rect(4, 0, Dim - 8, CardHeight));
         scene.Cards[0].Invalidate();
         scene.Draw();
@@ -353,7 +353,7 @@ public class LayerPlacementRenderTests
         scene.Over[1].Invalidate();
         scene.Draw();
 
-        // Laps of unrelated edits: neighbours start and stop drawing, which re-lays the arena underneath the bar and
+        // Laps of unrelated edits: neighbors start and stop drawing, which re-lays the arena underneath the bar and
         // hands its old slots to other controls. The bar itself is untouched throughout - nothing re-records it.
         for (var lap = 0; lap < 4; lap++)
         {
@@ -381,7 +381,7 @@ public class LayerPlacementRenderTests
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the frames after it goes have to be replays");
 
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer),
-            "a control that stopped drawing must go, however far its slots have travelled since it last drew");
+            "a control that stopped drawing must go, however far its slots have traveled since it last drew");
     }
 
     // The same, for a control that LEAVES THE TREE rather than collapsing - the tab switch - after the arena has moved
@@ -415,7 +415,7 @@ public class LayerPlacementRenderTests
         scene.Draw();
 
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer),
-            "a view that left must go, however far its slots have travelled since it last drew");
+            "a view that left must go, however far its slots have traveled since it last drew");
     }
 
     // The layers are the structure of a recorded frame - which draws may be reordered among themselves and which may not
@@ -459,7 +459,7 @@ public class LayerPlacementRenderTests
         // NOT clipped on purpose. Turning ClipToBounds on here does make the boundary case reachable (a clipped control
         // records scissor ops, and an insertion point backed up over them lands between two layers) - and it then fails,
         // by 74 pixels, with the layer bookkeeping bypassed entirely. That is the documented limit of the flat stream
-        // (see OpIndexForRank and BorderPatchRenderTests.ANeighbourAppearing_DoesNotCostABorderItsRing), not this.
+        // (see OpIndexForRank and BorderPatchRenderTests.ANeighborAppearing_DoesNotCostABorderItsRing), not this.
         for (var lap = 0; lap < 6; lap++)
         {
             // Alternate the two kinds of placement, so inserts land both inside a layer and at its edges.
@@ -540,7 +540,7 @@ public class LayerPlacementRenderTests
         Assert.That(DifferingPixels(shown, Pixels(scene.Renderer)), Is.Zero, "showing it again must put back exactly what it drew");
     }
 
-    // Hiding is INHERITED, and a WALK has to honour that as much as a patch does. The walk stops at nothing now - it goes
+    // Hiding is INHERITED, and a WALK has to honor that as much as a patch does. The walk stops at nothing now - it goes
     // through a hidden element to keep its subtree's ranks - so it has to carry "hidden" down itself. It did not, and the
     // hidden element's visible children went on drawing: every tab wore its close-button glyph until the pointer touched
     // one, which is the state a fresh window opens in.

@@ -13,7 +13,7 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>The NODE of a graph under each theme: it gets a template, it is as big as what is in it, and its title strip
-/// wears the theme's accent rather than a colour of the editor's own.</summary>
+/// wears the theme's accent rather than a color of the editor's own.</summary>
 [TestFixture]
 public class CanvasNodeThemeTests
 {
@@ -90,7 +90,7 @@ public class CanvasNodeThemeTests
         });
     }
 
-    // The strip takes the THEME's accent. An editor that painted it a colour of its own would look like a different
+    // The strip takes the THEME's accent. An editor that painted it a color of its own would look like a different
     // application inside the application.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
@@ -118,13 +118,13 @@ public class CanvasNodeThemeTests
         Assert.That(many, Is.GreaterThan(few));
     }
 
-    // The sockets came out with no colour at all: what was drawn was one hairline of the same stroke the body wears, so
+    // The sockets came out with no color at all: what was drawn was one hairline of the same stroke the body wears, so
     // the body's own edge ran straight through them and the row read as a line with faint bumps in it. A socket has to
-    // come out of the theme with a colour whether or not the application says anything.
+    // come out of the theme with a color whether or not the application says anything.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void EverySocketHasAColour(string theme)
+    public void EverySocketHasAColor(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -132,18 +132,18 @@ public class CanvasNodeThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(node.PinColor, Is.Not.Null, "with no colour the sockets are drawn in nothing");
+            Assert.That(node.PinColor, Is.Not.Null, "with no color the sockets are drawn in nothing");
             foreach (var pin in node.InputPins) Assert.That(pin.Color, Is.Not.Null, pin.Name);
             foreach (var pin in node.OutputPins) Assert.That(pin.Color, Is.Not.Null, pin.Name);
         });
     }
 
-    // Colouring a socket is how a graph editor says what may be joined to what, so a colour put on one pin outranks the
+    // Coloring a socket is how a graph editor says what may be joined to what, so a color put on one pin outranks the
     // theme's default - including a pin that was there before the theme arrived.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void APinsOwnColourSurvivesTheTheme(string theme)
+    public void APinsOwnColorSurvivesTheTheme(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -155,7 +155,7 @@ public class CanvasNodeThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(node.InputPins[0].Color, Is.SameAs(mine), "the theme took a colour the application had chosen");
+            Assert.That(node.InputPins[0].Color, Is.SameAs(mine), "the theme took a color the application had chosen");
             Assert.That(node.InputPins[1].Color, Is.SameAs(node.PinColor));
         });
     }
@@ -184,13 +184,13 @@ public class CanvasNodeThemeTests
         });
     }
 
-    // SOLID, both of them. The inspector shows a colour through a swatch, and a swatch can only show a solid brush -
+    // SOLID, both of them. The inspector shows a color through a swatch, and a swatch can only show a solid brush -
     // handed anything else it quietly keeps whatever it was showing before, which reads as a row that lies rather than
     // as a row that cannot answer.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void TheNodesColoursAreSolidSoASwatchCanShowThem(string theme)
+    public void TheNodesColorsAreSolidSoASwatchCanShowThem(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -203,14 +203,14 @@ public class CanvasNodeThemeTests
         });
     }
 
-    // ...and they are the THEME's brushes, which everything else asking for that colour is holding too. Marked as such,
-    // so an editor handed one leaves a new brush on the node instead of repainting it: recolouring one node's title
-    // strip turned every accent in the application that colour, and the node's two colour lines - both starting at the
+    // ...and they are the THEME's brushes, which everything else asking for that color is holding too. Marked as such,
+    // so an editor handed one leaves a new brush on the node instead of repainting it: recoloring one node's title
+    // strip turned every accent in the application that color, and the node's two color lines - both starting at the
     // accent - were one object being shown twice.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void ThoseColoursAreTheThemesAndSayThatTheyAre(string theme)
+    public void ThoseColorsAreTheThemesAndSayThatTheyAre(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -219,16 +219,16 @@ public class CanvasNodeThemeTests
         Assert.Multiple(() =>
         {
             Assert.That(node.Accent.IsShared, Is.True, "the accent is editable in place");
-            Assert.That(node.PinColor.IsShared, Is.True, "the socket colour is editable in place");
+            Assert.That(node.PinColor.IsShared, Is.True, "the socket color is editable in place");
         });
     }
 
     // ...and the inspector has to be able to READ them through the item that carries the node, which is what it is
-    // actually pointed at. A colour that only the template can see is a row that shows nothing.
+    // actually pointed at. A color that only the template can see is a row that shows nothing.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void TheInspectorReadsThoseColoursThroughTheItem(string theme)
+    public void TheInspectorReadsThoseColorsThroughTheItem(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -432,11 +432,11 @@ public class CanvasNodeThemeTests
         });
     }
 
-    // The middle follows the colour too: recolouring a docked pin has to repaint what is in it, not just its ring.
+    // The middle follows the color too: recoloring a docked pin has to repaint what is in it, not just its ring.
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
-    public void RecolouringADockedPinRepaintsItsMiddle(string theme)
+    public void RecoloringADockedPinRepaintsItsMiddle(string theme)
     {
         Use(ThemeNamed(theme));
 
@@ -1012,7 +1012,7 @@ public class CanvasNodeThemeTests
 
     // FOLDED, the button that folded it must not paint. It is checked while the node is folded, and a checked toggle
     // wears the THEME's accent - which is not the node's: a green node grew a blue pill in its own strip. The checked
-    // look is a brush the toggle carries now, so a toggle standing on somebody else's colour can say "not painted".
+    // look is a brush the toggle carries now, so a toggle standing on somebody else's color can say "not painted".
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
     [TestCase("MacOs")]
@@ -1034,7 +1034,7 @@ public class CanvasNodeThemeTests
             Assert.That(Opaque(fold.BackgroundCheckedPressed), Is.False, "it fills as soon as it is held");
         });
 
-        // AND WHAT WAS ACTUALLY PAINTED, not just what it was told: the trigger is what puts the colour on, so a theme
+        // AND WHAT WAS ACTUALLY PAINTED, not just what it was told: the trigger is what puts the color on, so a theme
         // that kept writing the accent into the trigger itself would pass every line above and still show the pill.
         var inner = Named(fold, "InnerBorder");
 

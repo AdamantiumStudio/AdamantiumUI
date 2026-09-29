@@ -71,7 +71,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
         => band is { Inner: false } b ? b.Reach : 0;
 
     public bool TryAdd(LivingBand band, Rect destinationRect, ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world,
-        double opacity, Rect2D scissor, Rect logicalBounds, Vector4F colour, int transformSlot = 0,
+        double opacity, Rect2D scissor, Rect logicalBounds, Vector4F color, int transformSlot = 0,
         ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1)
     {
         const float eps = 1e-4f;
@@ -83,7 +83,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
 
-        if (!BakeItem(band, destinationRect, corners, shape, world, opacity, colour, transformSlot, fieldRange, clipSlot, fadeSlot, out var baked))
+        if (!BakeItem(band, destinationRect, corners, shape, world, opacity, color, transformSlot, fieldRange, clipSlot, fadeSlot, out var baked))
             return false;
 
         LastSlot = Count;
@@ -100,15 +100,15 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
     /// <summary>Bake one living band WITHOUT appending it. False = not bakeable this way (a rotated/sheared world, or a
     /// band that has faded to nothing).</summary>
     public static bool BakeItem(LivingBand band, Rect destinationRect, ProceduralGeometry.CornerRadius corners,
-        HaloShape shape, Matrix4x4F world, double opacity, Vector4F colour, int transformSlot, double fieldRange,
+        HaloShape shape, Matrix4x4F world, double opacity, Vector4F color, int transformSlot, double fieldRange,
         int clipSlot, int fadeSlot, out HaloLivingItem item)
     {
         item = default;
         const float eps = 1e-4f;
         if (System.Math.Abs(world.M12) > eps || System.Math.Abs(world.M21) > eps) return false;
 
-        colour.W *= (float)opacity;
-        if (colour.W <= 0f) return false;
+        color.W *= (float)opacity;
+        if (color.W <= 0f) return false;
 
         // The bake goes INTO the instance and the slot on top - see HaloRectCollector.TryAdd for why dropping it put a
         // band in the top-left corner. Slot units, not device px: the vertex stage scales bounds and band together.
@@ -123,7 +123,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
             Radii = radii,
             Band = new Vector4F(0, 0, band.Spread * iso, band.Softness * iso),
             Field = new Vector4F((float)fieldRange * iso, band.Turbulence, band.Flow, band.Detail),
-            Color = new Color(colour),
+            Color = new Color(color),
             // .y = the rounded clip's slot, .z = the opacity slot (-1 = none for either) - Field is full here, so both
             // ride in the ramp's spare components.
             Ramp = new Vector4F(band.StopCount, clipSlot, fadeSlot, 0)

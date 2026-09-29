@@ -90,7 +90,7 @@ public class PropertyGridResetTests
         }
     }
 
-    // THE MARK MEANS EDITED, not "holds a value". A button wearing the theme's colour has not been touched, and a reset
+    // THE MARK MEANS EDITED, not "holds a value". A button wearing the theme's color has not been touched, and a reset
     // offered there would take the theme away rather than an edit.
     [Test]
     public void AnUntouchedLineOffersNothingToPutBack()

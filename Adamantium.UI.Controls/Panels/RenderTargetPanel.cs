@@ -154,7 +154,7 @@ public class RenderTargetPanel : Grid
    }
 
    // --- Mouse-look: engage relative mouse mode per MouseLookMode ---------------------------------------------------
-   // Engage = focus + capture the mouse + ask the window (its platform worker) to hide/centre the cursor and start
+   // Engage = focus + capture the mouse + ask the window (its platform worker) to hide/center the cursor and start
    // feeding synthesized RawMouseMove deltas. Disengage restores everything. Drag mode brackets it with the button
    // hold; Continuous mode brackets it with focus (click to engage, blur to release).
 
@@ -217,7 +217,7 @@ public class RenderTargetPanel : Grid
       CaptureMouse();
 
       // NO grab on the left button: looking around is the RIGHT one (that is the button the engine rotates the camera
-      // with). Grabbing here hid and re-centred the cursor on a plain click, so every left-click pick measured from
+      // with). Grabbing here hid and re-centered the cursor on a plain click, so every left-click pick measured from
       // the middle of the surface instead of where it landed.
       if (MouseLookMode == MouseLookMode.Continuous) 
          Focus();

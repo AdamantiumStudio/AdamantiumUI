@@ -103,7 +103,7 @@ public static class CanvasLayoutSerializer
                 canvas.HomeScale = homeScale;
             }
 
-            // The zoom first: centring uses the scale, so a camera put down before it lands at the wrong place.
+            // The zoom first: centering uses the scale, so a camera put down before it lands at the wrong place.
             if (root.TryGetProperty("camera", out var camera) && camera.ValueKind == JsonValueKind.Object)
             {
                 if (canvas.RemembersZoom && camera.TryGetProperty("scale", out _))

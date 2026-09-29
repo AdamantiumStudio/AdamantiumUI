@@ -37,7 +37,7 @@
                                 <ScrollBarPageButton Focusable="false"/>
                             </Track.DecreaseRepeatButton>
                             <!-- The handle: a 20px accent circle. Its Width/Height drive the Track's slider-mode sizing
-                                 (centred across the rail); the inline template overrides the shared grey Thumb style at
+                                 (centered across the rail); the inline template overrides the shared gray Thumb style at
                                  Local priority. -->
                             <Track.Thumb>
                                 <Thumb Width="20" Height="20">
@@ -49,7 +49,7 @@
                                     </Thumb.Template>
                                 </Thumb>
                             </Track.Thumb>
-                            <!-- Increase side stays empty so the grey rail shows through past the thumb. -->
+                            <!-- Increase side stays empty so the gray rail shows through past the thumb. -->
                             <Track.IncreaseRepeatButton>
                                 <ScrollBarPageButton Focusable="false"/>
                             </Track.IncreaseRepeatButton>

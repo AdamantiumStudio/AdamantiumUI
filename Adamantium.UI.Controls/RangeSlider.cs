@@ -298,7 +298,7 @@ public class RangeSlider : RangeLimitsBase
         var shift = _track.ValueFromDistance(horizontal, vertical);
         var lower = SnapToTick(Math.Clamp(_dragStartLower + shift, Minimum, Maximum - width));
 
-        // Order matters: the pair coerce against each other, so move the end that is travelling AWAY from the other one
+        // Order matters: the pair coerce against each other, so move the end that is traveling AWAY from the other one
         // first - the other would otherwise be pushed by the coercion before it gets its own value.
         if (shift >= 0)
         {
@@ -335,10 +335,10 @@ public class RangeSlider : RangeLimitsBase
         // WHICH bound moves is decided in pixels - by the thumb the press landed nearer to - and only then is the point
         // turned into a value FOR THAT BOUND. Choosing by value would compare against a scale the two ends do not share,
         // and the two mappings differ anyway (the upper thumb has the lower one and the band ahead of it).
-        var lowerCentre = Centre(_track.LowerThumb, vertical);
-        var upperCentre = Centre(_track.UpperThumb, vertical);
+        var lowerCenter = Center(_track.LowerThumb, vertical);
+        var upperCenter = Center(_track.UpperThumb, vertical);
 
-        if (Math.Abs(pos - lowerCentre) <= Math.Abs(pos - upperCentre))
+        if (Math.Abs(pos - lowerCenter) <= Math.Abs(pos - upperCenter))
         {
             SetLowerFromInput(SnapToTick(_track.LowerValueFromPoint(point)));
         }
@@ -348,7 +348,7 @@ public class RangeSlider : RangeLimitsBase
         }
     }
 
-    private static double Centre(Thumb thumb, bool vertical)
+    private static double Center(Thumb thumb, bool vertical)
     {
         if (thumb == null) return 0;
         var bounds = thumb.Bounds;

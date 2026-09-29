@@ -131,10 +131,10 @@ public class MacOsTabStripTests
         });
     }
 
-    // The colour picker is driven entirely BY PART NAME from code - the square's hue, the alpha gradient, the preview
+    // The color picker is driven entirely BY PART NAME from code - the square's hue, the alpha gradient, the preview
     // fill, all four grips' positions. Every one of them lost is a piece of the picker that stops moving.
     [Test]
-    public void TheColourPickerKeepsEveryPartTheControlDrives()
+    public void TheColorPickerKeepsEveryPartTheControlDrives()
     {
         var picker = new ColorPicker();
         picker.ApplyCurrentTheme();

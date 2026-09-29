@@ -9,7 +9,7 @@
                          StrokeThickness="1.1"/>
     </DrawingImage>
 
-    <DrawingImage x:Key="TrafficLightMinimiseGlyph">
+    <DrawingImage x:Key="TrafficLightMinimizeGlyph">
         <GeometryDrawing Geometry="M0,3 L7,3"
                          Stroke="{ResourceReference TrafficLightGlyph}"
                          StrokeThickness="1.1"/>
@@ -24,7 +24,7 @@
 
     <!-- The PIN, for the card window's fourth light. A thumbtack seen head-on: a cap, flared shoulders, a tapering neck
          and a point. Filled, so it still reads as a pin at seven pixels - an outline at that size closes into a blob.
-         Not a Mac light, but it has to say what it does, and a coloured dot says nothing. -->
+         Not a Mac light, but it has to say what it does, and a colored dot says nothing. -->
     <DrawingImage x:Key="PinGlyph">
         <GeometryDrawing Geometry="M4,0 L8,0 L8,3 L10,5 L10,6 L6.8,6 L6.8,9 L6,11 L5.2,9 L5.2,6 L2,6 L2,5 L4,3 Z"
                          Brush="{ResourceReference TrafficLightGlyph}"/>

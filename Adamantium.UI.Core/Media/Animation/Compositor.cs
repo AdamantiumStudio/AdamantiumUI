@@ -131,7 +131,7 @@ public static class Compositor
         internal Brush PaintBase
         {
             get => _paintBase;
-            set { _paintBase = value; _lastPaintTag = long.MinValue; }   // a new base -> force one republish so a recolour shows
+            set { _paintBase = value; _lastPaintTag = long.MinValue; }   // a new base -> force one republish so a recolor shows
         }
 
         /// <summary>Recompute this animation's applied state for RIGHT NOW. Idempotent - calling it twice in a frame is
@@ -228,7 +228,7 @@ public static class Compositor
             }
             case CompositorChannel.Paint:
             {
-                // A shared brush whose colour/opacity/geometry animates. No element to promote and no matrix: the render
+                // A shared brush whose color/opacity/geometry animates. No element to promote and no matrix: the render
                 // thread republishes the brush's snapshot each present, and the slots painting with it are re-baked from it.
                 // Any double paint property works - BuildAnimatedSnapshot applies it generically, and AffectsPaint (which the
                 // channel already required) guarantees a re-bake suffices.
@@ -262,7 +262,7 @@ public static class Compositor
         return entry;
     }
 
-    /// <summary>Stop compositing this target (the animation was cancelled or finished). Loop thread.</summary>
+    /// <summary>Stop compositing this target (the animation was canceled or finished). Loop thread.</summary>
     public static void Release(AdamantiumComponent target)
     {
         lock (Gate)
@@ -289,7 +289,7 @@ public static class Compositor
     }
 
     /// <summary>Re-capture every entry's base from the live tree. Loop thread, once per frame: layout may have moved or
-    /// resized a transformed element, or a theme swap may have recoloured an animating brush - the render thread reads only
+    /// resized a transformed element, or a theme swap may have recolored an animating brush - the render thread reads only
     /// these captured bases, so this is where such changes reach it. Reading the live tree here is the loop thread's right.</summary>
     public static void RefreshBases()
     {
@@ -303,7 +303,7 @@ public static class Compositor
                 }
                 else if (((Brush)entry.Target).ConsumeBaseChange())
                 {
-                    // Only when the brush itself changed (a theme recolour) - not every frame, which would reset the dedup.
+                    // Only when the brush itself changed (a theme recolor) - not every frame, which would reset the dedup.
                     entry.PaintBase = ((Brush)entry.Target).CaptureBase();
                 }
             }

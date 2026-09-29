@@ -22,7 +22,7 @@
              look a content-sized strip is for; set TabPanel.ItemWidth to make every tab the same instead. -->
         <Setter Property="MaxWidth" Value="240"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeChrome}"/>
-        <!-- CENTRED, unlike Fluent's left-aligned label: a segment's name sits in the middle of its capsule, and that is
+        <!-- CENTERED, unlike Fluent's left-aligned label: a segment's name sits in the middle of its capsule, and that is
              what makes a row of them read as one control rather than as a list of headings. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -43,7 +43,7 @@
                              close button against the right edge. -->
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
                             <!-- Collapsed by default and revealed by HasIcon: an empty presenter measures to nothing,
-                                 but its MARGIN is reserved regardless, and that gap pushes a centred label off-centre. -->
+                                 but its MARGIN is reserved regardless, and that gap pushes a centered label off-center. -->
                             <ContentPresenter x:Name="PART_Icon" Grid.Column="0"
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed"
@@ -83,7 +83,7 @@
 
     <!-- The ONLY tab, filling its strip. It is the title of what is open, not one choice among several, so it does NOT
          become a capsule: a capsule that spans the whole groove is just the groove repainted. It sits flat and takes
-         the primary text colour, which is the whole of what a Mac says here. -->
+         the primary text color, which is the whole of what a Mac says here. -->
     <Style Selector="TabItem[IsStretched=true]">
         <Setter Property="BackgroundSelected" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="Transparent"/>

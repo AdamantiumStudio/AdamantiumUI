@@ -2,7 +2,7 @@
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:m="clr-namespace:Adamantium.UI.Core.Media;assembly=Adamantium.UI.Core">
     <!-- DataContext is the ShapesViewModel. ONE Stroke settings object drives the stroke of EVERY shape in the gallery
-         and the big preview - the pen panel (thickness/dashes/trim/corner/cap/join/colour) retraces them all at once.
+         and the big preview - the pen panel (thickness/dashes/trim/corner/cap/join/color) retraces them all at once.
          Wrapped in a ScrollViewer (horizontal Disabled so the WrapPanels wrap to the viewport). -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Orientation="Vertical" Margin="24">
@@ -109,7 +109,7 @@
           </StackPanel>
         </WrapPanel>
 
-        <!-- The pen playground. Thickness/dash/trim/corner are sliders; Cap and Join are enum DropDowns; Colour is a
+        <!-- The pen playground. Thickness/dash/trim/corner are sliders; Cap and Join are enum DropDowns; Color is a
              ColorPicker (compact button that opens the full HSV picker). Everything mutates the one Stroke object above. -->
         <TextBlock Text="Stroke / Pen parameters:" Margin="0,20,0,6"/>
         <Grid ColumnDefinitions="Auto,*">
@@ -463,7 +463,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.BoxHeight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
-                <CheckBox Content="Sector — closed through the centre (off: edge-to-edge, closed by the chord)"
+                <CheckBox Content="Sector — closed through the center (off: edge-to-edge, closed by the chord)"
                           IsChecked="{Binding Arc.Sector, Mode=TwoWay}" MarginBottom="4"/>
                 <CheckBox Content="Fill — off leaves the outline alone, the way a ring gauge is drawn"
                           IsChecked="{Binding Arc.Filled, Mode=TwoWay}"/>
@@ -475,7 +475,7 @@
         <TextBlock Text="Border — a thickness per side, a radius per corner, all drawn by one SDF instance:" Margin="0,20,0,6"/>
         <StackPanel Orientation="Horizontal">
             <!-- The border sits over a two-tone backdrop so a TRANSLUCENT ring shows what is behind the element - which is
-                 what the alpha slider is for. The flat swatch below the stand is the reference: same colour, same alpha,
+                 what the alpha slider is for. The flat swatch below the stand is the reference: same color, same alpha,
                  no ring arithmetic. Drag alpha down and the border's CORNER must keep matching that swatch; a ring drawn
                  as its own shape darkens there (two edges meet, the pixel is blended twice), and this one may not. -->
             <StackPanel Orientation="Vertical" Margin="0,0,24,0">
@@ -585,7 +585,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- TRANSLUCENT OVERLAP. Every stroke here is the same colour at the same alpha, so anything that draws a piece
+        <!-- TRANSLUCENT OVERLAP. Every stroke here is the same color at the same alpha, so anything that draws a piece
              of coverage TWICE shows up as a darker patch. The swatch is the reference tone: a crossing that matches it
              is correct, a crossing darker than it is double-blended. -->
         <TextBlock Text="Translucent overlap — a crossing must not be darker than the swatch:" Margin="0,20,0,6"/>
@@ -598,7 +598,7 @@
                            Value="{Binding Stroke.OverlapAlpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
         </StackPanel>
         <WrapPanel Orientation="Horizontal">
-            <!-- Reference: one flat piece of the same colour, drawn once. -->
+            <!-- Reference: one flat piece of the same color, drawn once. -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <Border Width="150" Height="60" Background="#22D3EE" Opacity="{Binding Stroke.OverlapAlpha}"/>
                 <TextBlock Text="reference tone" Margin="0,4,0,0"/>

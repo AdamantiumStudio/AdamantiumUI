@@ -33,7 +33,7 @@ public class MacOsCheckBoxFillTests
     }
 
     [Test]
-    public void TheUncheckedBoxIsADifferentColourInEachVariant()
+    public void TheUncheckedBoxIsADifferentColorInEachVariant()
     {
         var theme = new MacOs();
         _themes.AddTheme(theme.Name, theme);
@@ -45,7 +45,7 @@ public class MacOsCheckBoxFillTests
         TestContext.WriteLine($"dark  = {dark}");
         TestContext.WriteLine($"light = {light}");
 
-        Assert.That(light, Is.Not.EqualTo(dark), "the two variants must not answer the same colour for the box");
+        Assert.That(light, Is.Not.EqualTo(dark), "the two variants must not answer the same color for the box");
     }
 
     [Test]

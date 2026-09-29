@@ -31,7 +31,7 @@ public class StyleTriggerTests
         trigger.Apply(new PartContext(host, theme: null));
 
         Assert.DoesNotThrow(() => host.IsEnabled = false,
-            "ResourceReference marker is routed through the theme, never parsed as a colour string");
+            "ResourceReference marker is routed through the theme, never parsed as a color string");
     }
 
     // The unification: ONE template, the variants only differ in the control's state brushes. A trigger reads a brush

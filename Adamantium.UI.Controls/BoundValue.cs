@@ -81,8 +81,8 @@ internal sealed class BoundValue : FundamentalUIComponent
         if (!_writable) return false;
 
         // WHAT THE PROPERTY TAKES, and only failing that what is in it now. A property typed Brush holding a solid
-        // colour takes a picture just as well, and asking the value being replaced what fits refused every kind but
-        // the one already there - a row could put a colour over a colour for ever and never put a picture there once.
+        // color takes a picture just as well, and asking the value being replaced what fits refused every kind but
+        // the one already there - a row could put a color over a color for ever and never put a picture there once.
         if (!TryConvert(value, _expression?.SourceType ?? Value?.GetType(), out value)) return false;
 
         _writing = true;

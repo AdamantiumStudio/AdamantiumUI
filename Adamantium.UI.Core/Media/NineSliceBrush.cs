@@ -12,7 +12,7 @@ public sealed class NineSliceBrush : Brush
 
     public NineSliceBrush(ImageSource source) => Source = source;
 
-    // PAINT, all of them: a nine-slice fills the shape it is given, so changing any of this re-colours the same pixels.
+    // PAINT, all of them: a nine-slice fills the shape it is given, so changing any of this re-colors the same pixels.
     public static readonly AdamantiumProperty SourceProperty = AdamantiumProperty.Register(nameof(Source),
         typeof(ImageSource), typeof(NineSliceBrush), new PropertyMetadata(null, PropertyMetadataOptions.AffectsPaint, OnSourceChanged));
 

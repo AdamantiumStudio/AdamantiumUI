@@ -66,7 +66,7 @@ public static class TypeCastFactory
             if (finalType.IsEnum) return ParseEnum(finalType, input.ToString());
 
             // Everything else (Brush, Thickness, CornerRadius, Color, Vector2, Geometry, …) converts through the engine's
-            // TypeParser - honouring [TypeParser] + the ParserRegistry - i.e. the same conversion a compiled build uses.
+            // TypeParser - honoring [TypeParser] + the ParserRegistry - i.e. the same conversion a compiled build uses.
             return TypeParser.Parse(input.ToString(), finalType);
         }
         catch (Exception ex)

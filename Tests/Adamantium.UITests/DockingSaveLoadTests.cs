@@ -59,7 +59,7 @@ public class DockingSaveLoadTests
             Assert.That(inspector.PaneIds, Is.EqualTo(new[] { "inspector", "hierarchy" }));
             Assert.That(inspector.Length, Is.EqualTo(PaneLength.Pixels(240)), "the band keeps the width it was given");
 
-            Assert.That(back.DocumentWell, Is.SameAs(documents), "and the centre is still a PLACE, not just a group");
+            Assert.That(back.DocumentWell, Is.SameAs(documents), "and the center is still a PLACE, not just a group");
         });
     }
 

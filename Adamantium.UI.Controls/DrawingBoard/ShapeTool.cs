@@ -65,8 +65,8 @@ public class ShapeTool : ICanvasTool
         if (e.Button != MouseButtons.Left || canvas.Scene == null) return;
 
         _from = e.World;
-        // A PAINT OF ITS OWN, copied off the setting: the colour in hand is what the next thing is drawn WITH, not a
-        // colour every thing drawn with it goes on sharing - see Brush.Copy.
+        // A PAINT OF ITS OWN, copied off the setting: the color in hand is what the next thing is drawn WITH, not a
+        // color every thing drawn with it goes on sharing - see Brush.Copy.
         _making = new ShapeItem(Shape, new Rect(_from.X, _from.Y, 0, 0), canvas.Ink?.Copy(),
             canvas.ScreenToWorldLength(canvas.InkThickness),
             Shape is CanvasShape.Line or CanvasShape.Arrow ? null : canvas.ShapeFill?.Copy())

@@ -6,7 +6,7 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Hides the colour pickers when the fire palette owns the colouring: collapses only when the type is
+/// <summary>Hides the color pickers when the fire palette owns the coloring: collapses only when the type is
 /// CombustibleVoronoi AND its fire palette is on (both inputs needed, hence a MultiBinding). value[0] = NoiseType,
 /// value[1] = the fire-palette bool.</summary>
 public class CombustibleColorsVisibilityConverter : IMultiValueConverter

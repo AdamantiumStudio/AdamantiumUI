@@ -12,8 +12,8 @@ public static class HaloBake
     {
         if (aura is not { IsLiving: true }) return null;
 
-        var colour = Premultiplied(aura.Color, aura.Opacity);
-        if (colour.W <= 0f) return null;
+        var color = Premultiplied(aura.Color, aura.Opacity);
+        if (color.W <= 0f) return null;
 
         var softness = (float)System.Math.Max(0.0, aura.Radius);
         if (softness <= 0f) return null;
@@ -23,7 +23,7 @@ public static class HaloBake
         var stops = 0;
         if (aura.Palette is { Count: > 1 } && packPalette != null)
         {
-            stops = packPalette(aura.Palette, colour.W, out palette, out offsets);
+            stops = packPalette(aura.Palette, color.W, out palette, out offsets);
         }
 
         return new LivingBand(
@@ -31,7 +31,7 @@ public static class HaloBake
             (float)System.Math.Clamp(aura.Turbulence, 0.0, 4.0),
             (float)aura.Flow,
             (float)System.Math.Max(0.25, aura.Detail),
-            colour, palette, offsets, stops);
+            color, palette, offsets, stops);
     }
 
     /// <summary>How a palette is packed. Injected because the packer lives with the renderer (it is the same one every

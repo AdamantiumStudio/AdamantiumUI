@@ -48,7 +48,7 @@ public class ContentPresenterGrowthTests
         }
     }
 
-    // The optimisation itself must survive: an untouched subtree is not re-walked. Without this the fix would be "measure
+    // The optimization itself must survive: an untouched subtree is not re-walked. Without this the fix would be "measure
     // everything, always", which is the cost the fast path exists to avoid.
     [Test]
     public void ContentThatDidNotChange_IsStillNotReWalked()

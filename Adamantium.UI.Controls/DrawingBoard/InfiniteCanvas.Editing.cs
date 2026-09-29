@@ -647,7 +647,7 @@ public partial class InfiniteCanvas
         var room = Math.Max(0, FrameMargin);
         var strip = room * 1.4;
 
-        // A COPY of the accent, not the accent itself: the frame's colour is a thing a person changes in the panel, and
+        // A COPY of the accent, not the accent itself: the frame's color is a thing a person changes in the panel, and
         // written into the theme's own brush that change would repaint every accent in the application.
         var frame = new CanvasFrameItem(
             new Rect(bounds.X - room, bounds.Y - room - strip, bounds.Width + room * 2, bounds.Height + room * 2 + strip),
@@ -658,7 +658,7 @@ public partial class InfiniteCanvas
         try
         {
             // UNDER what it is about, and the scene draws in order - so it goes to the BACK. This is the whole of what
-            // keeps it there: a frame left where it was made would be a sheet of colour over the very nodes it is
+            // keeps it there: a frame left where it was made would be a sheet of color over the very nodes it is
             // drawn round.
             scene.Add(frame);
             scene.SendToBack(frame);
@@ -804,7 +804,7 @@ public partial class InfiniteCanvas
     }
 
     /// <summary>Puts EQUAL GAPS between the selection, along one axis. The two on the outside stay where they are -
-    /// they are what the person has already placed - and equal GAPS rather than equal centres, which is what the eye
+    /// they are what the person has already placed - and equal GAPS rather than equal centers, which is what the eye
     /// actually reads when the things are different sizes.</summary>
     public bool Spread(CanvasSpread way)
     {
@@ -1043,7 +1043,7 @@ public partial class InfiniteCanvas
     }
 
     // Set from OUTSIDE - by an application restoring what was selected last time, or by a list beside the canvas. What
-    // arrives is adopted; what the canvas published itself is recognised and ignored, or the two would push each other
+    // arrives is adopted; what the canvas published itself is recognized and ignored, or the two would push each other
     // round in circles.
     private static void OnSelectionSet(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {

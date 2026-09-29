@@ -3,10 +3,10 @@ namespace Adamantium.UI.Core;
 /// <summary>What a platform implements to answer <see cref="FileDialog"/>.</summary>
 public interface IFileDialogPlatform
 {
-    /// <summary>Shows the platform's save dialog and returns the chosen path, or null when the user cancelled. Modal to
+    /// <summary>Shows the platform's save dialog and returns the chosen path, or null when the user canceled. Modal to
     /// the window the user pressed from, and called on the UI thread.</summary>
     string Save(SaveFileRequest request);
 
-    /// <summary>The same for opening: the path of an EXISTING file, or null when the user cancelled.</summary>
+    /// <summary>The same for opening: the path of an EXISTING file, or null when the user canceled.</summary>
     string Open(OpenFileRequest request);
 }

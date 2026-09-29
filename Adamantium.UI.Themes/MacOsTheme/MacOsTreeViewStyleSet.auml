@@ -78,7 +78,7 @@
                             <Grid ColumnDefinitions="Auto,16,*" Margin="4 2 6 2">
                                 <Border Grid.Column="0" Width="{TemplateBinding Indent}"/>
                                 <!-- Pinned to its 16x16 glyph: the base ToggleButton style reaches this by IS-A and would
-                                     otherwise lend it a MinHeight and a Padding that push the arrow off the row's centre. -->
+                                     otherwise lend it a MinHeight and a Padding that push the arrow off the row's center. -->
                                 <ToggleButton x:Name="PART_Expander" Grid.Column="1"
                                         Template="{TemplateBinding ExpanderTemplate}"
                                         Width="16" Height="16" MinWidth="0" MinHeight="0" Padding="0"
@@ -99,7 +99,7 @@
 
     <Style Selector="TreeViewItem">
         <!-- Hover is IsPointerOverHeader (this row only, not its subtree) and sits ABOVE the selection fill, so a
-             selected row that is also hovered stays accent instead of reverting to grey. Selection is declared LAST so
+             selected row that is also hovered stays accent instead of reverting to gray. Selection is declared LAST so
              it wins the Root background. -->
         <PropertyTrigger Property="IsPointerOverHeader" Value="true">
             <Setter TargetName="HoverOverlay" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>

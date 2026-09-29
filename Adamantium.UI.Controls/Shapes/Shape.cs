@@ -461,7 +461,7 @@ public abstract class Shape : InputUIComponent
       // The shape's natural (intrinsic) size, captured before Rect is recomputed below. This is what the shape reports
       // to layout: a Stretch-aligned shape with no explicit size desires its intrinsic size (0 for a box shape like
       // Rectangle/Ellipse), NOT the available space - stretching fills the box via Rect (render), at arrange/render time,
-      // not by inflating the desired size. (WPF behaviour; previously a Stretch shape desired the whole available area.)
+      // not by inflating the desired size. (WPF behavior; previously a Stretch shape desired the whole available area.)
       double naturalWidth = Rect.Width + Rect.X;
       double naturalHeight = Rect.Height + Rect.Y;
 

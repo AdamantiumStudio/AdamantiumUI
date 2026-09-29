@@ -164,7 +164,7 @@ public static class DockingLayoutSerializer
         }
 
         // The window's OWN document area travels with its tree: which node is the area has to survive the round trip, or
-        // the centre stops existing the moment the layout is loaded and the next document opens wherever it likes.
+        // the center stops existing the moment the layout is loaded and the next document opens wherever it likes.
         if (WriteNode(writer, "content", root.DocumentWell, root.Content, keep) == false)
         {
             writer.WriteNull("content");
@@ -377,7 +377,7 @@ public static class DockingLayoutSerializer
         // flyout hanging over it restores a gesture rather than an arrangement.
         if (group.State == PaneGroupState.Revealed) group.State = PaneGroupState.Collapsed;
 
-        // An EMPTY area still counts: the centre is a place, and a layout saved with nothing open in it comes back with
+        // An EMPTY area still counts: the center is a place, and a layout saved with nothing open in it comes back with
         // the place, not without one.
         if (element.TryGetProperty("well", out var isWell) && isWell.GetBoolean()) well = group;
 

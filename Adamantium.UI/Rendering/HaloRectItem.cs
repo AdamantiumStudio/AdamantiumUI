@@ -27,7 +27,7 @@ public struct HaloRectItem
     public Vector4F Band;
 
     /// <summary>Straight-alpha RGBA, the author's Opacity already folded into the alpha. Four BYTES - the form the
-    /// colour arrived in before <c>ToVector4</c> divided it by 255 - and twelve bytes an instance smaller than the
+    /// color arrived in before <c>ToVector4</c> divided it by 255 - and twelve bytes an instance smaller than the
     /// float4 it replaces. The shader reads the same four as a <c>uint8_t4</c>.</summary>
     public Color Color;
 

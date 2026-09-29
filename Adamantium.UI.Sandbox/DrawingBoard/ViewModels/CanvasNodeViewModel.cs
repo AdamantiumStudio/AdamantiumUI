@@ -11,7 +11,7 @@ namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 [ViewModel]
 public partial class CanvasNodeViewModel : ICanvasNode
 {
-    /// <summary>WHAT IT IS, as a word the catalogue looks up - and what a file names it by.</summary>
+    /// <summary>WHAT IT IS, as a word the catalog looks up - and what a file names it by.</summary>
     [Bindable] private string _kind = string.Empty;
 
     /// <summary>What it is called on its strip.</summary>
@@ -29,7 +29,7 @@ public partial class CanvasNodeViewModel : ICanvasNode
     /// <summary>Folded down to its title strip, or open.</summary>
     [Bindable] private bool _isCollapsed;
 
-    /// <summary>The colour it is drawn in, or null for the theme's.</summary>
+    /// <summary>The color it is drawn in, or null for the theme's.</summary>
     [Bindable] private Color? _accent;
 
     /// <summary>What this node IS: the part a change of kind replaces, while the node itself - and every wire on it -

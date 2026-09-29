@@ -398,7 +398,7 @@ public class BindingExpression : BindingExpressionBase
       }
 
       // Empty path with a source -> bind to the SOURCE OBJECT ITSELF ({Binding}, {Binding ElementName=x}, {Binding Source=y}),
-      // the standard WPF behaviour. There is no leaf property to read/observe - the value simply IS the resolved source.
+      // the standard WPF behavior. There is no leaf property to read/observe - the value simply IS the resolved source.
       if (string.IsNullOrEmpty(path))
       {
          ResolvedSource = root;
@@ -664,7 +664,7 @@ public class BindingExpression : BindingExpressionBase
    // nothing resolved; a resolved null is a value.
    private object ComputeValue(Type targetType) => Formatted(ReadValue(targetType), targetType);
 
-   // StringFormat lived on every binding, travelled into every expression, and was read by NOBODY except MultiBinding:
+   // StringFormat lived on every binding, traveled into every expression, and was read by NOBODY except MultiBinding:
    // a single binding took the format, ignored it and showed the raw value without a word. Only where it can mean
    // something - a string target, a value that exists. A PRODUCER (trigger condition, MultiBinding input) asks for
    // object and must keep its type: a comparison against a formatted string is not the comparison that was written.

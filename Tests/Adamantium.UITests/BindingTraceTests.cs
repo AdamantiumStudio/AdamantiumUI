@@ -42,7 +42,7 @@ public class BindingTraceTests
     [TearDown]
     public void StopListening() => BindingTrace.Sink = null;
 
-    // A name that has not been found is no source yet - not a licence to read the DataContext instead.
+    // A name that has not been found is no source yet - not a license to read the DataContext instead.
     [Test]
     public void ANamedElementNotFoundYet_DoesNotFallBackToTheDataContext()
     {

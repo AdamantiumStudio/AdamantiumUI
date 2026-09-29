@@ -23,7 +23,7 @@ public class RotatedGeometryFringeTests
 {
     private const int Dim = 64;
 
-    // A bar across the middle, turned 30 degrees about the centre: both long edges cross the pixel grid at an angle,
+    // A bar across the middle, turned 30 degrees about the center: both long edges cross the pixel grid at an angle,
     // so every scanline through them has an edge to soften.
     private static byte[] Render(bool instanced)
     {
@@ -150,7 +150,7 @@ public class RotatedGeometryFringeTests
         // anti-aliased edge produces one.
         stage.RenderAction = s =>
         {
-            if (shapes > 0) s.DrawGeometry(new SolidColorBrush(Grey), card, null, fit);
+            if (shapes > 0) s.DrawGeometry(new SolidColorBrush(Gray), card, null, fit);
             if (shapes > 1) s.DrawGeometry(Brushes.White, bar, null, turn);
             if (shapes > 2) s.DrawGeometry(Brushes.White, cross, null, turn);
         };
@@ -165,7 +165,7 @@ public class RotatedGeometryFringeTests
         return bytes;
     }
 
-    private static readonly Color Grey = Color.FromRgba(128, 128, 128, 255);
+    private static readonly Color Gray = Color.FromRgba(128, 128, 128, 255);
 
     // Exactly the pixels that are none of the three tones drawn - i.e. a blend, i.e. a softened edge.
     private static int Blended(byte[] px)

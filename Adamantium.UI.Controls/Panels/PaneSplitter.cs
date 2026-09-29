@@ -7,7 +7,7 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>The grip between two neighbours in a <see cref="PaneHost"/>. A drag moves their boundary, editing the pane
+/// <summary>The grip between two neighbors in a <see cref="PaneHost"/>. A drag moves their boundary, editing the pane
 /// lengths in place; the pair keeps its total, so no one else in the row moves.</summary>
 public class PaneSplitter : Thumb
 {
@@ -47,10 +47,10 @@ public class PaneSplitter : Thumb
 
         if (VisualParent is not PaneHost host) return;
 
-        var (before, after) = Neighbours();
+        var (before, after) = Neighbors();
         if (before == null || after == null) return;
 
-        // Where the two neighbours START, in PIXELS - which is also what the drag will write. A pixel of mouse is a
+        // Where the two neighbors START, in PIXELS - which is also what the drag will write. A pixel of mouse is a
         // pixel of boundary, with no basis to convert to and nothing to compound: Thumb reports a CUMULATIVE change, so
         // every delta is measured from here rather than added to whatever the last one produced.
         _originBefore = host.PixelsOf(before);
@@ -61,7 +61,7 @@ public class PaneSplitter : Thumb
     {
         base.OnDragDelta(e);
 
-        var (before, after) = Neighbours();
+        var (before, after) = Neighbors();
         if (before == null || after == null) return;
 
         var moved = Orientation == Orientation.Horizontal ? e.Change.X : e.Change.Y;
@@ -110,23 +110,23 @@ public class PaneSplitter : Thumb
     /// <summary>A share's weight, treating an unstated one as a single share - the same reading the host uses.</summary>
     private static double Weight(PaneLength length) => length.Value > 0 ? length.Value : 1;
 
-    /// <summary>The smallest this neighbour may become, in pixels. An explicit MinWidth/MinHeight wins; otherwise the
-    /// neighbour is asked what it needs - and a docking area answers with its own policy, so a group cannot be squeezed
+    /// <summary>The smallest this neighbor may become, in pixels. An explicit MinWidth/MinHeight wins; otherwise the
+    /// neighbor is asked what it needs - and a docking area answers with its own policy, so a group cannot be squeezed
     /// under what its panes declared (nor, therefore, under its own tab strip). A nested host answers for its children,
     /// since squeezing it squeezes them.</summary>
-    private double MinPixelsOf(IUIComponent neighbour)
+    private double MinPixelsOf(IUIComponent neighbor)
     {
-        if (neighbour is MeasurableUIComponent measurable)
+        if (neighbor is MeasurableUIComponent measurable)
         {
             var explicitMin = Orientation == Orientation.Horizontal ? measurable.MinWidth : measurable.MinHeight;
             if (!double.IsNaN(explicitMin) && explicitMin > 0) return explicitMin;
         }
 
-        return neighbour is IPaneMinimum owner ? owner.MinimumExtent(Orientation) : 0;
+        return neighbor is IPaneMinimum owner ? owner.MinimumExtent(Orientation) : 0;
     }
 
     /// <summary>The two content children this splitter sits between (other splitters are not content).</summary>
-    private (IUIComponent Before, IUIComponent After) Neighbours()
+    private (IUIComponent Before, IUIComponent After) Neighbors()
     {
         if (VisualParent is not PaneHost host) return (null, null);
 

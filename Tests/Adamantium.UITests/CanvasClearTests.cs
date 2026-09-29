@@ -143,7 +143,7 @@ public class CanvasClearTests
     }
 
     /// <summary>A SELECTION SURVIVES AN EDIT. Letting go of what has left the plane must not let go of what is still on
-    /// it - an inspector writes a colour, the scene is told something changed, and if the selection evaporated there
+    /// it - an inspector writes a color, the scene is told something changed, and if the selection evaporated there
     /// the row it was writing through has nothing left to write to.</summary>
     [Test]
     [Timeout(15000)]

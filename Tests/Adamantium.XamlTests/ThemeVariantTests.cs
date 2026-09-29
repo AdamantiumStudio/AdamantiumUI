@@ -51,7 +51,7 @@ public class ThemeVariantTests
     }
 
     [Test]
-    public void SwitchingAVariant_KeepsTheBrushObject_AndOnlyChangesItsColour()
+    public void SwitchingAVariant_KeepsTheBrushObject_AndOnlyChangesItsColor()
     {
         var theme = TwoVariantTheme();
         Assert.That(theme.ApplyVariant(ThemeVariant.Light), Is.True);
@@ -65,7 +65,7 @@ public class ThemeVariantTests
 
         Assert.That(after, Is.SameAs(before),
             "the brush must be the SAME object - a new one would be a property write on every element drawing with it");
-        Assert.That(after.Color, Is.EqualTo(DarkBg), "...and it must actually have taken the new variant's colour");
+        Assert.That(after.Color, Is.EqualTo(DarkBg), "...and it must actually have taken the new variant's color");
     }
 
     [Test]
@@ -120,7 +120,7 @@ public class ThemeVariantTests
         theme.ApplyVariant(ThemeVariant.Dark);
 
         // Accent and focus are theme PROPERTIES, not palette entries - {ThemeResource} resolves them off the theme
-        // object. A variant that could only set colours would leave a light theme wearing the dark theme's accent.
+        // object. A variant that could only set colors would leave a light theme wearing the dark theme's accent.
         Assert.That((theme.AccentColor as SolidColorBrush)?.Color, Is.EqualTo(accent));
     }
 
@@ -136,7 +136,7 @@ public class ThemeVariantTests
     [Test]
     public void AThemeWithNoLightDarkNotion_ResolvesTheSystemVariantToNothing()
     {
-        // A HUD theme is dark by nature and its variants run along another axis entirely - the signal colour. Asked to
+        // A HUD theme is dark by nature and its variants run along another axis entirely - the signal color. Asked to
         // follow the OS it must answer "I have no such thing" rather than pretending one of its variants is "light".
         var hud = new Theme("Game HUD");
         var cyan = new ThemeVariantDefinition(ThemeVariant.Named("Cyan"));

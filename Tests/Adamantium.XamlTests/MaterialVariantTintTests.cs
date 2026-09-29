@@ -58,7 +58,7 @@ public class MaterialVariantTintTests
         var (onDark, onLight) = TintAcrossVariants(new Adamantium.UI.Themes.FluentTheme.Fluent(), key);
 
         Assert.That(onLight, Is.Not.EqualTo(onDark),
-            "the surface kept the colour of the variant it was built under");
+            "the surface kept the color of the variant it was built under");
     }
 
     [TestCase("FlyoutSurfaceFill")]
@@ -68,13 +68,13 @@ public class MaterialVariantTintTests
         var (onDark, onLight) = TintAcrossVariants(new Adamantium.UI.Themes.MacOsTheme.MacOs(), key);
 
         Assert.That(onLight, Is.Not.EqualTo(onDark),
-            "the surface kept the colour of the variant it was built under");
+            "the surface kept the color of the variant it was built under");
     }
 
-    /// <summary>And it is the palette's colour it follows, not some colour of its own - so a variant that changes the
+    /// <summary>And it is the palette's color it follows, not some color of its own - so a variant that changes the
     /// palette entry moves the surface with it.</summary>
     [Test]
-    public void TheTint_IsThePalettesOwnColour()
+    public void TheTint_IsThePalettesOwnColor()
     {
         var theme = new Adamantium.UI.Themes.FluentTheme.Fluent();
         var themes = new ThemeManager(new Adamantium.Core.DependencyInjection.AdamantiumDependencyContainer());

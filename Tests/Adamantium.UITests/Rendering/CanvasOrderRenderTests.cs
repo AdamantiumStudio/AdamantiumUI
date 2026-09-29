@@ -100,8 +100,8 @@ public class CanvasOrderRenderTests
         return (pixels[i + 2], pixels[i + 1], pixels[i + 0]);
     }
 
-    private static ShapeItem Box(Color colour) =>
-        new(CanvasShape.Rectangle, new Rect(-40, -40, 80, 80), Brushes.Transparent, 0, new SolidColorBrush(colour));
+    private static ShapeItem Box(Color color) =>
+        new(CanvasShape.Rectangle, new Rect(-40, -40, 80, 80), Brushes.Transparent, 0, new SolidColorBrush(color));
 
     // TWO OF THE SAME SORT. Both are rectangles, so both go to the same batch and their order inside it is the only
     // thing deciding - the easy case, and the one that has to work before anything else is asked.
@@ -151,9 +151,9 @@ public class CanvasOrderRenderTests
             $"bringing a stroke to the front did not put it over another stroke: {swapped}");
     }
 
-    private static StrokeItem Ink(Color colour)
+    private static StrokeItem Ink(Color color)
     {
-        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(colour), 40);
+        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(color), 40);
 
         ink.Add(new Vector2(-40, 0));
         ink.Add(new Vector2(40, 0));
@@ -207,8 +207,8 @@ public class CanvasOrderRenderTests
             $"a rectangle brought to the front stayed under the polygon: {swapped}");
     }
 
-    private static ShapeItem Hexagon(Color colour) =>
-        new(CanvasShape.Polygon, new Rect(-40, -40, 80, 80), Brushes.Transparent, 0, new SolidColorBrush(colour))
+    private static ShapeItem Hexagon(Color color) =>
+        new(CanvasShape.Polygon, new Rect(-40, -40, 80, 80), Brushes.Transparent, 0, new SolidColorBrush(color))
         {
             Sides = 6
         };

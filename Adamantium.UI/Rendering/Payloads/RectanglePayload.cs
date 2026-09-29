@@ -31,7 +31,7 @@ public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius co
     public bool AntiAlias { get; init; } = true;
 
     // The FRAME: a border of its own thickness on each side, drawn INSIDE the rect. Not a pen - a pen is one width
-    // centred on a contour, and four different widths are not a contour offset at all. Fill and frame ride in the SAME
+    // centered on a contour, and four different widths are not a contour offset at all. Fill and frame ride in the SAME
     // instance on purpose: drawn as two shapes they share an outline, and both anti-alias it, which composites to a
     // dark hairline all the way round (what the old CombinedGeometry ring did).
     private readonly Brush _borderBrush;
@@ -46,7 +46,7 @@ public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius co
                          || BorderThickness.Right > 0 || BorderThickness.Bottom > 0;
 
     /// <summary>What the border leaves for the fill. The inner box is NOT concentric - insetting the sides by different
-    /// amounts moves the centre by half their difference - which is why it is stated once here.</summary>
+    /// amounts moves the center by half their difference - which is why it is stated once here.</summary>
     public Rect FrameInnerRect => DestinationRect.Deflate(BorderThickness);
 
     /// <summary>The inner outline's corners, each shrunk by the thicker of its two sides; must match CompositeFillBorder in

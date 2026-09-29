@@ -87,7 +87,7 @@ public class DataGridCell : ContentControl
         typeof(bool), typeof(DataGridCell), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
 
     /// <summary>What the view-model says this cell MEANS - an error, a warning, whatever the application distinguishes.
-    /// The theme turns it into a look; the model never names a colour.</summary>
+    /// The theme turns it into a look; the model never names a color.</summary>
     public static readonly AdamantiumProperty StateProperty = AdamantiumProperty.Register(nameof(State),
         typeof(object), typeof(DataGridCell), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
@@ -186,7 +186,7 @@ public class DataGridCell : ContentControl
     }
 
     /// <summary>...and the cell the search is ON. A WASH, never a plate: a cell holds a check box and a meaning, and a
-    /// solid colour swallows both.</summary>
+    /// solid color swallows both.</summary>
     public static readonly AdamantiumProperty SearchCurrentBrushProperty = AdamantiumProperty.Register(
         nameof(SearchCurrentBrush), typeof(Brush), typeof(DataGridCell),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));

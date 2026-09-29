@@ -69,7 +69,7 @@ public static class DiscardedVisuals
 
         if (Batch.Count == 0) return 0;
 
-        // The element's own release first (its bindings and behaviours), then the subsystems keyed by it. In that
+        // The element's own release first (its bindings and behaviors), then the subsystems keyed by it. In that
         // order because a subsystem's sweep may read the element, and an element that has let go of its bindings is
         // still a valid thing to read - whereas the reverse would have subsystems answering about an element whose
         // sources are still live.

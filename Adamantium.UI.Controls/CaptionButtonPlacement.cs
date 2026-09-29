@@ -7,7 +7,7 @@ public enum CaptionButtonPlacement
     /// <summary>Right of the title, closing outermost. Windows and most Linux desktops.</summary>
     Right,
 
-    /// <summary>Left of the title, closing outermost - so the order reverses to close, minimise, maximise. macOS, and
+    /// <summary>Left of the title, closing outermost - so the order reverses to close, minimize, maximize. macOS, and
     /// Ubuntu since Unity.</summary>
     Left
 }

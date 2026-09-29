@@ -53,14 +53,14 @@ public abstract class TileBrush : Brush
         typeof(double), typeof(TileBrush), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>What <see cref="RotationAngle"/> turns about, as a fraction of ONE TILE - so the default is the tile's
-    /// own middle. A tile's own centre rather than the shape's because that is the one that shows: an endless grid
-    /// looks the same turned about any point, but a SINGLE copy turned about the shape's centre swings away across it
+    /// own middle. A tile's own center rather than the shape's because that is the one that shows: an endless grid
+    /// looks the same turned about any point, but a SINGLE copy turned about the shape's center swings away across it
     /// instead of spinning where it lies.</summary>
     public static readonly AdamantiumProperty RotationCenterProperty = AdamantiumProperty.Register(nameof(RotationCenter),
         typeof(Vector2), typeof(TileBrush), new PropertyMetadata(new Vector2(0.5, 0.5), PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>Multiplied into every sampled pixel. White (the default) draws the content as it is; a colour tints it,
-    /// which is how one greyscale skin serves several themes.</summary>
+    /// <summary>Multiplied into every sampled pixel. White (the default) draws the content as it is; a color tints it,
+    /// which is how one grayscale skin serves several themes.</summary>
     public static readonly AdamantiumProperty TintProperty = AdamantiumProperty.Register(nameof(Tint),
         typeof(Color), typeof(TileBrush), new PropertyMetadata(Colors.White, PropertyMetadataOptions.AffectsPaint));
 

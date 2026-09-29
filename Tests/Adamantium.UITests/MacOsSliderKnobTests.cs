@@ -40,11 +40,11 @@ public class MacOsSliderKnobTests
         {
             TestContext.WriteLine($"border.Aura   = {border.Aura?.GetType().Name ?? "<null>"}");
             TestContext.WriteLine($"border.Shadow = {border.Shadow?.GetType().Name ?? "<null>"}");
-            // The colour is printed for the record and is NOT asserted: this fixture stands up the style set with no
-            // theme, so there is no dictionary for the colour keys to resolve against and white here means nothing.
-            // What the colour resolves to is a question for the running app.
+            // The color is printed for the record and is NOT asserted: this fixture stands up the style set with no
+            // theme, so there is no dictionary for the color keys to resolve against and white here means nothing.
+            // What the color resolves to is a question for the running app.
             if (border.Aura != null)
-                TestContext.WriteLine($"aura: enabled={border.Aura.IsEnabled} colour={border.Aura.Color} (no theme) " +
+                TestContext.WriteLine($"aura: enabled={border.Aura.IsEnabled} color={border.Aura.Color} (no theme) " +
                                       $"spread={border.Aura.Spread} radius={border.Aura.Radius}");
         }
 

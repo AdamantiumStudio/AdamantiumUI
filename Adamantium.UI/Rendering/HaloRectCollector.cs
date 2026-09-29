@@ -137,7 +137,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     /// <summary>Bake one command's bands into <paramref name="dst"/> and return how many were written. WHERE they land is
     /// the caller's business - the retained arena while walking, the records they already occupy while patching - and the
     /// bake is the same either way. That symmetry is the point: without it the band was written by the walk alone, so a
-    /// colour change repainted the shape at once and left its aura on the old colour until some unrelated frame walked.
+    /// color change repainted the shape at once and left its aura on the old color until some unrelated frame walked.
     /// </summary>
     public static int BakeInto(Span<HaloRectItem> dst, HaloBand[] bands, bool inner, Rect destinationRect,
         ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world, double opacity,

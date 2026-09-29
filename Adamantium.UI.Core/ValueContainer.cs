@@ -115,7 +115,7 @@ internal class ValueContainer
     }
 
     /// <summary>The effective value: the winning slot's request, coerced. A plain field read - no scan, no bookkeeping,
-    /// nothing to synchronise.</summary>
+    /// nothing to synchronize.</summary>
     public object Effective => _effective;
 
     /// <summary>What the winning slot asked for, before coercion - the input a re-coercion works from.</summary>

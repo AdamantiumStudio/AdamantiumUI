@@ -27,7 +27,7 @@ public partial class RenderCache
 
     // GPU-resident transform table (one world matrix per MOTION NODE; slot 0 = identity for legacy world-space bakes). The
     // SDF vertex shaders fetch each instance's matrix by slot, so moving a node costs ONE matrix write instead of re-baking
-    // its instances - and rotated/3D instances stay batched. Owned per cache; initialised in the Render device block.
+    // its instances - and rotated/3D instances stay batched. Owned per cache; initialized in the Render device block.
     private TransformTable _transformTable;
 
     // Set only while a clone run is being drawn; null on every ordinary group, which is what keeps the hot loop
@@ -200,7 +200,7 @@ public partial class RenderCache
 
     /// <summary>The mirror of <see cref="NoteOpInserted"/>: the layer that held the op loses one, and everything behind
     /// it moves back. The layers must keep tiling the stream exactly - a range that has slid by one is a frame assembled
-    /// out of its neighbours' pieces.</summary>
+    /// out of its neighbors' pieces.</summary>
     private void NoteOpRemoved(int index)
     {
         var taken = false;
@@ -667,7 +667,7 @@ public partial class RenderCache
         phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
 
         // The animations this thread plays by itself. BEFORE the clean-frame early-out on purpose: a composited animation
-        // changes what the retained op stream draws (a matrix, a re-baked colour slot), so an otherwise CLEAN frame is
+        // changes what the retained op stream draws (a matrix, a re-baked color slot), so an otherwise CLEAN frame is
         // exactly when it must still apply - the loop can be stalled in a theme cascade and the spinner keeps turning.
         if (_transformTable != null) _transformTable.CompositedWrite = true;
         ApplyCompositedAnimations(device);
@@ -701,7 +701,7 @@ public partial class RenderCache
             return;
         }
 
-        // Fast-path PARTIAL replay: a geometry-only partial that only recoloured/updated already-batched tiles in place (no
+        // Fast-path PARTIAL replay: a geometry-only partial that only recolored/updated already-batched tiles in place (no
         // splice). Patch just those slots, then replay - O(dirty). ONLY when nothing MOVED (!LastBuildTransformDirty):
         // ExecuteOps redraws batch segments from last frame's baked positions, so a MOVE would leave batched fills stale
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
@@ -952,7 +952,7 @@ public partial class RenderCache
                 if (ClipGroupChanged(scissor, unit.Component) || OverlapsHigherLayer(0, rectBounds, unit.Component))   // 0 = rect layer
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var bakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Rect);
-                FadeBySlot(unit);   // this pass reads the alpha from the slot - keep it out of the colour
+                FadeBySlot(unit);   // this pass reads the alpha from the slot - keep it out of the color
                 if (_rectBatch.TryAdd(rru.RectPayload, bakeWorld, rru.FillOpacity, scissor, rectBounds, slot4Rect,
                         rru.FadeSlot, TagOf(group), RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1109,7 +1109,7 @@ public partial class RenderCache
                 if (ClipGroupChanged(scissor, unit.Component) || OverlapsHigherLayer(1, polyBounds, unit.Component))
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var bakeWorldPoly = ResolveBake(device, unit.Component, wt, out var slot4Poly);
-                FadeBySlot(unit);   // this pass reads the alpha from the slot - keep the chain out of the colour
+                FadeBySlot(unit);   // this pass reads the alpha from the slot - keep the chain out of the color
                 if (_polygonBatch.TryAdd(pru2.PolygonPayload, bakeWorldPoly, pru2.FillOpacity, scissor, polyBounds, slot4Poly,
                         RoundedClipSlot(unit.Component, fullScissor), pru2.FadeSlot))
                 {
@@ -1164,7 +1164,7 @@ public partial class RenderCache
                     || OverlapsHigherLayer(4, patPolyBounds, unit.Component))   // 4 = pattern layer
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var patPolyBake = ResolveBake(device, unit.Component, wt, out var slot4PatPoly);
-                FadeBySlot(unit);   // the pattern passes read the chain from the slot now - keep it out of the colours
+                FadeBySlot(unit);   // the pattern passes read the chain from the slot now - keep it out of the colors
                 if (_patternBatch.TryAddPolygon(ppru.PolygonPayload, patPolyBake, ppru.FillOpacity, scissor, patPolyBounds, slot4PatPoly, ppru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1278,7 +1278,7 @@ public partial class RenderCache
                         fullScissor, ref scissorNarrowed))
                 {
                     var matBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Mat);
-                    FadeBySlot(unit);   // the material pass reads the chain from the slot; keep it out of the colour
+                    FadeBySlot(unit);   // the material pass reads the chain from the slot; keep it out of the color
                     if (_materialBatch.TryAdd(mru.RectPayload, matBakeWorld, mru.FillOpacity, scissor, materialBounds,
                             slot4Mat, mru.FadeSlot, matSource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
@@ -1350,7 +1350,7 @@ public partial class RenderCache
                 }
                 var patBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Pat);
                 // The SDF pattern reads its alpha from the slot now (Anim.z), so the bake must not fold the chain into
-                // c1/c2 as well - that was the doubling this stand caught: 0.34 where every neighbour sat at 0.55.
+                // c1/c2 as well - that was the doubling this stand caught: 0.34 where every neighbor sat at 0.55.
                 FadeBySlot(unit);
                 if (_patternBatch.TryAdd(pru.RectPayload, patBakeWorld, pru.FillOpacity, scissor, patternBounds, slot4Pat, pru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
@@ -1384,7 +1384,7 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 }
                 var fracBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Frac);
-                FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the colours
+                FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the colors
                 if (_fractalBatch.TryAdd(fru.RectPayload, fracBakeWorld, fru.FillOpacity, scissor, fractalBounds, slot4Frac,
                         RoundedClipSlot(unit.Component, fullScissor), fru.FadeSlot))
                 {
@@ -1494,14 +1494,14 @@ public partial class RenderCache
                 // component-based batch cannot reach itself.
                 var textBake = tru.Place(ResolveBake(device, unit.Component, wt, out var slot4Text));
                 var textFirst = _textBatch.RetainedCount;
-                FadeBySlot(unit);   // this pass reads the alpha from the slot now - keep the chain out of the colour
+                FadeBySlot(unit);   // this pass reads the alpha from the slot now - keep the chain out of the color
                 if (_textBatch.TryAdd(tc, textBake, slot4Text, unit.FadeSlot, scissor, atlas, LogicalBounds(unit.Component, wt),
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
-                    // NOT slot-blind any more. Text used to bake the opacity CHAIN into its glyph colours because its
+                    // NOT slot-blind any more. Text used to bake the opacity CHAIN into its glyph colors because its
                     // shader could not read the table twice, so a fading ancestor had to re-bake every glyph under it;
                     // now the glyph VS reads the fade slot like everyone else. Leaving it in that list would apply the
-                    // fade TWICE - once in the colour it re-bakes, once in the slot the shader reads.
+                    // fade TWICE - once in the color it re-bakes, once in the slot the shader reads.
                     if (_recording)
                     {
                         // SLOT-patchable while the glyph count holds; and when it does NOT, the run is what the splice
@@ -2013,7 +2013,7 @@ public partial class RenderCache
     private void ApplyBrushRepaints(IGraphicsDevice device)
     {
         // Not during a SPLICE, for the same reason the paint patch stands aside: its whole business is moving the very
-        // slots this would be writing. The splice re-issues those records from the payload anyway, so the colour is not
+        // slots this would be writing. The splice re-issues those records from the payload anyway, so the color is not
         // lost - only this pass is.
         if (device == null || _partialSpliced || _brushPaintBaked.Count == 0) return;
 
@@ -2067,7 +2067,7 @@ public partial class RenderCache
                 {
                     tru.RefreshColors();
                     if (_textRunByUnit.TryGetValue(u, out var run))
-                        _textBatch?.RecolourRun(device, run.First, run.Count, tru.TextComponent);
+                        _textBatch?.RecolorRun(device, run.First, run.Count, tru.TextComponent);
                     continue;
                 }
 
@@ -2306,12 +2306,12 @@ public partial class RenderCache
         }
 
         // The soft bands first: they are a SEPARATE record from the fill, so a repaint that touches only the fill left
-        // a shape recoloured and its aura on the old colour until an unrelated frame walked the scene.
+        // a shape recolored and its aura on the old color until an unrelated frame walked the scene.
         PatchHalo(device, u, bakeWorld, transformSlot);
 
         if (u is RectangleRenderUnit rru)
         {
-            // Only the SLOT-READING families are patched here (the maps below hold nothing else), so the colour is
+            // Only the SLOT-READING families are patched here (the maps below hold nothing else), so the color is
             // re-baked WITHOUT the chain - exactly as the walk bakes it.
             FadeBySlot(u);
 
@@ -2384,10 +2384,10 @@ public partial class RenderCache
 
         if (u is TextRenderUnit tru)
         {
-            // A paint patch is where an INHERITED recolour arrives: the block was never re-recorded, so its component
+            // A paint patch is where an INHERITED recolor arrives: the block was never re-recorded, so its component
             // still holds the brushes it dereferenced at record time. Re-read them before baking.
             tru.RefreshColors();
-            FadeBySlot(u);   // and bake the colour WITHOUT the chain, exactly as the walk does - see the rect branch
+            FadeBySlot(u);   // and bake the color WITHOUT the chain, exactly as the walk does - see the rect branch
             // The block's own placement rides on top of the bake, exactly as the recording walk composed it.
             return _textBatch.UpdateRun(device, _textRunByUnit[u].First, tru.TextComponent, tru.Place(bakeWorld), transformSlot, tru.FadeSlot,
                 RoundedClipSlot(u.Component, _frameScissor));   // as the walk stamps it - see the rect branch
@@ -2397,7 +2397,7 @@ public partial class RenderCache
         {
             // Through the arena's own stage: it knows how to bake one record of its key, and the same two calls are what
             // the splice uses to replace a record. Staged, written, and the stage dropped - a patch owns nothing between
-            // frames. The colour keeps the opacity CHAIN here: this family's shader does not read the slot.
+            // frames. The color keeps the opacity CHAIN here: this family's shader does not read the slot.
             var (fillArena, fillSlot) = _fillSlotByUnit[u];
             fillArena.ClearStage();
             if (!fillArena.TryStage(u, bakeWorld, transformSlot, 0, RoundedClipSlot(u.Component, _frameScissor))) return false;
@@ -2536,7 +2536,7 @@ public partial class RenderCache
         if (_haloRunsByUnit.Count == 0 || !_haloRunsByUnit.TryGetValue(u, out var runs)) return;
         if (!TryHaloShape(u, out var shape, out var corners, out var kind, out _, out var fieldRange)) return;
 
-        FadeBySlot(u);   // as the walk bakes it - the band's chain comes from the slot, not from its colour
+        FadeBySlot(u);   // as the walk bakes it - the band's chain comes from the slot, not from its color
         var opacity = u.RenderData.Opacity;
         var haloClip = RoundedClipSlot(u.Component, _frameScissor);   // the patch writes what the walk writes
         var haloFade = u.FadeSlot;
@@ -2564,7 +2564,7 @@ public partial class RenderCache
             bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot);
 
         // Fewer bands than the walk recorded means one went dark; the splice owns that, and rewriting a PREFIX here
-        // would leave the rest painting the old colour. Left to the refusal above.
+        // would leave the rest painting the old color. Left to the refusal above.
         if (written != count) return;
 
         for (var i = 0; i < written; i++) batch.UpdateSlot(device, first + i, _haloPatchStage[i]);
@@ -2685,7 +2685,7 @@ public partial class RenderCache
                     if (cull) break;   // whole component off-clip: it contributes no items (units share the component)
                 }
                 var bakeWorld = ResolveBake(device, u.Component, wt, out var slot);
-                // The families whose shaders read the opacity slot must be re-baked WITHOUT the chain in their colour,
+                // The families whose shaders read the opacity slot must be re-baked WITHOUT the chain in their color,
                 // exactly as the walk bakes them; the rest keep it. Which arena repairs this group says which it is.
                 if (ReadsFadeSlot(arena)) FadeBySlot(u);
                 if (!arena.TryStage(u, bakeWorld, slot, TagOf(group), RoundedClipSlot(u.Component, fullScissor)))
@@ -2754,7 +2754,7 @@ public partial class RenderCache
         // ---- Mutate (can no longer fail) ----
         foreach (var p in _patchBuf)
         {
-            if (!p.InPlace) continue;   // count-stable recolour: the slots are already the right ones
+            if (!p.InPlace) continue;   // count-stable recolor: the slots are already the right ones
             // In place only ever happens for a group whose every unit holds a RECT slot (AllUnitsHaveSlots asks that
             // map), so its arena is the rect one - said through the patch all the same, because that is where it is known.
             var i = 0;
@@ -2923,7 +2923,7 @@ public partial class RenderCache
         if (_instancedFill != null) _instancedFill.Backdrop = _materialBatch;
     }
 
-    /// <summary>The frame region a material must copy to draw over: what it covers, grown so the blur has neighbours to
+    /// <summary>The frame region a material must copy to draw over: what it covers, grown so the blur has neighbors to
     /// average at its edges, then cut back to the clip it lives in - outside that clip is whatever is drawn OVER the
     /// element, and the blur would drag it inward as a dense band along the border.</summary>
     private Rect2D MaterialCaptureRegion(Rect bounds, Rect2D scissor, Rect2D fullScissor)
@@ -3095,7 +3095,7 @@ public partial class RenderCache
     }
 
     // A control that drew nothing until now: give it its own segment and put its op where its RANK says, not where its
-    // neighbours happen to be. Nothing already recorded moves, so this cannot disturb anyone's order - and it is provable
+    // neighbors happen to be. Nothing already recorded moves, so this cannot disturb anyone's order - and it is provable
     // without looking at what else the frame contains.
     private bool PlaceNewSegment(IGraphicsDevice device, GroupPatch patch)
     {
@@ -3201,7 +3201,7 @@ public partial class RenderCache
             LayerProbe.Splits++;
 
             // Nothing to fix up: every op, every pending patch and every layer this frame resolved names its segment by
-            // ID, and the split gave the new half an id of its own. This is what used to be three synchronised loops over
+            // ID, and the split gave the new half an id of its own. This is what used to be three synchronized loops over
             // the op stream, the patch buffer and its resolved layers - and the bug when one of them was missed.
             var spanEnd = op.Order;
             op.Order = order;   // this half now ends before the newcomer

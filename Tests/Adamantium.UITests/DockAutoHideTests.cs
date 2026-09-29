@@ -16,7 +16,7 @@ public class DockAutoHideTests
         return group;
     }
 
-    /// <summary>The editor shape: documents in the centre, an inspector docked right.</summary>
+    /// <summary>The editor shape: documents in the center, an inspector docked right.</summary>
     private static (DockingLayout Layout, PaneGroupNode Documents, PaneGroupNode Inspector) Editor()
     {
         var documents = Group("scene", "game");
@@ -71,9 +71,9 @@ public class DockAutoHideTests
     }
 
     /// <summary>Collapsing leaves the rest of the layout alone - it is one group giving up room, not a rearrangement.
-    /// The stars around it absorb what it released, and a fixed neighbour does not move at all.</summary>
+    /// The stars around it absorb what it released, and a fixed neighbor does not move at all.</summary>
     [Test]
-    public void CollapsingAGroup_DoesNotDisturbItsNeighbours()
+    public void CollapsingAGroup_DoesNotDisturbItsNeighbors()
     {
         var documents = Group("scene");
         var layout = new DockingLayout();
@@ -91,7 +91,7 @@ public class DockAutoHideTests
 
     /// <summary>
     /// A collapsed group stays collapsed through everything else that happens to the layout. Measured: any operation
-    /// that normalised the tree - a tear-off, a drop, a close - turned Auto back into a star and the panel sprang open,
+    /// that normalized the tree - a tear-off, a drop, a close - turned Auto back into a star and the panel sprang open,
     /// because Auto carries no number and "no number" was being read as "nobody set a weight".
     /// </summary>
     [Test]
@@ -183,16 +183,16 @@ public class DockAutoHideTests
         {
             Assert.That(inspector.State, Is.EqualTo(PaneGroupState.Revealed), "showing, but still not docked");
             Assert.That(inspector.Length, Is.EqualTo(PaneLength.Auto),
-                "in the TREE it is still just its strip - the body is a flyout over the neighbours, not a share of the row");
+                "in the TREE it is still just its strip - the body is a flyout over the neighbors, not a share of the row");
             Assert.That(inspector.RestoreLength, Is.EqualTo(PaneLength.Pixels(240)),
                 "and what it is worth docked is remembered - that is how wide the flyout opens");
         });
     }
 
     /// <summary>Glancing at a tool does not move the layout about. Before the fix, revealing gave the panel
-    /// its docked length back, so every look at a tool shoved its neighbours aside and then back again.</summary>
+    /// its docked length back, so every look at a tool shoved its neighbors aside and then back again.</summary>
     [Test]
-    public void RevealingAGroup_DoesNotDisturbItsNeighbours()
+    public void RevealingAGroup_DoesNotDisturbItsNeighbors()
     {
         var (layout, documents, inspector) = Editor();
         layout.CollapseGroup(inspector);
@@ -307,7 +307,7 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>Aimed at the CENTRE of a group, its panes become tabs of that group - which is what makes a floating
+    /// <summary>Aimed at the CENTER of a group, its panes become tabs of that group - which is what makes a floating
     /// window somewhere other panels can be collected.</summary>
     [Test]
     public void DroppingAFloatingPanelOntoAGroup_TabsItsPanesIn()
@@ -370,12 +370,12 @@ public class DockAutoHideTests
         Assert.That(layout.MoveNode(root.Content, root.Content, DockZone.Left), Is.False);
     }
 
-    // --- The document well: the centre is a PLACE, not a property of the panes in it ---------------------------------
+    // --- The document well: the center is a PLACE, not a property of the panes in it ---------------------------------
     // Everything inside the well is a document and everything outside it is a tool, which
-    // is what makes a tool dropped into the centre behave like a document: the zones for tools are the EDGES, and a panel
-    // in the centre has no edge to fold against.
+    // is what makes a tool dropped into the center behave like a document: the zones for tools are the EDGES, and a panel
+    // in the center has no edge to fold against.
 
-    /// <summary>An editor built from authored zones: documents in the centre, an inspector on the right.</summary>
+    /// <summary>An editor built from authored zones: documents in the center, an inspector on the right.</summary>
     private static (DockingLayout Layout, PaneGroupNode Documents, PaneGroupNode Inspector) Authored()
     {
         var documents = Group("scene");
@@ -395,10 +395,10 @@ public class DockAutoHideTests
         Assert.That(layout.DocumentWell, Is.SameAs(documents));
     }
 
-    /// <summary>A TOOL dropped into the centre joins the well, and from then on it is in the place where documents live -
+    /// <summary>A TOOL dropped into the center joins the well, and from then on it is in the place where documents live -
     /// which is the whole point: the group it landed in is a document group, so that is how it is dressed.</summary>
     [Test]
-    public void AToolDroppedIntoTheCentre_JoinsTheDocumentWell()
+    public void AToolDroppedIntoTheCenter_JoinsTheDocumentWell()
     {
         var (layout, documents, _) = Authored();
 
@@ -411,8 +411,8 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>The centre cannot be put away or docked somewhere else: there is no edge for it to fold against, and a
-    /// window whose centre has moved into a tool panel is not a layout state that should be reachable.
+    /// <summary>The center cannot be put away or docked somewhere else: there is no edge for it to fold against, and a
+    /// window whose center has moved into a tool panel is not a layout state that should be reachable.
     /// <para>Its CONTENTS are another matter - see DocumentAreaTests: the last group may be carried out into a window
     /// of its own, and what stays behind is the empty place.</para></summary>
     [Test]
@@ -428,8 +428,8 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>Closing the last document leaves the centre as EMPTY SPACE. Letting it be tidied away would mean the
-    /// layout loses its centre, and the next document opens wherever it likes.</summary>
+    /// <summary>Closing the last document leaves the center as EMPTY SPACE. Letting it be tidied away would mean the
+    /// layout loses its center, and the next document opens wherever it likes.</summary>
     [Test]
     public void TheDocumentWell_SurvivesLosingItsLastDocument()
     {
@@ -518,7 +518,7 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>A band dropped on the BOTTOM edge anchor splits the centre column, not the whole window - so the side
+    /// <summary>A band dropped on the BOTTOM edge anchor splits the center column, not the whole window - so the side
     /// panels keep their full height and a put-away strip stays on the edge it is folded against.
     /// <para>Measured before the rule: the band was aimed at the root, which cut the right-hand strip off at the band's
     /// top edge - and a strip pushed off its edge is no longer a strip on an edge.</para></summary>
@@ -531,7 +531,7 @@ public class DockAutoHideTests
         var console = Group("console");
         var target = layout.BandTarget(layout.Main);
 
-        Assert.That(target, Is.SameAs(documents), "the centre column is what a band splits");
+        Assert.That(target, Is.SameAs(documents), "the center column is what a band splits");
 
         layout.Split(target, DockZone.Bottom, console);
 

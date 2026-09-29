@@ -24,8 +24,8 @@ public class DockingPolicyBehavior : Behavior<DockingArea>
         _area = null;
     }
 
-    /// <summary>Says what was answered, out loud. Through the VIEW MODEL rather than a property on this behaviour: a
-    /// behaviour is not an element of the visual tree, so nothing in the markup can bind to it by name - the view model
+    /// <summary>Says what was answered, out loud. Through the VIEW MODEL rather than a property on this behavior: a
+    /// behavior is not an element of the visual tree, so nothing in the markup can bind to it by name - the view model
     /// is what both the view and this share.</summary>
     private void Answer(string text)
     {

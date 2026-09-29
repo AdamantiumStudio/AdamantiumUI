@@ -105,7 +105,7 @@ public partial class BrushesViewModel : TabPageViewModel
     /// <summary>Every spread method - what happens OUTSIDE the stops' span.</summary>
     public GradientSpreadMethod[] GradientSpreads { get; } = Enum.GetValues<GradientSpreadMethod>();
 
-    /// <summary>Both interpolation spaces - sRGB muddies the midpoint between complementary colours, OKLab does not.</summary>
+    /// <summary>Both interpolation spaces - sRGB muddies the midpoint between complementary colors, OKLab does not.</summary>
     public ColorInterpolationMode[] GradientInterpolations { get; } = Enum.GetValues<ColorInterpolationMode>();
 
     [Bindable] private GradientKind _gradientKind = GradientKind.Linear;
@@ -161,7 +161,7 @@ public partial class BrushesViewModel : TabPageViewModel
     }
 
     // The angle is what a person means by "which way does it run"; the two points are how the brush stores it. Span
-    // shortens the ramp about the centre, which is what makes Reflect and Repeat show anything at all.
+    // shortens the ramp about the center, which is what makes Reflect and Repeat show anything at all.
     private void ApplyGradientGeometry()
     {
         var radians = _gradientAngle * Math.PI / 180.0;
@@ -180,7 +180,7 @@ public partial class BrushesViewModel : TabPageViewModel
         LiveConic.StartAngle = _gradientStartAngle;
     }
 
-    /// <summary>The brush the "live pattern" rectangle fills with; the controls below drive its type/cell/colours - one
+    /// <summary>The brush the "live pattern" rectangle fills with; the controls below drive its type/cell/colors - one
     /// configurable PatternBrush that replaces the static per-pattern swatch row.</summary>
     public PatternBrush LivePattern { get; } = new PatternBrush
     {
@@ -191,7 +191,7 @@ public partial class BrushesViewModel : TabPageViewModel
     };
 
     /// <summary>The brush the "live image" rectangle fills with: one picture, laid down once or repeated. The sample is
-    /// deliberately ASYMMETRIC - a triangle, an off-centre dot and a corner square - so a plain tile shows its seams and
+    /// deliberately ASYMMETRIC - a triangle, an off-center dot and a corner square - so a plain tile shows its seams and
     /// a mirrored one visibly meets its own reflection.</summary>
     public ImageBrush LiveImage { get; } = new ImageBrush
     {
@@ -399,7 +399,7 @@ public partial class BrushesViewModel : TabPageViewModel
 
     [Bindable] private PointsCollection _drawingStar = Star(320, 200);
 
-    /// <summary>The brush the "live mesh" rectangle fills with: four corner colours blended bilinearly, driven by four
+    /// <summary>The brush the "live mesh" rectangle fills with: four corner colors blended bilinearly, driven by four
     /// pickers. No axis and no stops - which is what makes it a different animal from the linear/radial family.</summary>
     public MeshGradientBrush LiveMesh { get; } = new MeshGradientBrush
     {
@@ -433,7 +433,7 @@ public partial class BrushesViewModel : TabPageViewModel
         new NineSliceSkin("Stone blocks", "nine-slice-stone.png"),
         new NineSliceSkin("Sci-fi plating", "nine-slice-scifi.png"),
         new NineSliceSkin("Gilded parchment", "nine-slice-parchment.png"),
-        // ...and one that is NOT a picture: a drawing, rasterised to order before it is cut. The brush stays raster, so
+        // ...and one that is NOT a picture: a drawing, rasterized to order before it is cut. The brush stays raster, so
         // what this one is for is checking that the raster it gets is made at the resolution the FRAME needs.
         NineSliceSkin.Vector()
     ];
@@ -489,7 +489,7 @@ public partial class BrushesViewModel : TabPageViewModel
             : LiveStand.Gradients;
 
     // The buttons drive the property; the property drives the region. Navigating to a VIEW of this very object - not to
-    // a view-model of its own - is what keeps the shared figure, slot and colours alive across the switch.
+    // a view-model of its own - is what keeps the shared figure, slot and colors alive across the switch.
     partial void OnLiveStandChanged(LiveStand value) => ShowStand(value);
 
     // Navigates to this instance, not by type (which would recurse from the constructor); GetOrCreate since the region
@@ -527,7 +527,7 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private double _materialOpacity = 1.0;
 
     // The SURFACE branch - the first material knobs that describe what a thing is made of rather than what shows
-    // through it. Grain, roughness and the light are shared by velvet and metal; the colours are each material's own.
+    // through it. Grain, roughness and the light are shared by velvet and metal; the colors are each material's own.
     [Bindable] private Color _materialNapColor = new Color(38, 20, 54, 255);
     [Bindable] private Color _materialSheenColor = new Color(228, 214, 255, 255);
     [Bindable] private Color _materialMetalColor = new Color(196, 199, 202, 255);
@@ -622,7 +622,7 @@ public partial class BrushesViewModel : TabPageViewModel
     {
         if (metal == null) return;
 
-        MaterialMetalColor = metal.Colour;
+        MaterialMetalColor = metal.Color;
         MaterialRoughness = metal.Roughness;
         MaterialGrainScale = metal.Grain;
     }
@@ -664,7 +664,7 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnMaterialLightElevationChanged(double value) => LiveMaterial.LightElevation = value;
 
     /// <summary>What lies UNDER the material - the whole point of a backdrop is that it has something to show, and a
-    /// flat colour proves nothing. Switchable because different fields expose different faults: a moving noise shows
+    /// flat color proves nothing. Switchable because different fields expose different faults: a moving noise shows
     /// whether the capture is fresh, a hard-edged checkerboard shows how far the refraction bends, and a gradient shows
     /// banding the grain is there to hide.</summary>
     public MaterialUnderlay[] MaterialUnderlays { get; } = Enum.GetValues<MaterialUnderlay>();
@@ -783,7 +783,7 @@ public partial class BrushesViewModel : TabPageViewModel
 
     /// <summary>The preview slot every "paint it on a shape" stand draws into. One number, in one place: the stands were
     /// 500x280 and 300x200 by hand, and the star - a Polygon, which carries authored coordinates and does NOT stretch to
-    /// its slot - was cut for the big one and reused in the small ones, where it drew past the edge onto the neighbour
+    /// its slot - was cut for the big one and reused in the small ones, where it drew past the edge onto the neighbor
     /// (a Grid does not clip). Bound rather than repeated, so the four stands cannot drift apart again.</summary>
     public double PreviewWidth => 500;
 
@@ -863,7 +863,7 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnNoiseLacunarityChanged(double value) => LiveNoise.Lacunarity = value;
     partial void OnNoiseGainChanged(double value) => LiveNoise.Gain = value;
 
-    // Colour-picker bound: the two noise colours (low -> high). Match LiveNoise's initial colours so the pickers start right.
+    // Color-picker bound: the two noise colors (low -> high). Match LiveNoise's initial colors so the pickers start right.
     [Bindable] private Color _noiseColor1 = new Color(11, 18, 32, 255);
     [Bindable] private Color _noiseColor2 = new Color(125, 211, 252, 255);
 
@@ -889,9 +889,9 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private bool _noiseFirePalette = true;
     partial void OnNoiseFirePaletteChanged(bool value) => LiveNoise.UseFirePalette = value;
 
-    // Mid colour = the ONLY thing that separates "tritone" from plain noise: with it on, the SAME noise maps through a
-    // 3-colour gradient-map ramp (Color1 -> Mid -> Color2) instead of the 2-colour duotone. Off (checkbox clear) sets the
-    // brush's MidColor transparent, which the shader reads as "duotone". Same brush, same pattern - only the colour mapping.
+    // Mid color = the ONLY thing that separates "tritone" from plain noise: with it on, the SAME noise maps through a
+    // 3-color gradient-map ramp (Color1 -> Mid -> Color2) instead of the 2-color duotone. Off (checkbox clear) sets the
+    // brush's MidColor transparent, which the shader reads as "duotone". Same brush, same pattern - only the color mapping.
     [Bindable] private bool _noiseUseMid;
     [Bindable] private Color _noiseMid = new Color(249, 115, 22, 255);   // a warm mid; applied only while UseMid is on
 
@@ -937,7 +937,7 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private double _fractalCenterY = 0;
     [Bindable] private double _fractalFineX = 0;   // fine pan, scaled by 1/zoom in ApplyCenter so it stays precise when zoomed in
     [Bindable] private double _fractalFineY = 0;
-    // The view's own residue: mouse pan and zoom re-anchoring write here rather than into the coarse centre, which past
+    // The view's own residue: mouse pan and zoom re-anchoring write here rather than into the coarse center, which past
     // zoom ~1e13 can no longer represent a one-pixel step at all.
     [Bindable] private double _fractalCenterFineX = 0;
     [Bindable] private double _fractalCenterFineY = 0;
@@ -955,7 +955,7 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnFractalZoomExpChanged(double value)
     {
         LiveFractal.Zoom = Math.Pow(10, value);   // slider holds log10(Zoom) - a linear drag zooms multiplicatively
-        ApplyCenter();   // the fine-pan offset scales by 1/zoom, so re-apply the centre when zoom changes
+        ApplyCenter();   // the fine-pan offset scales by 1/zoom, so re-apply the center when zoom changes
         RaisePropertyChanged(nameof(ZoomText));
     }
 
@@ -979,7 +979,7 @@ public partial class BrushesViewModel : TabPageViewModel
         LiveFractal.C = new Vector2((float)_fractalCx, (float)value);
     }
 
-    partial void OnFractalCenterXChanged(double value) => ApplyCenter();   // base centre, driven by mouse pan/zoom (FractalView)
+    partial void OnFractalCenterXChanged(double value) => ApplyCenter();   // base center, driven by mouse pan/zoom (FractalView)
     partial void OnFractalCenterYChanged(double value) => ApplyCenter();
     partial void OnFractalCenterFineXChanged(double value) => ApplyCenter();
     partial void OnFractalCenterFineYChanged(double value) => ApplyCenter();
@@ -997,7 +997,7 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnFractalColor1Changed(Color value) => LiveFractal.Color1 = value;
     partial void OnFractalColor2Changed(Color value) => LiveFractal.Color2 = value;
 
-    // Effective centre = coarse base + fine offset, the fine offset scaled by the viewport (1.5 / zoom) so axis panning
+    // Effective center = coarse base + fine offset, the fine offset scaled by the viewport (1.5 / zoom) so axis panning
     // stays precise at any depth. Mouse pan/zoom writes the base CenterX/Y and ZoomExp (two-way from FractalView).
     private void ApplyCenter()
     {

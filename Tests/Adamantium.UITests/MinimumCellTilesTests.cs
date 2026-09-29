@@ -90,7 +90,7 @@ public class MinimumCellTilesTests
     }
 
     /// <summary>The same list under the tab's own default budget. This one only REPORTS - how many of the window's
-    /// slots the budget manages to bind in a pass - because what counts as acceptable here is a judgement about the
+    /// slots the budget manages to bind in a pass - because what counts as acceptable here is a judgment about the
     /// dial, not an invariant.</summary>
     [Test]
     public void AtTheMinimumCell_HowMuchTheBindBudgetKeepsUpWith()

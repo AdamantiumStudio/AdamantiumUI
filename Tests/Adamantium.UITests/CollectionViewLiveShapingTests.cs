@@ -69,7 +69,7 @@ public class CollectionViewLiveShapingTests
 
         row.Done = true;
 
-        Assert.That(Names(view), Is.EqualTo(new[] { "a", "b" }), "this is the WPF behaviour, and why live shaping exists");
+        Assert.That(Names(view), Is.EqualTo(new[] { "a", "b" }), "this is the WPF behavior, and why live shaping exists");
         Assert.That(log, Is.Empty);
     }
 
@@ -108,7 +108,7 @@ public class CollectionViewLiveShapingTests
 
         row.Done = false;
 
-        Assert.That(Names(view), Is.EqualTo(new[] { "a", "b", "c" }), "back between its neighbours, not appended");
+        Assert.That(Names(view), Is.EqualTo(new[] { "a", "b", "c" }), "back between its neighbors, not appended");
         Assert.That(log, Has.Count.EqualTo(1));
         Assert.That(log[0].Action, Is.EqualTo(NotifyCollectionChangedAction.Add));
         Assert.That(log[0].NewStartingIndex, Is.EqualTo(1));

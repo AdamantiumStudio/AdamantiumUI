@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace Adamantium.Navigation;
 
 /// <summary>Shared, UI-free glue between a dialog host and an <see cref="IDialogAware"/> view model: fires
-/// <see cref="IDialogAware.OnDialogOpened"/>, and on <see cref="IDialogAware.RequestClose"/> honours
+/// <see cref="IDialogAware.OnDialogOpened"/>, and on <see cref="IDialogAware.RequestClose"/> honors
 /// <see cref="IDialogAware.CanCloseDialog"/>, tears down the presentation, and completes <see cref="Completion"/> with the
 /// result. Every <see cref="IDialogHost"/> reuses this so the lifecycle lives in one place.</summary>
 public sealed class DialogSession

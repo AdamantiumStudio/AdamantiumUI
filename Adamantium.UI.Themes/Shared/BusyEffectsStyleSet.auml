@@ -44,8 +44,8 @@
         </Setter>
     </Style>
 
-    <!-- The wave is ONE animation played by three dots at three Delays - that is what makes it read as a travelling wave
-         rather than three things blinking. Scale, not opacity: a scaled dot keeps its colour and the motion stays legible
+    <!-- The wave is ONE animation played by three dots at three Delays - that is what makes it read as a traveling wave
+         rather than three things blinking. Scale, not opacity: a scaled dot keeps its color and the motion stays legible
          on any background. -->
     <Style Selector="BusyIndicator.Dots">
         <PropertyTrigger Property="IsActive" Value="True">
@@ -119,7 +119,7 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- ============================== Ripple: two rings expanding out of the centre ============================== -->
+    <!-- ============================== Ripple: two rings expanding out of the center ============================== -->
     <Style Selector="BusyIndicator.Ripple">
         <Setter Property="Width" Value="{ResourceReference BusySize}"/>
         <Setter Property="Height" Value="{ResourceReference BusySize}"/>
@@ -357,7 +357,7 @@
                 <ControlTemplate TargetType="BusyIndicator">
                     <StackPanel Orientation="Horizontal">
                         <!-- Perspective is what makes this a FLIP and not a horizontal squash: without the depth
-                             foreshortening a Y-rotation is just a width scale. Origin at the centre so each card turns
+                             foreshortening a Y-rotation is just a width scale. Origin at the center so each card turns
                              about its own middle. -->
                         <Border Width="{ResourceReference BusyFlipWidth}" Height="{ResourceReference BusyFlipHeight}" Margin="{ResourceReference BusyFlipGap}" CornerRadius="{ResourceReference BusyPieceRadiusLarge}"
                                          Background="{ThemeResource AccentFillColorDefault}"
@@ -423,8 +423,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
-                    <!-- Origin at the BOTTOM centre (0.5,1): a bar must grow UPWARD out of the floor, not out of its own
-                         middle - with a centred origin it would stretch both ways and the row would have no baseline. -->
+                    <!-- Origin at the BOTTOM center (0.5,1): a bar must grow UPWARD out of the floor, not out of its own
+                         middle - with a centered origin it would stretch both ways and the row would have no baseline. -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                         <Border Width="{ResourceReference BusyEqualizerBarWidth}" Height="{ResourceReference BusyEqualizerBarHeight}" Margin="{ResourceReference BusyEqualizerGap}" CornerRadius="{ResourceReference BusyPieceRadius}"
                                          Background="{ThemeResource AccentFillColorDefault}"

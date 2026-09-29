@@ -49,7 +49,7 @@
          Horizontal padding is generous where a row is tight: the text needs air on the axis that has room, not on the
          one that does not. -->
     <!-- The same roles Fluent names, answered for a dense skin. Flatter than its: at this row height a pixel of
-         optical centring is a twelfth of the row, so the insets are symmetric and the air is horizontal. -->
+         optical centering is a twelfth of the row, so the insets are symmetric and the air is horizontal. -->
     <Thickness x:Key="PaddingControl">8 2 8 2</Thickness>
     <Thickness x:Key="PaddingDropDown">8 2 6 2</Thickness>
     <Thickness x:Key="PaddingControlCompact">6 1 6 1</Thickness>
@@ -153,7 +153,7 @@
          The chevron every list-opener shares (drop-down, overflow, tree expander, submenu), the box a checkbox draws,
          and the ring a radio draws. Named for what they are, not "icon size" - they are not one size. -->
     <sys:Double x:Key="DropDownIconSize">8</sys:Double>
-    <!-- The square an expander arrow is centred in. Smaller than Fluent's 16 because it has to sit inside a 22-pixel
+    <!-- The square an expander arrow is centered in. Smaller than Fluent's 16 because it has to sit inside a 22-pixel
          row without crowding the label beside it. -->
     <sys:Double x:Key="ExpanderBoxSize">12</sys:Double>
     <!-- A command glyph, two pixels down from Fluent's: at this row height a 16-pixel icon crowds the label. -->
@@ -297,7 +297,7 @@
     <sys:Double x:Key="OverlayMinWidth">260</sys:Double>
     <sys:Double x:Key="OverlayGripSize">14</sys:Double>
 
-    <!-- Colour: the wheel and square live in a PROPERTIES COLUMN, not in a dialog, so they are sized to a column. The
+    <!-- Color: the wheel and square live in a PROPERTIES COLUMN, not in a dialog, so they are sized to a column. The
          marker is small and hairline - a fat ring hides the very pixels you are choosing between. -->
     <sys:Double x:Key="ColorWheelSize">150</sys:Double>
     <sys:Double x:Key="ColorAreaSize">150</sys:Double>

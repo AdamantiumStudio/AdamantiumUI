@@ -22,7 +22,7 @@ public sealed class RibbonGroupVariant
     public bool IsCollapsed { get; }
 
     /// <summary>Roomiest first, collapsed last. The GROUP steps as one - as asked, then medium, then small - and each
-    /// command follows or sits a step out by its thresholds. Stepping them individually reads as broken: a labelled row
+    /// command follows or sits a step out by its thresholds. Stepping them individually reads as broken: a labeled row
     /// ends up stacked over a bare icon.</summary>
     public static IReadOnlyList<RibbonGroupVariant> Generate(
         IReadOnlyList<(RibbonSize Max, RibbonCollapseThreshold ToMedium, RibbonCollapseThreshold ToSmall)> commands)

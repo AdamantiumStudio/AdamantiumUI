@@ -85,7 +85,7 @@
         </Setter>
     </Style>
 
-    <!-- The pin's own light. It is not one of the three a Mac window has, so it takes a neutral grey and lights up
+    <!-- The pin's own light. It is not one of the three a Mac window has, so it takes a neutral gray and lights up
          accent when pinned - which is the lights' whole vocabulary. Its own palette key, and that is the point: the
          first version borrowed ControlFillColorTertiary, which in the dark variant is #3C3C3E - the caption's own
          ground, to the byte. The button was there, sized and hit-testable, and completely invisible. -->
@@ -129,7 +129,7 @@
             <Setter TargetName="PART_TitleBar" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <!-- Inactive dims the TITLE and drops the strip back to the card's own ground, so an unfocused card loses the
-             distinction without the caption changing colour - the same way this theme's real window says it. -->
+             distinction without the caption changing color - the same way this theme's real window says it. -->
         <PropertyTrigger Property="IsActive" Value="false">
             <Setter Property="TitleBarBackground" Value="{ObservableResource CardBackgroundFillColorDefault}"/>
             <Setter Property="TitleForeground" Value="{ObservableResource TextFillColorSecondary}"/>

@@ -6,16 +6,16 @@ namespace Adamantium.Navigation;
 /// with an exception.</summary>
 public sealed class NavigationResult
 {
-    private NavigationResult(bool success, bool cancelled, Exception error, object viewModel)
+    private NavigationResult(bool success, bool canceled, Exception error, object viewModel)
     {
         Success = success;
-        Cancelled = cancelled;
+        Canceled = canceled;
         Error = error;
         ViewModel = viewModel;
     }
 
     public bool Success { get; }
-    public bool Cancelled { get; }
+    public bool Canceled { get; }
     public Exception Error { get; }
     public object ViewModel { get; }
 

@@ -6,7 +6,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Vector icons tab: one DrawingImage resource shown at many sizes at once. The point of the stand is that the
 /// biggest and the smallest come from the SAME drawing and the same mesh - so the edges must stay clean at every size,
-/// and dragging a colour or an angle must move all of them together.</summary>
+/// and dragging a color or an angle must move all of them together.</summary>
 [ViewModel]
 public partial class VectorIconsViewModel : TabPageViewModel
 {

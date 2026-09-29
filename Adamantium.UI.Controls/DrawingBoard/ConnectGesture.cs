@@ -163,7 +163,7 @@ public class ConnectGesture
         canvas?.Scene != null && Socket(canvas, world, out _, out var pin) ? pin : null;
 
     /// <summary>What the wire is drawn in while it is over a socket that will not take it. Null draws it in the source
-    /// socket's colour like any other, which is what an application that has not said otherwise gets.</summary>
+    /// socket's color like any other, which is what an application that has not said otherwise gets.</summary>
     public Brush RefusedStroke { get; set; }
 
     /// <summary>Whether the socket under the pointer right now would take this wire. False while nothing is being
@@ -182,7 +182,7 @@ public class ConnectGesture
         if (Where(_fromItem, _fromPin) is not { } from) return;
 
         // SAID WHILE THE HAND IS STILL MOVING. A wire that looks willing all the way and is then quietly dropped tells
-        // you nothing about why; over a socket that will not take it, it is drawn in the refusing colour and the answer
+        // you nothing about why; over a socket that will not take it, it is drawn in the refusing color and the answer
         // arrives before the button does.
         var stroke = RefusedStroke != null && OverRefusal(canvas, _at) ? RefusedStroke : _fromPin.Color;
 

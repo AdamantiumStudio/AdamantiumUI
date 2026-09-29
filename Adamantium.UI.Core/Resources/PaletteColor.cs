@@ -10,13 +10,13 @@ public enum PaletteEntryKind
     /// <summary>A brush - what nearly everything painting with the palette wants.</summary>
     Brush,
 
-    /// <summary>A raw colour. A gradient STOP takes a colour, not a brush, so the two edge-fade and two shimmer
-    /// tokens have always been colours; served as brushes they simply would not resolve, and the surfaces that use
+    /// <summary>A raw color. A gradient STOP takes a color, not a brush, so the two edge-fade and two shimmer
+    /// tokens have always been colors; served as brushes they simply would not resolve, and the surfaces that use
     /// them would paint nothing at all.</summary>
     Color,
 }
 
-/// <summary>One palette entry of a theme variant: the resource key, and the colour this variant gives it.
+/// <summary>One palette entry of a theme variant: the resource key, and the color this variant gives it.
 /// <code>&lt;PaletteColor Key="SolidBackgroundFillColorBase" Color="#202020"/&gt;</code>
 /// <code>&lt;PaletteColor Key="EdgeFadeColor" Color="#E6161616" As="Color"/&gt;</code></summary>
 public class PaletteColor
@@ -35,7 +35,7 @@ public class PaletteColor
     public Color Color { get; set; }
 
     /// <summary>Brush by default, because that is what nearly every key is. Stated explicitly for the few that are
-    /// consumed as colours - it cannot be inferred from the name, since <c>SolidBackgroundFillColorBase</c> is a brush
+    /// consumed as colors - it cannot be inferred from the name, since <c>SolidBackgroundFillColorBase</c> is a brush
     /// and <c>EdgeFadeColor</c> is not.</summary>
     public PaletteEntryKind As { get; set; } = PaletteEntryKind.Brush;
 

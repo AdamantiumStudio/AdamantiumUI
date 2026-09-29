@@ -109,7 +109,7 @@ public class CompositorTests
     }
 
     [Test]
-    public void CancellingStopsTheRenderThreadToo()
+    public void CancelingStopsTheRenderThreadToo()
     {
         var (_, transform) = Spinner();
         Spin().Apply(transform);
@@ -160,7 +160,7 @@ public class CompositorTests
     // --- Paint channel: a brush's own opacity, on the render thread ---------------------------------------------------
     //
     // The skeleton pulse: ONE shared brush whose Opacity breathes while hundreds of cards paint with it. Unlike a transform,
-    // it is NOT mirrored to the property system (colour touches neither layout nor hit-test) - the loop thread stops touching
+    // it is NOT mirrored to the property system (color touches neither layout nor hit-test) - the loop thread stops touching
     // it entirely, which is the whole point: it was the per-tick republish + mark-every-card that cost the most.
 
     private static SolidColorBrush PulsingBrush() => new(Colors.White) { Opacity = 0.05 };
@@ -237,7 +237,7 @@ public class CompositorTests
     }
 
     [Test]
-    public void CancellingAPaintPulseStopsTheRenderThread()
+    public void CancelingAPaintPulseStopsTheRenderThread()
     {
         var brush = PulsingBrush();
         Pulse().Apply(brush);
@@ -250,21 +250,21 @@ public class CompositorTests
     }
 
     [Test]
-    public void ARecolourOfTheBaseFlowsThroughWhileAnimating()
+    public void ARecolorOfTheBaseFlowsThroughWhileAnimating()
     {
-        // A theme swap recolours the shared brush mid-pulse. The base is re-captured on the loop thread (RefreshBases), so
-        // the animated snapshot must pick up the new colour - the animation overrides only Opacity, never the colour.
+        // A theme swap recolors the shared brush mid-pulse. The base is re-captured on the loop thread (RefreshBases), so
+        // the animated snapshot must pick up the new color - the animation overrides only Opacity, never the color.
         var brush = PulsingBrush();
         brush.ForRendering();
         Pulse().Apply(brush);
         Compositor.Tick(_view);
         Assert.That(((SolidColorBrush)brush.Snapshot).Color, Is.EqualTo(Colors.White));
 
-        brush.Color = Colors.Red;      // the recolour, on the loop thread
+        brush.Color = Colors.Red;      // the recolor, on the loop thread
         AnimationManager.Tick(0.0);    // a loop frame re-captures the base
         Compositor.Tick(_view);        // the render thread rebuilds the snapshot from it
 
         Assert.That(((SolidColorBrush)brush.Snapshot).Color, Is.EqualTo(Colors.Red),
-            "the new base colour must reach the animated snapshot");
+            "the new base color must reach the animated snapshot");
     }
 }

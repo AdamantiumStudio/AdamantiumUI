@@ -7,7 +7,7 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>A COLOUR somebody picked - where colour enters the graph.</summary>
+/// <summary>A COLOR somebody picked - where color enters the graph.</summary>
 public partial class ColorSpecialization : NodeSpecialization
 {
     [Bindable] private Color _color = Color.FromRgba(80, 140, 220, 255);

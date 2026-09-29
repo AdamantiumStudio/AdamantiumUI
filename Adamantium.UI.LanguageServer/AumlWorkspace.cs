@@ -50,7 +50,7 @@ public sealed class AumlWorkspace : IDisposable
             var (compilation, repoRoot, xmlnsMappings) = SourceProjectGraph.Build(project, binDir, _syntaxCache, _metadataCache);
             var model = AumlTypeModel.FromCompilation(compilation, xmlnsMappings);
 
-            // Pre-register the project's own AUML views so an embedded <ControlsView/> is recognised and its inherited
+            // Pre-register the project's own AUML views so an embedded <ControlsView/> is recognized and its inherited
             // properties complete - the source generator does the same when it builds. Parsed from the .auml files
             // directly (obj/bin copies excluded), so it needs no build.
             var projectDir = Path.GetDirectoryName(project);

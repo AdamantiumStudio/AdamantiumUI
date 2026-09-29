@@ -72,7 +72,7 @@ public class TabForegroundFollowsSelectionTests
     private static TextBlock LabelOf(TabItem tab) =>
         PresenterOf(tab).VisualChildren.OfType<TextBlock>().FirstOrDefault();
 
-    private static Color ColourOf(Brush brush) =>
+    private static Color ColorOf(Brush brush) =>
         brush is SolidColorBrush solid ? solid.Color : default;
 
     /// <summary>The first link: the TRIGGER onto the part. If this one holds and the label still does not change, the
@@ -84,50 +84,50 @@ public class TabForegroundFollowsSelectionTests
         Use(Build(themeName));
         var tab = LiveTab();
         var presenter = PresenterOf(tab);
-        var resting = ColourOf(presenter.Foreground);
+        var resting = ColorOf(presenter.Foreground);
 
         tab.IsSelected = true;
 
-        Assert.That(ColourOf(presenter.Foreground), Is.Not.EqualTo(resting),
+        Assert.That(ColorOf(presenter.Foreground), Is.Not.EqualTo(resting),
             "the IsSelected trigger never reached PART_ContentPresenter");
     }
 
     [TestCase("EditorPro")]
     [TestCase("Fluent")]
-    public void SelectingATab_ChangesItsLabelColour(string themeName)
+    public void SelectingATab_ChangesItsLabelColor(string themeName)
     {
         Use(Build(themeName));
         var tab = LiveTab();
         var label = LabelOf(tab);
         Assert.That(label, Is.Not.Null, "the header string never became a TextBlock");
-        var resting = ColourOf(label.Foreground);
+        var resting = ColorOf(label.Foreground);
 
         tab.IsSelected = true;
         Frame(tab);
 
         // Re-read rather than trust the reference taken above: a presenter is free to REBUILD its generated text, and
-        // asserting on the old object would report a stale colour as a defect.
-        Assert.That(ColourOf(LabelOf(tab).Foreground), Is.Not.EqualTo(resting),
-            "the selected tab's label kept the resting colour - the plate says 'current' and the text does not");
+        // asserting on the old object would report a stale color as a defect.
+        Assert.That(ColorOf(LabelOf(tab).Foreground), Is.Not.EqualTo(resting),
+            "the selected tab's label kept the resting color - the plate says 'current' and the text does not");
     }
 
     [TestCase("EditorPro")]
     [TestCase("Fluent")]
-    public void DeselectingATab_PutsItsLabelColourBack(string themeName)
+    public void DeselectingATab_PutsItsLabelColorBack(string themeName)
     {
         Use(Build(themeName));
         var tab = LiveTab();
         var label = LabelOf(tab);
-        var resting = ColourOf(label.Foreground);
+        var resting = ColorOf(label.Foreground);
 
         tab.IsSelected = true;
         Frame(tab);
         tab.IsSelected = false;
         Frame(tab);
 
-        Assert.That(ColourOf(LabelOf(tab).Foreground), Is.EqualTo(resting),
-            "the label stayed in the selected colour after the tab lost selection - it sticks on whichever tab was " +
-            "current when the colour was first written");
+        Assert.That(ColorOf(LabelOf(tab).Foreground), Is.EqualTo(resting),
+            "the label stayed in the selected color after the tab lost selection - it sticks on whichever tab was " +
+            "current when the color was first written");
     }
 
     /// <summary>The seam itself, with no theme in sight: a presenter's own Foreground reaching the text it generated.
@@ -141,7 +141,7 @@ public class TabForegroundFollowsSelectionTests
         presenter.Measure(new Size(200, 32));
         var label = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(label, Is.Not.Null, "the string content never became a TextBlock");
-        Assume.That(ColourOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's colour");
+        Assume.That(ColorOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's color");
 
         presenter.Foreground = new SolidColorBrush(green);
         // A source change on an ELEMENT source is coalesced into the per-frame binding queue, so a test has to stand in
@@ -149,13 +149,13 @@ public class TabForegroundFollowsSelectionTests
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         presenter.Measure(new Size(200, 32));
 
-        Assert.That(ColourOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
-            "the label kept the colour the presenter held when the text was built");
+        Assert.That(ColorOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
+            "the label kept the color the presenter held when the text was built");
     }
 
     /// <summary>The same seam for TEMPLATED content - the shape the stand actually uses, where a tab header comes from an
     /// ItemTemplate holding an AUTHORED TextBlock. The presenter deliberately never writes into one of those (an explicit
-    /// write would outrank inheritance for good), so the colour has to arrive by INHERITANCE, and it has to arrive again
+    /// write would outrank inheritance for good), so the color has to arrive by INHERITANCE, and it has to arrive again
     /// on every later change.</summary>
     [Test]
     public void ATemplatedLabelFollowsThePresentersForeground()
@@ -175,22 +175,22 @@ public class TabForegroundFollowsSelectionTests
         presenter.Measure(new Size(200, 32));
         var label = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(label, Is.Not.Null, "the content template never produced a TextBlock");
-        Assume.That(ColourOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's colour");
+        Assume.That(ColorOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's color");
 
         presenter.Foreground = new SolidColorBrush(green);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         presenter.Measure(new Size(200, 32));
 
-        Assert.That(ColourOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
-            "a templated label froze on the colour the presenter held when the template was built");
+        Assert.That(ColorOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
+            "a templated label froze on the color the presenter held when the template was built");
     }
 
     /// <summary>The stand's actual shape: a tab whose header comes from a template, so the label is an AUTHORED
-    /// TextBlock reached by inheritance - and the colour is written by a TRIGGER rather than by hand. Each half of that
+    /// TextBlock reached by inheritance - and the color is written by a TRIGGER rather than by hand. Each half of that
     /// works on its own; this is the pair.</summary>
     [TestCase("EditorPro")]
     [TestCase("Fluent")]
-    public void SelectingATab_ChangesATEMPLATEDLabelsColour(string themeName)
+    public void SelectingATab_ChangesATEMPLATEDLabelsColor(string themeName)
     {
         Use(Build(themeName));
         var tab = new TabItem
@@ -201,12 +201,12 @@ public class TabForegroundFollowsSelectionTests
         };
         tab.ApplyCurrentTheme();
         Frame(tab);
-        var resting = ColourOf(LabelOf(tab).Foreground);
+        var resting = ColorOf(LabelOf(tab).Foreground);
 
         tab.IsSelected = true;
         Frame(tab);
 
-        Assert.That(ColourOf(LabelOf(tab).Foreground), Is.Not.EqualTo(resting),
+        Assert.That(ColorOf(LabelOf(tab).Foreground), Is.Not.EqualTo(resting),
             "a templated tab label ignored the selection - the trigger wrote the presenter and the text never heard");
     }
 
@@ -224,12 +224,12 @@ public class TabForegroundFollowsSelectionTests
         tab.ApplyCurrentTheme();
         Frame(tab);
 
-        var selected = ColourOf(LabelOf(tab).Foreground);
+        var selected = ColorOf(LabelOf(tab).Foreground);
 
         tab.IsSelected = false;
         Frame(tab);
 
-        Assert.That(ColourOf(LabelOf(tab).Foreground), Is.Not.EqualTo(selected),
-            "after the theme changed, the label froze on the colour it had at the moment of the change");
+        Assert.That(ColorOf(LabelOf(tab).Foreground), Is.Not.EqualTo(selected),
+            "after the theme changed, the label froze on the color it had at the moment of the change");
     }
 }

@@ -40,7 +40,7 @@ public interface ICanvasScene
     bool SendToBack(ICanvasItem item);
 
     /// <summary>Puts an item straight after or before a named neighbor in paint order, so it can go between two others.</summary>
-    bool MoveNextTo(ICanvasItem item, ICanvasItem neighbour, bool after);
+    bool MoveNextTo(ICanvasItem item, ICanvasItem neighbor, bool after);
 
     /// <summary>Puts an item at a PLACE in paint order, counting from the back - what writing a layer number means.
     /// Clamped rather than refused: asked for the hundredth place in a scene of ten, a person means the top.</summary>

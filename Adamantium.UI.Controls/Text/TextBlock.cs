@@ -45,8 +45,8 @@ public class TextBlock : InputUIComponent
             new PropertyMetadata(null, PropertyMetadataOptions.Inherits, OnFontFamilyChanged));
         // Foreground is the inherited property from UIComponent; keep the White default + render flag a TextBlock had,
         // and preserve Inherits so an ancestor's set Foreground cascades into unstyled text. NOT two-way: a brush is
-        // something text is PAINTED with, never something it edits, and a colour written back into whatever supplied it
-        // is how a selected tab's label kept the selected colour after the tab lost selection.
+        // something text is PAINTED with, never something it edits, and a color written back into whatever supplied it
+        // is how a selected tab's label kept the selected color after the tab lost selection.
         ForegroundProperty.OverrideMetadata(typeof(TextBlock),
             new PropertyMetadata(Brushes.White,
                 PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
@@ -223,7 +223,7 @@ public class TextBlock : InputUIComponent
     }
 
     // --- Bindable inline runs -----------------------------------------------------------------------------------------
-    // When Inlines has content it REPLACES Text: the block renders each Run in sequence with its own (bindable) colour and
+    // When Inlines has content it REPLACES Text: the block renders each Run in sequence with its own (bindable) color and
     // size. Each Run is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and this
     // block listens to every Run's Changed to re-shape when a bound value updates. Single line, no cross-run wrapping.
 

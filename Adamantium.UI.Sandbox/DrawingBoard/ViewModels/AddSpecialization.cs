@@ -5,7 +5,7 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>COLOURS ADDED, the way lights on one surface add - as many as arrive.</summary>
+/// <summary>COLORS ADDED, the way lights on one surface add - as many as arrive.</summary>
 public sealed class AddSpecialization : NodeSpecialization
 {
     public override ValueTask<object> Evaluate(IReadOnlyList<CanvasArrival> inputs, CancellationToken token)

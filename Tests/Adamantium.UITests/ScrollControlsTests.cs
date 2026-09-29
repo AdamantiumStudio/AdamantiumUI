@@ -137,7 +137,7 @@ public class ScrollControlsTests
     [Test]
     public void Track_ValueFromPoint_MapsClickToValue()
     {
-        // Horizontal, 200px track, 12px thumb -> 188px travel; the thumb is CENTRED on the click. Click at x=100 (track
+        // Horizontal, 200px track, 12px thumb -> 188px travel; the thumb is CENTERED on the click. Click at x=100 (track
         // middle) -> along = 100 - 6 = 94 -> 94/188 * 100 = 50. Ends clamp to Minimum/Maximum.
         var track = ArrangedTrack(Orientation.Horizontal, 0, 100, 0, 0, 200, 12);
         Assert.Multiple(() =>
@@ -149,14 +149,14 @@ public class ScrollControlsTests
         });
     }
 
-    /// <summary>Paging must stop with the thumb's EDGE at the cursor, not its centre - otherwise it swallows the click
+    /// <summary>Paging must stop with the thumb's EDGE at the cursor, not its center - otherwise it swallows the click
     /// point and overshoots by half a thumb, which on a long thumb is the difference between "went where I pointed" and
     /// "went past it".</summary>
     [Test]
     public void Track_PageLimitFromPoint_StopsWithTheThumbEdgeAtTheCursor()
     {
         // Horizontal, 200px track, 12px thumb -> 188px travel, so a value unit is 188/100 px and half a thumb is
-        // 6px = 3.19 value units. Centred on x=100 is 50 (above), so the edges sit 3.19 either side of it.
+        // 6px = 3.19 value units. Centered on x=100 is 50 (above), so the edges sit 3.19 either side of it.
         var track = ArrangedTrack(Orientation.Horizontal, 0, 100, 0, 0, 200, 12);
         Assert.Multiple(() =>
         {
@@ -168,7 +168,7 @@ public class ScrollControlsTests
     }
 
     /// <summary>The ENDS are the case a middle-of-the-track check cannot see. Deriving the limit by shifting the
-    /// centred mapping by half a thumb looked right at x=100 and was wrong at both stops: that mapping clamps its own
+    /// centered mapping by half a thumb looked right at x=100 and was wrong at both stops: that mapping clamps its own
     /// travel first, so the shift came off an already-clamped number and the thumb halted half a thumb short.</summary>
     [Test]
     public void Track_PageLimitFromPoint_ReachesBothStops()

@@ -33,7 +33,7 @@ public sealed class TransformSettings : PropertyChangedBase
     private double _scale = 1.0;
     public double Scale { get => _scale; set { if (SetProperty(ref _scale, value)) Apply(); } }
 
-    // How much each tile's transform differs from its neighbour's. At 0 the whole grid shares one matrix; turned up, every
+    // How much each tile's transform differs from its neighbor's. At 0 the whole grid shares one matrix; turned up, every
     // tile gets its own - which is the case that used to fall out of the batch, one draw call per tile.
     private double _spread = 1.5;
     public double Spread { get => _spread; set { if (SetProperty(ref _spread, value)) Apply(); } }

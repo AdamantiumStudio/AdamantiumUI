@@ -18,7 +18,7 @@ public class DataGridCellEditEventArgs : EventArgs
 
     public DataGridColumn Column { get; }
 
-    /// <summary>On ending: what the editor produced, and what will be written unless this is cancelled.</summary>
+    /// <summary>On ending: what the editor produced, and what will be written unless this is canceled.</summary>
     public object Value { get; set; }
 
     public bool Cancel { get; set; }

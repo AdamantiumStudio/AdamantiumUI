@@ -20,7 +20,7 @@ float SdRoundRectJoin(float2 p, float2 b, float4 radii, int joinType)
     float inside = min(max(q.x, q.y), 0.0);
     float2 qp = max(q, float2(0.0, 0.0));
     // A ROUNDED geometry (r>0) already curves the corner - the join is moot and applying miter/bevel would (wrongly)
-    // reshape the FILL, so only a (near-)sharp corner honours the join. Round join is always the plain Euclidean offset.
+    // reshape the FILL, so only a (near-)sharp corner honors the join. Round join is always the plain Euclidean offset.
     float outside = (r > 0.5 || joinType == 2) ? length(qp)
                   : (joinType == 1) ? (qp.x + qp.y)                   // bevel: L1 - a 45-deg chamfer at the corner, but a
                                                                      // straight edge (one component 0) stays exact

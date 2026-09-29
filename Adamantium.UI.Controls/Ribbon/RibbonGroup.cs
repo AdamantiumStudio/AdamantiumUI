@@ -114,7 +114,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         if (!Ribbon.GetCanAddToQuickAccess(command)) return;
 
         // A command the author named nothing by gets an identity of its own. Without one it cannot be told apart at all:
-        // it would be put in the bar again on every asking (the ribbon never recognising its own copy) and could then
+        // it would be put in the bar again on every asking (the ribbon never recognizing its own copy) and could then
         // never be taken back out, the request naming nothing for the application to match. An author's key wins; a
         // command that RUNS something is matched by that too, so this only fills the gap where there is neither.
         if (Ribbon.GetQuickAccessKey(command) == null)

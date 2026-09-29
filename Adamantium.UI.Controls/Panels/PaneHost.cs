@@ -32,7 +32,7 @@ public class PaneHost : Panel, IPaneMinimum
 
     /// <summary>How much of the row this child takes - so many pixels, or a weight in the leftovers. Attached, so it
     /// travels with the child rather than sitting in a list on the parent: reordering children cannot hand one of them
-    /// its neighbour's size.</summary>
+    /// its neighbor's size.</summary>
     public static readonly AdamantiumProperty PaneLengthProperty =
         AdamantiumProperty.RegisterAttached("PaneLength", typeof(PaneLength), typeof(UIComponent),
             new PropertyMetadata(PaneLength.Star, LengthChanged));
@@ -40,7 +40,7 @@ public class PaneHost : Panel, IPaneMinimum
     // A share is spent by the PARENT, so changing it has to re-arrange the parent - and that is done here, once, rather
     // than by every caller that writes a share (a splitter drag, a restored layout, a view-model). One road.
     // Not via AffectsParentArrange: that option is not implemented, so it silently did nothing - measured, with the
-    // shares changing on every mouse move while the neighbour's width never moved off its starting value.
+    // shares changing on every mouse move while the neighbor's width never moved off its starting value.
     private static void LengthChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         // MEASURE, not just arrange: this panel hands out sizes by share in BOTH passes, so a changed share that only
@@ -183,7 +183,7 @@ public class PaneHost : Panel, IPaneMinimum
     private double _contentExtent;
 
     /// <summary>Pixels the shares are currently spent over - the extent left after the dividers. A splitter needs it to
-    /// turn a pixel drag into a share, and taking it from here rather than from the neighbours' bounds means the two
+    /// turn a pixel drag into a share, and taking it from here rather than from the neighbors' bounds means the two
     /// agree by construction.</summary>
     internal double ContentExtent => _contentExtent;
 

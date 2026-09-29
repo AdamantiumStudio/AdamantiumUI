@@ -4,15 +4,15 @@ namespace Adamantium.UI.Core.Media;
 
 /// <summary>A gradient radiating outward from <see cref="GradientOrigin"/> (offset 0) to the ellipse boundary defined by
 /// <see cref="Center"/> + <see cref="RadiusX"/>/<see cref="RadiusY"/> (offset 1). All values are RELATIVE to the filled
-/// bounds (0..1), so the default (centre 0.5,0.5 / radius 0.5) inscribes the bounds.</summary>
+/// bounds (0..1), so the default (center 0.5,0.5 / radius 0.5) inscribes the bounds.</summary>
 public sealed class RadialGradientBrush : GradientBrush
 {
     public RadialGradientBrush() { }
 
     public RadialGradientBrush(GradientStopCollection stops) : base(stops) { }
 
-    // PAINT, every one of them: a gradient's geometry is RELATIVE to the filled bounds, so moving the centre or the radius
-    // re-colours the same pixels - it never changes the element's shape or its layout (see Brush.Opacity).
+    // PAINT, every one of them: a gradient's geometry is RELATIVE to the filled bounds, so moving the center or the radius
+    // re-colors the same pixels - it never changes the element's shape or its layout (see Brush.Opacity).
     public static readonly AdamantiumProperty CenterProperty = AdamantiumProperty.Register(nameof(Center),
         typeof(Vector2), typeof(RadialGradientBrush), new PropertyMetadata(new Vector2(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
 
@@ -25,14 +25,14 @@ public sealed class RadialGradientBrush : GradientBrush
     public static readonly AdamantiumProperty RadiusYProperty = AdamantiumProperty.Register(nameof(RadiusY),
         typeof(double), typeof(RadialGradientBrush), new PropertyMetadata(0.5, PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>The ellipse centre (relative). The stops lay out from <see cref="GradientOrigin"/> to this ellipse's edge.</summary>
+    /// <summary>The ellipse center (relative). The stops lay out from <see cref="GradientOrigin"/> to this ellipse's edge.</summary>
     public Vector2 Center
     {
         get => GetValue<Vector2>(CenterProperty);
         set { if (IsFrozen) return; SetValue(CenterProperty, value); }
     }
 
-    /// <summary>Where offset 0 sits (relative). Defaults to the centre; move it for an off-centre "spotlight".</summary>
+    /// <summary>Where offset 0 sits (relative). Defaults to the center; move it for an off-center "spotlight".</summary>
     public Vector2 GradientOrigin
     {
         get => GetValue<Vector2>(GradientOriginProperty);

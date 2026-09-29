@@ -229,20 +229,20 @@ public class TilesHost : ItemsControl
         AssignFragments();
         if (_tiles.Count == 0) return;
 
-        // Diagonal wave: a tile's start delay is its (x+y) position across the board normalised into WaveDuration.
+        // Diagonal wave: a tile's start delay is its (x+y) position across the board normalized into WaveDuration.
         double maxDiag = 0;
-        var centres = new Vector2[_tiles.Count];
+        var centers = new Vector2[_tiles.Count];
         for (var i = 0; i < _tiles.Count; i++)
         {
             var rect = RectInHost(_tiles[i]);
-            centres[i] = new Vector2(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
-            maxDiag = Math.Max(maxDiag, centres[i].X + centres[i].Y);
+            centers[i] = new Vector2(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+            maxDiag = Math.Max(maxDiag, centers[i].X + centers[i].Y);
         }
         var wave = WaveDuration;
         for (var i = 0; i < _tiles.Count; i++)
         {
             var tile = _tiles[i];
-            tile.FlipDelay = maxDiag > 0 ? (centres[i].X + centres[i].Y) / maxDiag * wave : 0;
+            tile.FlipDelay = maxDiag > 0 ? (centers[i].X + centers[i].Y) / maxDiag * wave : 0;
             tile.IsFlipped = flipped;
         }
     }
@@ -262,7 +262,7 @@ public class TilesHost : ItemsControl
             var dx = cursor.X - (rect.X + rect.Width / 2);
             var dy = cursor.Y - (rect.Y + rect.Height / 2);
             // CONCAVE dish around the pointer (a satellite antenna, not a bump): every tile's near edge - the one
-            // facing the cursor - sinks away from the viewer, so the whole board reads as a bowl centred on the cursor.
+            // facing the cursor - sinks away from the viewer, so the whole board reads as a bowl centered on the cursor.
             var rotY = Math.Clamp(dx * perPixel, -maxAngle, maxAngle);
             var rotX = Math.Clamp(-dy * perPixel, -maxAngle, maxAngle);
             tile.SetFieldTilt(rotX, rotY);

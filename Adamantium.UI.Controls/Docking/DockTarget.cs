@@ -19,7 +19,7 @@ public readonly struct DockTarget
     public PaneNode Node { get; }
 
     /// <summary>The group under the pointer, in the docking area's coordinates. The compass draws its cross from the
-    /// centre of it - the same centre the indicators are measured from. It stays the group even when an EDGE is armed:
+    /// center of it - the same center the indicators are measured from. It stays the group even when an EDGE is armed:
     /// the cross belongs where the pointer is, only the answer is about the whole area.</summary>
     public Rect Bounds { get; }
 

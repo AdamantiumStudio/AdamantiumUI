@@ -88,7 +88,7 @@
                                 <Border Grid.Column="0" Width="{TemplateBinding Indent}"/>
                                 <!-- Pin the expander to its 16x16 glyph: the base ToggleButton style leaks MinHeight=32 +
                                      Padding via the IS-A selector, which inflated the button and pushed the arrow off its
-                                     row centre. Un-inherit them here so the chevron sits dead-centre. -->
+                                     row center. Un-inherit them here so the chevron sits dead-center. -->
                                 <ToggleButton x:Name="PART_Expander" Grid.Column="1"
                                         Template="{TemplateBinding ExpanderTemplate}"
                                         Width="16" Height="16" MinWidth="0" MinHeight="0" Padding="0"
@@ -109,7 +109,7 @@
 
     <Style Selector="TreeViewItem">
         <!-- Hover uses IsPointerOverHeader (this row only), layered ABOVE the selection fill so a selected+hovered row stays
-             accent (just a touch lighter) instead of reverting to the hover grey. -->
+             accent (just a touch lighter) instead of reverting to the hover gray. -->
         <PropertyTrigger Property="IsPointerOverHeader" Value="true">
             <Setter TargetName="HoverOverlay" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
         </PropertyTrigger>

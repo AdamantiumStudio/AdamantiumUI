@@ -130,7 +130,7 @@ public class ImageTilingTests
         Assert.That(layout.UvRect, Is.EqualTo(new Vector4F(0, 0, 1, 1)), "nothing is cropped");
         Assert.That(layout.Drawn.Z, Is.EqualTo(1f).Within(1e-4), "the wide axis fills the tile");
         Assert.That(layout.Drawn.W, Is.EqualTo(0.5f).Within(1e-4), "the other keeps the 2:1 ratio");
-        Assert.That(layout.Drawn.Y, Is.EqualTo(0.25f).Within(1e-4), "centred in what is left");
+        Assert.That(layout.Drawn.Y, Is.EqualTo(0.25f).Within(1e-4), "centered in what is left");
     }
 
     // A TILED Uniform brush letterboxes EVERY copy, not the lot: the fit is measured against one tile.
@@ -161,7 +161,7 @@ public class ImageTilingTests
 
         Assert.That(layout.Drawn, Is.EqualTo(new Vector4F(0, 0, 1, 1)), "the tile is filled edge to edge");
         Assert.That(layout.UvRect.Z, Is.EqualTo(0.5f).Within(1e-4), "half the source's width is sampled");
-        Assert.That(layout.UvRect.X, Is.EqualTo(0.25f).Within(1e-4), "and it is the CENTRED half");
+        Assert.That(layout.UvRect.X, Is.EqualTo(0.25f).Within(1e-4), "and it is the CENTERED half");
         Assert.That(layout.UvRect.W, Is.EqualTo(1f), "its full height");
     }
 
@@ -175,7 +175,7 @@ public class ImageTilingTests
 
         Assert.That(layout.Drawn.Z, Is.EqualTo(0.32f).Within(1e-4), "64 of 200");
         Assert.That(layout.Drawn.W, Is.EqualTo(0.16f).Within(1e-4), "32 of 200");
-        Assert.That(layout.Drawn.X, Is.EqualTo(0.34f).Within(1e-4), "centred");
+        Assert.That(layout.Drawn.X, Is.EqualTo(0.34f).Within(1e-4), "centered");
     }
 
     // --- Alignment: which part survives when Stretch leaves room -----------------------------------------------------
@@ -289,10 +289,10 @@ public class ImageTilingTests
             "one pixel across becomes one pixel down - not sixteen, which a swapped aspect gives");
     }
 
-    // The centre is a fraction of the TILE, so a single copy turns where it lies instead of swinging around the shape.
+    // The center is a fraction of the TILE, so a single copy turns where it lies instead of swinging around the shape.
     // Its whole effect is on the grid's ORIGIN - the matrix cannot carry a translation.
     [Test]
-    public void TheTurnCentreMovesTheGridOriginAndNothingElse()
+    public void TheTurnCenterMovesTheGridOriginAndNothingElse()
     {
         var brush = Brush();
         brush.RotationAngle = 90;

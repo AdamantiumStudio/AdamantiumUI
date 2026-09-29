@@ -37,7 +37,7 @@ public class InheritedChangeInvalidatesTests
         }
 
         Assert.That(toldToRedraw, Is.True,
-            "the text took the new colour but was never asked to redraw - it keeps painting the old one until " +
+            "the text took the new color but was never asked to redraw - it keeps painting the old one until " +
             "something unrelated dirties it, which is why this looked intermittent");
     }
 }

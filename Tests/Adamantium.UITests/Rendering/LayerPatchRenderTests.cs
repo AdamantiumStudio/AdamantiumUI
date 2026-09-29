@@ -64,7 +64,7 @@ public class LayerPatchRenderTests
         {
             var y = i * RowHeight;
             backdrops[i] = Placed(new Rect(0, y, Dim, RowHeight));
-            stage.Add(backdrops[i]);                              // behind: this is what materialises
+            stage.Add(backdrops[i]);                              // behind: this is what materializes
 
             var bar = Placed(new Rect(0, y + 4, 100, 8));
             bar.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 100, 8));
@@ -172,7 +172,7 @@ public class LayerPatchRenderTests
     [Test]
     public void ABackdropAppearing_StaysUnderItsRow_NotOverIt()
     {
-        // The placement itself: the newcomer's paint rank puts it BEHIND the bar of its row. Borrowing a neighbour's place
+        // The placement itself: the newcomer's paint rank puts it BEHIND the bar of its row. Borrowing a neighbor's place
         // instead of using its own rank is how a selection ended up on top of the thing it was meant to sit behind.
         using var scene = NewScene();
 

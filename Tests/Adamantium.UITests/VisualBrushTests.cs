@@ -10,7 +10,7 @@ namespace Adamantium.UITests;
 
 /// <summary>A VisualBrush is the one brush whose content cannot be replayed - a live subtree has layout and state of
 /// its own - so it paints from a PICTURE that is re-taken when the source changes. What these pin is the bookkeeping
-/// around that picture, because getting it wrong costs a render target per frame rather than a wrong colour.</summary>
+/// around that picture, because getting it wrong costs a render target per frame rather than a wrong color.</summary>
 [TestFixture]
 public class VisualBrushTests
 {

@@ -18,7 +18,7 @@
                                 Padding="{ResourceReference ColorSwatchPadding}">
                             <Grid>
                                 <Border x:Name="PART_Swatch" Background="{TemplateBinding SelectedBrush}" CornerRadius="0"/>
-                                <!-- NO ONE COLOUR TO SHOW - see Fluent's set. -->
+                                <!-- NO ONE COLOR TO SHOW - see Fluent's set. -->
                                 <TextBlock x:Name="PART_Mixed" Text="—" Visibility="Collapsed"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Foreground="{ResourceReference TextFillColorSecondary}"/>

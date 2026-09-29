@@ -4,7 +4,7 @@ namespace Adamantium.UI.Controls.Docking;
 
 /// <summary>
 /// A leaf: one area showing several panes as tabs, one of them active. Panes are referenced BY ID, never by object -
-/// the moment a node holds a live pane it stops being data and there is nothing left to serialise.
+/// the moment a node holds a live pane it stops being data and there is nothing left to serialize.
 /// </summary>
 public class PaneGroupNode : PaneNode
 {
@@ -22,7 +22,7 @@ public class PaneGroupNode : PaneNode
 
     /// <summary>Whether the group owns a length of its own - true only while DOCKED. In both folded states the length is
     /// <see cref="Panels.PaneUnit.Auto"/>: the strip and nothing more, a value that belongs to the fold rather than to
-    /// anything the user dragged. A revealed panel is no exception - its body is a flyout over the neighbours, so in the
+    /// anything the user dragged. A revealed panel is no exception - its body is a flyout over the neighbors, so in the
     /// tree it is still only a strip.</summary>
     public bool OwnsLength => State == PaneGroupState.Docked;
 
@@ -50,7 +50,7 @@ public class PaneGroupNode : PaneNode
         if (index < 0) return false;
 
         PaneIds.RemoveAt(index);
-        // Keep pointing at a real pane: at the one after the removed (its neighbour takes its place), or at the last.
+        // Keep pointing at a real pane: at the one after the removed (its neighbor takes its place), or at the last.
         if (PaneIds.Count == 0) ActiveIndex = -1;
         else if (index < ActiveIndex || ActiveIndex >= PaneIds.Count) ActiveIndex = System.Math.Min(ActiveIndex, PaneIds.Count - 1);
         return true;

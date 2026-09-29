@@ -20,7 +20,7 @@ public class HoverAdorner : Adorner
     {
     }
 
-    /// <summary>Frame outline colour. Default a bright designer blue, distinct from the selection frame.</summary>
+    /// <summary>Frame outline color. Default a bright designer blue, distinct from the selection frame.</summary>
     public Brush Stroke { get; set; } = new SolidColorBrush(Colors.DodgerBlue);
 
     // The theme's HoverAdorner template wraps the whole element; the stage sizes it to the adorned bounds.

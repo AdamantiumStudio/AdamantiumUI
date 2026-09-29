@@ -102,7 +102,7 @@ public class QuickAccessPlacementTests
 
             // The one that was actually wrong, and the one nothing else would have caught: every command in the bar
             // strokes itself with the BAR's foreground, so a transparent one is a row of buttons drawn in nothing.
-            // The caption's instance is handed the title bar's colour by the shell; this one has no title bar to ask.
+            // The caption's instance is handed the title bar's color by the shell; this one has no title bar to ask.
             Assert.That(((SolidColorBrush)bar.Foreground)?.Color.A, Is.GreaterThan(0),
                 "a bar nobody dressed still has to draw - its icons take their stroke from this");
         });

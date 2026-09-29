@@ -8,13 +8,13 @@ namespace Adamantium.UI.Sandbox.Behaviors;
 
 /// <summary>
 /// View-layer behavior: on click, swaps the CURRENT theme's accent SEED (<c>Theme.AccentColor</c>). The theme derives the
-/// whole ramp (hover/pressed) and a contrast-correct on-accent text colour from that one seed, and every consumer via
+/// whole ramp (hover/pressed) and a contrast-correct on-accent text color from that one seed, and every consumer via
 /// <c>{ThemeResource Accent*}</c> refreshes live - no theme reload. Attach in markup:
 /// <code>&lt;Button&gt;&lt;Button.Behaviors&gt;&lt;local:CycleAccentBehavior/&gt;&lt;/Button.Behaviors&gt;&lt;/Button&gt;</code>
 /// </summary>
 public class CycleAccentBehavior : Behavior<Button>
 {
-    // Just seeds - the theme derives the hover/pressed ramp and the on-accent text colour for each.
+    // Just seeds - the theme derives the hover/pressed ramp and the on-accent text color for each.
     private static readonly string[] Seeds = ["#0091F7", "#107C10", "#8764B8", "#CA5010", "#C42B72"];
 
     private Button _button;

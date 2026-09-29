@@ -43,10 +43,10 @@ internal sealed class CanvasGraphHost
     }
 
     /// <summary>The kinds a node here can be. Data, not a factory handed to the control: the shell is the engine's own
-    /// and is made below, and what a kind MEANS is asked of the catalogue entry.</summary>
+    /// and is made below, and what a kind MEANS is asked of the catalog entry.</summary>
     public void SetKinds(IEnumerable kinds) => _kinds = kinds;
 
-    /// <summary>What a SOCKET may carry, and what each of those looks like. A pin takes its colour from what flows
+    /// <summary>What a SOCKET may carry, and what each of those looks like. A pin takes its color from what flows
     /// through it, so every socket carrying the same thing looks the same across the whole graph.</summary>
     public void SetSocketKinds(IEnumerable kinds)
     {
@@ -55,7 +55,7 @@ internal sealed class CanvasGraphHost
         _socketKinds = kinds;
 
         // WHAT PAINTS A PIN is made from that table and kept out of sight: the application says which word means which
-        // colour, and how a pin ends up wearing it is nobody else's business. Put INTO the binding that paints, which is
+        // color, and how a pin ends up wearing it is nobody else's business. Put INTO the binding that paints, which is
         // the only way a converter is ever used - nothing here calls it.
         _paint = kinds == null ? null : new SocketKindToBrushConverter(kinds);
 
@@ -78,7 +78,7 @@ internal sealed class CanvasGraphHost
     {
         if (_nodes is not IList<ICanvasNode> list) return null;
 
-        // ASKED OF THE CATALOGUE. A node is the application's object - the canvas has none of its own to reach for, the
+        // ASKED OF THE CATALOG. A node is the application's object - the canvas has none of its own to reach for, the
         // same way an items control has no item type - so a canvas told nothing about kinds cannot invent one, and says
         // so by making nothing.
         if (KindOf(kind)?.Make() is not { } made) return null;
@@ -92,7 +92,7 @@ internal sealed class CanvasGraphHost
         return made;
     }
 
-    /// <summary>The catalogue entry for a kind, or null when the catalogue says nothing about it - a node of a kind
+    /// <summary>The catalog entry for a kind, or null when the catalog says nothing about it - a node of a kind
     /// nobody offers is still a node, it just has nothing inside.</summary>
     public ICanvasNodeKind KindOf(string kind)
     {
@@ -249,7 +249,7 @@ internal sealed class CanvasGraphHost
         {
             said.Append($" [{i}] {sockets[i].Name}/{pins[i].Name} wires={sockets[i].Connections.Count}" +
                         $" taken={pins[i].IsConnected} fill={(pins[i].Fill == null ? "none" : "yes")}" +
-                        $" colour={(pins[i].Color == null ? "none" : "yes")};");
+                        $" color={(pins[i].Color == null ? "none" : "yes")};");
         }
 
         try
@@ -331,8 +331,8 @@ internal sealed class CanvasGraphHost
         Bind(node, CanvasNode.TitleProperty, model, nameof(ICanvasNode.Title));
         Bind(node, CanvasNode.IsCollapsedProperty, model, nameof(ICanvasNode.IsCollapsed));
 
-        // ITS COLOUR, through a converter: the node holds a colour and the strip needs a brush, and the brush is made
-        // per node here. A colour nobody chose converts to nothing at all, which leaves the strip wearing the theme's.
+        // ITS COLOR, through a converter: the node holds a color and the strip needs a brush, and the brush is made
+        // per node here. A color nobody chose converts to nothing at all, which leaves the strip wearing the theme's.
         node.SetBinding(CanvasNode.AccentProperty, new Adamantium.UI.Core.Data.Binding(nameof(ICanvasNode.Accent))
         {
             Source = model,
@@ -445,7 +445,7 @@ internal sealed class CanvasGraphHost
                 });
 
             // ...and WHAT IT LOOKS LIKE, read off what flows through it. Bound to the kind rather than set once, so a
-            // socket told it now carries a colour changes colour; a kind the catalogue says nothing about leaves the
+            // socket told it now carries a color changes color; a kind the catalog says nothing about leaves the
             // pin wearing the theme's.
             if (paint == null) continue;
 
@@ -540,8 +540,8 @@ internal sealed class CanvasGraphHost
                 (_scene as CanvasScene)?.Touch();
                 break;
 
-            // TOLD IT IS NOW A TEXTURE, it becomes one: the word changed, and what that word means is in the catalogue
-            // the canvas was handed. Here and not in the node, because the node has no catalogue - and not only where
+            // TOLD IT IS NOW A TEXTURE, it becomes one: the word changed, and what that word means is in the catalog
+            // the canvas was handed. Here and not in the node, because the node has no catalog - and not only where
             // the palette makes one, or the same pick from an inspector would change the label and nothing else.
             case nameof(ICanvasNode.Kind) when sender is ICanvasNode model:
                 model.Specialization = KindOf(model.Kind)?.Create();

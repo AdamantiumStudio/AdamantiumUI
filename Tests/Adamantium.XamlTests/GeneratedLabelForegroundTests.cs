@@ -11,8 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>A ContentPresenter given a string builds its own label and binds the label's colour to its own. A presenter
-/// placed straight in a page (a rotated tool-strip caption) had no colour of its own, the binding wrote that null over
+/// <summary>A ContentPresenter given a string builds its own label and binds the label's color to its own. A presenter
+/// placed straight in a page (a rotated tool-strip caption) had no color of its own, the binding wrote that null over
 /// the label's, and the label threw on every frame it was drawn.</summary>
 [TestFixture]
 public class GeneratedLabelForegroundTests
@@ -42,7 +42,7 @@ public class GeneratedLabelForegroundTests
         root as T ?? root.VisualChildren.Select(Find<T>).FirstOrDefault(found => found != null);
 
     [Test]
-    public void AStringInAPresenterOnAPage_IsLabelledInThePagesColour()
+    public void AStringInAPresenterOnAPage_IsLabeledInThePagesColor()
     {
         UseFluent();
         var page = (IUIComponent)AumlLoader.Load(

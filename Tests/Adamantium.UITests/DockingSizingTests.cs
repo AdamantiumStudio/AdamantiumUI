@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// What the layout is allowed to do to the sizes it hands out: the document well has a floor, minimums are honoured
+/// What the layout is allowed to do to the sizes it hands out: the document well has a floor, minimums are honored
 /// wherever a size comes from, and the area does not hold on to controls for nodes that have died.
 /// </summary>
 [TestFixture]
@@ -51,7 +51,7 @@ public class DockingSizingTests
     }
 
     /// <summary>
-    /// Every tool docked against the centre is paid for by the centre, so without a floor enough of them
+    /// Every tool docked against the center is paid for by the center, so without a floor enough of them
     /// squeeze it out of existence - measured before the fix at 60px against a stated minimum of 200.
     /// </summary>
     [Test]
@@ -69,13 +69,13 @@ public class DockingSizingTests
         Lay(area, 700, 600);
 
         Assert.That(Control(area, "scene").Bounds.Width, Is.GreaterThanOrEqualTo(200 - 0.5),
-            "the centre keeps its floor and the bands are squeezed instead");
+            "the center keeps its floor and the bands are squeezed instead");
     }
 
     /// <summary>A share is not a permission to disappear: whoever falls under its minimum is pinned at it, and the cost
     /// comes out of those that still have room. Before this, minimums were a splitter's business alone.</summary>
     [Test]
-    public void MinimumsAreHonouredWhereverTheSizeComesFrom()
+    public void MinimumsAreHonoredWhereverTheSizeComesFrom()
     {
         var area = Area(Group("scene", DockZone.Center), Group("inspector", DockZone.Right, size: 240));
         area.DocumentMinSize = 200;
@@ -85,17 +85,17 @@ public class DockingSizingTests
 
         Assert.Multiple(() =>
         {
-            var centre = Control(area, "scene").Bounds.Width;
+            var center = Control(area, "scene").Bounds.Width;
             var side = Control(area, "inspector").Bounds.Width;
 
-            Assert.That(centre + side, Is.EqualTo(300).Within(1), "between them they still fill the area exactly");
-            Assert.That(centre, Is.GreaterThan(0), "and neither is squeezed out of existence");
+            Assert.That(center + side, Is.EqualTo(300).Within(1), "between them they still fill the area exactly");
+            Assert.That(center, Is.GreaterThan(0), "and neither is squeezed out of existence");
             Assert.That(side, Is.GreaterThan(0));
         });
     }
 
     /// <summary>A pane opened from CODE joins the panel already on that side. Opening from code cannot see what a new
-    /// column would cost, and each one used to take its band off the centre until the layout was a row of slivers.</summary>
+    /// column would cost, and each one used to take its band off the center until the layout was a row of slivers.</summary>
     [Test]
     public void APaneOpenedOnAnOccupiedSideBecomesATabThere()
     {

@@ -74,7 +74,7 @@ public abstract class Decorator : InputUIComponent, IContainer
    {
       // Fill the arranged slot and lay the child out inside it (minus padding); the child positions itself within via its
       // own alignment. Returning the CHILD's size instead collapsed a stretched decorator down to a non-stretch child -
-      // e.g. a Button's border shrank to its centred ContentPresenter and the text spilled outside. Shrink-to-content is
+      // e.g. a Button's border shrank to its centered ContentPresenter and the text spilled outside. Shrink-to-content is
       // a MEASURE concern (MeasureOverride already returns child+padding), not arrange.
       Child?.Arrange(new Rect(finalSize).Deflate(Padding));
       return finalSize;

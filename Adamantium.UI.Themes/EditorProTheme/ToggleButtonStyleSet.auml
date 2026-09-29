@@ -71,7 +71,7 @@
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundPressed}"/>
         </PropertyTrigger>
-        <!-- Held down: the fill stays and the rule appears. The label keeps its own colour - nothing accent-coloured is
+        <!-- Held down: the fill stays and the rule appears. The label keeps its own color - nothing accent-colored is
              behind it. -->
         <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundChecked}"/>

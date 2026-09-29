@@ -27,7 +27,7 @@ public class DockingWorkspaceHandoverTests
     }
 
     // Rooted and laid out, or nothing happens: an area outside a visual tree never builds its layout, so every pane
-    // waits in the deferred queue and two different arrangements serialise identically - a test that cannot fail.
+    // waits in the deferred queue and two different arrangements serialize identically - a test that cannot fail.
     private static DockingArea Rooted(DockingArea area)
     {
         var root = new TestWindowRoot { Width = 1000, Height = 700, ClientWidth = 1000, ClientHeight = 700 };

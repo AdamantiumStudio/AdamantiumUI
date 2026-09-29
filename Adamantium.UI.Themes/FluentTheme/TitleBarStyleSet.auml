@@ -44,7 +44,7 @@
                                             Command="{Binding Command}"
                                             CommandParameter="{Binding CommandParameter}">
                                         <!-- {Ancestor} walks the visual tree up to the hosting TitleBar and binds its LIVE
-                                             Foreground, so a command icon follows the SAME active/inactive colour as the
+                                             Foreground, so a command icon follows the SAME active/inactive color as the
                                              title text + window buttons (and re-resolves if the tree rebuilds). -->
                                         <Path Data="{Binding Icon}"
                                                 Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"

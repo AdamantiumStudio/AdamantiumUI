@@ -32,7 +32,7 @@ public partial class DockingViewModel : TabPageViewModel
         Workspace.Ready += OnWorkspaceReady;
 
         // The area ASKS before it closes anything; this is the application ANSWERING, out of its own state. Not a
-        // behaviour reading a flag off the control: whether a document has unsaved work is a fact this view model owns,
+        // behavior reading a flag off the control: whether a document has unsaved work is a fact this view model owns,
         // and the control has no business holding it.
         Workspace.PaneClosing += OnPaneClosing;
     }
@@ -49,7 +49,7 @@ public partial class DockingViewModel : TabPageViewModel
 
     [Bindable] private string _selectedPage = "Assets";
 
-    /// <summary>Where a NEW pane is created. Centre means the document well, the middle four are the area's own edges,
+    /// <summary>Where a NEW pane is created. Center means the document well, the middle four are the area's own edges,
     /// and Floating opens it in a window of its own - which is also how to get a pane that is only ever floating (see
     /// the Watch pane's Pane.Allowed in the view).</summary>
     public ObservableCollection<DockZone> Places { get; } =

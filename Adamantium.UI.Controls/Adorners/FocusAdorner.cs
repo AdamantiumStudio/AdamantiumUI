@@ -18,7 +18,7 @@ public class FocusAdorner : Adorner
     public override bool FillsAdornedBounds => true;
 
     /// <summary>How far OUTSIDE the control the ring sits. Outside, not on the border: a ring drawn ON the chrome reads
-    /// as the control changing colour rather than as a mark of where the keyboard is. The theme sets it.</summary>
+    /// as the control changing color rather than as a mark of where the keyboard is. The theme sets it.</summary>
     public static readonly AdamantiumProperty OutsetProperty = AdamantiumProperty.Register(nameof(Outset),
         typeof(double), typeof(FocusAdorner), new PropertyMetadata(0.0, OnOutsetChanged));
 

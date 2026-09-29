@@ -176,7 +176,7 @@ public class FillFringeRenderTests
         Assert.That(A(5, 30), Is.EqualTo(0), "nothing must be drawn left of the shape");
         Assert.That(A(60, 30), Is.EqualTo(0), "nothing must be drawn right of the shape");
 
-        // Both checker colours must appear inside it - i.e. the pattern is still a pattern, not one flat fill.
+        // Both checker colors must appear inside it - i.e. the pattern is still a pattern, not one flat fill.
         var reds = 0;
         var blues = 0;
         for (var x = 12; x < 48; x++)
@@ -186,8 +186,8 @@ public class FillFringeRenderTests
             if (r > 200 && b < 60) reds++;
             if (b > 200 && r < 60) blues++;
         }
-        Assert.That(reds, Is.GreaterThan(0), "the pattern's first colour must show");
-        Assert.That(blues, Is.GreaterThan(0), "the pattern's second colour must show");
+        Assert.That(reds, Is.GreaterThan(0), "the pattern's first color must show");
+        Assert.That(blues, Is.GreaterThan(0), "the pattern's second color must show");
     }
 
     // The unit factory needs one, but nothing here draws a texture or text.

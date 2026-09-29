@@ -27,7 +27,7 @@ public class Track : Panel
 
     private double _density;     // value units per pixel of thumb travel (for ValueFromDistance)
     private double _remaining;   // travel length (trackLength - thumbAlong); for ValueFromPoint
-    private double _thumbAlong;  // thumb size along the track; for ValueFromPoint (centre the thumb on the click)
+    private double _thumbAlong;  // thumb size along the track; for ValueFromPoint (center the thumb on the click)
 
     public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.Register(nameof(Orientation),
         typeof(Orientation), typeof(Track),
@@ -149,7 +149,7 @@ public class Track : Panel
         var thumbDesired = Thumb?.DesiredSize ?? new Size(MinThumbLength, MinThumbLength);
 
         // Thumb size ALONG the track + ACROSS it. Scrollbar (viewport > 0): a viewport-proportional bar that fills the
-        // cross thickness. Slider (viewport == 0): a fixed handle at the theme's own Thumb size, centred across the track
+        // cross thickness. Slider (viewport == 0): a fixed handle at the theme's own Thumb size, centered across the track
         // (so it can be a circle on a thin rail). Nothing to scroll: the thumb fills the whole track.
         double thumbAlong;
         double thumbCross;
@@ -208,7 +208,7 @@ public class Track : Panel
 
     /// <summary>The thumb center for a range fraction, in pixels from the track start, using the same mapping as arrange;
     /// anything aligned to the thumb should read it here. NaN before the first arrange.</summary>
-    public double ThumbCentreFromFraction(double fraction)
+    public double ThumbCenterFromFraction(double fraction)
     {
         if (_remaining <= 0) return double.NaN;
 
@@ -226,8 +226,8 @@ public class Track : Panel
         return horizontal * _density;
     }
 
-    /// <summary>Maps a point in the track's local space to the Value whose thumb would be CENTRED on it - used by a
-    /// move-to-point slider click. Honours orientation and <see cref="IsDirectionReversed"/>.</summary>
+    /// <summary>Maps a point in the track's local space to the Value whose thumb would be CENTERED on it - used by a
+    /// move-to-point slider click. Honors orientation and <see cref="IsDirectionReversed"/>.</summary>
     public double ValueFromPoint(Vector2 point)
     {
         if (_remaining <= 0) return Minimum;   // thumb fills the track - nowhere to move

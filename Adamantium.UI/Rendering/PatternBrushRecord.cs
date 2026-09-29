@@ -15,7 +15,7 @@ internal readonly struct PatternBrushRecord
     public readonly Color Color1;
     public readonly Color Color2;
 
-    /// <summary>The gradient-map MID colour (NoiseBrush only); transparent = off.</summary>
+    /// <summary>The gradient-map MID color (NoiseBrush only); transparent = off.</summary>
     public readonly Color MidColor;
 
     /// <summary>PatternBrush.CellSize / NoiseBrush.Scale - the caller decides whether it stays in local units or scales

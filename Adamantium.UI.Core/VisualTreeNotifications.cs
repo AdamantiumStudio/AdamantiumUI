@@ -35,7 +35,7 @@ public static class VisualTreeNotifications
     /// <summary>An element's CONTENT is stale: what it draws is not what it drew (a new size, a new shape, new text).</summary>
     public static event Action<IUIComponent> ContentInvalidated;
 
-    /// <summary>An element's PAINT is stale: it draws exactly the same thing, in a different colour.</summary>
+    /// <summary>An element's PAINT is stale: it draws exactly the same thing, in a different color.</summary>
     public static event Action<IUIComponent> PaintInvalidated;
 
     /// <summary>An element MOVED: same content, new place.</summary>

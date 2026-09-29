@@ -139,13 +139,13 @@
                 </DataGridTextColumn>
 
                 <!-- Read-only BY THE COLUMN, which is the other way to refuse an edit: Code refuses one cell at a time
-                     instead. Both are honoured by the same BeginEdit. -->
+                     instead. Both are honored by the same BeginEdit. -->
                 <DataGridTextColumn Header="Checksum" Binding="{Binding Checksum}" Width="120" IsReadOnly="True"/>
 
                 <!-- From here on the columns exist to overflow the viewport: scroll sideways and only the columns in
                      view carry cells (the header strip follows the same offset). -->
                 <!-- A column pinned from the MIDDLE of the table: the pinned zone is a place in the layout, not a
-                     prefix of the declaration, so this one leaves its neighbours and joins the left zone. -->
+                     prefix of the declaration, so this one leaves its neighbors and joins the left zone. -->
                 <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="110" SortMemberPath="Region"
                                     FrozenSide="{Binding RegionSide}"/>
                 <DataGridTextColumn Header="Batch" Binding="{Binding Batch}" Width="90" SortMemberPath="Batch"/>
@@ -251,7 +251,7 @@
                 <TextBlock Text="{Binding ExportStatus}" FontSize="11" Margin="0,0,0,8" TextWrapping="WrapByWords"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                 <!-- Three pins, one on each kind of column: the first, one from the MIDDLE, and one pinned to the
-                     other EDGE. A pinned column leaves its neighbours and joins the zone at its side. -->
+                     other EDGE. A pinned column leaves its neighbors and joins the zone at its side. -->
                 <CheckBox Content="Pin Code left" Margin="0,0,0,6"
                           IsChecked="{Binding PinCode, Mode=TwoWay}"/>
                 <CheckBox Content="Pin Region left" Margin="0,0,0,6"
@@ -271,17 +271,17 @@
 
                 <!-- Unchecked, the theme's match colors apply; checked, the page's own. Unchecking must reach built cells
                      too. Swatches stay enabled, having no disabled look. -->
-                <CheckBox Content="Own match colours" Margin="0,0,0,6"
-                          IsChecked="{Binding OwnSearchColours, Mode=TwoWay}"/>
-                <!-- SAID SEPARATELY, each with its own name. Side by side and unlabelled they read as one setting, and
+                <CheckBox Content="Own match colors" Margin="0,0,0,6"
+                          IsChecked="{Binding OwnSearchColors, Mode=TwoWay}"/>
+                <!-- SAID SEPARATELY, each with its own name. Side by side and unlabeled they read as one setting, and
                      the first search shows exactly ONE washed cell - the current one - so touching the other swatch
                      changed nothing anybody could see and the whole thing read as broken. -->
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,0,0,4">
                     <ColorPickerButton Grid.Row="0" Grid.Column="0" Width="72" Height="24" Margin="0,0,8,4"
-                                       SelectedColor="{Binding SearchMatchColour, Mode=TwoWay}"/>
+                                       SelectedColor="{Binding SearchMatchColor, Mode=TwoWay}"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="Every match" VerticalAlignment="Center" Margin="0,0,0,4"/>
                     <ColorPickerButton Grid.Row="1" Grid.Column="0" Width="72" Height="24" Margin="0,0,8,0"
-                                       SelectedColor="{Binding SearchCurrentColour, Mode=TwoWay}"/>
+                                       SelectedColor="{Binding SearchCurrentColor, Mode=TwoWay}"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="The one you are on" VerticalAlignment="Center"/>
                 </Grid>
                 <TextBlock Text="Keep the alpha down - it is a wash over the cell, not a plate."
@@ -322,11 +322,11 @@
                                    Value="{Binding SizeWarnAbove, Mode=TwoWay}" Minimum="0" Maximum="10000"
                                    SmallChange="250" SnapsToSmallChange="true" StringFormat="N0"/>
                 </Grid>
-                <CheckBox Content="Own error colour" Margin="0,0,0,6"
-                          IsChecked="{Binding OwnValidationColour, Mode=TwoWay}"/>
+                <CheckBox Content="Own error color" Margin="0,0,0,6"
+                          IsChecked="{Binding OwnValidationColor, Mode=TwoWay}"/>
                 <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
                     <ColorPickerButton Grid.Column="0" Width="72" Height="24" Margin="0,0,8,0"
-                                       SelectedColor="{Binding ValidationErrorColour, Mode=TwoWay}"/>
+                                       SelectedColor="{Binding ValidationErrorColor, Mode=TwoWay}"/>
                     <TextBlock Grid.Column="1" Text="Rejected value" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -380,7 +380,7 @@
                 <TextBlock Text="2 = every other row; 0 = none" FontSize="11" Margin="0,0,0,8"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                <TextBlock Text="Tint colour" Margin="0,0,0,4"/>
+                <TextBlock Text="Tint color" Margin="0,0,0,4"/>
                 <ColorPickerButton x:Name="TintPicker" Width="72" Height="24" HorizontalAlignment="Left"
                                    Margin="0,0,0,8" SelectedColor="#332F6FED"/>
 

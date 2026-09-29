@@ -13,7 +13,7 @@ struct BlurVSOutput
     float2 Uv : TEXCOORD0;
 };
 
-// ONE TRIANGLE, not two. A quad is two triangles with a seam down the diagonal, and the rasteriser shades in 2x2
+// ONE TRIANGLE, not two. A quad is two triangles with a seam down the diagonal, and the rasterizer shades in 2x2
 // quads - so along that seam the edge quads are shaded twice. An oversized triangle covers the target with no seam,
 // no index buffer and no vertex buffer at all: the three corners come from the vertex id.
 [shader("vertex")]
@@ -36,13 +36,13 @@ float4 CaptureBlurPS(BlurVSOutput input) : SV_Target
     float2 uv = input.Uv;
 
     // The four corner quads. Each sits a whole destination texel out on a diagonal, so its bilinear fetch straddles
-    // four source texels - together they cover the 4x4 neighbourhood that stops the fold.
+    // four source texels - together they cover the 4x4 neighborhood that stops the fold.
     float4 a = SourceTexture.SampleLevel(SourceSampler, uv + float2(-texel.x,  texel.y), level);
     float4 b = SourceTexture.SampleLevel(SourceSampler, uv + float2( texel.x,  texel.y), level);
     float4 c = SourceTexture.SampleLevel(SourceSampler, uv + float2(-texel.x, -texel.y), level);
     float4 d = SourceTexture.SampleLevel(SourceSampler, uv + float2( texel.x, -texel.y), level);
 
-    // The centre quad, at half a texel - the part that keeps the result from being four separate averages.
+    // The center quad, at half a texel - the part that keeps the result from being four separate averages.
     float2 h = texel * 0.5;
     float4 e = SourceTexture.SampleLevel(SourceSampler, uv + float2(-h.x,  h.y), level);
     float4 f = SourceTexture.SampleLevel(SourceSampler, uv + float2( h.x,  h.y), level);
@@ -55,13 +55,13 @@ float4 CaptureBlurPS(BlurVSOutput input) : SV_Target
     float4 l = SourceTexture.SampleLevel(SourceSampler, uv + float2(0.0, -texel.y), level);
     float4 m = SourceTexture.SampleLevel(SourceSampler, uv + float2(0.0,  texel.y), level);
 
-    float4 centre = SourceTexture.SampleLevel(SourceSampler, uv, level);
+    float4 center = SourceTexture.SampleLevel(SourceSampler, uv, level);
 
     // The weights of the pattern: the inner quad carries half the result, the corners and the axes a quarter each.
     return (e + f + g + i) * 0.125
          + (a + b + c + d) * 0.03125
          + (j + k + l + m) * 0.0625
-         + centre * 0.125;
+         + center * 0.125;
 }
 
 technique CaptureBlur

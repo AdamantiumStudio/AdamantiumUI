@@ -148,13 +148,13 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
 
     /// <summary>Rewrites only the color of a retained run in place, so recolors work on replayed frames without a
     /// re-pack.</summary>
-    public bool RecolourRun(IGraphicsDevice device, int first, int count, TextRenderComponent tc)
+    public bool RecolorRun(IGraphicsDevice device, int first, int count, TextRenderComponent tc)
     {
         if (count <= 0 || tc?.Foreground is not SolidColorBrush solid) return false;
         if (first < 0 || first + count > Count) return false;
 
         var color = solid.Color.ToVector4();
-        color.W *= (float)tc.RenderData.Opacity;   // the same fold PackInto does - one colour, computed one way
+        color.W *= (float)tc.RenderData.Opacity;   // the same fold PackInto does - one color, computed one way
 
         var span = Items.AsSpan(first, count);
         var changed = false;
@@ -185,7 +185,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
 
     // Write one block's glyphs at [at, at+run.Count): each glyph's LOCAL rect folded by the node-RELATIVE scale/translate
     // (the axis-aligned rect can hold that), its transform SLOT, its atlas UV, and the block's foreground as a per-instance
-    // colour. NO world matrix is applied here - the glyph VS applies the node matrix (from the transform table at the slot)
+    // color. NO world matrix is applied here - the glyph VS applies the node matrix (from the transform table at the slot)
     // on the GPU. False (no write) for a rotated/sheared RELATIVE transform. Mirrors RectBatchCollector's bake.
     private bool Pack(TextRenderComponent tc, Matrix4x4F relWorld, int transformSlot, int fadeSlot, int clipSlot, int at)
         => PackInto(tc, relWorld, transformSlot, fadeSlot, clipSlot, Items.AsSpan(at, tc.GlyphRun.Count));

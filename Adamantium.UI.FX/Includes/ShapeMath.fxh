@@ -16,7 +16,7 @@ float2 SlotPixelScale(float4x4 nodeWorld)
     return ViewportSize.x < 1.0 ? float2(1.0, 1.0) : scale;   // no viewport supplied: leave the bake untouched
 }
 
-// Approximate SIGNED DISTANCE (device px) to an ellipse boundary: the implicit F = length(p/half) - 1 normalised by the
+// Approximate SIGNED DISTANCE (device px) to an ellipse boundary: the implicit F = length(p/half) - 1 normalized by the
 // length of its gradient (first-order/Taylor distance). Exact for a circle (rx==ry); for rx!=ry it's the correct shape
 // with sub-pixel-accurate distance near the boundary - which is exactly where fill AA and the stroke ring live.
 float SdEllipse(float2 p, float2 half)
@@ -33,9 +33,9 @@ float SdEllipse(float2 p, float2 half)
 float SdRegularPolygon(float2 p, float2 half, float n, float startAngle)
 {
     float2 h = max(half, float2(1e-6, 1e-6));
-    float2 q = p / h;                       // normalised: the shape is the unit circumradius polygon
+    float2 q = p / h;                       // normalized: the shape is the unit circumradius polygon
 
-    // Turn the shape by rolling the SAMPLE the other way - and do it HERE, in normalised space, where the corners sit on
+    // Turn the shape by rolling the SAMPLE the other way - and do it HERE, in normalized space, where the corners sit on
     // a unit circle. Rotating the fragment before the divide would rotate the box too, so a squashed hexagon would swing
     // out of the slot it is inscribed in; rotating after it moves the corners along the ellipse the box inscribes, which
     // is exactly what Shapes.Polygon does with the same angle (radii * cos/sin of start + 2*pi*i/N).
@@ -48,7 +48,7 @@ float SdRegularPolygon(float2 p, float2 half, float n, float startAngle)
     // Fold into a single half-sector, measured from the +x axis so that vertex 0 lands on it. What is left is a point
     // whose x runs along the apothem and whose y is its (positive) offset along the edge.
     float a = atan2(q.y, q.x);
-    float wrapped = a - 2.0 * an * floor(a / (2.0 * an) + 0.5);   // into [-an, an], centred on a VERTEX
+    float wrapped = a - 2.0 * an * floor(a / (2.0 * an) + 0.5);   // into [-an, an], centered on a VERTEX
     float2 folded = length(q) * float2(cos(wrapped), abs(sin(wrapped)));
 
     // Distance to the edge running from that vertex to the next: a segment, so a point past the vertex measures to the
@@ -59,7 +59,7 @@ float SdRegularPolygon(float2 p, float2 half, float n, float startAngle)
     float2 w = folded - v0;
     float2 d = w - e * saturate(dot(w, e) / max(dot(e, e), 1e-9));
 
-    // Inside is the side the centre is on. cross(e, w) changes sign exactly across the edge's line.
+    // Inside is the side the center is on. cross(e, w) changes sign exactly across the edge's line.
     float side = (e.x * w.y - e.y * w.x) > 0.0 ? -1.0 : 1.0;
     return length(d) * side * min(h.x, h.y);
 }
@@ -157,7 +157,7 @@ float EllipseCurvRadius(float2 p, float2 h)
 }
 
 // The ring's vertex, expanded. Shared by every fringe pass (solid / pattern / gradient): they differ only in WHICH
-// record supplies the matrix and the colour, and the expansion itself must stay one definition - it is the thing that
+// record supplies the matrix and the color, and the expansion itself must stay one definition - it is the thing that
 // makes the ring exactly one device pixel wide. `coverage` comes out 1 on the contour and 0 on the outer edge.
 float4 ExpandFringe(FringeVertex v, float4x4 m, out float coverage)
 {

@@ -3,7 +3,7 @@ using Adamantium.UI.FX;
 
 namespace Adamantium.UI.Rendering;
 
-/// <summary>An SDF batch drawn through <c>BrushEffect</c> - the FILLS whose colour is computed or sampled rather than
+/// <summary>An SDF batch drawn through <c>BrushEffect</c> - the FILLS whose color is computed or sampled rather than
 /// flat: gradients, procedural patterns and noise, textures, fractals. Everything about the batching is the shapes'
 /// (see <see cref="ShapeSdfCollector{TItem}"/>); only the effect differs, and it differs because a brush pass carries
 /// its own parameters and its own pixel-shader budget.</summary>

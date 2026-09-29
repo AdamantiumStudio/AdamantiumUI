@@ -118,7 +118,7 @@ public class StackPanel : VirtualizingPanel
       if (!IsArrow(direction)) return base.Navigate(from, direction);
       if (IsVertical(direction) != (Orientation == Orientation.Vertical)) return null;
 
-      return Neighbour(from, IsForward(direction));
+      return Neighbor(from, IsForward(direction));
    }
 
    public Orientation Orientation
@@ -133,7 +133,7 @@ public class StackPanel : VirtualizingPanel
       set => SetValue(SpacingProperty, value);
    }
 
-   // ---- Plain container layout (unchanged behaviour: a StackPanel used with explicit Children) ------------------
+   // ---- Plain container layout (unchanged behavior: a StackPanel used with explicit Children) ------------------
 
    protected override Size MeasurePlain(Size availableSize)
    {
@@ -362,7 +362,7 @@ public class StackPanel : VirtualizingPanel
       }
 
       // Each tile's slot is CONSTANT from its index (absolute stack, no cumulative dependency), so the tiles' Arrange are
-      // INDEPENDENT - fan them across cores when there are enough to amortise the thread overhead (same pattern + safety
+      // INDEPENDENT - fan them across cores when there are enough to amortize the thread overhead (same pattern + safety
       // as WrapPanel: the only shared write a tile arrange makes is RenderDirty.MarkGeometry, which is locked). Small
       // windows stay sequential.
       if (_arrangeIndexBuf.Count >= ParallelArrangeThreshold)

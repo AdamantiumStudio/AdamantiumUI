@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS spinner: a still wheel of grey spokes with a fade running around it, one eighth of a cycle apart.
+    <!-- The macOS spinner: a still wheel of gray spokes with a fade running around it, one eighth of a cycle apart.
          RotationCenterY is tied to BusySize, so the size is set here; the named class variants stay Fluent's. -->
 
     <Style Selector="BusyIndicator">

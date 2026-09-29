@@ -173,7 +173,7 @@ public class CanvasNode : ContentControl
 
     /// <summary>Put on whatever element in a socket's row is its GRIP - the one place a press means "move this socket"
     /// instead of "pull a wire from it". A mark and not a control: what the grip LOOKS like belongs to whoever draws
-    /// the row, and the node only needs to recognise it.</summary>
+    /// the row, and the node only needs to recognize it.</summary>
     public static readonly AdamantiumProperty IsSocketGripProperty = AdamantiumProperty.RegisterAttached("IsSocketGrip",
         typeof(Boolean), typeof(AdamantiumComponent), new PropertyMetadata(false));
 
@@ -440,7 +440,7 @@ public class CanvasNode : ContentControl
     }
 
     /// <summary>How many sockets down the left. Changing it keeps the pins that survive: a node that went from three
-    /// inputs to four would otherwise lose the names and colours of the first three.</summary>
+    /// inputs to four would otherwise lose the names and colors of the first three.</summary>
     public Int32 Inputs
     {
         get => GetValue<Int32>(InputsProperty);
@@ -454,7 +454,7 @@ public class CanvasNode : ContentControl
         set => SetValue(OutputsProperty, value);
     }
 
-    /// <summary>The colour of the title strip. What a graph editor says the KIND of a node with, and the reason a
+    /// <summary>The color of the title strip. What a graph editor says the KIND of a node with, and the reason a
     /// screenful of them can be read at a glance. Null takes the theme's accent.</summary>
     /// <summary>Whether the node is folded down to its title strip.</summary>
     public Boolean IsCollapsed
@@ -477,7 +477,7 @@ public class CanvasNode : ContentControl
         set => SetValue(PinSizeProperty, value);
     }
 
-    /// <summary>What colour a socket is drawn in when it has not been given one of its own. A pin that states its own
+    /// <summary>What color a socket is drawn in when it has not been given one of its own. A pin that states its own
     /// <see cref="CanvasNodePin.Color"/> - because it carries a TYPE, the way a graph editor says what may be joined to
     /// what - keeps it.</summary>
     public Brush PinColor
@@ -486,7 +486,7 @@ public class CanvasNode : ContentControl
         set => SetValue(PinColorProperty, value);
     }
 
-    /// <summary>The sockets down the left, in order. Held rather than made on demand, so that a name or a colour put on
+    /// <summary>The sockets down the left, in order. Held rather than made on demand, so that a name or a color put on
     /// one stays there.</summary>
     public ObservableCollection<CanvasNodePin> InputPins => _inputs;
 
@@ -708,8 +708,8 @@ public class CanvasNode : ContentControl
         node.ShowStubs();
     }
 
-    // The theme sets PinColor AFTER the pins are built, so this is what actually colours them. Only the pins still
-    // wearing the previous default are touched: one given a colour of its own said something the theme did not, and a
+    // The theme sets PinColor AFTER the pins are built, so this is what actually colors them. Only the pins still
+    // wearing the previous default are touched: one given a color of its own said something the theme did not, and a
     // theme change must not take that away.
     private static void OnPinColorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
@@ -749,14 +749,14 @@ public class CanvasNode : ContentControl
         }
     }
 
-    // A DEFAULT, written as one. What a pin is coloured when nobody has said otherwise is the node's business, but a
+    // A DEFAULT, written as one. What a pin is colored when nobody has said otherwise is the node's business, but a
     // socket that says what it carries beats it - and a plain write would not let it: a local value outranks a binding,
-    // so the colour of a kind never reached a pin the node had already painted.
-    private static void Wear(CanvasNodePin pin, Brush colour) =>
-        pin.SetValue(CanvasNodePin.ColorProperty, colour, ValuePriority.Style);
+    // so the color of a kind never reached a pin the node had already painted.
+    private static void Wear(CanvasNodePin pin, Brush color) =>
+        pin.SetValue(CanvasNodePin.ColorProperty, color, ValuePriority.Style);
 
     // Grown and trimmed rather than rebuilt: the pins that stay are the same objects, so what was said about them -
-    // a name, a colour, and one day whatever is connected to them - survives a change of count.
+    // a name, a color, and one day whatever is connected to them - survives a change of count.
     private void Rebuild(ObservableCollection<CanvasNodePin> pins, Int32 wanted, Boolean input)
     {
         wanted = Math.Max(0, wanted);

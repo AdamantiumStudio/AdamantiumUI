@@ -10,11 +10,11 @@ public enum GradientKind
     [Display(Name = "Linear")]
     Linear,
 
-    /// <summary>The ramp runs outward from a centre.</summary>
+    /// <summary>The ramp runs outward from a center.</summary>
     [Display(Name = "Radial")]
     Radial,
 
-    /// <summary>The ramp is swept around a centre.</summary>
+    /// <summary>The ramp is swept around a center.</summary>
     [Display(Name = "Conic")]
     Conic
 }

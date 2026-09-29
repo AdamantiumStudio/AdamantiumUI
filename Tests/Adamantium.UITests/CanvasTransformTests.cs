@@ -51,7 +51,7 @@ public class CanvasTransformTests
         });
     }
 
-    // About the MIDDLE it is given: a point at the centre of a turn does not move.
+    // About the MIDDLE it is given: a point at the center of a turn does not move.
     [Test]
     public void TheMiddleOfATurnStaysStill()
     {

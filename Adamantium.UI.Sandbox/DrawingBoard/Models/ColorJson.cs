@@ -5,13 +5,13 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
-/// <summary>A COLOUR AS FOUR NUMBERS in a graph file - the same shape the node's own accent is written in.
-/// <para>Without it a colour is written as <c>{}</c> and read back as black: the type keeps its channels in FIELDS, and
-/// a serializer that is only asked about properties finds nothing to say. A file that carries a colour graph and loses
-/// every colour in it is worse than one that refuses to save.</para></summary>
+/// <summary>A COLOR AS FOUR NUMBERS in a graph file - the same shape the node's own accent is written in.
+/// <para>Without it a color is written as <c>{}</c> and read back as black: the type keeps its channels in FIELDS, and
+/// a serializer that is only asked about properties finds nothing to say. A file that carries a color graph and loses
+/// every color in it is worse than one that refuses to save.</para></summary>
 public sealed class ColorJson : JsonConverter<Color>
 {
-    /// <summary>The options a graph's state is written with and read back by - the one place that knows a colour is
+    /// <summary>The options a graph's state is written with and read back by - the one place that knows a color is
     /// four numbers, so both directions cannot drift apart.</summary>
     public static readonly JsonSerializerOptions Options = new() { Converters = { new ColorJson() } };
 

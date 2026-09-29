@@ -60,7 +60,7 @@ public sealed class RenderDirtyScope
     // shared brush cheap.
     private readonly HashSet<IUIComponent> PaintSet = new();
 
-    /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new colour.</summary>
+    /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new color.</summary>
     public void MarkPaint(IUIComponent component)
     {
         if (component == null) return;
@@ -75,7 +75,7 @@ public sealed class RenderDirtyScope
     private long _paintMarks;
 
     /// <summary>How many paint marks this scope has EVER taken. Monotonic and untouched by <see cref="Clear"/>, so a
-    /// stage that runs on the render thread can still tell whether a recolour happened since it last redrew: the set
+    /// stage that runs on the render thread can still tell whether a recolor happened since it last redrew: the set
     /// itself is wiped once per frame by the loop thread, long before an overlay stage gets to look at it.</summary>
     public long TotalPaintMarks { get { lock (PaintSet) return _paintMarks; } }
 
@@ -97,7 +97,7 @@ public sealed class RenderDirtyScope
     // A move whose COMPONENT we can't name (a Transform ticking while it is not assigned as anyone's RenderTransform, so
     // Transform.Owner is null). Then the incremental refresh above cannot know what went stale, and the recorder falls back
     // to re-capturing the whole snapshot for that frame. Correctness over cleverness: an unnameable mover is rare (an
-    // orphaned/re-assigned transform), and the fallback is exactly the pre-incremental behaviour.
+    // orphaned/re-assigned transform), and the fallback is exactly the pre-incremental behavior.
     private bool _transformUnknown;
 
     /// <summary>Records that <paramref name="component"/> MOVED (world transforms must be re-baked; no re-record). Pass the
@@ -150,7 +150,7 @@ public sealed class RenderDirtyScope
     // WHICH components entered or left the drawn set this frame (a visual child added/removed, a Visibility toggle). Recorded
     // like MarkTransform's movers, and for the same reason: knowing the identities is what will let the recorder splice just
     // those components instead of re-recording the whole tree. Today NOTHING reads this - the recorder still does the full walk
-    // it always did - so this step is pure bookkeeping and cannot change behaviour. It only makes the next one possible.
+    // it always did - so this step is pure bookkeeping and cannot change behavior. It only makes the next one possible.
     private readonly HashSet<IUIComponent> StructuralSet = new();
 
     // A structural change nobody could name (a caller with no component to hand). The incremental path can then know nothing
@@ -239,7 +239,7 @@ public sealed class RenderDirtyScope
     /// <summary>True while a multi-frame structural state swap (resize / DPI / theme) is still settling. The
     /// decoupled render path uses this as a lightweight barrier: it records such a window INLINE (record + apply together
     /// in BeginDraw) instead of at loop level, so the packet can't straddle the swap's per-frame relayout + presenter /
-    /// projection finalisation and desync (chrome left at the old size while dirty content re-records at the new one).</summary>
+    /// projection finalization and desync (chrome left at the old size while dirty content re-records at the new one).</summary>
     public bool IsSettlingStructural => _forceUntilSettled || _finalForcedBuild;
 
     /// <summary>The geometry-dirty components to re-render this build (only valid until <see cref="Clear"/>).</summary>

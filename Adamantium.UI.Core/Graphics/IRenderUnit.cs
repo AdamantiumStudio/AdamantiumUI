@@ -9,7 +9,7 @@ public interface IRenderUnit : IDisposable
     /// <summary>The per-command state captured at RECORD time (opacity, transform, clip, halo bands). The draw path
     /// reads VALUES from here; the live element is edited on another thread and must never be dereferenced there.</summary>
     RenderData RenderData { get; }
-    /// <summary>Set the alpha the unit's colours bake with - the element's OWN opacity, not the chain. The chain rides
+    /// <summary>Set the alpha the unit's colors bake with - the element's OWN opacity, not the chain. The chain rides
     /// <see cref="FadeSlot"/> and is applied at draw time; folding it in here would mean re-baking every instance under
     /// a fading container.</summary>
     void SetEffectiveOpacity(float opacity);

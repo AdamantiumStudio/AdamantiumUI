@@ -55,7 +55,7 @@ public partial class TreeDataGrid
 
     // IsVisible, not IsShown: a column the table is GROUPED BY still goes out. Its value is on every record, and on
     // screen it lives in the captions - a file has no captions, so leaving it out drops the very field the table is
-    // organised by.
+    // organized by.
     private List<DataGridColumn> ExportColumns()
     {
         var columns = new List<DataGridColumn>();

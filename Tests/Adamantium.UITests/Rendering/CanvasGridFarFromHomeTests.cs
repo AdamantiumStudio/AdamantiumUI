@@ -38,7 +38,7 @@ public class CanvasGridFarFromHomeTests
         return item;
     }
 
-    // HOWEVER FAR. The record must never carry the distance travelled - that is the whole defect - so whatever the
+    // HOWEVER FAR. The record must never carry the distance traveled - that is the whole defect - so whatever the
     // camera has been through, what reaches the shader stays inside one cell.
     [Test]
     [TestCase(0)]
@@ -53,9 +53,9 @@ public class CanvasGridFarFromHomeTests
         Assert.Multiple(() =>
         {
             Assert.That(item.Camera.X, Is.InRange(0, (float)Period),
-                $"the distance travelled went to the shader: {item.Camera.X}");
+                $"the distance traveled went to the shader: {item.Camera.X}");
             Assert.That(item.Camera.Y, Is.InRange(0, (float)Period),
-                $"the distance travelled went to the shader: {item.Camera.Y}");
+                $"the distance traveled went to the shader: {item.Camera.Y}");
         });
     }
 
@@ -102,7 +102,7 @@ public class CanvasGridFarFromHomeTests
             Assert.That(near.Clip.Z, Is.EqualTo(200).Within(0.001));
 
             Assert.That(far.Clip.Y, Is.LessThanOrEqualTo(1200 + 800 + 64),
-                "the distance travelled reached the shader through the axes instead");
+                "the distance traveled reached the shader through the axes instead");
             Assert.That(far.Clip.Z, Is.GreaterThanOrEqualTo(-(1200 + 800 + 64)));
 
             // ...and still off the element, which is where the axes really are.

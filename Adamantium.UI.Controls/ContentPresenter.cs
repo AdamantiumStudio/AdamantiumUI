@@ -246,7 +246,7 @@ public class ContentPresenter : InputUIComponent
                     TextTrimming = TextTrimming,
                     HorizontalTextAlignment = ToTextAlignment(HorizontalAlignment),
                     VerticalTextAlignment = ToTextAlignment(VerticalAlignment),
-                    // Centred, not stretched: a stretched block does not hand its height to the text layout, so the
+                    // Centered, not stretched: a stretched block does not hand its height to the text layout, so the
                     // label sat against the top of its slot.
                     HorizontalAlignment = HorizontalAlignment,
                     VerticalAlignment = VerticalAlignment == VerticalAlignment.Stretch
@@ -254,7 +254,7 @@ public class ContentPresenter : InputUIComponent
                         : VerticalAlignment
                 };
                 // Bound, not copied: an inherited change can step over the label without notifying it. A presenter with
-                // no colour of its own says nothing - handed its null, the label threw on every frame it drew.
+                // no color of its own says nothing - handed its null, the label threw on every frame it drew.
                 textBlock.SetBinding(nameof(TextBlock.Foreground),
                     new Core.Data.Binding(nameof(Foreground)) { Source = this, TargetNullValue = AdamantiumProperty.UnsetValue });
 

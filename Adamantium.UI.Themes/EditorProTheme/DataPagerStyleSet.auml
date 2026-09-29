@@ -50,7 +50,7 @@
                                               MarginRight="6" VerticalAlignment="Center">
                                     <!-- NOT VIRTUALIZED, deliberately: as an items host this panel lays its children on
                                          a UNIFORM pitch, and a page button is as wide as its number - "999" and "1000"
-                                         are different sizes, so the wide ones would run into their neighbours. Five
+                                         are different sizes, so the wide ones would run into their neighbors. Five
                                          buttons; nothing to virtualize. -->
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>

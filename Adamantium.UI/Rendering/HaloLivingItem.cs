@@ -4,7 +4,7 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One LIVING aura instance - the band whose reach wanders along the outline and drifts over time, travelling a palette.
+/// One LIVING aura instance - the band whose reach wanders along the outline and drifts over time, traveling a palette.
 /// Matches <c>HaloLivingData</c> in BatchEffect.fx field for field.
 /// <para>Its own record and its own pass: a still band must not carry a palette it never reads, and the noise this one
 /// evaluates is real ALU that a plain shadow has no business paying for.</para>
@@ -29,7 +29,7 @@ public struct HaloLivingItem
     /// .w = detail.</summary>
     public Vector4F Field;
 
-    /// <summary>The aura's own colour, used when the palette is empty. Straight (non-premultiplied) RGBA with the
+    /// <summary>The aura's own color, used when the palette is empty. Straight (non-premultiplied) RGBA with the
     /// element's opacity folded into the alpha - four BYTES, read by the shader as a <c>uint8_t4</c>.</summary>
     public Color Color;
 

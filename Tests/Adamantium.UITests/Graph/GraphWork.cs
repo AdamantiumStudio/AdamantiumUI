@@ -35,7 +35,7 @@ public class GraphWork : ICanvasNodeSpecialization, ICanvasNodeWork, INotifyProp
     public int Ran { get; private set; }
 
     /// <summary>Something to wait on, ONCE - for catching a pass in flight. One-shot deliberately: the pass that
-    /// follows a cancelled one must be free to finish, or the test hangs on its own trap.</summary>
+    /// follows a canceled one must be free to finish, or the test hangs on its own trap.</summary>
     public Func<CancellationToken, Task> WaitsOnce { get; set; }
 
     public void Shape(ICanvasNode node)

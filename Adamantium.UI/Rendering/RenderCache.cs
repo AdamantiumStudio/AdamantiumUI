@@ -102,7 +102,7 @@ public partial class RenderCache
     private readonly Dictionary<Guid, ControlGroup> _groupById = new();   // control -> its group (the retained unit cache)
 
     // Paint rank of each drawn component (sort key of _groups). SPARSE (0, GAP, 2*GAP...) so an added tile takes a rank
-    // strictly BETWEEN its neighbours' with nobody renumbered -> a structural change is O(changed), not O(scene).
+    // strictly BETWEEN its neighbors' with nobody renumbered -> a structural change is O(changed), not O(scene).
     // RECORDER-owned; the applier never reads it (a changed rank travels ON the packet).
     private readonly Dictionary<IUIComponent, long> _orderByControl = new();
 
@@ -215,8 +215,8 @@ public partial class RenderCache
     // ...and for geometry units on the instanced collector: which key-arena and slot, so paint patches can reach them.
     private readonly Dictionary<IRenderUnit, (BatchArena Arena, int Slot)> _fillSlotByUnit = new();
 
-    // Which halo records a unit occupies. A shape's soft bands used to be written by the WALK alone: a colour change
-    // patched the shape's own slot at once and left its aura on the old colour until some unrelated frame happened to
+    // Which halo records a unit occupies. A shape's soft bands used to be written by the WALK alone: a color change
+    // patched the shape's own slot at once and left its aura on the old color until some unrelated frame happened to
     // walk - "the aura catches up eventually" was the bug, and this ledger is what a patch needs to answer it.
     // FOUR ranges, because a shape can wear a still band and a living one, each on either side of its own fill.
     private struct HaloRuns
@@ -234,7 +234,7 @@ public partial class RenderCache
     // hundreds of elements (the skeleton pulse) - the reason paint fans out where transform does not.
     private readonly Dictionary<Core.Media.Brush, List<IRenderUnit>> _unitsByBrush = new();
 
-    // What each indexed brush looked like when the walk baked it. A recolour is then one comparison per brush in the
+    // What each indexed brush looked like when the walk baked it. A recolor is then one comparison per brush in the
     // scene - see Brush.PaintVersion and ApplyBrushRepaints.
     private readonly Dictionary<Core.Media.Brush, int> _brushPaintBaked = new();
 
@@ -270,7 +270,7 @@ public partial class RenderCache
     private readonly List<IUIComponent> _movedNodesCapture = new();  // moved motion nodes, for the snapshot re-freeze on a FULL frame
     private readonly List<IUIComponent> _partialConsumed = new();    // rendered by a partial pass that may yet be discarded
 
-    // Structural-record (splice) scratch - the marks name what entered/left; new subtrees get a rank between neighbours' (RecordStructuralFrame):
+    // Structural-record (splice) scratch - the marks name what entered/left; new subtrees get a rank between neighbors' (RecordStructuralFrame):
     private readonly HashSet<IUIComponent> _placeRoots = new();       // outermost unranked (=new) drawn components to place
     private readonly HashSet<IUIComponent> _structRecorded = new();   // recorded by THIS structural pass (the dirty pass skips them)
     private readonly Dictionary<IUIComponent, List<IUIComponent>> _addsByParent = new();
@@ -375,7 +375,7 @@ public partial class RenderCache
         if (_built && !Dirty.HasWork && !_forceFullNextFrame) return;
 
         // Non-structural change -> PARTIAL: re-render only the geometry-dirty components in place; the retained groups
-        // stay. Drop world/clip memos ONLY on a MOVE (transform-dirty) - a geometry-only partial (a hover recolour) moved
+        // stay. Drop world/clip memos ONLY on a MOVE (transform-dirty) - a geometry-only partial (a hover recolor) moved
         // nothing, so cached transforms stay valid (skipping the O(N) re-bake of thousands of units). An UNNAMEABLE move
         // (an unowned Transform ticking) can't tell which snapshot entries went stale -> escalate to a full record.
         if (_built && !Dirty.IsStructural && !Dirty.IsTransformUnknown && !_forceFullNextFrame)
@@ -414,7 +414,7 @@ public partial class RenderCache
                 _packet.PartialDirty.AddRange(_geometryDirtyBuffer);
 
                 // Paint-dirty components ride the SAME list: not re-rendered, their commands hold the brush BY REFERENCE,
-                // so the draw pass's slot patch re-bakes from the (now different) brush - a recolour costs a re-bake, not
+                // so the draw pass's slot patch re-bakes from the (now different) brush - a recolor costs a re-bake, not
                 // a re-record.
                 Dirty.SnapshotPaintInto(_paintDirtyBuffer);
                 _packet.PartialDirty.AddRange(_paintDirtyBuffer);

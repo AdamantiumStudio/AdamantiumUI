@@ -6,7 +6,7 @@
 
     <Style Selector="ToggleSwitch">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <!-- Its own key, not a ControlFill: with no outline round the groove, its colour is the only thing that says
+        <!-- Its own key, not a ControlFill: with no outline round the groove, its color is the only thing that says
              where the track ends - see the note in MacOsDark. -->
         <Setter Property="Background" Value="{ResourceReference SelectionControlFillColorOff}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>

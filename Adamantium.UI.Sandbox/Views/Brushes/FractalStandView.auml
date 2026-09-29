@@ -90,10 +90,10 @@
                                    Value="{Binding FractalFineY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
                 </StackPanel>
             </StackPanel>
-            <!-- Colours: right of the controls, in the free zone. Cohesive ColorPickerButton controls - a swatch that
+            <!-- Colors: right of the controls, in the free zone. Cohesive ColorPickerButton controls - a swatch that
                  reveals the ColorPicker inline (compact when closed), so the editors don't scatter the panel. -->
             <StackPanel Orientation="Vertical" MarginLeft="24" VerticalAlignment="Top">
-                <TextBlock Text="Colours — click a swatch to edit" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="8"/>
+                <TextBlock Text="Colors — click a swatch to edit" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="8"/>
                 <TextBlock Text="Color 1 (inside / edge)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton SelectedColor="{Binding FractalColor1, Mode=TwoWay}" Width="200" Height="30" MarginBottom="12"/>
                 <TextBlock Text="Color 2 (escaping outside)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>

@@ -12,7 +12,7 @@ public partial class KeyboardViewModel : TabPageViewModel
 
     public ObservableCollection<string> Rows { get; } = new(
     [
-        "Aurora", "Basalt", "Cinder", "Dune", "Ember", "Fjord", "Glacier", "Harbour",
+        "Aurora", "Basalt", "Cinder", "Dune", "Ember", "Fjord", "Glacier", "Harbor",
         "Inlet", "Jetty", "Kelp", "Lagoon", "Marsh", "Nimbus", "Onyx", "Prairie",
         "Quarry", "Reef", "Summit", "Tundra", "Vale", "Willow", "Yonder", "Zenith"
     ]);

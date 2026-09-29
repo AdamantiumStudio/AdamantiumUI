@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Cutting a picture into nine pieces: the corners keep their size, the edges take the axis they run along, the centre
+// Cutting a picture into nine pieces: the corners keep their size, the edges take the axis they run along, the center
 // takes what is left. Pure rectangle arithmetic, and the part of a nine-slice that is easy to get subtly wrong - so it
 // is tested apart from any device.
 [TestFixture]
@@ -40,7 +40,7 @@ public class NineSliceTests
     }
 
     [Test]
-    public void WithoutItsCentreItCutsIntoEight()
+    public void WithoutItsCenterItCutsIntoEight()
     {
         var brush = Brush();
         brush.DrawCenter = false;
@@ -90,16 +90,16 @@ public class NineSliceTests
         Assert.That(topLeft.UvRect.X, Is.EqualTo(0f).Within(Texel));
         Assert.That(topLeft.UvRect.Z, Is.EqualTo(0.25f).Within(1.5 * Texel));
 
-        var centre = items[4];
-        Assert.That(centre.UvRect.X, Is.EqualTo(0.25f).Within(Texel));
-        Assert.That(centre.UvRect.Z, Is.EqualTo(0.5f).Within(1.5 * Texel), "what is left between the two 0.25 cuts");
+        var center = items[4];
+        Assert.That(center.UvRect.X, Is.EqualTo(0.25f).Within(Texel));
+        Assert.That(center.UvRect.Z, Is.EqualTo(0.5f).Within(1.5 * Texel), "what is left between the two 0.25 cuts");
     }
 
-    // A linear sampler asked for a strip's very edge blends in the texel BEYOND it - the neighbouring piece's pixels.
+    // A linear sampler asked for a strip's very edge blends in the texel BEYOND it - the neighboring piece's pixels.
     // On a tiled edge that happens at every wrap and draws a thin line at each seam, so the sampled range stops at the
-    // texel CENTRES instead of the texel edges.
+    // texel CENTERS instead of the texel edges.
     [Test]
-    public void EachPieceStopsAtTheTexelCentres()
+    public void EachPieceStopsAtTheTexelCenters()
     {
         var items = Bake(Brush(), new Rect(0, 0, 300, 300));
 
@@ -167,20 +167,20 @@ public class NineSliceTests
     // The MIDDLE is not an edge: tiled at the edges' pitch it becomes a grid, denser the smaller the slice. It only
     // tiles when asked outright.
     [Test]
-    public void TheCentreDoesNotTileWithTheEdges()
+    public void TheCenterDoesNotTileWithTheEdges()
     {
         var brush = Brush();
         brush.EdgeMode = NineSliceEdgeMode.Repeat;
 
         var items = Bake(brush, new Rect(0, 0, 300, 300));
 
-        var centre = items[4];
-        Assert.That(centre.Tile.X, Is.EqualTo(1f), "the centre is stretched, not tiled");
-        Assert.That(centre.Tile.Y, Is.EqualTo(1f));
+        var center = items[4];
+        Assert.That(center.Tile.X, Is.EqualTo(1f), "the center is stretched, not tiled");
+        Assert.That(center.Tile.Y, Is.EqualTo(1f));
     }
 
     [Test]
-    public void TheCentreTilesWhenAsked()
+    public void TheCenterTilesWhenAsked()
     {
         var brush = Brush();
         brush.EdgeMode = NineSliceEdgeMode.Repeat;
@@ -268,8 +268,8 @@ public class NineSliceTests
             Assert.That(NineSlice.BakeSize(brush, new Size(120, 120)).Width, Is.EqualTo(160).Within(1e-6),
                 "the corner asks for more than the whole shape");
 
-            // A wide panel stretches the CENTRE, and that band then asks for the most - which is the shape's size, give
-            // or take the corners. The old behaviour, and still right when it is the demanding one.
+            // A wide panel stretches the CENTER, and that band then asks for the most - which is the shape's size, give
+            // or take the corners. The old behavior, and still right when it is the demanding one.
             Assert.That(NineSlice.BakeSize(brush, new Size(900, 200)).Width, Is.EqualTo((900 - 80) / 0.5).Within(1e-6));
 
             // A REPEATED edge draws its motif at the motif's own size however long the strip is, so it asks for nothing
@@ -283,7 +283,7 @@ public class NineSliceTests
     // 0.01 a 40px corner wants 4000 across. The corner softens past the cap instead of the frame costing a render target
     // of that size - the trade a brush that is raster BY DESIGN is entitled to make.
     [Test]
-    public void AnAbsurdDemandIsCappedRatherThanHonoured()
+    public void AnAbsurdDemandIsCappedRatherThanHonored()
     {
         var brush = Brush();
         brush.Slice = new Thickness(0.01);

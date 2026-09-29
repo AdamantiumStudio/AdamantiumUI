@@ -65,12 +65,12 @@ public class ShaderRecordLayoutTests
             $"{record.StructName} strides {declared.Stride} bytes per instance, {record.Item.Name} is {size}");
     }
 
-    // A colour put back into bytes has to come back as the colour that went in. It can, because a colour reaches a
+    // A color put back into bytes has to come back as the color that went in. It can, because a color reaches a
     // record as a byte over 255 - so the round trip is exact for every one of the 256 values a channel can hold, and
     // "lossless" is then a claim that can be checked rather than a hope. Rounding is the part that bites: truncating
     // sends channels a step darker, which is a whole theme drifting.
     [Test]
-    public void AColourSurvivesTheRoundTripThroughAVector()
+    public void AColorSurvivesTheRoundTripThroughAVector()
     {
         for (var b = 0; b < 256; b++)
         {

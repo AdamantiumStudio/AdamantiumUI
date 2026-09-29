@@ -53,7 +53,7 @@ public class TypeDefaultSlotTests
 
         TestContext.WriteLine($"ancestor says Red, blanket style says Blue, text={text.Foreground}");
         Assert.That(text.Foreground, Is.SameAs(Brushes.Red),
-            "the row's colour reaches its own text - a blanket type rule no longer masks it");
+            "the row's color reaches its own text - a blanket type rule no longer masks it");
     }
 
     /// <summary>A selector that NARROWS is not a default and keeps its full strength: someone who writes

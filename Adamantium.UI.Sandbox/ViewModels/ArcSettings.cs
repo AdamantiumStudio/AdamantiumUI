@@ -28,7 +28,7 @@ public sealed class ArcSettings : PropertyChangedBase
 
     public double StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
 
-    /// <summary>The outline's own brush, MUTATED rather than replaced when the alpha moves - recolouring re-bakes the
+    /// <summary>The outline's own brush, MUTATED rather than replaced when the alpha moves - recoloring re-bakes the
     /// instances that paint with it instead of re-recording the element.</summary>
     public SolidColorBrush StrokeBrush { get; } = new(new Color((byte)245, (byte)158, (byte)11, (byte)255));
 
@@ -51,7 +51,7 @@ public sealed class ArcSettings : PropertyChangedBase
     /// free to outline the band. 0 is solid; anything else turns the wedge into a donut slice.</summary>
     public double RingThickness { get => _ringThickness; set => SetProperty(ref _ringThickness, value); }
 
-    /// <summary>Sector (closed through the centre) or edge-to-edge (closed by the chord).</summary>
+    /// <summary>Sector (closed through the center) or edge-to-edge (closed by the chord).</summary>
     public bool Sector
     {
         get => _sector;

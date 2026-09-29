@@ -177,7 +177,7 @@ public class RecordCostProbe
         totals.Report($"{ViewportW}x{ViewportH} tile-size drag");
     }
 
-    /// <summary>Content ARRIVING - what a tab entry does. Modelled on what the live stand measured: a container holding
+    /// <summary>Content ARRIVING - what a tab entry does. Modeled on what the live stand measured: a container holding
     /// thousands of children, of which a few hundred each receive one new child. The plan then has to place a few hundred
     /// marks, and it re-read 1.18 MILLION children to do it.</summary>
     [Test]

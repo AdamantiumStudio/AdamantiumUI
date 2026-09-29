@@ -2,7 +2,7 @@ using Adamantium.Core;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>One tile of the Transforms tab's grid: a fill colour plus the affine transform THIS tile is drawn under.
+/// <summary>One tile of the Transforms tab's grid: a fill color plus the affine transform THIS tile is drawn under.
 /// Each tile carries its own angle/shear (the panel spreads them across the grid) so the batch is asked to draw many
 /// DIFFERENT matrices at once - which is the thing being demonstrated.</summary>
 public sealed class TransformTile : PropertyChangedBase

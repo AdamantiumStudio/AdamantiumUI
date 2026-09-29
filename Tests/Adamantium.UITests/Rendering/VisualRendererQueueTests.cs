@@ -9,7 +9,7 @@ namespace Adamantium.UITests.Rendering;
 /// <summary>The off-screen renderer shares ONE GPU device with the window's render thread, so an off-screen draw has to
 /// be handed to that thread rather than submitted by whoever asked. These pin the deferral: the raster fallback for a
 /// DrawingImage was rendering synchronously from the loop thread, and its picture came back with one shape wearing
-/// another's fill colour on roughly one launch in six.</summary>
+/// another's fill color on roughly one launch in six.</summary>
 [TestFixture]
 public class VisualRendererQueueTests
 {

@@ -113,7 +113,7 @@ internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
     }
 
     // Where the lattice stands within ONE cell. The grid repeats every cell, so this is the whole of what the shader
-    // needs; taken in double, where the distance travelled is still exact.
+    // needs; taken in double, where the distance traveled is still exact.
     private static double Phase(double offset, double period)
     {
         var wrapped = offset - Math.Floor(offset / period) * period;

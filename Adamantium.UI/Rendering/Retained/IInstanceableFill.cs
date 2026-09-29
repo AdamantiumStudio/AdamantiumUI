@@ -11,7 +11,7 @@ namespace Adamantium.UI.Rendering.Retained;
 internal interface IInstanceableFill
 {
     /// <summary>Shape key (elements sharing it share one mesh + one instanced draw), the shared LOCAL mesh, and the
-    /// baked fill colour. False = not instanceable this frame (non-solid brush, no mesh, ...): draw the fill per-unit.</summary>
+    /// baked fill color. False = not instanceable this frame (non-solid brush, no mesh, ...): draw the fill per-unit.</summary>
     bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color);
 
     /// <summary>Set by the render pass each frame: true = the fill went to the instanced renderer, so Render() skips its

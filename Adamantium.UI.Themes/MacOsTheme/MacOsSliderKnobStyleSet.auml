@@ -15,7 +15,7 @@
                             BorderBrush="{ObservableResource SliderKnobRimColor}"
                             BorderThickness="1">
                         <Border.Shadow>
-                            <!-- Opacity 1: the strength lives in the palette colour's alpha, so a variant that wants no
+                            <!-- Opacity 1: the strength lives in the palette color's alpha, so a variant that wants no
                                  shadow says so in one place instead of in two that have to agree. -->
                             <Shadow OffsetY="1" BlurRadius="3" Opacity="1"
                                     Color="{ObservableResource SliderKnobShadowColor}"/>
@@ -43,7 +43,7 @@
         <PropertyTrigger Property="IsDragging" Value="true">
             <!-- The knob's own fill, FIRST, because it is the half of this that always reads. The aura is the accent,
                  and a knob spends half its travel standing on the accent-filled part of the rail, where an accent glow
-                 is its background's colour to the byte - invisible by construction, and the reason the glow alone
+                 is its background's color to the byte - invisible by construction, and the reason the glow alone
                  looked like it fired only some of the time. What is behind the knob cannot hide the knob. -->
             <Setter TargetName="Knob" Property="Background" Value="{ObservableResource SliderKnobFillPressed}"/>
             <!-- The knob's own rim goes accent too, and not for decoration: the aura's inner edge and the knob's fill

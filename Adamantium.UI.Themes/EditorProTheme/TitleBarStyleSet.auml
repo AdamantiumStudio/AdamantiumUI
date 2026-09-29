@@ -47,7 +47,7 @@
                                                 Command="{Binding Command}"
                                                 CommandParameter="{Binding CommandParameter}">
                                             <!-- {Ancestor} walks up to the hosting TitleBar and binds its LIVE
-                                                 Foreground, so a command icon follows the same active/inactive colour
+                                                 Foreground, so a command icon follows the same active/inactive color
                                                  as the window buttons (and re-resolves if the tree rebuilds). -->
                                             <Path Data="{Binding Icon}"
                                                     Stroke="{Ancestor TitleBar, Foreground}"
@@ -229,7 +229,7 @@
     </Style>
 
     <!-- The one place in the chrome that shouts, and it comes from the palette rather than a literal: a theme that
-         hard-codes a colour cannot answer for its own light variant. -->
+         hard-codes a color cannot answer for its own light variant. -->
     <Style Selector="Button.CloseButton">
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference CloseButtonFillPointerOver}"/>
         <Setter Property="BackgroundPressed" Value="{ResourceReference CloseButtonFillPressed}"/>

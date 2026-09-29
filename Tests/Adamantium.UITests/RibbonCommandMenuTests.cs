@@ -127,7 +127,7 @@ public class RibbonCommandMenuTests
         Assert.That(command.ContextMenu.Items.Count, Is.EqualTo(2), "the group's own template, not the ancestor's");
     }
 
-    // A command that neither runs anything nor was named would be unrecognisable: put in the bar again on every asking,
+    // A command that neither runs anything nor was named would be unrecognizable: put in the bar again on every asking,
     // and never taken back out because the request names nothing to match. So it is given an identity of its own.
     [Test]
     public void ACommandNamedByNothingIsGivenAnIdentity()

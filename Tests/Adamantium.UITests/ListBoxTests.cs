@@ -152,7 +152,7 @@ public class ListBoxTests
         lb.SelectFromContainer(c1);                         // user selects
 
         Assert.That(chosen, Does.Contain("b"),
-            "the control mutates the SAME collection the view-model holds - no attached-behaviour workaround");
+            "the control mutates the SAME collection the view-model holds - no attached-behavior workaround");
     }
 
     [Test]

@@ -31,7 +31,7 @@ public class ListBox : Selector
 
         // The arrows are the LIST's own business, not the navigator's: they move the SELECTION, and the focus and the
         // scroll follow it. The navigator only ever gets keys nobody claimed, so claiming them here is what stops the
-        // focus wandering off to a neighbouring control instead of down the rows.
+        // focus wandering off to a neighboring control instead of down the rows.
     }
 
     /// <summary>Runs on a double click on a row, with the item as the parameter.</summary>
@@ -225,7 +225,7 @@ public class ListBox : Selector
     // properties, the bound SelectedItems collection (unless it IS the source of this change), the containers, the event.
     private void ApplySelection(IReadOnlyList<object> items, int primaryIndex, bool writeBoundList)
     {
-        // Only materialise the internal mirror collection when there is actually something to store. Creating an empty one
+        // Only materialize the internal mirror collection when there is actually something to store. Creating an empty one
         // eagerly (the ctor seeds SelectedIndex=-1 -> ClearSelection, and base-property seeding now runs that before the
         // SelectedItems slot exists) would pin SelectedItems at Local priority and mask a later two-way {Binding}
         // (Binding < Local), silently isolating the view-model's collection.

@@ -23,7 +23,7 @@ public class BrushSnapshotTests
 
         Assert.That(ColorOf(payload.Brush), Is.EqualTo(Colors.Red));
 
-        brush.Color = Colors.Blue;   // the element is NOT re-recorded: a colour change re-bakes the payload it already has
+        brush.Color = Colors.Blue;   // the element is NOT re-recorded: a color change re-bakes the payload it already has
 
         Assert.That(ColorOf(payload.Brush), Is.EqualTo(Colors.Blue),
             "a recorded payload must see the brush's CURRENT appearance, or an animated brush never reaches the screen");
@@ -56,7 +56,7 @@ public class BrushSnapshotTests
     public void AnUnchangedBrushKeepsTheSameSnapshotInstance()
     {
         // The render cache detects change by REFERENCE (Brush has no value equality). A brush that did not change must
-        // therefore keep handing out the same snapshot, or every re-record would look like a recolour and re-bake - and
+        // therefore keep handing out the same snapshot, or every re-record would look like a recolor and re-bake - and
         // every TextBlock would re-raster its glyphs - for nothing.
         var brush = new SolidColorBrush(Colors.Red);
         var payload = new RectanglePayload(brush, Box, new CornerRadius(0), null);

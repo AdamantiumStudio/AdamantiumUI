@@ -24,7 +24,7 @@
                 <ControlTemplate TargetType="InfiniteCanvas">
                     <Grid>
                         <!-- What is on the plane, in the plane's own order - see Fluent's set: the canvas fills this
-                             itself, a layer per run of neighbours of the same sort. -->
+                             itself, a layer per run of neighbors of the same sort. -->
                         <Grid x:Name="PART_Layers"/>
 
                         <!-- The glass: what a gesture is making, over everything. -->
@@ -180,7 +180,7 @@
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Padding="{TemplateBinding Padding}">
                             <DockPanel LastChildFill="True">
-                                <!-- Coloured outright - see Fluent's set. -->
+                                <!-- Colored outright - see Fluent's set. -->
                                 <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
                                                   Content="{TemplateBinding Header}"
                                                   FontSize="11"
@@ -479,7 +479,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasSelectionBar">
                     <StackPanel Orientation="Horizontal">
-                        <!-- NO COLOUR HERE - see Fluent's set: a colour is set in the panel, where it is said as the
+                        <!-- NO COLOR HERE - see Fluent's set: a color is set in the panel, where it is said as the
                              three things it actually is. -->
                         <Button x:Name="PART_Front" Width="24" Height="22" MinWidth="0" MinHeight="0"
                                 MarginRight="3" Padding="0"

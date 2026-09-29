@@ -18,12 +18,12 @@ public class DockCompassTests
 
     private static readonly Rect Target = new(100, 200, 400, 300);
 
-    private static Vector2 Centre => new(Target.X + Target.Width / 2, Target.Y + Target.Height / 2);
+    private static Vector2 Center => new(Target.X + Target.Width / 2, Target.Y + Target.Height / 2);
 
     [Test]
-    public void TheCentreIndicator_MeansJoinTheseTabs()
+    public void TheCenterIndicator_MeansJoinTheseTabs()
     {
-        Assert.That(DockCompass.ZoneAt(Target, Centre, Size, Gap), Is.EqualTo(DockZone.Center));
+        Assert.That(DockCompass.ZoneAt(Target, Center, Size, Gap), Is.EqualTo(DockZone.Center));
     }
 
     [Test]
@@ -33,10 +33,10 @@ public class DockCompassTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Centre.X - step, Centre.Y), Size, Gap), Is.EqualTo(DockZone.Left));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Centre.X + step, Centre.Y), Size, Gap), Is.EqualTo(DockZone.Right));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Centre.X, Centre.Y - step), Size, Gap), Is.EqualTo(DockZone.Top));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Centre.X, Centre.Y + step), Size, Gap), Is.EqualTo(DockZone.Bottom));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X - step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Left));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X + step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Right));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X, Center.Y - step), Size, Gap), Is.EqualTo(DockZone.Top));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X, Center.Y + step), Size, Gap), Is.EqualTo(DockZone.Bottom));
         });
     }
 
@@ -49,7 +49,7 @@ public class DockCompassTests
         {
             Assert.That(DockCompass.ZoneAt(Target, new Vector2(Target.X + 4, Target.Y + 4), Size, Gap), Is.EqualTo(DockZone.None),
                 "a corner of the group is not a target");
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Centre.X + Size / 2 + Gap / 2, Centre.Y), Size, Gap),
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X + Size / 2 + Gap / 2, Center.Y), Size, Gap),
                 Is.EqualTo(DockZone.None), "the gap between two indicators is not a target");
         });
     }
@@ -101,19 +101,19 @@ public class DockCompassTests
         });
     }
 
-    /// <summary>The cross sits at the centre of the group aimed at - the same centre <see cref="DockCompass.ZoneAt"/>
+    /// <summary>The cross sits at the center of the group aimed at - the same center <see cref="DockCompass.ZoneAt"/>
     /// measures from. Drawn and hit have to be one arrangement, or the indicator the pointer lights up is not the one it
     /// is over.</summary>
     [Test]
-    public void TheCross_SitsAtTheCentreOfTheGroupAimedAt()
+    public void TheCross_SitsAtTheCenterOfTheGroupAimedAt()
     {
         var group = new Rect(400, 0, 400, 300);
-        var centre = AimedAt(group, DockZone.Center).Children[1];   // [preview, Center, Left, Top, Right, Bottom]
+        var center = AimedAt(group, DockZone.Center).Children[1];   // [preview, Center, Left, Top, Right, Bottom]
 
         Assert.Multiple(() =>
         {
-            Assert.That(centre.Bounds.X + centre.Bounds.Width / 2, Is.EqualTo(600).Within(0.5));
-            Assert.That(centre.Bounds.Y + centre.Bounds.Height / 2, Is.EqualTo(150).Within(0.5));
+            Assert.That(center.Bounds.X + center.Bounds.Width / 2, Is.EqualTo(600).Within(0.5));
+            Assert.That(center.Bounds.Y + center.Bounds.Height / 2, Is.EqualTo(150).Within(0.5));
         });
     }
 
@@ -123,11 +123,11 @@ public class DockCompassTests
     private const double Inset = 12;
 
     /// <summary>
-    /// The four EDGE anchors: "along that whole side of the area". They sit centred on each side, inset from it, and
+    /// The four EDGE anchors: "along that whole side of the area". They sit centered on each side, inset from it, and
     /// they are the area's - unlike the cross, which follows whichever group the pointer is over.
     /// </summary>
     [Test]
-    public void EachEdgeAnchor_SitsCentredOnItsOwnSide()
+    public void EachEdgeAnchor_SitsCenteredOnItsOwnSide()
     {
         Assert.Multiple(() =>
         {
@@ -150,7 +150,7 @@ public class DockCompassTests
             Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(2, 400), Size, Inset), Is.EqualTo(DockZone.None),
                 "nor is the very edge - the anchor is inset from it");
             Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(Inset + Size / 2, 60), Size, Inset), Is.EqualTo(DockZone.None),
-                "the left anchor is centred, not a strip running the whole side");
+                "the left anchor is centered, not a strip running the whole side");
         });
     }
 
@@ -172,7 +172,7 @@ public class DockCompassTests
 
     /// <summary>Joining the tabs does not carve the group up, so the preview is the whole of it.</summary>
     [Test]
-    public void TheCentrePreview_IsTheWholeGroup()
+    public void TheCenterPreview_IsTheWholeGroup()
     {
         var preview = DockCompass.PreviewOf(Target, DockZone.Center);
 

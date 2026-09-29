@@ -54,7 +54,7 @@ public abstract class RangeLimitsBase : Control
     }
 
     // protected static so a subclass that wants a different default Minimum/Maximum (Slider/ProgressBar = 0..100,
-    // ScrollBar = 0..0) can re-use it in OverrideMetadata - keeping the re-coercion + OnLimitsChanged behaviour that
+    // ScrollBar = 0..0) can re-use it in OverrideMetadata - keeping the re-coercion + OnLimitsChanged behavior that
     // a fresh PropertyMetadata would otherwise drop. (Subclasses set the default via metadata, NOT a constructor set,
     // which would write Local priority and permanently mask a {Binding}/Style/Trigger on the property.)
     protected static void OnMinimumChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)

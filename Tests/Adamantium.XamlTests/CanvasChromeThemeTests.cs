@@ -282,9 +282,9 @@ public class CanvasChromeThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(align.IsEnabled, Is.True, "two things are selected and the button is still grey");
-            Assert.That(frame?.IsEnabled, Is.True, "something is selected and framing is still grey");
-            Assert.That(bin?.IsEnabled, Is.True, "there is something on the plane and the bin is still grey");
+            Assert.That(align.IsEnabled, Is.True, "two things are selected and the button is still gray");
+            Assert.That(frame?.IsEnabled, Is.True, "something is selected and framing is still gray");
+            Assert.That(bin?.IsEnabled, Is.True, "there is something on the plane and the bin is still gray");
         });
     }
 
@@ -760,7 +760,7 @@ public class CanvasChromeThemeTests
                 "a drawing was offered the graph's buttons");
         });
 
-        // ...AND THE EXPORT LIGHTS UP once there is something to write. A button that is always grey is a button that
+        // ...AND THE EXPORT LIGHTS UP once there is something to write. A button that is always gray is a button that
         // was never wired to the thing it does - which is exactly how the last row of these was found.
         Assert.That(canvas.ExportSvgCommand.CanExecute(null), Is.False, "an empty plane offered to export itself");
 
@@ -1026,7 +1026,7 @@ public class CanvasChromeThemeTests
         });
     }
 
-    // A COLOUR PICKED IN THE PANEL LANDS ON THE SHAPE. It lands on a control - the same panel, the same kind of row -
+    // A COLOR PICKED IN THE PANEL LANDS ON THE SHAPE. It lands on a control - the same panel, the same kind of row -
     // and on a shape nothing moved at all.
     [Test]
     [TestCase("Fluent")]
@@ -1055,7 +1055,7 @@ public class CanvasChromeThemeTests
         }
 
         Assert.That(rows.Keys, Does.Contain("Stroke").And.Contain("Fill"),
-            $"{theme}: a shape has no colour lines - it has: {string.Join(", ", rows.Keys)}");
+            $"{theme}: a shape has no color lines - it has: {string.Join(", ", rows.Keys)}");
 
         Assert.That(canvas.Inspector, Is.Not.Null,
             $"{theme}: the canvas was never handed the panel's grid, so a line written in it reaches nobody");
@@ -1072,9 +1072,9 @@ public class CanvasChromeThemeTests
 
     }
 
-    // SEVERAL SHAPES, EACH ITS OWN COLOUR. The line had no swatch at all then - a colour editor is refused an empty
-    // state, and objects that disagree leave the row empty - so on a plane where the shapes are different colours no
-    // colour could be picked for any of them. Controls hid it: theirs agree, so theirs had a swatch.
+    // SEVERAL SHAPES, EACH ITS OWN COLOR. The line had no swatch at all then - a color editor is refused an empty
+    // state, and objects that disagree leave the row empty - so on a plane where the shapes are different colors no
+    // color could be picked for any of them. Controls hid it: theirs agree, so theirs had a swatch.
     [Test]
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
@@ -1105,13 +1105,13 @@ public class CanvasChromeThemeTests
         }
 
         Assert.That(fill, Is.Not.Null, $"{theme}: no fill line for a selection of shapes");
-        Assert.That(fill.IsMixed, Is.True, $"{theme}: two different colours were read as one");
+        Assert.That(fill.IsMixed, Is.True, $"{theme}: two different colors were read as one");
 
         var swatch = Rows<ColorPickerButton>(fill).Count > 0 ? Rows<ColorPickerButton>(fill)[0] : null;
 
-        Assert.That(swatch, Is.Not.Null, $"{theme}: the line offers nothing to pick a colour with");
+        Assert.That(swatch, Is.Not.Null, $"{theme}: the line offers nothing to pick a color with");
         Assert.That(swatch.IsIndeterminate, Is.True,
-            $"{theme}: the swatch shows a colour neither of them holds");
+            $"{theme}: the swatch shows a color neither of them holds");
 
         swatch.SelectedColor = Colors.Red;
         Settle(window);
@@ -1124,7 +1124,7 @@ public class CanvasChromeThemeTests
     }
 
     // A DRAWING READ IN FROM AN SVG can be painted too. It had no set of its own at all, so a whole imported icon
-    // arrived with nowhere to say what colour it is.
+    // arrived with nowhere to say what color it is.
     [Test]
     [TestCase("Fluent")]
     [TestCase("EditorPro")]
@@ -1154,13 +1154,13 @@ public class CanvasChromeThemeTests
         }
 
         Assert.That(fill, Is.Not.Null,
-            $"{theme}: an imported drawing has no colour line - selection={canvas.Selection.Count}"
+            $"{theme}: an imported drawing has no color line - selection={canvas.Selection.Count}"
             + $" sort={path.Sort} it shows: {string.Join(", ", seen)}");
 
         fill.Owner.Write(fill, Colors.Red);
         Settle(window);
 
-        Assert.That((path.Fill as SolidColorBrush)?.Color, Is.EqualTo(Colors.Red), $"{theme}: the colour went nowhere");
+        Assert.That((path.Fill as SolidColorBrush)?.Color, Is.EqualTo(Colors.Red), $"{theme}: the color went nowhere");
     }
 
     // ...AND WHEN THEY AGREE, all of them move. A write INTO a value edits the object holding it, and the row's copy is
@@ -1191,7 +1191,7 @@ public class CanvasChromeThemeTests
             if (row.Definition is SolidColorBrushProperty && (row.Definition.Header as string) == "Fill") fill = row;
         }
 
-        Assert.That(fill?.IsMixed, Is.False, "two shapes of one colour were read as disagreeing");
+        Assert.That(fill?.IsMixed, Is.False, "two shapes of one color were read as disagreeing");
 
         fill.Owner.Write(fill, Colors.Red);
         Settle(window);

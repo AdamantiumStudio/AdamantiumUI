@@ -3,7 +3,7 @@
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the brushes tab's region under the key "Noise"; the DataContext is the tab's own view-model. -->
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Noise — live (drag to re-bake; tick “Mid colour” for a 3-colour gradient-map ramp)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="Noise — live (drag to re-bake; tick “Mid color” for a 3-color gradient-map ramp)" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Margin="10">
                 <Rectangle Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Fill="{Binding LiveNoise}"
@@ -108,7 +108,7 @@
                                        Value="{Binding NoiseGain, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <CheckBox Content="Fire palette (off = use colours below)" IsChecked="{Binding NoiseFirePalette, Mode=TwoWay}" MarginBottom="6"
+                <CheckBox Content="Fire palette (off = use colors below)" IsChecked="{Binding NoiseFirePalette, Mode=TwoWay}" MarginBottom="6"
                           Visibility="{Binding NoiseKind, Converter={conv:NoiseParamVisibilityConverter}, ConverterParameter=FirePalette}"/>
                 <StackPanel Orientation="Vertical">
                     <StackPanel.Visibility>
@@ -117,8 +117,8 @@
                             <Binding Path="NoiseFirePalette"/>
                         </MultiBinding>
                     </StackPanel.Visibility>
-                    <CheckBox Content="Mid colour (3-colour gradient-map ramp)" IsChecked="{Binding NoiseUseMid, Mode=TwoWay}" MarginBottom="6"/>
-                    <TextBlock Text="Colours (low / mid / high — mid used only when ticked)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <CheckBox Content="Mid color (3-color gradient-map ramp)" IsChecked="{Binding NoiseUseMid, Mode=TwoWay}" MarginBottom="6"/>
+                    <TextBlock Text="Colors (low / mid / high — mid used only when ticked)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
                         <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding NoiseColor1, Mode=TwoWay}" MarginRight="8"/>
                         <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding NoiseMid, Mode=TwoWay}" MarginRight="8"/>
@@ -128,7 +128,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- The swatch row belongs to THIS stand, not to the tab: one labelled square per noise type, so what the
+        <!-- The swatch row belongs to THIS stand, not to the tab: one labeled square per noise type, so what the
              sliders above can be pointed at is on screen beside them. -->
         <TextBlock Text="Noise types (all selectable in the live panel above)" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">

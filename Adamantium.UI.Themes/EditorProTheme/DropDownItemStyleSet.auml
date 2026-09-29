@@ -15,7 +15,7 @@
         <Setter Property="Padding" Value="{ResourceReference PaddingRow}"/>
         <Setter Property="MinHeight" Value="{ResourceReference RowHeight}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
-        <!-- Left and centred, unlike a list row: a drop-down row is a LABEL, never a card, so there is nothing here
+        <!-- Left and centered, unlike a list row: a drop-down row is a LABEL, never a card, so there is nothing here
              that would want the whole slot. -->
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

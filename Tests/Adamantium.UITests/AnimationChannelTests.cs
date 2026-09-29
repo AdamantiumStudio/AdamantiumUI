@@ -27,7 +27,7 @@ public class AnimationChannelTests
         Assert.That(AnimationChannels.Of(new SolidColorBrush(Colors.Red), Brush.OpacityProperty),
             Is.EqualTo(CompositorChannel.Paint));
         Assert.That(AnimationChannels.Of(new GradientStop(Colors.White, 0), GradientStop.OffsetProperty),
-            Is.EqualTo(CompositorChannel.Paint), "the shimmer sweeps its band by moving stops - pure colour");
+            Is.EqualTo(CompositorChannel.Paint), "the shimmer sweeps its band by moving stops - pure color");
     }
 
     [Test]

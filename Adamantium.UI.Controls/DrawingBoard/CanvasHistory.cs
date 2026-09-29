@@ -106,7 +106,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 
     /// <summary>Adds a step. A new one throws away whatever was undone: the drawing has taken a different turn, and a
     /// redo onto it would put back something that no longer follows from anything.
-    /// <para>Public, because the canvas is not the only thing that changes a drawing: an inspector writing a colour
+    /// <para>Public, because the canvas is not the only thing that changes a drawing: an inspector writing a color
     /// records its own step, and so may an application with edits of its own.</para></summary>
     public void Push(ICanvasStep step)
     {

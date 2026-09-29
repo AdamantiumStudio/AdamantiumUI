@@ -11,9 +11,9 @@
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
         <Setter Property="BackgroundPressed" Value="{ResourceReference ControlFillColorTertiary}"/>
-        <!-- A WASH, not a plate of accent, and the row keeps its own colours - the same selection language Fluent uses
+        <!-- A WASH, not a plate of accent, and the row keeps its own colors - the same selection language Fluent uses
              and the same one the table now uses. A solid accent swallows whatever the row draws itself: a check box in
-             the accent, an icon, a colour that MEANS something. -->
+             the accent, an icon, a color that MEANS something. -->
         <Setter Property="BackgroundSelected" Value="{ThemeResource AccentFillColorSelection}"/>
         <Setter Property="ForegroundSelected" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -22,7 +22,7 @@
         <!-- The selection plate stands in from the list's edge. On the ITEM, so a view can override it the ordinary
              way; it costs the item that much of its content, which a grid of small tiles feels. -->
         <Setter Property="Margin" Value="{ResourceReference ListRowPlateInset}"/>
-        <!-- Stretch on both axes, as Fluent's does and for its reason: content that wants to be centred can say so
+        <!-- Stretch on both axes, as Fluent's does and for its reason: content that wants to be centered can say so
              about itself, while content that wants the whole slot cannot get back height never handed to it. -->
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>

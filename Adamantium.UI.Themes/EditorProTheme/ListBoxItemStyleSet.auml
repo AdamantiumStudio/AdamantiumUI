@@ -23,7 +23,7 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <!-- Stretch on BOTH axes so the row's content fills it: a templated card spans the full width, and plain text
              still reads left inside the stretched presenter. Vertically too, and that is the recoverable choice -
-             content that wants to be centred says so about ITSELF, whereas content that wants the whole slot cannot get
+             content that wants to be centered says so about ITSELF, whereas content that wants the whole slot cannot get
              back height the container never handed down. -->
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>

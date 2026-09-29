@@ -62,7 +62,7 @@
                             <Border Grid.Column="1" Width="{TemplateBinding Indent}"/>
                             <!-- Pinned to its own box: the base ToggleButton style reaches this button through the IS-A
                                  selector and would otherwise lend it a button's height and padding, which at this row
-                                 height pushes the arrow off centre. -->
+                                 height pushes the arrow off center. -->
                             <ToggleButton x:Name="PART_Expander" Grid.Column="2"
                                     Template="{TemplateBinding ExpanderTemplate}"
                                     Width="{ResourceReference ExpanderBoxSize}"
@@ -91,7 +91,7 @@
             <Setter TargetName="PART_Expander" Property="Visibility" Value="Hidden"/>
         </PropertyTrigger>
         <!-- Selection last, so it wins the row's ground over hover. The label brightens to primary instead of flipping
-             to the on-accent colour: nothing accent-coloured is behind it. -->
+             to the on-accent color: nothing accent-colored is behind it. -->
         <PropertyTrigger Property="IsSelected" Value="true">
             <Setter TargetName="Root" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
             <Setter TargetName="SelectionBar" Property="Visibility" Value="Visible"/>

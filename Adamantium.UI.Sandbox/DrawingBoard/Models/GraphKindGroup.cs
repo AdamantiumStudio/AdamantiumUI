@@ -5,7 +5,7 @@ namespace Adamantium.UI.Sandbox.DrawingBoard.Models;
 
 /// <summary>One SECTION of the palette - a family of kinds under its name, with the kinds as its children.
 /// <para>A tree and not a flat list with a word beside each row: what a person looks for is "something that mixes", and
-/// a family is the answer to that. The section is only a way of showing the catalogue - the catalogue itself is a flat
+/// a family is the answer to that. The section is only a way of showing the catalog - the catalog itself is a flat
 /// list of kinds, and what a node IS has nothing to do with which section it was picked from.</para></summary>
 public sealed class GraphKindGroup
 {

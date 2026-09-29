@@ -13,7 +13,7 @@ public interface IWindowRenderer : IDisposable
 
     /// <summary>Render resolution multiplier over the window's logical size: presenter + viewport are sized
     /// ClientSize x RenderScale, while the projection stays the logical size. 1 = on-screen 1:1; the designer sets it
-    /// to the zoom factor so geometry/text re-rasterise crisply at design x scale.</summary>
+    /// to the zoom factor so geometry/text re-rasterize crisply at design x scale.</summary>
     public double RenderScale { get; set; }
         
     public void SetWindow(IWindow window);

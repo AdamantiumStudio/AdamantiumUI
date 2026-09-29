@@ -11,7 +11,7 @@ struct CanvasGridData
 {
     float4 Bounds;     // NODE-local x, y, w, h
     float4 Params;     // .x transform slot, .y marks (1 dots, 2 lines), .z opacity slot, .w mark size (logical px)
-    float4 Camera;     // .xy the lattice's PHASE within one cell (logical px) - NEVER the distance travelled, which a
+    float4 Camera;     // .xy the lattice's PHASE within one cell (logical px) - NEVER the distance traveled, which a
                        // float cannot carry; .z screen px per world unit, .w spare
     float4 Step;       // .x the step to draw (world units, ALREADY coarsened); .y coarsening; .z 1 / the pitch a mark
                        // must keep on screen, as a RECIPROCAL - the shader must not divide; .w spare

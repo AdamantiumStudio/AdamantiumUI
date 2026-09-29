@@ -28,7 +28,7 @@
 
             <!-- PAINTED WITH IT. The box is the sliders, not what the figure happens to measure - same reason as the
                  ImageBrush stand: a figure that keeps its proportions would otherwise slide along the box's edge. -->
-            <!-- GREY, not the near-black the others use: the source's own background is near-black too, so on a dark
+            <!-- GRAY, not the near-black the others use: the source's own background is near-black too, so on a dark
                  box the figure's outline vanished into it and only the tinted content showed where the fill was. -->
             <Border Width="300" Height="230" Margin="10" Background="#3A4048">
                 <Grid Width="{Binding VisualWidth}"

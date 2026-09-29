@@ -446,8 +446,8 @@ public class Program
             eyes.Start();
         }
 
-        // ADAM_CANVAS_PAINT=1: draw a shape, select it, and recolour it THROUGH THE PANEL'S OWN ROW - the write a hand
-        // makes, on the live renderer. Reported: a colour picked for a shape changes nothing, while the same row on a
+        // ADAM_CANVAS_PAINT=1: draw a shape, select it, and recolor it THROUGH THE PANEL'S OWN ROW - the write a hand
+        // makes, on the live renderer. Reported: a color picked for a shape changes nothing, while the same row on a
         // control does.
         if (Environment.GetEnvironmentVariable("ADAM_CANVAS_PAINT") is "1")
         {
@@ -840,7 +840,7 @@ public class Program
                     canvas.Scene.Reset(Array.Empty<Adamantium.UI.Controls.DrawingBoard.ICanvasItem>());
 
                     // ADAM_CANVAS_ONLY=<n>: put ONE of the drawing's paths down instead of all of them. A shape that
-                    // is right alone and wrong beside its neighbours is a fact about the batch, not about the shape.
+                    // is right alone and wrong beside its neighbors is a fact about the batch, not about the shape.
                     if (Environment.GetEnvironmentVariable("ADAM_CANVAS_ONLY") is { } single
                         && int.TryParse(single, out var which))
                     {
@@ -1134,7 +1134,7 @@ public class Program
                 var limit = Environment.GetEnvironmentVariable("ADAM_PROBE_SECONDS") is { } sec ? double.Parse(sec) : 20;
                 // WHO marks layout dirty, by type + the property that changed. The per-second columns say how MUCH layout
                 // there is; only this says whose it is - e.g. whether a label beside the slider, re-measuring as its text
-                // changes width, is shoving its neighbours and cascading into the whole window.
+                // changes width, is shoving its neighbors and cascading into the whole window.
                 var countLayout = Environment.GetEnvironmentVariable("ADAM_LAYOUT_COUNT") == "1";
                 if (countLayout) Adamantium.UI.Core.Diagnostics.LayoutTrace.Counting = true;
                 // ADAM_LAYOUT_CALLERS=1: also walk the stack for WHO asked. Slow, and the only thing that answers
@@ -1731,7 +1731,7 @@ public class Program
                         System.Threading.Thread.Sleep(300);
                         Adamantium.UI.Core.Diagnostics.LayoutTrace.Counting = true;
 
-                        // Measured apart: moving (small pans, no structural change) and travelling (full sweeps where
+                        // Measured apart: moving (small pans, no structural change) and traveling (full sweeps where
                         // headers cross the clip and chevrons toggle).
                         var moveFrames = Run(4, () => strip.Pan(_pan = -_pan));
                         var moveFps = moveFrames / 4.0;
@@ -1749,7 +1749,7 @@ public class Program
                         Adamantium.UI.Core.Diagnostics.LayoutTrace.Counting = false;
                         System.IO.File.AppendAllText(log + ".strip.txt",
                             $"moving the strip (no clip crossings): {moveFps:0} fps, {movePans} pans" + Environment.NewLine
-                            + $"travelling end to end: {travelFps:0} fps, {_panned - movePans} pans" + Environment.NewLine
+                            + $"traveling end to end: {travelFps:0} fps, {_panned - movePans} pans" + Environment.NewLine
                             + Adamantium.UI.Core.Diagnostics.FrameTrace.Percentiles() + Environment.NewLine
                             + Adamantium.UI.Rendering.LayerProbe.Dump() + Environment.NewLine
                             + Adamantium.UI.Core.Diagnostics.LayoutTrace.DumpCounts() + Environment.NewLine);

@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// The soft band under a shape - an aura or a shadow. GPU tests because the whole point is WHERE the colour lands and
+/// The soft band under a shape - an aura or a shadow. GPU tests because the whole point is WHERE the color lands and
 /// how it fades, and nothing on the CPU side can see that: the band is the shape's own signed distance read further out,
 /// so only the pixels say whether the falloff, the offset and the clip-to-outside are right.
 /// </summary>
@@ -78,7 +78,7 @@ public class HaloRenderTests
         Assert.That(justOutside.R, Is.GreaterThan(60), $"nothing was painted beside the shape: {justOutside}");
     }
 
-    // ...and it FADES: the whole difference between a glow and a coloured border is that the far side is fainter.
+    // ...and it FADES: the whole difference between a glow and a colored border is that the far side is fainter.
     [Test]
     public void AnAuraFadesWithDistance()
     {
@@ -113,7 +113,7 @@ public class HaloRenderTests
     }
 
     // An outer band is NOT painted beneath the shape, as CSS clips a box-shadow. Otherwise a translucent card darkens
-    // itself, and the fill it was given is no longer the colour on screen.
+    // itself, and the fill it was given is no longer the color on screen.
     [Test]
     public void AnOuterBandIsNotPaintedUnderTheShape()
     {
@@ -171,7 +171,7 @@ public class HaloRenderTests
         var pixels = Draw(new Aura { Radius = 26, Color = Colors.Red, Opacity = 1.0 },
             new Shadow { OffsetX = 0, OffsetY = 0, BlurRadius = 26, Color = Colors.Black, Opacity = 1.0 });
 
-        // Both bands are at full strength here, so whichever is drawn LAST is the colour on screen.
+        // Both bands are at full strength here, so whichever is drawn LAST is the color on screen.
         var beside = At_(pixels, At + Size / 2, At - 4);
         Assert.That(beside.R, Is.GreaterThan(90), $"the shadow covered the aura: {beside}");
     }
@@ -184,7 +184,7 @@ public class HaloRenderTests
         var pixels = Draw(new Aura { Radius = 20, Color = Colors.Red, Opacity = 1.0, Inner = true }, null);
 
         var justInside = At_(pixels, At + Size / 2, At + 4);       // a few px inside the top edge
-        var middle = At_(pixels, At + Size / 2, At + Size / 2);    // the shape's centre, past the reach
+        var middle = At_(pixels, At + Size / 2, At + Size / 2);    // the shape's center, past the reach
 
         Assert.That(justInside.R - justInside.B, Is.GreaterThan(60),
             $"the fill covered the inner glow: {justInside}");
@@ -303,7 +303,7 @@ public class HaloRenderTests
             $"the living band is as even as the still one: {Spread(alive)} against {Spread(still)}");
     }
 
-    // A living aura with a PALETTE travels its colours rather than painting one - so more than one hue reaches the band.
+    // A living aura with a PALETTE travels its colors rather than painting one - so more than one hue reaches the band.
     [Test]
     public void ALivingAuraTravelsItsPalette()
     {
@@ -331,8 +331,8 @@ public class HaloRenderTests
             }
         }
 
-        Assert.That(reds, Is.GreaterThan(10), "the palette's first colour never reached the band");
-        Assert.That(greens, Is.GreaterThan(10), "the palette's second colour never reached the band");
+        Assert.That(reds, Is.GreaterThan(10), "the palette's first color never reached the band");
+        Assert.That(greens, Is.GreaterThan(10), "the palette's second color never reached the band");
     }
 
     // How far apart the band's outer edge sits on different sides of the shape - a still band is the same everywhere, a
@@ -446,7 +446,7 @@ public class HaloRenderTests
 
     // A recolored aura or shadow shows on the very next frame, without a walk.
     [Test]
-    public void RecolouringAnAura_ShowsOnTheNextFrame_WithoutAWalk()
+    public void RecoloringAnAura_ShowsOnTheNextFrame_WithoutAWalk()
     {
         var control = new TestControl
         {
@@ -470,9 +470,9 @@ public class HaloRenderTests
         var patched = Snapshot();
         var beside = At_(patched, At + Size / 2, At - 5);   // in the band, just outside the shape
         Assert.That(_renderer.Cache.LastFrameReplayed, Is.True,
-            "a recolour must not cost the frame a walk - the band is patched where it already sits");
+            "a recolor must not cost the frame a walk - the band is patched where it already sits");
         Assert.That(beside.G, Is.GreaterThan(beside.R + 20),
-            $"the aura is still painting the old colour a frame later: {beside}");
+            $"the aura is still painting the old color a frame later: {beside}");
 
         RenderDirty.MarkStructural();
         Assert.That(_renderer.RenderFrame(root), Is.True);

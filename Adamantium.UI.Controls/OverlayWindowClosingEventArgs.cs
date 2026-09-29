@@ -7,7 +7,7 @@ public class OverlayWindowClosingEventArgs : EventArgs
 {
     public OverlayWindowClosingEventArgs(object result) => Result = result;
 
-    /// <summary>The result the window is closing with (what <see cref="OverlayWindow.Result"/> becomes if not cancelled).</summary>
+    /// <summary>The result the window is closing with (what <see cref="OverlayWindow.Result"/> becomes if not canceled).</summary>
     public object Result { get; }
 
     /// <summary>Set to true to cancel the close and keep the window open.</summary>

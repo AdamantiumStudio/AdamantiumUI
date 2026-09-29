@@ -17,7 +17,7 @@ public class SelectionAdorner : Adorner
     {
     }
 
-    /// <summary>Frame + handle outline colour. Default a designer blue.</summary>
+    /// <summary>Frame + handle outline color. Default a designer blue.</summary>
     public Brush Stroke { get; set; } = new SolidColorBrush(Colors.CornflowerBlue);
 
     /// <summary>Corner handle fill. Default white.</summary>

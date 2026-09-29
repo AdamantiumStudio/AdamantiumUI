@@ -97,12 +97,12 @@ public class TabPanel : VirtualizingPanel
         if (IsVertical(direction) != (Orientation == Orientation.Vertical))
             return null;
 
-        if (!IsItemsHost) return Neighbour(from, IsForward(direction));
+        if (!IsItemsHost) return Neighbor(from, IsForward(direction));
 
-        // By ITEM INDEX: the base walks realized children, in realization order, and the neighbour an arrow at the edge
+        // By ITEM INDEX: the base walks realized children, in realization order, and the neighbor an arrow at the edge
         // wants is exactly the one not realized - so the arrows stopped at the window's edge, mid-strip.
         var index = Owner.ItemContainerGenerator.IndexFromContainer(from);
-        if (index < 0) return Neighbour(from, IsForward(direction));
+        if (index < 0) return Neighbor(from, IsForward(direction));
 
         var next = index + (IsForward(direction) ? 1 : -1);
         return next >= 0 && next < Owner.Items.Count ? RealizeInWindow(next) : null;

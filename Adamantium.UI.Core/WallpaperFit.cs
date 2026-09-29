@@ -5,7 +5,7 @@ namespace Adamantium.UI.Core;
 /// sitting on - which is the one thing that gives the illusion away.</summary>
 public enum WallpaperFit
 {
-    /// <summary>Centred at its own size, background colour around it.</summary>
+    /// <summary>Centered at its own size, background color around it.</summary>
     Center,
 
     /// <summary>Repeated from the top-left.</summary>

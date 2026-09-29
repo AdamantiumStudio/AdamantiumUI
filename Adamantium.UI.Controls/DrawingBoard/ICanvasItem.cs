@@ -47,7 +47,7 @@ public interface ICanvasItem
     /// <summary>The one color this item reads as, or null; each item knows where its own color lives.</summary>
     Color? Paint => null;
 
-    /// <summary>...and paints it that colour. Does nothing for an item that has no colour to set, which is the honest
+    /// <summary>...and paints it that color. Does nothing for an item that has no color to set, which is the honest
     /// answer rather than a refusal: whoever paints a selection paints what can be painted and leaves the rest.</summary>
     void PaintWith(Color color) { }
 

@@ -3,7 +3,7 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Buttons;
 
-/// <summary>A standard clickable button. Click/command/press behaviour lives in <see cref="ButtonBase"/>.</summary>
+/// <summary>A standard clickable button. Click/command/press behavior lives in <see cref="ButtonBase"/>.</summary>
 public class Button : ButtonBase
 {
     public static readonly AdamantiumProperty IsDefaultProperty = AdamantiumProperty.Register(nameof(IsDefault),

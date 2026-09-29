@@ -60,50 +60,50 @@ public class MacOsRangeBandTests
                 ((IUIComponent)track).Bounds);
     }
 
-    private static double CentreY(Rect r) => r.Y + r.Height / 2;
-    private static double CentreX(Rect r) => r.X + r.Width / 2;
+    private static double CenterY(Rect r) => r.Y + r.Height / 2;
+    private static double CenterX(Rect r) => r.X + r.Width / 2;
 
     [Test]
-    public void TheBandReachesBothThumbCentres_Horizontally()
+    public void TheBandReachesBothThumbCenters_Horizontally()
     {
         var (band, lower, upper, track) = Place(Orientation.Horizontal);
         TestContext.WriteLine($"track={track} band={band} lower={lower} upper={upper}");
 
         Assert.Multiple(() =>
         {
-            Assert.That(band.X, Is.EqualTo(CentreX(lower)).Within(0.51), "the band starts at the lower thumb's centre");
-            Assert.That(band.Right, Is.EqualTo(CentreX(upper)).Within(0.51), "...and ends at the upper one's");
+            Assert.That(band.X, Is.EqualTo(CenterX(lower)).Within(0.51), "the band starts at the lower thumb's center");
+            Assert.That(band.Right, Is.EqualTo(CenterX(upper)).Within(0.51), "...and ends at the upper one's");
         });
     }
 
     /// <summary>The sandbox's own vertical range slider, number for number - the one the gap was seen on.</summary>
     [Test]
-    public void TheBandReachesBothThumbCentres_Vertically_AsTheSandboxBuildsIt()
+    public void TheBandReachesBothThumbCenters_Vertically_AsTheSandboxBuildsIt()
     {
         var (band, lower, upper, track) = Place(Orientation.Vertical, minimumRange: 16, bandThickness: 8);
         TestContext.WriteLine($"track={track} band={band} lower={lower} upper={upper}");
-        TestContext.WriteLine($"band reaches {CentreY(upper) - band.Y} past the upper centre, " +
-                              $"{band.Bottom - CentreY(lower)} past the lower one");
+        TestContext.WriteLine($"band reaches {CenterY(upper) - band.Y} past the upper center, " +
+                              $"{band.Bottom - CenterY(lower)} past the lower one");
 
         Assert.Multiple(() =>
         {
-            Assert.That(band.Y, Is.EqualTo(CentreY(upper)).Within(0.51), "the band starts at the upper thumb's centre");
-            Assert.That(band.Bottom, Is.EqualTo(CentreY(lower)).Within(0.51), "...and ends at the lower one's");
+            Assert.That(band.Y, Is.EqualTo(CenterY(upper)).Within(0.51), "the band starts at the upper thumb's center");
+            Assert.That(band.Bottom, Is.EqualTo(CenterY(lower)).Within(0.51), "...and ends at the lower one's");
         });
     }
 
     [Test]
-    public void TheBandReachesBothThumbCentres_Vertically()
+    public void TheBandReachesBothThumbCenters_Vertically()
     {
         var (band, lower, upper, track) = Place(Orientation.Vertical);
         TestContext.WriteLine($"track={track} band={band} lower={lower} upper={upper}");
 
-        // Reversed: the UPPER value is at the top, so the band runs from the upper thumb's centre down to the lower
+        // Reversed: the UPPER value is at the top, so the band runs from the upper thumb's center down to the lower
         // thumb's.
         Assert.Multiple(() =>
         {
-            Assert.That(band.Y, Is.EqualTo(CentreY(upper)).Within(0.51), "the band starts at the upper thumb's centre");
-            Assert.That(band.Bottom, Is.EqualTo(CentreY(lower)).Within(0.51), "...and ends at the lower one's");
+            Assert.That(band.Y, Is.EqualTo(CenterY(upper)).Within(0.51), "the band starts at the upper thumb's center");
+            Assert.That(band.Bottom, Is.EqualTo(CenterY(lower)).Within(0.51), "...and ends at the lower one's");
         });
     }
 
@@ -132,14 +132,14 @@ public class MacOsRangeBandTests
         var vertical = orientation == Orientation.Vertical;
         var lowerBounds = ((IUIComponent)track.LowerThumb).Bounds;
         var upperBounds = ((IUIComponent)track.UpperThumb).Bounds;
-        var atLower = vertical ? CentreY(lowerBounds) : CentreX(lowerBounds);
-        var atUpper = vertical ? CentreY(upperBounds) : CentreX(upperBounds);
+        var atLower = vertical ? CenterY(lowerBounds) : CenterX(lowerBounds);
+        var atUpper = vertical ? CenterY(upperBounds) : CenterX(upperBounds);
 
         var grabbedAtLower = slider.CoveringHandle(atLower, vertical);
         var grabbedAtUpper = slider.CoveringHandle(atUpper, vertical);
-        TestContext.WriteLine($"at the lower centre ({atLower}): " +
+        TestContext.WriteLine($"at the lower center ({atLower}): " +
                               $"{(ReferenceEquals(grabbedAtLower, track.CenterThumb) ? "band" : "thumb")}; " +
-                              $"at the upper centre ({atUpper}): " +
+                              $"at the upper center ({atUpper}): " +
                               $"{(ReferenceEquals(grabbedAtUpper, track.CenterThumb) ? "band" : "thumb")}");
 
         Assert.Multiple(() =>
@@ -169,6 +169,6 @@ public class MacOsRangeBandTests
 
         var track = (RangeTrack)slider.GetTemplateChild("PART_Track");
         var band = ((IUIComponent)track.CenterThumb).Bounds;
-        Assert.That(slider.CoveringHandle(CentreX(band), vertical: false), Is.SameAs(track.CenterThumb));
+        Assert.That(slider.CoveringHandle(CenterX(band), vertical: false), Is.SameAs(track.CenterThumb));
     }
 }

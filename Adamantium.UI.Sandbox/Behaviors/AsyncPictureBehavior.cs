@@ -51,7 +51,7 @@ public class AsyncPictureBehavior : Behavior<Image>
             }
             catch
             {
-                // A picture no decoder recognises just never appears - it must not take the list down with it.
+                // A picture no decoder recognizes just never appears - it must not take the list down with it.
             }
 
             // Back onto the LOOP thread, which is the one that owns the visual tree - hence Post, not Invoke: Invoke

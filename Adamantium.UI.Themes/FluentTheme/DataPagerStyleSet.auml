@@ -12,7 +12,7 @@
 
         <!-- The pager takes the width it is given and puts its buttons at the LEADING edge, under the first column of
              the list it belongs to. Alignment is a SETTER rather than a constant in the template, so an author who
-             wants the row centred or trailing says so on the control. -->
+             wants the row centered or trailing says so on the control. -->
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

@@ -208,7 +208,7 @@
 
                     <ControlTemplate.Triggers>
                         <!-- PINNED: the strip scrolls UNDER this header, so it stops being transparent and takes the
-                             band's own colour. Declared before the drag and the sort so those still win. -->
+                             band's own color. Declared before the drag and the sort so those still win. -->
                         <PropertyTrigger Property="IsFrozen" Value="true">
                             <Setter TargetName="HeaderBg" Property="Background"
                                     Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
@@ -303,7 +303,7 @@
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
     </Style>
 
-    <!-- A group row takes the band's colour, not a stripe of the zebra - see the macOS set. -->
+    <!-- A group row takes the band's color, not a stripe of the zebra - see the macOS set. -->
     <Style Selector="DataGridRow[IsGroup=true]">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
     </Style>
@@ -316,7 +316,7 @@
 
     <!-- A fault in the RECORD, not in any one of its cells - a "from" later than a "to". It washes the whole row for
          exactly that reason: marking one of the cells involved would name the wrong culprit. Through the row's own
-         brush, so a page that names its colour is obeyed here as it is on the cells. -->
+         brush, so a page that names its color is obeyed here as it is on the cells. -->
     <Style Selector="DataGridRow[HasValidationError=true]">
         <Setter Property="Background" Value="{Self ValidationErrorBrush}"/>
     </Style>
@@ -487,7 +487,7 @@
                         <PropertyTrigger Property="IsExpanded" Value="true">
                             <Setter TargetName="Expander" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
                         </PropertyTrigger>
-                        <!-- A WASH, not a plate, and the content keeps its colours - see the macOS set. -->
+                        <!-- A WASH, not a plate, and the content keeps its colors - see the macOS set. -->
                         <!-- FOUND by the search - see the macOS set for why it is a wash of its own and why it stands
                              before the selection. -->
                         <PropertyTrigger Property="IsSearchMatch" Value="true">
@@ -520,14 +520,14 @@
                         <!-- An editor takes the WHOLE cell - see the macOS set. -->
                         <PropertyTrigger Property="IsEditing" Value="true">
                             <Setter TargetName="CellBorder" Property="Padding" Value="0"/>
-                            <!-- ...the WHOLE of it, top to bottom. The content is centred and sized to itself the rest
+                            <!-- ...the WHOLE of it, top to bottom. The content is centered and sized to itself the rest
                                  of the time, which is right for a value being read and leaves an editor standing a few
                                  pixels short of the cell it is filling in. -->
                             <Setter TargetName="PART_ContentPresenter" Property="VerticalAlignment" Value="Stretch"/>
                         </PropertyTrigger>
                         <!-- The three meanings a table normally distinguishes. A column states them through
                              StateBinding or works them out with a StateRule; what they LOOK like is decided here, which
-                             is the whole reason a rule returns a meaning and not a colour. -->
+                             is the whole reason a rule returns a meaning and not a color. -->
                         <PropertyTrigger Property="State" Value="Error">
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                                     Value="{ObservableResource SystemFillColorCritical}"/>
@@ -843,7 +843,7 @@
         </Setter>
     </Style>
 
-    <!-- A total is set apart by COLOUR - see the macOS set. -->
+    <!-- A total is set apart by COLOR - see the macOS set. -->
     <Style Selector="DataGridFooterCell">
         <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeCaption}"/>

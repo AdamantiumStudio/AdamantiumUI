@@ -50,7 +50,7 @@ public class PropertyReadBenchmark
         TestContext.WriteLine($"with lock : {locked.ElapsedMilliseconds,6} ms  ({reads / (double)locked.ElapsedMilliseconds / 1000:F1} M reads/s)");
         TestContext.WriteLine($"the lock cost {locked.ElapsedMilliseconds - lockFree.ElapsedMilliseconds} ms, " +
                               $"i.e. x{locked.ElapsedMilliseconds / (double)lockFree.ElapsedMilliseconds:F2}");
-        TestContext.WriteLine($"(sum {sum:F0}, warm {warm:F0} - kept so nothing is optimised away)");
+        TestContext.WriteLine($"(sum {sum:F0}, warm {warm:F0} - kept so nothing is optimized away)");
     }
 
     // What measure and arrange read off every node, every pass.

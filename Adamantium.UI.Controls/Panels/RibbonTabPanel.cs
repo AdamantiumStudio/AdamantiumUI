@@ -29,7 +29,7 @@ public class RibbonTabPanel : Panel
     // The headers in the order they are LAID OUT, which is not the order they were authored in - see Order().
     private readonly List<IMeasurableComponent> _order = [];
 
-    // (first header index, last header index, group) for each run of neighbouring tabs sharing a group.
+    // (first header index, last header index, group) for each run of neighboring tabs sharing a group.
     private readonly List<(int First, int Last, RibbonContextualGroup Group)> _runs = [];
 
     /// <summary>Left/Right walk the headers as they STAND, ledges skipped - the ledge is a label, and the laid-out
@@ -141,7 +141,7 @@ public class RibbonTabPanel : Panel
 
         edges[_order.Count] = x;
 
-        // The plate is the TITLE BAND over its run; the tabs below carry their own colour, and stand as tabs rather
+        // The plate is the TITLE BAND over its run; the tabs below carry their own color, and stand as tabs rather
         // than as holes cut in a slab.
         for (var i = 0; i < _runs.Count && i < _ledges.Count; i++)
         {
@@ -212,7 +212,7 @@ public class RibbonTabPanel : Panel
         foreach (var entry in contextual) _order.Add(entry.Header);
     }
 
-    // A run is a MAXIMAL stretch of neighbouring headers with the SAME group. Neighbouring, not merely belonging: an
+    // A run is a MAXIMAL stretch of neighboring headers with the SAME group. Neighboring, not merely belonging: an
     // ordinary tab placed between two tabs of one group yields TWO ledges with the same title, and that is the honest
     // answer - the strip shows what is in it. Office forbids the arrangement instead; we make it predictable.
     private void Repartition()
@@ -232,7 +232,7 @@ public class RibbonTabPanel : Panel
             var last = i;
             while (last + 1 < _order.Count && ReferenceEquals(GroupOf(_order[last + 1]), group)) last++;
 
-            // EVERY run gets a plate - that is what colours its tabs. Only a run whose group asks for a title costs the
+            // EVERY run gets a plate - that is what colors its tabs. Only a run whose group asks for a title costs the
             // strip the title band's height.
             _runs.Add((i, last, group));
             i = last + 1;

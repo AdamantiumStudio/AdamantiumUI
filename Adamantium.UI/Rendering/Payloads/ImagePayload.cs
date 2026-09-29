@@ -18,8 +18,8 @@ public class ImagePayload(Brush filter, ImageSource image, Rect destinationRect,
     public Rect DestinationRect { get; } = destinationRect;
     public CornerRadius CornerRadius { get; } = cornerRadius;
 
-    /// <summary>Normalised (0..1) sub-rect of the image to sample - a mosaic tile shows just its fragment of one shared
-    /// photo. Null = the whole image (the default, unchanged behaviour).</summary>
+    /// <summary>Normalized (0..1) sub-rect of the image to sample - a mosaic tile shows just its fragment of one shared
+    /// photo. Null = the whole image (the default, unchanged behavior).</summary>
     public Rect? SourceUv { get; } = sourceUv;
 
     /// <summary>Which LAYER of the image's frame-array texture to sample, for an animation. Null = a plain single image.

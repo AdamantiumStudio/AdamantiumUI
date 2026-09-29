@@ -37,8 +37,8 @@ public class ConnectionItem : ICanvasItem
     /// <summary>How thick the wire is, in WORLD units - it belongs to the drawing, so it grows with the zoom.</summary>
     public double Thickness { get; set; } = 2;
 
-    /// <summary>What it is drawn in. Null takes the colour of the socket it LEAVES, which is what a graph editor does:
-    /// a wire is the same colour as the thing flowing down it.</summary>
+    /// <summary>What it is drawn in. Null takes the color of the socket it LEAVES, which is what a graph editor does:
+    /// a wire is the same color as the thing flowing down it.</summary>
     public Brush Stroke { get; set; }
 
     public string Title => $"Wire {FromPin?.Name} - {ToPin?.Name}";

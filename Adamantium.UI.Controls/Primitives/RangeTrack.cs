@@ -200,7 +200,7 @@ public class RangeTrack : Panel
 
         var crossOffset = Math.Max(0, (thickness - thumbCross) / 2);
 
-        // The band has its own thickness (a thin bar between two fat handles), so it gets its OWN cross-centring. Giving
+        // The band has its own thickness (a thin bar between two fat handles), so it gets its OWN cross-centering. Giving
         // it the handles' cross-size instead left it sitting at the top edge of that box rather than on the rail.
         var bandDesired = CenterThumb?.DesiredSize ?? default;
         var bandCross = vertical ? bandDesired.Width : bandDesired.Height;
@@ -231,10 +231,10 @@ public class RangeTrack : Panel
         return (IsDirectionReversed ? -vertical : vertical) * _density;
     }
 
-    /// <summary>The LOWER bound whose thumb would be centred on <paramref name="point"/> (track-local space).</summary>
+    /// <summary>The LOWER bound whose thumb would be centered on <paramref name="point"/> (track-local space).</summary>
     public double LowerValueFromPoint(Vector2 point) => ValueFromPoint(point, 0);
 
-    /// <summary>The UPPER bound whose thumb would be centred on <paramref name="point"/>. Its lead-in differs from the
+    /// <summary>The UPPER bound whose thumb would be centered on <paramref name="point"/>. Its lead-in differs from the
     /// lower one's by the lower thumb plus the reserved band, which both sit before it - mapping a point the same way for
     /// both is what made a click land on the wrong value.</summary>
     public double UpperValueFromPoint(Vector2 point) => ValueFromPoint(point, _thumbAlong + MinimumBandLength);

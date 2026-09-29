@@ -4,7 +4,7 @@
     <!-- Navigated into the brushes tab's region under the key "Pattern"; the DataContext is the tab's own view-model.
          The figure picker is not repeated here - it lives above the stands, as one choice for all of them. -->
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Pattern — live (pick a type; drag cell size, corner radius and colours)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="Pattern — live (pick a type; drag cell size, corner radius and colors)" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Margin="10">
                 <Rectangle Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Fill="{Binding LivePattern}"
@@ -71,7 +71,7 @@
                                        Value="{Binding PatternRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Colours (background / feature)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="Colors (background / feature)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal">
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding PatternColor1, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding PatternColor2, Mode=TwoWay}"/>

@@ -20,7 +20,7 @@ public class BindingStringConversionTests
     private sealed class Source
     {
         public string Path { get; init; }
-        public string Colour { get; init; }
+        public string Color { get; init; }
         public string Edges { get; init; }
         public string Number { get; init; }
         public string Mode { get; init; }
@@ -39,8 +39,8 @@ public class BindingStringConversionTests
     [Test]
     public void AStringBindsOntoABrushProperty()
     {
-        var border = new Border { DataContext = new Source { Colour = "Red" } };
-        border.SetBinding(nameof(Border.Background), new Binding(nameof(Source.Colour)));
+        var border = new Border { DataContext = new Source { Color = "Red" } };
+        border.SetBinding(nameof(Border.Background), new Binding(nameof(Source.Color)));
 
         Assert.That(border.Background, Is.InstanceOf<SolidColorBrush>());
     }

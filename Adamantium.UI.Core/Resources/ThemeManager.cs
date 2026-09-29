@@ -87,7 +87,7 @@ public class ThemeManager : IThemeManager
 
         // A variant rewrites the palette, so everything holding a LIVE reference to a keyed resource has to re-resolve.
         // Solid fills came through without this because the brush OBJECT survives a variant and tells its owners itself;
-        // a raw COLOUR has no such thread - a gradient stop is handed a value, and only this tells it there is a new one.
+        // a raw COLOR has no such thread - a gradient stop is handed a value, and only this tells it there is a new one.
         UIAppContext.Current?.ResourceManager?.NotifyResourcesChanged();
 
         // Nothing else: recolored brushes notify their owners, including inheritors (see InheritedBrushRepaintTests).

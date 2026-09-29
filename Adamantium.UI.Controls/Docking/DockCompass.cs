@@ -47,7 +47,7 @@ public class DockCompass : Panel
         nameof(IndicatorSize), typeof(double), typeof(DockCompass),
         new PropertyMetadata(34.0, PropertyMetadataOptions.AffectsArrange));
 
-    /// <summary>Gap between the centre indicator and the four around it.</summary>
+    /// <summary>Gap between the center indicator and the four around it.</summary>
     public static readonly AdamantiumProperty IndicatorGapProperty = AdamantiumProperty.Register(
         nameof(IndicatorGap), typeof(double), typeof(DockCompass),
         new PropertyMetadata(6.0, PropertyMetadataOptions.AffectsArrange));
@@ -170,7 +170,7 @@ public class DockCompass : Panel
     /// <summary>Which EDGE anchors may be drawn. Separate from <see cref="AllowedZones"/> because the two answer
     /// different questions with the same four bits: Left in the cross means "split the panel under the pointer", which
     /// that panel pays for, while Left on the rim means "a band down the whole side", which the DOCUMENT AREA pays for.
-    /// One mask for both drew rim anchors the centre had no room left for - aim, drop, nothing happens.</summary>
+    /// One mask for both drew rim anchors the center had no room left for - aim, drop, nothing happens.</summary>
     public DockZone AllowedEdgeZones
     {
         get => _allowedEdges;
@@ -224,7 +224,7 @@ public class DockCompass : Panel
         return DockZone.None;
     }
 
-    /// <summary>Where an edge anchor sits: centred on its side of the area, inset from it.</summary>
+    /// <summary>Where an edge anchor sits: centered on its side of the area, inset from it.</summary>
     private static Rect EdgeSlotOf(DockZone zone, Rect area, double size, double inset)
     {
         var cx = area.X + area.Width / 2 - size / 2;
@@ -307,7 +307,7 @@ public class DockCompass : Panel
         _preview.Visibility = aiming && _armed != DockZone.None ? Visibility.Visible : Visibility.Collapsed;
         _preview.Arrange(_armedIsEdge ? PreviewOf(area, _armed, _edgeExtent) : PreviewOf(_group, _armed));
 
-        // The cross sits at the centre of the group - the same centre ZoneAt measures its indicators from, so what is
+        // The cross sits at the center of the group - the same center ZoneAt measures its indicators from, so what is
         // drawn and what is hit are one arrangement.
         var cx = _group.X + _group.Width / 2;
         var cy = _group.Y + _group.Height / 2;

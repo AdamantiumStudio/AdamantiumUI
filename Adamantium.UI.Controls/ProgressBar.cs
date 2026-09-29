@@ -62,7 +62,7 @@ public class ProgressBar : RangeBase
     {
         // The bar stretches only along its Orientation: clamp the CROSS axis to the content thickness (DesiredSize) BEFORE
         // arranging, so the template settles onto the real bar and ActualWidth/Height report the visible bar, not the whole
-        // slot (a default-Stretch bar otherwise fills the slot's height with a 6px line centred inside it).
+        // slot (a default-Stretch bar otherwise fills the slot's height with a 6px line centered inside it).
         finalSize = Orientation == Orientation.Horizontal
             ? new Size(finalSize.Width, Math.Min(finalSize.Height, DesiredSize.Height))
             : new Size(Math.Min(finalSize.Width, DesiredSize.Width), finalSize.Height);

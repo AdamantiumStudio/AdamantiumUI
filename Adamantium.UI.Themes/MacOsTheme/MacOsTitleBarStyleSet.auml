@@ -37,7 +37,7 @@
                                 TextTrimming="CharEllipses"/>
 
                         <!-- The lights. Named exactly as the control looks them up - parts are found by NAME, and the
-                             control wires close / minimise / zoom to these three. The gap belongs to the PANEL: hiding
+                             control wires close / minimize / zoom to these three. The gap belongs to the PANEL: hiding
                              one light (a window that cannot be zoomed) then closes up on its own instead of leaving a
                              double gap where a margin used to be. -->
                         <!-- EVERYTHING ON THE LEFT LIVES IN THE Auto COLUMN, and that is a rule rather than tidiness:
@@ -60,8 +60,8 @@
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid>
-                                    <Button x:Name="PART_MinButton" Classes="TrafficLight MinimiseLight" Focusable="False"/>
-                                    <Image x:Name="MinimiseGlyph" Source="{ResourceReference TrafficLightMinimiseGlyph}"
+                                    <Button x:Name="PART_MinButton" Classes="TrafficLight MinimizeLight" Focusable="False"/>
+                                    <Image x:Name="MinimizeGlyph" Source="{ResourceReference TrafficLightMinimizeGlyph}"
                                             Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
@@ -139,7 +139,7 @@
     <Style Selector="TitleBar">
         <PropertyTrigger Property="IsMouseOver" Value="true">
             <Setter TargetName="CloseGlyph" Property="Opacity" Value="1"/>
-            <Setter TargetName="MinimiseGlyph" Property="Opacity" Value="1"/>
+            <Setter TargetName="MinimizeGlyph" Property="Opacity" Value="1"/>
             <Setter TargetName="ZoomGlyph" Property="Opacity" Value="1"/>
         </PropertyTrigger>
     </Style>
@@ -160,7 +160,7 @@
     </Style>
 
     <!-- What all three lights share: a circle of a fixed size. They do not scale with the caption - they are a constant
-         of the platform the way a scrollbar's width is. The COLOURS and the glyphs are per light, below; none of them
+         of the platform the way a scrollbar's width is. The COLORS and the glyphs are per light, below; none of them
          are palette keys, because Apple's three are the same in light and dark and so belong to the platform rather
          than to a variant. -->
     <Style Selector="Button.TrafficLight">
@@ -186,7 +186,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="Button.MinimiseLight">
+    <Style Selector="Button.MinimizeLight">
         <Setter Property="Background" Value="#FEBC2E"/>
         <Setter Property="Template">
             <Setter.Value>

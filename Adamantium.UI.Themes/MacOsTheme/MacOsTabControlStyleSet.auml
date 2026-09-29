@@ -7,7 +7,7 @@
 
     <Style Selector="TabControl" BasedOn="ItemsControl">
         <!-- The content is PAPER on the window's surface, which is this palette's whole premise - white in light
-             appearance, sunk in dark - so the box under the strip takes the well colour and not the window's. -->
+             appearance, sunk in dark - so the box under the strip takes the well color and not the window's. -->
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="{ResourceReference StrokeControl}"/>
@@ -40,7 +40,7 @@
         </Setter>
         <!-- The per-tab PIN button, same disc. The thumbtack is DRAWN and fills in solid once pinned - hollow against
              solid is how the two states are told apart, and it is the button reporting its own state rather than a
-             second thing to read elsewhere. Inline rather than a keyed DrawingImage because its colour is changed BY
+             second thing to read elsewhere. Inline rather than a keyed DrawingImage because its color is changed BY
              NAME from the triggers below, which a drawing in the icon dictionary cannot be. -->
         <Setter Property="PinButtonTemplate">
             <Setter.Value>
@@ -94,7 +94,7 @@
                         </PropertyTrigger>
                         <!-- Pressed and OPEN are the same picture on purpose: the flyout being up is the button still
                              being held down, as far as what it is saying goes. Later triggers win, so open survives the
-                             pointer leaving - and it rises to a segment's own colour, because while the list is up this
+                             pointer leaving - and it rises to a segment's own color, because while the list is up this
                              IS the current thing on the rail. -->
                         <PropertyTrigger Property="IsPressed" Value="true">
                             <Setter TargetName="ChevronBg" Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
@@ -301,7 +301,7 @@
                             <Setter TargetName="StripTrack" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
                         <!-- One tab filling the strip is a title, not a choice, so the groove has nothing to hold: it
-                             would be a grey band the full width with one flat label on it. -->
+                             would be a gray band the full width with one flat label on it. -->
                         <PropertyTrigger Property="HasStretchedTab" Value="true">
                             <Setter TargetName="StripTrack" Property="Background" Value="Transparent"/>
                         </PropertyTrigger>

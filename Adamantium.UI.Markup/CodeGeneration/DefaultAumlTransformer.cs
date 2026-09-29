@@ -157,7 +157,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         // The xml-namespace -> assembly registry only holds URIs registered via [XmlnsDefinition]. A property element
         // on a custom-namespace type (<local:TilesHost.ItemsPanel>) carries the raw clr-namespace declaration instead -
-        // resolve that directly by CLR namespace (honouring an explicit ;assembly= part) so property elements work on
+        // resolve that directly by CLR namespace (honoring an explicit ;assembly= part) so property elements work on
         // app-assembly controls, not only on framework types.
         IResolvedAssembly ResolveXmlDefinitionContainer(string xmlNamespace)
         {

@@ -123,7 +123,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     }
 
     /// <summary>Is the texture behind this brush a BAKE OF THE VIEWBOX'S SLICE rather than of the whole source? True
-    /// for a vector source, which is rasterised to exactly what a tile shows (see BrushTexture); false for pixels,
+    /// for a vector source, which is rasterized to exactly what a tile shows (see BrushTexture); false for pixels,
     /// which exist once at their own resolution. The layout has to be told, because it decides what uv means.</summary>
     internal static bool SourceIsSlice(TileBrush brush) => brush?.ContentSource is DrawingImage;
 
@@ -134,7 +134,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     public bool CanBatch(RectanglePayload p) => WantsBatch(p);
 
     /// <summary>Bake one textured fill into the pending segment. An <see cref="ImageBrush"/> is one instance; a
-    /// <see cref="NineSliceBrush"/> is NINE - the corners at their own size, the edges and centre stretched or tiled -
+    /// <see cref="NineSliceBrush"/> is NINE - the corners at their own size, the edges and center stretched or tiled -
     /// which is the whole trick: one batch, one texture, nine records.</summary>
     public bool TryAdd(RectanglePayload p, Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds,
         ITexture texture, int transformSlot = 0, int fadeSlot = -1, int clipSlot = -1)
@@ -244,7 +244,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     }
 
     // POLYGON variant: a regular polygon with a textured fill (a picture, a drawing, a live element) batches into the
-    // SAME pass. The shape stays a field - one instanced draw, crisp at any zoom - and only the source of the colour
+    // SAME pass. The shape stays a field - one instanced draw, crisp at any zoom - and only the source of the color
     // differs. A NineSliceBrush does not come here for the same reason it does not come to the ellipse: nine quads cut on
     // four straight lines mean nothing on a shape that is not a rect.
     /// <summary>THE one statement for the polygon form - the render unit asks THIS, never its own copy.</summary>

@@ -76,7 +76,7 @@ public class CanvasHistoryTests
         Assert.That(scene.Items, Is.Empty);
     }
 
-    // A MOVE is put back by travelling, which is exact - not by being resized into its old box.
+    // A MOVE is put back by traveling, which is exact - not by being resized into its old box.
     [Test]
     public void AMoveIsUndoneExactly()
     {
@@ -263,7 +263,7 @@ public class CanvasHistoryTests
         });
     }
 
-    // A line written in an INSPECTOR changes no bounds at all - a colour, a thickness, a corner radius - so the
+    // A line written in an INSPECTOR changes no bounds at all - a color, a thickness, a corner radius - so the
     // canvas's before-and-after of where things are records nothing. The grid's own step is what covers it, written
     // from the value that was there just before the write.
     [Test]

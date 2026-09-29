@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Correctness contract for the recycling-list rebind optimisation, held for BOTH the recycling case (a virtualized list
+// Correctness contract for the recycling-list rebind optimization, held for BOTH the recycling case (a virtualized list
 // rebinding a container to another same-template item) and the GENERAL ContentPresenter case (a Button/header whose
 // content changes to a different-sized element). Both must stay green.
 [TestFixture]
@@ -40,7 +40,7 @@ public class ContentPresenterRebindTests
     }
 
     // General correctness (NOT recycling): replacing content with a DIFFERENT-sized element must re-measure + resize the
-    // presenter. The recycling optimisation must not break this.
+    // presenter. The recycling optimization must not break this.
     [Test]
     public void ContentReplace_DifferentSizedElement_ResizesPresenter()
     {
@@ -328,21 +328,21 @@ public class ContentPresenterTests
 
     // A presenter restyles only text it generated; an authored TextBlock content keeps its own color.
     [Test]
-    public void AnAuthoredTextContent_TakesItsColourFromWhicheverPresenterHoldsIt()
+    public void AnAuthoredTextContent_TakesItsColorFromWhicheverPresenterHoldsIt()
     {
         var authored = new TextBlock { Text = "body" };
         var slot = new Size(100, 100);
 
-        // The presenter it starts in, holding the colour a torn-down one ends up with.
+        // The presenter it starts in, holding the color a torn-down one ends up with.
         var dim = new ContentPresenter { Foreground = Brushes.Transparent, Content = authored };
         dim.Measure(slot);
 
-        // Handed to a live presenter with a real colour - what a merge does.
+        // Handed to a live presenter with a real color - what a merge does.
         var lit = new ContentPresenter { Foreground = Brushes.White, Content = authored };
         lit.Measure(slot);
 
         Assert.That(authored.Foreground, Is.SameAs(Brushes.White),
-            "the colour must follow the presenter that holds it now - a value stamped in by the old one would be permanent");
+            "the color must follow the presenter that holds it now - a value stamped in by the old one would be permanent");
     }
 
     [Test]

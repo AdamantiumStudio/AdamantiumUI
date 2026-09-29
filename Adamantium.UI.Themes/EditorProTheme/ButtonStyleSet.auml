@@ -81,7 +81,7 @@
     </Style>
 
     <!-- The flat form, for the case the outline was originally written for: a ROW of them. A toolbar of icon buttons
-         outlined one after another is a fence, and there the neighbours plus the strip's own edge already say what
+         outlined one after another is a fence, and there the neighbors plus the strip's own edge already say what
          these are. Opt in with Classes="Toolbar" - which is the difference from before, when every button in the
          application was quietly assumed to be in a toolbar. -->
     <Style Selector="Button.Toolbar">
@@ -91,7 +91,7 @@
 
     <Style Selector="Button.Toolbar">
         <!-- The edge appears WITH the hover here, since there is none at rest to brighten - and goes away again when
-             the button cannot be pressed, rather than dimming to the grey the outlined form fades to. -->
+             the button cannot be pressed, rather than dimming to the gray the outlined form fades to. -->
         <PropertyTrigger Property="IsMouseOver" Value="true">
             <Setter TargetName="InnerBorder" Property="BorderBrush"
                     Value="{ResourceReference ControlStrokeColorDefault}"/>

@@ -10,7 +10,7 @@ public interface ITheme: IInitializable, IAdamantiumComponent
     Brush AccentColor { get; set; }
 
     // The theme's accent / focus brushes: its runtime-mutable identity, consumed across styles via {ThemeResource Key}.
-    // Assigning one live re-colours every consumer (checked toggles/checkboxes/radios, focus) with no theme reload.
+    // Assigning one live re-colors every consumer (checked toggles/checkboxes/radios, focus) with no theme reload.
     Brush AccentFillColorDefault { get; set; }
 
     Brush AccentFillColorSecondary { get; set; }
@@ -41,7 +41,7 @@ public interface ITheme: IInitializable, IAdamantiumComponent
     /// <summary>The variants this theme declares, by key. A theme with none has exactly one appearance.</summary>
     IReadOnlyDictionary<ThemeVariant, ThemeVariantDefinition> VariantsByKey { get; }
 
-    /// <summary>The variant in force. Setting it re-colours the palette IN PLACE - the brushes keep their identity, so
+    /// <summary>The variant in force. Setting it re-colors the palette IN PLACE - the brushes keep their identity, so
     /// nothing that draws with them has to be told anything beyond "you changed".</summary>
     ThemeVariant CurrentVariant { get; }
 

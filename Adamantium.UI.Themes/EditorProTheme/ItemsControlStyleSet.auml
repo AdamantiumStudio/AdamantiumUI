@@ -3,7 +3,7 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- A border around a scroll viewer that hosts the items. CanContentScroll delegates scrolling to the virtualizing
-         panel (item scrolling, not pixel translation), which is behaviour rather than looks and is kept as it is. -->
+         panel (item scrolling, not pixel translation), which is behavior rather than looks and is kept as it is. -->
     <Style Selector="ItemsControl">
         <Setter Property="Template">
             <Setter.Value>

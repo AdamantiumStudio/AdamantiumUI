@@ -24,7 +24,7 @@ public class TextBlockStyleMaskTests
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(presenter);
 
         TestContext.WriteLine($"ancestor Foreground=Red, TextBlock Foreground={text.Foreground}");
-        Assert.That(text.Foreground, Is.SameAs(Brushes.Red), "state recolouring travels by INHERITANCE");
+        Assert.That(text.Foreground, Is.SameAs(Brushes.Red), "state recoloring travels by INHERITANCE");
     }
 
     /// <summary>...and a per-TextBlock STYLE cuts that channel. The style value here is applied exactly as
@@ -41,12 +41,12 @@ public class TextBlockStyleMaskTests
 
         TestContext.WriteLine($"ancestor Foreground=Red, TextBlock after a Style-priority setter={text.Foreground}");
         Assert.That(text.Foreground, Is.SameAs(Brushes.Blue),
-            "Style (5) outranks Inherited (6), so the selected row's colour never reaches its own text");
+            "Style (5) outranks Inherited (6), so the selected row's color never reaches its own text");
     }
 
     /// <summary>How far the damage actually reaches - measured, because "the whole theme breaks" and "one case breaks"
     /// call for different fixes. Content given as a STRING is immune: the presenter GENERATES the TextBlock and stamps
-    /// its own colour on it as a LOCAL value (ContentPresenter.ApplyTextStyle), and Local (1) beats Style (5). A row
+    /// its own color on it as a LOCAL value (ContentPresenter.ApplyTextStyle), and Local (1) beats Style (5). A row
     /// whose item is a plain string keeps following selection even with a blanket TextBlock style in the theme.</summary>
     [Test]
     public void GeneratedTextContent_IsImmuneToATextBlockStyle()
@@ -64,8 +64,8 @@ public class TextBlockStyleMaskTests
     }
 
     /// <summary>...and AUTHORED content is the exposed half. A TextBlock written out in a DataTemplate is not stamped -
-    /// deliberately, since an explicit write would become the element's own colour for good (see the docking bug in
-    /// ContentPresenter.ApplyTextStyle) - so it takes the state colour by inheritance, and a blanket style masks it.
+    /// deliberately, since an explicit write would become the element's own color for good (see the docking bug in
+    /// ContentPresenter.ApplyTextStyle) - so it takes the state color by inheritance, and a blanket style masks it.
     /// This is the whole surface of the fragility, and it is worth knowing it is this narrow.</summary>
     [Test]
     public void AuthoredTextContent_IsTheHalfAStyleCanBreak()

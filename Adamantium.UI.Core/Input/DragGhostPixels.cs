@@ -7,7 +7,7 @@ namespace Adamantium.UI.Core.Input;
 /// <summary>Turns a readback snapshot bitmap into the premultiplied BGRA buffer the drag ghost hands the OS compositor.</summary>
 public static class DragGhostPixels
 {
-    /// <summary>Premultiply straight-alpha BGRA (the readback layout) in place into a new buffer: each colour channel
+    /// <summary>Premultiply straight-alpha BGRA (the readback layout) in place into a new buffer: each color channel
     /// scaled by alpha/255, as <c>UpdateLayeredWindow</c> (and a premultiplied CGImage) require.</summary>
     public static byte[] ToPremultipliedBgra(BitmapSource source)
     {
@@ -95,13 +95,13 @@ public static class DragGhostPixels
         if (body.bgra == null) return badge;
         if (badge.bgra == null) return body;
 
-        int ovR = badge.w / 2, ovT = badge.h / 2;               // the badge's centre sits on the body's top-right corner
+        int ovR = badge.w / 2, ovT = badge.h / 2;               // the badge's center sits on the body's top-right corner
         int w = body.w + (badge.w - ovR);                       // exact right extent (handles an odd badge width - no clip)
         int h = Math.Max(ovT + body.h, badge.h);
         var dst = new byte[w * h * 4];
 
         Blit(dst, w, h, body.bgra, body.w, body.h, 0, ovT);                      // body below the top overflow band
-        Blit(dst, w, h, badge.bgra, badge.w, badge.h, body.w - ovR, 0);          // badge centred on the body's top-right corner
+        Blit(dst, w, h, badge.bgra, badge.w, badge.h, body.w - ovR, 0);          // badge centered on the body's top-right corner
         return (dst, w, h);
     }
 

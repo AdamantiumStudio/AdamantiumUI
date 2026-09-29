@@ -22,7 +22,7 @@ public class FlipTile : Control
     public static readonly AdamantiumProperty PhotoProperty = AdamantiumProperty.Register(nameof(Photo),
         typeof(ImageSource), typeof(FlipTile), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
-    // Normalised (0..1) fragment of the photo this tile shows on its back - four doubles so plain {Binding}s from the
+    // Normalized (0..1) fragment of the photo this tile shows on its back - four doubles so plain {Binding}s from the
     // tile item compose it (no multi-value converter needed).
     public static readonly AdamantiumProperty SourceUProperty = AdamantiumProperty.Register(nameof(SourceU),
         typeof(double), typeof(FlipTile), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsRender));
@@ -140,13 +140,13 @@ public class FlipTile : Control
         var rect = new Rect(0, 0, RenderSize.Width, RenderSize.Height);
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        // Keep the 3D pivot at the tile centre (cheap no-op sets once the size settles).
+        // Keep the 3D pivot at the tile center (cheap no-op sets once the size settles).
         _transform.RotationCenterX = rect.Width / 2;
         _transform.RotationCenterY = rect.Height / 2;
 
         var session = context.ForControl(this);
         var corners = new CornerRadius(6);
-        // While the shared photo's ASYNC decode is still running, fall back to the front colour instead of an empty
+        // While the shared photo's ASYNC decode is still running, fall back to the front color instead of an empty
         // quad (the render side skips a texture-less image; see BitmapSource.GetOrCreateTexture).
         var photoReady = Photo is not null && Photo is not BitmapImage { IsLoaded: false };
         if (_showBack && photoReady)

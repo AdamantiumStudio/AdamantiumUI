@@ -26,10 +26,10 @@ public class DockingLayoutTests
         return layout;
     }
 
-    /// <summary>The centre drop: the pane simply joins the target's tabs. This is the common case and it must not grow
+    /// <summary>The center drop: the pane simply joins the target's tabs. This is the common case and it must not grow
     /// a level in the tree for nothing.</summary>
     [Test]
-    public void MovePane_IntoTheCentre_JoinsTheTargetsTabs()
+    public void MovePane_IntoTheCenter_JoinsTheTargetsTabs()
     {
         var documents = Group("scene", "game");
         var tools = Group("inspector");
@@ -204,7 +204,7 @@ public class DockingLayoutTests
         Assert.Multiple(() =>
         {
             Assert.That(group.PaneIds, Is.EqualTo(new[] { "a", "b" }));
-            Assert.That(group.ActiveIndex, Is.EqualTo(1), "the last pane's neighbour becomes active, not a hole");
+            Assert.That(group.ActiveIndex, Is.EqualTo(1), "the last pane's neighbor becomes active, not a hole");
         });
     }
 
@@ -219,7 +219,7 @@ public class DockingLayoutTests
             new ZoneDeclaration(DockZone.Bottom, Group("console"), 180)
         });
 
-        // A SIDE is outermost: it takes the full height of the window. The bottom band is INSIDE the centre column, so it
+        // A SIDE is outermost: it takes the full height of the window. The bottom band is INSIDE the center column, so it
         // runs under the documents only and stops where the side begins - the layout every editor uses.
         var outer = (PaneSplitNode)layout.Main.Content;
         Assert.Multiple(() =>
@@ -259,9 +259,9 @@ public class DockingLayoutTests
         });
     }
 
-    /// <summary>Two bands stack inside the same centre column rather than nesting one inside the other's split.</summary>
+    /// <summary>Two bands stack inside the same center column rather than nesting one inside the other's split.</summary>
     [Test]
-    public void FromZones_TwoBands_ShareTheCentreColumn()
+    public void FromZones_TwoBands_ShareTheCenterColumn()
     {
         var layout = DockingLayout.FromZones(new[]
         {
@@ -314,7 +314,7 @@ public class DockingLayoutTests
         var inspector = Group("inspector", "console");   // the console starts as one of the inspector's tabs
 
         var layout = LayoutWith(scene);
-        layout.Split(scene, DockZone.Right, inspector, 0.25);   // one horizontal row: centre 0.75 | inspector 0.25
+        layout.Split(scene, DockZone.Right, inspector, 0.25);   // one horizontal row: center 0.75 | inspector 0.25
 
         var sceneShare = scene.Length.Value;
         var inspectorShare = inspector.Length.Value;
@@ -329,7 +329,7 @@ public class DockingLayoutTests
             Assert.That(arrived.PaneIds, Is.EqualTo(new[] { "console" }), "it landed to the RIGHT of the group it was dropped on");
             Assert.That(scene.Length.Value, Is.EqualTo(sceneShare / 2).Within(1e-6), "the group dropped on keeps half of its own share");
             Assert.That(arrived.Length.Value, Is.EqualTo(sceneShare / 2).Within(1e-6), "and the arrival takes the other half OF THAT GROUP");
-            Assert.That(inspector.Length.Value, Is.EqualTo(inspectorShare).Within(1e-6), "an uninvolved neighbour is not touched at all");
+            Assert.That(inspector.Length.Value, Is.EqualTo(inspectorShare).Within(1e-6), "an uninvolved neighbor is not touched at all");
             
         });
     }
@@ -424,10 +424,10 @@ public class DockingLayoutTests
         });
     }
 
-    /// <summary>There is nothing to tab into but a group, so a centre drop on anything else is refused rather than
+    /// <summary>There is nothing to tab into but a group, so a center drop on anything else is refused rather than
     /// invented.</summary>
     [Test]
-    public void MovePane_IntoTheCentreOfASplit_IsRefused()
+    public void MovePane_IntoTheCenterOfASplit_IsRefused()
     {
         var scene = Group("scene", "game");
         var layout = LayoutWith(scene);

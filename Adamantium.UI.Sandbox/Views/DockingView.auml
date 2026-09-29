@@ -5,7 +5,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="24">
 
         <TextBlock Grid.Row="0" MarginBottom="12" MaxWidth="820"
-                   Text="An editor-shaped arrangement written as ZONES only. Nothing here says what share of what a group takes - the author writes WHERE (centre, right, bottom) and the split tree is derived from that. Drag the grips between the areas: they rewrite the layout's own shares, which is the number a save would read."
+                   Text="An editor-shaped arrangement written as ZONES only. Nothing here says what share of what a group takes - the author writes WHERE (center, right, bottom) and the split tree is derived from that. Drag the grips between the areas: they rewrite the layout's own shares, which is the number a save would read."
                    Foreground="{ResourceReference TextFillColorSecondary}"/>
 
         <!-- The application's docking answers (always yes), logged; static limits are Pane.Allowed data (see Errors below).
@@ -61,7 +61,7 @@
                 <docking:DockingArea.Behaviors>
                     <behaviors:DockingPolicyBehavior/>
                     <!-- The tab menu, built by the APPLICATION and calling the area's own API (ClosePane,
-                         CloseOtherPanes, ClosePanesOfGroup, CloseUnpinnedPanes, CloseAllPanes). A behaviour rather than
+                         CloseOtherPanes, ClosePanesOfGroup, CloseUnpinnedPanes, CloseAllPanes). A behavior rather than
                          markup, so panes opened by CODE get it too - and it stands next to the control, so it works on
                          the pane and the area directly instead of routing through the view model. -->
                     <behaviors:TabContextMenuBehavior/>
@@ -111,10 +111,10 @@
                         <TextBlock Text="Output" Margin="16" Opacity="0.7"/>
                     </docking:Pane>
                     <!-- Allowed is the OTHER half of the vocabulary: where a pane may go at all, in data. Drag this one
-                         and the compass draws only the EDGES - no centre indicator, no tearing it off - because an
+                         and the compass draws only the EDGES - no center indicator, no tearing it off - because an
                          indicator that quietly declines is worse than no indicator. -->
                     <docking:Pane Header="Errors" Kind="Tool" Allowed="Center,Top,Bottom,Floating">
-                        <TextBlock Text="Errors - centre, top or bottom only; never the sides (Pane.Allowed)"
+                        <TextBlock Text="Errors - center, top or bottom only; never the sides (Pane.Allowed)"
                                    Margin="16" Opacity="0.7"/>
                     </docking:Pane>
                 </docking:PaneGroup>

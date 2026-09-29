@@ -9,18 +9,18 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// <see cref="MaterialType"/> that would each mean "the same shader with other numbers".</summary>
 public sealed class MetalPreset
 {
-    private MetalPreset(string name, Color colour, double roughness, double grain)
+    private MetalPreset(string name, Color color, double roughness, double grain)
     {
         Name = name;
-        Colour = colour;
+        Color = color;
         Roughness = roughness;
         Grain = grain;
     }
 
     public string Name { get; }
 
-    /// <summary>F0: what the metal reflects head-on, which for a conductor IS its colour.</summary>
-    public Color Colour { get; }
+    /// <summary>F0: what the metal reflects head-on, which for a conductor IS its color.</summary>
+    public Color Color { get; }
 
     public double Roughness { get; }
 
@@ -29,7 +29,7 @@ public sealed class MetalPreset
 
     public override string ToString() => Name;
 
-    /// <summary>The catalogue. The colours are the measured reflectances every renderer quotes for these metals, not
+    /// <summary>The catalog. The colors are the measured reflectances every renderer quotes for these metals, not
     /// tastes - which is why gold is warm and dark rather than yellow-bright.</summary>
     public static MetalPreset[] All { get; } =
     [

@@ -2,7 +2,7 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>A PROCEDURAL two-colour pattern fill (checkerboard, stripes, dots, grid) evaluated per fragment in the SDF
+/// <summary>A PROCEDURAL two-color pattern fill (checkerboard, stripes, dots, grid) evaluated per fragment in the SDF
 /// batch - resolution-independent (crisp at any zoom, no tiled texture). <see cref="CellSize"/> is the cell edge in
 /// logical px (it scales with the element). The transparency-preview backdrop is a <see cref="PatternType.Checkerboard"/>.
 /// Unlike WPF (which has no procedural brush and tiles a baked DrawingBrush), this is one instanced draw and stays sharp.</summary>
@@ -10,7 +10,7 @@ public sealed class PatternBrush : Brush
 {
     public PatternBrush() { }
 
-    // PAINT, all of them: a pattern's geometry is fill-relative, so changing the type/colours/cell re-colours the same
+    // PAINT, all of them: a pattern's geometry is fill-relative, so changing the type/colors/cell re-colors the same
     // pixels - never the element's shape or its layout (see Brush.Opacity).
     public static readonly AdamantiumProperty PatternProperty = AdamantiumProperty.Register(nameof(Pattern),
         typeof(PatternType), typeof(PatternBrush), new PropertyMetadata(PatternType.Checkerboard, PropertyMetadataOptions.AffectsPaint));
@@ -40,7 +40,7 @@ public sealed class PatternBrush : Brush
         }
     }
 
-    /// <summary>The primary (background) colour.</summary>
+    /// <summary>The primary (background) color.</summary>
     public Color Color1
     {
         get => GetValue<Color>(Color1Property);
@@ -51,7 +51,7 @@ public sealed class PatternBrush : Brush
         }
     }
 
-    /// <summary>The secondary (feature) colour - the alternate square, the dot, the grid line.</summary>
+    /// <summary>The secondary (feature) color - the alternate square, the dot, the grid line.</summary>
     public Color Color2
     {
         get => GetValue<Color>(Color2Property);

@@ -6,6 +6,6 @@ public class MaterialSwatch
 {
     public string Name { get; set; }
 
-    /// <summary>The swatch colour, as a string the binding parses into a brush.</summary>
+    /// <summary>The swatch color, as a string the binding parses into a brush.</summary>
     public string Fill { get; set; }
 }

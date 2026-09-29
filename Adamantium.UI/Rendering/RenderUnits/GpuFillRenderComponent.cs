@@ -29,7 +29,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
 
     private ulong RingBytes => (ulong)(_ring.Length * Marshal.SizeOf<FringeVertex>());
 
-    // The fill brush, read LIVE at Render (like the body's GeometryRenderComponent.Background) so an in-place colour
+    // The fill brush, read LIVE at Render (like the body's GeometryRenderComponent.Background) so an in-place color
     // change or a cheap brush repoint shows without rebuilding the contour. A non-solid brush => the fringe doesn't draw
     // (the CPU body doesn't render non-solid fills either), so no stale outline is left when a fill turns into a gradient.
     public Brush Brush { get; set; }
@@ -113,11 +113,11 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         else if (Brush is SolidColorBrush solid)
         {
             var color = solid.Color.ToVector4();
-            color.W *= (float)solid.Opacity * RenderData.Opacity;   // colour alpha x brush Opacity x element Opacity
+            color.W *= (float)solid.Opacity * RenderData.Opacity;   // color alpha x brush Opacity x element Opacity
             _effect.FillColor.SetValue(color);
             _effect.IsGradient.SetValue(0);
         }
-        else   // PatternBrush / NoiseBrush: a flat representative edge colour (the 1px ring doesn't evaluate the pattern)
+        else   // PatternBrush / NoiseBrush: a flat representative edge color (the 1px ring doesn't evaluate the pattern)
         {
             _effect.FillColor.SetValue(PatternFringeColor(Brush));
             _effect.IsGradient.SetValue(0);
@@ -137,7 +137,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     }
 
     // Push the fill gradient into the fringe Draw uniforms (packed by the shared GradientBake, same as the fill batch), so
-    // the ring is coloured by the gradient at each fragment - the AA edge matches the fill instead of one flat colour.
+    // the ring is colored by the gradient at each fragment - the AA edge matches the fill instead of one flat color.
     private void SetGradientUniforms(GradientBrush g)
     {
         var alpha = (float)(g.Opacity * RenderData.Opacity);
@@ -156,8 +156,8 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         _effect.GOff1.SetValue(new Vector4F(offs[4], offs[5], offs[6], offs[7]));
     }
 
-    // Analytic-AA fringe colour for a procedural pattern/noise fill: the ring is 1px, so rather than evaluate the whole
-    // pattern there (a heavy fringe shader), colour it with the brush's LOW colour (Color1). A procedural field is mostly its
+    // Analytic-AA fringe color for a procedural pattern/noise fill: the ring is 1px, so rather than evaluate the whole
+    // pattern there (a heavy fringe shader), color it with the brush's LOW color (Color1). A procedural field is mostly its
     // background/low value, so a shape edge is dominated by Color1 - the ring blends into it instead of ringing a bright
     // midpoint. Not per-fragment exact, but smooths the edge without a highlighted rim. Alpha folds brush + element opacity.
     private Vector4F PatternFringeColor(Brush brush)

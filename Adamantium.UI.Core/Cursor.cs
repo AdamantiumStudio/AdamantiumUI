@@ -36,7 +36,7 @@ public sealed class Cursor
     public static Cursor Default => Cursors.Arrow;
 
     /// <summary>Naming a standard shape IS naming a cursor: <c>e.DragCursor = CursorType.Hand</c> reads as intent and
-    /// costs nothing, because it hands back the shared catalogue entry rather than building one. It also lets code that
+    /// costs nothing, because it hands back the shared catalog entry rather than building one. It also lets code that
     /// must not deal in UI objects - a view-model choosing drop feedback - stay on the plain enum.</summary>
     public static implicit operator Cursor(CursorType type) => Cursors.Of(type);
 }

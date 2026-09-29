@@ -51,8 +51,8 @@
                 </StackPanel>
                 <TextBlock Text="Edge mode" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <DropDown ItemsSource="{Binding EdgeModes}" SelectedItem="{Binding SliceEdgeMode, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <CheckBox Content="Draw the centre" IsChecked="{Binding SliceDrawCenter, Mode=TwoWay}" MarginBottom="6"/>
-                <CheckBox Content="Tile the centre too (off = stretched, as CSS border-image does)" IsChecked="{Binding SliceTileCenter, Mode=TwoWay}" MarginBottom="10"/>
+                <CheckBox Content="Draw the center" IsChecked="{Binding SliceDrawCenter, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox Content="Tile the center too (off = stretched, as CSS border-image does)" IsChecked="{Binding SliceTileCenter, Mode=TwoWay}" MarginBottom="10"/>
                 <TextBlock Text="Tint" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding SliceTint, Mode=TwoWay}"/>
             </StackPanel>

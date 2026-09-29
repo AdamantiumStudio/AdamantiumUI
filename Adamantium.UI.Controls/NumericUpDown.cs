@@ -641,15 +641,15 @@ public class NumericUpDown : RangeLimitsBase
 
         // Measured from the PRESS, never accumulated per event: an accumulated delta drifts, and here it would also
         // fight the editor's own idea of where the drag began.
-        var travelled = RootX(e) - _scrubOriginX;
+        var traveled = RootX(e) - _scrubOriginX;
         if (!_scrubbing)
         {
-            if (Math.Abs(travelled) < ScrubThreshold) return;   // still a click as far as anyone knows
+            if (Math.Abs(traveled) < ScrubThreshold) return;   // still a click as far as anyone knows
             BeginScrub();
         }
 
-        ShowScrubCursor(travelled);
-        SetValueFromInput(_scrubFrom + travelled / Math.Max(1, ScrubPixelsPerStep) * ScrubStep());
+        ShowScrubCursor(traveled);
+        SetValueFromInput(_scrubFrom + traveled / Math.Max(1, ScrubPixelsPerStep) * ScrubStep());
     }
 
     protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -681,9 +681,9 @@ public class NumericUpDown : RangeLimitsBase
     /// would flip the shape on every twitch of the hand. Set through the app-wide OVERRIDE rather than Mouse.Cursor: the
     /// pointer keeps entering the parts it drags across (presenter, frame, a button), and each of those sets Mouse.Cursor
     /// to its own on the way in, which wiped ours a frame after we set it.</summary>
-    private void ShowScrubCursor(double travelled)
+    private void ShowScrubCursor(double traveled)
     {
-        var direction = Math.Sign(travelled);
+        var direction = Math.Sign(traveled);
         if (direction == 0 || direction == _scrubDirection) return;
 
         _scrubDirection = direction;

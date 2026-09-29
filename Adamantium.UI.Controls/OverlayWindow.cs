@@ -197,7 +197,7 @@ public class OverlayWindow : ContentControl
         set => SetValue(TitleBarBackgroundProperty, value);
     }
 
-    /// <summary>The title text/icon colour (readable on <see cref="TitleBarBackground"/>).</summary>
+    /// <summary>The title text/icon color (readable on <see cref="TitleBarBackground"/>).</summary>
     public Brush TitleForeground
     {
         get => GetValue<Brush>(TitleForegroundProperty);
@@ -211,7 +211,7 @@ public class OverlayWindow : ContentControl
         set => SetValue(OpenDurationProperty, value);
     }
 
-    /// <summary>Where the window first appears - centred+cascaded, or a manual top-left. Set before it is shown.</summary>
+    /// <summary>Where the window first appears - centered+cascaded, or a manual top-left. Set before it is shown.</summary>
     public OverlayStartupLocation StartupLocation { get; set; } = OverlayStartupLocation.CenterOwner;
 
     /// <summary>The window's absolute left in the parent window's coordinates (like <c>Window.Left</c>). Two-way bindable:
@@ -275,7 +275,7 @@ public class OverlayWindow : ContentControl
     private void ApplyPositionToPopup()
     {
         if (HostPopup == null) return;
-        HostPopup.Placement = PlacementMode.Relative;   // Relative anchors the card's top-left at (offset), not centred
+        HostPopup.Placement = PlacementMode.Relative;   // Relative anchors the card's top-left at (offset), not centered
         HostPopup.HorizontalOffset = Left;
         HostPopup.VerticalOffset = Top;
     }
@@ -392,7 +392,7 @@ public class OverlayWindow : ContentControl
         {
             var pop = RenderTransform ?? new Transform();
             RenderTransform = pop;
-            RenderTransformOrigin = new Vector2(0.5f, 0.5f);   // scale about the centre
+            RenderTransformOrigin = new Vector2(0.5f, 0.5f);   // scale about the center
             var duration = TimeSpan.FromSeconds(OpenDuration);
             pop.BeginAnimation(Transform.ScaleXProperty, new DoubleAnimation { From = 0.85, To = 1, Duration = duration, FillBehavior = FillBehavior.Stop });
             pop.BeginAnimation(Transform.ScaleYProperty, new DoubleAnimation { From = 0.85, To = 1, Duration = duration, FillBehavior = FillBehavior.Stop });
@@ -445,7 +445,7 @@ public class OverlayWindow : ContentControl
 
     // Drag moves the window by writing Left/Top (its absolute top-left). The delta is measured in the PARENT WINDOW's space
     // (a fixed frame) - NOT the card's, which moves as we drag it. The base is the card's real top-left, so it works whether
-    // the window was centred or explicitly placed; the first drag of a centred window switches it to explicit placement at
+    // the window was centered or explicitly placed; the first drag of a centered window switches it to explicit placement at
     // its current spot, so it doesn't jump.
     private void OnDragPress(object sender, MouseButtonEventArgs e)
     {
@@ -485,7 +485,7 @@ public class OverlayWindow : ContentControl
 
     private void OnPinClick(object sender, RoutedEventArgs e) => IsPinned = !IsPinned;
 
-    // Resize drags the bottom-right grip. Because the card is CENTRED by the popup, growing it by (dw,dh) moves both edges
+    // Resize drags the bottom-right grip. Because the card is CENTERED by the popup, growing it by (dw,dh) moves both edges
     // out by half; shift the popup offset by half the applied change so the top-left corner stays put under the grip.
     private void OnResizePress(object sender, MouseButtonEventArgs e)
     {
@@ -517,7 +517,7 @@ public class OverlayWindow : ContentControl
         Width = newW;
         Height = newH;
 
-        // Keep the top-left anchored: Center placement centres the card, so hold left = _resizeLeft by shifting the offset
+        // Keep the top-left anchored: Center placement centers the card, so hold left = _resizeLeft by shifting the offset
         // back half the (parent - size) change; a manually-placed (Relative) card's offset already IS its top-left.
         if (HostPopup.Placement == PlacementMode.Center)
         {

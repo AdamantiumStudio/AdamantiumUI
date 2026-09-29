@@ -25,7 +25,7 @@ float4x4 Projection;
 float Time;
 
 // Per-instance data by BUFFER DEVICE ADDRESS (BDA), not a descriptor-heap StructuredBuffer: the SV_InstanceID-indexed
-// StructuredBuffer form did not bind/read on this device (the fill rasterised nothing - World came out garbage), while
+// StructuredBuffer form did not bind/read on this device (the fill rasterized nothing - World came out garbage), while
 // BDA is the engine's proven GPU-storage pattern (see StrokeEffect/FillFringeEffect: uint64_t address + (T*)addr).
 uint64_t InstancesAddress;
 
@@ -53,7 +53,7 @@ SamplerState SourceSampler : register(s2);
 
 // One PROCEDURAL fill instance on arbitrary geometry. Shared because its FILL is a brush (BrushEffect evaluates the
 // pattern from it) while its FRINGE is not: a one-pixel ring does not evaluate a pattern, it just takes the brush's low
-// colour, so the ring is the same flat pass the solid fills use and lives with them in BatchEffect. Both read this
+// color, so the ring is the same flat pass the solid fills use and lives with them in BatchEffect. Both read this
 // record, so it belongs to neither.
 struct PatternGeomData
 {

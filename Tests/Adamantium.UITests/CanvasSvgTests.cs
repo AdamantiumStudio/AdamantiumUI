@@ -87,7 +87,7 @@ public class CanvasSvgTests
             Assert.That(back.Origin.X + back.Points[1].At.X, Is.EqualTo(40).Within(0.01), "the stroke moved");
             Assert.That(back.Origin.Y + back.Points[1].At.Y, Is.EqualTo(60).Within(0.01));
             Assert.That(back.Thickness, Is.EqualTo(3).Within(0.01), "the pen changed width");
-            Assert.That((back.Brush as SolidColorBrush)?.Color, Is.EqualTo(Colors.Tomato), "the colour changed");
+            Assert.That((back.Brush as SolidColorBrush)?.Color, Is.EqualTo(Colors.Tomato), "the color changed");
         });
     }
 
@@ -440,8 +440,8 @@ public class CanvasSvgTests
         Assert.That(back.Children, Has.Count.EqualTo(2), "something in the group was lost");
     }
 
-    // CONTROLS AND WIRES ARE NOT A DRAWING. A control is a living thing with a template and behaviour, and a rectangle
-    // labelled "Button" in a file would be a lie about what it is.
+    // CONTROLS AND WIRES ARE NOT A DRAWING. A control is a living thing with a template and behavior, and a rectangle
+    // labeled "Button" in a file would be a lie about what it is.
     [Test]
     public void ControlsAreLeftOutRatherThanDrawnAsShapes()
     {
@@ -473,7 +473,7 @@ public class CanvasSvgTests
 
             var box = items.OfType<ShapeItem>().First(s => s.Shape == CanvasShape.Rectangle);
             Assert.That((box.Fill as SolidColorBrush)?.Color, Is.EqualTo(Colors.Red), "#ff0000 is red");
-            Assert.That((box.Stroke as SolidColorBrush)?.Color, Is.EqualTo(Colors.Blue), "a named colour was missed");
+            Assert.That((box.Stroke as SolidColorBrush)?.Color, Is.EqualTo(Colors.Blue), "a named color was missed");
 
             var circle = items.OfType<ShapeItem>().First(s => s.Shape == CanvasShape.Ellipse);
             Assert.That(circle.World.Width, Is.EqualTo(50).Within(0.01), "a circle is an ellipse of its diameter");

@@ -5,8 +5,8 @@ using Adamantium.UI.Controls.DrawingBoard;
 
 namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 
-/// <summary>COLOURS BLENDED by an amount: nothing of the next at zero, all of it at one. Two is the usual case and the
-/// kind gives it two sockets - but a third colour blends in the same way, one step at a time, so a socket somebody adds
+/// <summary>COLORS BLENDED by an amount: nothing of the next at zero, all of it at one. Two is the usual case and the
+/// kind gives it two sockets - but a third color blends in the same way, one step at a time, so a socket somebody adds
 /// does what the node is for rather than nothing at all.</summary>
 public sealed class MixSpecialization : NodeSpecialization
 {

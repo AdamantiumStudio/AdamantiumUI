@@ -103,7 +103,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
     /// <summary>How many slots the retained arena currently holds, and what one of them holds. The cache sweeps them to
     /// find any whose owner has stopped drawing - the arena issues segments as RANGES, so such a slot is drawn by its
-    /// neighbours' draw call.</summary>
+    /// neighbors' draw call.</summary>
     public int SlotCount => Count;
 
     public TItem ItemAt(int slot) => Items[slot];
@@ -339,7 +339,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     }
 
     /// <summary>Is every slot of this run blank - written by nobody? Asked before a range is handed back, so a stale run
-    /// cannot take a live neighbour with it. The base class cannot read an instance's fields, so the derived collector
+    /// cannot take a live neighbor with it. The base class cannot read an instance's fields, so the derived collector
     /// answers; a family with nothing to say answers "no" and simply never reclaims.</summary>
     protected virtual bool IsBlank(int first, int count) => false;
 
@@ -360,7 +360,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         // ...and it must be EMPTY - every slot in it already blanked. A group's runs can be stale: a walk that did not
         // visit the group reassigns its slots to whoever it recorded there, so the run may now name somebody else's
         // instances (which is why the blanking checks the owner tag before it writes). Shrinking a range by a stale
-        // length takes a live neighbour out of the draw with it - measured as a card that vanished from the frame.
+        // length takes a live neighbor out of the draw with it - measured as a card that vanished from the frame.
         if (!IsBlank(first, count)) return false;
 
         if (first == (int)s.First)

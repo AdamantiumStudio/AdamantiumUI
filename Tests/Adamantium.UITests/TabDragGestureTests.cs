@@ -128,7 +128,7 @@ public class TabDragGestureTests
                                    // tabs 2 and 3 are the ordinary row
 
         tc.BeginDrag(tabs[3], 125.0);   // grabbed 5px into the last ordinary tab (it starts at 120)
-        tc.UpdateDrag(tabs[3], 80.0);   // ...dragged back past tab 2's centre, so the gap opens at index 2
+        tc.UpdateDrag(tabs[3], 80.0);   // ...dragged back past tab 2's center, so the gap opens at index 2
 
         Assert.Multiple(() =>
         {

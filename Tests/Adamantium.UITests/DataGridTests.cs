@@ -135,7 +135,7 @@ public class DataGridTests
     }
 
     [Test]
-    public void Widths_MinAndMax_AreHonoured()
+    public void Widths_MinAndMax_AreHonored()
     {
         var clampedUp = new DataGridTextColumn { Width = new GridLength(10), MinWidth = 50 };
         var clampedDown = new DataGridTextColumn { Width = new GridLength(900), MaxWidth = 200 };
@@ -427,7 +427,7 @@ public class DataGridTests
         var grid = WideGrid(200);
         Relayout(grid, width: 400);
 
-        grid.HorizontalOffset = 10000;   // column 100 and its neighbours
+        grid.HorizontalOffset = 10000;   // column 100 and its neighbors
         Relayout(grid, width: 400);
 
         var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
@@ -452,7 +452,7 @@ public class DataGridTests
         Assert.Multiple(() =>
         {
             Assert.That(row.CellAt(0), Is.Not.Null, "frozen means it stays - that is the whole of it");
-            Assert.That(row.CellAt(1), Is.Null, "its unfrozen neighbour left with the rest");
+            Assert.That(row.CellAt(1), Is.Null, "its unfrozen neighbor left with the rest");
         });
     }
 
@@ -615,7 +615,7 @@ public class DataGridTests
         Assert.Multiple(() =>
         {
             Assert.That(row.CellAt(0).Content, Is.EqualTo(item.Name), "the value the column's binding produces");
-            Assert.That(row.CellAt(1).State, Is.EqualTo(item.Note), "a MEANING, not a colour");
+            Assert.That(row.CellAt(1).State, Is.EqualTo(item.Note), "a MEANING, not a color");
             Assert.That(row.CellAt(1).IsReadOnly, Is.EqualTo(item.Locked), "and this one cell's own refusal");
         });
     }
@@ -774,7 +774,7 @@ public class DataGridTests
     }
 
     // The pinned zone paints in TWO layers - the table's surface and the row's OWN band brush over it - and the band
-    // must be that very brush, not a colour mixed from it. A colour picker changes one brush object in place, and a
+    // must be that very brush, not a color mixed from it. A color picker changes one brush object in place, and a
     // mixed copy would leave the zone in the shade it was mixed at while every other column followed.
     [Test]
     public void ThePinnedZone_PaintsWithTheRowsOwnBrush_NotACopyOfIt()
@@ -796,7 +796,7 @@ public class DataGridTests
         {
             Assert.That(backdrop, Is.Not.Null, "something has to paint the zone - a cell is transparent");
             Assert.That(((Border)backdrop.Child).Background, Is.SameAs(banded.Background),
-                "the band is the row's OWN brush, so a colour changed in place is followed");
+                "the band is the row's OWN brush, so a color changed in place is followed");
             Assert.That(backdrop.Background, Is.SameAs(grid.Background), "over the table's surface, which is opaque");
         });
     }
@@ -861,7 +861,7 @@ public class DataGridTests
     }
 
     // A clip is a SCISSOR on the GPU and a scissor change ends the batch, so a cell that clips cannot share a draw call
-    // with its neighbours: measured on 90 cells, 467 draws a frame against 191 and 262 fps against 408. Only the
+    // with its neighbors: measured on 90 cells, 467 draws a frame against 191 and 262 fps against 408. Only the
     // EDITOR ever needed it - a themed field carries a standalone control's MinWidth and would hang over the next
     // column - so only an editing cell asks for one.
     [Test]
@@ -870,7 +870,7 @@ public class DataGridTests
         var grid = SelectableGrid(3);
         Relayout(grid);
 
-        Assert.That(grid.CellFor(0, 0).ClipToBounds, Is.False, "an ordinary cell shares its neighbours' draw call");
+        Assert.That(grid.CellFor(0, 0).ClipToBounds, Is.False, "an ordinary cell shares its neighbors' draw call");
 
         grid.BeginEdit(0, 0);
         Relayout(grid, grid.CellFor(0, 0));
@@ -883,7 +883,7 @@ public class DataGridTests
         Assert.That(grid.CellFor(0, 0).ClipToBounds, Is.False, "and gives the scissor back when the edit ends");
     }
 
-    // The rule colour is the grid's to name, and it reaches the cells that draw it. ONE brush for both directions:
+    // The rule color is the grid's to name, and it reaches the cells that draw it. ONE brush for both directions:
     // the rules ride on the cell's own border, and a border has one.
     [Test]
     public void GridLines_TakeTheBrushTheGridNames()
@@ -1285,7 +1285,7 @@ public class DataGridTests
         Assert.That(grid.CellFor(0, 0).HasValidationError, Is.False, "the mark goes when the complaint does");
     }
 
-    // The colour is the PAGE's to name, exactly as the search washes are - and handing it back has to restore the
+    // The color is the PAGE's to name, exactly as the search washes are - and handing it back has to restore the
     // theme's, which is the half a plain null assignment gets wrong.
     [Test]
     public void TheErrorWash_TakesTheBrushTheGridNames_AndGivesItBack()
@@ -1300,12 +1300,12 @@ public class DataGridTests
 
         grid.ValidationErrorBrush = Brushes.Red;
         Relayout(grid);
-        Assert.That(grid.CellFor(0, 0).ValidationErrorBrush, Is.EqualTo(Brushes.Red), "the page's colour wins");
+        Assert.That(grid.CellFor(0, 0).ValidationErrorBrush, Is.EqualTo(Brushes.Red), "the page's color wins");
 
         grid.ValidationErrorBrush = null;
         Relayout(grid);
         Assert.That(grid.CellFor(0, 0).ValidationErrorBrush, Is.EqualTo(Brushes.Blue),
-            "and saying nothing hands the theme's colour back");
+            "and saying nothing hands the theme's color back");
     }
 
     private sealed class Washes : System.ComponentModel.INotifyPropertyChanged
@@ -1343,7 +1343,7 @@ public class DataGridTests
             Assert.That(grid.CellFor(0, 0).SearchCurrentBrush, Is.EqualTo(Brushes.Red));
         });
 
-        // A SECOND colour, still through the binding: naming one and then naming another has to land too, not only the
+        // A SECOND color, still through the binding: naming one and then naming another has to land too, not only the
         // first one to arrive.
         washes.Match = Brushes.Yellow;
         BindingUpdateQueue.Flush();
@@ -1356,7 +1356,7 @@ public class DataGridTests
         Relayout(grid);
 
         Assert.That(grid.CellFor(0, 0).SearchMatchBrush, Is.EqualTo(Brushes.Blue),
-            "the colour from below is visible again, not the one the grid stopped naming");
+            "the color from below is visible again, not the one the grid stopped naming");
     }
 
     // The rules are a THICKNESS on the cell's own border, so the four visibility states have to come out as the four
@@ -1728,7 +1728,7 @@ public class DataGridTests
     }
 
     [Test]
-    public void Cancelling_WritesNothing()
+    public void Canceling_WritesNothing()
     {
         var (grid, items) = EditableGrid();
 
@@ -1802,7 +1802,7 @@ public class DataGridTests
         Assert.Multiple(() =>
         {
             Assert.That(grid.CellFor(0, 0).ContentTemplate, Is.SameAs(editing));
-            Assert.That(grid.CellFor(0, 1).ContentTemplate, Is.Not.SameAs(editing), "the neighbour was left alone");
+            Assert.That(grid.CellFor(0, 1).ContentTemplate, Is.Not.SameAs(editing), "the neighbor was left alone");
         });
     }
 
@@ -2455,7 +2455,7 @@ public class DataGridTests
     }
 
     [Test]
-    public void MatchCaseIsHonoured()
+    public void MatchCaseIsHonored()
     {
         var condition = new DataGridFilterCondition
         {
@@ -3960,7 +3960,7 @@ public class DataGridTests
     }
 
     // The order of the chips IS the nesting, so carrying one along the strip is how a column changes how deep it
-    // groups - and the rows have to come out re-nested, not merely re-labelled.
+    // groups - and the rows have to come out re-nested, not merely re-labeled.
     [Test]
     public void CarryingAChip_ChangesHowDeepItsColumnGroups()
     {
@@ -4392,7 +4392,7 @@ public class DataGridTests
 
     // The zebra counts the rows of the DATA. A caption stands in the same flat list, so it used to take whichever
     // stripe its place happened to fall on and the group headers came out half light, half dark - a table that looks
-    // like it made a mistake. It takes no stripe at all now, and its own colour from the theme.
+    // like it made a mistake. It takes no stripe at all now, and its own color from the theme.
     [Test]
     public void AGroupRow_TakesNoStripeOfTheZebra()
     {
@@ -4693,7 +4693,7 @@ public class DataGridTests
     }
 
     // Grouping moves a column's value into the captions and the table stops drawing it. A file has no captions, so
-    // taking the column out of the export would drop the very field the table is organised by.
+    // taking the column out of the export would drop the very field the table is organized by.
     [Test]
     public void AColumnTheTableIsGroupedBy_StillGoesOut_AndTheCaptionsDoNot()
     {
@@ -5163,7 +5163,7 @@ public class DataGridTests
     }
 
     // Conditional formatting: the MEANING is worked out from the value, where StateBinding reads one the record already
-    // carries. A meaning, never a colour - the theme decides what "Warning" looks like.
+    // carries. A meaning, never a color - the theme decides what "Warning" looks like.
     [Test]
     public void AStateRule_GivesTheCellItsMeaning_FromTheValue()
     {

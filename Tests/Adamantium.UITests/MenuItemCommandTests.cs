@@ -43,7 +43,7 @@ public class MenuItemCommandTests
         Assert.That(item.IsEnabled, Is.True, "and only to that one");
     }
 
-    /// <summary>A PARENT row opens a submenu and runs nothing, so a command left on it must not grey it out - which
+    /// <summary>A PARENT row opens a submenu and runs nothing, so a command left on it must not gray it out - which
     /// would make a whole branch unreachable.</summary>
     [Test]
     public void AParentRowIsNotDisabledByACommand()

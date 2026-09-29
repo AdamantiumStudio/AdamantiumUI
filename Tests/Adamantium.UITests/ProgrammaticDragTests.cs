@@ -13,7 +13,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// <c>DragDrop.DoDragDrop</c> - starting a drag from CODE, for the gestures the engine cannot recognise itself (a
+/// <c>DragDrop.DoDragDrop</c> - starting a drag from CODE, for the gestures the engine cannot recognize itself (a
 /// context menu's "Move to…", a keyboard pick-up, a source that is not an element). No pointer is involved in starting
 /// one, which is exactly what makes it testable here; the drop itself needs a window, so what is covered is the session:
 /// it starts, it carries the payload, it refuses to overlap another, and it lets go cleanly.
@@ -23,7 +23,7 @@ public class ProgrammaticDragTests
 {
     private Border _source;
 
-    // A real 2x2 PNG: the file fallback only offers what it can recognise as a picture, so arbitrary bytes will not do.
+    // A real 2x2 PNG: the file fallback only offers what it can recognize as a picture, so arbitrary bytes will not do.
     private static readonly byte[] TinyPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7D" +
         "AcdvqGQAAAATSURBVBhXY/jPwPAfDBkY/oMBAEnICfeW3k0uAAAAAElFTkSuQmCC");

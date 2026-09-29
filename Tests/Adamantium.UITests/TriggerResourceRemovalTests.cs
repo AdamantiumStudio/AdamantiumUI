@@ -18,7 +18,7 @@ public class TriggerResourceRemovalTests
     // The order is the one a real click produces: the pressed trigger goes first (the button comes up), then the checked
     // one (the state flips). Removing them the other way round never showed the defect, which is why it survived.
     [Test]
-    public void AThemeResourceTriggerTakesItsColourWithIt()
+    public void AThemeResourceTriggerTakesItsColorWithIt()
     {
         var part = new Border();
         var property = part.GetProperty(nameof(Border.Background));
@@ -37,7 +37,7 @@ public class TriggerResourceRemovalTests
 
         ThemeResource.Remove(part, nameof(Border.Background), ValuePriority.Trigger, checkedToken);
         // Not "is null": an un-triggered Border carries its own default brush. What matters is that NEITHER trigger's
-        // colour is still on the part.
+        // color is still on the part.
         Assert.That(part.Background, Is.Not.SameAs(Checked).And.Not.SameAs(Pressed),
             "both triggers have left - nothing of theirs may stay on the part");
     }
@@ -45,7 +45,7 @@ public class TriggerResourceRemovalTests
     // The same seam, the same shape, the same defect: the label's Foreground is an {ObservableResource} in the very
     // triggers this bug was found in.
     [Test]
-    public void AnObservableResourceTriggerTakesItsColourWithIt()
+    public void AnObservableResourceTriggerTakesItsColorWithIt()
     {
         var part = new Border();
         var property = part.GetProperty(nameof(Border.Background));
@@ -63,7 +63,7 @@ public class TriggerResourceRemovalTests
 
         ObservableResource.Remove(part, nameof(Border.Background), ValuePriority.Trigger, checkedToken);
         // Not "is null": an un-triggered Border carries its own default brush. What matters is that NEITHER trigger's
-        // colour is still on the part.
+        // color is still on the part.
         Assert.That(part.Background, Is.Not.SameAs(Checked).And.Not.SameAs(Pressed),
             "both triggers have left - nothing of theirs may stay on the part");
     }

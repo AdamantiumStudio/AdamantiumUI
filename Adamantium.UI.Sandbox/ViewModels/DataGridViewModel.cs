@@ -60,7 +60,7 @@ public class GridNode : System.ComponentModel.INotifyDataErrorInfo
     public string Updated { get; set; }
     public ObservableCollection<GridNode> Children { get; } = new();
 
-    /// <summary>What this row's status MEANS - a meaning, never a colour: the theme decides what "error" looks like, and
+    /// <summary>What this row's status MEANS - a meaning, never a color: the theme decides what "error" looks like, and
     /// a model that handed out brushes would break the moment the theme changed. Read by the Status column's
     /// <see cref="DataGridColumn.StateBinding"/>, like any other value.</summary>
     public object StatusState => Status == "error" ? "Error" : null;
@@ -382,45 +382,45 @@ public partial class DataGridViewModel : TabPageViewModel
             Key = "sandbox.table.export"
         });
 
-        if (path == null) ExportStatus = "Cancelled";
+        if (path == null) ExportStatus = "Canceled";
         return path;
     }
 
     /// <summary>Whether the strip that searches the table is shown.</summary>
     [Bindable] private bool _showSearchPanel;
 
-    /// <summary>Whether this page names the search colours itself instead of leaving them to the theme. BOTH states are
+    /// <summary>Whether this page names the search colors itself instead of leaving them to the theme. BOTH states are
     /// the point: saying nothing is what a table does by default, and saying something overrides it - and going back is
     /// the half that is easy to get wrong, on the control's side and on the binding's.</summary>
     [Bindable, Affects(nameof(SearchMatchBrush), nameof(SearchCurrentMatchBrush))]
-    private bool _ownSearchColours;
+    private bool _ownSearchColors;
 
     // Red, green, blue, ALPHA - and the alpha is the whole point: a wash lets the check box and the text under it
     // through, a plate swallows them. Starting away from the theme's yellow so that what this page names, and what it
     // would have got by saying nothing, cannot be mistaken for each other.
     [Bindable, Affects(nameof(SearchMatchBrush))]
-    private Color _searchMatchColour = new(0x21, 0xC8, 0x6E, 0x59);
+    private Color _searchMatchColor = new(0x21, 0xC8, 0x6E, 0x59);
 
     [Bindable, Affects(nameof(SearchCurrentMatchBrush))]
-    private Color _searchCurrentColour = new(0x21, 0xC8, 0x6E, 0xA6);
+    private Color _searchCurrentColor = new(0x21, 0xC8, 0x6E, 0xA6);
 
     /// <summary>What a found cell is washed with - null while the theme owns it, which is exactly what the grid's own
     /// property means by null.</summary>
-    public Brush SearchMatchBrush => OwnSearchColours ? new SolidColorBrush(SearchMatchColour) : null;
+    public Brush SearchMatchBrush => OwnSearchColors ? new SolidColorBrush(SearchMatchColor) : null;
 
     /// <summary>...and the cell the search is standing on.</summary>
-    public Brush SearchCurrentMatchBrush => OwnSearchColours ? new SolidColorBrush(SearchCurrentColour) : null;
+    public Brush SearchCurrentMatchBrush => OwnSearchColors ? new SolidColorBrush(SearchCurrentColor) : null;
 
-    /// <summary>Whether this page names the colour a rejected value is washed with, instead of leaving it to the theme -
-    /// the same two states as the search colours, and the same reason for showing both.</summary>
+    /// <summary>Whether this page names the color a rejected value is washed with, instead of leaving it to the theme -
+    /// the same two states as the search colors, and the same reason for showing both.</summary>
     [Bindable, Affects(nameof(ValidationErrorBrush))]
-    private bool _ownValidationColour;
+    private bool _ownValidationColor;
 
     [Bindable, Affects(nameof(ValidationErrorBrush))]
-    private Color _validationErrorColour = new(0xC8, 0x46, 0x21, 0x66);
+    private Color _validationErrorColor = new(0xC8, 0x46, 0x21, 0x66);
 
     /// <summary>What a cell the column will not accept is washed with - null while the theme owns it.</summary>
-    public Brush ValidationErrorBrush => OwnValidationColour ? new SolidColorBrush(ValidationErrorColour) : null;
+    public Brush ValidationErrorBrush => OwnValidationColor ? new SolidColorBrush(ValidationErrorColor) : null;
 
     /// <summary>The range the Size column will accept. Bound INTO the rule from here, which is the point of a rule
     /// being a component: the limits are a page's business, not a compiled-in constant.</summary>

@@ -59,7 +59,7 @@
     </Style>
 
     <!-- Triggers (its own style). State triggers project the control's state brushes onto the named parts via
-         {TemplateBinding}; the focus ring uses {ThemeResource} so a runtime focus-colour change flows live. The host of
+         {TemplateBinding}; the focus ring uses {ThemeResource} so a runtime focus-color change flows live. The host of
          a style trigger is the control itself, so {TemplateBinding} reads the button's properties and TargetName reaches
          the template parts. -->
     <Style Selector="Button">
@@ -73,7 +73,7 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundDisabled}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
-            <!-- AND THE CONTENT AS A WHOLE GOES QUIET. A disabled control is greyed through its FOREGROUND, which is
+            <!-- AND THE CONTENT AS A WHOLE GOES QUIET. A disabled control is grayed through its FOREGROUND, which is
                  what text reads - and a picture carries its own brush and ignores it, so a button with a glyph in it
                  sat there looking live with nothing to do. Opacity is what reaches a picture. -->
             <Setter TargetName="PART_ContentPresenter" Property="Opacity" Value="0.4"/>

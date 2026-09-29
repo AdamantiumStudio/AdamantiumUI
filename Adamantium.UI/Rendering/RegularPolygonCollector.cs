@@ -46,7 +46,7 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
 
     /// <summary>The three numbers that describe a polygon to a shader, in the slot a shape without corner radii leaves
     /// free: corners, start angle in RADIANS, ring thickness in device px. One statement, read by this batch and by the
-    /// gradient/pattern/texture siblings that paint the same shape with another source of colour.</summary>
+    /// gradient/pattern/texture siblings that paint the same shape with another source of color.</summary>
     internal static Vector4F ShapeNumbers(RegularPolygonPayload p, float scale) =>
         new(p.Corners, (float)MathHelper.DegreesToRadians(p.StartAngle), (float)(p.RingThickness * scale), 0);
 
@@ -70,7 +70,7 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
         const float eps = 1e-4f;
         if (Math.Abs(world.M12) > eps || Math.Abs(world.M21) > eps) return false;   // rotation/shear -> per-unit
 
-        var color = RectBatchCollector.FillColour(p.Brush, opacity);
+        var color = RectBatchCollector.FillColor(p.Brush, opacity);
 
         var sx = world.M11; var sy = world.M22; var tx = world.M41; var ty = world.M42;
         var r = p.DestinationRect;

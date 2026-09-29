@@ -95,7 +95,7 @@ public class CombinedGeometryTests
     {
         var m = Combine(GeometryCombineMode.Exclude, NestedOuter(), NestedInner());
         Assert.IsTrue(Covered(m, new Vector2(10, 50)), "ring (in outer, outside inner) kept");
-        Assert.IsFalse(Covered(m, new Vector2(50, 50)), "centre (the hole) removed");
+        Assert.IsFalse(Covered(m, new Vector2(50, 50)), "center (the hole) removed");
         Assert.IsFalse(Covered(m, new Vector2(150, 150)), "exterior empty");
     }
 
@@ -111,7 +111,7 @@ public class CombinedGeometryTests
     public void Nested_Union_KeepsOuter()
     {
         var m = Combine(GeometryCombineMode.Union, NestedOuter(), NestedInner());
-        Assert.IsTrue(Covered(m, new Vector2(50, 50)), "centre filled");
+        Assert.IsTrue(Covered(m, new Vector2(50, 50)), "center filled");
         Assert.IsTrue(Covered(m, new Vector2(10, 50)), "ring filled");
         Assert.IsFalse(Covered(m, new Vector2(150, 150)), "exterior empty");
     }

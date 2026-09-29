@@ -75,7 +75,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         return _texture;
     }
 
-    /// <summary>The colour behind the picture, and the whole answer when there is no picture.</summary>
+    /// <summary>The color behind the picture, and the whole answer when there is no picture.</summary>
     public Color Background => _prepared.Background;
 
     /// <summary>The monitor this copy was prepared for, in DESKTOP pixels. A material maps its fragments through it -
@@ -108,12 +108,12 @@ internal sealed class WallpaperBackdrop : IDisposable
                 return new Rect(monitor.X, monitor.Y, _picture.Width, _picture.Height);
 
             case WallpaperFit.Center:
-                return Centred(monitor, _picture.Width, _picture.Height);
+                return Centered(monitor, _picture.Width, _picture.Height);
 
             case WallpaperFit.Fit:
             {
                 var scale = Math.Min(monitor.Width / _picture.Width, monitor.Height / _picture.Height);
-                return Centred(monitor, _picture.Width * scale, _picture.Height * scale);
+                return Centered(monitor, _picture.Width * scale, _picture.Height * scale);
             }
 
             default:
@@ -121,12 +121,12 @@ internal sealed class WallpaperBackdrop : IDisposable
                 // Fill: cover the monitor and let the overflow hang off the edges - which is why the rectangle returned
                 // here is LARGER than the monitor, and why a material must map through it rather than through the screen.
                 var scale = Math.Max(monitor.Width / _picture.Width, monitor.Height / _picture.Height);
-                return Centred(monitor, _picture.Width * scale, _picture.Height * scale);
+                return Centered(monitor, _picture.Width * scale, _picture.Height * scale);
             }
         }
     }
 
-    private static Rect Centred(Rect monitor, double width, double height)
+    private static Rect Centered(Rect monitor, double width, double height)
         => new(monitor.X + (monitor.Width - width) / 2, monitor.Y + (monitor.Height - height) / 2, width, height);
 
     /// <summary>Syncs the copy with the wallpaper of the monitor under <paramref name="point"/> (path and timestamp

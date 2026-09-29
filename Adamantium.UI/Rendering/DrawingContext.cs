@@ -106,7 +106,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
 
       // The payload keeps the LIVE brush/pen and reads their immutable snapshots (Brush.Snapshot): a brush is animatable,
       // and a paint change repaints by RE-BAKING this payload rather than re-recording the element - so a payload holding a
-      // snapshot taken here would pin the colour forever.
+      // snapshot taken here would pin the color forever.
       var payload = new RectanglePayload(
       brush,
       destinationRect,

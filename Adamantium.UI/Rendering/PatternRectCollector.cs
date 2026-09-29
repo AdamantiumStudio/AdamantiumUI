@@ -51,7 +51,7 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
         PatternBrushRecord.TryDescribe(brush, out var record) ? record.Type : -1;
 
     // Pattern kinds and noise kinds share one record and one vertex stage, so they differ only in which pass runs.
-    // Anything unrecognised falls back to the checkerboard pass rather than drawing nothing: a new PatternType that
+    // Anything unrecognized falls back to the checkerboard pass rather than drawing nothing: a new PatternType that
     // nobody wired up should look wrong, not vanish.
     protected override IEffectPass DrawPass => _kind switch
     {
@@ -127,7 +127,7 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
     }
 
     // POLYGON variant: a regular polygon with a procedural fill batches into the SAME pass. The shape stays a distance
-    // field - one instanced draw, self-anti-aliased - and only the source of the colour differs.
+    // field - one instanced draw, self-anti-aliased - and only the source of the color differs.
     /// <summary>THE one statement for the polygon form - the render unit asks THIS, never its own copy.</summary>
     public static bool WantsBatchPolygon(RegularPolygonPayload p)
     {

@@ -14,7 +14,7 @@
         <Setter Property="BackgroundDisabled" Value="{ResourceReference ControlFillColorDisabled}"/>
         <Setter Property="ForegroundPressed" Value="{ResourceReference TextFillColorSecondary}"/>
         <Setter Property="ForegroundDisabled" Value="{ResourceReference TextFillColorDisabled}"/>
-        <!-- The CHECKED look, as brushes rather than as values written into the trigger. A toggle standing on a colour
+        <!-- The CHECKED look, as brushes rather than as values written into the trigger. A toggle standing on a color
              somebody else chose - the fold on a graph node, sitting on the node's own accent strip - overrides these
              and is left alone; a trigger that named the accent itself gave it nothing to override. -->
         <Setter Property="BackgroundChecked" Value="{ThemeResource AccentFillColorDefault}"/>

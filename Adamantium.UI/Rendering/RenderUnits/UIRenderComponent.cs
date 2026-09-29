@@ -154,7 +154,7 @@ public class StrokeRenderComponent : UIRenderComponent
         UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
 
         var fill = solidColor.Color.ToVector4();
-        fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the colour alpha
+        fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the color alpha
         UIBasicEffect.FillColor.SetValue(fill);
         UIBasicEffect.BasicSolidColorPass.Apply();
         base.Render();
@@ -204,10 +204,10 @@ public class GeometryRenderComponent : UIRenderComponent
         UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
 
         var fill = solidColor.Color.ToVector4();
-        fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the colour alpha
+        fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the color alpha
         UIBasicEffect.FillColor.SetValue(fill);
         // Fully transparent fill -> force zero opacity. Value check (not `== Brushes.Transparent`) so a FROZEN clone of
-        // Transparent - a different instance from the shared static - is still recognised (payload brushes are frozen).
+        // Transparent - a different instance from the shared static - is still recognized (payload brushes are frozen).
         if (solidColor.Color.A == 0)
         {
             UIBasicEffect.Opacity.SetValue(0f);
@@ -345,7 +345,7 @@ public class ImageRenderComponent : UIRenderComponent
         if (Background is SolidColorBrush solidColor)
         {
             var fill = solidColor.Color.ToVector4();
-            fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the colour alpha
+            fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the color alpha
             UIBasicEffect.FillColor.SetValue(fill);
         }
         
@@ -456,7 +456,7 @@ public class TextRenderComponent : ImageRenderComponent
 
     private bool _textRendered = false;
 
-    // Colour-only change: swap the brushes and force one re-rasterization, reusing the existing render
+    // Color-only change: swap the brushes and force one re-rasterization, reusing the existing render
     // target and geometry (no buffer/RT rebuild).
     public void UpdateColors(Brush background, Brush foreground, Brush stroke)
     {
@@ -495,7 +495,7 @@ public class TextRenderComponent : ImageRenderComponent
         if (GlyphRun == null) return;
 
         // Inset the text by the effect padding inside the (padded) target so edge glyphs' outline/glow have room. The
-        // composite quad was grown by the same pad with its origin shifted -pad (see RenderUnit), cancelling this inset.
+        // composite quad was grown by the same pad with its origin shifted -pad (see RenderUnit), canceling this inset.
         var pad = GlyphRun.EffectPadding;
         var location = new Vector3F(RenderingParameters.TextArea.X + pad, RenderingParameters.TextArea.Y + pad, 5);
         var foreground = ((SolidColorBrush)Foreground).Color;

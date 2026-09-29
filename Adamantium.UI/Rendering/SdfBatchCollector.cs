@@ -84,8 +84,8 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         var dev = (GraphicsDevice)device;
         if (!EnsureEffectForDraw(device)) return;
 
-        // Set what this draw DEPENDS on, don't inherit it. The colour mask is device state like any other, and a pass
-        // that borrows it (the strokes' union coverage masks colour off for its depth pass) would otherwise leave these
+        // Set what this draw DEPENDS on, don't inherit it. The color mask is device state like any other, and a pass
+        // that borrows it (the strokes' union coverage masks color off for its depth pass) would otherwise leave these
         // instances writing nothing at all.
         dev.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
                                   ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;

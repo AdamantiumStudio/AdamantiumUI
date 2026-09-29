@@ -14,7 +14,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Pure-CPU behaviour tests for the toggle family (ToggleButton/CheckBox/RadioButton/ToggleSwitch) and the range
+// Pure-CPU behavior tests for the toggle family (ToggleButton/CheckBox/RadioButton/ToggleSwitch) and the range
 // controls (Slider/ProgressBar) - their state machine and value math, independent of any template/GPU.
 [TestFixture]
 public class ControlsTests
@@ -253,7 +253,7 @@ public class ControlsTests
     }
 
     // The real button chrome: a STRETCHED Border (decorator) wrapping a Center-aligned ContentPresenter (the WPF idiom
-    // HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"). The border must fill its slot and centre the
+    // HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"). The border must fill its slot and center the
     // content inside - it must NOT collapse to the content's width and let the text spill outside. Regression repro for
     // the button-chrome break (Decorator.ArrangeOverride was returning the child's size instead of the arranged size).
     [Test]

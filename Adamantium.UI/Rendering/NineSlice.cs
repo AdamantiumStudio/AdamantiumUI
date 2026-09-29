@@ -12,7 +12,7 @@ namespace Adamantium.UI.Rendering;
 /// and the part that is easy to get subtly wrong.</summary>
 internal static class NineSlice
 {
-    /// <summary>How many instance records a brush bakes into - nine for a nine-slice (eight without its centre), one for
+    /// <summary>How many instance records a brush bakes into - nine for a nine-slice (eight without its center), one for
     /// anything else. The collector asks BEFORE baking, to check the batch has room.</summary>
     public static int Count(Brush brush) => brush switch
     {
@@ -150,9 +150,9 @@ internal static class NineSlice
                 var repeatY = tiles && row == 1 && dvs[1] > 0 ? Whole(h / (dvs[1] * sourceHeight * scaleY), round) : 1.0;
 
                 // HALF-TEXEL INSET. The piece samples a strip of the source, and a linear sampler asked for the strip's
-                // very edge blends in the texel BEYOND it - the neighbouring piece's pixels. On a tiled edge that lands
+                // very edge blends in the texel BEYOND it - the neighboring piece's pixels. On a tiled edge that lands
                 // at every wrap of frac(), which draws a thin line at each tile seam. Pulling the range in to the texel
-                // CENTRES removes it, and costs nothing in the shader.
+                // CENTERS removes it, and costs nothing in the shader.
                 var uv = Inset(us[column], dus[column], texelWidth);
                 var vv = Inset(vs[row], dvs[row], texelHeight);
 
@@ -190,8 +190,8 @@ internal static class NineSlice
         _ => (source.Width, source.Height)
     };
 
-    // Pull a normalised range in by half a texel at each end, so sampling it never reaches past its own pixels. A range
-    // thinner than one texel would invert - keep its centre instead, which is the best a sub-texel strip can do.
+    // Pull a normalized range in by half a texel at each end, so sampling it never reaches past its own pixels. A range
+    // thinner than one texel would invert - keep its center instead, which is the best a sub-texel strip can do.
     private static (double Start, double Length) Inset(double start, double length, double sizeInPixels)
     {
         if (length <= 0 || sizeInPixels <= 0) return (start, length);

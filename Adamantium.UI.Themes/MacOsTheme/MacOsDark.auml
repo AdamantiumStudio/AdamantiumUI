@@ -10,7 +10,7 @@
     <ThemeValue Property="AccentColor" Value="#0A84FF"/>
     <ThemeValue Property="AccentFillColorDisabled" Value="#3A3A3C"/>
     <!-- A Mac's focus ring is the ACCENT, not white - the accent with a wide soft halo, which is the platform's most
-         recognisable interaction cue. The halo needs a ring that can be blurred; until then the accent alone. -->
+         recognizable interaction cue. The halo needs a ring that can be blurred; until then the accent alone. -->
     <ThemeValue Property="FocusStrokeColorOuter" Value="#0A84FF"/>
     <ThemeValue Property="FocusStrokeColorInner" Value="#00000000"/>
   </ThemeVariantDefinition.Values>
@@ -42,7 +42,7 @@
     <!-- The table's rules, OPAQUE - see FluentDark. -->
     <PaletteColor Key="DataGridLineColor" Color="#404042"/>
     <!-- What a search HIT is washed with. Translucent, because a cell holds controls and meanings - a check box, a
-         state painted red - and a solid plate swallows both; the cell the search is ON takes the solid caution colour
+         state painted red - and a solid plate swallows both; the cell the search is ON takes the solid caution color
          instead, which is what sets it apart from the rest of what was found. -->
     <PaletteColor Key="DataGridSearchMatchColor" Color="#59FFD60A"/>
     <!-- ...and the cell the search is ON. Denser, but still a WASH: a solid plate swallowed the check box under it. -->
@@ -62,17 +62,17 @@
          goes darker than #323232 while the selected capsule rises to ControlFillColorDefault (#545456) above it. -->
     <PaletteColor Key="SegmentedTrackColor" Color="#2A2A2C"/>
 
-    <!-- The same groove as a COLOUR, for the strip's edge fade - see MacOsLight for why one key cannot serve both
+    <!-- The same groove as a COLOR, for the strip's edge fade - see MacOsLight for why one key cannot serve both
          slots. -->
     <PaletteColor Key="SegmentedTrackFadeColor" Color="#E62A2A2C" As="Color"/>
     <PaletteColor Key="SegmentedTrackFadeColorTransparent" Color="#002A2A2C" As="Color"/>
 
-    <!-- The ribbon band's own fade - see MacOsLight. The band is the well, so the fade is the well's colour. -->
+    <!-- The ribbon band's own fade - see MacOsLight. The band is the well, so the fade is the well's color. -->
     <PaletteColor Key="BandFadeColor" Color="#E6232325" As="Color"/>
     <PaletteColor Key="BandFadeColorTransparent" Color="#00232325" As="Color"/>
 
     <!-- The overlay scroller's thumb. TRANSLUCENT, because an overlay scroller lies ON the content rather than in a
-         gutter beside it: it has to be readable over a white paragraph and over a dark image, and only a colour that
+         gutter beside it: it has to be readable over a white paragraph and over a dark image, and only a color that
          lets both through does that. -->
     <!-- Denser than a Mac's own 50%: THERE IS NO TRACK behind this capsule (see MacOsScrollBarStyleSet), so it carries
          the contrast alone. At half alpha the text under it read straight through and the bar looked broken. -->
@@ -103,13 +103,13 @@
     <PaletteColor Key="DockCompassPreviewColor" Color="#590A84FF"/>
 
     <!-- Text. macOS states its secondary and tertiary text as fixed alphas of the primary - 55% and 25% - which is why
-         these are translucent white rather than three greys. -->
+         these are translucent white rather than three grays. -->
     <PaletteColor Key="TextFillColorPrimary" Color="#FFFFFF"/>
     <PaletteColor Key="TextFillColorSecondary" Color="#8CFFFFFF"/>
     <PaletteColor Key="TextFillColorTertiary" Color="#40FFFFFF"/>
     <PaletteColor Key="TextFillColorDisabled" Color="#40FFFFFF"/>
 
-    <!-- The system colours, as macOS states them for dark appearance. -->
+    <!-- The system colors, as macOS states them for dark appearance. -->
     <PaletteColor Key="SystemFillColorSuccess" Color="#32D74B"/>
     <PaletteColor Key="SystemFillColorCaution" Color="#FFD60A"/>
     <PaletteColor Key="SystemFillColorCritical" Color="#FF453A"/>
@@ -121,7 +121,7 @@
     <PaletteColor Key="KeyTipPlateStroke" Color="#48484A"/>
     <PaletteColor Key="KeyTipForeground" Color="#1C1C1E"/>
 
-    <!-- Served as raw COLOURS, not brushes: a gradient stop takes a colour, and so does a material's tint. -->
+    <!-- Served as raw COLORS, not brushes: a gradient stop takes a color, and so does a material's tint. -->
     <PaletteColor Key="ShimmerPeakColor" Color="#99FFFFFF" As="Color"/>
     <PaletteColor Key="ShimmerTrackColor" Color="#14FFFFFF" As="Color"/>
     <PaletteColor Key="EdgeFadeColor" Color="#E6323232" As="Color"/>

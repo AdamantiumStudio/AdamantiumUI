@@ -26,7 +26,7 @@ public interface IRegion : INotifyPropertyChanged
     /// <summary>Every view model present in the region (for a TabControl: the open tabs).</summary>
     IReadOnlyList<object> ActiveViewModels { get; }
 
-    /// <summary>Single-content behaviour: navigating REPLACES (removes the previous active) instead of accumulating. A
+    /// <summary>Single-content behavior: navigating REPLACES (removes the previous active) instead of accumulating. A
     /// ContentControl adapter sets this true on attach; a Selector adapter leaves it false (tabs accumulate).</summary>
     bool SingleActiveView { get; set; }
 

@@ -146,7 +146,7 @@ public class RibbonQuickAccessTransferTests
     }
 
     [Test]
-    public void ACommandIsRecognisedInTheBarByTheCommandItRuns()
+    public void ACommandIsRecognizedInTheBarByTheCommandItRuns()
     {
         var run = new Spy();
         var button = Command();
@@ -158,7 +158,7 @@ public class RibbonQuickAccessTransferTests
     }
 
     [Test]
-    public void ACommandThatRunsNothingIsRecognisedByItsKey()
+    public void ACommandThatRunsNothingIsRecognizedByItsKey()
     {
         var toggle = Command();
         Ribbon.SetQuickAccessKey(toggle, "ShowGrid");

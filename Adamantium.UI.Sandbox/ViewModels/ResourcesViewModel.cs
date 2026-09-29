@@ -51,7 +51,7 @@ public partial class ResourcesViewModel : TabPageViewModel
 
     /// <summary>Move the whole application onto the chosen theme. A SWAP, not a variant switch: different style sets and
     /// different metrics, so every template is rebuilt - which is exactly what the stand exists to make visible next to
-    /// the variant button, whose cost is a colour write per palette key.</summary>
+    /// the variant button, whose cost is a color write per palette key.</summary>
     [Command]
     private void SwitchTheme()
     {

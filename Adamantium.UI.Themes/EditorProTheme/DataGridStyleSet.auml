@@ -249,7 +249,7 @@
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
     </Style>
 
-    <!-- A group row takes the band's colour, not a stripe of the zebra - see the macOS set. -->
+    <!-- A group row takes the band's color, not a stripe of the zebra - see the macOS set. -->
     <Style Selector="DataGridRow[IsGroup=true]">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
     </Style>
@@ -262,7 +262,7 @@
 
     <!-- A fault in the RECORD, not in any one of its cells - a "from" later than a "to". It washes the whole row for
          exactly that reason: marking one of the cells involved would name the wrong culprit. Through the row's own
-         brush, so a page that names its colour is obeyed here as it is on the cells. -->
+         brush, so a page that names its color is obeyed here as it is on the cells. -->
     <Style Selector="DataGridRow[HasValidationError=true]">
         <Setter Property="Background" Value="{Self ValidationErrorBrush}"/>
     </Style>
@@ -428,7 +428,7 @@
                         <PropertyTrigger Property="IsExpanded" Value="true">
                             <Setter TargetName="Expander" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
                         </PropertyTrigger>
-                        <!-- A WASH, and the content keeps its own colours: a cell holds controls and meanings, and a
+                        <!-- A WASH, and the content keeps its own colors: a cell holds controls and meanings, and a
                              plate of accent swallows both. -->
                         <!-- FOUND by the search - see the macOS set. -->
                         <PropertyTrigger Property="IsSearchMatch" Value="true">
@@ -464,10 +464,10 @@
                             <!-- ...the whole of it, top to bottom - see Fluent's set. -->
                             <Setter TargetName="PART_ContentPresenter" Property="VerticalAlignment" Value="Stretch"/>
                         </PropertyTrigger>
-                        <!-- What the view-model called an error. A MEANING from the model, a colour from here. -->
+                        <!-- What the view-model called an error. A MEANING from the model, a color from here. -->
                         <!-- The three meanings a table normally distinguishes. A column states them through
                              StateBinding or works them out with a StateRule; what they LOOK like is decided here, which
-                             is the whole reason a rule returns a meaning and not a colour. -->
+                             is the whole reason a rule returns a meaning and not a color. -->
                         <PropertyTrigger Property="State" Value="Error">
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                                     Value="{ObservableResource SystemFillColorCritical}"/>
@@ -834,7 +834,7 @@
         </Setter>
     </Style>
 
-    <!-- A total is set apart by COLOUR - see the macOS set. -->
+    <!-- A total is set apart by COLOR - see the macOS set. -->
     <Style Selector="DataGridFooterCell">
         <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeCaption}"/>

@@ -1,7 +1,7 @@
 namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>How a <see cref="RenderTargetPanel"/> feeds a hosted universe a relative mouse delta (mouse-look). In a relative
-/// mode the panel hides the cursor, holds it centred and synthesizes <c>RawMouseMove</c> events with the raw delta, so a
+/// mode the panel hides the cursor, holds it centered and synthesizes <c>RawMouseMove</c> events with the raw delta, so a
 /// camera can be rotated with no limit even when the pointer reaches the window edge (replacing OS raw input).</summary>
 public enum MouseLookMode
 {

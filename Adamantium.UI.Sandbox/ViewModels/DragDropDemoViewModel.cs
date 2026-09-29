@@ -121,7 +121,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         }
     }
 
-    // One line per dropped thing, labelled by where it came from.
+    // One line per dropped thing, labeled by where it came from.
     private static IEnumerable<string> Describe(DragDropEventArgs e)
     {
         if (e.Data?.Get(DataFormats.Files) is string[] files && files.Length > 0)

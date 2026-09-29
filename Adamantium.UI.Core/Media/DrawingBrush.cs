@@ -8,7 +8,7 @@ namespace Adamantium.UI.Core.Media;
 /// <see cref="Imaging.DrawingImage"/>; tiling and fitting come from <see cref="TileBrush"/>.</summary>
 public sealed class DrawingBrush : TileBrush
 {
-    // PAINT: the drawing fills the shape it is given, so swapping it re-colours the same pixels and never touches layout.
+    // PAINT: the drawing fills the shape it is given, so swapping it re-colors the same pixels and never touches layout.
     public static readonly AdamantiumProperty DrawingProperty = AdamantiumProperty.Register(nameof(Drawing),
         typeof(Drawing), typeof(DrawingBrush), new PropertyMetadata(null, PropertyMetadataOptions.AffectsPaint, OnDrawingChanged));
 

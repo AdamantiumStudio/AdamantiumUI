@@ -65,7 +65,7 @@ public class CanvasArrangeTests
         Assert.That(seen.Width, Is.GreaterThan(box.World.Width * 1.05), "it is touching the edges");
     }
 
-    // A single POINT is centred at the zoom already in hand, not zoomed to infinity.
+    // A single POINT is centered at the zoom already in hand, not zoomed to infinity.
     [Test]
     public void FittingSomethingWithNoSizeDoesNotZoomForEver()
     {
@@ -276,7 +276,7 @@ public class CanvasArrangeTests
         });
     }
 
-    // What was ALREADY clear of its neighbour does not move: a layout somebody has arranged is not rearranged by being
+    // What was ALREADY clear of its neighbor does not move: a layout somebody has arranged is not rearranged by being
     // lined up, only the overlaps are opened.
     [Test]
     public void AligningLeavesWhatIsAlreadyApartWhereItIs()

@@ -93,7 +93,7 @@ public class TileResizeRenderTests
     private static string Name(IUIComponent c) => $"{c.GetType().Name}#{c.RenderId.ToString()[..8]}";
 
     // The slider: the cell size changes and the layout is driven ONE pass at a time, with the frame RECORDED after each pass -
-    // which is what the app does, and why the artefacts are visible mid-drag rather than only at the end.
+    // which is what the app does, and why the artifacts are visible mid-drag rather than only at the end.
     [Test]
     public void TileResize_DrawnGeometryNeverGoesStale()
     {

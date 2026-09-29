@@ -534,7 +534,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     /// layout stays the authority. New items and scrolling animate nothing.</summary>
     protected void AnimateLayoutMoves(Func<int, Rect> slotRect)
     {
-        // Gap closed: nothing is travelling any more, so give the slots back.
+        // Gap closed: nothing is traveling any more, so give the slots back.
         if (DropGapIndex < 0 && _promoted.Count > 0)
         {
             foreach (var row in _promoted) AsMotionNode(row, false);

@@ -109,7 +109,7 @@ public class CanvasCurveTests
         Assert.That(Curve().Handles, Is.EqualTo(CanvasHandles.Body));
     }
 
-    // ...and the canvas honours that: no grip of the frame answers a press.
+    // ...and the canvas honors that: no grip of the frame answers a press.
     [Test]
     public void NoFrameGripAnswersOnACurve()
     {
@@ -194,7 +194,7 @@ public class CanvasCurveTests
         var session = new RecordingDrawingSession();
         var points = new System.Collections.Generic.List<Vector2>();
 
-        // A zig-zag: no interior point is anywhere near where the curve between its neighbours would pass, so one found
+        // A zig-zag: no interior point is anywhere near where the curve between its neighbors would pass, so one found
         // on the line is one the walk put there.
         for (var i = 0; i < count; i++) points.Add(new Vector2(i * 30, i % 2 == 0 ? 0 : -50));
 

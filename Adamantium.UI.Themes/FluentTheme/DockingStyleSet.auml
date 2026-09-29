@@ -69,7 +69,7 @@
          HEADER carrying its name and the two things you do to a tool and never to a document - put it away and close it -
          while its tabs sit along the BOTTOM. A document has many siblings and no caption of its own; a tool has few and
          is part of the workspace rather than of the work. Every editor draws this distinction; until now we drew none. -->
-    <!-- Close buttons and the stretched lone tab are BEHAVIOUR, not looks: they live on PaneGroup and DockingArea
+    <!-- Close buttons and the stretched lone tab are BEHAVIOR, not looks: they live on PaneGroup and DockingArea
          (see DockingArea.StretchSingleDocumentTab and Pane.IsClosable) so a host changes them without touching a
          theme. -->
 
@@ -257,7 +257,7 @@
                             <Setter TargetName="PART_AutoHideButton" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
                         <!-- The whole of a floating window: the window's own title bar names it and carries the system's
-                             close button, so a caption here would repeat the name word for word, in a second colour, with
+                             close button, so a caption here would repeat the name word for word, in a second color, with
                              a thumbtack with no edge left to fold against. -->
                         <PropertyTrigger Property="IsFloatingRoot" Value="true">
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
@@ -396,7 +396,7 @@
     </Style>
 
     <!-- The compass shown while a pane is being dragged. Its brushes live here rather than in the control: which of the
-         five targets is armed is said with COLOUR, and colour is the theme's business. -->
+         five targets is armed is said with COLOR, and color is the theme's business. -->
     <Style Selector="DockCompass">
         <Setter Property="IndicatorBrush" Value="{ResourceReference DockCompassFillColor}"/>
         <Setter Property="IndicatorStroke" Value="{ResourceReference DockCompassStrokeColor}"/>

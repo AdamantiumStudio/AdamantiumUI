@@ -461,7 +461,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     /// <summary>Only the paint changed - do NOT touch IsGeometryValid. That flag is what makes the recorder re-run OnRender
-    /// and rebuild this element's draw commands, and none of that is needed for a new colour: the commands are the same, the
+    /// and rebuild this element's draw commands, and none of that is needed for a new color: the commands are the same, the
     /// units are the same, and the GPU data they bake from the brush is all that is stale.</summary>
     public void InvalidatePaint() => VisualTreeNotifications.RaisePaintInvalidated(this);
 
@@ -758,7 +758,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
                 var matrix = (Matrix4x4F)renderTransform.Matrix;
 
                 // Apply the transform AROUND the render-transform origin: move that point to the local origin, transform,
-                // move it back. Resolved from the element's CURRENT size, so the same template stays centred at any size.
+                // move it back. Resolved from the element's CURRENT size, so the same template stays centered at any size.
                 var origin = RenderTransformOrigin;
                 if (origin.X != 0 || origin.Y != 0)
                 {

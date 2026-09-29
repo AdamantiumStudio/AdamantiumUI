@@ -43,7 +43,7 @@ VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 float4 SolidColor_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
 	float4 result = fillColor;
-    result.a *= opacity;   // combine the colour's own alpha with the element/brush opacity (don't drop fillColor.a)
+    result.a *= opacity;   // combine the color's own alpha with the element/brush opacity (don't drop fillColor.a)
     return result;
 }
 
@@ -52,7 +52,7 @@ float4 Textured_PS(VERTEX_OUTPUT input) : SV_TARGET
    //float4 color = shaderTexture.Sample(sampleType, input.uv0) * fillColor;
    float4 color = shaderTexture.Sample(sampleType, input.uv0);
 
-   // Apply the control's opacity so a textured element (image / RenderTargetPanel) honours Opacity, like SolidColor_PS.
+   // Apply the control's opacity so a textured element (image / RenderTargetPanel) honors Opacity, like SolidColor_PS.
    color.a *= opacity;
 
    return color;
@@ -73,7 +73,7 @@ VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
 float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
     // 0..1 across the shape's box -> TILE space -> the content's rect inside one tile -> the source's sub-rectangle.
-    // Back into the UNTURNED grid: one 2x2, with the inverse, the aspect and the turn centre already folded in.
+    // Back into the UNTURNED grid: one 2x2, with the inverse, the aspect and the turn center already folded in.
     float2 g = float2(input.uv0.x * texRotation.x + input.uv0.y * texRotation.y,
                       input.uv0.x * texRotation.z + input.uv0.y * texRotation.w);
     float2 nn = g * texTile.xy - texTile.zw;

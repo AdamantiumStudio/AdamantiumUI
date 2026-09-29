@@ -5,7 +5,7 @@
     <!-- TabControl: the strip (PART_TabStrip, which pans on the mouse wheel - no scrollbar) + the themed content area
          (PART_SelectedContentHost). Each TabStripPlacement is its OWN small style whose selector matches that value
          ("TabControl[TabStripPlacement=Left]"): its template applies while the placement holds and switches on change,
-         so a side can fully restyle its strip (e.g. a docking-style Left/Right). Colours via {ResourceReference}. -->
+         so a side can fully restyle its strip (e.g. a docking-style Left/Right). Colors via {ResourceReference}. -->
 
     <!-- Shared chrome + the default (horizontal) header panel. The drag-reorder motion feel is declared here (the easing
          defaults to a decelerate cubic in code). -->

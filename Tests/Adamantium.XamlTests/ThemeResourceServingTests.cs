@@ -16,7 +16,7 @@ public class ThemeResourceServingTests
         new(@"<PaletteColor\b[^>]*\bKey\s*=\s*""([^""]+)""[^>]*>", RegexOptions.Compiled);
     private static readonly Regex ServedAsColor = new(@"\bAs\s*=\s*""Color""", RegexOptions.Compiled);
 
-    private static readonly Regex ColourSlot =
+    private static readonly Regex ColorSlot =
         new(@"\b(?:Color|Color1|Color2)\s*=\s*""\{\s*(?:ObservableResource|ResourceReference)\s+([A-Za-z0-9_]+)\s*\}""",
             RegexOptions.Compiled);
 
@@ -30,7 +30,7 @@ public class ThemeResourceServingTests
     public void AKeyIsUsedInTheSlotItIsServedFor(string themeFolder)
     {
         var folder = Path.Combine(ThemesRoot(), themeFolder);
-        var servedAsColour = new Dictionary<string, bool>();
+        var servedAsColor = new Dictionary<string, bool>();
 
         foreach (var file in Directory.EnumerateFiles(folder, "*.auml"))
         {
@@ -39,11 +39,11 @@ public class ThemeResourceServingTests
             {
                 var line = StripComments(raw, ref inComment);
                 foreach (Match declaration in Declaration.Matches(line))
-                    servedAsColour[declaration.Groups[1].Value] = ServedAsColor.IsMatch(declaration.Value);
+                    servedAsColor[declaration.Groups[1].Value] = ServedAsColor.IsMatch(declaration.Value);
             }
         }
 
-        Assert.That(servedAsColour, Is.Not.Empty, "the theme's palette should have been found");
+        Assert.That(servedAsColor, Is.Not.Empty, "the theme's palette should have been found");
 
         var complaints = new List<string>();
 
@@ -55,20 +55,20 @@ public class ThemeResourceServingTests
                 var line = StripComments(raw, ref inComment);
                 if (line.Length == 0) continue;
 
-                foreach (Match use in ColourSlot.Matches(line))
+                foreach (Match use in ColorSlot.Matches(line))
                 {
                     var key = use.Groups[1].Value;
                     // A key this theme does not declare is answered by a borrowed palette; that is a different question.
-                    if (!servedAsColour.TryGetValue(key, out var asColour) || asColour) continue;
+                    if (!servedAsColor.TryGetValue(key, out var asColor) || asColor) continue;
                     complaints.Add($"{Path.GetFileName(file)}:{number}: '{key}' is served as a BRUSH but sits in a " +
-                                   "colour slot - this throws inside the render walk and blanks the whole scene");
+                                   "color slot - this throws inside the render walk and blanks the whole scene");
                 }
 
                 foreach (Match use in BrushSlot.Matches(line))
                 {
                     var key = use.Groups[1].Value;
-                    if (!servedAsColour.TryGetValue(key, out var asColour) || !asColour) continue;
-                    complaints.Add($"{Path.GetFileName(file)}:{number}: '{key}' is served as a COLOUR but sits in a " +
+                    if (!servedAsColor.TryGetValue(key, out var asColor) || !asColor) continue;
+                    complaints.Add($"{Path.GetFileName(file)}:{number}: '{key}' is served as a COLOR but sits in a " +
                                    "brush slot");
                 }
             }

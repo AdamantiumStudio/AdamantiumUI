@@ -34,7 +34,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public static readonly AdamantiumProperty CommandParameterProperty = AdamantiumProperty.Register(nameof(CommandParameter),
         typeof(object), typeof(MenuItem), new PropertyMetadata(null, OnCommandParameterChanged));
 
-    // A row follows its command's availability, the way a button does: greyed out while the command says no, instead of
+    // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
     // looking ordinary and doing nothing when clicked. The subscription is WEAK (the relay holds the row weakly), so a
     // command owned by a long-lived view-model does not keep a dismissed menu's rows alive - a menu is built and thrown
     // away on every open, so that leak would be per-open.

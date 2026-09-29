@@ -334,7 +334,7 @@ public class RenderCacheTests
     // The point of dirty regions: a same-shape change re-renders ONLY the dirty control, not its unchanged siblings, and
     // does NOT do a full tree walk.
     [Test]
-    public void ColourChange_IsPartial_ReRendersOnlyTheDirtyControl()
+    public void ColorChange_IsPartial_ReRendersOnlyTheDirtyControl()
     {
         var a = AddControl(); DrawsRectangle(a);
         var b = AddControl(); DrawsRectangle(b);
@@ -342,7 +342,7 @@ public class RenderCacheTests
         var aBefore = a.OnRenderCount;
         var bBefore = b.OnRenderCount;
 
-        a.RenderAction = s => s.DrawRectangle(Brushes.Blue, Box);   // same shape, new colour
+        a.RenderAction = s => s.DrawRectangle(Brushes.Blue, Box);   // same shape, new color
         a.Invalidate();
         RenderFrame();
 
@@ -587,7 +587,7 @@ public class RenderCacheTests
     }
 
     // Element Opacity is AffectsPaint, not AffectsRender: it moved INTO the frozen snapshot, so a change re-bakes the same
-    // commands with a new alpha (a partial paint frame) instead of re-recording the element. Same trick as a brush recolour
+    // commands with a new alpha (a partial paint frame) instead of re-recording the element. Same trick as a brush recolor
     // above, but the alpha is composed from the snapshot chain at bake time (RenderCache.EffectiveOpacity).
     [Test]
     public void ElementOpacity_RepaintsWithoutReRecording()
@@ -792,7 +792,7 @@ public class RenderCacheTests
         AssertPaintOrderMatchesFullWalk("two new runs separated by hidden siblings");
     }
 
-    // The rank space between two neighbours is finite: every insert into the SAME gap halves it, so a panel realizing tiles
+    // The rank space between two neighbors is finite: every insert into the SAME gap halves it, so a panel realizing tiles
     // into one spot eventually runs out. That must cost a RENUMBER - an order-only walk plus a re-sort - and never a re-record
     // of the whole tree: the numbers changed, not the content. (It used to fall back to a full walk, which on a 4K fill is
     // 100-200 ms of re-recording ~20 000 components to achieve some fresh integers.)

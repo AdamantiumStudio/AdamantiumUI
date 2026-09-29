@@ -5,7 +5,7 @@ namespace Adamantium.UITests;
 
 /// <summary>Pixel snapping rounds MIDPOINTS one way. At a fractional scale a whole number of DIPs lands on half a
 /// pixel - at 150% every integer coordinate does - so essentially every edge is a midpoint case, and the default
-/// "round half to even" sends neighbouring edges in OPPOSITE directions by parity. Two plates of the same size then
+/// "round half to even" sends neighboring edges in OPPOSITE directions by parity. Two plates of the same size then
 /// come out a pixel apart on screen.</summary>
 [TestFixture]
 public class DevicePixelRoundingTests

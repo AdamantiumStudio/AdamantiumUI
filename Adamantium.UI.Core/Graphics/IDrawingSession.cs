@@ -38,7 +38,7 @@ public interface IDrawingSession
     IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Matrix4x4F transform);
     IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners);
 
-    /// <summary>Draws a normalised (0..1) SUB-RECT of the image into <paramref name="destinationRect"/> - a mosaic tile
+    /// <summary>Draws a normalized (0..1) SUB-RECT of the image into <paramref name="destinationRect"/> - a mosaic tile
     /// shows just its fragment of one shared photo without cropping/copying the bitmap.</summary>
     IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, Rect sourceUv);
 

@@ -19,7 +19,7 @@ namespace Adamantium.UITests.Rendering;
 [Explicit("Measurement probe - run it deliberately and read the numbers")]
 public class TileResizeCostProbe
 {
-    // The scenario the freeze was reported on: 4K, maximised, tiles at their minimum.
+    // The scenario the freeze was reported on: 4K, maximized, tiles at their minimum.
     private const double BigViewportW = 3840;
     private const double BigViewportH = 2100;
 

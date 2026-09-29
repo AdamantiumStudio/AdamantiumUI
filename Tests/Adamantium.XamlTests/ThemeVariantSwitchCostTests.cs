@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>
-/// What a variant switch must NOT do. Asserting that the colour changed proves nothing - it would change just as well
+/// What a variant switch must NOT do. Asserting that the color changed proves nothing - it would change just as well
 /// if every template in the application were rebuilt, which is precisely the four-second, twenty-thousand-property-
 /// write path that variants exist to avoid. The screen looks the same either way, so the cheap path can only be held
 /// in place by tests that name the work that must not happen.
@@ -70,7 +70,7 @@ public class ThemeVariantSwitchCostTests
         Assert.That(_themes.SetVariant(ThemeVariant.Dark), Is.True);
 
         // The version is how a parked subtree asks "did the theme change while I was away". After a VARIANT change the
-        // answer must be no: it is holding the very brushes whose colour changed, so it is already correct, and saying
+        // answer must be no: it is holding the very brushes whose color changed, so it is already correct, and saying
         // yes would make it re-style a whole tab for nothing.
         Assert.That(ThemeManager.Version, Is.EqualTo(before));
     }
@@ -104,7 +104,7 @@ public class ThemeVariantSwitchCostTests
     }
 
     [Test]
-    public void SwitchingVariant_KeepsTheBrushAndChangesItsColour()
+    public void SwitchingVariant_KeepsTheBrushAndChangesItsColor()
     {
         var theme = CurrentTwoVariantTheme();
         var brush = theme.GetResource("Background") as SolidColorBrush;
@@ -188,6 +188,6 @@ public class ThemeVariantSwitchCostTests
         _themes.SetTheme(hud);
 
         Assert.That(_themes.SetVariant(ThemeVariant.System), Is.False,
-            "a HUD theme has no light or dark; guessing one of its signal colours is 'light' would be a lie");
+            "a HUD theme has no light or dark; guessing one of its signal colors is 'light' would be a lie");
     }
 }

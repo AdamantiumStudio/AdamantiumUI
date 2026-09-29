@@ -64,7 +64,7 @@ public abstract class BindingExpressionBase
    public virtual bool ResetSource() => false;
 
    /// <summary>What the SOURCE will take, where the expression has resolved a property to write back to. The DECLARED
-   /// type and not the type of what is in it: a property typed <c>Brush</c> holding a solid colour takes a picture
+   /// type and not the type of what is in it: a property typed <c>Brush</c> holding a solid color takes a picture
    /// just as well, and anything deciding what fits by asking the value it is replacing would refuse every kind but
    /// the one already there. Null where the expression has nothing to write back to.</summary>
    public virtual Type SourceType => null;

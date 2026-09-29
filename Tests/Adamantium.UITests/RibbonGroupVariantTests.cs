@@ -46,7 +46,7 @@ public class RibbonGroupVariantTests
     }
 
     // The group steps down as ONE. Lowering commands individually offers more widths but reads as broken: a column ends
-    // up with a labelled row stacked over a bare icon.
+    // up with a labeled row stacked over a bare icon.
     [Test]
     public void TheWholeGroupStepsDownTogether()
     {
@@ -65,7 +65,7 @@ public class RibbonGroupVariantTests
         Assert.That(shapes, Is.EqualTo(new[] { "LMM", "MMM", "SSS", "collapsed" }));
     }
 
-    // THE reason the thresholds exist: a command nobody recognises without its words sits the last step out while
+    // THE reason the thresholds exist: a command nobody recognizes without its words sits the last step out while
     // everything beside it takes it.
     [Test]
     public void ACommandThatNeverGoesSmall_KeepsItsLabelToTheEnd()

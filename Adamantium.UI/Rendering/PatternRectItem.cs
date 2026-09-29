@@ -20,13 +20,13 @@ public struct PatternRectItem
     /// <summary>The four corner radii: x = top-left, y = top-right, z = bottom-right, w = bottom-left.</summary>
     public Vector4F Radii;
 
-    /// <summary>Primary (background) colour, straight RGBA, opacity folded into .w.</summary>
+    /// <summary>Primary (background) color, straight RGBA, opacity folded into .w.</summary>
     public Vector4F Color1;
 
-    /// <summary>Secondary (feature) colour, straight RGBA, opacity folded into .w.</summary>
+    /// <summary>Secondary (feature) color, straight RGBA, opacity folded into .w.</summary>
     public Vector4F Color2;
 
-    /// <summary>Straight stroke colour in four bytes (opacity folded into the alpha); alpha 0 = no stroke.</summary>
+    /// <summary>Straight stroke color in four bytes (opacity folded into the alpha); alpha 0 = no stroke.</summary>
     public Color StrokeColor;
 
     /// <summary>Stroke geometry: x = width px, y = align (-1/0/+1), z = dash ON, w = dash GAP.</summary>
@@ -42,8 +42,8 @@ public struct PatternRectItem
     /// <summary>FBM noise params (pattern type 4 only; zero otherwise): x = octaves, y = seed, z = lacunarity, w = gain.</summary>
     public Vector4F Noise;
 
-    /// <summary>Optional MID colour for a 3-colour gradient-map ramp of the noise (Color1 -> Color3 -> Color2); straight
-    /// RGBA, opacity folded. .w == 0 = disabled (plain two-colour duotone).</summary>
+    /// <summary>Optional MID color for a 3-color gradient-map ramp of the noise (Color1 -> Color3 -> Color2); straight
+    /// RGBA, opacity folded. .w == 0 = disabled (plain two-color duotone).</summary>
     public Vector4F Color3;
 
     /// <summary>.x = the offset subtracted from the shared clock while ANIMATING, so the brush flows on its own phase; .y =

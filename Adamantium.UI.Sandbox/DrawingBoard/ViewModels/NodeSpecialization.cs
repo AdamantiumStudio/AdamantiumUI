@@ -33,7 +33,7 @@ public abstract partial class NodeSpecialization : ICanvasNodeSpecialization, IC
     }
 
     // The node's own sockets brought level with what this kind is made of - names and kinds included, because what a
-    // socket CARRIES is what decides whether a wire may go on it and what colour it wears.
+    // socket CARRIES is what decides whether a wire may go on it and what color it wears.
     private static void Fit(TrackingCollection<ICanvasSocket> sockets,
         IReadOnlyList<(string Name, string Kind)> wanted, int takes)
     {
@@ -54,12 +54,12 @@ public abstract partial class NodeSpecialization : ICanvasNodeSpecialization, IC
     }
 
     /// <summary>WHAT IT COMPUTES, from what arrived on its sockets - each socket's values, with what that socket
-    /// carries. Read BY KIND and not by position: a node then means the same thing whether its colours come in on the
+    /// carries. Read BY KIND and not by position: a node then means the same thing whether its colors come in on the
     /// two sockets its kind gave it or on a third somebody added, and a socket that takes several wires does not shift
     /// the ones after it.</summary>
     public abstract ValueTask<object> Evaluate(IReadOnlyList<CanvasArrival> inputs, CancellationToken token);
 
-    /// <summary>Every COLOUR that arrived, in socket order - all the wires of all the colour sockets.</summary>
+    /// <summary>Every COLOR that arrived, in socket order - all the wires of all the color sockets.</summary>
     protected static List<Color> Paints(IReadOnlyList<CanvasArrival> inputs)
     {
         var colors = new List<Color>();
@@ -90,7 +90,7 @@ public abstract partial class NodeSpecialization : ICanvasNodeSpecialization, IC
         return 0;
     }
 
-    /// <summary>The colours as ONE colour, averaged - what a node with one colour to work on does when it is handed
+    /// <summary>The colors as ONE color, averaged - what a node with one color to work on does when it is handed
     /// several.</summary>
     protected static Color Paint(IReadOnlyList<CanvasArrival> inputs)
     {
