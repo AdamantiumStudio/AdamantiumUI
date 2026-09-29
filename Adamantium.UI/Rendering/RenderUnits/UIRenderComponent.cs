@@ -314,7 +314,6 @@ public class ImageRenderComponent : UIRenderComponent
     /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
     /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>
     public SharedSurface SharedSource { get; set; }
-    private ulong _lastLatched;
 
     // The shared surface (Texture) is sampled directly. Register, for this frame's UI Submit: a wait on
     // Produce>=latest (so the producer's write+transition-to-ShaderReadOnly is complete before the fragment sample)
@@ -322,12 +321,19 @@ public class ImageRenderComponent : UIRenderComponent
     // lockstep (the producer CPU-throttles on Consume), so there is no read-during-write race.
     public override void PreRender()
     {
-        if (SharedSource == null) return;
-        var latest = SharedSource.ProduceValue;
-        if (latest <= _lastLatched) return;
+        if (SharedSource == null)
+        {
+            return;
+        }
+
+        var latest = SharedSource.LatchNewFrame();
+        if (latest == 0)
+        {
+            return;
+        }
+
         GraphicsDevice.AddWaitSemaphore(SharedSource.ProduceSemaphore, PipelineStageFlagBits.FragmentShaderBit, latest);
         GraphicsDevice.AddSignalSemaphore(SharedSource.ConsumeSemaphore, latest);
-        _lastLatched = latest;
     }
 
     public override void Render()
