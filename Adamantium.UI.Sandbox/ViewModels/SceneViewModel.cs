@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Adamantium.ECS.Components;
+using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Dispatcher;
@@ -15,6 +16,8 @@ public partial class SceneViewModel : TabPageViewModel
     public SceneViewModel() : base("Scene") { }
 
     private DemoUniverse _universe;
+    [Bindable]
+    private Light _light;
 
     /// <summary>Called by DemoUniverseBehavior once the hosted universe exists, so the menu's load commands can reach it.</summary>
     internal void AttachUniverse(DemoUniverse universe)
@@ -44,11 +47,11 @@ public partial class SceneViewModel : TabPageViewModel
     [Bindable] private double _frameCostMs;
 
     /// <summary>How fast the camera travels through the world, in meters per second.</summary>
-    [Bindable] private double _cameraSpeed = 0.5;
+    [Bindable] private double _cameraSpeed = 4;
 
     // What we last handed the camera. The universe doubles and halves the velocity on its own keys (numpad + / -), so
     // anything else found there came from the keyboard and the box should follow it rather than fight it.
-    private double _handed = 0.5;
+    private double _handed = 4;
 
     // Where the camera stood the first time we saw it. Remembered rather than assumed: whatever the engine placed it
     // at IS home, and that is the one place a lost person can be put back.
@@ -61,6 +64,7 @@ public partial class SceneViewModel : TabPageViewModel
 
         Fps = _universe.RenderFps;
         FrameCostMs = _universe.DrawTimeMs;
+        SyncLight();
 
         if (_universe.MainOutput?.Camera is not { } camera) return;
 
@@ -146,6 +150,102 @@ public partial class SceneViewModel : TabPageViewModel
     partial void OnToolChanged(EditTool value)
     {
         _universe?.UseTool(value);
+    }
+
+    /// <summary>Whether a light is selected, so the panel shows its settings.</summary>
+    [Bindable] private bool _hasSelectedLight;
+
+    [Bindable] private string _selectedLightName;
+
+    /// <summary>Whether the selected light has a range: every kind but a directional one.</summary>
+    [Bindable] private bool _hasRange;
+
+    [Bindable] private bool _isSpotSelected;
+
+    [Bindable] private double _lightIntensity = 1;
+
+    [Bindable] private double _lightRange = 8;
+
+    /// <summary>The whole opening of the selected spot light's cone, in degrees.</summary>
+    [Bindable] private double _coneAngle = 60;
+
+    [Command] private void AddPointLight() => AddLight(LightType.Point);
+
+    [Command] private void AddSpotLight() => AddLight(LightType.Spot);
+
+    [Command] private void AddDirectionalLight() => AddLight(LightType.Directional);
+
+    [Command] private void RemoveLight()
+    {
+        _universe?.RemoveSelectedLight();
+        Light = null;
+        HasSelectedLight = false;
+    }
+
+    private void AddLight(LightType type)
+    {
+        if (_universe == null)
+        {
+            Status = "Universe not ready yet";
+            return;
+        }
+
+        Show(_universe.AddLight(type).GetComponent<Light>());
+    }
+
+    private void SyncLight()
+    {
+        var light = _universe.SelectedLight;
+        if (light == null)
+        {
+            Light = null;
+            HasSelectedLight = false;
+            return;
+        }
+
+        if (light != Light || Math.Abs(light.Range - LightRange) > 1e-4 || Math.Abs(ConeOf(light) - ConeAngle) > 1e-3)
+        {
+            Show(light);
+        }
+    }
+
+    private void Show(Light light)
+    {
+        Light = null;
+        SelectedLightName = $"{light.Type} light";
+        HasRange = light.Type != LightType.Directional;
+        IsSpotSelected = light.Type == LightType.Spot;
+        LightIntensity = light.Intensity;
+        LightRange = light.Range;
+        ConeAngle = ConeOf(light);
+        HasSelectedLight = true;
+        Light = light;
+    }
+
+    private static double ConeOf(Light light)
+    {
+        return MathHelper.RadiansToDegrees(light.OuterSpotAngle) * 2;
+    }
+
+    partial void OnLightIntensityChanged(double value)
+    {
+        _light?.Intensity = (float)Math.Max(value, 0);
+    }
+
+    partial void OnLightRangeChanged(double value)
+    {
+        if (_light != null)
+        {
+            _light.Range = (float)Math.Max(value, 0.01);
+        }
+    }
+
+    partial void OnConeAngleChanged(double value)
+    {
+        if (_light != null)
+        {
+            _light.OuterSpotAngle = MathHelper.DegreesToRadians(Math.Clamp(value, 2, 179) / 2);
+        }
     }
 
     /// <summary>While the menu is open the game is paused; the scene is still drawn.</summary>

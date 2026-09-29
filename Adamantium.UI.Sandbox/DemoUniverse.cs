@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Engine;
 using Adamantium.Engine.EntityServices;
+using Adamantium.Engine.Managers;
 using Adamantium.Engine.Templates;
 using Adamantium.Engine.Templates.Lights;
 using Adamantium.Engine.Tools;
@@ -24,9 +25,11 @@ namespace Adamantium.UI.Sandbox
         private readonly RotationTool _rotationTool = new();
         private readonly ScaleTool _scaleTool = new();
         private readonly PivotTool _pivotTool = new();
+        private const double NewLightDistance = 10;
         private Task _startupLoad;
         private InputService _inputService;
         private ToolsService _tools;
+        private LightManager _lights;
 
         public DemoUniverse(
             IGraphicsDeviceService graphicsDeviceService,
@@ -40,7 +43,7 @@ namespace Adamantium.UI.Sandbox
         private void OnWindowCreated(UniverseOutput output)
         {
             var renderingService = CreateRenderService<RenderingService>(output);
-            renderingService.AttachProcessor(new ForwardRenderingProcessor());
+            renderingService.AttachProcessor(new ForwardPlusRenderingProcessor());
             renderingService.AttachProcessor(new EditorOverlayProcessor(_tools));
         }
 
@@ -49,6 +52,8 @@ namespace Adamantium.UI.Sandbox
             base.Initialize();
             Satellites.Add(new Selection());
             Satellites.Add(new Observatory(this, EntityWorld));
+            _lights = new LightManager(this, EntityWorld);
+            Satellites.Add(_lights);
             InitializeScene();
         }
 
@@ -63,6 +68,53 @@ namespace Adamantium.UI.Sandbox
                 EditTool.Pivot => _pivotTool,
                 _ => _selectTool
             };
+        }
+
+        /// <summary>The light the tools have selected, or null.</summary>
+        public Light SelectedLight => Satellites.Get<Selection>().Current?.GetComponent<Light>();
+
+        /// <summary>Adds a light a little ahead of the camera and selects it, so the tools take it at once.</summary>
+        public Entity AddLight(LightType type)
+        {
+            var entity = new LightTemplate().BuildEntity(null, $"{type} light", type);
+            var light = entity.GetComponent<Light>();
+            switch (type)
+            {
+                case LightType.Point:
+                    light.Range = 8;
+                    break;
+                case LightType.Spot:
+                    light.Range = 12;
+                    light.OuterSpotAngle = MathHelper.DegreesToRadians(30);
+                    entity.Transform.Rotation = QuaternionF.RotationAxis(Vector3F.UnitX, MathHelper.DegreesToRadians(180));
+                    break;
+                case LightType.Directional:
+                    entity.Transform.Rotation = QuaternionF.RotationAxis(Vector3F.UnitX, MathHelper.DegreesToRadians(150));
+                    break;
+            }
+
+            if (MainOutput?.Camera is { } camera)
+            {
+                entity.Transform.Position = camera.WorldPosition + camera.Forward * NewLightDistance;
+            }
+
+            _lights.AddLight(entity);
+            Satellites.Get<Selection>().Current = entity;
+            return entity;
+        }
+
+        /// <summary>Takes the selected light out of the scene; does nothing when what is selected is not a light.</summary>
+        public void RemoveSelectedLight()
+        {
+            var selection = Satellites.Get<Selection>();
+            if (selection.Current?.GetComponent<Light>() == null)
+            {
+                return;
+            }
+
+            var entity = selection.Current;
+            selection.Current = null;
+            _lights.RemoveLight(entity);
         }
 
         protected override void LoadContent()
@@ -97,7 +149,7 @@ namespace Adamantium.UI.Sandbox
             var point = new LightTemplate().BuildEntity(null, "Point light", LightType.Point);
             point.Transform.Position = new Vector3(-5, -4, 2);
             point.GetComponent<Light>().Range = 6;
-            EntityWorld.EntityManager.AddEntity(point);
+            _lights.AddLight(point);
 
             var spot = new LightTemplate().BuildEntity(null, "Spot light", LightType.Spot);
             spot.Transform.Position = new Vector3(5, -6, 6);
@@ -105,12 +157,12 @@ namespace Adamantium.UI.Sandbox
             var spotLight = spot.GetComponent<Light>();
             spotLight.Range = 8;
             spotLight.OuterSpotAngle = MathHelper.DegreesToRadians(30);
-            EntityWorld.EntityManager.AddEntity(spot);
+            _lights.AddLight(spot);
 
             var directional = new LightTemplate().BuildEntity(null, "Directional light", LightType.Directional);
             directional.Transform.Position = new Vector3(0, -7, 8);
             directional.Transform.Rotation = QuaternionF.RotationAxis(Vector3F.UnitX, MathHelper.DegreesToRadians(150));
-            EntityWorld.EntityManager.AddEntity(directional);
+            _lights.AddLight(directional);
 
             var camera = new CameraTemplate().BuildEntity(null, "Scene camera", new Vector3(8, -3, -4), Vector3.ForwardLH, -Vector3.Up, 800, 600, 0.1f, 1000f);
             EntityWorld.EntityManager.AddEntity(camera);
