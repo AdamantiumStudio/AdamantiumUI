@@ -5,6 +5,7 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Core.Dispatcher;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -63,6 +64,9 @@ public partial class GalleryViewModel
     // one thing that differs between them.
     [Bindable] private TabIndicatorPlacement _indicatorPlacement = TabIndicatorPlacement.Inner;
 
+    private DispatcherTimer _sweep;
+    private int _swept;
+
     public GalleryViewModel(IDependencyResolver resolver)
     {
         // The Navigation tab owns a region and needs INavigationService - resolve it through DI (which injects the service)
@@ -80,5 +84,26 @@ public partial class GalleryViewModel
         SelectedTab = Environment.GetEnvironmentVariable("ADAM_PROBE_TAB") is { } probe
             ? Tabs.First(t => t.GetType().Name.StartsWith(probe))
             : Tabs[2];
+
+        if (Environment.GetEnvironmentVariable("ADAM_PROBE_SWEEP") != null)
+        {
+            _sweep = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            _sweep.Tick += OnSweepTick;
+            _sweep.Start();
+        }
+    }
+
+    private void OnSweepTick(object sender, EventArgs e)
+    {
+        if (_swept == Tabs.Count)
+        {
+            _sweep.Stop();
+            Serilog.Log.Information("Tab sweep finished");
+            return;
+        }
+
+        var tab = Tabs[_swept++];
+        Serilog.Log.Information("Tab sweep: {Tab}", tab.GetType().Name);
+        SelectedTab = tab;
     }
 }
