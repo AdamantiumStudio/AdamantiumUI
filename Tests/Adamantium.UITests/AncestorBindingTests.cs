@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Extensions;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -142,6 +148,59 @@ public class AncestorBindingTests
         var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true }.Apply(leaf, "Width");
 
         Assert.That(e.Status, Is.EqualTo(BindingStatus.PathError));   // rooted but no Grid ancestor -> flagged, not silent
+    }
+
+    // The visual walk: in a window, and still no match - a real miss, flagged and written down.
+    [Test]
+    public void Ancestor_Visual_InAWindowWithNoMatch_IsReported()
+    {
+        var messages = new List<string>();
+        BindingTrace.Sink = messages.Add;
+        try
+        {
+            var leaf = new TextBlock();
+            var window = new Window { Width = 200, Height = 100, Content = leaf };
+            WindowExtension.UpdateTree(window);
+
+            var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(leaf, "Width");
+            BindingUpdateQueue.Flush();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(e.Status, Is.EqualTo(BindingStatus.PathError));
+                Assert.That(messages, Has.Some.Contains("no Grid ancestor"));
+            });
+        }
+        finally
+        {
+            BindingTrace.Sink = null;
+        }
+    }
+
+    // ...while one still being put together, with a parent but no root yet, has not missed anything.
+    [Test]
+    public void Ancestor_Visual_WithAParentButNoRoot_IsNotReported()
+    {
+        var messages = new List<string>();
+        BindingTrace.Sink = messages.Add;
+        try
+        {
+            var leaf = new TextBlock();
+            var unrooted = new Border { Child = leaf };
+
+            var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(leaf, "Width");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached));
+                Assert.That(messages, Is.Empty);
+            });
+            GC.KeepAlive(unrooted);
+        }
+        finally
+        {
+            BindingTrace.Sink = null;
+        }
     }
 
     [Test]

@@ -155,6 +155,11 @@ public class CodeGenerationContext
             {
                 TextGenerator.WriteLine($"{CurrentTemplate}.RegisterName(\"{named}\", {elementName});");
             }
+            else if (isNamed && EntityType is not (EntityType.ResourceDictionary or EntityType.StyleSet or EntityType.Theme
+                                                   or EntityType.ThemeVariant))
+            {
+                TextGenerator.WriteLine($"global::Adamantium.UI.Core.Templates.NameScope.Register(this, \"{named}\", {elementName});");
+            }
         }
 
         var directives = element.Children.Where(x => x is AumlAstDirective).ToList();

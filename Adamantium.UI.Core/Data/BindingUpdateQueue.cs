@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Adamantium.UI.Core.Diagnostics;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -38,14 +39,23 @@ public static class BindingUpdateQueue
     /// graph is settled before layout reads it.</summary>
     public static void Flush()
     {
+        // The failures reported BEFORE this flush have had their frame to mend; what is still broken after it is broken.
+        var suspects = BindingTrace.TakeSuspects();
+
         // Drain the cascade now so layout never sees one of two dependent bindings stale; the budget spans all rounds.
         var remaining = MaxAppliesPerFlush > 0 ? MaxAppliesPerFlush : int.MaxValue;
         for (var round = 0; round < MaxCascadeRounds && remaining > 0; round++)
         {
             var applied = FlushOnce(remaining);
-            if (applied == 0) return;
+            if (applied == 0)
+            {
+                break;
+            }
+
             remaining -= applied;
         }
+
+        BindingTrace.Confirm(suspects);
     }
 
     /// <summary>One coalesced pass over the currently-dirty expressions; returns how many were applied.</summary>

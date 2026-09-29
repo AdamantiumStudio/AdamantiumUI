@@ -63,4 +63,28 @@ public class AumlRuntimeLoaderDirectiveTests
         Assert.That(((Adamantium.UI.Controls.Panels.StackPanel)result.Root).Children.Count, Is.EqualTo(2),
             "the children have to come through the walk, not be dropped by it");
     }
+
+    // x:Name goes into the name scope of the markup it was declared in, as the generated code does, and an ElementName
+    // finds it there - inside a scroll viewer, further down the page than the binding.
+    [Test]
+    public void ANameInsideAScrollViewer_IsDeclaredInThePagesScope()
+    {
+        var result = AumlLoader.Load(
+            "<StackPanel xmlns=\"http://adamantium/ui\" xmlns:x=\"http://adamantium/ui/xaml/extensions\">" +
+            "<Border Height=\"{Binding Width, ElementName=Later}\"/>" +
+            "<ScrollViewer><Border x:Name=\"Later\" Width=\"42\"/></ScrollViewer></StackPanel>");
+        var page = (Adamantium.UI.Controls.Panels.StackPanel)result.Root;
+        var target = (Adamantium.UI.Controls.Decorators.Border)page.Children[0];
+
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = page };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Adamantium.UI.Core.Templates.NameScope.Find(page, "Later"), Is.Not.Null, "the name is not in the page's scope");
+            Assert.That(target.Height, Is.EqualTo(42), string.Join(" | ", result.Diagnostics));
+        });
+        System.GC.KeepAlive(window);
+    }
 }

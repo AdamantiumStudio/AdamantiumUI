@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -29,7 +30,7 @@ public class BindingExpression : BindingExpressionBase
       {
          var (component, property) = SourceSlot();
 
-         return property != null && component.IsSet(property, ValuePriority.Local);
+         return property != null && (component.IsSet(property, ValuePriority.Local) || HoldsWrittenCurrentValue(component, property));
       }
    }
 
@@ -40,7 +41,17 @@ public class BindingExpression : BindingExpressionBase
       if (property == null) return false;
 
       component.ClearValue(property);
+      if (HoldsWrittenCurrentValue(component, property))
+      {
+         component.ClearValue(property, ValuePriority.Binding);
+      }
+
       return true;
+   }
+
+   private static bool HoldsWrittenCurrentValue(AdamantiumComponent component, AdamantiumProperty property)
+   {
+      return component.IsSet(property, ValuePriority.Binding) && BindingEngine.GetBindingExpression(component, property) == null;
    }
 
    // The property system's own slot behind the path, where there is one. A plain object's property has none - there is
@@ -61,6 +72,27 @@ public class BindingExpression : BindingExpressionBase
    private INotifyPropertyChanged _observed;
    private AdamantiumComponent _observedComponent;   // element source ({ElementName}) - observed via AdamantiumProperty changes, not INPC
    private string[] _segments;   // cached Binding.Path split on '.', computed once (path is fixed per expression)
+   private List<(object Owner, string Segment)> _passed;
+   private bool _reconnectPending;
+   private IUIComponent _awaitingAttach;
+
+   internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
+
+   internal static PropertyInfo FindProperty(Type type, string name)
+   {
+      for (var declaring = type; declaring != null; declaring = declaring.BaseType)
+      {
+         foreach (var property in declaring.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+         {
+            if (property.Name == name && property.GetIndexParameters().Length == 0)
+            {
+               return property;
+            }
+         }
+      }
+
+      return null;
+   }
 
    // Property-accessor cache: `GetType().GetProperty(name)` is a slow metadata search and `PropertyInfo.GetValue` a slow
    // reflection invoke, and a virtualized list re-runs both for EVERY binding of EVERY recycled row on scroll (a fling can
@@ -71,7 +103,7 @@ public class BindingExpression : BindingExpressionBase
    private static (PropertyInfo Prop, Func<object, object> Getter) GetAccessor(Type type, string name)
       => _accessors.GetOrAdd((type, name), static key =>
       {
-         var prop = key.Item1.GetProperty(key.Item2);
+         var prop = FindProperty(key.Item1, key.Item2);
          if (prop is not { CanRead: true }) return (prop, null);
          var o = Expression.Parameter(typeof(object), "o");
          var body = Expression.Convert(Expression.Property(Expression.Convert(o, key.Item1), prop), typeof(object));
@@ -94,7 +126,7 @@ public class BindingExpression : BindingExpressionBase
       var o = Expression.Parameter(typeof(object), "o");
       var self = Expression.Convert(o, owner);
 
-      if (owner.GetProperty(member) is { } prop)
+      if (FindProperty(owner, member) is { } prop)
       {
          var read = prop.CanRead
             ? Expression.Lambda<Func<object, object>>(Expression.Convert(Expression.Property(self, prop), typeof(object)), o).Compile()
@@ -163,6 +195,7 @@ public class BindingExpression : BindingExpressionBase
    {
       // Re-resolve against the (possibly new) DataContext BEFORE touching subscriptions.
       var previousObserved = _observed;
+      UnwatchPassed();
       ResolveSource();
       var newObserved = ResolvedSource as INotifyPropertyChanged;
 
@@ -170,13 +203,15 @@ public class BindingExpression : BindingExpressionBase
       // O(subscribers) per rebind.
       if (ReferenceEquals(newObserved, previousObserved) && previousObserved != null)
       {
+         WatchPassed();
+
          // The target already holds this value, so skip the re-push; a producer still republishes for its parent.
          if (IsProducer) Refresh();
          return;
       }
 
       // Source object genuinely changed: tear down the old subscription and establish the new one.
-      CloseConnection();
+      ReleaseSource();
 
       // OneWayToSource: the flow is TARGET -> SOURCE only. Never observe or push the source; write its initial value from
       // the target, then update it whenever the target changes (a target with a read-only/private-set property that can't
@@ -185,6 +220,7 @@ public class BindingExpression : BindingExpressionBase
       {
          UpdateSource();
          if (Target != null) Target.PropertyChanged += OnTargetPropertyChanged;
+         WatchPassed();
          return;
       }
 
@@ -205,11 +241,33 @@ public class BindingExpression : BindingExpressionBase
       }
       if (Mode == BindingMode.TwoWay && !IsProducer && Target != null)
          Target.PropertyChanged += OnTargetPropertyChanged;
+      WatchPassed();
    }
 
    public override void CloseConnection()
    {
+      UnwatchPassed();
+      _passed?.Clear();
+      StopAwaitingAttach();
+      ReleaseSource();
+   }
+
+   internal override void Retry()
+   {
+      CloseConnection();
+      EstablishConnection();
+   }
+
+   internal void Forget()
+   {
+      CloseConnection();
+      ForgetResolution();
+   }
+
+   private void ReleaseSource()
+   {
       BindingUpdateQueue.Remove(this);   // F2: a closed binding must not be applied by a later flush
+      _reconnectPending = false;
       if (_observed != null)
       {
          SharedSourceRegistry.Unsubscribe(_observed, this);   // O(1) remove - the reason a shrunk window can release cheaply
@@ -225,9 +283,78 @@ public class BindingExpression : BindingExpressionBase
          Target.PropertyChanged -= OnTargetPropertyChanged;
    }
 
-   // Source = explicit Binding.Source, else the target's DataContext. Walk all but the last path segment to reach
-   // the object that owns the bound property; the leaf segment is the property we read/observe.
-   private void ResolveSource()
+   private void WatchPassed()
+   {
+      if (_passed == null)
+      {
+         return;
+      }
+
+      foreach (var (owner, _) in _passed)
+      {
+         if (owner is AdamantiumComponent component)
+         {
+            component.PropertyChanged += OnPassedComponentChanged;
+         }
+
+         if (owner is INotifyPropertyChanged notifying && !ReferenceEquals(owner, _observed))
+         {
+            SharedSourceRegistry.Subscribe(notifying, this);
+         }
+      }
+   }
+
+   private void UnwatchPassed()
+   {
+      if (_passed == null)
+      {
+         return;
+      }
+
+      foreach (var (owner, _) in _passed)
+      {
+         if (owner is AdamantiumComponent component)
+         {
+            component.PropertyChanged -= OnPassedComponentChanged;
+         }
+
+         if (owner is INotifyPropertyChanged notifying && !ReferenceEquals(owner, _observed))
+         {
+            SharedSourceRegistry.Unsubscribe(notifying, this);
+         }
+      }
+   }
+
+   private void OnPassedComponentChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+   {
+      if (_writingSource || !Passes(sender, e.Property?.Name))
+      {
+         return;
+      }
+
+      _reconnectPending = true;
+      ScheduleUpdate();
+   }
+
+   private bool Passes(object sender, string propertyName)
+   {
+      if (_passed == null)
+      {
+         return false;
+      }
+
+      foreach (var (owner, segment) in _passed)
+      {
+         if (ReferenceEquals(owner, sender) && (string.IsNullOrEmpty(propertyName) || propertyName == segment))
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private void ForgetResolution()
    {
       ResolvedSource = null;
       _sourceProperty = null;
@@ -235,10 +362,40 @@ public class BindingExpression : BindingExpressionBase
       SourcePropertyName = null;
       _bindToSource = false;
       _leaf = null;
+      _passed?.Clear();
+      if (_boxes != null)
+      {
+         Array.Clear(_boxes);
+      }
+   }
 
-      var root = Binding.Source ?? ResolveElementName() ?? DataContextSource?.DataContext;
+   // Source = explicit Binding.Source, else the target's DataContext. Walk all but the last path segment to reach
+   // the object that owns the bound property; the leaf segment is the property we read/observe.
+   private void ResolveSource()
+   {
+      ForgetResolution();
+      StopAwaitingAttach();
+      Status = BindingStatus.Active;
+
+      var named = Binding.Source == null && !string.IsNullOrEmpty(Binding.ElementName);
+      var root = Binding.Source ?? (named ? ResolveElementName() : DataContextSource?.DataContext);
       var path = Binding.Path?.Path;
-      if (root == null) return;
+      if (root == null)
+      {
+         if (named && AnchorElement(Target) is { } anchor)
+         {
+            if (anchor.IsAttachedToVisualTree)
+            {
+               Fail($"{Target?.GetType().Name}.{TargetProperty?.Name}: no element named '{Binding.ElementName}' in the tree.");
+            }
+            else
+            {
+               AwaitAttach(anchor);
+            }
+         }
+
+         return;
+      }
 
       // Empty path with a source -> bind to the SOURCE OBJECT ITSELF ({Binding}, {Binding ElementName=x}, {Binding Source=y}),
       // the standard WPF behaviour. There is no leaf property to read/observe - the value simply IS the resolved source.
@@ -255,7 +412,27 @@ public class BindingExpression : BindingExpressionBase
       var segments = _segments ??= path.Split('.');
       object current = root;
       for (var i = 0; i < segments.Length - 1 && current != null; i++)
-         current = GetAccessor(current.GetType(), segments[i]).Getter?.Invoke(current);
+      {
+         if (current is INotifyPropertyChanged or AdamantiumComponent)
+         {
+            (_passed ??= []).Add((current, segments[i]));
+         }
+
+         var accessor = GetAccessor(current.GetType(), segments[i]);
+         if (accessor.Prop != null)
+         {
+            current = accessor.Getter?.Invoke(current);
+         }
+         else if (HopTo(current.GetType(), segments[i]) is { } field)
+         {
+            current = field.Get(current);
+         }
+         else
+         {
+            ReportMissing(current.GetType(), segments[i]);
+            return;
+         }
+      }
 
       if (current == null)
          return;
@@ -263,17 +440,59 @@ public class BindingExpression : BindingExpressionBase
       if (current.GetType().IsValueType)
       {
          _leaf = HopTo(current.GetType(), segments[^1]);
-         if (_leaf == null) return;
+         if (_leaf == null)
+         {
+            ReportMissing(current.GetType(), segments[^1]);
+            return;
+         }
 
          _boxes ??= new object[segments.Length];
          ResolvedSource = root;
          SourcePropertyName = segments[0];
+         if (_passed is { Count: 1 } && ReferenceEquals(_passed[0].Owner, root))
+         {
+            _passed.Clear();
+         }
+
          return;
       }
 
       ResolvedSource = current;
       SourcePropertyName = segments[^1];
       (_sourceProperty, _sourceGetter) = GetAccessor(current.GetType(), SourcePropertyName);
+      if (_sourceProperty == null)
+      {
+         ReportMissing(current.GetType(), SourcePropertyName);
+      }
+   }
+
+   private void AwaitAttach(IUIComponent anchor)
+   {
+      _awaitingAttach = anchor;
+      anchor.AttachedToVisualTreeEvent += OnAnchorAttached;
+   }
+
+   private void StopAwaitingAttach()
+   {
+      if (_awaitingAttach == null)
+      {
+         return;
+      }
+
+      _awaitingAttach.AttachedToVisualTreeEvent -= OnAnchorAttached;
+      _awaitingAttach = null;
+   }
+
+   private void OnAnchorAttached(object sender, VisualTreeAttachmentEventArgs e)
+   {
+      StopAwaitingAttach();
+      _reconnectPending = true;
+      ScheduleUpdate();
+   }
+
+   private void ReportMissing(Type owner, string member)
+   {
+      Fail($"{Target?.GetType().Name}.{TargetProperty?.Name}: path '{Binding.Path?.Path}' breaks at '{member}' - {owner.Name} has no such property.");
    }
 
    // {Binding Path, ElementName=X}: the source is the element named X in the target's tree (not the DataContext). Resolved
@@ -298,9 +517,17 @@ public class BindingExpression : BindingExpressionBase
       if (target.TemplatedParent is ITemplateHost host && host.GetTemplateChild(Binding.ElementName) is IUIComponent inTemplate)
          return inTemplate;
 
+      for (IFundamentalUIComponent node = target; node != null; node = (node as IUIComponent)?.VisualParent ?? node.LogicalParent)
+      {
+         if (NameScope.Find(node, Binding.ElementName) is { } declared)
+         {
+            return declared;
+         }
+      }
+
       var root = target;
       while (root.VisualParent is { } parent) root = parent;
-      return FindByName(root, Binding.ElementName);
+      return FindByName(root, Binding.ElementName, []);
    }
 
    // The element a search starts from: the target itself when it is one, otherwise the nearest one holding it.
@@ -314,11 +541,38 @@ public class BindingExpression : BindingExpressionBase
       return null;
    }
 
-   private static IUIComponent FindByName(IUIComponent node, string name)
+   private static IFundamentalUIComponent FindByName(IFundamentalUIComponent node, string name,
+      HashSet<IFundamentalUIComponent> searched)
    {
-      if (node is IFundamentalUIComponent named && named.Name == name) return node;
-      foreach (var child in node.VisualChildren)
-         if (FindByName(child, name) is { } found) return found;
+      if (!searched.Add(node))
+      {
+         return null;
+      }
+
+      if (node.Name == name)
+      {
+         return node;
+      }
+
+      if (node is IUIComponent visual)
+      {
+         foreach (var child in visual.VisualChildren)
+         {
+            if (FindByName(child, name, searched) is { } found)
+            {
+               return found;
+            }
+         }
+      }
+
+      foreach (var child in node.LogicalChildren)
+      {
+         if (FindByName(child, name, searched) is { } found)
+         {
+            return found;
+         }
+      }
+
       return null;
    }
 
@@ -338,6 +592,13 @@ public class BindingExpression : BindingExpressionBase
       if (_writingSource)   // our own TwoWay write-back - don't echo it back to the target
       {
          if (ours) _sourceSpoke = true;
+         return;
+      }
+
+      if (Passes(sender, e.PropertyName))
+      {
+         _reconnectPending = true;
+         ScheduleUpdate();
          return;
       }
 
@@ -362,11 +623,22 @@ public class BindingExpression : BindingExpressionBase
 
    // F2: the coalesced apply reads the current source value (producer mode publishes ProducedValue, top-level pushes
    // to the target) - same path as a source change, just deferred to the per-frame flush.
-   internal override void ApplyPending() => Refresh();
+   internal override void ApplyPending()
+   {
+      if (!_reconnectPending)
+      {
+         Refresh();
+         return;
+      }
+
+      _reconnectPending = false;
+      CloseConnection();
+      EstablishConnection();
+   }
 
    private void OnTargetPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
    {
-      if ((Mode == BindingMode.TwoWay || Mode == BindingMode.OneWayToSource) && e.Property == TargetProperty)
+      if (Mode is BindingMode.TwoWay or BindingMode.OneWayToSource && e.Property == TargetProperty)
          UpdateSource();
    }
 
@@ -466,7 +738,7 @@ public class BindingExpression : BindingExpressionBase
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
       if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced)) return;
-      Target.SetValue(TargetProperty, coerced, ValuePriority.Binding);
+      Target.SetValue(TargetProperty, coerced, Priority);
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
 
@@ -498,7 +770,14 @@ public class BindingExpression : BindingExpressionBase
          var into = HopTo(_boxes[i - 1].GetType(), _segments[i - 1]);
          if (into is not { CanWrite: true }) return;
 
-         into.Set(_boxes[i - 1], _boxes[i]);
+         if (_boxes[i - 1] is AdamantiumComponent component && component.GetProperty(_segments[i - 1]) is { } property)
+         {
+            component.SetCurrentValue(property, _boxes[i]);
+         }
+         else
+         {
+            into.Set(_boxes[i - 1], _boxes[i]);
+         }
       }
    }
 
@@ -511,8 +790,20 @@ public class BindingExpression : BindingExpressionBase
 
    private void WriteSource(object written)
    {
-      if (_leaf != null) Backfill(written);
-      else _sourceProperty.SetValue(ResolvedSource, written);
+      if (_leaf != null)
+      {
+         Backfill(written);
+         return;
+      }
+
+      var (component, property) = SourceSlot();
+      if (property != null)
+      {
+         component.SetCurrentValue(property, written);
+         return;
+      }
+
+      _sourceProperty.SetValue(ResolvedSource, written);
    }
 
    public override void UpdateSource()
@@ -567,7 +858,7 @@ public class BindingExpression : BindingExpressionBase
          }
          else
          {
-            Target.SetValue(TargetProperty, targetValue, ValuePriority.Binding);
+            Target.SetValue(TargetProperty, targetValue, Priority);
          }
       }
       finally

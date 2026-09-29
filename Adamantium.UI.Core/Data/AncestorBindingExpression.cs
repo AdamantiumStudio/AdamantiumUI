@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-using Adamantium.UI.Core.Diagnostics;
-using Adamantium.UI.Core.RoutedEvents;
+﻿using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -19,13 +17,8 @@ public class AncestorBindingExpression : BindingExpressionBase
     internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
 
     private IFundamentalUIComponent _source;
-    private AdamantiumProperty _sourceProperty;   // the ancestor's AdamantiumProperty for the FIRST path segment
-    private string[] _segments = [];
-    private INotifyPropertyChanged _leafOwner;    // for a dotted path: the object owning the leaf, observed for changes
-    private IAdamantiumComponent _leafComponent;  // ...and the same when that object is a component of this engine
-    private AdamantiumProperty _leafProperty;     // the leaf hop itself, whose own Changed says when it moved
+    private BindingExpression _path;
     private bool _hooked;
-    private bool _targetHooked;
 
     public AncestorBindingExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty, Ancestor def)
     {
@@ -118,8 +111,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         ApplyFallback();   // no source resolved -> push FallbackValue if one was set (else leave the target at its default)
         if (IsTargetAttached())
         {
-            Status = BindingStatus.PathError;
-            BindingTrace.Log($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: no {_def.AncestorType?.Name} ancestor found in the {(_def.Logical ? "logical" : "visual")} tree.");
+            Fail($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: no {_def.AncestorType?.Name} ancestor found in the {(_def.Logical ? "logical" : "visual")} tree.");
         }
         else
         {
@@ -143,8 +135,8 @@ public class AncestorBindingExpression : BindingExpressionBase
     {
         var element = DataContextSource;
         return _def.Logical ? element?.GetLogicalParentOrBridge() != null
-             : element is IUIComponent visual ? visual.VisualParent != null
-             : element?.LogicalParent != null;   // non-visual (a Behavior): attached once it has a host
+             : element is IUIComponent visual ? visual.IsAttachedToVisualTree
+             : element != null && NearestElement(element) is { IsAttachedToVisualTree: true };   // non-visual: its host is
     }
 
     private void OnDetached()
@@ -161,80 +153,34 @@ public class AncestorBindingExpression : BindingExpressionBase
         _source = FindAncestor();
         if (_source == null) return;   // not rooted yet, or no match - a later attach re-resolves (and warns then)
 
-        _segments = _def.Path?.Split('.') ?? [];
-        _sourceProperty = _segments.Length > 0 ? _source.GetProperty(_segments[0]) : null;
-
-        // The first hop must exist as either an AdamantiumProperty (observable) or a plain CLR property (for a dotted
-        // path off e.g. DataContext). Neither -> a genuine path error.
-        var firstHopExists = _sourceProperty != null
-            || (_segments.Length > 0 && _source.GetType().GetProperty(_segments[0]) != null);
-        if (!firstHopExists)
+        if (!HasFirstLink(_source, _def.Path))
         {
-            Status = BindingStatus.PathError;
-            BindingTrace.Log($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: {_def.AncestorType?.Name} has no '{_def.Path}' property.");
+            Fail($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: {_def.AncestorType?.Name} has no '{_def.Path}' property.");
             return;
         }
 
-        if (_sourceProperty != null)
+        _path ??= new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
         {
-            _source.PropertyChanged += OnSourcePropertyChanged;
-            System.Threading.Interlocked.Increment(ref SourceHooks);
-        }
-        HookLeafOwner();
+            Mode = _def.Mode,
+            Converter = _def.Converter,
+            ConverterParameter = _def.ConverterParameter,
+            FallbackValue = _def.FallbackValue,
+            TargetNullValue = _def.TargetNullValue
+        }) { Priority = Priority };
+        _path.Binding.Source = _source;
+        _path.EstablishConnection();
+        Status = _path.Status;
+    }
 
-        // TwoWay only for a single, directly-observable property hop - writing back through a reflected dotted chain has
-        // no well-defined meaning.
-        if (_def.Mode == BindingMode.TwoWay && _segments.Length == 1 && _sourceProperty != null && Target != null)
+    internal static bool HasFirstLink(IAdamantiumComponent root, string path)
+    {
+        var first = path?.Split('.')[0];
+        if (string.IsNullOrEmpty(first))
         {
-            Target.PropertyChanged += OnTargetPropertyChanged;
-            _targetHooked = true;
+            return false;
         }
-        UpdateTarget();
-        Status = BindingStatus.Active;
-    }
 
-    // For a dotted path, observe the object that owns the leaf property so a change to the leaf (e.g. a VM's Title)
-    // propagates. Single-segment paths need no leaf hook (the source property itself is observed above).
-    private void HookLeafOwner()
-    {
-        if (_segments.Length <= 1) return;
-
-        var owner = RelativeBindingPipeline.LeafOwner(_source, _sourceProperty, _segments);
-
-        _leafOwner = owner as INotifyPropertyChanged;
-        if (_leafOwner != null) _leafOwner.PropertyChanged += OnLeafOwnerChanged;
-
-        // ...AND A COMPONENT OF THIS ENGINE, which says so on the PROPERTY rather than on the object. Left out, a
-        // dotted path onto a control - {Ancestor Panel, Canvas.SomeSwitch} - read the value once and never again.
-        // Hooked on the property and not on the component: a component announces every property it has, and a canvas
-        // announces its camera on every frame of a pan.
-        if (owner is not IAdamantiumComponent component) return;
-        if (component.GetProperty(_segments[^1]) is not { } leaf) return;
-
-        _leafComponent = component;
-        _leafProperty = leaf;
-        _leafProperty.Changed += OnLeafPropertyChanged;
-    }
-
-    // The property is one object shared by every instance of its type, so the sender says WHOSE value moved.
-    private void OnLeafPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
-    {
-        if (ReferenceEquals(sender, _leafComponent)) ScheduleUpdate();
-    }
-
-    private void UnhookLeafOwner()
-    {
-        if (_leafOwner != null) _leafOwner.PropertyChanged -= OnLeafOwnerChanged;
-        _leafOwner = null;
-
-        if (_leafProperty != null) _leafProperty.Changed -= OnLeafPropertyChanged;
-        _leafProperty = null;
-        _leafComponent = null;
-    }
-
-    private void OnLeafOwnerChanged(object sender, PropertyChangedEventArgs e)
-    {
-        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == _segments[^1]) ScheduleUpdate();
+        return root.GetProperty(first) != null || BindingExpression.FindProperty(root.GetType(), first) != null;
     }
 
     // The first thing UP THE LOGICAL CHAIN that is actually in the visual tree - where a non-visual target's visual
@@ -288,51 +234,31 @@ public class AncestorBindingExpression : BindingExpressionBase
         return string.IsNullOrEmpty(_def.Name) || candidate.Name == _def.Name;
     }
 
-    private void OnSourcePropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
-    {
-        if (e.Property != _sourceProperty) return;
-        if (_segments.Length > 1) { UnhookLeafOwner(); HookLeafOwner(); }   // first hop changed -> the leaf owner moved
-        ScheduleUpdate();   // coalesced per-frame flush, like {Binding}
-    }
-
-    private void OnTargetPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
-    {
-        if (e.Property == TargetProperty) UpdateSource();
-    }
-
     public override void UpdateTarget()
     {
-        if (_source == null || TargetProperty == null) return;
-        var raw = RelativeBindingPipeline.Walk(_source, _sourceProperty, _segments);
-        var value = RelativeBindingPipeline.Produce(raw, _def.Converter, _def.ConverterParameter,
-            TargetProperty.PropertyType, _def.FallbackValue, _def.TargetNullValue);
-        if (ReferenceEquals(value, RelativeBindingPipeline.Unset)) return;   // nothing usable - leave the target default
-        Target.SetValue(TargetProperty, value, Priority);
+        if (_source != null)
+        {
+            _path?.UpdateTarget();
+        }
     }
 
     public override void UpdateSource()
     {
-        if (_source == null || _sourceProperty == null || _def.Mode != BindingMode.TwoWay || _segments.Length != 1) return;
-        // Write-back is authoritative (the user edited the target), so push at Local priority - a Binding-priority write
-        // would be masked by any Local/Style value the ancestor property already holds.
-        var value = RelativeBindingPipeline.ConvertBack(Target.GetValue(TargetProperty), _def.Converter, _def.ConverterParameter, _sourceProperty.PropertyType);
-        if (TryCoerce(value, _sourceProperty.PropertyType, out var coerced))
-            _source.SetValue(_sourceProperty, coerced, ValuePriority.Local);
+        if (_source != null)
+        {
+            _path?.UpdateSource();
+        }
     }
 
     private void DetachSource()
     {
         BindingUpdateQueue.Remove(this);   // a re-resolve must not be applied to the old source by a later flush
-        if (_source != null)
+        if (_path != null)
         {
-            _source.PropertyChanged -= OnSourcePropertyChanged;
-            System.Threading.Interlocked.Increment(ref SourceUnhooks);
+            _path.Forget();
+            _path.Binding.Source = null;
         }
-        if (_targetHooked && Target != null) Target.PropertyChanged -= OnTargetPropertyChanged;
-        UnhookLeafOwner();
+
         _source = null;
-        _sourceProperty = null;
-        _segments = [];
-        _targetHooked = false;
     }
 }

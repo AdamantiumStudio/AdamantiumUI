@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Adamantium.UI.Core.Diagnostics;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -18,6 +19,20 @@ public abstract class BindingExpressionBase
    public BindingBase BindingBase { get; internal set;}
 
    public BindingStatus Status { get; internal set; }
+
+   internal string Failure { get; private set; }
+
+   internal void Fail(string message)
+   {
+      Status = BindingStatus.PathError;
+      Failure = message;
+      BindingTrace.Suspect(this, message);
+   }
+
+   internal virtual void Retry()
+   {
+      EstablishConnection();
+   }
 
    /// <summary>What the binding writes to. Any component with the property system, NOT only a tree element: a Transform
    /// is an AdamantiumComponent that carries animatable properties but sits outside the logical tree, and refusing to

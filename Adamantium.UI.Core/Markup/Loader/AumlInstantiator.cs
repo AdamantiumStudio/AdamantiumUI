@@ -30,6 +30,7 @@ internal sealed class AumlInstantiator
 
     // The template results being built, innermost on top: named parts and TemplateBindings register with it.
     private readonly Stack<TemplateResult> _templates = new();
+    private object _root;
 
     public AumlInstantiator(ITypeResolver resolver, List<Assembly> assemblies, Func<Type, Type> typeMapper, List<string> diagnostics)
     {
@@ -60,6 +61,7 @@ internal sealed class AumlInstantiator
         var actualType = _typeMapper?.Invoke(clrType) ?? clrType;
         var instance = Activator.CreateInstance(actualType);
         if (instance != null) SourceMap[instance] = new AumlSourceSpan(node.Line, node.Position);
+        _root ??= instance;
 
         foreach (var child in node.Children)
         {
@@ -112,9 +114,16 @@ internal sealed class AumlInstantiator
             nameProperty.SetValue(instance, name);
         }
 
-        if (_templates.TryPeek(out var building) && instance is IAdamantiumComponent part)
+        if (_templates.TryPeek(out var building))
         {
-            building.RegisterName(name, part);
+            if (instance is IAdamantiumComponent part)
+            {
+                building.RegisterName(name, part);
+            }
+        }
+        else if (_root is IFundamentalUIComponent root)
+        {
+            NameScope.Register(root, name, instance);
         }
     }
 
