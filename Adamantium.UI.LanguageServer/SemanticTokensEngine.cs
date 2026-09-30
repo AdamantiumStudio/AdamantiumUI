@@ -9,7 +9,7 @@ public static class SemanticTokensEngine
 {
     public const int Namespace = 0, Type = 1, Property = 2, Macro = 3, Unknown = 4;
 
-    public static IReadOnlyList<SemToken> Tokenize(string text, AumlTypeModel? model)
+    public static IReadOnlyList<SemToken> Tokenize(string text, AumlTypeModel model)
     {
         var namespaces = AumlNamespaces.Scan(text);
         var tokens = new List<SemToken>();
@@ -62,7 +62,7 @@ public static class SemanticTokensEngine
     }
 
     private static void AddName(List<SemToken> tokens, string text, int start, int end, bool element,
-        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel? model)
+        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
     {
         int colon = -1;
         for (int k = start; k < end; k++) if (text[k] == ':') { colon = k; break; }
@@ -119,7 +119,7 @@ public static class SemanticTokensEngine
     // Colors a markup extension written inside an attribute value (e.g. "{Binding ShowMessageCommand}",
     // "{x:Type vm:MainViewModel}"); a plain string value is left to the client's default string color.
     private static void TokenizeValue(List<SemToken> tokens, string text, int start, int end,
-        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel? model)
+        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
     {
         int i = start;
         while (i < end && char.IsWhiteSpace(text[i])) i++;
@@ -127,7 +127,7 @@ public static class SemanticTokensEngine
     }
 
     private static void TokenizeMarkupExtension(List<SemToken> tokens, string text, int start, int end,
-        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel? model)
+        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
     {
         int i = start + 1;   // past '{'
         while (i < end && char.IsWhiteSpace(text[i])) i++;

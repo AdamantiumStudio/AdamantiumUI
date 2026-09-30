@@ -127,7 +127,7 @@ public partial class DockingViewModel : TabPageViewModel
             return;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(LayoutFile)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(LayoutFile));
         File.WriteAllText(LayoutFile, state);
 
         LayoutState = $"Saved to {LayoutFile}. Rearrange things and press Restore - or restart the app, it survives that.";

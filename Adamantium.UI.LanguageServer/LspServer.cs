@@ -38,7 +38,7 @@ public sealed class LspServer
     {
         while (true)
         {
-            JsonNode? message;
+            JsonNode message;
             try { message = ReadMessageFrom(_input); }
             catch { break; }
             if (message is null) break;                 // stream closed
@@ -62,50 +62,50 @@ public sealed class LspServer
 
             case "textDocument/didOpen":
             {
-                var td = msg["params"]!["textDocument"]!;
-                var uri = td["uri"]!.GetValue<string>();
-                _documents[uri] = td["text"]!.GetValue<string>();
+                var td = msg["params"]["textDocument"];
+                var uri = td["uri"].GetValue<string>();
+                _documents[uri] = td["text"].GetValue<string>();
                 PublishDiagnostics(uri);
                 break;
             }
 
             case "textDocument/didChange":
             {
-                var p = msg["params"]!;
-                var uri = p["textDocument"]!["uri"]!.GetValue<string>();
-                var changes = p["contentChanges"]!.AsArray();
+                var p = msg["params"];
+                var uri = p["textDocument"]["uri"].GetValue<string>();
+                var changes = p["contentChanges"].AsArray();
                 if (changes.Count > 0)                  // full sync: the last change carries the whole text
-                    _documents[uri] = changes[^1]!["text"]!.GetValue<string>();
+                    _documents[uri] = changes[^1]["text"].GetValue<string>();
                 PublishDiagnostics(uri);
                 break;
             }
 
             case "textDocument/didClose":
-                _documents.TryRemove(msg["params"]!["textDocument"]!["uri"]!.GetValue<string>(), out _);
+                _documents.TryRemove(msg["params"]["textDocument"]["uri"].GetValue<string>(), out _);
                 break;
 
             case "textDocument/completion":
-                Reply(id, CompletionResult(msg["params"]!));
+                Reply(id, CompletionResult(msg["params"]));
                 break;
 
             case "textDocument/hover":
-                Reply(id, HoverResult(msg["params"]!));
+                Reply(id, HoverResult(msg["params"]));
                 break;
 
             case "textDocument/definition":
-                Reply(id, DefinitionResult(msg["params"]!));
+                Reply(id, DefinitionResult(msg["params"]));
                 break;
 
             case "textDocument/documentSymbol":
-                Reply(id, DocumentSymbolResult(msg["params"]!));
+                Reply(id, DocumentSymbolResult(msg["params"]));
                 break;
 
             case "textDocument/codeAction":
-                Reply(id, CodeActionResult(msg["params"]!));
+                Reply(id, CodeActionResult(msg["params"]));
                 break;
 
             case "textDocument/semanticTokens/full":
-                Reply(id, SemanticTokensResult(msg["params"]!));
+                Reply(id, SemanticTokensResult(msg["params"]));
                 break;
 
             case "shutdown":
@@ -151,16 +151,16 @@ public sealed class LspServer
 
     private JsonNode CompletionResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
-        var pos = @params["position"]!;
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        var pos = @params["position"];
         if (!_documents.TryGetValue(uri, out var text))
             return new JsonArray();
 
         var model = ResolveModel(uri);
         if (model is null) return new JsonArray();
 
-        int line = pos["line"]!.GetValue<int>();
-        int character = pos["character"]!.GetValue<int>();
+        int line = pos["line"].GetValue<int>();
+        int character = pos["character"].GetValue<int>();
         int offset = OffsetAt(text, line, character);
         var result = new JsonArray();
         foreach (var item in new CompletionEngine(model).Complete(text, offset, UriToLocalPath(uri)))
@@ -195,7 +195,7 @@ public sealed class LspServer
         return result;
     }
 
-    private AumlTypeModel? ResolveModel(string uri)
+    private AumlTypeModel ResolveModel(string uri)
     {
         try { return _workspace.GetModelForFile(UriToLocalPath(uri)); }
         catch (Exception ex)
@@ -219,16 +219,16 @@ public sealed class LspServer
         return path;
     }
 
-    private JsonNode? HoverResult(JsonNode @params)
+    private JsonNode HoverResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
-        var pos = @params["position"]!;
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        var pos = @params["position"];
         if (!_documents.TryGetValue(uri, out var text)) return null;
 
         var model = ResolveModel(uri);
         if (model is null) return null;
 
-        int offset = OffsetAt(text, pos["line"]!.GetValue<int>(), pos["character"]!.GetValue<int>());
+        int offset = OffsetAt(text, pos["line"].GetValue<int>(), pos["character"].GetValue<int>());
         var hover = new HoverEngine(model).Hover(text, offset);
         if (hover is null) return null;
 
@@ -238,16 +238,16 @@ public sealed class LspServer
         };
     }
 
-    private JsonNode? DefinitionResult(JsonNode @params)
+    private JsonNode DefinitionResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
-        var pos = @params["position"]!;
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        var pos = @params["position"];
         if (!_documents.TryGetValue(uri, out var text)) return null;
 
         var model = ResolveModel(uri);
         if (model is null) return null;
 
-        int offset = OffsetAt(text, pos["line"]!.GetValue<int>(), pos["character"]!.GetValue<int>());
+        int offset = OffsetAt(text, pos["line"].GetValue<int>(), pos["character"].GetValue<int>());
         var location = new DefinitionEngine(model).Definition(text, offset);
         if (location is null) return null;
 
@@ -264,7 +264,7 @@ public sealed class LspServer
 
     private JsonNode DocumentSymbolResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
         var result = new JsonArray();
         if (_documents.TryGetValue(uri, out var text))
             foreach (var symbol in DocumentSymbolEngine.Symbols(text))
@@ -274,7 +274,7 @@ public sealed class LspServer
 
     private JsonNode SemanticTokensResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
         var data = new JsonArray();
         if (_documents.TryGetValue(uri, out var text))
         {
@@ -306,15 +306,15 @@ public sealed class LspServer
 
     private JsonNode CodeActionResult(JsonNode @params)
     {
-        var uri = @params["textDocument"]!["uri"]!.GetValue<string>();
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
         var result = new JsonArray();
         if (!_documents.TryGetValue(uri, out var text)) return result;
 
         var model = ResolveModel(uri);
         if (model is null) return result;
 
-        var start = @params["range"]!["start"]!;
-        int offset = OffsetAt(text, start["line"]!.GetValue<int>(), start["character"]!.GetValue<int>());
+        var start = @params["range"]["start"];
+        int offset = OffsetAt(text, start["line"].GetValue<int>(), start["character"].GetValue<int>());
 
         // Echoing the triggering diagnostics back ties the fix to the red squiggle (lightbulb on the error).
         var triggers = @params["context"]?["diagnostics"] as JsonArray;
@@ -415,7 +415,7 @@ public sealed class LspServer
 
     // --- JSON-RPC plumbing -------------------------------------------------
 
-    private void Reply(JsonNode? id, JsonNode? result) => Write(new JsonObject
+    private void Reply(JsonNode id, JsonNode result) => Write(new JsonObject
     {
         ["jsonrpc"] = "2.0",
         ["id"] = id?.DeepClone(),
@@ -459,10 +459,10 @@ public sealed class LspServer
             yield return node;
     }
 
-    private static JsonNode? ReadMessageFrom(Stream stream)
+    private static JsonNode ReadMessageFrom(Stream stream)
     {
         int contentLength = -1;
-        string? line;
+        string line;
         while (!string.IsNullOrEmpty(line = ReadHeaderLine(stream)))
         {
             int colon = line.IndexOf(':');
@@ -482,7 +482,7 @@ public sealed class LspServer
         return JsonNode.Parse(Encoding.UTF8.GetString(buffer));
     }
 
-    private static string? ReadHeaderLine(Stream stream)
+    private static string ReadHeaderLine(Stream stream)
     {
         var sb = new StringBuilder();
         int prev = -1, current;

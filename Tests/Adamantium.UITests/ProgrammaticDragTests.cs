@@ -133,7 +133,7 @@ public class ProgrammaticDragTests
 
             var files = package.Get(DataFormats.Files) as string[];
             Assert.That(files, Has.Length.EqualTo(1));
-            Assert.That(File.ReadAllBytes(files![0]), Is.EqualTo(TinyPng));
+            Assert.That(File.ReadAllBytes(files[0]), Is.EqualTo(TinyPng));
             Assert.That(files[0], Does.EndWith(".png"), "the extension must match what the bytes actually are");
         }
         finally

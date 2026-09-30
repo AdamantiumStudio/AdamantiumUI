@@ -57,6 +57,11 @@ public struct GridLength:IEquatable<GridLength>
       return this == (GridLength) obj;
    }
 
+   public override int GetHashCode()
+   {
+      return IsAuto ? unitType.GetHashCode() : HashCode.Combine(Value, unitType);
+   }
+
    public override string ToString()
    {
       if (IsAuto)

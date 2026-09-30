@@ -63,7 +63,7 @@ public class ThemeVariantMarkupTests
 
         var theme = result.Root as Theme;
         Assert.That(theme, Is.Not.Null, "the root must load as a Theme");
-        Assert.That(theme!.VariantsByKey.Keys, Is.EquivalentTo(new[] { ThemeVariant.Light, ThemeVariant.Dark }));
+        Assert.That(theme.VariantsByKey.Keys, Is.EquivalentTo(new[] { ThemeVariant.Light, ThemeVariant.Dark }));
     }
 
     [Test]
@@ -73,24 +73,24 @@ public class ThemeVariantMarkupTests
 
         // Filling the collection is what declares the variant and creates the brushes - there is no separate "now
         // build the palette" step for a file to forget.
-        Assert.That(theme!.Palette.Keys, Is.EquivalentTo(new[] { "Background", "Card" }));
+        Assert.That(theme.Palette.Keys, Is.EquivalentTo(new[] { "Background", "Card" }));
     }
 
     [Test]
     public void ColorsReadFromMarkupAreTheOnesWritten()
     {
         var theme = AumlLoader.Load(TwoVariants).Root as Theme;
-        theme!.ApplyVariant(ThemeVariant.Dark);
+        theme.ApplyVariant(ThemeVariant.Dark);
 
         var background = theme.GetResource("Background") as SolidColorBrush;
-        Assert.That(background!.Color, Is.EqualTo(Color.FromRgba(32, 32, 32, 255)));
+        Assert.That(background.Color, Is.EqualTo(Color.FromRgba(32, 32, 32, 255)));
     }
 
     [Test]
     public void SwitchingAVariantOnAThemeReadFromMarkup_StillKeepsTheBrush()
     {
         var theme = AumlLoader.Load(TwoVariants).Root as Theme;
-        theme!.ApplyVariant(ThemeVariant.Light);
+        theme.ApplyVariant(ThemeVariant.Light);
         var before = theme.GetResource("Card");
 
         theme.ApplyVariant(ThemeVariant.Dark);
@@ -104,7 +104,7 @@ public class ThemeVariantMarkupTests
     {
         var theme = AumlLoader.Load(TwoVariants).Root as Theme;
 
-        Assert.That(theme!.DefaultVariant, Is.EqualTo(ThemeVariant.Light),
+        Assert.That(theme.DefaultVariant, Is.EqualTo(ThemeVariant.Light),
             "file order is the only thing that says which variant a theme opens on");
     }
 
@@ -135,11 +135,11 @@ public class ThemeVariantMarkupTests
         // The accent is a theme PROPERTY, not a palette entry - {ThemeResource AccentColor} resolves it off the theme
         // object. Besides their palettes, an accent is the only thing the two Fluent files actually differ by, so a
         // variant that could not carry one would not be able to replace them.
-        theme!.ApplyVariant(ThemeVariant.Dark);
-        Assert.That((theme.AccentColor as SolidColorBrush)!.Color, Is.EqualTo(Color.FromRgba(0, 145, 247, 255)));
+        theme.ApplyVariant(ThemeVariant.Dark);
+        Assert.That((theme.AccentColor as SolidColorBrush).Color, Is.EqualTo(Color.FromRgba(0, 145, 247, 255)));
 
         theme.ApplyVariant(ThemeVariant.Light);
-        Assert.That((theme.AccentColor as SolidColorBrush)!.Color, Is.EqualTo(Color.FromRgba(0, 95, 184, 255)));
+        Assert.That((theme.AccentColor as SolidColorBrush).Color, Is.EqualTo(Color.FromRgba(0, 95, 184, 255)));
     }
 
     [Test]
@@ -167,7 +167,7 @@ public class ThemeVariantMarkupTests
 
         var theme = AumlLoader.Load(patchy).Root as Theme;
 
-        Assert.That(theme!.ValidateVariants().Any(p => p.Contains("Accent")), Is.True,
+        Assert.That(theme.ValidateVariants().Any(p => p.Contains("Accent")), Is.True,
             "a theme author who forgets a key in one variant must be told, not left with a palette that keeps "
             + "whatever the previous variant put there");
     }

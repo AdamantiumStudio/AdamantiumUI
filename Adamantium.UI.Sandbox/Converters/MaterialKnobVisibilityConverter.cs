@@ -18,7 +18,7 @@ public class MaterialKnobVisibilityConverter : IValueConverter
         var metal = value is MaterialType.Metal;
         var wood = value is MaterialType.Wood;
         var surface = velvet || metal || wood;
-        var visible = parameter as string switch
+        var visible = (parameter as string) switch
         {
             // A SURFACE has no capture to scatter, bend or tint: every knob about the thing BEHIND the element is
             // meaningless on it, and showing a control that does nothing is worse than showing none.

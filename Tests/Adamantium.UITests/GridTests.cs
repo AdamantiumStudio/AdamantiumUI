@@ -22,13 +22,10 @@ namespace Adamantium.UITests
          public Size MeasureArg = Size.Zero;
          public Size ArrangeResult = Size.Zero;
          public Size ArrangeArg = Size.Zero;
-         public Func<Size> ArrangeFunc;
-         public Func<Size> MeasureFunc;
 
          protected override Size MeasureOverride(Size availableSize)
          {
             MeasureArg = availableSize;
-            MeasureResult = MeasureFunc != null ? MeasureFunc() : MeasureResult;
             Debug.WriteLine($"Panel available size is {availableSize}");
             return MeasureResult;
          }
@@ -36,7 +33,6 @@ namespace Adamantium.UITests
          protected override Size ArrangeOverride(Size finalSize)
          {
             ArrangeArg = finalSize;
-            ArrangeResult = ArrangeFunc != null ? ArrangeFunc() : ArrangeResult;
             Debug.WriteLine($"Panel final size is {finalSize}");
             return ArrangeResult;
          }

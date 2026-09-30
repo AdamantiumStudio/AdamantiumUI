@@ -13,7 +13,7 @@ namespace Adamantium.UI.Threading;
 
 public sealed class Dispatcher : IDispatcher
 {
-    private CancellationToken cancellationToken;
+    private CancellationToken cancellationToken = new(true);
     private IApplicationPlatform appPlatform;
     private DispatcherOperationExecutor executor;
     private Thread uiThread;
@@ -83,7 +83,15 @@ public sealed class Dispatcher : IDispatcher
         
     public void Run(CancellationToken token)
     {
-        appPlatform.Run(token);
+        cancellationToken = token;
+        try
+        {
+            appPlatform.Run(token);
+        }
+        finally
+        {
+            cancellationToken = new CancellationToken(true);
+        }
     }
 
     public bool CheckAccess()

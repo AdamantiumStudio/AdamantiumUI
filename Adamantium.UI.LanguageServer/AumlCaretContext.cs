@@ -7,9 +7,9 @@ public enum AumlCompletionKind { None, ElementName, AttributeName, AttributeValu
 public sealed record AumlCompletionContext(
     AumlCompletionKind Kind,
     string Prefix,
-    string? ElementName = null,
-    string? AttributeName = null,
-    string? MarkupExtension = null);
+    string ElementName = null,
+    string AttributeName = null,
+    string MarkupExtension = null);
 
 /// <summary>
 /// Lenient, caret-based context detector for AUML completion. Works on partial/malformed
@@ -72,7 +72,7 @@ public static class AumlCaretContext
         return new(AumlCompletionKind.AttributeName, namePrefix, elementName);
     }
 
-    private static AumlCompletionContext DetectMarkupExtension(string value, string? elementName, string? attrName)
+    private static AumlCompletionContext DetectMarkupExtension(string value, string elementName, string attrName)
     {
         var body = value.Substring(1);   // drop the leading '{'
         int space = body.IndexOf(' ');
@@ -87,7 +87,7 @@ public static class AumlCaretContext
         return new(AumlCompletionKind.MarkupExtensionArg, argPart.Substring(tok), elementName, attrName, extName);
     }
 
-    private static string? AttributeNameBeforeQuote(string tag, int openQuote)
+    private static string AttributeNameBeforeQuote(string tag, int openQuote)
     {
         int j = openQuote - 1;
         while (j >= 0 && char.IsWhiteSpace(tag[j])) j--;   // skip whitespace before the quote

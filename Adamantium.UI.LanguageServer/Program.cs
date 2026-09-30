@@ -52,7 +52,7 @@ static void RunDemo(CompletionEngine engine)
     }
 }
 
-static string? FindDefaultBinDir()
+static string FindDefaultBinDir()
 {
     // The artifacts\bin this server was built into.
     var artifacts = new DirectoryInfo(AppContext.BaseDirectory);

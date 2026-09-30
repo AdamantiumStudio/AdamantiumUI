@@ -135,7 +135,7 @@ public class MergedFluentThemeTests
         theme.ApplyVariant(ThemeVariant.Dark);
 
         var before = theme.Palette.ToDictionary(p => p.Key, p => (Brush)p.Value);
-        var darkBackground = (theme.GetResource("SolidBackgroundFillColorBase") as SolidColorBrush)!.Color;
+        var darkBackground = (theme.GetResource("SolidBackgroundFillColorBase") as SolidColorBrush).Color;
 
         theme.ApplyVariant(ThemeVariant.Light);
 
@@ -145,7 +145,7 @@ public class MergedFluentThemeTests
                 $"'{pair.Key}' must be the same brush object - a new one is a property write on every element using it");
         }
 
-        var lightBackground = (theme.GetResource("SolidBackgroundFillColorBase") as SolidColorBrush)!.Color;
+        var lightBackground = (theme.GetResource("SolidBackgroundFillColorBase") as SolidColorBrush).Color;
         Assert.That(lightBackground, Is.Not.EqualTo(darkBackground), "...and the colors must actually have changed");
     }
 
@@ -155,10 +155,10 @@ public class MergedFluentThemeTests
         var theme = new Fluent();
 
         theme.ApplyVariant(ThemeVariant.Dark);
-        var darkAccent = (theme.AccentColor as SolidColorBrush)!.Color;
+        var darkAccent = (theme.AccentColor as SolidColorBrush).Color;
 
         theme.ApplyVariant(ThemeVariant.Light);
-        var lightAccent = (theme.AccentColor as SolidColorBrush)!.Color;
+        var lightAccent = (theme.AccentColor as SolidColorBrush).Color;
 
         // Besides their palettes, the accent is what the two old theme files actually differed by - a variant that
         // could not carry one would not be able to replace them.

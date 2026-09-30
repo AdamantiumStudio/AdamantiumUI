@@ -51,7 +51,7 @@ public static class SourceProjectGraph
         // reference set. Enumerating every *.dll in the runtime directory instead drags in native images
         // (msquic, hostpolicy, *.Native.dll, …) that carry no managed metadata (CS0009) and a facade soup that
         // leaves even System.Object/Attribute unbound — so attribute constructor arguments never materialize.
-        var tpa = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "")
+        var tpa = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "")
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         foreach (var dll in tpa)
         {
@@ -113,7 +113,7 @@ public static class SourceProjectGraph
     {
         if (nodes.TryGetValue(csprojPath, out var existing)) return existing;
 
-        var directory = Path.GetDirectoryName(csprojPath)!;
+        var directory = Path.GetDirectoryName(csprojPath);
         XDocument doc;
         try { doc = XDocument.Load(csprojPath); }
         catch { doc = null; }

@@ -384,9 +384,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             var previousDesired = DesiredSize;
 
             _measuring = true;
-            var measureFrame = Core.Diagnostics.RuntimeStats.BeginLayoutFrame();
             var desiredSize = MeasureCore(availableSize).Constrain(availableSize);
-            Core.Diagnostics.RuntimeStats.EndLayoutFrame(GetType(), measureFrame);
             _measuring = false;
 
             if (IsInvalidSize(desiredSize))
@@ -473,9 +471,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         {
             IsArrangeValid = true;
             TotalArrangeCores++;
-            var arrangeFrame = Core.Diagnostics.RuntimeStats.BeginLayoutFrame();
             ArrangeCore(rect);
-            Core.Diagnostics.RuntimeStats.EndLayoutFrame(GetType(), arrangeFrame);
             _previousArrange = rect;
             if (LayoutTrace.Enabled) LayoutTrace.Log($"  ARRANGE {LayoutName}: rect={rect} -> bounds={Bounds} render={RenderSize}");
         }

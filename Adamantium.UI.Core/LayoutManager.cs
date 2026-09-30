@@ -272,10 +272,6 @@ public sealed class LayoutManager
         }
 
         PassStopwatch.Restart();   // time the pass for RuntimeStats
-        // ...and what it ALLOCATES. A tab switch allocates ~190MB in one second and pays 180-200ms of GC pause for it,
-        // while the record and apply together account for a couple of MB - so the question is which half of the build
-        // (laying it out, or constructing it) that is.
-        var passBytes = GC.GetAllocatedBytesForCurrentThread();
 
         var didWork = false;
         var iterations = 0;
@@ -288,19 +284,10 @@ public sealed class LayoutManager
             }
             didWork = true;
 
-            // Drain snapshots in style, measure, arrange order, each timed; work re-dirtied meanwhile waits for the next
-            // iteration.
-            var phase = System.Diagnostics.Stopwatch.GetTimestamp();
+            // Drain snapshots in style, measure, arrange order; work re-dirtied meanwhile waits for the next iteration.
             DrainPhase(ToStyle, ApplyTheme);
-            var afterStyle = System.Diagnostics.Stopwatch.GetTimestamp();
             DrainPhase(ToMeasure, MeasureDirty);
-            var afterMeasure = System.Diagnostics.Stopwatch.GetTimestamp();
             DrainPhase(ToArrange, ArrangeDirty);
-
-            RuntimeStats.LayoutStyleMs += System.Diagnostics.Stopwatch.GetElapsedTime(phase, afterStyle).TotalMilliseconds;
-            RuntimeStats.LayoutMeasureMs += System.Diagnostics.Stopwatch.GetElapsedTime(afterStyle, afterMeasure).TotalMilliseconds;
-            RuntimeStats.LayoutArrangeMs += System.Diagnostics.Stopwatch.GetElapsedTime(afterMeasure).TotalMilliseconds;
-            RuntimeStats.LayoutIterations++;
         }
 
         var settled = ToStyle.IsEmpty && ToMeasure.IsEmpty && ToArrange.IsEmpty;
@@ -314,8 +301,6 @@ public sealed class LayoutManager
         }
 
         RuntimeStats.LastLayoutPassMs = PassStopwatch.Elapsed.TotalMilliseconds;
-        RuntimeStats.LayoutPasses++;
-        RuntimeStats.LayoutBytes += GC.GetAllocatedBytesForCurrentThread() - passBytes;
 
         if (didWork) Diagnostics.LayoutTrace.Count(typeof(LayoutManager), "*pass*");
         RuntimeStats.LastPassBudgetDeferred = !settled;

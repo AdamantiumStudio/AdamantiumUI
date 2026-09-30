@@ -441,7 +441,7 @@ public class DockingArea : Panel
     // stays" and "stop asking me about the rest".
     private async Task<(bool closed, bool stop)> ClosePaneAsync(Pane pane, object _)
     {
-        if (pane?.Id is not { } id) return (false, false);
+        if (pane?.Id is not { Length: > 0 } id) return (false, false);
 
         var group = Layout.FindGroup(id);
         if (group == null) return (false, false);
@@ -711,7 +711,7 @@ public class DockingArea : Panel
     {
         if (e.Property != Pane.AllowedProperty || sender is not Pane pane) return;
         if ((pane.Allowed & (DockZone.Center | DockZone.Edges)) != 0) return;   // still dockable somewhere
-        if (pane.Id == null || Layout.FindGroup(pane.Id) == null) return;       // not in the tree: nothing to undo
+        if (string.IsNullOrEmpty(pane.Id) || Layout.FindGroup(pane.Id) == null) return;       // not in the tree: nothing to undo
 
         // Just said it may not be docked, and it IS docked - so out, the same answer markup and AddPane give. Left
         // alone it would make its whole panel undockable: pullable out, never puttable back.
@@ -1157,7 +1157,7 @@ public class DockingArea : Panel
     {
         // Not allowed to float: the strip keeps it and goes on reordering.
         if (pane == null || (pane.Allowed & DockZone.Floating) == 0) return false;
-        if (pane.Id == null) return false;
+        if (string.IsNullOrEmpty(pane.Id)) return false;
         if (Refuses(new PaneTearingOffEventArgs([pane.Id], isWholePanel: false))) return false;
 
         // A REVEALED panel is put away first: the glance is over the moment something is carried off it.

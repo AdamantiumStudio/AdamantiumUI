@@ -12,36 +12,11 @@ namespace Adamantium.UI.Rendering;
 
 public partial class RenderCache
 {
-    // SCRATCH (ADAM_OP_OWNERS=1): every op of the retained stream by the component that drew it - the list of who costs
-    // the screen its draw calls, which no timing can name.
-    private string DumpOpOwners()
-    {
-        var byOwner = new Dictionary<string, int>();
-        foreach (var op in _ops)
-        {
-            var name = op.Clip is { } clip
-                ? clip.GetType().Name + (string.IsNullOrEmpty(clip.Name) ? "" : " '" + clip.Name + "'")
-                : "(none)";
-            var key = op.Kind + " under " + name;
-            byOwner[key] = byOwner.TryGetValue(key, out var had) ? had + 1 : 1;
-        }
-
-        var text = new System.Text.StringBuilder($"op stream: {_ops.Count} ops in {_layers.Count} layers");
-        foreach (var pair in byOwner.OrderByDescending(p => p.Value))
-        {
-            text.Append(Environment.NewLine).Append($"  {pair.Value,5}  {pair.Key}");
-        }
-
-        return text.ToString();
-    }
-
     // Replay a recorded frame's op stream (a Clean frame): re-issue scissor changes, per-unit draws and batch segments in
     // order. No walk, no bake, no upload - the batch buffers still hold last frame's bytes, and each unit's RenderData its
     // baked transform (nothing moved on a Clean frame).
     private void ExecuteOps(IGraphicsDevice device, Rect2D fullScissor)
     {
-        var opsBytes0 = System.GC.GetAllocatedBytesForCurrentThread();
-        var executed = 0;
         // LAYER by layer, and inside a layer in the order it was recorded. The two are the same sequence - a layer owns a
         // contiguous range of the stream - and saying it this way is what makes the structure of a recorded frame legible:
         // the stream is a flat list, the layers are what it MEANS.
@@ -49,10 +24,6 @@ public partial class RenderCache
             for (var i = layer.OpFirst; i < layer.OpFirst + layer.OpCount; i++)
             {
                 var op = _ops[i];
-                executed++;
-                var kind = (int)op.Kind;
-                if (kind >= 0 && kind < 4) Core.Diagnostics.RuntimeStats.OpCountByKind[kind]++;
-                var opBytes0 = System.GC.GetAllocatedBytesForCurrentThread();
                 switch (op.Kind)
                 {
                     case RenderOpKind.Scissor:
@@ -91,12 +62,7 @@ public partial class RenderCache
                         _instancedFill.ReplayFlush(op.SegId, fullScissor, _projectionMatrix);
                         break;
                 }
-                if (kind >= 0 && kind < 4)
-                    Core.Diagnostics.RuntimeStats.OpBytesByKind[kind] += System.GC.GetAllocatedBytesForCurrentThread() - opBytes0;
             }
-
-        Core.Diagnostics.RuntimeStats.ExecuteOpsBytes += System.GC.GetAllocatedBytesForCurrentThread() - opsBytes0;
-        Core.Diagnostics.RuntimeStats.LastOpsExecuted = executed;
     }
 
     // Gives a per-unit draw (re-issued by the CPU on replay) its slot's current composed alpha times its own.
@@ -355,7 +321,6 @@ public partial class RenderCache
         }
 
         RecordSegment(2, _textBatch.Flush(device, fullScissor, _projectionMatrix));
-        if (_flushedSomething) { LayerProbe.Cycle(); _flushedSomething = false; }
 
         // The cycle is over, and with it the LAYER: a flush happens precisely when the next draw can no longer be
         // reordered with what is pending, so whatever is recorded from here belongs strictly after all of it.
@@ -366,13 +331,8 @@ public partial class RenderCache
 
     // Record a batch segment op (the immediate draw already happened in Flush; this only appends it for a clean-frame
     // replay). A Flush that drew nothing returns -1 and records nothing.
-    // A LAYER is one flush cycle - the set whose mutual order does not matter. Counted here because this is where
-    // one ends: two increments per cycle.
-    private bool _flushedSomething;
-
     private void RecordSegment(byte batch, int segId)
     {
-        if (segId >= 0) { _flushedSomething = true; LayerProbe.Segment(); }
         if (!_recording || segId < 0) return;
 
         // A segment's paint span runs from the first group that filled it to the one being recorded when it flushed. Only
@@ -651,7 +611,6 @@ public partial class RenderCache
         }
 
         var units = group.Units;
-        var unitStart = System.Diagnostics.Stopwatch.GetTimestamp();
         for (int i = 0; i < drawCommands.Count; i++)
         {
             var command = drawCommands[i];
@@ -660,14 +619,7 @@ public partial class RenderCache
             if (i >= units.Count)
             {
                 Core.Diagnostics.RuntimeStats.UnitsCreated++;
-                Core.Diagnostics.RuntimeStats.UnitsCreatedGrow++;
-                var growStart = System.Diagnostics.Stopwatch.GetTimestamp();
-                var madeUnit = _renderUnitFactory.CreateRenderUnitFromCommand(command);
-                units.Add(madeUnit);
-                var growMs = System.Diagnostics.Stopwatch.GetElapsedTime(growStart).TotalMilliseconds;
-                Core.Diagnostics.RuntimeStats.UnitCreateMs += growMs;
-                Core.Diagnostics.RuntimeStats.NoteUnitCreated(
-                    madeUnit == null ? "null" : madeUnit.GetType().Name + "<" + component.GetType().Name + ">", growMs);
+                units.Add(_renderUnitFactory.CreateRenderUnitFromCommand(command));
             }
             else
             {
@@ -675,35 +627,16 @@ public partial class RenderCache
                 if (unit.Match(command))
                 {
                     Core.Diagnostics.RuntimeStats.UnitsUpdated++;
-                    var oneStart = System.Diagnostics.Stopwatch.GetTimestamp();
                     unit.UpdateWithDrawCommand(command);
-                    var oneMs = System.Diagnostics.Stopwatch.GetElapsedTime(oneStart).TotalMilliseconds;
-                    Core.Diagnostics.RuntimeStats.UnitUpdateMs += oneMs;
-                    if (oneMs > Core.Diagnostics.RuntimeStats.LastApplySlowestUnitMs)
-                    {
-                        Core.Diagnostics.RuntimeStats.LastApplySlowestUnitMs = oneMs;
-                        // The OWNER as well as the unit kind: "a RectangleRenderUnit" is a shape, "on a ScrollViewer
-                        // 1200x800" is an element somebody can go and look at. The size matters too - a re-tessellation
-                        // that costs 36ms is not costing it for a 24px tile.
-                        Core.Diagnostics.RuntimeStats.LastApplySlowestUnit =
-                            $"{unit.GetType().Name}<{component.GetType().Name}>{component.RenderSize.Width:0}x{component.RenderSize.Height:0}";
-                    }
                 }
                 else
                 {
                     Core.Diagnostics.RuntimeStats.UnitsCreated++;
-                    Core.Diagnostics.RuntimeStats.UnitsCreatedMismatch++;
-                    var swapStart = System.Diagnostics.Stopwatch.GetTimestamp();
                     unit.DeferDispose();
                     units[i] = _renderUnitFactory.CreateRenderUnitFromCommand(command);
-                    Core.Diagnostics.RuntimeStats.UnitCreateMs += System.Diagnostics.Stopwatch.GetElapsedTime(swapStart).TotalMilliseconds;
                 }
             }
         }
-
-        // Everything above happens INSIDE a render unit; the build loop's own work (group lookup, order bookkeeping,
-        // the empty-commands path) is what is left when this is subtracted from LastApplyBuildMs.
-        Core.Diagnostics.RuntimeStats.LastApplyUnitMs += System.Diagnostics.Stopwatch.GetElapsedTime(unitStart).TotalMilliseconds;
 
         if (units.Count > drawCommands.Count)
         {
@@ -832,12 +765,10 @@ public partial class RenderCache
                 (stale ??= new List<IUIComponent>()).Add(component);
         }
 
-        Core.Diagnostics.RuntimeStats.SnapSweeps++;   // TEMP: did this sweep run at all, and on which cache instance
         if (stale != null)
         {
             foreach (var component in stale) _applySnap.Remove(component);
             removed += stale.Count;
-            Core.Diagnostics.RuntimeStats.SnapSwept += stale.Count;
         }
 
         // ...and the per-node walk memo, which nothing has ever removed from either. It is small by design - motion

@@ -184,7 +184,7 @@ internal static class LspSelfTest
 
             if (response["result"] is JsonArray array && id is "2" or "4" or "7" or "12" or "13" or "14" or "15" or "19" or "22" or "23" or "24" or "25" or "26" or "27" or "28")
             {
-                var labels = array.Select(c => c!["label"]!.GetValue<string>()).ToList();
+                var labels = array.Select(c => c["label"].GetValue<string>()).ToList();
                 var tag = id switch
                 {
                     "4" => "x: directives",
@@ -216,13 +216,13 @@ internal static class LspSelfTest
                 Console.WriteLine($"<- codeAction (id {id}): {actions.Count} quick-fix(es)");
                 foreach (var action in actions)
                 {
-                    Console.WriteLine($"     * {action!["title"]!.GetValue<string>()}");
-                    foreach (var fileEdits in action["edit"]!["changes"]!.AsObject())
-                        foreach (var edit in fileEdits.Value!.AsArray())
+                    Console.WriteLine($"     * {action["title"].GetValue<string>()}");
+                    foreach (var fileEdits in action["edit"]["changes"].AsObject())
+                        foreach (var edit in fileEdits.Value.AsArray())
                         {
-                            var s = edit!["range"]!["start"]!;
-                            var newText = edit["newText"]!.GetValue<string>().Replace("\r", "\\r").Replace("\n", "\\n");
-                            Console.WriteLine($"         L{s["line"]!.GetValue<int>()}:{s["character"]!.GetValue<int>()} -> \"{newText}\"");
+                            var s = edit["range"]["start"];
+                            var newText = edit["newText"].GetValue<string>().Replace("\r", "\\r").Replace("\n", "\\n");
+                            Console.WriteLine($"         L{s["line"].GetValue<int>()}:{s["character"].GetValue<int>()} -> \"{newText}\"");
                         }
                 }
             }
@@ -233,8 +233,8 @@ internal static class LspSelfTest
                 int tokLine = 0, tokChar = 0;
                 for (int k = 0; k + 4 < tokenData.Count; k += 5)
                 {
-                    int deltaLine = tokenData[k]!.GetValue<int>(), deltaChar = tokenData[k + 1]!.GetValue<int>();
-                    int length = tokenData[k + 2]!.GetValue<int>(), tokenType = tokenData[k + 3]!.GetValue<int>();
+                    int deltaLine = tokenData[k].GetValue<int>(), deltaChar = tokenData[k + 1].GetValue<int>();
+                    int length = tokenData[k + 2].GetValue<int>(), tokenType = tokenData[k + 3].GetValue<int>();
                     if (deltaLine != 0) { tokLine += deltaLine; tokChar = deltaChar; } else tokChar += deltaChar;
                     parts.Add($"{types[tokenType]}@{tokLine}:{tokChar}+{length}");
                 }
@@ -249,19 +249,19 @@ internal static class LspSelfTest
             {
                 if (response["result"] is JsonObject def)
                 {
-                    var path = new Uri(def["uri"]!.GetValue<string>()).LocalPath;
-                    int startLine = def["range"]!["start"]!["line"]!.GetValue<int>();
+                    var path = new Uri(def["uri"].GetValue<string>()).LocalPath;
+                    int startLine = def["range"]["start"]["line"].GetValue<int>();
                     Console.WriteLine($"<- definition (id {id}): {Path.GetFileName(path)}:{startLine}");
                 }
                 else Console.WriteLine($"<- definition (id {id}): (none)");
             }
             else if (method == "textDocument/publishDiagnostics")
             {
-                var @params = response["params"]!;
-                var diags = @params["diagnostics"]!.AsArray();
-                Console.WriteLine($"<- diagnostics [{Path.GetFileName(@params["uri"]!.GetValue<string>())}]: {diags.Count}");
+                var @params = response["params"];
+                var diags = @params["diagnostics"].AsArray();
+                Console.WriteLine($"<- diagnostics [{Path.GetFileName(@params["uri"].GetValue<string>())}]: {diags.Count}");
                 foreach (var d in diags)
-                    Console.WriteLine($"     - {d!["message"]!.GetValue<string>()}");
+                    Console.WriteLine($"     - {d["message"].GetValue<string>()}");
             }
             else
             {
@@ -276,7 +276,7 @@ internal static class LspSelfTest
             var objectSymbol = model?.Compilation.GetTypeByMetadataName("System.Object");
             if (objectSymbol is not null)
             {
-                var loc = MetadataDecompiler.Locate(objectSymbol, model!.Compilation);
+                var loc = MetadataDecompiler.Locate(objectSymbol, model.Compilation);
                 Console.WriteLine($"<- definition metadata (System.Object): " +
                     $"{(loc is null ? "(none)" : Path.GetFileName(loc.FilePath) + ":" + loc.StartLine)}");
             }
@@ -290,8 +290,8 @@ internal static class LspSelfTest
         {
             foreach (var symbol in symbols)
             {
-                var detail = symbol!["detail"]?.GetValue<string>();
-                into.Add(symbol["name"]!.GetValue<string>() + (string.IsNullOrEmpty(detail) ? "" : $" {detail}"));
+                var detail = symbol["detail"]?.GetValue<string>();
+                into.Add(symbol["name"].GetValue<string>() + (string.IsNullOrEmpty(detail) ? "" : $" {detail}"));
                 if (symbol["children"] is JsonArray children) Flatten(children, into);
             }
         }

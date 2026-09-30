@@ -54,7 +54,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     // ...and the two that CLOSE the accounting: what a loop frame cost, and what the entity processors took out of it.
     // Without them the file lists a handful of tenths and stops, while the frame it is describing is eight
     // milliseconds - and a reader is left to assume the rest is the part that was named.
-    private double _windowMaxFrame, _windowMaxProcs, _secMaxFrame, _secMaxProcs, _windowMaxDraw;
+    private double _windowMaxProcs, _secMaxFrame, _secMaxProcs, _windowMaxDraw;
 
     // The worst draw's own phases, so the four numbers describe ONE frame - see where they are taken.
     private double _drawSetup, _drawPaint, _drawMoved, _drawOps, _drawWalk, _drawAnim, _drawArena, _drawBrush;
@@ -333,7 +333,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         _windowElapsed = 0; _windowFrames = 0; _windowMaxLayoutMs = 0; _windowDeferred = false;
         _windowMaxRecord = 0; _windowMaxApply = 0;
         _windowMaxWait = 0; _windowMaxPresent = 0; _windowGcMs = 0;
-        _secMaxFrame = 0; _secMaxProcs = 0; _windowMaxProcs = 0; _windowMaxFrame = 0; _windowMaxDraw = 0;
+        _secMaxFrame = 0; _secMaxProcs = 0; _windowMaxProcs = 0; _windowMaxDraw = 0;
         _windowMaxBegin = 0; _windowMaxEnd = 0; _windowMaxSubmit = 0; _windowMaxPre = 0;
         _sumLayout = _sumBuild = _sumProc = _sumDraw = _sumProcs = _sumWait = _sumPresent = 0;
         return false;   // keep ticking

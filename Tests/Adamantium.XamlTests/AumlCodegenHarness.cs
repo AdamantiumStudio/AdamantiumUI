@@ -41,7 +41,7 @@ internal static class AumlCodegenHarness
 
     private sealed class DictOptions(Dictionary<string, string> values) : AnalyzerConfigOptions
     {
-        public override bool TryGetValue(string key, out string? value) => values.TryGetValue(key, out value);
+        public override bool TryGetValue(string key, out string value) => values.TryGetValue(key, out value);
     }
 
     private sealed class DictOptionsProvider : AnalyzerConfigOptionsProvider

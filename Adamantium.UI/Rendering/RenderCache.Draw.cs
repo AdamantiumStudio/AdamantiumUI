@@ -272,7 +272,6 @@ public partial class RenderCache
             var reclaimedAll = true;
             foreach (var run in group.Runs)
             {
-                LayerProbe.OrphanSweptSlots += run.Count;
                 var segment = _rectBatch.FindSegmentContaining(run.First);
                 _rectBatch.BlankOwned(device, (uint)run.First, (uint)run.Count, group.Tag);
 
@@ -299,8 +298,6 @@ public partial class RenderCache
             if (!_rectBatch.SegmentDrawsNothing(id)) continue;
             DropSegmentOp(id);
         }
-
-        LayerProbe.OrphanSweeps++;
     }
 
     // For the watch above only - a group is named by the control it draws for, which is the only name a person can
@@ -642,7 +639,6 @@ public partial class RenderCache
     {
         // This frame's transform-table copy, picked BEFORE anything writes a matrix or draws - the composited animations
         // below write matrices, and the replay paths below draw without ever reaching the walk's setup block.
-        var setupBytes0 = System.GC.GetAllocatedBytesForCurrentThread();
         var phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
         BeginTransformFrame(device);
 
@@ -693,7 +689,6 @@ public partial class RenderCache
             RefreshMovedScissors(fullScissor);    // the viewports they carried past are world-space rects - derive again
             AcceptPatchedTransforms();
             LastFrameReplayed = true;
-            Core.Diagnostics.RuntimeStats.DrawSetupBytes += System.GC.GetAllocatedBytesForCurrentThread() - setupBytes0;
             DrawMovedMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
             phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
             ExecuteOps(device, fullScissor);
@@ -1724,13 +1719,6 @@ public partial class RenderCache
         if (_recording)
         {
             _opsRecorded = true; _recording = false;
-            // The BIGGEST stream only: several caches share this field (a window and its adorner layers), and an empty
-            // adorner recording last would otherwise be the whole report.
-            if (LayerProbe.DumpOwners && _ops.Count > LayerProbe.LastOpCount)
-            {
-                LayerProbe.LastOpCount = _ops.Count;
-                LayerProbe.LastOpDump = DumpOpOwners();
-            }
             // The transform + layout state this op stream was recorded AGAINST. A replay is faithful only while it holds.
             _opsMatrixVersion = _transformTable?.MatrixVersion ?? 0;
             _opsLayoutVersion = _transformTable?.LayoutMatrixVersion ?? 0;
@@ -2140,9 +2128,6 @@ public partial class RenderCache
 
                 // Not skipped by family: any paint change arrives here, so slot readers are re-baked too. Pure fades
                 // bypass this loop via ApplyCompositedOpacity.
-
-                // TEMP: WHICH families the patch still re-bakes once the slot readers are skipped.
-                Core.Diagnostics.FrameTrace.NotePatched($"{u.GetType().Name}<{u.Component?.GetType().Name}>");
 
                 u.SetEffectiveOpacity(EffectiveOpacity(u.Component));   // a paint change may be an opacity change
                 var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
@@ -3038,17 +3023,10 @@ public partial class RenderCache
 
         // The cheap path: edit inside the room the layer already owns, moving only what follows the edit. Only when the
         // layer has outgrown its room does it relocate, and then it does have to be carried across whole.
-        if (arena.ReplaceStagedInSegment(device, layer, at, replaced, patch.StageFirst, patch.StageCount))
-        {
-            LayerProbe.SegmentEditsInPlace++;
-        }
-        else
+        if (!arena.ReplaceStagedInSegment(device, layer, at, replaced, patch.StageFirst, patch.StageCount))
         {
             // Outgrew the room this layer owns: it is carried to the end of the arena and every group drawing in it is
-            // re-indexed below. THE cost a per-layer arena exists to remove - counted, so the rewrite is judged and not
-            // assumed.
-            LayerProbe.SegmentRelocations++;
-            LayerProbe.RelocatedSlots += count;
+            // re-indexed below. THE cost a per-layer arena exists to remove.
             if (!arena.RepointSegmentAroundStage(device, layer, first, at, replaced, count, scissor, patch.StageFirst, patch.StageCount))
                 return false;
         }

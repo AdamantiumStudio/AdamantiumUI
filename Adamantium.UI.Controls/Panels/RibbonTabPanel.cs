@@ -164,8 +164,6 @@ public class RibbonTabPanel : Panel
         return new Size(x, row + ledgeRow);
     }
 
-    private double _headerRow;
-
     // The title band costs height only if some context actually asks for a title; a strip of plates alone is exactly as
     // tall as it always was.
     private double LedgeRow

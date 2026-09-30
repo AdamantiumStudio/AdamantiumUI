@@ -86,16 +86,11 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
         if (!BakeItem(band, destinationRect, corners, shape, world, opacity, color, transformSlot, fieldRange, clipSlot, fadeSlot, out var baked))
             return false;
 
-        LastSlot = Count;
         Items[Count++] = baked;
         if (field != null) _field = field;
         MarkPending(scissor, logicalBounds);
         return true;
     }
-
-    /// <summary>Which record the last <see cref="TryAdd"/> took, so a patch can re-bake it in place - see
-    /// <see cref="HaloRectCollector.BakeInto"/> for why the bake has to be reachable outside the walk.</summary>
-    public int LastSlot { get; private set; }
 
     /// <summary>Bake one living band WITHOUT appending it. False = not bakeable this way (a rotated/sheared world, or a
     /// band that has faded to nothing).</summary>

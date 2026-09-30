@@ -15,7 +15,7 @@ public static class MetadataDecompiler
     private static readonly Dictionary<string, string> FileCache = new(StringComparer.Ordinal);
     private static readonly object Gate = new();
 
-    public static DefinitionLocation? Locate(ISymbol symbol, Compilation compilation)
+    public static DefinitionLocation Locate(ISymbol symbol, Compilation compilation)
     {
         var type = symbol as INamedTypeSymbol ?? symbol.ContainingType;
         if (type is null) return null;

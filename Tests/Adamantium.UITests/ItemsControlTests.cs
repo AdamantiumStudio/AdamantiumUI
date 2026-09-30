@@ -365,7 +365,7 @@ public class ItemsControlTests
 
                 var content = (c as ContentPresenter)?.VisualChildren.OfType<Border>().FirstOrDefault();
                 Assert.That(content, Is.Not.Null, $"container {idx}: content Border missing");
-                Assert.That(content!.RenderSize.Width, Is.EqualTo(120).Within(0.5), $"container {idx}: content did NOT re-stretch to the grown cell (frozen small)");
+                Assert.That(content.RenderSize.Width, Is.EqualTo(120).Within(0.5), $"container {idx}: content did NOT re-stretch to the grown cell (frozen small)");
                 Assert.That(content.RenderSize.Height, Is.EqualTo(120).Within(0.5), $"container {idx}: content did NOT re-stretch to the grown cell (frozen small)");
             }
         });
@@ -439,7 +439,7 @@ public class ItemsControlTests
                 var cp = Descendants(c).OfType<ContentPresenter>().FirstOrDefault();
                 var content = cp?.VisualChildren.OfType<Border>().FirstOrDefault();
                 Assert.That(content, Is.Not.Null, $"item {idx}: DataTemplate content missing");
-                Assert.That(content!.RenderSize.Width, Is.EqualTo(120).Within(0.5), $"item {idx}: content did NOT fill the grown cell");
+                Assert.That(content.RenderSize.Width, Is.EqualTo(120).Within(0.5), $"item {idx}: content did NOT fill the grown cell");
                 Assert.That(content.RenderSize.Height, Is.EqualTo(120).Within(0.5), $"item {idx}: content did NOT fill the grown cell");
             }
         });

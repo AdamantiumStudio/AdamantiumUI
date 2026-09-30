@@ -46,7 +46,7 @@ public static class DocumentSymbolEngine
             children);
     }
 
-    private static string? XName(AumlAstObjectNode node) =>
+    private static string XName(AumlAstObjectNode node) =>
         node.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == "Name")?.Value is AumlAstTextNode text
             ? text.Text
             : null;

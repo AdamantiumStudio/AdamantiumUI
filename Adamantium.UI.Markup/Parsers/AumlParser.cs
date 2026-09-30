@@ -181,7 +181,7 @@ public class ParserContext
         if (node is XText xText)
             return new AumlAstTextNode(node.ToLineInfo(), xText.Value);
 
-        return null!;
+        return null;
     }
 
     private List<IAumlAstValueNode> ParseValueNodes(XElement element)

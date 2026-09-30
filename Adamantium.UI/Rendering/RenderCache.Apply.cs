@@ -20,26 +20,9 @@ public partial class RenderCache
     /// every window has recorded - see below - not here.)</summary>
     public void ApplyFrame()
     {
-        var applyBytes0 = System.GC.GetAllocatedBytesForCurrentThread();
         BeginApplyFrame();
 
-        // Counted for the WHOLE frame: this loop drains every packet published since the last apply, so per-packet
-        // figures describe whichever one happened to be last and say nothing about the frame's cost.
-        Core.Diagnostics.RuntimeStats.LastApplyPackets = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyDraws = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyStructuralMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyReRenderMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyBuildMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyMergeMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyUnitMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplySlowestUnitMs = 0;
-        Core.Diagnostics.RuntimeStats.LastApplySlowestUnit = "-";
-        Core.Diagnostics.RuntimeStats.LastApplyInserts = 0;
-        Core.Diagnostics.RuntimeStats.LastApplyKind = "-";
-
-        var glyphStart = System.Diagnostics.Stopwatch.GetTimestamp();
         AdoptReadyGlyphs();   // glyphs that finished rasterizing since the last frame land here
-        Core.Diagnostics.RuntimeStats.LastApplyGlyphMs = System.Diagnostics.Stopwatch.GetElapsedTime(glyphStart).TotalMilliseconds;
 
         while (_published.TryDequeue(out var packet))
         {
@@ -47,8 +30,6 @@ public partial class RenderCache
             packet.Reset(RenderBuildKind.Clean);
             _spare.Add(packet);   // back to the pool for the recorder
         }
-
-        Core.Diagnostics.RuntimeStats.LastApplyBytes = System.GC.GetAllocatedBytesForCurrentThread() - applyBytes0;
 
         // RenderDirty (a GLOBAL set shared by every window) is NOT cleared per-window here: with two windows the first to
         // apply would wipe the set before the second records, so the second never re-records its content. Both the
@@ -259,16 +240,6 @@ public partial class RenderCache
         }
 
 
-        // Accumulated into the frame's totals (reset in ApplyFrame). The KIND keeps the heaviest one seen this frame, so
-        // "Structural" is not lost behind a Clean packet that happened to arrive after it.
-        Core.Diagnostics.RuntimeStats.LastApplyPackets++;
-        Core.Diagnostics.RuntimeStats.LastApplyDraws += packet.Draws.Count;
-        if (packet.Kind > RenderBuildKind.Clean &&
-            (Core.Diagnostics.RuntimeStats.LastApplyKind == "-" || packet.Kind == RenderBuildKind.Full))
-        {
-            Core.Diagnostics.RuntimeStats.LastApplyKind = packet.Kind.ToString();
-        }
-
         switch (packet.Kind)
         {
             case RenderBuildKind.Clean:
@@ -280,10 +251,8 @@ public partial class RenderCache
             case RenderBuildKind.Partial:
             {
                 // APPLY pass (GPU): realize the recorded draws - update the units in place / splice a count change.
-                var reRenderStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 foreach (var draw in packet.Draws)
                     ApplyReRender(draw.Component, draw.Commands, draw.Order, draw.Clones);
-                Core.Diagnostics.RuntimeStats.LastApplyReRenderMs += System.Diagnostics.Stopwatch.GetElapsedTime(reRenderStart).TotalMilliseconds;
 
                 if (LastBuildKind != RenderBuildKind.Full) LastBuildKind = RenderBuildKind.Partial;
                 _partialDirty.AddRange(packet.PartialDirty);
@@ -306,9 +275,7 @@ public partial class RenderCache
                             && !reordered && !packet.SnapReset && !_layoutChangedSinceRecord;
 
 
-                var structuralStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 ApplyStructural(packet);
-                Core.Diagnostics.RuntimeStats.LastApplyStructuralMs += System.Diagnostics.Stopwatch.GetElapsedTime(structuralStart).TotalMilliseconds;
                 if (LastBuildKind != RenderBuildKind.Full)
                     LastBuildKind = local ? RenderBuildKind.Partial : RenderBuildKind.Structural;
                 LastBuildTransformDirty = !local;
@@ -437,7 +404,6 @@ public partial class RenderCache
         if (commands.Count == 0)
         {
             Core.Diagnostics.RuntimeStats.LastRecordEmptyDraws++;
-            Core.Diagnostics.RuntimeStats.NoteEmptyDraw(component.GetType());
         }
         MirrorUnits(component, commands.Count, false);   // it WAS dirty: no commands now means "draws nothing" -> units freed
         return PartialRecord.Recorded;
@@ -532,7 +498,6 @@ public partial class RenderCache
         //    linear scan per insert would be O(new x scene) on a fill).
         _pendingInserts.Clear();
         _pendingSet.Clear();
-        var buildStart = System.Diagnostics.Stopwatch.GetTimestamp();
         foreach (var draw in packet.Draws)
         {
             if (draw.Commands.Count == 0)
@@ -569,13 +534,10 @@ public partial class RenderCache
             QueueInsert(group);
         }
 
-        Core.Diagnostics.RuntimeStats.LastApplyBuildMs += System.Diagnostics.Stopwatch.GetElapsedTime(buildStart).TotalMilliseconds;
-
         FlushOrderRemovals();   // the merge below READS the order, so the batch has to be committed first
 
         if (_pendingInserts.Count == 0) return;
 
-        var mergeStart = System.Diagnostics.Stopwatch.GetTimestamp();
         // One merge of two sorted sequences - the retained paint order and this frame's arrivals.
         _pendingInserts.Sort(static (a, b) => a.Order.CompareTo(b.Order));
         _mergedGroups.Clear();
@@ -608,9 +570,6 @@ public partial class RenderCache
         // A group JOINED the paint order, so the recorded stream has no ops for it at all and a patch cannot show what
         // was not there. Departures are answered by _leftTheOrder; this is the arrival.
         _orderJoined = true;
-        Core.Diagnostics.RuntimeStats.LastApplyMergeMs += System.Diagnostics.Stopwatch.GetElapsedTime(mergeStart).TotalMilliseconds;
-        Core.Diagnostics.RuntimeStats.LastApplyInserts += _pendingInserts.Count;
-        Core.Diagnostics.RuntimeStats.LastApplyGroups = _groups.Count;
     }
 
     // Groups leaving the paint order; removals are batched into one pass, since a whole view can leave at once.

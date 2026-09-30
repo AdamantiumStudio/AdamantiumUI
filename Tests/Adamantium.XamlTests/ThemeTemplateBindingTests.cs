@@ -100,11 +100,11 @@ public class ThemeTemplateBindingTests
     {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            if (assembly.IsDynamic || !assembly.FullName!.StartsWith("Adamantium")) continue;
+            if (assembly.IsDynamic || !assembly.FullName.StartsWith("Adamantium")) continue;
 
             Type[] types;
             try { types = assembly.GetTypes(); }
-            catch (ReflectionTypeLoadException e) { types = e.Types.Where(t => t != null).ToArray()!; }
+            catch (ReflectionTypeLoadException e) { types = e.Types.Where(t => t != null).ToArray(); }
 
             var hit = types.FirstOrDefault(t => t.Name == name);
             if (hit != null) return hit;

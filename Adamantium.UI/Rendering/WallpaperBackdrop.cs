@@ -293,7 +293,7 @@ internal sealed class WallpaperBackdrop : IDisposable
     {
         try
         {
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file)!);
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
             using var writer = new System.IO.BinaryWriter(System.IO.File.Create(file));
             writer.Write(width);
             writer.Write(height);

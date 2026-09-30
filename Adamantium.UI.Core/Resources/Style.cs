@@ -55,8 +55,6 @@ public class Style : AdamantiumComponent
 
     public static void Apply(IFundamentalUIComponent component, params ReadOnlySpan<Style> styles)
     {
-        if (styles == null) return;
-        
         foreach (var style in styles)
         {
             style.Attach(component);
@@ -65,8 +63,6 @@ public class Style : AdamantiumComponent
     
     public static void UnApply(IFundamentalUIComponent component, params ReadOnlySpan<Style> styles)
     {
-        if (styles == null) return;
-        
         foreach (var style in styles)
         {
             style.Detach(component);

@@ -122,6 +122,4 @@ public unsafe class BitmapSource : ImageSource
 
       return Texture;
    }
-
-   public event EventHandler<ExceptionEventArgs> DecodeFailed;
 }

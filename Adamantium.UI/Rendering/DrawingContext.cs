@@ -15,7 +15,6 @@ namespace Adamantium.UI.Rendering;
 public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawingSession
 {
    private IUIComponent _currentComponent;
-   private uint _currentIndex;
    
    private readonly List<DrawCommand> drawCommands = new List<DrawCommand>();
 

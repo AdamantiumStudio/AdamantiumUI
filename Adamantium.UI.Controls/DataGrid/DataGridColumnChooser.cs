@@ -40,7 +40,7 @@ public class DataGridColumnChooser : Control
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
-        Drop();
+        ReleaseAll();
         _items = null;
     }
 
@@ -94,7 +94,7 @@ public class DataGridColumnChooser : Control
             column.IsVisible = box.IsChecked == true;
     }
 
-    private void Drop()
+    private void ReleaseAll()
     {
         foreach (var box in _live) Release(box);
         _live.Clear();

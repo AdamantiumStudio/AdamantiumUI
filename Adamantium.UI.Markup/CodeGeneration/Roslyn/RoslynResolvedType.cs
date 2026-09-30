@@ -201,6 +201,7 @@ public class RoslynResolvedType : IResolvedType
             Microsoft.CodeAnalysis.SpecialType.System_Boolean => ResolvedSpecialType.System_Boolean,
             Microsoft.CodeAnalysis.SpecialType.System_Enum => ResolvedSpecialType.System_Enum,
             Microsoft.CodeAnalysis.SpecialType.System_Array => ResolvedSpecialType.System_Array,
+            _ => ResolvedSpecialType.None
         };
 
     public ResolvedTypeKind TypeKind =>
@@ -211,6 +212,7 @@ public class RoslynResolvedType : IResolvedType
             Microsoft.CodeAnalysis.TypeKind.Struct => ResolvedTypeKind.Struct,
             Microsoft.CodeAnalysis.TypeKind.Interface => ResolvedTypeKind.Interface,
             Microsoft.CodeAnalysis.TypeKind.Enum => ResolvedTypeKind.Enum,
+            _ => ResolvedTypeKind.Unknown
         };
     
     public ResolvedMemberKind MemberKind =>

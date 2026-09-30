@@ -36,7 +36,11 @@ public class MacOSPlatform : IApplicationPlatform
         throw new NotImplementedException();
     }
 
-    public event Action Signaled;
+    public event Action Signaled
+    {
+        add { }
+        remove { }
+    }
 
     // TODO(macOS): NSWindow.windowNumberAtPoint:belowWindowWithWindowNumber: -> the window number, mapped back to our
     // handle. Zero until then, which makes the drag fall back to client-bounds containment.

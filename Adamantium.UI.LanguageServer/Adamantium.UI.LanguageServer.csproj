@@ -7,7 +7,7 @@
 		<Configurations>Debug;Release</Configurations>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+		<Nullable>disable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>

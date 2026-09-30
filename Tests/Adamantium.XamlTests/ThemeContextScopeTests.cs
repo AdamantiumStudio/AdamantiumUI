@@ -96,8 +96,8 @@ public class ThemeContextScopeTests
         var resolved = ThemeContext.For(element) as Theme;
 
         Assert.That(resolved, Is.Not.SameAs(theme), "one palette cannot hold two variants at once");
-        Assert.That(resolved!.CurrentVariant, Is.EqualTo(ThemeVariant.Dark));
-        Assert.That((resolved.GetResource("Background") as SolidColorBrush)!.Color, Is.EqualTo(DarkBg));
+        Assert.That(resolved.CurrentVariant, Is.EqualTo(ThemeVariant.Dark));
+        Assert.That((resolved.GetResource("Background") as SolidColorBrush).Color, Is.EqualTo(DarkBg));
     }
 
     [Test]
@@ -118,11 +118,11 @@ public class ThemeContextScopeTests
         ThemeContext.SetVariant(left, ThemeVariant.Light);
         ThemeContext.SetVariant(right, ThemeVariant.Dark);
 
-        var leftBrush = (ThemeContext.For(left) as Theme)!.GetResource("Background") as SolidColorBrush;
-        var rightBrush = (ThemeContext.For(right) as Theme)!.GetResource("Background") as SolidColorBrush;
+        var leftBrush = (ThemeContext.For(left) as Theme).GetResource("Background") as SolidColorBrush;
+        var rightBrush = (ThemeContext.For(right) as Theme).GetResource("Background") as SolidColorBrush;
 
-        Assert.That(leftBrush!.Color, Is.EqualTo(LightBg));
-        Assert.That(rightBrush!.Color, Is.EqualTo(DarkBg));
+        Assert.That(leftBrush.Color, Is.EqualTo(LightBg));
+        Assert.That(rightBrush.Color, Is.EqualTo(DarkBg));
         Assert.That(leftBrush, Is.Not.SameAs(rightBrush), "two variants shown at once need two brushes");
     }
 
@@ -179,10 +179,10 @@ public class ThemeContextScopeTests
         ThemeContext.SetVariant(element, ThemeVariant.System);
 
         SystemAppearance.PrefersDark = true;
-        Assert.That((ThemeContext.For(element) as Theme)!.CurrentVariant, Is.EqualTo(ThemeVariant.Dark));
+        Assert.That((ThemeContext.For(element) as Theme).CurrentVariant, Is.EqualTo(ThemeVariant.Dark));
 
         SystemAppearance.PrefersDark = false;
-        Assert.That((ThemeContext.For(element) as Theme)!.CurrentVariant, Is.EqualTo(ThemeVariant.Light));
+        Assert.That((ThemeContext.For(element) as Theme).CurrentVariant, Is.EqualTo(ThemeVariant.Light));
     }
 
     [Test]
@@ -201,9 +201,9 @@ public class ThemeContextScopeTests
 
         SystemAppearance.PrefersDark = false;
 
-        Assert.That((ThemeContext.For(inner) as Theme)!.CurrentVariant, Is.EqualTo(ThemeVariant.Light),
+        Assert.That((ThemeContext.For(inner) as Theme).CurrentVariant, Is.EqualTo(ThemeVariant.Light),
             "the inner subtree follows the OS, not the ancestor that pinned dark");
-        Assert.That((ThemeContext.For(outer) as Theme)!.CurrentVariant, Is.EqualTo(ThemeVariant.Dark),
+        Assert.That((ThemeContext.For(outer) as Theme).CurrentVariant, Is.EqualTo(ThemeVariant.Dark),
             "...and the ancestor is unaffected by its child following the OS");
     }
 
@@ -221,7 +221,7 @@ public class ThemeContextScopeTests
         var resolved = _app.ResourceManager.FindResource(element, "Background") as SolidColorBrush;
 
         Assert.That(resolved, Is.Not.Null);
-        Assert.That(resolved!.Color, Is.EqualTo(DarkBg));
+        Assert.That(resolved.Color, Is.EqualTo(DarkBg));
     }
 
     [Test]
@@ -241,8 +241,8 @@ public class ThemeContextScopeTests
         var leftValue = _app.ResourceManager.FindResource(left, "Background") as SolidColorBrush;
         var rightValue = _app.ResourceManager.FindResource(right, "Background") as SolidColorBrush;
 
-        Assert.That(leftValue!.Color, Is.EqualTo(LightBg));
-        Assert.That(rightValue!.Color, Is.EqualTo(DarkBg));
+        Assert.That(leftValue.Color, Is.EqualTo(LightBg));
+        Assert.That(rightValue.Color, Is.EqualTo(DarkBg));
     }
 
     [Test]

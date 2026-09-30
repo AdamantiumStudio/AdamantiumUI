@@ -76,7 +76,7 @@ public class PropertyGridResetTests
     }
 
     private static PropertyRow Row(IUIComponent within) =>
-        Rows(within).FirstOrDefault(row => row.Definition?.Header == "Background");
+        Rows(within).FirstOrDefault(row => row.Definition?.Header is "Background");
 
     private static System.Collections.Generic.IEnumerable<PropertyRow> Rows(IUIComponent within)
     {
@@ -190,7 +190,7 @@ public class PropertyGridResetTests
         grid.Measure(new Size(360, 300));
         grid.Arrange(new Rect(0, 0, 360, 300));
 
-        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header == "Opacity");
+        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header is "Opacity");
 
         Assert.That(row, Is.Not.Null);
 
@@ -275,7 +275,7 @@ public class PropertyGridResetTests
         button.ApplyCurrentTheme();
         Settle(window);
 
-        var row = Rows(grid).FirstOrDefault(one => one.Definition?.Header == "Kind");
+        var row = Rows(grid).FirstOrDefault(one => one.Definition?.Header is "Kind");
 
         Assert.That(row, Is.Not.Null, "the read-only line was not built");
 
@@ -307,7 +307,7 @@ public class PropertyGridResetTests
 
         Settle(window);
 
-        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header == "Scale");
+        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header is "Scale");
         var editor = Editor(row);
 
         Assert.That(editor, Is.Not.Null, "the line has no number editor");
@@ -361,7 +361,7 @@ public class PropertyGridResetTests
 
         Settle(window);
 
-        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header == "Scale");
+        var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header is "Scale");
 
         Assert.That(row, Is.Not.Null);
 

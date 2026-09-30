@@ -538,7 +538,7 @@ public partial class InfiniteCanvas : Control
     // them: these are the kinds of thing this plane deals in, they are the same however the panel is dressed, and a
     // set of lines held as a resource can reach them through the canvas it is pointed at. A panel that kept its own
     // copy would be a second list to keep in step with this one.
-    private static readonly IReadOnlyList<CanvasGridStyle> Styles =
+    private static readonly IReadOnlyList<CanvasGridStyle> Grids =
         [CanvasGridStyle.Dots, CanvasGridStyle.Lines, CanvasGridStyle.None, CanvasGridStyle.Transparent];
 
     private static readonly IReadOnlyList<CanvasArrowHead> Heads =
@@ -560,7 +560,7 @@ public partial class InfiniteCanvas : Control
 
     /// <summary>The grids a plane can wear, for the line that chooses one.</summary>
     public static readonly AdamantiumProperty GridStylesProperty = AdamantiumProperty.Register(nameof(GridStyles),
-        typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Styles));
+        typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Grids));
 
     public IEnumerable GridStyles => GetValue<IEnumerable>(GridStylesProperty);
 

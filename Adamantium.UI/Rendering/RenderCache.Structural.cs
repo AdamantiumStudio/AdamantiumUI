@@ -39,7 +39,6 @@ public partial class RenderCache
         Core.Diagnostics.RuntimeStats.LastRecordPlanScans = 0;
         Core.Diagnostics.RuntimeStats.LastRecordPlanRuns = 0;
         Core.Diagnostics.RuntimeStats.LastRecordPlanParents = 0;
-        Core.Diagnostics.RuntimeStats.LastRecordRenumberMs = 0;
         if (!PlanStructuralChange())
         {
             // Ran out of rank SPACE, not information (each insert into a gap halves it). Renumbering is cheap - an
@@ -109,8 +108,6 @@ public partial class RenderCache
     // new sorted place (the applier re-sorts on the Reranks below). No Render, no draw commands, no unit work.
     private void RenumberOrder(IRootVisualComponent visualRoot, RenderPacket packet)
     {
-        LayerProbe.Renumbers++;
-        var renumberStart = System.Diagnostics.Stopwatch.GetTimestamp();
         packet.Renumbered = true;
         _orderByControl.Clear();
 
@@ -138,7 +135,6 @@ public partial class RenderCache
         }
 
         _needRenumber = false;
-        Core.Diagnostics.RuntimeStats.LastRecordRenumberMs += System.Diagnostics.Stopwatch.GetElapsedTime(renumberStart).TotalMilliseconds;
     }
 
     // TEMP: name the give-up so a full walk in the trace says WHY it is one.
@@ -367,7 +363,6 @@ public partial class RenderCache
 
         if (component.IsGeometryValid && HoldsUnits(component))
         {
-            Core.Diagnostics.RuntimeStats.LastRecordReranks++;
             packet.Reranks.Add(new KeyValuePair<IUIComponent, long>(component, rank));
             return;
         }
@@ -386,7 +381,6 @@ public partial class RenderCache
         if (commands.Count == 0)
         {
             Core.Diagnostics.RuntimeStats.LastRecordEmptyDraws++;
-            Core.Diagnostics.RuntimeStats.NoteEmptyDraw(component.GetType());
         }
 
         packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, rank, component.RenderClones));

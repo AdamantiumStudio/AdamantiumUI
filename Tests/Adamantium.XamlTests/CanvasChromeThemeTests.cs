@@ -475,7 +475,7 @@ public class CanvasChromeThemeTests
         {
             foreach (var section in grid.Displayed)
             {
-                if (section.Header != "Layer") continue;
+                if (section.Header is not "Layer") continue;
 
                 Assert.That(section.Properties, Is.Not.Empty, "the Layer section is empty");
                 found = true;

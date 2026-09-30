@@ -95,7 +95,7 @@ public static class AumlValidator
         var xmlns = node.TypeReference.Namespace;
         var name = node.TypeReference.Name;
 
-        IResolvedType? element = null;
+        IResolvedType element = null;
         if (model.IsKnownNamespace(xmlns))
         {
             element = model.GetElement(xmlns, name);

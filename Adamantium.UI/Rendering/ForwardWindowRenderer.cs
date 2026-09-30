@@ -122,7 +122,6 @@ public class ForwardWindowRenderer : WindowRendererBase
 
         GraphicsDevice.SetViewports(Viewport);
         GraphicsDevice.SetScissors(Scissor);
-        var drawBytes0 = GC.GetAllocatedBytesForCurrentThread();
         var t0 = Stopwatch.GetTimestamp();
         _renderCache.Render(GraphicsDevice, Scissor);
         RuntimeStats.LastRenderDrawMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
@@ -138,7 +137,6 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastDrawAnimMs = _renderCache.DrawAnimMs;
         RuntimeStats.LastDrawArenaPaintMs = _renderCache.DrawArenaPaintMs;
         RuntimeStats.LastDrawBrushRepaintMs = _renderCache.DrawBrushRepaintMs;
-        RuntimeStats.DrawBytes += GC.GetAllocatedBytesForCurrentThread() - drawBytes0;
     }
 
     public override void PreRender()
@@ -147,11 +145,9 @@ public class ForwardWindowRenderer : WindowRendererBase
 
         // TEMP measurement: this sweep visits every unit of every group on EVERY frame, replayed ones included. Whether
         // that costs anything is a question a number answers.
-        var preBytes0 = GC.GetAllocatedBytesForCurrentThread();
         var preRenderStart = Stopwatch.GetTimestamp();
         _renderCache.PreRender();
         RuntimeStats.LastPreRenderMs = Stopwatch.GetElapsedTime(preRenderStart).TotalMilliseconds;
-        RuntimeStats.PreRenderBytes += GC.GetAllocatedBytesForCurrentThread() - preBytes0;
     }
 
     private double _lastRecordMs;

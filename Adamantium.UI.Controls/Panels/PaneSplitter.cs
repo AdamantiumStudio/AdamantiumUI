@@ -13,7 +13,6 @@ public class PaneSplitter : Thumb
 {
     private double _originBefore;
     private double _originAfter;
-    private double _extent;
 
     /// <summary>Which way this splitter resizes, set by the host; picks the cursor, and themes trigger on it to orient the
     /// grip.</summary>

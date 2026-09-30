@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Adamantium.UI.Core;
 using Adamantium.Win32;
 using Adamantium.Win32.Shell;
@@ -12,6 +13,7 @@ namespace Adamantium.UI.Platforms.Windows;
 /// application stays alive and repaints behind it.</summary>
 internal sealed class WindowsFileDialog : IFileDialogPlatform
 {
+    [SupportedOSPlatform("windows")]
     public string Save(SaveFileRequest request)
     {
         var clsid = ShellDialog.ClsidFileSaveDialog;
@@ -38,6 +40,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         }
     }
 
+    [SupportedOSPlatform("windows")]
     public string Open(OpenFileRequest request)
     {
         var clsid = ShellDialog.ClsidFileOpenDialog;
@@ -146,6 +149,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         return specs.ToArray();
     }
 
+    [SupportedOSPlatform("windows")]
     private static string PathOf(IShellItem item)
     {
         if (item == null) return null;

@@ -181,7 +181,7 @@ public sealed class AumlTypeModel
         return true;
     }
 
-    public IResolvedType? GetElement(string xmlns, string name) =>
+    public IResolvedType GetElement(string xmlns, string name) =>
         GetElements(xmlns).FirstOrDefault(t => t.Name == name);
 
     /// <summary>
@@ -231,7 +231,7 @@ public sealed class AumlTypeModel
         return result;
     }
 
-    public IResolvedType? GetPropertyType(IResolvedType element, string propertyName) =>
+    public IResolvedType GetPropertyType(IResolvedType element, string propertyName) =>
         GetProperties(element).FirstOrDefault(p => p.Name == propertyName)?.Type;
 
     private const string ThemeTypeFullName = "Adamantium.UI.Core.Resources.Theme";
@@ -309,7 +309,7 @@ public sealed class AumlTypeModel
 
     /// <summary>First element type with this simple name across all registered xmlns namespaces — used
     /// to resolve an attached-property owner written without an xmlns prefix (e.g. <c>ResourceContext</c>).</summary>
-    public IResolvedType? FindElement(string name)
+    public IResolvedType FindElement(string name)
     {
         foreach (var xmlns in _resolver.XmlnsDefinitions)
             if (GetElement(xmlns, name) is { } type) return type;
@@ -386,7 +386,7 @@ public sealed class AumlTypeModel
 
     /// <summary>Resolves a markup-extension type from the name used in <c>{Name ...}</c>: matches either the exact type
     /// name or the conventional <c>NameExtension</c> form (so both <c>{Binding}</c> and <c>{BindingExtension}</c> work).</summary>
-    public IResolvedType? ResolveMarkupExtensionType(string localName)
+    public IResolvedType ResolveMarkupExtensionType(string localName)
     {
         const string baseFqn = "Adamantium.UI.Core.MarkupExtensions.MarkupExtension";
         foreach (var assembly in _resolver.ResolvedAssemblies)
@@ -400,7 +400,7 @@ public sealed class AumlTypeModel
 
     /// <summary>The markup extension's positional/default argument property (the one marked
     /// <c>[DefaultProperty]</c>, e.g. <c>Binding.Path</c>), or null when the extension has none.</summary>
-    public IResolvedProperty? GetDefaultProperty(IResolvedType extensionType) =>
+    public IResolvedProperty GetDefaultProperty(IResolvedType extensionType) =>
         extensionType.FindPropertyWithAttribute("Adamantium.UI.Core.MarkupExtensions.DefaultPropertyAttribute", out var p) ? p : null;
 
     private static readonly string[] CommonColors =

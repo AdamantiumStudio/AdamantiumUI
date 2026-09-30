@@ -76,10 +76,6 @@ public class Pane : TabItem
         set => SetValue(RestoreProperty, value);
     }
 
-    /// <summary>Identity in a saved layout. The model refers to panes BY ID - holding the object would stop it being
-    /// data, and there would be nothing left to serialize.</summary>
-    public string Id { get; set; }
-
     /// <summary>What the application needs to recreate this pane, saved beside its id and handed to
     /// <see cref="DockingArea.PaneRestoring"/> on load; null for a pane declared in markup.</summary>
     public string RestoreKey { get; set; }

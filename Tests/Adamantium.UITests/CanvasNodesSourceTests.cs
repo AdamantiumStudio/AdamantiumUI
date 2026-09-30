@@ -99,7 +99,7 @@ public class CanvasNodesSourceTests
     private static CanvasNode Shown(InfiniteCanvas canvas, ICanvasNode model) =>
         canvas.ItemsHere().OfType<ElementItem>()
             .Select(item => item.Element as CanvasNode)
-            .FirstOrDefault(node => node != null && node.Title == (model.Title ?? string.Empty));
+            .FirstOrDefault(node => node != null && Equals(node.Title, model.Title ?? string.Empty));
 
     // A node put in the collection appears on the plane, wearing what the model says about it.
     [Test]

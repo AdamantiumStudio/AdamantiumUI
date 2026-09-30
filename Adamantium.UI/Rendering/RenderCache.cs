@@ -348,7 +348,6 @@ public partial class RenderCache
         // accounted for, and this session has twice been misled by a figure that described only a piece of one.
         Core.Diagnostics.RuntimeStats.LastRecordRenderMs = 0;
         Core.Diagnostics.RuntimeStats.LastRecordEmptyDraws = 0;
-        Core.Diagnostics.RuntimeStats.LastRecordReranks = 0;
         Core.Diagnostics.RuntimeStats.LastRecordPlanMs = 0;
         Core.Diagnostics.RuntimeStats.LastRecordCopyMs = 0;
         Core.Diagnostics.RuntimeStats.LastRecordSnapMs = 0;

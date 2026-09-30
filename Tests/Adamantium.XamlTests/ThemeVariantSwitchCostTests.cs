@@ -112,7 +112,7 @@ public class ThemeVariantSwitchCostTests
         _themes.SetVariant(ThemeVariant.Dark);
 
         Assert.That(theme.GetResource("Background"), Is.SameAs(brush));
-        Assert.That(brush!.Color, Is.EqualTo(DarkBg));
+        Assert.That(brush.Color, Is.EqualTo(DarkBg));
     }
 
     [Test]
@@ -121,7 +121,7 @@ public class ThemeVariantSwitchCostTests
         var theme = CurrentTwoVariantTheme();
         var brush = theme.GetResource("Background") as SolidColorBrush;
         var raised = 0;
-        brush!.Changed += (_, _) => raised++;
+        brush.Changed += (_, _) => raised++;
 
         _themes.SetVariant(ThemeVariant.Dark);
 

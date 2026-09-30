@@ -111,17 +111,17 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
         return true;
     }
 
-    // The max distance of the stroke from its every-Stride-th-point polyline (measured to segments), so fragments can
-    // reject early against the coarse line.
+    // The max distance of the stroke from its every-CoarseStride-th-point polyline (measured to segments), so fragments
+    // can reject early against the coarse line.
     private float Spread(int first, int points)
     {
-        if (points < Stride * 2) return -1;   // fewer points than a coarse walk saves: none is taken
+        if (points < CoarseStride * 2) return -1;   // fewer points than a coarse walk saves: none is taken
 
         var most = 0f;
 
-        for (var at = 0; at < points - 1; at += Stride)
+        for (var at = 0; at < points - 1; at += CoarseStride)
         {
-            var next = Math.Min(at + Stride, points - 1);
+            var next = Math.Min(at + CoarseStride, points - 1);
 
             var ax = Items[first + at].Segment.X;
             var ay = Items[first + at].Segment.Y;
@@ -152,7 +152,7 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
     /// <summary>How many points a coarse step skips. Sixteen because the saving is what the coarse walk does NOT do and
     /// the cost is the spread it opens up: too fine saves nothing, too coarse bulges so far from the ink that no pixel
     /// is ever allowed to stop.</summary>
-    internal const int Stride = 16;
+    internal const int CoarseStride = 16;
 
     /// <summary>Bake one unit into the patch stage - see BatchArena. Ink does not patch: a stroke is many instances and
     /// the stage repairs one, so a stroke that changed is re-recorded like anything else.</summary>

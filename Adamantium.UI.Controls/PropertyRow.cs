@@ -612,15 +612,15 @@ public class PropertyRow : Control
             if (FindEditor(child) is { } nested) return nested;
         }
 
-        return Focusable(root);
+        return FirstFocusable(root);
     }
 
-    private static IInputComponent Focusable(IUIComponent root)
+    private static IInputComponent FirstFocusable(IUIComponent root)
     {
         foreach (var child in root.VisualChildren)
         {
             if (child is IInputComponent { Focusable: true } editor) return editor;
-            if (Focusable(child) is { } nested) return nested;
+            if (FirstFocusable(child) is { } nested) return nested;
         }
 
         return null;

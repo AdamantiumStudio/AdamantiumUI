@@ -93,7 +93,7 @@ public static class CodeActionEngine
     /// look up, so we map its conventional prefix straight to its URI. Works on the raw buffer, so it
     /// fires even though the undeclared prefix makes the document invalid XML.
     /// </summary>
-    private static AumlCodeAction? DeclareKnownPrefixAction(string text, int offset, IReadOnlyDictionary<string, string> namespaces)
+    private static AumlCodeAction DeclareKnownPrefixAction(string text, int offset, IReadOnlyDictionary<string, string> namespaces)
     {
         if (QualifiedNameAt(text, offset) is not { } token) return null;
         var (prefix, _) = SplitName(token.Name);
@@ -128,7 +128,7 @@ public static class CodeActionEngine
     }
 
     /// <summary>Conventional URI for a well-known AUML prefix (only the type-less directive namespace).</summary>
-    private static string? KnownPrefixUri(string prefix) => prefix == "x" ? AumlXDirectives.Xmlns : null;
+    private static string KnownPrefixUri(string prefix) => prefix == "x" ? AumlXDirectives.Xmlns : null;
 
     /// <summary>The qualified-name token (element or attribute) surrounding the caret, if any.</summary>
     private static (int Start, int End, string Name)? QualifiedNameAt(string text, int offset)
@@ -143,7 +143,7 @@ public static class CodeActionEngine
     }
 
     /// <summary>Prefix under which this URI is already declared, or null if it isn't ("" = default xmlns).</summary>
-    private static string? DeclaredPrefix(IReadOnlyDictionary<string, string> namespaces, string uri)
+    private static string DeclaredPrefix(IReadOnlyDictionary<string, string> namespaces, string uri)
     {
         foreach (var (prefix, declared) in namespaces)
             if (declared == uri) return prefix;

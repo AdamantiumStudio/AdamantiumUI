@@ -222,7 +222,7 @@ public class OleFormatBridgeTests
         var package = new DataPackage(new Uri("https://example.com"));
 
         using var data = new Win32DataObject(package);
-        var id = unchecked((short)Win32Interop.RegisterClipboardFormat(typeof(Uri).FullName!));
+        var id = unchecked((short)Win32Interop.RegisterClipboardFormat(typeof(Uri).FullName));
 
         Assert.That(Array.Exists(data.Formats, f => f.cfFormat == id), Is.False);
     }

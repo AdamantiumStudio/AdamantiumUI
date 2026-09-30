@@ -15,7 +15,7 @@ public sealed class HoverEngine
 
     public HoverEngine(AumlTypeModel model) => _model = model;
 
-    public string? Hover(string text, int offset)
+    public string Hover(string text, int offset)
     {
         if (string.IsNullOrEmpty(text) || offset < 0 || offset > text.Length) return null;
 
@@ -32,7 +32,7 @@ public sealed class HoverEngine
         };
     }
 
-    private string? HoverElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    private string HoverElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var element = ResolveElement(qualifiedName, namespaces);
         if (element is null) return null;
@@ -43,7 +43,7 @@ public sealed class HoverEngine
         return hover;
     }
 
-    private string? HoverAttribute(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
+    private string HoverAttribute(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
     {
         var (attrPrefix, local) = SplitName(ctx.Prefix);
 
@@ -65,7 +65,7 @@ public sealed class HoverEngine
         return _model.IsKnownAttribute(element, local) ? $"**{local}**\n\non `{element.FullName}`" : null;
     }
 
-    private IResolvedType? ResolveElement(string? qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    private IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var (prefix, local) = SplitName(qualifiedName ?? "");
         var xmlns = ResolveXmlns(prefix, namespaces);

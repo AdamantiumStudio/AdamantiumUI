@@ -4941,7 +4941,11 @@ public class DataGridTests
         public string Fault { get; set; }
 
         public bool HasErrors => Fault != null;
-        public event EventHandler<System.ComponentModel.DataErrorsChangedEventArgs> ErrorsChanged;
+        public event EventHandler<System.ComponentModel.DataErrorsChangedEventArgs> ErrorsChanged
+        {
+            add { }
+            remove { }
+        }
 
         // NO property name is how this interface says "the record", not "this field".
         public System.Collections.IEnumerable GetErrors(string propertyName) =>

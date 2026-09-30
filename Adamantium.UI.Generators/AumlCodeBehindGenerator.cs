@@ -28,7 +28,7 @@ namespace Adamantium.UI.Generators
                 .Where(file => file.Path.EndsWith(".xml") || file.Path.EndsWith(".auml"))
                 .Select((text, cancellationToken) => (
                     Path: text.Path,
-                    Content: text.GetText(cancellationToken)!.ToString()))
+                    Content: text.GetText(cancellationToken).ToString()))
                 .Combine(buildProperties)
                 .Select((pair, _) => ParseDocument(pair.Left.Path, pair.Left.Content, pair.Right.RootNamespace, pair.Right.ProjectDir))
                 .WithTrackingName(ParseStepName)

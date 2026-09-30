@@ -11,7 +11,7 @@ public enum AumlCompletionItemKind { Element, Property, Value, Directive }
 /// explicit edit range) instead of letting the client guess the word boundary. Needed for path segments: after
 /// <c>Textures/</c> the client would otherwise filter bare file names against the whole "Textures/" prefix and
 /// hide them — here only the segment after the last '/' is the prefix/replacement.</param>
-public sealed record AumlCompletionItem(string Label, AumlCompletionItemKind Kind, string? Detail = null, string? InsertText = null, int? ReplaceBack = null);
+public sealed record AumlCompletionItem(string Label, AumlCompletionItemKind Kind, string Detail = null, string InsertText = null, int? ReplaceBack = null);
 
 /// <summary>
 /// Produces AUML completions at a caret position: element names, an element's settable
@@ -26,7 +26,7 @@ public sealed class CompletionEngine
 
     public CompletionEngine(AumlTypeModel model) => _model = model;
 
-    public IReadOnlyList<AumlCompletionItem> Complete(string text, int offset, string? documentPath = null)
+    public IReadOnlyList<AumlCompletionItem> Complete(string text, int offset, string documentPath = null)
     {
         var ctx = AumlCaretContext.Detect(text, offset);
         var namespaces = AumlNamespaces.Scan(text);
@@ -107,7 +107,7 @@ public sealed class CompletionEngine
     /// type names; resources -> resource keys); everything else is driven by the property's CLR type: a view-model path
     /// for a PropertyPath, type names for a Type, enum members / booleans / brush colors via the type model.</summary>
     private IReadOnlyList<AumlCompletionItem> CompleteExtensionValue(
-        string extLocal, Adamantium.UI.Markup.CodeGeneration.IResolvedType? propType,
+        string extLocal, Adamantium.UI.Markup.CodeGeneration.IResolvedType propType,
         string partial, string text, int offset, IReadOnlyDictionary<string, string> namespaces)
     {
         if (extLocal is "TemplateBinding" or "TemplateBindingExtension")
@@ -176,7 +176,7 @@ public sealed class CompletionEngine
     /// <summary>The type named by the nearest <c>&lt;attrLocalName&gt;="..."</c> attribute before the caret
     /// (pragmatic scan): the ControlTemplate's <c>TargetType</c> for a TemplateBinding, or the <c>x:ViewModel</c>
     /// for a Binding. Good enough to scope completion to the enclosing template / data type.</summary>
-    private Adamantium.UI.Markup.CodeGeneration.IResolvedType? FindNearestAttributeType(
+    private Adamantium.UI.Markup.CodeGeneration.IResolvedType FindNearestAttributeType(
         string text, int offset, string attrLocalName, IReadOnlyDictionary<string, string> namespaces)
     {
         int region = Math.Min(offset, text.Length);
@@ -206,7 +206,7 @@ public sealed class CompletionEngine
     /// the last narrows to that property's type; the last segment is completed against the narrowed type. Uses
     /// readable properties (get-only included), since bindings read as well as write.</summary>
     private IReadOnlyList<AumlCompletionItem> CompleteBindingPath(
-        string path, Adamantium.UI.Markup.CodeGeneration.IResolvedType? dataType)
+        string path, Adamantium.UI.Markup.CodeGeneration.IResolvedType dataType)
     {
         if (dataType is null) return [];
 
@@ -341,7 +341,7 @@ public sealed class CompletionEngine
         return used;
     }
 
-    private IReadOnlyList<AumlCompletionItem> CompleteValues(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset, string? documentPath)
+    private IReadOnlyList<AumlCompletionItem> CompleteValues(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset, string documentPath)
     {
         // A type-valued x: directive (x:ViewModel) completes type names directly in its value - the simplified form
         // without {x:Type}. Same type set used inside {x:Type}.
@@ -397,7 +397,7 @@ public sealed class CompletionEngine
 
     // The value of an attribute on the SAME element whose opening tag holds the caret (e.g. read StrokeDashGlyphs while
     // completing StrokeDashSymbols). Scans from the element's '<' to the first '>'. Null when the attribute isn't there.
-    private static string? CurrentElementAttributeValue(string text, int offset, string attrLocalName)
+    private static string CurrentElementAttributeValue(string text, int offset, string attrLocalName)
     {
         int region = Math.Min(offset, text.Length);
         int lt = text.LastIndexOf('<', Math.Max(0, region - 1));
@@ -448,7 +448,7 @@ public sealed class CompletionEngine
 
     // True when the attribute is an x: directive whose value names a CLR type (x:ViewModel), per the single-source
     // registry AumlDirectives. Lets the plain "prefix:Type" value complete types, like inside {x:Type}.
-    private static bool IsTypeReferenceDirective(string? attributeName, IReadOnlyDictionary<string, string> namespaces)
+    private static bool IsTypeReferenceDirective(string attributeName, IReadOnlyDictionary<string, string> namespaces)
     {
         if (string.IsNullOrEmpty(attributeName)) return false;
         int colon = attributeName.IndexOf(':');
@@ -468,7 +468,7 @@ public sealed class CompletionEngine
     /// so far is split into an already-typed directory part and a final-segment prefix; folders are offered with a
     /// trailing '/' so the path can be drilled into. Returns nothing without a known document/project.
     /// </summary>
-    private IReadOnlyList<AumlCompletionItem> CompletePaths(string partial, string? documentPath)
+    private IReadOnlyList<AumlCompletionItem> CompletePaths(string partial, string documentPath)
     {
         var root = FindProjectRoot(documentPath);
         if (root is null) return [];
@@ -503,18 +503,18 @@ public sealed class CompletionEngine
     }
 
     // The project root a relative asset path resolves against: the nearest .csproj ancestor of the edited file.
-    private static string? FindProjectRoot(string? documentPath)
+    private static string FindProjectRoot(string documentPath)
     {
         if (string.IsNullOrEmpty(documentPath)) return null;
-        DirectoryInfo? dir;
-        try { dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(documentPath))!); }
+        DirectoryInfo dir;
+        try { dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(documentPath))); }
         catch { return null; }
         for (; dir is not null; dir = dir.Parent)
             if (dir.GetFiles("*.csproj").Length > 0) return dir.FullName;
         return null;
     }
 
-    private Adamantium.UI.Markup.CodeGeneration.IResolvedType? ResolveElement(string? qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    private Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var (prefix, local) = SplitName(qualifiedName ?? "");
         var xmlns = ResolveXmlns(prefix, namespaces);
@@ -522,7 +522,7 @@ public sealed class CompletionEngine
     }
 
     /// <summary>Resolves a (possibly xmlns-prefixed) type name; an unprefixed name may live in any registered namespace.</summary>
-    private Adamantium.UI.Markup.CodeGeneration.IResolvedType? ResolveType(string xmlnsPrefix, string typeName, IReadOnlyDictionary<string, string> namespaces)
+    private Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveType(string xmlnsPrefix, string typeName, IReadOnlyDictionary<string, string> namespaces)
     {
         var xmlns = ResolveXmlns(xmlnsPrefix, namespaces);
         if (xmlns.Length > 0 && _model.GetElement(xmlns, typeName) is { } resolved) return resolved;
@@ -543,7 +543,7 @@ public sealed class CompletionEngine
 
     // An attribute completion that auto-inserts ="" and drops the caret between the quotes (LSP snippet),
     // so picking a property doesn't leave the author to type =" " themselves.
-    private static AumlCompletionItem AttrItem(string label, AumlCompletionItemKind kind, string? detail) =>
+    private static AumlCompletionItem AttrItem(string label, AumlCompletionItemKind kind, string detail) =>
         new(label, kind, detail, $"{label}=\"$0\"");
 
     // Case-insensitive substring match for short scoped lists; large global catalogs use MatchesStart. The client

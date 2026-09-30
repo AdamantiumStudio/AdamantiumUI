@@ -941,7 +941,11 @@ public class PropertyGridTests
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged
+        {
+            add { }
+            remove { }
+        }
     }
 
     [Test]

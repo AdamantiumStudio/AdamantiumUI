@@ -13,7 +13,7 @@ namespace Adamantium.UI.Input;
 /// </summary>
 public class DropTargetBehavior : Behavior<AdamantiumComponent>
 {
-    public static readonly AdamantiumProperty AllowDropProperty = AdamantiumProperty.Register(nameof(AllowDrop),
+    public new static readonly AdamantiumProperty AllowDropProperty = AdamantiumProperty.Register(nameof(AllowDrop),
         typeof(bool), typeof(DropTargetBehavior), new PropertyMetadata(true, OnChanged));
 
     public static readonly AdamantiumProperty DropCommandProperty = AdamantiumProperty.Register(nameof(DropCommand),
@@ -23,7 +23,7 @@ public class DropTargetBehavior : Behavior<AdamantiumComponent>
         typeof(ICommand), typeof(DropTargetBehavior), new PropertyMetadata(null, OnChanged));
 
     /// <summary>Whether the host accepts drops (default true).</summary>
-    public bool AllowDrop { get => GetValue<bool>(AllowDropProperty); set => SetValue(AllowDropProperty, value); }
+    public new bool AllowDrop { get => GetValue<bool>(AllowDropProperty); set => SetValue(AllowDropProperty, value); }
 
     /// <summary>Runs on drop with the payload (the target ADDS to its collection).</summary>
     public ICommand DropCommand { get => GetValue(DropCommandProperty) as ICommand; set => SetValue(DropCommandProperty, value); }

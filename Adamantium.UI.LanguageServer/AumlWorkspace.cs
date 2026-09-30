@@ -8,7 +8,7 @@ namespace Adamantium.UI.LanguageServer;
 public sealed class AumlWorkspace : IDisposable
 {
     private readonly object _gate = new();
-    private readonly Dictionary<string, AumlTypeModel?> _byProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, AumlTypeModel> _byProject = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Timer> _debounce = new(StringComparer.OrdinalIgnoreCase);
     private readonly SyntaxTreeCache _syntaxCache = new();
@@ -19,10 +19,10 @@ public sealed class AumlWorkspace : IDisposable
 
     /// <summary>Raised (off the message-loop thread) after a project's build output changed and its cached type
     /// model was dropped, so the server can re-validate open documents and stale diagnostics clear without an edit.</summary>
-    public event Action? ModelsChanged;
+    public event Action ModelsChanged;
 
     /// <summary>Type model for the project that contains <paramref name="filePath"/>, or null.</summary>
-    public AumlTypeModel? GetModelForFile(string filePath)
+    public AumlTypeModel GetModelForFile(string filePath)
     {
         var project = FindProjectFile(filePath);
         if (project is null)
@@ -182,9 +182,9 @@ public sealed class AumlWorkspace : IDisposable
         }
     }
 
-    private static string? FindProjectFile(string filePath)
+    private static string FindProjectFile(string filePath)
     {
-        var dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(filePath))!);
+        var dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(filePath)));
         for (; dir is not null; dir = dir.Parent)
         {
             var csproj = dir.GetFiles("*.csproj").FirstOrDefault();
@@ -193,9 +193,9 @@ public sealed class AumlWorkspace : IDisposable
         return null;
     }
 
-    private static string? FindProjectBinDir(string csprojPath)
+    private static string FindProjectBinDir(string csprojPath)
     {
-        var projectDir = Path.GetDirectoryName(csprojPath)!;
+        var projectDir = Path.GetDirectoryName(csprojPath);
         var ownDll = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
 
         // Candidate output roots: <projectDir>\bin, a <BaseOutputPath> redirect, and an artifacts\bin found by walking up.
@@ -229,7 +229,7 @@ public sealed class AumlWorkspace : IDisposable
     }
 
     // Walk up from the project looking for a solution-wide artifacts\bin (the current consolidated output root).
-    private static string? FindAncestorArtifactsBin(string startDir)
+    private static string FindAncestorArtifactsBin(string startDir)
     {
         for (var dir = new DirectoryInfo(startDir); dir is not null; dir = dir.Parent)
         {
@@ -240,7 +240,7 @@ public sealed class AumlWorkspace : IDisposable
         return null;
     }
 
-    private static string? ReadBaseOutputPath(string csprojPath)
+    private static string ReadBaseOutputPath(string csprojPath)
     {
         try
         {

@@ -417,7 +417,7 @@ public class CanvasTextureTests
     // ANYWHERE IN THE PANEL: the inspector holds more than one grid - the tool's own face and the selection's - and
     // which of them a line ended up in is not what this is asking.
     private static PropertyRow Row(IUIComponent within, string header) =>
-        Rows(within).FirstOrDefault(row => row.Definition?.Header == header);
+        Rows(within).FirstOrDefault(row => Equals(row.Definition?.Header, header));
 
     private static System.Collections.Generic.IEnumerable<PropertyRow> Rows(IUIComponent within)
     {

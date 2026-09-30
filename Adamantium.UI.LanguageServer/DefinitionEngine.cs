@@ -18,7 +18,7 @@ public sealed class DefinitionEngine
 
     public DefinitionEngine(AumlTypeModel model) => _model = model;
 
-    public DefinitionLocation? Definition(string text, int offset)
+    public DefinitionLocation Definition(string text, int offset)
     {
         if (string.IsNullOrEmpty(text) || offset < 0 || offset > text.Length) return null;
 
@@ -38,7 +38,7 @@ public sealed class DefinitionEngine
 
     // An element name is a type ("controls:Border") or a property-element ("controls:Border.Child"); the latter
     // navigates to the property, not the type.
-    private ISymbol? ElementSymbol(string? qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    private ISymbol ElementSymbol(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var name = qualifiedName ?? "";
         int dot = name.IndexOf('.');
@@ -49,7 +49,7 @@ public sealed class DefinitionEngine
         return MemberSymbol(owner, name[(dot + 1)..]);
     }
 
-    private ISymbol? AttributeSymbol(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
+    private ISymbol AttributeSymbol(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
     {
         var (attrPrefix, local) = SplitName(ctx.Prefix ?? "");
 
@@ -65,7 +65,7 @@ public sealed class DefinitionEngine
         return MemberSymbol(ResolveElement(ctx.ElementName, namespaces), local);
     }
 
-    private DefinitionLocation? Locate(ISymbol symbol)
+    private DefinitionLocation Locate(ISymbol symbol)
     {
         foreach (var location in symbol.Locations)
         {
@@ -80,14 +80,14 @@ public sealed class DefinitionEngine
         return MetadataDecompiler.Locate(symbol, _model.Compilation);
     }
 
-    private IResolvedType? ResolveElement(string? qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    private IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var (prefix, local) = SplitName(qualifiedName ?? "");
         var xmlns = ResolveXmlns(prefix, namespaces);
         return xmlns.Length == 0 ? null : _model.GetElement(xmlns, local);
     }
 
-    private static ISymbol? MemberSymbol(IResolvedType? owner, string name, bool attached = false)
+    private static ISymbol MemberSymbol(IResolvedType owner, string name, bool attached = false)
     {
         if (owner is null) return null;
         // Attached properties expose Get<Name>/Set<Name> accessors; prefer the getter's declaration.
@@ -97,9 +97,9 @@ public sealed class DefinitionEngine
         return SymbolOf(member);
     }
 
-    private static ISymbol? SymbolOf(IResolvedType? type) => (type as RoslynResolvedType)?.Symbol;
+    private static ISymbol SymbolOf(IResolvedType type) => (type as RoslynResolvedType)?.Symbol;
 
-    private static ISymbol? SymbolOf(IResolvedMember? member) => (member as RoslynResolvedMember)?.Symbol;
+    private static ISymbol SymbolOf(IResolvedMember member) => (member as RoslynResolvedMember)?.Symbol;
 
     private static string ResolveXmlns(string prefix, IReadOnlyDictionary<string, string> namespaces) =>
         namespaces.TryGetValue(prefix, out var uri) ? uri : prefix.Length == 0 ? FallbackXmlns : "";

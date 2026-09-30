@@ -980,8 +980,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public event EventHandler<EventArgs> Stopped;
     public event EventHandler Paused;
     public event EventHandler Resumed;
-    public event EventHandler<EventArgs> ContentLoading;
     public event EventHandler<EventArgs> ContentUnloading;
     public event EventHandler CycleFinished;
     public event UnhandledExceptionEventHandler UnhandledException;
+
+    /// <summary>Never raised: a UI application loads content per window, not in one phase.</summary>
+    public event EventHandler<EventArgs> ContentLoading
+    {
+        add { }
+        remove { }
+    }
 }

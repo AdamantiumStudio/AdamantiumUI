@@ -1,4 +1,5 @@
 using System.Linq;
+using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
@@ -354,5 +355,18 @@ public class ContentPresenterTests
         cp.Content = new Border();   // a UI element brings its own bindings; must keep inheriting the ambient context
 
         Assert.That(cp.DataContext, Is.SameAs(ambient), "a UI-element content must not hijack the presenter's DataContext");
+    }
+
+    [Test]
+    public void TrimmingSetAfterTheLabelIsBuilt_ReachesTheLabel()
+    {
+        var presenter = new ContentPresenter { Content = "a caption" };
+        presenter.Measure(new Size(120, 30));
+        var label = presenter.VisualChildren.OfType<TextBlock>().Single();
+
+        presenter.TextTrimming = TextTrimming.CharEllipses;
+        BindingUpdateQueue.Flush();
+
+        Assert.That(label.TextTrimming, Is.EqualTo(TextTrimming.CharEllipses));
     }
 }

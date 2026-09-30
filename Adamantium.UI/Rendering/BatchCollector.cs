@@ -305,19 +305,10 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
         var s = _segments[index];
         if (s.Count == 0) return;   // re-issued to nothing - nothing left to draw
-        var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         device.SetScissors(s.Scissor);
-        var b1 = System.GC.GetAllocatedBytesForCurrentThread();
         BindSegment(index);
-        var b2 = System.GC.GetAllocatedBytesForCurrentThread();
         DrawSegment(device, _ring[_current], s.Count, s.First, projection);
-        var b3 = System.GC.GetAllocatedBytesForCurrentThread();
         device.SetScissors(fullScissor);
-        var b4 = System.GC.GetAllocatedBytesForCurrentThread();
-        Core.Diagnostics.RuntimeStats.SegScissorBytes += (b1 - b0) + (b4 - b3);
-        Core.Diagnostics.RuntimeStats.SegBindBytes += b2 - b1;
-        Core.Diagnostics.RuntimeStats.SegDrawBytes += b3 - b2;
-        Core.Diagnostics.RuntimeStats.SegCount++;
     }
 
     // --- Spliced-patch surgery (per-control render-cache patching) -------------------------------------------------

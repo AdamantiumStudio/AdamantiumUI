@@ -31,7 +31,6 @@ public class ContentPresenter : InputUIComponent
     private bool _transitionPending;
     private bool _transitionRunning;
     private Action _afterTransition;
-    private bool _textIsGenerated;
     private bool _lastContentRebuilt;
     private Size _lastArrangeSize = new(double.NaN, double.NaN);
     // Supersedes a background build whose content has already been replaced.
@@ -73,7 +72,7 @@ public class ContentPresenter : InputUIComponent
     /// the width it wants.</summary>
     public static readonly AdamantiumProperty TextTrimmingProperty = AdamantiumProperty.Register(nameof(TextTrimming),
         typeof(TextTrimming), typeof(ContentPresenter),
-        new PropertyMetadata(TextTrimming.None, PropertyMetadataOptions.AffectsMeasure, OnTextStyleChanged));
+        new PropertyMetadata(TextTrimming.None, PropertyMetadataOptions.AffectsMeasure));
 
     public TextTrimming TextTrimming
     {
@@ -84,9 +83,9 @@ public class ContentPresenter : InputUIComponent
     static ContentPresenter()
     {
         ForegroundProperty.OverrideMetadata(typeof(ContentPresenter),
-            new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender, OnTextStyleChanged));
+            new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
         FontSizeProperty.OverrideMetadata(typeof(ContentPresenter),
-            new PropertyMetadata(14.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure, OnTextStyleChanged));
+            new PropertyMetadata(14.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
 
         SweepPresentersOnDiscard();
     }
@@ -243,7 +242,6 @@ public class ContentPresenter : InputUIComponent
                 var textBlock = new TextBlock
                 {
                     Text = newContent.ToString(),
-                    TextTrimming = TextTrimming,
                     HorizontalTextAlignment = ToTextAlignment(HorizontalAlignment),
                     VerticalTextAlignment = ToTextAlignment(VerticalAlignment),
                     // Centered, not stretched: a stretched block does not hand its height to the text layout, so the
@@ -260,6 +258,9 @@ public class ContentPresenter : InputUIComponent
 
                 textBlock.SetBinding(nameof(TextBlock.FontSize),
                     new Core.Data.Binding(nameof(FontSize)) { Source = this });
+
+                textBlock.SetBinding(nameof(TextBlock.TextTrimming),
+                    new Core.Data.Binding(nameof(TextTrimming)) { Source = this });
                 _currentRoot = textBlock;
             }
         }
@@ -609,32 +610,9 @@ public class ContentPresenter : InputUIComponent
         set => SetValue(TransitionDurationProperty, value);
     }
 
-    private static void OnTextStyleChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
-    {
-        if (a is not ContentPresenter presenter) return;
-
-        presenter.ApplyTextStyle();
-    }
-
-    private void ApplyTextStyle()
-    {
-        // Only the generated label: an explicit write into an authored one would outrank its inheritance for good.
-        if (!_textIsGenerated || _currentRoot is not TextBlock textBlock) return;
-        textBlock.FontSize = FontSize;
-        textBlock.TextTrimming = TextTrimming;
-        if (Foreground != null) textBlock.Foreground = Foreground;
-    }
-
-    /// <summary>TEMP: where this type's own measure cost goes.</summary>
-    public static double UpdateContentMs, CacheHitMs, BaseMeasureMs;
-    public static int CacheHits, FullMeasures;
-
     protected override Size MeasureOverride(Size availableSize)
     {
-        var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         _lastContentRebuilt = UpdateVisualContent(Content);
-        var t1 = System.Diagnostics.Stopwatch.GetTimestamp();
-        UpdateContentMs += System.Diagnostics.Stopwatch.GetElapsedTime(t0, t1).TotalMilliseconds;
 
         var sizeBefore = DesiredSize;
         // Reused data-only content keeps its size. The inner size is returned, not DesiredSize, which would add the
@@ -644,16 +622,10 @@ public class ContentPresenter : InputUIComponent
             && LayoutTransform == null
             && measured.DesiredSize == _lastContentDesired)
         {
-            CacheHitMs += System.Diagnostics.Stopwatch.GetElapsedTime(t1).TotalMilliseconds;
-            CacheHits++;
             return _lastMeasuredInner;
         }
 
-        var t2 = System.Diagnostics.Stopwatch.GetTimestamp();
-        CacheHitMs += System.Diagnostics.Stopwatch.GetElapsedTime(t1, t2).TotalMilliseconds;
         var size = base.MeasureOverride(availableSize);
-        BaseMeasureMs += System.Diagnostics.Stopwatch.GetElapsedTime(t2).TotalMilliseconds;
-        FullMeasures++;
         _lastMeasuredInner = size;
         _lastContentDesired = _currentRoot is IMeasurableComponent content ? content.DesiredSize : default;
 
