@@ -224,6 +224,11 @@ public partial class RenderCache
         // Nothing is built any more: left set, the next record read "no marks" as a clean frame and replayed the op stream
         // of the scene these units drew.
         _built = false;
+
+        // ...and the tree's slots go with it: its nodes never detach to hand them back, so a designer rendering fresh trees
+        // grew the table until a frame outgrew its buffer mid-walk and drew everything past the old end misplaced.
+        _clipOwners.Clear();
+        _transformTable?.ReleaseAll();
     }
 
     /// <summary>The last packet's projection, captured by the RECORDER from the root visual. The applier uses this, not
@@ -570,8 +575,6 @@ public partial class RenderCache
             _nodeAllAware[up.RenderId] = false;
             NoteStraggler(up, component);
         }
-
-        Core.Diagnostics.FrameTrace.NoteNotAware(node.GetType().Name + " <- " + component.GetType().Name);
     }
 
     private void NoteStraggler(IUIComponent node, IUIComponent component)

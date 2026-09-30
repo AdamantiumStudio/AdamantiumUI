@@ -77,10 +77,14 @@ class AumlPreviewService : Disposable {
     fun render(text: String, scale: Double, sourcePath: String? = null, live: Boolean = false): RenderResult {
         synchronized(lock) {
             return try {
-                ensureProcess()
                 val request = buildRenderRequest(text, scale, sourcePath, live)
-                writer!!.apply { write(request); write("\n"); flush() }
-                val line = reader!!.readLine() ?: throw RuntimeException("designer host closed the connection")
+                var line = exchange(request)
+                // The project was rebuilt since the host loaded it, and a loaded assembly cannot be replaced: the host
+                // has quit, and a fresh one previews the new build.
+                if ((MiniJson.parse(line) as? Map<*, *>)?.get("restart") == true) {
+                    stopProcess()
+                    line = exchange(request)
+                }
                 val result = parseResponse(line)
                 // A successful render makes this preview the owner of the host's single warm scene (see frame()).
                 if (result.error == null) lastRenderPath = sourcePath
@@ -172,6 +176,12 @@ class AumlPreviewService : Disposable {
                 RenderResult(emptyList(), e.message ?: e.toString(), emptyList(), null, null, null)
             }
         }
+    }
+
+    private fun exchange(request: String): String {
+        ensureProcess()
+        writer!!.apply { write(request); write("\n"); flush() }
+        return reader!!.readLine() ?: throw RuntimeException("designer host closed the connection")
     }
 
     private fun ensureProcess() {

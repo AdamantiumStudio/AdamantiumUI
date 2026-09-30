@@ -380,6 +380,37 @@ internal sealed class TransformTable
 
     public bool TryGetSlot(Guid nodeId, out int slot) => _slotByNode.TryGetValue(nodeId, out slot);
 
+    /// <summary>Hands back every slot but the identity one, each as a fresh slot: for a cache that drops a whole tree at
+    /// once, whose nodes never detach to release their slots one by one.</summary>
+    public void ReleaseAll()
+    {
+        var hasIdentity = _slotByNode.TryGetValue(Guid.Empty, out var identity);
+
+        _slotByNode.Clear();
+        _clipSlotByOwner.Clear();
+        _opacitySlotByOwner.Clear();
+        _fadeChildren.Clear();
+        _free.Clear();
+
+        InitSlots(_cpu, 0, _count);
+        Array.Fill(_ownAlpha, 1f, 0, _count);
+        for (var slot = _count - 1; slot >= 0; slot--)
+        {
+            if (hasIdentity && slot == identity)
+            {
+                continue;
+            }
+
+            _version[slot]++;
+            _free.Push(slot);
+        }
+
+        if (hasIdentity)
+        {
+            _slotByNode[Guid.Empty] = identity;
+        }
+    }
+
     /// <summary>Writes a node's world matrix into this frame's copy; unchanged matrices write nothing.</summary>
     public void SetMatrix(IGraphicsDevice device, int slot, in Matrix4x4F world)
     {

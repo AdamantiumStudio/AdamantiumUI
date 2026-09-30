@@ -140,7 +140,7 @@ public sealed class DesignerSession : IDisposable
     /// else a default), and only the render target is scaled - so zooming re-rasterizes the same layout crisply
     /// rather than reflowing it.
     /// </summary>
-    public RenderResult Render(string aumlText, uint? requestWidth, uint? requestHeight, double scale, string outPath, string? aumlSourcePath = null, bool live = false)
+    public RenderResult Render(string aumlText, uint? requestWidth, uint? requestHeight, double scale, string outPath, string aumlSourcePath = null, bool live = false)
     {
         // Live preview lets design-mode animations run (a one-shot render keeps them settled). Set before layout below.
         Design.IsLivePreview = live;
@@ -468,7 +468,7 @@ public sealed class DesignerSession : IDisposable
     /// (the project root, matching how the app finds assets relative to its output root), else the file's own folder.
     /// Accepts a plain path or a file:// URI; null/blank yields null (CWD left unchanged).
     /// </summary>
-    private static string? ResolveAssetRoot(string? sourcePath)
+    private static string ResolveAssetRoot(string sourcePath)
     {
         if (string.IsNullOrWhiteSpace(sourcePath)) return null;
 
@@ -476,7 +476,7 @@ public sealed class DesignerSession : IDisposable
         try { path = sourcePath.StartsWith("file:", StringComparison.OrdinalIgnoreCase) ? new Uri(sourcePath).LocalPath : sourcePath; }
         catch { path = sourcePath; }
 
-        string? dir;
+        string dir;
         try { dir = Path.GetDirectoryName(Path.GetFullPath(path)); }
         catch { return null; }
         if (dir == null) return null;
@@ -487,8 +487,44 @@ public sealed class DesignerSession : IDisposable
         return Directory.Exists(dir) ? dir : null;
     }
 
-    // Project assemblies loaded this session: load each once so the warm host doesn't add duplicate type copies.
-    private static readonly Dictionary<string, Assembly> _loadedProjectAssemblies = new(StringComparer.OrdinalIgnoreCase);
+    // Assemblies loaded from a project's output this session, by assembly name: a second copy of one assembly is a second
+    // set of its types, so the application booted from one copy while views built from the other found no services.
+    private static readonly Dictionary<string, Assembly> _loadedByName = new(StringComparer.OrdinalIgnoreCase);
+
+    // Where each of them came from and when that file was written, so a rebuild of the project is noticed.
+    private static readonly Dictionary<string, (string Path, DateTime Written)> _loadedFrom = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>True when an assembly this session loaded from a project's output has been rebuilt since. A loaded
+    /// assembly cannot be replaced in the process, so only a fresh host previews the new build. A file written within the
+    /// last second may still be being written and does not count yet.</summary>
+    public static bool ProjectWasRebuilt()
+    {
+        var settled = DateTime.UtcNow - TimeSpan.FromSeconds(1);
+        lock (_loadedByName)
+        {
+            foreach (var (path, written) in _loadedFrom.Values)
+            {
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                var now = File.GetLastWriteTimeUtc(path);
+                if (now > written && now < settled)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+#if DEBUG
+    private const string HostConfiguration = "Debug";
+#else
+    private const string HostConfiguration = "Release";
+#endif
 
     /// <summary>
     /// Loads the previewed file's own project assembly from its build output, so the designer can resolve the
@@ -496,7 +532,7 @@ public sealed class DesignerSession : IDisposable
     /// Best-effort: no .csproj ancestor, an unbuilt project or an unloadable dll return null and just leave those types
     /// unresolved, as before.
     /// </summary>
-    private static Assembly LoadProjectAssembly(string? aumlSourcePath)
+    private static Assembly LoadProjectAssembly(string aumlSourcePath)
     {
         var projectDir = ResolveAssetRoot(aumlSourcePath);
         if (projectDir == null) return null;
@@ -509,22 +545,48 @@ public sealed class DesignerSession : IDisposable
         // Resolve missing assemblies from the project's output dir (e.g. Adamantium.MVVM); otherwise reflection silently
         // drops view-model types.
         _projectOutputDir = Path.GetDirectoryName(dll);
-        lock (_loadedProjectAssemblies)
+        lock (_loadedByName)
         {
             if (!_resolverRegistered)
             {
                 AppDomain.CurrentDomain.AssemblyResolve += ResolveFromProjectOutput;
                 _resolverRegistered = true;
             }
-            if (_loadedProjectAssemblies.TryGetValue(dll, out var loaded)) return loaded;   // already loaded this session
         }
 
-        // Load from a byte copy, not Assembly.LoadFrom: LoadFrom keeps the .dll file locked, which would stop the
-        // user rebuilding their project while this warm preview host has it open. Loaded once per session (a rebuild
-        // is picked up after a host restart; full hot-reload is a separate, deferred workstream).
-        Assembly assembly = null;
-        try { assembly = Assembly.Load(File.ReadAllBytes(dll)); } catch { /* ignore unloadable */ }
-        lock (_loadedProjectAssemblies) _loadedProjectAssemblies[dll] = assembly;
+        return LoadOnce(dll);
+    }
+
+    // Load from a byte copy, not Assembly.LoadFrom: LoadFrom keeps the .dll file locked, which would stop the user
+    // rebuilding their project while this warm preview host has it open. Loaded once per session (a rebuild is picked up
+    // after a host restart; full hot-reload is a separate, deferred workstream).
+    private static Assembly LoadOnce(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        lock (_loadedByName)
+        {
+            if (_loadedByName.TryGetValue(name, out var loaded))
+            {
+                return loaded;
+            }
+        }
+
+        var written = File.GetLastWriteTimeUtc(path);
+        Assembly assembly;
+        try { assembly = Assembly.Load(File.ReadAllBytes(path)); }
+        catch { return null; }
+
+        lock (_loadedByName)
+        {
+            if (_loadedByName.TryGetValue(name, out var first))
+            {
+                return first;
+            }
+
+            _loadedByName[name] = assembly;
+            _loadedFrom[name] = (path, written);
+        }
+
         return assembly;
     }
 
@@ -540,12 +602,12 @@ public sealed class DesignerSession : IDisposable
         if (dir == null) return null;
         var path = Path.Combine(dir, new AssemblyName(args.Name).Name + ".dll");
         if (!File.Exists(path)) return null;
-        try { return Assembly.Load(File.ReadAllBytes(path)); } catch { return null; }
+        return LoadOnce(path);
     }
 
-    // The project's compiled assembly, looked up in BaseOutputPath, bin and an artifacts/bin above it; the newest match
-    // wins over stale TFM builds.
-    private static string? FindProjectAssembly(string csprojPath)
+    // The project's compiled assembly, looked up in BaseOutputPath, bin and an artifacts/bin above it: a build in the
+    // host's own configuration first - a Release copy from days ago is not the project being worked on - then the newest.
+    private static string FindProjectAssembly(string csprojPath)
     {
         var dllName = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
 
@@ -553,16 +615,21 @@ public sealed class DesignerSession : IDisposable
         {
             if (!Directory.Exists(binBase)) continue;
             var dll = Directory.EnumerateFiles(binBase, dllName, SearchOption.AllDirectories)
-                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .OrderByDescending(IsHostConfiguration)
+                .ThenByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
             if (dll != null) return dll;
         }
         return null;
     }
 
+    private static bool IsHostConfiguration(string path) =>
+        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Contains(HostConfiguration, StringComparer.OrdinalIgnoreCase);
+
     private static IEnumerable<string> CandidateOutputRoots(string csprojPath)
     {
-        var projectDir = Path.GetDirectoryName(csprojPath)!;
+        var projectDir = Path.GetDirectoryName(csprojPath);
 
         // 1. An explicit <BaseOutputPath> in the csproj.
         string baseOutput = null;

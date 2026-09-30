@@ -168,6 +168,57 @@ public class HeadlessRetargetRenderTests
         }
     }
 
+    /// <summary>The designer builds a fresh tree for every render into the same cache. Freeing the units kept the old
+    /// tree's transform slots, so the table grew with every render until one outgrew its buffer mid-frame and drew
+    /// everything past the old end in the wrong place.</summary>
+    [Test]
+    public void FreshTreeAfterFreshTree_IsDrawnInPlace()
+    {
+        var device = GpuTestDevice.Device;
+        var renderer = new HeadlessWindowRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)));
+        try
+        {
+            renderer.SetWindow(Crowd());
+            Frame(device, renderer);
+
+            for (var render = 2; render <= 4; render++)
+            {
+                renderer.ResetCache();
+                renderer.Retarget(Crowd());
+                Frame(device, renderer);
+
+                var middle = Pixel(renderer.Presenter.RenderTarget);
+                Assert.That((middle.R, middle.G), Is.EqualTo(((byte)0, (byte)255)),
+                    $"render {render}: the last element must be drawn where it is");
+            }
+        }
+        finally
+        {
+            renderer.Dispose();
+            GpuTestDevice.Reclaim();
+        }
+    }
+
+    // Many drawn elements, each holding a transform slot of its own; the last one covers the middle.
+    private static FilledWindow Crowd()
+    {
+        var window = Window(Colors.Transparent);
+        for (var i = 0; i < 200; i++)
+        {
+            var dot = new TestControl
+            {
+                RenderAction = i == 199
+                    ? s => s.DrawRectangle(new SolidColorBrush(Colors.Lime), new Rect(Dim / 4, Dim / 4, Dim / 2, Dim / 2))
+                    : s => s.DrawRectangle(new SolidColorBrush(Colors.Red), new Rect(0, 0, 1, 1)),
+                Bounds = new Rect(0, 0, Dim, Dim),
+                RenderSize = new Size(Dim, Dim)
+            };
+            window.Host(dot);
+        }
+
+        return window;
+    }
+
     [Test]
     public void TheRetargetedWindow_IsDrawn_AndItsEditsReachThePixels()
     {

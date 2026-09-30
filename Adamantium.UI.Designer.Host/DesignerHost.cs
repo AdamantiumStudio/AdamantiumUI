@@ -14,7 +14,9 @@ namespace Adamantium.UI.Designer.Host;
 ///        (width/height are an optional design-size hint; scale (default 1) zooms the render. The window is laid out
 ///         at its design size and the render target is design × scale. live=true captures the whole animation.)
 ///   &lt;- {"frames":["&lt;path0&gt;",...],"frameMs":16.7,"looped":false,"width":1280,"height":720,"scale":1.0,"diagnostics":[...]}
-///        or {"error":"&lt;message&gt;","diagnostics":[...]}. Frames are RAW B8G8R8A8 (width*height*4 bytes, no encode);
+///        or {"error":"&lt;message&gt;","diagnostics":[...]},
+///        or {"restart":true} when the previewed project was rebuilt since the host loaded it: the host exits, and the
+///        client starts a fresh one and sends the render again. Frames are RAW B8G8R8A8 (width*height*4 bytes, no encode);
 ///        a settled render returns one, a live render the full animation sequence the client plays at frameMs.
 ///   -&gt; {"op":"hittest","x":..,"y":..}   &lt;- {"hit":{"line":..,"column":..,"x":..,"y":..,"width":..,"height":..,"file":..}}
 ///        (maps a design-space point to the authored element's markup position + rect; for hover / go-to-source. "file"
@@ -121,6 +123,14 @@ public static class DesignerHost
                     return 0;
 
                 case "render":
+                    if (DesignerSession.ProjectWasRebuilt())
+                    {
+                        // The client starts a fresh host, which loads the new build, and sends this render again.
+                        WriteResponse(protocol, new Response { Restart = true });
+                        session.Dispose();
+                        return 0;
+                    }
+
                     var outPath = Path.Combine(tempDir, $"preview-{counter++}.bgra");
                     WriteResponse(protocol, RenderOne(session, request, outPath, previousFrames));
                     break;
@@ -362,6 +372,7 @@ public static class DesignerHost
         public string Error { get; set; }
         public List<string> Diagnostics { get; set; }
         public HitInfo Hit { get; set; }
+        public bool? Restart { get; set; }
     }
 
     private sealed class HitInfo
