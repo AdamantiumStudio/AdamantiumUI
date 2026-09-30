@@ -16,7 +16,8 @@ import kotlin.io.path.exists
  * Owns the long-running Adamantium designer host process and talks to it over its line-delimited JSON
  * protocol (see Adamantium.UI.Designer.Host). The host keeps the engine warm between renders, so a render
  * is just one request/response round-trip. One process is shared by every `.auml` editor in the project;
- * requests are serialized. The process is started lazily and restarted automatically if it dies.
+ * requests are serialized. The process is started lazily and restarted automatically if it dies. It runs from a copy of
+ * its build folder ([DesignerHostShadowCopy]) and restarts on a new build of it.
  */
 @Service(Service.Level.PROJECT)
 class AumlPreviewService : Disposable {
@@ -24,6 +25,7 @@ class AumlPreviewService : Disposable {
     private var process: Process? = null
     private var writer: BufferedWriter? = null
     private var reader: BufferedReader? = null
+    private var hostStamp: String? = null
     // The sourcePath of the last successful render = the owner of the host's single warm scene. Only that preview may
     // stream frames; a different (background) preview's frame() would advance and return THIS scene - i.e. show the
     // wrong file. Reset whenever the host process restarts.
@@ -77,10 +79,9 @@ class AumlPreviewService : Disposable {
     fun render(text: String, scale: Double, sourcePath: String? = null, live: Boolean = false): RenderResult {
         synchronized(lock) {
             return try {
+                restartIfHostRebuilt()
                 val request = buildRenderRequest(text, scale, sourcePath, live)
                 var line = exchange(request)
-                // The project was rebuilt since the host loaded it, and a loaded assembly cannot be replaced: the host
-                // has quit, and a fresh one previews the new build.
                 if ((MiniJson.parse(line) as? Map<*, *>)?.get("restart") == true) {
                     stopProcess()
                     line = exchange(request)
@@ -189,10 +190,13 @@ class AumlPreviewService : Disposable {
         stopProcess()
 
         val exe = resolveHostExecutable()
-        val command = GeneralCommandLine(exe.toString(), "serve").apply { charset = StandardCharsets.UTF_8 }
+        val stamp = DesignerHostShadowCopy.settledStamp(exe)
+        val copy = DesignerHostShadowCopy.copyOf(exe, stamp)
+        val command = GeneralCommandLine(copy.toString(), "serve").apply { charset = StandardCharsets.UTF_8 }
         val proc = command.createProcess()
 
         process = proc
+        hostStamp = stamp
         writer = BufferedWriter(OutputStreamWriter(proc.outputStream, StandardCharsets.UTF_8))
         reader = BufferedReader(InputStreamReader(proc.inputStream, StandardCharsets.UTF_8))
         drainStderr(proc)
@@ -205,7 +209,16 @@ class AumlPreviewService : Disposable {
         writer = null
         reader = null
         process = null
+        hostStamp = null
         lastRenderPath = null   // the warm scene died with the process; the next render re-establishes ownership
+    }
+
+    private fun restartIfHostRebuilt() {
+        val running = hostStamp ?: return
+        if (process?.isAlive != true) return
+        val exe = resolveHostExecutable()
+        val stamp = DesignerHostShadowCopy.stamp(exe)
+        if (stamp != running && DesignerHostShadowCopy.isSettled(exe, stamp)) stopProcess()
     }
 
     private fun resolveHostExecutable(): Path {

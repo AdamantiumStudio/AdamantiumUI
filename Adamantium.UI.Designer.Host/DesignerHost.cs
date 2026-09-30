@@ -125,7 +125,6 @@ public static class DesignerHost
                 case "render":
                     if (DesignerSession.ProjectWasRebuilt())
                     {
-                        // The client starts a fresh host, which loads the new build, and sends this render again.
                         WriteResponse(protocol, new Response { Restart = true });
                         session.Dispose();
                         return 0;

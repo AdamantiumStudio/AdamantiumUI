@@ -487,11 +487,7 @@ public sealed class DesignerSession : IDisposable
         return Directory.Exists(dir) ? dir : null;
     }
 
-    // Assemblies loaded from a project's output this session, by assembly name: a second copy of one assembly is a second
-    // set of its types, so the application booted from one copy while views built from the other found no services.
     private static readonly Dictionary<string, Assembly> _loadedByName = new(StringComparer.OrdinalIgnoreCase);
-
-    // Where each of them came from and when that file was written, so a rebuild of the project is noticed.
     private static readonly Dictionary<string, (string Path, DateTime Written)> _loadedFrom = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>True when an assembly this session loaded from a project's output has been rebuilt since. A loaded

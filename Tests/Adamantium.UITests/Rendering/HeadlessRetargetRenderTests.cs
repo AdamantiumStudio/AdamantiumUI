@@ -199,7 +199,6 @@ public class HeadlessRetargetRenderTests
         }
     }
 
-    // Many drawn elements, each holding a transform slot of its own; the last one covers the middle.
     private static FilledWindow Crowd()
     {
         var window = Window(Colors.Transparent);
