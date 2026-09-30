@@ -70,6 +70,9 @@ internal sealed class TransformTable
 
     /// <summary>Allocated slot count / GPU capacity (diagnostics).</summary>
     public int SlotCount => _count;
+
+    /// <summary>Slots held right now: allocated minus the free list (diagnostics).</summary>
+    public int LiveSlotCount => _count - _free.Count;
     public int GpuCapacity => _gpuCapacity;
 
     /// <summary>Reserves <paramref name="extraSlots"/> before <see cref="EnsureResources"/> sizes the buffer, so large

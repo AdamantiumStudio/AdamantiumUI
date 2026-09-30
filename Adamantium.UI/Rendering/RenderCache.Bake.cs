@@ -33,6 +33,7 @@ public partial class RenderCache
 
     private readonly Dictionary<IUIComponent, float> _opacityChain = new();   // memo of OpacityChain, like _worldCache
     private readonly Dictionary<IUIComponent, int> _opacitySlotCache = new();   // memo of OpacitySlotOf, same lifetime
+    private readonly Dictionary<IUIComponent, int> _fadeOwners = new();
 
     // Set when a fade slot is handed out for the first time - the instances beneath it still carry the old index, so the
     // frame has to walk instead of patch. Cleared by the walk that acts on it.
@@ -224,10 +225,8 @@ public partial class RenderCache
         // Nothing is built any more: left set, the next record read "no marks" as a clean frame and replayed the op stream
         // of the scene these units drew.
         _built = false;
-
-        // ...and the tree's slots go with it: its nodes never detach to hand them back, so a designer rendering fresh trees
-        // grew the table until a frame outgrew its buffer mid-walk and drew everything past the old end misplaced.
         _clipOwners.Clear();
+        _fadeOwners.Clear();
         _transformTable?.ReleaseAll();
     }
 
@@ -253,6 +252,9 @@ public partial class RenderCache
     /// dies by - the applier reads ANY entry as "the layout moved under the recorded stream" and refuses to replay it,
     /// so an idle frame publishing entries costs the whole scene its retained path (measured: 28 fps against ~320).</summary>
     internal static long SnapshotEntriesPublished { get; private set; }
+
+    /// <summary>Test hook: transform-table slots held right now.</summary>
+    internal int LiveTransformSlots => _transformTable?.LiveSlotCount ?? 0;
 
     private void PublishSnapshot(IUIComponent component, LayoutSnapshot snapshot)
     {
@@ -453,6 +455,7 @@ public partial class RenderCache
             if (!had) _fadeSlotJustCreated = true;
 
             slot = _transformTable.AcquireOpacitySlot(c.RenderId);
+            _fadeOwners[c] = slot;
             _transformTable.SetAlpha(device, slot, s.Opacity);
             _transformTable.SetOpacityParent(device, slot, parent);
 

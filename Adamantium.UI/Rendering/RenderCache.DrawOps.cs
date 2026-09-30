@@ -756,6 +756,9 @@ public partial class RenderCache
                 RemoveAndDeferDispose(id);
         }
 
+        removed += ReleaseSlotsOfDeparted(_clipOwners, owner => _transformTable?.ReleaseClipSlot(owner.RenderId));
+        removed += ReleaseSlotsOfDeparted(_fadeOwners, owner => _transformTable?.ReleaseOpacitySlot(owner.RenderId));
+
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
         // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.
         List<IUIComponent> stale = null;
@@ -783,11 +786,41 @@ public partial class RenderCache
 
         if (staleNodes != null)
         {
-            foreach (var node in staleNodes) _nodeRefreshed.Remove(node);
+            foreach (var node in staleNodes)
+            {
+                _nodeRefreshed.Remove(node);
+                _transformTable?.ReleaseSlot(node.RenderId);
+            }
+
             removed += staleNodes.Count;
         }
 
         return removed;
+    }
+
+    private int ReleaseSlotsOfDeparted(Dictionary<IUIComponent, int> owners, Action<IUIComponent> release)
+    {
+        List<IUIComponent> gone = null;
+        foreach (var owner in owners.Keys)
+        {
+            if (LeftTheTree(owner))
+            {
+                (gone ??= []).Add(owner);
+            }
+        }
+
+        if (gone == null)
+        {
+            return 0;
+        }
+
+        foreach (var owner in gone)
+        {
+            owners.Remove(owner);
+            release(owner);
+        }
+
+        return gone.Count;
     }
 
     /// <summary>Drops the cache entry and defer-disposes its units (deferred until the frame fence signals, as the GPU may
