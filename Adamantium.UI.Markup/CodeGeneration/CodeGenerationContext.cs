@@ -91,7 +91,7 @@ public class CodeGenerationContext
             diagnostics.ReportError(Metadata.ClassName, $"Could not resolve assembly '{element.TypeReference.Assembly}' for element '{element.TypeReference.Name}' (namespace '{element.TypeReference.Namespace}', resolved={element.TypeReference.IsResolved}).");
             return string.Empty;
         }
-        var typeInfo = typeContainer.Types.FirstOrDefault(x => x.Name == element.TypeReference.Name);
+        var typeInfo = typeContainer.GetTypeByShortName(element.TypeReference.Name);
         var properties = element.GetProperties();
         var children = element.GetLogicalChildrenObjects();
 
@@ -206,8 +206,8 @@ public class CodeGenerationContext
                     // container, which only happened to work while the owner shared the element's assembly (e.g. Grid.Row
                     // on a Controls element). ResourceContext.Source on a View (owner in Adamantium.UI.Core) NRE'd here.
                     var ownerContainer = Metadata.TypeResolver.GetResolvedAssembly(propRef.OwnerType.Assembly);
-                    propertyType = ownerContainer?.Types.FirstOrDefault(x => x.Name == propRef.OwnerType.Name)
-                                   ?? typeContainer.Types.FirstOrDefault(x => x.Name == propRef.OwnerType.Name);
+                    propertyType = ownerContainer?.GetTypeByShortName(propRef.OwnerType.Name)
+                                   ?? typeContainer.GetTypeByShortName(propRef.OwnerType.Name);
                     // We are faced with Attached property, so its really not a property, but a method with Get and Set prefixes,
                     // so we need to handle this case properly
                     propertyName = $"Get{propRef.Name}";
@@ -341,7 +341,7 @@ public class CodeGenerationContext
                 else if (value is AumlAstMarkupExtensionLiteral literal)
                 {
                     var typeContainer = Metadata.TypeResolver.GetResolvedAssembly(literal.TypeReference.Assembly);
-                    var typeInfo = typeContainer.Types.FirstOrDefault(x => x.Name == literal.TypeReference.Name);
+                    var typeInfo = typeContainer.GetTypeByShortName(literal.TypeReference.Name);
                     var literalName = GenerateNextElementName();
                     TextGenerator.WriteLine($"var {literalName} = new {typeInfo.FullName}();");
                 }
@@ -926,7 +926,7 @@ public class CodeGenerationContext
         }
 
         var container = Metadata.TypeResolver.GetResolvedAssembly(obj.TypeReference.Assembly);
-        var type = container?.Types.FirstOrDefault(x => x.Name == obj.TypeReference.Name);
+        var type = container?.GetTypeByShortName(obj.TypeReference.Name);
         return type != null && type.HasAttribute("Adamantium.UI.Core.Resources.PerTargetAttribute");
     }
 

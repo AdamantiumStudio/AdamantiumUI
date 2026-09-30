@@ -4,7 +4,7 @@ namespace Adamantium.UI.Markup.CodeGeneration.Roslyn;
 
 public class RoslynResolvedType : IResolvedType
 {
-    private ITypeSymbol _symbol;
+    private readonly ITypeSymbol _symbol;
     
     public RoslynResolvedType(ITypeSymbol symbol)
     {
@@ -15,11 +15,11 @@ public class RoslynResolvedType : IResolvedType
     public ITypeSymbol Symbol => _symbol;
 
     public string Name => _symbol.Name;
-    public string Namespace => _symbol.ContainingNamespace.ToDisplayString();
+    public string Namespace => field ??= _symbol.ContainingNamespace.ToDisplayString();
 
     public string AssemblyName => _symbol.ContainingAssembly.Name;
 
-    public string FullName => _symbol.ToDisplayString();
+    public string FullName => field ??= _symbol.ToDisplayString();
     
     public bool IsNamedType => _symbol is INamedTypeSymbol;
 

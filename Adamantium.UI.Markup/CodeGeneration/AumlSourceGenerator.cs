@@ -75,7 +75,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
     {
         var rootNode = container.RootNode as AumlAstObjectNode;
         var typeContainer = container.TypeResolver.GetResolvedAssembly(rootNode.TypeReference.Assembly);
-        var rootBaseType = typeContainer.Types.FirstOrDefault(x => x.Name == rootNode.TypeReference.Name);
+        var rootBaseType = typeContainer.GetTypeByShortName(rootNode.TypeReference.Name);
         var className = $"{container.FileName}";
         var additionalPath = Path.GetDirectoryName(container.RelativeFilePath);
         var @namespace = $"{container.AssemblyName}";
@@ -131,7 +131,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
     {
         var rootNode = container.RootNode as AumlAstObjectNode;
         var typeContainer = container.TypeResolver.GetResolvedAssembly(rootNode.TypeReference.Assembly);
-        var rootBaseType = typeContainer.Types.FirstOrDefault(x => x.Name == rootNode.TypeReference.Name);
+        var rootBaseType = typeContainer.GetTypeByShortName(rootNode.TypeReference.Name);
         var className = container.FileName;
         var additionalPath = Path.GetDirectoryName(container.RelativeFilePath);
         var @namespace = $"{container.AssemblyName}";
@@ -175,7 +175,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
     {
         var rootNode = container.RootNode as AumlAstObjectNode;
         var typeContainer = container.TypeResolver.GetResolvedAssembly(rootNode.TypeReference.Assembly);
-        var rootBaseType = typeContainer.Types.FirstOrDefault(x => x.Name == rootNode.TypeReference.Name);
+        var rootBaseType = typeContainer.GetTypeByShortName(rootNode.TypeReference.Name);
         var className = container.FileName;
         var additionalPath = Path.GetDirectoryName(container.RelativeFilePath);
         var @namespace = $"{container.AssemblyName}";
@@ -254,7 +254,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         foreach (var item in container.NamedElements)
         {
             typeContainer = container.TypeResolver.GetResolvedAssembly(item.Element.TypeReference.Assembly);
-            var typeInfo = typeContainer.Types.FirstOrDefault(x => x.Name == item.Element.TypeReference.Name);
+            var typeInfo = typeContainer.GetTypeByShortName(item.Element.TypeReference.Name);
             // A NAMED element held back by x:Load has no field to hold it - it does not exist yet. What the name means
             // instead is "give it to me", and asking builds it: in UWP the field is simply null until something loads
             // the element, and everyone trips over that.

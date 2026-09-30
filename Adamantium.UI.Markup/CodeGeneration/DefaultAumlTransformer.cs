@@ -197,7 +197,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     return typeReference;
                 }
 
-                var typeInfo = typeContainer.Types.FirstOrDefault(x => x.Name == typeReference.Name);
+                var typeInfo = typeContainer.GetTypeByShortName(typeReference.Name);
                 if (typeInfo == null)
                 {
                     // A same-assembly (generated) type used WITHOUT a clr-namespace prefix - e.g. an embedded AUML view
@@ -231,7 +231,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             var clrTypeContainer = typeResolver.ResolveAssembly(typeReference.Assembly);
             if (clrTypeContainer != null)
             {
-                var typeInfo = clrTypeContainer.Types.FirstOrDefault(x => x.Name == typeReference.Name);
+                var typeInfo = clrTypeContainer.GetTypeByShortName(typeReference.Name);
                 if (typeInfo == null)
                 {
                     diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
@@ -263,7 +263,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     return typeReference;
                 }
 
-                var typeInfo = typeContainer.Types.FirstOrDefault(x => x.Name == typeReference.Name);
+                var typeInfo = typeContainer.GetTypeByShortName(typeReference.Name);
                 if (typeInfo == null)
                 {
                     // A same-assembly (generated) type used WITHOUT a clr-namespace prefix - e.g. a property set on an
@@ -299,7 +299,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             var clrTypeContainer = typeResolver.ResolveAssembly(typeReference.Assembly);
             if (clrTypeContainer != null)
             {
-                var typeInfo = clrTypeContainer.Types.FirstOrDefault(x => x.Name == typeReference.Name);
+                var typeInfo = clrTypeContainer.GetTypeByShortName(typeReference.Name);
                 if (typeInfo == null)
                 {
                     diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
@@ -321,7 +321,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return typeReference;
             }
             
-            var type = typeInfo.Types.FirstOrDefault(x => x.FullName == typeReference.GetFullTypeName());
+            var type = typeInfo.GetTypeByFullName(typeReference.GetFullTypeName());
             if (type == null)
             {
                 diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
@@ -853,7 +853,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         if (rootRef.IsXmlNamespaceDeclaration && !string.IsNullOrEmpty(rootRef.Namespace))
         {
             type = typeResolver.GetResolvedAssemblyByXmlDefinition(rootRef.Namespace)
-                ?.Types.FirstOrDefault(x => x.Name == rootRef.Name);
+                ?.GetTypeByShortName(rootRef.Name);
         }
         else if (string.IsNullOrEmpty(rootRef.Namespace))
         {
@@ -862,7 +862,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         else
         {
             type = typeResolver.FindAssemblyByNamespace(rootRef.Namespace)
-                ?.Types.FirstOrDefault(x => x.FullName == rootRef.GetFullTypeName());
+                ?.GetTypeByFullName(rootRef.GetFullTypeName());
         }
 
         if (type == null) return null;
