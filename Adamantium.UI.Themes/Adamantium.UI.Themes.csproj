@@ -29,8 +29,6 @@
     <ItemGroup>
         <AdditionalFiles Include="$(ProjectDir)**\*.auml" />
         <CompilerVisibleProperty Include="RootNamespace" />
-        <!-- IDE up-to-date check: rebuild when generator inputs (AdditionalFiles) change. -->
-        <UpToDateCheckInput Include="@(AdditionalFiles)" Visible="false" />
     </ItemGroup>
 
 </Project>

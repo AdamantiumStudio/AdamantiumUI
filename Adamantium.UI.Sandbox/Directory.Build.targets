@@ -1,4 +1,7 @@
 <Project>
+  <!-- The nearest Directory.Build.targets is the only one MSBuild imports, so this one brings in the repository's. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+
   <PropertyGroup>
       <AssignTargetPathsDependsOn>
          <!--$(AssignTargetPathsDependsOn);

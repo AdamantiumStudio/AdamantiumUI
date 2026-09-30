@@ -54,10 +54,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.ObjectModel" Version="4.0.12" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<!-- Lets the render-cache test harness construct the internal DrawingContext directly. -->
 		<InternalsVisibleTo Include="Adamantium.UITests" />
 	</ItemGroup>
@@ -67,8 +63,6 @@
 		     draws through. The generator options stay because other generators in this project read them. -->
 		<CompilerVisibleProperty Include="RootNamespace" />
 		<AdditionalFiles Remove="obj\**" />
-		<!-- IDE up-to-date check: rebuild when generator inputs (AdditionalFiles) change. -->
-		<UpToDateCheckInput Include="@(AdditionalFiles)" Visible="false" />
 	</ItemGroup>
 
 	<ItemGroup>
