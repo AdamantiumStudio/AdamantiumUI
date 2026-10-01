@@ -64,6 +64,9 @@ public interface ITheme: IInitializable, IAdamantiumComponent
     
     StyleIncludeCollection StyleIncludes { get; }
 
+    /// <summary>Takes a style set into this theme and the variants already made from it, initializing it with this theme
+    /// first: a set made from markup has no styles until then. To reach every theme, use
+    /// <see cref="IThemeManager.AddStyleSet{T}"/>.</summary>
     void AddStyleSet(StyleSet styleSet);
     
     StyleSet MergedStyles { get; }

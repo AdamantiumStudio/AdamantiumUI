@@ -30,6 +30,13 @@ public interface IThemeManager : IThemeEngine
 
     void AddTheme(string name, ITheme theme);
 
+    /// <summary>Adds the style set <typeparamref name="T"/> to every theme, the ones added later included: how a library
+    /// gives its own controls their look whichever theme is current. Each theme gets an instance of its own, and its
+    /// styles count as the theme's, so the application's styles still outrank them. Adding a set twice adds it once.
+    /// Elements styled before the call keep their styles, so call it before they exist - a control's static
+    /// constructor is the place, through <see cref="FundamentalUIComponent.AddStyleSetToThemes{T}"/>.</summary>
+    void AddStyleSet<T>() where T : StyleSet, new();
+
     void RemoveTheme(string name);
 
     void SetTheme(ITheme theme);

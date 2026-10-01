@@ -556,8 +556,18 @@ public class Theme : AdamantiumComponent, ITheme
 
     public void AddStyleSet(StyleSet styleSet)
     {
+        styleSet.Initialize(this);
         StyleSets.Add(styleSet);
         Merge(styleSet.Styles);
+
+        lock (_siblings)
+        {
+            foreach (var sibling in _siblings.Values)
+            {
+                sibling.StyleSets.Add(styleSet);
+                sibling.Merge(styleSet.Styles);
+            }
+        }
     }
 
     /// <summary>Takes styles into this theme, stamping each as the THEME'S - which is what stops it outranking the

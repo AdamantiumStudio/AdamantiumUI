@@ -11,6 +11,7 @@ public class ThemeManager : IThemeManager
     private Dictionary<StyleSelector, IUIComponent> components;
     private TrackingCollection<ITheme> _themes;
     private IResourceManager _resourceManager;
+    private readonly List<Type> _styleSetsOfEveryTheme = [];
 
     public IReadOnlyList<ITheme> Themes => _themes;
 
@@ -282,8 +283,32 @@ public class ThemeManager : IThemeManager
         if (!_themesMap.TryAdd(name, theme)) return;
 
         theme.Initialize();
+        lock (_styleSetsOfEveryTheme)
+        {
+            foreach (var type in _styleSetsOfEveryTheme)
+            {
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(type));
+            }
+        }
 
         _themes.Add(theme);
+    }
+
+    public void AddStyleSet<T>() where T : StyleSet, new()
+    {
+        lock (_styleSetsOfEveryTheme)
+        {
+            if (_styleSetsOfEveryTheme.Contains(typeof(T)))
+            {
+                return;
+            }
+
+            _styleSetsOfEveryTheme.Add(typeof(T));
+            foreach (var theme in _themes)
+            {
+                theme.AddStyleSet(new T());
+            }
+        }
     }
 
     public void RemoveTheme(string name)

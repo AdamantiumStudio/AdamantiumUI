@@ -67,6 +67,14 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         o.SyncClassNames();
     }
 
+    /// <summary>Adds the style set <typeparamref name="T"/> to every theme of the application (see
+    /// <see cref="IThemeManager.AddStyleSet{T}"/>). What a control of a library calls from its static constructor to have
+    /// its look in whichever theme is current; nothing before an application exists.</summary>
+    protected static void AddStyleSetToThemes<T>() where T : StyleSet, new()
+    {
+        UIAppContext.Current?.ThemeManager?.AddStyleSet<T>();
+    }
+
     // Created lazily. The getters materialize, since generated markup calls element.Behaviors.Add(x); engine code that
     // only checks presence uses the Has* members or the field.
 
