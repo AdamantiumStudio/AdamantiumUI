@@ -7,7 +7,7 @@
         <PackageId>Adamantium.UI.Templates</PackageId>
         <PackageType>Template</PackageType>
         <IsPackable>true</IsPackable>
-        <Description>Project templates for Adamantium UI. dotnet new adamantium-app creates a desktop application: a window in AUML markup and its view-model.</Description>
+        <Description>Project templates for Adamantium UI. adamantium-app: a desktop application, a window in AUML markup and its view-model. adamantium-viewlib: a library of views with their view-models. adamantium-controllib: a library of templated controls styled in every theme.</Description>
         <PackageTags>adamantium;ui;auml;mvvm;templates;dotnet-new</PackageTags>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>

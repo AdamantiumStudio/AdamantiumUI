@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Adamantium Studio",
+  "classifications": [ "Desktop", "Adamantium", "MVVM", "Library" ],
+  "identity": "Adamantium.UI.ViewLibrary.CSharp",
+  "groupIdentity": "Adamantium.UI.ViewLibrary",
+  "name": "Adamantium UI View Library",
+  "description": "A library of Adamantium UI views: a view in AUML markup and its view-model, for an application to place or navigate to.",
+  "shortName": "adamantium-viewlib",
+  "sourceName": "AdamantiumViewLibrary",
+  "defaultName": "AdamantiumViewLibrary1",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "primaryOutputs": [
+    { "path": "AdamantiumViewLibrary.csproj" }
+  ]
+}

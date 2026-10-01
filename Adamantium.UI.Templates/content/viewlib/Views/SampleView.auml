@@ -1,0 +1,7 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:vm="clr-namespace:AdamantiumViewLibrary.ViewModels"
+      x:ViewModel="{x:Type vm:SampleViewModel}"
+      x:CreateInDesignTime="True">
+    <Grid/>
+</View>

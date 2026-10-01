@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Adamantium Studio",
+  "classifications": [ "Desktop", "Adamantium", "Library" ],
+  "identity": "Adamantium.UI.ControlLibrary.CSharp",
+  "groupIdentity": "Adamantium.UI.ControlLibrary",
+  "name": "Adamantium UI Control Library",
+  "description": "A library of Adamantium UI controls: a templated control and the style set that gives it its look in every theme.",
+  "shortName": "adamantium-controllib",
+  "sourceName": "AdamantiumControlLibrary",
+  "defaultName": "AdamantiumControlLibrary1",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "primaryOutputs": [
+    { "path": "AdamantiumControlLibrary.csproj" }
+  ]
+}

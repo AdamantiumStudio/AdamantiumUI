@@ -1,4 +1,3 @@
-using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Universes;
 
 namespace AdamantiumApp;
@@ -9,11 +8,5 @@ public class App : MultiverseApplication
     public App()
     {
         StartupTheme = "THEME_NAME";
-    }
-
-    // View-models get their dependencies from here: containerRegistry.RegisterSingleton<IService, Service>();
-    protected override void RegisterServices(IContainerRegistry containerRegistry)
-    {
-        base.RegisterServices(containerRegistry);
     }
 }
