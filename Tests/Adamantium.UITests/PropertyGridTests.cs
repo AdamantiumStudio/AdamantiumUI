@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using Adamantium.Core.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
@@ -1420,7 +1421,8 @@ public class PropertyGridTests
     }
 
     // The conversion has to know the type even when there is no common value to read it off - otherwise what was typed
-    // reaches a double-valued property as a string.
+    // reaches a double-valued property as a string. Typed the way the user's culture writes it, which is what the grid
+    // reads first: "7,5" means 7.5 in Russian and 75 in English.
     [Test]
     public void ANumberTypedIntoADisagreeingRowIsStillConverted()
     {
@@ -1432,7 +1434,7 @@ public class PropertyGridTests
         var row = RowOf(grid, scale);
         Assert.That(row.IsMixed, Is.True);
 
-        Assert.That(grid.Write(row, "7,5"), Is.True);
+        Assert.That(grid.Write(row, 7.5.ToString(CultureInfo.CurrentCulture)), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(first.Scale, Is.EqualTo(7.5));
