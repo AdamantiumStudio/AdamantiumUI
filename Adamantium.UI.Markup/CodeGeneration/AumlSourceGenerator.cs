@@ -39,7 +39,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         foreach (var info in collectedInfos)
         {
-            textGenerator.WriteLine($"map.Add(\"{info.Uri}\", typeof({info.FullTypeName}));");
+            textGenerator.WriteLine($"map.Add(\"{info.Uri}\", typeof(global::{info.FullTypeName}));");
         }
 
         textGenerator.UnindentAndWriteCloseBrace();
@@ -109,7 +109,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
-        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.FullName}");
+        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
         textGenerator.WriteLine($@"public {className}() : base(""{themeName}"")");
         textGenerator.WriteOpenBraceAndIndent();
@@ -154,7 +154,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.NewLine();
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
-        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.FullName}");
+        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
         textGenerator.WriteLine($"public {className}()");
         textGenerator.WriteOpenBraceAndIndent();
@@ -199,13 +199,13 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
-        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.FullName}");
+        textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
         if (entityType == EntityType.StyleSet)
         {
             var type = container.DefaultTypeContainer.ITheme;
-            textGenerator.WriteLine($"protected override void OnInitialize({type.FullName} theme)");
+            textGenerator.WriteLine($"protected override void OnInitialize({type.QualifiedName} theme)");
         }
         else
         {
@@ -248,7 +248,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
-        textGenerator.WriteLine($"public class {container.RootClassName} : {rootBaseType.FullName}");
+        textGenerator.WriteLine($"public class {container.RootClassName} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
         foreach (var item in container.NamedElements)
@@ -265,11 +265,11 @@ public class AumlSourceGenerator : IAumlSourceGenerator
                 // no way to be asked for at all.
                 var slotField = CodeGenerationContext.LoadSlotField(item.Name);
                 textGenerator.WriteLine($"global::Adamantium.UI.Controls.LoadSlot {slotField};");
-                textGenerator.WriteLine($"public {typeInfo.FullName} {item.Name} => ({typeInfo.FullName}){slotField}.Element;");
+                textGenerator.WriteLine($"public {typeInfo.QualifiedName} {item.Name} => ({typeInfo.QualifiedName}){slotField}.Element;");
                 continue;
             }
 
-            textGenerator.WriteLine($"{typeInfo.FullName} {item.Name};");
+            textGenerator.WriteLine($"{typeInfo.QualifiedName} {item.Name};");
         }
 
         textGenerator.NewLine();

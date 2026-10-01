@@ -16,6 +16,7 @@ public class MetadataResolvedType : IResolvedType
     public string Name => _metadata.ClassName;
     public string Namespace => _metadata.Namespace;
     public string FullName => _metadata.FullClassName;
+    public string QualifiedName => $"global::{FullName}";
 
     public string AssemblyName => _metadata.AssemblyName;
 

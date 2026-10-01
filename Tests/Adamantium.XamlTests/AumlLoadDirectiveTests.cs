@@ -90,7 +90,7 @@ public class AumlLoadDirectiveTests
         Assert.That(code, Does.Contain("_load_Advanced"), "it has to read through the element's own slot");
         Assert.That(code, Does.Contain("public"), "and be reachable: a view has no code behind it, so an accessor " +
             "nobody outside can call leaves x:Load=\"False\" with no way to be asked for");
-        Assert.That(code, Does.Match(@"public [\w\.]+ Advanced => "),
+        Assert.That(code, Does.Match(@"public [\w\.:]+ Advanced => "),
             "the name has to be an accessor - a plain field would be null until something loaded the element");
     }
 

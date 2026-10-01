@@ -15,6 +15,7 @@ public class ReflectionResolvedType : IResolvedType
     public string Namespace => _type.Namespace ?? string.Empty;
     public string AssemblyName => _type.Assembly.GetName().Name;
     public string FullName => string.IsNullOrEmpty(_type.Namespace) ? _type.Name : $"{_type.Namespace}.{_type.Name}";
+    public string QualifiedName => $"global::{FullName}";
 
     public bool IsNamedType => true;
     public bool IsGenericType => _type.IsGenericType;

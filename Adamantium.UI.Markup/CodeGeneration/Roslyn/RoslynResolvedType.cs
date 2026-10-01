@@ -20,7 +20,9 @@ public class RoslynResolvedType : IResolvedType
     public string AssemblyName => _symbol.ContainingAssembly.Name;
 
     public string FullName => field ??= _symbol.ToDisplayString();
-    
+
+    public string QualifiedName => field ??= _symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
     public bool IsNamedType => _symbol is INamedTypeSymbol;
 
     public bool IsGenericType => _symbol is INamedTypeSymbol { IsGenericType: true };

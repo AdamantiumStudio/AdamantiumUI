@@ -5,7 +5,11 @@ public interface IResolvedType
     string Name { get; }
     string Namespace { get; }
     string FullName { get; }
-    
+
+    /// <summary>The name generated code writes: global::-qualified, so a namespace of the project's own (one ending in
+    /// Adamantium, say) cannot capture it.</summary>
+    string QualifiedName { get; }
+
     string AssemblyName { get; }
     
     bool IsNamedType { get; }
