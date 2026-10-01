@@ -22,6 +22,13 @@
         </ItemGroup>
     </Target>
 
+    <!-- Listed explicitly: Rider did not show this folder from the default glob. Removed first, so it is not compiled
+         twice. -->
+    <ItemGroup>
+        <Compile Remove="Roslyn\**" />
+        <Compile Include="Roslyn\**\*.cs" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" PrivateAssets="all" />
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" PrivateAssets="all" />

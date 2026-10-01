@@ -1,5 +1,5 @@
 using Adamantium.UI.Markup.CodeGeneration;
-using Adamantium.UI.Markup.CodeGeneration.Roslyn;
+using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;

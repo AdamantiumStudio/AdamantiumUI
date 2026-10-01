@@ -12,6 +12,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
+		<!-- The generator's Roslyn type model, so completion resolves types exactly as the build does. -->
+		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,7 +1,8 @@
 ﻿using Adamantium.Core;
+using Adamantium.UI.Markup.CodeGeneration;
 using Microsoft.CodeAnalysis;
 
-namespace Adamantium.UI.Markup.CodeGeneration.Roslyn;
+namespace Adamantium.UI.Generators.Roslyn;
 
 public class RoslynDiagnosticSink : IDiagnosticSink
 {

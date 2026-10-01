@@ -20,8 +20,4 @@
       <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
-    </ItemGroup>
-
 </Project>

@@ -1,6 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Adamantium.UI.Markup.CodeGeneration;
+using Microsoft.CodeAnalysis;
 
-namespace Adamantium.UI.Markup.CodeGeneration.Roslyn;
+namespace Adamantium.UI.Generators.Roslyn;
 
 public class RoslynOutputSink(SourceProductionContext context) : ICodeOutputSink
 {

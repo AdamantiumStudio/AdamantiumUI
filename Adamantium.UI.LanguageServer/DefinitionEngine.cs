@@ -1,5 +1,5 @@
 using Adamantium.UI.Markup.CodeGeneration;
-using Adamantium.UI.Markup.CodeGeneration.Roslyn;
+using Adamantium.UI.Generators.Roslyn;
 using Microsoft.CodeAnalysis;
 
 namespace Adamantium.UI.LanguageServer;

@@ -1,6 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Adamantium.UI.Markup.CodeGeneration;
+using Microsoft.CodeAnalysis;
 
-namespace Adamantium.UI.Markup.CodeGeneration.Roslyn;
+namespace Adamantium.UI.Generators.Roslyn;
 
 public class RoslynResolvedAttribute : IResolvedAttribute
 {

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 using System.Linq;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
-using Adamantium.UI.Markup.CodeGeneration.Roslyn;
+using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
 
 namespace Adamantium.UI.Generators

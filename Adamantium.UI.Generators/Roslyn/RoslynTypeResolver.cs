@@ -1,7 +1,10 @@
-﻿using Adamantium.UI.Markup.Parsers;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Adamantium.UI.Markup.CodeGeneration;
+using Adamantium.UI.Markup.Parsers;
 using Microsoft.CodeAnalysis;
 
-namespace Adamantium.UI.Markup.CodeGeneration.Roslyn;
+namespace Adamantium.UI.Generators.Roslyn;
 
 public class RoslynTypeResolver : ITypeResolver
 {

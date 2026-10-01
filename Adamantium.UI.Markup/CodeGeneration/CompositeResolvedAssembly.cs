@@ -6,7 +6,7 @@ namespace Adamantium.UI.Markup.CodeGeneration;
 /// forwards look-ups to the first part that resolves. The resolver builds one of these when more than one
 /// [XmlnsDefinition] maps to the same URI, so consumers keep using a single IResolvedAssembly transparently.
 /// </summary>
-internal sealed class CompositeResolvedAssembly : IResolvedAssembly
+public sealed class CompositeResolvedAssembly : IResolvedAssembly
 {
     private readonly IReadOnlyList<IResolvedAssembly> _parts;
 
