@@ -21,10 +21,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ECS\Adamantium.ECS.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ProceduralGeometry\Adamantium.ProceduralGeometry.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MacOS\Adamantium.MacOS.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Controls\Adamantium.UI.Controls.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" />
 		<!-- The UI's SHADERS, in their own project (the same shape Adamantium.FX has): the .fx/.fxh files and the effect
@@ -33,14 +29,18 @@
 		<ProjectReference Include="..\Adamantium.UI.FX\Adamantium.UI.FX.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Win32\Adamantium.Win32.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.XInput\Adamantium.XInput.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.GameInput\Adamantium.GameInput.csproj" />
 		<PackageReference Include="Adamantium.Vulkan.Loader" Version="1.0.2" />
 		<PackageReference Include="Adamantium.Vulkan" Version="1.0.3" />
 	</ItemGroup>
-	
-	<ItemGroup>
+
+	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ECS\Adamantium.ECS.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ProceduralGeometry\Adamantium.ProceduralGeometry.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MacOS\Adamantium.MacOS.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Win32\Adamantium.Win32.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.XInput\Adamantium.XInput.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.GameInput\Adamantium.GameInput.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj"/>
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics.Core\Adamantium.Graphics.Core.csproj"/>
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj"/>
@@ -51,6 +51,22 @@
 		     Core+Mathematics come from the normal net10.0 refs above. -->
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0"/>
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0"/>
+	</ItemGroup>
+
+	<!-- The generator package carries the assemblies it loads, Core and Mathematics among them. -->
+	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+		<PackageReference Include="Adamantium.ECS" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.ProceduralGeometry" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.MacOS" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Win32" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.XInput" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.GameInput" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Graphics.Core" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>

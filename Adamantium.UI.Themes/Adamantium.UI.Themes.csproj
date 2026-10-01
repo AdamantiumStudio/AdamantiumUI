@@ -16,7 +16,9 @@
         <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
         <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
+    </ItemGroup>
 
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
         <!-- netstandard2.0 analyzer deps for the source generator above (Roslyn analyzers must be netstandard2.0).
@@ -24,6 +26,14 @@
              Core+Mathematics come from the normal net10.0 refs above. -->
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+    </ItemGroup>
+
+    <!-- The same netstandard2.0 analyzer deps, taken from the packages' own netstandard2.0 builds. -->
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
+        <Analyzer Include="$(PkgAdamantium_Mathematics)\lib\netstandard2.0\Adamantium.Mathematics.dll" Condition="'$(PkgAdamantium_Mathematics)' != ''" />
     </ItemGroup>
 
     <ItemGroup>

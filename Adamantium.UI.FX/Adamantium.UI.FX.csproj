@@ -23,7 +23,7 @@
         <AdamantiumShaderHotReload Condition="'$(AdamantiumShaderHotReload)' == '' And '$(Configuration)' == 'Debug'">true</AdamantiumShaderHotReload>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics.Core\Adamantium.Graphics.Core.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
@@ -34,6 +34,15 @@
              this net10.0 app's output - the runtime/compile Core+Mathematics come from the normal net10.0 refs above. -->
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+    </ItemGroup>
+
+    <!-- The generator package carries the assemblies it loads, Core and Mathematics among them. -->
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.Graphics.Core" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

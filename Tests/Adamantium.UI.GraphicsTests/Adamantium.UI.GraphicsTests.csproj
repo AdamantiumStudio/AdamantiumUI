@@ -32,9 +32,14 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics.Core\Adamantium.Graphics.Core.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics\Adamantium.Graphics.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <PackageReference Include="Adamantium.Graphics.Core" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.Graphics" Version="$(AdamantiumEngineVersion)" />
     </ItemGroup>
 
 </Project>

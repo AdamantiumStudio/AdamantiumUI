@@ -18,7 +18,14 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" GeneratePathProperty="true" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" GeneratePathProperty="true" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+      <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>

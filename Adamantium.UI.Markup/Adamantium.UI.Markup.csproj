@@ -9,8 +9,12 @@
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+      <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
     </ItemGroup>
 
     <ItemGroup>

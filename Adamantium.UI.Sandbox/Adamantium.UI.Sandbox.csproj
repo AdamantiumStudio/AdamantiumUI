@@ -26,9 +26,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine\Adamantium.Engine.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
 		<ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 	</ItemGroup>
@@ -256,11 +253,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
 
+	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine\Adamantium.Engine.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine.Generators\Adamantium.Engine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
@@ -270,6 +272,19 @@
 		     Core+Mathematics come from the normal net10.0 refs above. -->
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+	</ItemGroup>
+
+	<!-- The engine generator package carries the assemblies the generators load: Core, Mathematics, Fonts, EffectsCompiler. -->
+	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+		<PackageReference Include="Adamantium.Engine" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+		<PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
