@@ -58,8 +58,9 @@
 	</Target>
 
 	<!-- The designer host, alone: it runs on the dependency list of the project it previews, so the engine and the UI it
-	     needs are the application's own and travel no second time. Not a reference - the host references this project -
-	     so it is built here, or only asked where its output is under NoBuild. -->
+	     needs are the application's own and travel no second time. Its runtime configuration goes along for a library,
+	     which has none of its own. Not a reference - the host references this project - so it is built here, or only
+	     asked where its output is under NoBuild. -->
 	<Target Name="PackDesignerHost">
 		<PropertyGroup>
 			<_DesignerHostTarget Condition="'$(NoBuild)' == 'true'">GetTargetPath</_DesignerHostTarget>
@@ -71,6 +72,7 @@
 		<Error Condition="!Exists('@(_DesignerHost)')" Text="The designer host is not built: @(_DesignerHost)" />
 		<ItemGroup>
 			<TfmSpecificPackageFile Include="@(_DesignerHost)" PackagePath="tools/designer" />
+			<TfmSpecificPackageFile Include="@(_DesignerHost->'%(RootDir)%(Directory)%(Filename).runtimeconfig.json')" PackagePath="tools/designer" />
 		</ItemGroup>
 	</Target>
 
