@@ -28,4 +28,23 @@
     </ItemGroup>
   </Target>
 
+  <!-- What the designer runs on, written by every build into obj, where the IDE finds it from the project folder: the
+       designer host this package carries, and the output the build has just made. The host runs on the project's own
+       dependency list, so it previews with the very engine and UI the application runs on. -->
+  <Target Name="WriteAdamantiumDesignerManifest" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_AdamantiumDesignerHost>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\designer\Adamantium.UI.Designer.Host.dll'))</_AdamantiumDesignerHost>
+      <_AdamantiumDesignerManifest>{
+  "host": "$(_AdamantiumDesignerHost.Replace('\', '\\'))",
+  "assembly": "$([System.IO.Path]::GetFullPath('$(TargetPath)').Replace('\', '\\'))",
+  "depsFile": "$([System.IO.Path]::GetFullPath('$(ProjectDepsFilePath)').Replace('\', '\\'))",
+  "runtimeConfig": "$([System.IO.Path]::GetFullPath('$(ProjectRuntimeConfigFilePath)').Replace('\', '\\'))"
+}</_AdamantiumDesignerManifest>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(MSBuildProjectExtensionsPath)adamantium.designer.json"
+                      Lines="$([MSBuild]::Escape($(_AdamantiumDesignerManifest)))"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+  </Target>
+
 </Project>

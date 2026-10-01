@@ -40,7 +40,7 @@
 	     its assemblies in analyzers, its wiring in buildTransitive - and MVVM comes as dependencies, PrivateAssets none so
 	     its generator reaches the application too. The generator project is referenced only to be built first. -->
 	<PropertyGroup>
-		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackAumlGenerator</TargetsForTfmSpecificContentInPackage>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackAumlGenerator;PackDesignerHost</TargetsForTfmSpecificContentInPackage>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -54,6 +54,23 @@
 		</MSBuild>
 		<ItemGroup>
 			<TfmSpecificPackageFile Include="@(_AumlAnalyzer)" PackagePath="analyzers/dotnet/cs" />
+		</ItemGroup>
+	</Target>
+
+	<!-- The designer host, alone: it runs on the dependency list of the project it previews, so the engine and the UI it
+	     needs are the application's own and travel no second time. Not a reference - the host references this project -
+	     so it is built here, or only asked where its output is under NoBuild. -->
+	<Target Name="PackDesignerHost">
+		<PropertyGroup>
+			<_DesignerHostTarget Condition="'$(NoBuild)' == 'true'">GetTargetPath</_DesignerHostTarget>
+			<_DesignerHostTarget Condition="'$(NoBuild)' != 'true'">Build</_DesignerHostTarget>
+		</PropertyGroup>
+		<MSBuild Projects="..\Adamantium.UI.Designer.Host\Adamantium.UI.Designer.Host.csproj" Targets="$(_DesignerHostTarget)" Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework;RuntimeIdentifier">
+			<Output TaskParameter="TargetOutputs" ItemName="_DesignerHost" />
+		</MSBuild>
+		<Error Condition="!Exists('@(_DesignerHost)')" Text="The designer host is not built: @(_DesignerHost)" />
+		<ItemGroup>
+			<TfmSpecificPackageFile Include="@(_DesignerHost)" PackagePath="tools/designer" />
 		</ItemGroup>
 	</Target>
 

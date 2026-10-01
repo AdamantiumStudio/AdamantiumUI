@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Adamantium.Core;
 using Adamantium.Multiverse.Input;
@@ -601,10 +602,17 @@ public sealed class DesignerSession : IDisposable
         return LoadOnce(path);
     }
 
-    // The project's compiled assembly, looked up in BaseOutputPath, bin and an artifacts/bin above it: a build in the
-    // host's own configuration first - a Release copy from days ago is not the project being worked on - then the newest.
+    // The project's compiled assembly: the one its last build named in obj (the package's build targets write it). Without
+    // that, looked up in BaseOutputPath, bin and an artifacts/bin above it: a build in the host's own configuration
+    // first - a Release copy from days ago is not the project being worked on - then the newest.
     private static string FindProjectAssembly(string csprojPath)
     {
+        var built = LastBuiltAssembly(csprojPath);
+        if (built != null)
+        {
+            return built;
+        }
+
         var dllName = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
 
         foreach (var binBase in CandidateOutputRoots(csprojPath))
@@ -617,6 +625,26 @@ public sealed class DesignerSession : IDisposable
             if (dll != null) return dll;
         }
         return null;
+    }
+
+    private static string LastBuiltAssembly(string csprojPath)
+    {
+        var manifest = Path.Combine(Path.GetDirectoryName(csprojPath), "obj", "adamantium.designer.json");
+        if (!File.Exists(manifest))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(File.ReadAllText(manifest));
+            var assembly = json.RootElement.GetProperty("assembly").GetString();
+            return File.Exists(assembly) ? assembly : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private static bool IsHostConfiguration(string path) =>

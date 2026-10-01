@@ -9,15 +9,14 @@ import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import kotlin.io.path.exists
 
 /**
  * Owns the long-running Adamantium designer host process and talks to it over its line-delimited JSON
  * protocol (see Adamantium.UI.Designer.Host). The host keeps the engine warm between renders, so a render
  * is just one request/response round-trip. One process is shared by every `.auml` editor in the project;
  * requests are serialized. The process is started lazily and restarted automatically if it dies. It runs from a copy of
- * its build folder ([DesignerHostShadowCopy]) and restarts on a new build of it.
+ * the folder it loads its assemblies from ([DesignerHostLaunch], [DesignerHostShadowCopy]) and restarts on a new build
+ * of that folder, or for a file of another project.
  */
 @Service(Service.Level.PROJECT)
 class AumlPreviewService : Disposable {
@@ -25,6 +24,7 @@ class AumlPreviewService : Disposable {
     private var process: Process? = null
     private var writer: BufferedWriter? = null
     private var reader: BufferedReader? = null
+    private var launch: DesignerHostLaunch? = null
     private var hostStamp: String? = null
     // The sourcePath of the last successful render = the owner of the host's single warm scene. Only that preview may
     // stream frames; a different (background) preview's frame() would advance and return THIS scene - i.e. show the
@@ -79,7 +79,9 @@ class AumlPreviewService : Disposable {
     fun render(text: String, scale: Double, sourcePath: String? = null, live: Boolean = false): RenderResult {
         synchronized(lock) {
             return try {
-                restartIfHostRebuilt()
+                val next = DesignerHostLaunch.forFile(sourcePath)
+                restartIfHostChanged(next)
+                launch = next
                 val request = buildRenderRequest(text, scale, sourcePath, live)
                 var line = exchange(request)
                 if ((MiniJson.parse(line) as? Map<*, *>)?.get("restart") == true) {
@@ -189,10 +191,10 @@ class AumlPreviewService : Disposable {
         process?.let { if (it.isAlive) return }
         stopProcess()
 
-        val exe = resolveHostExecutable()
-        val stamp = DesignerHostShadowCopy.settledStamp(exe)
-        val copy = DesignerHostShadowCopy.copyOf(exe, stamp)
-        val command = GeneralCommandLine(copy.toString(), "serve").apply { charset = StandardCharsets.UTF_8 }
+        val target = launch ?: error("nothing has been rendered yet")
+        val stamp = DesignerHostShadowCopy.settledStamp(target.folder)
+        val copy = DesignerHostShadowCopy.copyOf(target.folder, stamp)
+        val command = GeneralCommandLine(target.command(copy)).apply { charset = StandardCharsets.UTF_8 }
         val proc = command.createProcess()
 
         process = proc
@@ -213,23 +215,20 @@ class AumlPreviewService : Disposable {
         lastRenderPath = null   // the warm scene died with the process; the next render re-establishes ownership
     }
 
-    private fun restartIfHostRebuilt() {
-        val running = hostStamp ?: return
-        if (process?.isAlive != true) return
-        val exe = resolveHostExecutable()
-        val stamp = DesignerHostShadowCopy.stamp(exe)
-        if (stamp != running && DesignerHostShadowCopy.isSettled(exe, stamp)) stopProcess()
-    }
+    private fun restartIfHostChanged(next: DesignerHostLaunch) {
+        if (process?.isAlive != true) {
+            return
+        }
+        if (next.folder != launch?.folder) {
+            stopProcess()
+            return
+        }
 
-    private fun resolveHostExecutable(): Path {
-        val override = System.getenv(HOST_ENV)?.takeIf { it.isNotBlank() }
-            ?: error(
-                "Set the $HOST_ENV environment variable to the built designer host, e.g. " +
-                    "…/artifacts/designer-host/Debug/net10.0/Adamantium.UI.Designer.Host.exe"
-            )
-        val path = Path.of(override)
-        if (!path.exists()) error("$HOST_ENV points to a missing file: $override")
-        return path
+        val running = hostStamp ?: return
+        val stamp = DesignerHostShadowCopy.stamp(next.folder)
+        if (stamp != running && DesignerHostShadowCopy.isSettled(next.folder, stamp)) {
+            stopProcess()
+        }
     }
 
     /** Engine logs go to the host's stderr; drain it so a full pipe can't block the process. */
@@ -285,13 +284,13 @@ class AumlPreviewService : Disposable {
     }
 
     companion object {
-        private const val HOST_ENV = "ADAMANTIUM_DESIGNER_HOST"
         private val LOG = logger<AumlPreviewService>()
     }
 }
 
-/** Tiny dependency-free JSON reader - enough for the host's flat `{png|error|diagnostics}` responses. */
-private object MiniJson {
+/** Tiny dependency-free JSON reader - enough for the host's flat `{png|error|diagnostics}` responses and the build's
+ * designer manifest. */
+internal object MiniJson {
     fun parse(text: String): Any? = Parser(text).value()
 
     private class Parser(private val s: String) {

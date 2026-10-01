@@ -20,8 +20,9 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 
 /**
- * Runs the designer host from a copy of its build folder. A running host keeps its dlls loaded, so a build that writes
- * that folder failed on every one of them; the copy leaves the build folder to the build.
+ * Runs the designer host from a copy of the folder it loads its assemblies from - its own build folder, or the
+ * previewed project's build output. A running host keeps those dlls loaded, so a build that writes the folder failed on
+ * every one of them; the copy leaves the folder to the build.
  */
 internal object DesignerHostShadowCopy {
     private const val SETTLE_MS = 1500L
@@ -30,19 +31,21 @@ internal object DesignerHostShadowCopy {
     private const val LOGS = "logs"
     private const val STAGING = ".staging"
 
+    // Every host loads it from its copy, so on Windows a copy whose file cannot be deleted is one a host runs from.
+    private const val HELD_BY_A_HOST = "Adamantium.UI.dll"
+
     private val root: Path = PathManager.getSystemDir().resolve("adamantium-designer-host")
 
-    /** A fingerprint of the build folder of [exe]; any file a build writes changes it. */
-    fun stamp(exe: Path): String {
-        val source = exe.parent
+    /** A fingerprint of [folder]; any file a build writes changes it. */
+    fun stamp(folder: Path): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(source.toAbsolutePath().normalize().toString().toByteArray())
+        digest.update(folder.toAbsolutePath().normalize().toString().toByteArray())
         try {
-            Files.walk(source).use { paths ->
-                paths.filter { it.isRegularFile() && !it.startsWith(source.resolve(LOGS)) }
+            Files.walk(folder).use { paths ->
+                paths.filter { it.isRegularFile() && !it.startsWith(folder.resolve(LOGS)) }
                     .sorted()
                     .forEach { file ->
-                        digest.update(source.relativize(file).toString().toByteArray())
+                        digest.update(folder.relativize(file).toString().toByteArray())
                         digest.update(ByteBuffer.allocate(16)
                             .putLong(file.fileSize())
                             .putLong(file.getLastModifiedTime().toMillis())
@@ -58,34 +61,34 @@ internal object DesignerHostShadowCopy {
     }
 
     /** True when [stamp] still holds a moment later, i.e. no build is writing the folder. */
-    fun isSettled(exe: Path, stamp: String): Boolean {
+    fun isSettled(folder: Path, stamp: String): Boolean {
         Thread.sleep(SETTLE_MS)
-        return stamp(exe) == stamp
+        return stamp(folder) == stamp
     }
 
     /** The stamp of a build that is no longer being written, waiting for a running build to finish. */
-    fun settledStamp(exe: Path): String {
-        var stamp = stamp(exe)
+    fun settledStamp(folder: Path): String {
+        var stamp = stamp(folder)
         if (root.resolve(stamp).exists()) {
             return stamp
         }
 
         val deadline = System.currentTimeMillis() + MAX_WAIT_MS
-        while (!isSettled(exe, stamp) && System.currentTimeMillis() < deadline) {
-            stamp = stamp(exe)
+        while (!isSettled(folder, stamp) && System.currentTimeMillis() < deadline) {
+            stamp = stamp(folder)
         }
         return stamp
     }
 
     /**
-     * The host executable inside the copy of the build [stamp] names, copied on first use. Other copies go once no host
-     * runs from them: at once on Windows, which will not delete a running exe, after a day elsewhere.
+     * The copy of [folder] as of [stamp], made on first use. Other copies go once no host runs from them: at once on
+     * Windows, which will not delete a loaded dll, after a day elsewhere.
      */
-    fun copyOf(exe: Path, stamp: String): Path {
+    fun copyOf(folder: Path, stamp: String): Path {
         val target = root.resolve(stamp)
         if (!target.exists()) {
             val staging = root.resolve("$stamp.${ProcessHandle.current().pid()}.${System.nanoTime()}$STAGING")
-            copyTree(exe.parent, staging)
+            copyTree(folder, staging)
             try {
                 Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE)
             } catch (_: IOException) {
@@ -93,8 +96,8 @@ internal object DesignerHostShadowCopy {
             }
         }
 
-        purgeUnused(target, exe.fileName)
-        return target.resolve(exe.fileName)
+        purgeUnused(target)
+        return target
     }
 
     private fun copyTree(source: Path, target: Path) {
@@ -110,7 +113,7 @@ internal object DesignerHostShadowCopy {
         }
     }
 
-    private fun purgeUnused(keep: Path, exeName: Path) {
+    private fun purgeUnused(keep: Path) {
         val dayAgo = System.currentTimeMillis() - DAY_MS
         for (dir in root.listDirectoryEntries()) {
             if (dir == keep || !dir.isDirectory()) {
@@ -123,7 +126,7 @@ internal object DesignerHostShadowCopy {
             }
 
             try {
-                dir.resolve(exeName).deleteIfExists()
+                dir.resolve(HELD_BY_A_HOST).deleteIfExists()
                 dir.toFile().deleteRecursively()
             } catch (_: IOException) {
             }
