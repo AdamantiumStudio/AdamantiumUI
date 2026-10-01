@@ -1,0 +1,80 @@
+# Builds the UI against the published engine packages and runs the tests that need no GPU: for every pull request, and
+# for main once it is merged into. There is no engine beside the clone on a runner, so this is exactly the build of
+# someone who cloned this repository alone. Windows only: the effects generator compiles the shaders during the build
+# and loads Slang through kernel32.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fit to be a required check: the job always runs and always reports. What it skips is the work, when nothing but
+  # documents, icons, settings or the editor plugins (not built here) changed.
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # A list of what to skip rather than of what to build, so a new project folder is built without anyone adding it.
+      # With nothing to compare against - a manual run, a history that is not there - everything counts as code.
+      - name: Changes
+        id: changes
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          code=true
+          range=
+          case "$EVENT" in
+            pull_request) range="$BASE...$HEAD" ;;
+            push) if git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then range="$BEFORE..$SHA"; fi ;;
+          esac
+          if [ -n "$range" ]; then
+            code=false
+            while IFS= read -r f; do
+              case "$f" in
+                ""|*.md|LICENSE|NOTICE|*icon.png|.gitignore|*.DotSettings|editors/*) ;;
+                *) code=true ;;
+              esac
+            done < <(git diff --name-only "$range")
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Code changed: $code"
+
+      # Version comes from global.json, so CI and a developer's machine build with the same SDK.
+      - uses: actions/setup-dotnet@v6
+        if: steps.changes.outputs.code == 'true'
+        with:
+          global-json-file: global.json
+
+      # bash, not the default PowerShell: PowerShell judges a step by its LAST command only, so a failed first build
+      # followed by a good second one would pass.
+      - name: Build
+        if: steps.changes.outputs.code == 'true'
+        shell: bash
+        run: |
+          dotnet build AdamantiumUI.sln -c Release -warnaserror
+          dotnet build AdamantiumUI.Tests.sln -c Release -warnaserror
+
+      # The runners have no GPU: the [Category("Gpu")] tests and Adamantium.UI.GraphicsTests, which renders only, are left
+      # out; every other test runs without one.
+      - name: Test
+        if: steps.changes.outputs.code == 'true'
+        shell: bash
+        run: |
+          dotnet test Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj -c Release --no-build
+          dotnet test Tests/Adamantium.UITests/Adamantium.UITests.csproj -c Release --no-build --filter "TestCategory!=Gpu"

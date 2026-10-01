@@ -24,6 +24,7 @@ namespace Adamantium.UITests.Rendering;
 // production RenderCache, the real transform table, the retained instances - while AnimationManager was never ticked once.
 // That is the whole promise: a theme cascade holds the loop thread for a second, and the spinner keeps turning anyway.
 [TestFixture]
+[Category("Gpu")]
 public class CompositorRenderTests
 {
     private IGraphicsDevice _device;
