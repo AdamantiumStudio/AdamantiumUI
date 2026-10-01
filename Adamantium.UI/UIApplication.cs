@@ -272,6 +272,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     public Type StartupType { get; set; }
 
+    /// <summary>The name of the theme the application opens on: Fluent (when unset), EditorPro or macOS. Set it in the
+    /// application's constructor, so the designer, which creates the application the same way, previews in it too. The
+    /// ADAM_THEME environment variable overrides it.</summary>
+    public string StartupTheme { get; set; }
+
     public IDependencyContainer Container { get; private set; }
 
     protected IGraphicsDeviceService GraphicsDeviceService { get; private set; }
@@ -430,9 +435,20 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         var macOs = new Themes.MacOsTheme.MacOs();
         ThemeManager.AddTheme(macOs.Name, macOs);
 
-        // Opens on Fluent, or on the theme ADAM_THEME names: a theme is fully exercised only when current from the first frame.
+        // ADAM_THEME wins over StartupTheme: a theme is fully exercised only when current from the first frame.
         var requested = Environment.GetEnvironmentVariable("ADAM_THEME");
-        var startOn = string.IsNullOrEmpty(requested) ? fluent : ThemeManager[requested] ?? fluent;
+        if (string.IsNullOrEmpty(requested))
+        {
+            requested = StartupTheme;
+        }
+
+        var startOn = string.IsNullOrEmpty(requested) ? fluent : ThemeManager[requested];
+        if (startOn == null)
+        {
+            throw new InvalidOperationException(
+                $"No theme is named '{requested}'. The themes are: {string.Join(", ", ThemeManager.Themes.Select(t => t.Name))}.");
+        }
+
         ThemeManager.SetTheme(startOn);
     }
 
