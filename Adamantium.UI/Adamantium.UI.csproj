@@ -10,6 +10,9 @@
 		<Configurations>Debug;Release</Configurations>
 		<LangVersion>latest</LangVersion>
 		<Nullable>disable</Nullable>
+		<IsPackable>true</IsPackable>
+		<Description>Adamantium UI: a .NET UI framework on the Adamantium engine's own Vulkan renderer, where a 3D scene and the interface around it are drawn by one renderer in one process. The package to reference: it brings the controls, the themes, AUML markup with its code generator, and MVVM with its generator.</Description>
+		<PackageTags>adamantium;ui;vulkan;3d;xaml;auml;mvvm</PackageTags>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -31,6 +34,37 @@
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<PackageReference Include="Adamantium.Vulkan.Loader" Version="1.0.2" />
 		<PackageReference Include="Adamantium.Vulkan" Version="1.0.3" />
+	</ItemGroup>
+
+	<!-- For the applications this package goes into, not for this project: the AUML generator rides in this package -
+	     its assemblies in analyzers, its wiring in buildTransitive - and MVVM comes as dependencies, PrivateAssets none so
+	     its generator reaches the application too. The generator project is referenced only to be built first. -->
+	<PropertyGroup>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackAumlGenerator</TargetsForTfmSpecificContentInPackage>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" ReferenceOutputAssembly="false" />
+		<None Include="buildTransitive\Adamantium.UI.targets" Pack="true" PackagePath="buildTransitive" />
+	</ItemGroup>
+
+	<Target Name="PackAumlGenerator">
+		<MSBuild Projects="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" Targets="GetAumlAnalyzerAssemblies" Properties="Configuration=$(Configuration);NoBuild=$(NoBuild)" RemoveProperties="TargetFramework;RuntimeIdentifier">
+			<Output TaskParameter="TargetOutputs" ItemName="_AumlAnalyzer" />
+		</MSBuild>
+		<ItemGroup>
+			<TfmSpecificPackageFile Include="@(_AumlAnalyzer)" PackagePath="analyzers/dotnet/cs" />
+		</ItemGroup>
+	</Target>
+
+	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" ReferenceOutputAssembly="false" PrivateAssets="none" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+		<PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="none" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
@@ -67,6 +101,19 @@
 		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Drag feedback cursors (arrow + green plus, arrow + link arrow): Windows has no IDC_* for either - the shapes
+		     Explorer draws sit in ole32.dll's resources - so ship .cur files and load them via LoadCursorFromFile.
+		     Copied next to the app so WindowsCursors resolves them at AppContext.BaseDirectory - from this package too,
+		     which is the one an application references, so NuGet copies them into its output the same way. -->
+		<Content Include="Resources\dragcopy.cur" PackageCopyToOutput="true">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Resources\draglink.cur" PackageCopyToOutput="true">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>

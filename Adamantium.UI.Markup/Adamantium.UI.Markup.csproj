@@ -7,6 +7,9 @@
         <Platforms>AnyCPU</Platforms>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>latest</LangVersion>
+        <IsPackable>true</IsPackable>
+        <Description>AUML, the markup of Adamantium UI: the parser, the document model and the type resolution shared by its code generator and its runtime loader.</Description>
+        <PackageTags>adamantium;ui;auml;markup;xaml</PackageTags>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">

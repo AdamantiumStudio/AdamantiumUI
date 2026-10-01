@@ -78,3 +78,7 @@ jobs:
         run: |
           dotnet test Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj -c Release --no-build
           dotnet test Tests/Adamantium.UITests/Adamantium.UITests.csproj -c Release --no-build --filter "TestCategory!=Gpu"
+
+      - name: Pack
+        if: steps.changes.outputs.code == 'true'
+        run: dotnet pack AdamantiumUI.sln -c Release --no-build -o artifacts/nupkg

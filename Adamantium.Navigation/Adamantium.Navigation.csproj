@@ -7,6 +7,9 @@
         <LangVersion>latest</LangVersion>
         <Nullable>disable</Nullable>
         <ImplicitUsings>disable</ImplicitUsings>
+        <IsPackable>true</IsPackable>
+        <Description>View-model navigation for Adamantium UI: navigation by key with parameters, regions and their journal, dialogs and overlays with results - with no view known to the view model.</Description>
+        <PackageTags>adamantium;ui;navigation;mvvm;dialogs;regions</PackageTags>
     </PropertyGroup>
 
     <!-- UI-free: the whole navigation engine + contracts a ViewModel sees. Only PropertyChangedBase + the DI resolver. -->

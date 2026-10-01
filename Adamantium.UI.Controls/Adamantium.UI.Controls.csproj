@@ -7,6 +7,9 @@
         <LangVersion>latest</LangVersion>
         <Configurations>Release;Debug</Configurations>
         <Platforms>AnyCPU</Platforms>
+        <IsPackable>true</IsPackable>
+        <Description>Controls of Adamantium UI: buttons, text, lists, trees and the data grid, docking, the ribbon, color pickers, a drawing board and an infinite canvas for node graphs.</Description>
+        <PackageTags>adamantium;ui;controls;datagrid;docking;ribbon</PackageTags>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

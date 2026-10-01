@@ -9,6 +9,9 @@
         <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
         <OutputType>Library</OutputType>
+        <IsPackable>true</IsPackable>
+        <Description>Themes of Adamantium UI - Fluent, Editor Pro and macOS - with a style for every control, in light and dark variants.</Description>
+        <PackageTags>adamantium;ui;themes;styles;fluent</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

@@ -9,6 +9,9 @@
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
         <LangVersion>latest</LangVersion>
         <OutputType>Library</OutputType>
+        <IsPackable>true</IsPackable>
+        <Description>Shaders of Adamantium UI - shapes, text, brushes, effects - compiled into the assembly at build time.</Description>
+        <PackageTags>adamantium;ui;shader;effects</PackageTags>
     </PropertyGroup>
 
     <!-- The Slang runtime rides in this package, so the shader compiler does not need the Vulkan SDK installed. Named

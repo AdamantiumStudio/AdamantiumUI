@@ -16,4 +16,10 @@
     </ItemGroup>
   </Target>
 
+  <!-- Packages are made against the published engine packages. Packed from the engine's source, the analyzer-only
+       references to its projects would turn into package dependencies. -->
+  <Target Name="PackAgainstEnginePackages" BeforeTargets="GenerateNuspec" Condition="'$(UseEngineSource)' == 'true' And '$(IsPackable)' == 'true'">
+    <Error Text="Pack the UI against the engine packages: dotnet pack -p:UseEngineSource=false" />
+  </Target>
+
 </Project>

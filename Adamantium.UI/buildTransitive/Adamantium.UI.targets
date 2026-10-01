@@ -1,0 +1,31 @@
+<Project>
+
+  <!-- What a project needs for its .auml files to become classes: the files handed to the generator, and the two build
+       properties it reads. A project that lists its .auml files itself keeps its list: those are not added twice.
+       AdamantiumAumlAutoInclude=false turns the automatic list off. -->
+  <ItemGroup Condition="'$(AdamantiumAumlAutoInclude)' != 'false'">
+    <AdditionalFiles Include="**\*.auml"
+                     Exclude="@(AdditionalFiles);bin\**;obj\**;$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RootNamespace" />
+    <CompilerVisibleProperty Include="ProjectDir" />
+  </ItemGroup>
+
+  <!-- AdditionalFiles are not inputs of the compile or of Visual Studio's up-to-date check, so an edited view would
+       leave the build "up to date" running the code generated before. Added inside targets, so an IDE does not list
+       every .auml again under each extra item type. -->
+  <Target Name="AdamantiumAumlAreCompileInputs" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <CustomAdditionalCompileInputs Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="AdamantiumAumlAreUpToDateInputs" BeforeTargets="CollectUpToDateCheckInputDesignTime">
+    <ItemGroup>
+      <UpToDateCheckInput Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml'" />
+    </ItemGroup>
+  </Target>
+
+</Project>

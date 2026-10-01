@@ -8,7 +8,19 @@
 		<Nullable>disable</Nullable>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<IsRoslynComponent>true</IsRoslynComponent>
+		<BuildProjectReferences Condition="'$(NoBuild)' == 'true'">false</BuildProjectReferences>
     </PropertyGroup>
+
+    <!-- What Adamantium.UI packs as its analyzers: the generator and the assemblies it loads - Markup and the
+         netstandard2.0 Core and Mathematics, whether they come from the engine's source or from its packages. The same set
+         a project reference hands the compiler. -->
+    <Target Name="GetAumlAnalyzerAssemblies" DependsOnTargets="ResolveReferences" Returns="@(_AumlAnalyzer->Distinct())">
+        <ItemGroup>
+            <_AumlAnalyzer Include="$(TargetPath)" />
+            <_AumlAnalyzer Include="@(ReferencePath)" Condition="'%(ReferencePath.ReferenceSourceTarget)' == 'ProjectReference'" />
+            <_AumlAnalyzer Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'Adamantium.Core' Or '%(ReferencePath.NuGetPackageId)' == 'Adamantium.Mathematics'" />
+        </ItemGroup>
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" PrivateAssets="all" />

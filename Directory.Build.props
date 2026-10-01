@@ -20,7 +20,45 @@
     <Authors>Adamantium Studio</Authors>
     <Company>Adamantium Studio</Company>
     <Copyright>Copyright © 2019-2026 Adamantium Studio</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/AdamantiumStudio/AdamantiumUI</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/AdamantiumStudio/AdamantiumUI</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+
+  <!-- One version for every package of the UI, as in the engine: they are built together and move together. A release
+       sets the suffix: dotnet pack -p:VersionSuffix=alpha.2 -->
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+  </PropertyGroup>
+
+  <!-- Off by default, on per project: tests, the sandbox and the editor tools are not products, and a published version
+       can be unlisted but never deleted. Content goes to contentFiles only, as in AdamantiumVulkan. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <ContentTargetFolders>contentFiles</ContentTargetFolders>
+  </PropertyGroup>
+
+  <!-- The README and each package's icon.png travel only when they exist: naming a file that is not packed breaks the
+       pack (NU5039, NU5046). The icons are generated with the studio's brand assets and copied here by their deploy
+       script. -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)README.md')">
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)README.md')">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">
+    <None Include="$(MSBuildProjectDirectory)\icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
 
   <!-- The engine repository checked out beside this one: its projects are referenced from source.
        They are not in our solutions, so a solution build would hand them no configuration and they would land in
