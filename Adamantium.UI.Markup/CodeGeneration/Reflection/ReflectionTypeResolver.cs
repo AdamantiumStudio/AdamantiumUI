@@ -124,7 +124,7 @@ public class ReflectionTypeResolver : ITypeResolver
             return resolved;
         }
 
-        var asm = _assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName);
+        var asm = _assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName) ?? LoadByName(assemblyName);
         if (asm == null) return null;
 
         var container = new ReflectionResolvedAssembly(asm);
@@ -132,6 +132,25 @@ public class ReflectionTypeResolver : ITypeResolver
         _resolvedAssemblies.Add(container);
         EnsureXmlDefinitionAssemblyAdded(container, xmlNamespace);
         return container;
+    }
+
+    private Assembly LoadByName(string assemblyName)
+    {
+        if (string.IsNullOrEmpty(assemblyName))
+        {
+            return null;
+        }
+
+        try
+        {
+            var assembly = Assembly.Load(new AssemblyName(assemblyName));
+            _assemblies.Add(assembly);
+            return assembly;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public IResolvedAssembly FindAssemblyByNamespace(string targetNamespace)
