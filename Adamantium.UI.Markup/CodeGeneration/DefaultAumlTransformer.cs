@@ -818,7 +818,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         if (resolvedRoot == null) return null;
 
         var rootType = typeResolver.Resolve(resolvedRoot.GetFullTypeName());
-        if (rootType is not { EntityType: EntityType.Window or EntityType.View or EntityType.Page
+        if (rootType is not { EntityType: EntityType.Window or EntityType.View
                               or EntityType.UIApplication or EntityType.ThemeVariant })
             return null;
 

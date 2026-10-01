@@ -128,7 +128,6 @@ public class ReflectionResolvedType : IResolvedType
         get
         {
             if (ImplementsInterface("IWindow")) return EntityType.Window;
-            if (ImplementsInterface("IPage")) return EntityType.Page;
             if (ImplementsInterface("IView")) return EntityType.View;
             if (ImplementsInterface("IUIApplication")) return EntityType.UIApplication;
             if (ImplementsInterface("ITheme")) return EntityType.Theme;

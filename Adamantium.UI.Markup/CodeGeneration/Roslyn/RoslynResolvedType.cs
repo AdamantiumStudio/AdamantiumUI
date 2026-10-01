@@ -240,10 +240,6 @@ public class RoslynResolvedType : IResolvedType
             {
                 return EntityType.Window;
             }
-            else if (ImplementsInterface("IPage"))
-            {
-                return EntityType.Page;
-            }
             else if (ImplementsInterface("IView"))
             {
                 return EntityType.View;

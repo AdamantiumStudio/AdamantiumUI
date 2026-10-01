@@ -4,7 +4,6 @@
     {
         Unknown,
         Window,
-        Page,
         View,
         Theme,
         UIApplication,
