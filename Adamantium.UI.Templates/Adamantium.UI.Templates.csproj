@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The dotnet new templates: "dotnet new install Adamantium.UI.Templates", after which Rider and Visual Studio list
+         them in New Project too. Nothing is compiled here; the package carries the folders under content/ only. -->
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <PackageId>Adamantium.UI.Templates</PackageId>
+        <PackageType>Template</PackageType>
+        <IsPackable>true</IsPackable>
+        <Description>Project templates for Adamantium UI. dotnet new adamantium-app creates a desktop application: a window in AUML markup and its view-model.</Description>
+        <PackageTags>adamantium;ui;auml;mvvm;templates;dotnet-new</PackageTags>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <EnableDefaultItems>false</EnableDefaultItems>
+        <!-- Else .template.config, which starts with a dot, is left out of the package. -->
+        <NoDefaultExcludes>true</NoDefaultExcludes>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackTemplateProjects</TargetsForTfmSpecificContentInPackage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Into a folder path NuGet writes a file under its RecursiveDir, so "content" is enough. -->
+        <None Include="content\**" Exclude="content\**\bin\**;content\**\obj\**;content\**\*.csproj" Pack="true" PackagePath="content" />
+        <TemplateProject Include="content\**\*.csproj" Exclude="content\**\bin\**;content\**\obj\**" PackagePath="content\%(RecursiveDir)" />
+    </ItemGroup>
+
+    <!-- A created project references the UI of this release: the version is written into the template's projects when
+         they are packed, so it is the one in Directory.Build.props and not a second number to keep in step. -->
+    <Target Name="PackTemplateProjects">
+        <WriteLinesToFile File="$(IntermediateOutputPath)%(TemplateProject.Identity)"
+                          Lines="$([MSBuild]::Escape($([System.IO.File]::ReadAllText('%(TemplateProject.FullPath)').Replace('ADAMANTIUM_UI_VERSION', '$(PackageVersion)').TrimEnd())))"
+                          Overwrite="true"
+                          WriteOnlyWhenDifferent="true" />
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="@(TemplateProject->'$(IntermediateOutputPath)%(Identity)')" />
+        </ItemGroup>
+    </Target>
+
+</Project>

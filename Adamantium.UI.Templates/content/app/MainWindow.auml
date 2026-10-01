@@ -1,0 +1,13 @@
+<Window xmlns="http://adamantium/ui"
+        xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns:vm="clr-namespace:AdamantiumApp.ViewModels"
+        x:ViewModel="{x:Type vm:MainWindowViewModel}"
+        x:CreateInDesignTime="True"
+        Title="AdamantiumApp"
+        Width="800"
+        Height="450">
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="{Binding Greeting}" FontSize="24" HorizontalAlignment="Center"/>
+        <Button Content="Click me" Command="{Binding ClickCommand}" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+    </StackPanel>
+</Window>

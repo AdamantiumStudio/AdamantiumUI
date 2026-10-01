@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Adamantium Studio",
+  "classifications": [ "Desktop", "Adamantium", "MVVM" ],
+  "identity": "Adamantium.UI.App.CSharp",
+  "groupIdentity": "Adamantium.UI.App",
+  "name": "Adamantium UI Application",
+  "description": "A desktop application on Adamantium UI: a window in AUML markup and its view-model.",
+  "shortName": "adamantium-app",
+  "sourceName": "AdamantiumApp",
+  "defaultName": "AdamantiumApp1",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "theme": {
+      "type": "parameter",
+      "datatype": "choice",
+      "displayName": "Theme",
+      "description": "The theme the application opens on.",
+      "choices": [
+        { "choice": "Fluent", "displayName": "Fluent", "description": "Fluent design, light and dark" },
+        { "choice": "EditorPro", "displayName": "Editor Pro", "description": "An editor's dense look: small type, tight radii, dark and light" },
+        { "choice": "macOS", "displayName": "macOS", "description": "The macOS look, light and dark" }
+      ],
+      "defaultValue": "Fluent",
+      "replaces": "THEME_NAME"
+    }
+  },
+  "primaryOutputs": [
+    { "path": "AdamantiumApp.csproj" }
+  ]
+}
