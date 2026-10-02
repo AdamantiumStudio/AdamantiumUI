@@ -1419,6 +1419,8 @@ public class CodeGenerationContext
         }
 
         public ResolvedMemberKind MemberKind => ResolvedMemberKind.Property;
+        public bool IsStatic => false;
+        public bool IsPublic => true;
         public IResolvedType MemberType => new StubResolvedType();
         public IResolvedType DeclaringType => new StubResolvedType();
     }

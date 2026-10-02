@@ -31,10 +31,12 @@
   <!-- What the designer runs on, written by every build into obj, where the IDE finds it from the project folder: the
        designer host this package carries, and the output the build has just made. The host runs on the project's own
        dependency list, so it previews with the very engine and UI the application runs on. A library has no runtime
-       configuration and keeps its packages in the package folder, so that is named too. -->
+       configuration and keeps its packages in the package folder, so that is named too. AdamantiumDesignerHost names
+       another host: the one built from source, for a project on the UI's checkout. -->
   <Target Name="WriteAdamantiumDesignerManifest" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
-      <_AdamantiumDesignerHost>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\designer\Adamantium.UI.Designer.Host.dll'))</_AdamantiumDesignerHost>
+      <_AdamantiumDesignerHost Condition="'$(AdamantiumDesignerHost)' != ''">$([System.IO.Path]::GetFullPath('$(AdamantiumDesignerHost)'))</_AdamantiumDesignerHost>
+      <_AdamantiumDesignerHost Condition="'$(AdamantiumDesignerHost)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\designer\Adamantium.UI.Designer.Host.dll'))</_AdamantiumDesignerHost>
       <_AdamantiumDesignerDeps Condition="'$(ProjectDepsFilePath)' != ''">$([System.IO.Path]::GetFullPath('$(ProjectDepsFilePath)'))</_AdamantiumDesignerDeps>
       <_AdamantiumDesignerRuntimeConfig Condition="'$(ProjectRuntimeConfigFilePath)' != ''">$([System.IO.Path]::GetFullPath('$(ProjectRuntimeConfigFilePath)'))</_AdamantiumDesignerRuntimeConfig>
       <_AdamantiumDesignerPackages Condition="'$(NuGetPackageRoot)' != ''">$([System.IO.Path]::GetFullPath('$(NuGetPackageRoot)'))</_AdamantiumDesignerPackages>

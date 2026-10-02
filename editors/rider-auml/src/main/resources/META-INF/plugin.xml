@@ -23,8 +23,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <p>The Adamantium UI project templates for File | New Solution: Rider offers to install them when they are
-        missing, and Tools | Install Adamantium UI Templates installs or updates them any time.</p>
+        <p>Completion for the x: directives: x:Null, x:Static and x:Type after an opening brace; inside {x:Static} a
+        type and then its static fields and properties; the values of x:Load, x:Shared, x:CreateInDesignTime and
+        x:KeepAlive.</p>
     ]]></change-notes>
 
     <!-- Declaration order matters: platform + xml, then lsp4ij, then the extensions below. -->

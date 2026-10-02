@@ -35,7 +35,7 @@ public sealed class CompletionEngine
             AumlCompletionKind.ElementName => CompleteElements(ctx, namespaces),
             AumlCompletionKind.AttributeName => CompleteAttributes(ctx, namespaces, text, offset),
             AumlCompletionKind.AttributeValue => CompleteValues(ctx, namespaces, text, offset, documentPath),
-            AumlCompletionKind.MarkupExtensionName => CompleteMarkupExtensionName(ctx, text, offset),
+            AumlCompletionKind.MarkupExtensionName => CompleteMarkupExtensionName(ctx, namespaces, text, offset),
             AumlCompletionKind.MarkupExtensionArg => CompleteMarkupExtensionArg(ctx, namespaces, text, offset),
             _ => []
         };
@@ -44,15 +44,37 @@ public sealed class CompletionEngine
     // After '{': offer the available markup-extension names (TemplateBinding, ResourceReference, …). ReplaceBack only
     // covers the partial name typed after '{' (so the '{' is preserved, not eaten by the client's word guess), and the
     // snippet closes the brace + drops the caret where the argument goes: "{Binding |}".
-    private IReadOnlyList<AumlCompletionItem> CompleteMarkupExtensionName(AumlCompletionContext ctx, string text, int offset)
+    private IReadOnlyList<AumlCompletionItem> CompleteMarkupExtensionName(
+        AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset)
     {
         // Don't append a closing brace when the editor already auto-paired one right after the caret ("{Th|}") - that
         // extra '}' is exactly what produced the annoying "{ThemeResource }}".
         var closeBrace = offset < text.Length && text[offset] == '}' ? "" : "}";
-        return _model.GetMarkupExtensions()
+        var items = _model.GetMarkupExtensions()
             .Where(n => Matches(n, ctx.Prefix))
             .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Element, InsertText: n + " $0" + closeBrace, ReplaceBack: ctx.Prefix.Length))
             .ToList();
+
+        var xPrefix = namespaces.FirstOrDefault(n => n.Value == AumlXDirectives.Xmlns).Key;
+        if (xPrefix == null)
+        {
+            return items;
+        }
+
+        foreach (var directive in AumlDirectives.All.Where(d => d.Usage == AumlDirectiveUsage.Value))
+        {
+            var name = $"{xPrefix}:{directive.Name}";
+            if (!Matches(name, ctx.Prefix))
+            {
+                continue;
+            }
+
+            var insert = directive.Name == AumlDirectives.Null ? name + closeBrace : name + " $0" + closeBrace;
+            items.Add(new AumlCompletionItem(name, AumlCompletionItemKind.Directive, directive.Description,
+                InsertText: insert, ReplaceBack: ctx.Prefix.Length));
+        }
+
+        return items;
     }
 
     // Completes arguments of any "{Name arg}" extension: named arguments from its properties, values by type; extensions
@@ -100,7 +122,7 @@ public sealed class CompletionEngine
     private static bool IsPositionalValueExtension(string extLocal) =>
         extLocal is "TemplateBinding" or "TemplateBindingExtension" or "Type" or "TypeExtension"
             or "ResourceReference" or "ResourceReferenceExtension"
-            or "ThemeResource" or "ThemeResourceExtension";
+            or "ThemeResource" or "ThemeResourceExtension" or AumlDirectives.Static;
 
     /// <summary>Completes the VALUE of a markup-extension argument from the appropriate external source. Special
     /// extensions are dispatched by name (TemplateBinding -> the ControlTemplate TargetType's properties; x:Type ->
@@ -123,6 +145,9 @@ public sealed class CompletionEngine
 
         if (extLocal is "Type" or "TypeExtension")
             return CompleteTypeNames(partial, namespaces);
+
+        if (extLocal is AumlDirectives.Static)
+            return CompleteStaticMembers(partial, namespaces);
 
         // Resource keys (ResourceReference): no resource index in the type model yet -> nothing to offer.
         if (extLocal is "ResourceReference" or "ResourceReferenceExtension")
@@ -156,6 +181,36 @@ public sealed class CompletionEngine
         return values
             .Where(v => Matches(v, partial))
             .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propType.Name, ReplaceBack: partial.Length))
+            .ToList();
+    }
+
+    private IReadOnlyList<AumlCompletionItem> CompleteStaticMembers(string partial, IReadOnlyDictionary<string, string> namespaces)
+    {
+        var dot = partial.LastIndexOf('.');
+        if (dot < 0)
+        {
+            return CompleteTypeNames(partial, namespaces);
+        }
+
+        var (prefix, typeName) = SplitName(partial[..dot]);
+        var memberPartial = partial[(dot + 1)..];
+        var names = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        for (var type = ResolveType(prefix, typeName, namespaces); type != null; type = type.BaseType)
+        {
+            foreach (var member in type.Members)
+            {
+                if (member.IsStatic && member.IsPublic &&
+                    member.MemberKind is Adamantium.UI.Markup.CodeGeneration.ResolvedMemberKind.Field
+                        or Adamantium.UI.Markup.CodeGeneration.ResolvedMemberKind.Property &&
+                    Matches(member.Name, memberPartial))
+                {
+                    names.TryAdd(member.Name, member.MemberType?.Name);
+                }
+            }
+        }
+
+        return names
+            .Select(n => new AumlCompletionItem(n.Key, AumlCompletionItemKind.Value, n.Value, ReplaceBack: memberPartial.Length))
             .ToList();
     }
 
@@ -348,6 +403,14 @@ public sealed class CompletionEngine
         if (IsTypeReferenceDirective(ctx.AttributeName, namespaces))
             return CompleteTypeNames(ctx.Prefix, namespaces);
 
+        if (XDirective(ctx.AttributeName, namespaces) is { Values.Count: > 0 } directive)
+        {
+            return directive.Values
+                .Where(v => Matches(v, ctx.Prefix))
+                .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, ctx.AttributeName))
+                .ToList();
+        }
+
         // StrokeDashSymbols: a space-separated sequence of glyph names. Offer the names declared in this element's
         // StrokeDashGlyphs (plus the built-in Dash/Dot), completing the token after the last space.
         if (string.Equals(ctx.AttributeName, "StrokeDashSymbols", StringComparison.Ordinal))
@@ -448,14 +511,23 @@ public sealed class CompletionEngine
 
     // True when the attribute is an x: directive whose value names a CLR type (x:ViewModel), per the single-source
     // registry AumlDirectives. Lets the plain "prefix:Type" value complete types, like inside {x:Type}.
-    private static bool IsTypeReferenceDirective(string attributeName, IReadOnlyDictionary<string, string> namespaces)
+    private static bool IsTypeReferenceDirective(string attributeName, IReadOnlyDictionary<string, string> namespaces) =>
+        XDirective(attributeName, namespaces) is { IsTypeReference: true };
+
+    private static AumlDirectiveInfo XDirective(string attributeName, IReadOnlyDictionary<string, string> namespaces)
     {
-        if (string.IsNullOrEmpty(attributeName)) return false;
-        int colon = attributeName.IndexOf(':');
-        if (colon < 0) return false;
-        if (!namespaces.TryGetValue(attributeName[..colon], out var ns) || ns != AumlXDirectives.Xmlns) return false;
-        var local = attributeName[(colon + 1)..];
-        return AumlDirectives.All.Any(d => d.Name == local && d.IsTypeReference);
+        if (string.IsNullOrEmpty(attributeName))
+        {
+            return null;
+        }
+
+        var colon = attributeName.IndexOf(':');
+        if (colon < 0 || !namespaces.TryGetValue(attributeName[..colon], out var ns) || ns != AumlXDirectives.Xmlns)
+        {
+            return null;
+        }
+
+        return AumlDirectives.Find(attributeName[(colon + 1)..]);
     }
 
     // Properties whose markup value is a file path (the engine converts the string to the real resource on load).

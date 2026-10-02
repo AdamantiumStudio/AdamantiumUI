@@ -604,17 +604,16 @@ public class DefaultAumlTransformer : IAumlTransformer
                     }
                     else if (directive.Name == AumlDirectives.KeepAlive && directive.ParentNode == document.Root)
                     {
-                        // Only one of three answers means anything, so a fourth is a build error rather than a value
-                        // silently read as the default.
                         var mode = (directive.Value as AumlAstTextNode)?.Text?.Trim();
-                        if (mode is "Disabled" or "Enabled" or "Required")
+                        var modes = AumlDirectives.Find(AumlDirectives.KeepAlive).Values;
+                        if (mode != null && modes.Contains(mode))
                         {
                             container.RootKeepAlive = mode;
                         }
                         else
                         {
                             diagnostics.ReportError(document.FileName,
-                                $"x:KeepAlive expects Disabled, Enabled or Required, got '{mode}'. {directive.GetLineInfo()}");
+                                $"x:KeepAlive expects {string.Join(", ", modes)}, got '{mode}'. {directive.GetLineInfo()}");
                         }
                     }
                     else if (directive.Name == AumlDirectives.Load)

@@ -1,0 +1,39 @@
+<Project>
+
+  <!-- For a project in another repository that builds on this checkout instead of the Adamantium.UI package: the same
+       references, generators and build steps the package gives, so a change here reaches it on its next build. Import it
+       in place of the PackageReference. The engine comes the way this repository takes it: from ../AdamantiumEngine when
+       it is there, otherwise from its packages. -->
+  <PropertyGroup>
+    <_AdamantiumUIDir>$(MSBuildThisFileDirectory)</_AdamantiumUIDir>
+    <_AdamantiumUIEngineDir>$(MSBuildThisFileDirectory)..\AdamantiumEngine\</_AdamantiumUIEngineDir>
+    <_AdamantiumUIEngineSource Condition="'$(UseEngineSource)' != ''">$(UseEngineSource)</_AdamantiumUIEngineSource>
+    <_AdamantiumUIEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(_AdamantiumUIEngineDir)'))</_AdamantiumUIEngineSource>
+    <AdamantiumDesignerHost>$(_AdamantiumUIDir)artifacts\designer-host\$(Configuration)\net10.0\Adamantium.UI.Designer.Host.dll</AdamantiumDesignerHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(_AdamantiumUIDir)Adamantium.UI\Adamantium.UI.csproj" />
+    <ProjectReference Include="$(_AdamantiumUIDir)Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(_AdamantiumUIDir)Adamantium.UI.Designer.Host\Adamantium.UI.Designer.Host.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- A project reference hands its consumer no analyzers: the MVVM generator, which the packages carry to it, is named
+       here. From the engine's packages it arrives through Adamantium.UI's own reference. -->
+  <ItemGroup Condition="'$(_AdamantiumUIEngineSource)' == 'true'">
+    <ProjectReference Include="$(_AdamantiumUIEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- The AUML generator and the assemblies it loads, asked of the generator project: the set the package carries. -->
+  <Target Name="AdamantiumAumlAnalyzersFromSource" BeforeTargets="CoreCompile">
+    <MSBuild Projects="$(_AdamantiumUIDir)Adamantium.UI.Generators\Adamantium.UI.Generators.csproj"
+             Targets="GetAumlAnalyzerAssemblies"
+             Properties="Configuration=$(Configuration)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier">
+      <Output TaskParameter="TargetOutputs" ItemName="Analyzer" />
+    </MSBuild>
+  </Target>
+
+  <Import Project="$(_AdamantiumUIDir)Adamantium.UI\buildTransitive\Adamantium.UI.targets" />
+
+</Project>

@@ -56,6 +56,10 @@ public class RoslynResolvedMember : IResolvedMember
         };
     }
 
+    public bool IsStatic => _symbol.IsStatic;
+
+    public bool IsPublic => _symbol.DeclaredAccessibility == Accessibility.Public;
+
     public ResolvedMemberKind MemberKind =>
         _symbol.Kind switch
         {
