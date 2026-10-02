@@ -244,4 +244,36 @@ public class PaneHostTests
 
         Assert.That(a.Bounds.Width, Is.EqualTo(150).Within(0.5), "saying nothing means one share of the leftovers");
     }
+
+    /// <summary>An Auto row, a StackPanel or a ScrollViewer offers infinity: the host answers with what its children
+    /// need - a star its own size, a fixed pane its pixels - plus the dividers.</summary>
+    [Test]
+    public void UnboundedAlongTheRow_MeasuresToWhatTheChildrenNeed()
+    {
+        var split = new PaneHost { Orientation = Orientation.Vertical, DividerThickness = 4 };
+        var top = Star();
+        top.Height = 30;
+        split.Children.Add(top);
+        split.Children.Add(Fixed(50));
+
+        split.Measure(new Size(200, double.PositiveInfinity));
+
+        Assert.That(split.DesiredSize, Is.EqualTo(new Size(200, 84)));
+    }
+
+    [Test]
+    public void UnboundedAcrossTheRow_MeasuresToTheTallestChild()
+    {
+        var split = new PaneHost { Orientation = Orientation.Horizontal, DividerThickness = 4 };
+        var left = Star();
+        left.Height = 30;
+        var right = Star();
+        right.Height = 70;
+        split.Children.Add(left);
+        split.Children.Add(right);
+
+        split.Measure(new Size(400, double.PositiveInfinity));
+
+        Assert.That(split.DesiredSize, Is.EqualTo(new Size(400, 70)));
+    }
 }

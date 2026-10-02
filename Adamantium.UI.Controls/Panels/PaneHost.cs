@@ -94,11 +94,13 @@ public class PaneHost : Panel, IPaneMinimum
         var total = horizontal ? availableSize.Width : availableSize.Height;
         var across = horizontal ? availableSize.Height : availableSize.Width;
 
+        if (double.IsInfinity(total))
+        {
+            return MeasureUnbounded(horizontal, across);
+        }
+
         var along = SpaceForChildren(total);
 
-        // An Auto child is asked how much it needs BEFORE the space is handed out, because its answer is what it gets -
-        // exactly as a Grid measures an Auto row first. Reading DesiredSize without this asks about the PREVIOUS pass,
-        // so a pane that has just been collapsed keeps the height it had until something else forces another layout.
         foreach (var child in Children)
         {
             if (child is PaneSplitter || !GetPaneLength(child).IsAuto) continue;
@@ -113,13 +115,65 @@ public class PaneHost : Panel, IPaneMinimum
         var placed = 0;
         foreach (var child in Children)
         {
-            // A splitter measures to the gap it will occupy, not to a share of the content.
             var size = child is PaneSplitter ? DividerThickness : _sizes[placed++];
             child.Measure(horizontal ? new Size(size, across) : new Size(across, size));
         }
 
-        return availableSize;
+        return Fit(horizontal, total, across);
     }
+
+    private Size MeasureUnbounded(bool horizontal, double across)
+    {
+        var along = Math.Max(0, ContentCount - 1) * DividerThickness;
+
+        foreach (var child in Children)
+        {
+            if (child is PaneSplitter)
+            {
+                child.Measure(horizontal ? new Size(DividerThickness, across) : new Size(across, DividerThickness));
+                continue;
+            }
+
+            var length = GetPaneLength(child);
+            var extent = length.IsPixel ? length.Value : double.PositiveInfinity;
+            child.Measure(horizontal ? new Size(extent, across) : new Size(across, extent));
+
+            var desired = DesiredOf(child);
+            along += length.IsPixel ? length.Value : horizontal ? desired.Width : desired.Height;
+        }
+
+        return Fit(horizontal, along, across);
+    }
+
+    private Size Fit(bool horizontal, double along, double across)
+    {
+        if (double.IsInfinity(across))
+        {
+            across = WidestAcross(horizontal);
+        }
+
+        return horizontal ? new Size(along, across) : new Size(across, along);
+    }
+
+    private double WidestAcross(bool horizontal)
+    {
+        var widest = 0.0;
+        foreach (var child in Children)
+        {
+            if (child is PaneSplitter)
+            {
+                continue;
+            }
+
+            var desired = DesiredOf(child);
+            widest = Math.Max(widest, horizontal ? desired.Height : desired.Width);
+        }
+
+        return widest;
+    }
+
+    private static Size DesiredOf(IUIComponent child) =>
+        child is IMeasurableComponent measurable ? measurable.DesiredSize : default;
 
     protected override Size ArrangeOverride(Size finalSize)
     {

@@ -70,7 +70,6 @@ public class DockingArea : Panel
         EnsureLayout(fromLayoutPass: true);
         FollowWindowActivation(HostWindow);
 
-        // Strips first, each asked what it needs across its own edge; the rest is the tree's.
         var left = MeasureBar(DockZone.Left, availableSize);
         var right = MeasureBar(DockZone.Right, availableSize);
         var top = MeasureBar(DockZone.Top, availableSize);
@@ -81,7 +80,11 @@ public class DockingArea : Panel
             System.Math.Max(0, availableSize.Height - top - bottom));
 
         _tree?.Measure(middle);
-        return availableSize;
+
+        var tree = _tree == null ? default : _tree.DesiredSize;
+        return new Size(
+            double.IsInfinity(availableSize.Width) ? left + right + tree.Width : availableSize.Width,
+            double.IsInfinity(availableSize.Height) ? top + bottom + tree.Height : availableSize.Height);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
