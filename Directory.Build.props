@@ -27,8 +27,9 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
-  <!-- One version for every package of the UI, as in the engine: they are built together and move together. A release
-       sets the suffix: dotnet pack -p:VersionSuffix=alpha.2 -->
+  <!-- One version for every package of the UI, as in the engine: they are built together and move together. The only
+       place it is set: a release changes it here, in the change it ships with, and the publish workflow packs what it
+       says. An empty suffix is a stable release. -->
   <PropertyGroup>
     <VersionPrefix>0.1.0</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
@@ -73,7 +74,7 @@
        version. -p:UseEngineSource=false builds against the packages even with the engine beside. -->
   <PropertyGroup>
     <UseEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(AdamantiumEngineDir)'))</UseEngineSource>
-    <AdamantiumEngineVersion>0.1.0-alpha</AdamantiumEngineVersion>
+    <AdamantiumEngineVersion>0.1.0-alpha.2</AdamantiumEngineVersion>
   </PropertyGroup>
 
 </Project>
