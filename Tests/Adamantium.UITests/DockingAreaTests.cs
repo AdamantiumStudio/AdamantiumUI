@@ -199,4 +199,30 @@ public class DockingAreaTests
             Assert.That(only.Bounds.Height, Is.EqualTo(480).Within(0.5));
         });
     }
+
+    /// <summary>An area left in a Grid's Auto row is offered infinite height: it measures to what it holds instead of
+    /// throwing "Invalid size returned for Measure".</summary>
+    [Test]
+    public void InAnAutoRow_TheAreaMeasuresToWhatItHolds()
+    {
+        var area = new DockingArea { DividerThickness = 4 };
+        area.Children.Add(Group("scene", DockZone.Center));
+        area.Children.Add(Group("inspector", DockZone.Right, 240));
+        area.Children.Add(Group("console", DockZone.Bottom, 160));
+
+        var grid = new Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        grid.Children.Add(area);
+
+        grid.Measure(new Size(1000, 800));
+        grid.Arrange(new Rect(0, 0, 1000, 800));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(area.DesiredSize.Width, Is.EqualTo(1000));
+            Assert.That(area.DesiredSize.Height, Is.GreaterThanOrEqualTo(164).And.LessThan(800),
+                "the console's 160 pixels and its divider, and no more than the grid has");
+        });
+    }
 }
