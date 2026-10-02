@@ -1,14 +1,28 @@
 <idea-plugin>
     <id>com.adamantium.auml</id>
     <name>Adamantium AUML</name>
-    <version>0.2.0</version>
-    <vendor>Adamantium</vendor>
+    <vendor email="adamantiumdev@gmail.com" url="https://github.com/AdamantiumStudio">Adamantium Studio</vendor>
 
     <description><![CDATA[
-        Language support for Adamantium UI markup (<code>.auml</code>): XML-based syntax highlighting,
-        plus type-aware completion and diagnostics via the Adamantium AUML language server.
-        Requires the LSP4IJ plugin (installed automatically as a dependency).
+        <p>Editing support for AUML, the markup of Adamantium UI (<code>.auml</code> files), with a live preview drawn
+        by the framework itself.</p>
+        <ul>
+            <li><b>Live preview</b> beside or below the markup, rendered from the application's own build in its own
+            theme. It follows edits as you type and plays animations; a click on an element selects it and moves the
+            caret to its line, and Go to Source opens the file a nested view was declared in.</li>
+            <li><b>Completion, diagnostics and go to definition</b> from the AUML language server, which knows the
+            types of the project and its packages.</li>
+            <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, themes, style sets and
+            resource dictionaries.</li>
+        </ul>
+        <p><b>Requirements:</b> the .NET 10 SDK and a project that references the <code>Adamantium.UI</code> NuGet
+        package. The preview runs the designer that package carries on the project's own build, so build the project
+        once before previewing. LSP4IJ is installed with this plugin.</p>
     ]]></description>
+
+    <change-notes><![CDATA[
+        <p>First public release.</p>
+    ]]></change-notes>
 
     <!-- Declaration order matters: platform + xml, then lsp4ij, then the extensions below. -->
     <depends>com.intellij.modules.platform</depends>

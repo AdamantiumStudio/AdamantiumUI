@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.adamantium"
-version = "1.3.2"
+version = "1.3.3"
 
 repositories {
     mavenCentral()
@@ -35,6 +35,12 @@ intellijPlatform {
             sinceBuild = providers.gradleProperty("sinceBuild")
             untilBuild = provider { null }   // don't cap the upper IDE version
         }
+    }
+
+    // `publishPlugin` uploads to JetBrains Marketplace with a token from the Marketplace profile (My Tokens). The first
+    // version of a plugin cannot be published this way: it is uploaded by hand on the site.
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
     }
 }
 
@@ -91,8 +97,9 @@ tasks.processResources {
 
 // --- Live preview host ------------------------------------------------------------------------
 // Point the AUML live preview at the locally built designer host so `runIde` works without manual
-// setup. AumlPreviewService also honors the ADAMANTIUM_DESIGNER_HOST env var if you set it yourself
-// (needed when installing the built plugin into a real Rider rather than the runIde sandbox).
+// setup. A project on the Adamantium.UI package needs nothing: its build tells the plugin where the
+// packaged host is. ADAMANTIUM_DESIGNER_HOST is for projects on the UI's own sources, in a real Rider
+// as well as in the runIde sandbox.
 val designerHostExe = listOf("Debug", "Release")
     .map { file("../../artifacts/designer-host/$it/net10.0/Adamantium.UI.Designer.Host.exe") }
     .firstOrNull { it.exists() }

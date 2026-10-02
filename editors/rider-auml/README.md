@@ -55,3 +55,22 @@ diagnostics should work — **no manual file-type or server configuration**.
   `Adamantium.UI.LanguageServer.exe` to skip the bundled copy.
 - After changing the server, rebuild the plugin (the publish reruns) and bump its version. The cached copy
   is keyed by the plugin version and the bundled server's content hash, so it is re-extracted by itself.
+
+## Live preview
+
+- A project on the **`Adamantium.UI` package** needs no setup. Every build writes `obj/adamantium.designer.json`,
+  which names the designer host the package carries and the project's own build output. The plugin runs that host
+  with `dotnet exec` on the project's dependency list, from a copy of the output, so the build is never locked. Build
+  the project once before the first preview.
+- A project on the **UI's own sources** has no such file. Set `ADAMANTIUM_DESIGNER_HOST` to a built
+  `Adamantium.UI.Designer.Host.exe`. The `runIde` sandbox sets it by itself.
+
+## Publishing to JetBrains Marketplace
+
+1. **First version, by hand.** Sign in to plugins.jetbrains.com and upload `build/distributions/adamantium-auml-<version>.zip`
+   under the Adamantium Studio organization. JetBrains reviews a new plugin before it appears.
+2. **Later versions.** Create a token in the Marketplace profile (My Tokens), then run
+   `PUBLISH_TOKEN=<token> ./gradlew publishPlugin`.
+
+Update `<change-notes>` in `plugin.xml` for every published version: Marketplace shows them on the plugin page and in
+the IDE's update dialog.
