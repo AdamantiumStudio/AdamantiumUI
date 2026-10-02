@@ -35,6 +35,22 @@ public class ReflectionResolvedMember : IResolvedMember
         _ => false
     };
 
+    public bool IsStatic => _member switch
+    {
+        FieldInfo f => f.IsStatic,
+        PropertyInfo p => (p.GetMethod ?? p.SetMethod)?.IsStatic == true,
+        MethodBase m => m.IsStatic,
+        _ => false
+    };
+
+    public bool IsPublic => _member switch
+    {
+        FieldInfo f => f.IsPublic,
+        PropertyInfo p => p.GetMethod?.IsPublic == true,
+        MethodBase m => m.IsPublic,
+        _ => false
+    };
+
     public ResolvedMemberKind MemberKind => _member.MemberType switch
     {
         MemberTypes.Field => ResolvedMemberKind.Field,

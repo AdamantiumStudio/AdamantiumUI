@@ -11,6 +11,10 @@ public interface IResolvedMember
     bool HasAttribute(string attributeMetadataName);
 
     bool HasSetter();
-    
+
+    bool IsStatic { get; }
+
+    bool IsPublic { get; }
+
     ResolvedMemberKind MemberKind { get; }
 }

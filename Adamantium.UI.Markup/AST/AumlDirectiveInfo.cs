@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Adamantium.UI.Markup.AST;
 
 /// <summary>One AUML <c>x:</c> directive: its local name, the description tooling shows, where it may be written, and
@@ -6,12 +8,13 @@ namespace Adamantium.UI.Markup.AST;
 public sealed class AumlDirectiveInfo
 {
     public AumlDirectiveInfo(string name, string description, bool isTypeReference = false,
-        AumlDirectiveUsage usage = AumlDirectiveUsage.Attribute)
+        AumlDirectiveUsage usage = AumlDirectiveUsage.Attribute, IReadOnlyList<string> values = null)
     {
         Name = name;
         Description = description;
         IsTypeReference = isTypeReference;
         Usage = usage;
+        Values = values ?? [];
     }
 
     public string Name { get; }
@@ -21,4 +24,7 @@ public sealed class AumlDirectiveInfo
     public bool IsTypeReference { get; }
 
     public AumlDirectiveUsage Usage { get; }
+
+    /// <summary>The words the value may be, for a directive that takes one of a fixed few; empty otherwise.</summary>
+    public IReadOnlyList<string> Values { get; }
 }
