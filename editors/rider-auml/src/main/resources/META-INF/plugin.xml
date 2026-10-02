@@ -14,6 +14,8 @@
             types of the project and its packages.</li>
             <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, themes, style sets and
             resource dictionaries.</li>
+            <li>The <b>project templates</b> for File | New Solution: offered at startup when missing, and installed or
+            updated any time with <b>Tools | Install Adamantium UI Templates</b>.</li>
         </ul>
         <p><b>Requirements:</b> the .NET 10 SDK and a project that references the <code>Adamantium.UI</code> NuGet
         package. The preview runs the designer that package carries on the project's own build, so build the project
@@ -21,7 +23,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <p>First public release.</p>
+        <p>The Adamantium UI project templates for File | New Solution: Rider offers to install them when they are
+        missing, and Tools | Install Adamantium UI Templates installs or updates them any time.</p>
     ]]></change-notes>
 
     <!-- Declaration order matters: platform + xml, then lsp4ij, then the extensions below. -->
@@ -53,7 +56,14 @@
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>
+        <notificationGroup id="Adamantium AUML" displayType="BALLOON"/>
+        <notificationGroup id="Adamantium AUML templates offer" displayType="STICKY_BALLOON"/>
     </extensions>
+    <!-- At startup, offer to install the project templates when dotnet new has none. -->
+    <applicationListeners>
+        <listener class="com.adamantium.auml.AumlTemplatesOffer"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
+    </applicationListeners>
 
     <!-- "AUML File" entry in the project view's New/Add context menu (kind picker -> bundled template). -->
     <actions>
@@ -62,6 +72,12 @@
                 text="AUML File"
                 description="Creates a new Adamantium UI markup file">
             <add-to-group group-id="NewGroup" anchor="first"/>
+        </action>
+        <action id="Adamantium.InstallTemplates"
+                class="com.adamantium.auml.InstallAumlTemplatesAction"
+                text="Install Adamantium UI Templates"
+                description="Installs or updates the Adamantium UI project templates for File | New Solution">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
 
