@@ -47,7 +47,7 @@ jobs:
             code=false
             while IFS= read -r f; do
               case "$f" in
-                ""|*.md|LICENSE|NOTICE|*icon.png|.gitignore|*.DotSettings|editors/*) ;;
+                ""|*.md|LICENSE|NOTICE|*icon.png|.gitignore|*.DotSettings|editors/*|.github/images/*) ;;
                 *) code=true ;;
               esac
             done < <(git diff --name-only "$range")
@@ -72,12 +72,22 @@ jobs:
 
       # The runners have no GPU: the [Category("Gpu")] tests and Adamantium.UI.GraphicsTests, which renders only, are left
       # out; every other test runs without one.
+      #
+      # The two suites run at once, each in a process of its own; the tests inside a suite stay sequential.
       - name: Test
         if: steps.changes.outputs.code == 'true'
         shell: bash
         run: |
-          dotnet test Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj -c Release --no-build
-          dotnet test Tests/Adamantium.UITests/Adamantium.UITests.csproj -c Release --no-build --filter "TestCategory!=Gpu"
+          dotnet test Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj -c Release --no-build > "$RUNNER_TEMP/xaml.log" 2>&1 &
+          xaml=$!
+          dotnet test Tests/Adamantium.UITests/Adamantium.UITests.csproj -c Release --no-build --filter "TestCategory!=Gpu" > "$RUNNER_TEMP/ui.log" 2>&1 &
+          ui=$!
+          status=0
+          wait $xaml || status=1
+          cat "$RUNNER_TEMP/xaml.log"
+          wait $ui || status=1
+          cat "$RUNNER_TEMP/ui.log"
+          exit $status
 
       - name: Pack
         if: steps.changes.outputs.code == 'true'
