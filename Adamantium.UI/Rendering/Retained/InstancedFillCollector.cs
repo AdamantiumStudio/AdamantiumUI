@@ -1177,7 +1177,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 if (texture == null) continue;
                 brush.InstancesAddress.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
-                brush.SourceSampler.SetResource(_device.SamplerStates.LinearClampToEdge);
+                brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.TextureMeshPass.Apply();
@@ -1273,7 +1273,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 if (seg.RingBuffer == null || texture == null) continue;
                 brush.InstancesAddress.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
-                brush.SourceSampler.SetResource(_device.SamplerStates.LinearClampToEdge);
+                brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
                 _device.SetVertexBuffer(seg.RingBuffer);
                 brush.TextureFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);

@@ -999,7 +999,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         if (texture == null) return null;   // decode still pending - no texture yet, draw nothing until a re-render
         var component = new ImageRenderComponent(GraphicsDevice, UIBasicEffect, mesh, texture, BufferManager)
         {
-            Sampler = GraphicsDevice.SamplerStates.LinearClampToEdge,
+            Sampler = SamplerStates.LinearClampToEdge,
             FrameLayer = layer
         };
         // A live shared surface (universe→panel): sample it directly, and drive the producer/consumer timeline so the

@@ -259,7 +259,7 @@ public class GeometryRenderComponent : UIRenderComponent
         UIBasicEffect.TexRepeat.SetValue(layout.Repeats ? 1f : 0f);
         UIBasicEffect.TexMirror.SetValue(layout.Mirror);
         UIBasicEffect.ShaderTexture.SetResource(texture);
-        UIBasicEffect.SampleType.SetResource(((GraphicsDevice)GraphicsDevice).SamplerStates.LinearClampToEdge);
+        UIBasicEffect.SampleType.SetResource(SamplerStates.LinearClampToEdge);
         UIBasicEffect.BasicTexturedFillPass.Apply();
 
         base.Render();
@@ -332,7 +332,7 @@ public class ImageRenderComponent : UIRenderComponent
             return;
         }
 
-        GraphicsDevice.AddWaitSemaphore(SharedSource.ProduceSemaphore, PipelineStageFlagBits.FragmentShaderBit, latest);
+        GraphicsDevice.AddWaitSemaphore(SharedSource.ProduceSemaphore, PipelineStageFlagBits2.FragmentShaderBit, latest);
         GraphicsDevice.AddSignalSemaphore(SharedSource.ConsumeSemaphore, latest);
     }
 
@@ -409,7 +409,7 @@ public class TextRenderComponent : ImageRenderComponent
         Stroke = stroke;
         _rtWidth = (uint)(mesh.Bounds.Width * TextSupersample);
         _rtHeight = (uint)(mesh.Bounds.Height * TextSupersample);
-        Sampler = GraphicsDevice.SamplerStates.LinearFont;
+        Sampler = SamplerStates.LinearFont;
     }
 
     private readonly uint _rtWidth, _rtHeight;
@@ -502,7 +502,7 @@ public class TextRenderComponent : ImageRenderComponent
         var previousColor = GraphicsDevice.ClearColor;
         // Rasterize the (logical-size) layout RenderScale x larger into the target; the composite minifies it = SSAA.
         FontRenderer.RenderScale = TextSupersample;
-        FontRenderer.SetState(GraphicsDevice.SamplerStates.LinearFont, location, EnsureRenderTarget(), outerPassActive: false);
+        FontRenderer.SetState(SamplerStates.LinearFont, location, EnsureRenderTarget(), outerPassActive: false);
         FontRenderer.DrawLayout(EnsureGlyphVtx(), (uint)GlyphRun.Count, GlyphRun.Atlas, GlyphRun.FontSize, foreground);
         FontRenderer.RestoreState(outerPassActive: false);
         GraphicsDevice.ClearColor = previousColor;
@@ -519,7 +519,7 @@ public class TextRenderComponent : ImageRenderComponent
 
         // The glyphs were rasterized into the private target in PreRender (before the main pass); here we only composite it.
         Texture = EnsureRenderTarget().ResolveTexture;
-        Sampler = GraphicsDevice.SamplerStates.LinearClampToEdge;
+        Sampler = SamplerStates.LinearClampToEdge;
         // The text target holds premultiplied color (the font shaders output rgb*alpha, rendered with a premultiplied
         // blend), so composite it with a premultiplied blend too - a straight AlphaBlend would darken the edges (rim).
         ColorBlendEquation = ColorBlendEquations.Premultiplied;
@@ -538,7 +538,7 @@ public class TextRenderComponent : ImageRenderComponent
         var foreground = ((SolidColorBrush)Foreground).Color;
         FontRenderer.RenderScale = 1f;
         FontRenderer.DrawLayoutDirect(
-            GraphicsDevice.SamplerStates.LinearFont,
+            SamplerStates.LinearFont,
             EnsureGlyphVtx(),
             (uint)GlyphRun.Count,
             GlyphRun.Atlas,

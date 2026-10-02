@@ -83,14 +83,14 @@ internal sealed class BackdropCapture : IDisposable
         _current.ImageLayout = ImageLayout.TransferDstOptimal;
 
         gd.InsertImageMemoryBarrier(commandBuffer, source,
-            AccessFlagBits.ColorAttachmentWriteBit, AccessFlagBits.TransferReadBit,
+            AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.TransferReadBit,
             ImageLayout.ColorAttachmentOptimal, ImageLayout.TransferSrcOptimal,
-            PipelineStageFlagBits.ColorAttachmentOutputBit, PipelineStageFlagBits.TransferBit);
+            PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.AllTransferBit);
 
         gd.InsertImageMemoryBarrier(commandBuffer, _current,
-            AccessFlagBits.ShaderReadBit, AccessFlagBits.TransferWriteBit,
+            AccessFlagBits2.ShaderReadBit, AccessFlagBits2.TransferWriteBit,
             ImageLayout.ShaderReadOnlyOptimal, ImageLayout.TransferDstOptimal,
-            PipelineStageFlagBits.FragmentShaderBit, PipelineStageFlagBits.TransferBit);
+            PipelineStageFlagBits2.FragmentShaderBit, PipelineStageFlagBits2.AllTransferBit);
 
         var blit = new ImageBlit
         {
@@ -116,9 +116,9 @@ internal sealed class BackdropCapture : IDisposable
         BuildPyramid(gd, commandBuffer, _current, (int)w, (int)h);
 
         gd.InsertImageMemoryBarrier(commandBuffer, source,
-            AccessFlagBits.TransferReadBit, AccessFlagBits.ColorAttachmentWriteBit,
+            AccessFlagBits2.TransferReadBit, AccessFlagBits2.ColorAttachmentWriteBit,
             ImageLayout.TransferSrcOptimal, ImageLayout.ColorAttachmentOptimal,
-            PipelineStageFlagBits.TransferBit, PipelineStageFlagBits.ColorAttachmentOutputBit);
+            PipelineStageFlagBits2.AllTransferBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);
 
         source.ImageLayout = ImageLayout.ColorAttachmentOptimal;
         _current.ImageLayout = ImageLayout.ShaderReadOnlyOptimal;
@@ -180,9 +180,9 @@ internal sealed class BackdropCapture : IDisposable
 
         // Level 0 arrives as a transfer destination; it is about to be READ.
         gd.InsertImageMemoryBarrier(commandBuffer, texture,
-            AccessFlagBits.TransferWriteBit, AccessFlagBits.ShaderReadBit,
+            AccessFlagBits2.TransferWriteBit, AccessFlagBits2.ShaderReadBit,
             ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal,
-            PipelineStageFlagBits.TransferBit, PipelineStageFlagBits.FragmentShaderBit,
+            PipelineStageFlagBits2.AllTransferBit, PipelineStageFlagBits2.FragmentShaderBit,
             0, 1);
 
         for (var level = 1u; level < levels; level++)
@@ -191,9 +191,9 @@ internal sealed class BackdropCapture : IDisposable
             var nh = Math.Max(1, h / 2);
 
             gd.InsertImageMemoryBarrier(commandBuffer, texture,
-                AccessFlagBits.None, AccessFlagBits.ColorAttachmentWriteBit,
+                AccessFlagBits2.None, AccessFlagBits2.ColorAttachmentWriteBit,
                 ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal,
-                PipelineStageFlagBits.TopOfPipeBit, PipelineStageFlagBits.ColorAttachmentOutputBit,
+                PipelineStageFlagBits2.TopOfPipeBit, PipelineStageFlagBits2.ColorAttachmentOutputBit,
                 level, 1);
 
             var attachment = new RenderingAttachmentInfo
@@ -221,7 +221,7 @@ internal sealed class BackdropCapture : IDisposable
             gd.SetScissors(info.RenderArea);
 
             _blur.SourceTexture.SetResource(texture);
-            _blur.SourceSampler.SetResource(gd.SamplerStates.LinearClampToEdge);
+            _blur.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
             _blur.BlurStep.SetValue(new Vector4F(level - 1, nw, nh, 0));
             _blur.CaptureBlurDownPass.Apply();
             gd.Draw(3, 1);
@@ -230,9 +230,9 @@ internal sealed class BackdropCapture : IDisposable
 
             // What was just drawn becomes the next step's source.
             gd.InsertImageMemoryBarrier(commandBuffer, texture,
-                AccessFlagBits.ColorAttachmentWriteBit, AccessFlagBits.ShaderReadBit,
+                AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
                 ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
-                PipelineStageFlagBits.ColorAttachmentOutputBit, PipelineStageFlagBits.FragmentShaderBit,
+                PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit,
                 level, 1);
 
             w = nw;

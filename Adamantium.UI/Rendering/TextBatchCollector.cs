@@ -225,7 +225,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
     protected override void DrawSegment(IGraphicsDevice device, Buffer<GlyphItem> buffer, uint count, uint firstInstance, Matrix4x4F projection)
     {
         var stride = (ulong)Marshal.SizeOf<GlyphItem>();
-        _fontRenderer.DrawBatch(device.SamplerStates.LinearFont, _atlas,
+        _fontRenderer.DrawBatch(SamplerStates.LinearFont, _atlas,
             buffer.GetDeviceAddress() + firstInstance * stride, TransformsAddress, count, projection);
     }
 }

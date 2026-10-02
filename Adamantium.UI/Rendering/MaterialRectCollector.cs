@@ -270,15 +270,13 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     public bool BindSource(IGraphicsDevice device, bool wallpaper, Rect2D region, ITexture own, MaterialAnchor anchor,
         EffectParameter texture, EffectParameter sampler, EffectParameter uv)
     {
-        var samplers = ((GraphicsDevice)device).SamplerStates;
-
         // The author's own picture replaces the built-in source: no capture, no desktop. The anchors differ only in the
         // rectangle it is laid over.
         if (own != null)
         {
             uv.SetValue(ToUv(OwnSourceRect(device, anchor)));
             texture.SetResource(own);
-            sampler.SetResource(samplers.LinearClampToEdge);
+            sampler.SetResource(SamplerStates.LinearClampToEdge);
             return true;
         }
 
@@ -296,7 +294,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
             texture.SetResource(picture);
             // Repeat only for a TILED desktop - every other layout places one copy, and repeating it would wrap the
             // picture's far edge into a pane sitting near the screen's border.
-            sampler.SetResource(_wallpaper.Tiles ? samplers.LinearRepeat : samplers.LinearClampToEdge);
+            sampler.SetResource(_wallpaper.Tiles ? SamplerStates.LinearRepeat : SamplerStates.LinearClampToEdge);
             return true;
         }
 
@@ -306,7 +304,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
         uv.SetValue(ToUv(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width, region.Extent.Height)));
         texture.SetResource(_capture.Image);
-        sampler.SetResource(samplers.LinearClampToEdge);
+        sampler.SetResource(SamplerStates.LinearClampToEdge);
         return true;
     }
 

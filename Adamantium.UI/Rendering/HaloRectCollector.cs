@@ -61,7 +61,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
         if (_field != null)
         {
             Effect.SourceTexture.SetResource(_field);
-            Effect.SourceSampler.SetResource(((GraphicsDevice)device).SamplerStates.LinearClampToEdge);
+            Effect.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
         }
 
         base.DrawSegment(device, buffer, count, firstInstance, projection);
