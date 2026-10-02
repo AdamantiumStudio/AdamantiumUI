@@ -5,7 +5,7 @@ same renderer, in the same process, under the same popups, clips and transforms 
 
 > **Alpha.** Windows only for now, and the API will change between releases.
 
-![An engine scene in a RenderTargetPanel: the tool panel on the left, the move gizmo on a selected light, and the light's properties on the right](https://raw.githubusercontent.com/AdamantiumStudio/AdamantiumUI/main/.github/images/hero.png)
+![An engine scene in a RenderTargetPanel: the tool panel on the left, the move gizmo on a selected light, and the light's properties on the right](.github/images/hero.png)
 
 ## What it is for
 
@@ -116,7 +116,7 @@ The same data grid in the three themes:
 
 | Fluent | Editor Pro | macOS |
 |---|---|---|
-| ![The data grid in Fluent](https://raw.githubusercontent.com/AdamantiumStudio/AdamantiumUI/main/.github/images/theme-fluent.png) | ![The data grid in Editor Pro](https://raw.githubusercontent.com/AdamantiumStudio/AdamantiumUI/main/.github/images/theme-editor-pro.png) | ![The data grid in macOS](https://raw.githubusercontent.com/AdamantiumStudio/AdamantiumUI/main/.github/images/theme-macos.png) |
+| ![The data grid in Fluent](.github/images/theme-fluent.png) | ![The data grid in Editor Pro](.github/images/theme-editor-pro.png) | ![The data grid in macOS](.github/images/theme-macos.png) |
 
 ## What is in the box
 

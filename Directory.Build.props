@@ -43,15 +43,11 @@
   </PropertyGroup>
 
   <!-- The README and each package's icon.png travel only when they exist: naming a file that is not packed breaks the
-       pack (NU5039, NU5046). The icons are generated with the studio's brand assets and copied here by their deploy
-       script. -->
+       pack (NU5039, NU5046). The README is packed by Directory.Build.targets. The icons are generated with the studio's
+       brand assets and copied here by their deploy script. -->
   <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)README.md')">
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
-  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)README.md')">
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
-  </ItemGroup>
 
   <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">
     <PackageIcon>icon.png</PackageIcon>
@@ -74,7 +70,7 @@
        version. -p:UseEngineSource=false builds against the packages even with the engine beside. -->
   <PropertyGroup>
     <UseEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(AdamantiumEngineDir)'))</UseEngineSource>
-    <AdamantiumEngineVersion>0.1.0-alpha.2</AdamantiumEngineVersion>
+    <AdamantiumEngineVersion>0.1.0-alpha.3</AdamantiumEngineVersion>
   </PropertyGroup>
 
 </Project>

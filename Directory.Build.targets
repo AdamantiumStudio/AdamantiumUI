@@ -22,4 +22,18 @@
     <Error Text="Pack the UI against the engine packages: dotnet pack -p:UseEngineSource=false" />
   </Target>
 
+  <!-- The README links its images by relative paths, which GitHub shows in a private repository too. nuget.org shows only
+       absolute ones, so the packed copy points them at raw.githubusercontent.com. -->
+  <Target Name="PackReadmeWithAbsoluteImageUrls" BeforeTargets="_GetPackageFiles" Condition="'$(PackageReadmeFile)' != ''">
+    <PropertyGroup>
+      <PackedReadme>$(BaseIntermediateOutputPath)README.md</PackedReadme>
+      <ReadmeImageUrl>$(RepositoryUrl.Replace('https://github.com/', 'https://raw.githubusercontent.com/'))/main/.github/images/</ReadmeImageUrl>
+      <ReadmeText>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)README.md').Replace('](.github/images/', ']($(ReadmeImageUrl)'))</ReadmeText>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(PackedReadme)" Lines="$([MSBuild]::Escape('$(ReadmeText)'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <None Include="$(PackedReadme)" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
+  </Target>
+
 </Project>
