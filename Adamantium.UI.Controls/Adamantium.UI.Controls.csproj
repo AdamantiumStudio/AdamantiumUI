@@ -8,8 +8,8 @@
         <Configurations>Release;Debug</Configurations>
         <Platforms>AnyCPU</Platforms>
         <IsPackable>true</IsPackable>
-        <Description>Controls of Adamantium UI: buttons, text, lists, trees and the data grid, docking, the ribbon, color pickers, a drawing board and an infinite canvas for node graphs.</Description>
-        <PackageTags>adamantium;ui;controls;datagrid;docking;ribbon</PackageTags>
+        <Description>Controls of Adamantium UI: buttons, text, lists and trees, tabs, docking, the ribbon, a tree data grid, a property grid, color pickers, shapes, and an infinite canvas for drawing and node graphs.</Description>
+        <PackageTags>adamantium;ui;controls;datagrid;docking;ribbon;tabs;propertygrid</PackageTags>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

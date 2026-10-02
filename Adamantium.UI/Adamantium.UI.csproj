@@ -11,8 +11,8 @@
 		<LangVersion>latest</LangVersion>
 		<Nullable>disable</Nullable>
 		<IsPackable>true</IsPackable>
-		<Description>Adamantium UI: a .NET UI framework on the Adamantium engine's own Vulkan renderer, where a 3D scene and the interface around it are drawn by one renderer in one process. The package to reference: it brings the controls, the themes, AUML markup with its code generator, and MVVM with its generator.</Description>
-		<PackageTags>adamantium;ui;vulkan;3d;xaml;auml;mvvm</PackageTags>
+		<Description>Adamantium UI: a .NET UI framework for desktop applications on its own Vulkan renderer - controls up to docking, a ribbon, a tree data grid and an infinite canvas; AUML markup compiled to C#; styles and live themes; MVVM and navigation; and a 3D scene as an element of the markup. The package to reference: it brings the controls, the themes, the AUML code generator and MVVM with its generator.</Description>
+		<PackageTags>adamantium;ui;desktop;vulkan;3d;xaml;auml;mvvm</PackageTags>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
