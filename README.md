@@ -28,7 +28,7 @@ renderer as the interface around it.
   and with other applications.
 - **[A 3D scene in the markup](#a-3d-scene-in-the-markup)** - an engine scene as an element of the tree, with no
   airspace and no copy of the frame.
-- **[Tooling](#tooling)** - `dotnet new` templates, a Rider plugin with a live preview, a Visual Studio Code extension.
+- **[Tooling](#tooling)** - `dotnet new` templates and a Rider plugin with a live preview.
 
 ## Controls
 
@@ -233,7 +233,9 @@ scene comes from the engine the interface is drawn with, and its panel is an ele
 - **Rider:** the *Adamantium AUML* plugin adds a live preview beside the markup, drawn by the framework itself from the
   project's own build and in its own theme, plus completion, diagnostics and go to definition.
   <!-- TODO: link the plugin's JetBrains Marketplace page once it is published. -->
-- **Visual Studio Code:** an extension with completion and diagnostics.
+- **Visual Studio Code:** an extension with completion and diagnostics is in
+  [`editors/vscode-auml`](https://github.com/AdamantiumStudio/AdamantiumUI/tree/main/editors/vscode-auml); it is not in
+  the marketplace yet.
 
 ## Getting started
 
