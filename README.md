@@ -1,5 +1,9 @@
 # Adamantium UI
 
+[![CI](https://github.com/AdamantiumStudio/AdamantiumUI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AdamantiumStudio/AdamantiumUI/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/vpre/Adamantium.UI?label=NuGet)](https://www.nuget.org/packages/Adamantium.UI)
+[![License](https://img.shields.io/github/license/AdamantiumStudio/AdamantiumUI)](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/LICENSE)
+
 A .NET UI framework for desktop applications, on its own Vulkan renderer: a full set of controls up to docking, a
 ribbon, a tree data grid, a property grid and an infinite canvas with a node graph; markup compiled to C#; styles and
 live themes; MVVM and navigation built in - and a 3D scene that is an ordinary element of the markup, drawn by the same
@@ -341,6 +345,13 @@ Alpha: what is listed above works, and the API will change. Not there yet:
 | `Adamantium.UI.Templates` | The `dotnet new` templates |
 
 All packages share one version and are released together.
+
+## Contributing
+
+Questions go to [Discussions](https://github.com/AdamantiumStudio/AdamantiumUI/discussions), bug reports and ideas
+to [issues](https://github.com/AdamantiumStudio/AdamantiumUI/issues/new/choose). How to build the repository and
+send a change is in
+[CONTRIBUTING.md](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/CONTRIBUTING.md).
 
 ## License
 
