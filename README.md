@@ -275,12 +275,11 @@ dotnet run
 
 ### In Rider
 
-1. Install the *Adamantium AUML* plugin. It is waiting for JetBrains Marketplace review; until it is there, download
-   `adamantium-auml-<version>.zip` from the
+1. Install the *Adamantium AUML* plugin: download `adamantium-auml-<version>.zip` from the
    [latest plugin release](https://github.com/AdamantiumStudio/AdamantiumUI/releases?q=rider-auml&expanded=true) and
-   install it with **Settings | Plugins | ⚙ | Install Plugin from Disk…**. The plugin needs LSP4IJ: if Rider does not
-   offer to install it, install LSP4IJ from the Marketplace first.
-   <!-- TODO: install from the JetBrains Marketplace page once the plugin is published. -->
+   install it with **Settings | Plugins | ⚙ | Install Plugin from Disk…**. The plugin will soon be available from
+   JetBrains Marketplace as well. It needs LSP4IJ: if Rider does not offer to install it, install LSP4IJ from the
+   Marketplace first.
 2. Restart Rider. If the project templates are not installed, Rider offers to install them; **Tools | Install
    Adamantium UI Templates** installs or updates them at any time.
 3. **File | New Solution** lists *Adamantium UI Application*, *Adamantium UI View Library* and *Adamantium UI Control
