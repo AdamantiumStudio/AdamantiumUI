@@ -1,0 +1,59 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please search the existing issues first; a comment on one of them helps more than a second report.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - The framework - controls, layout, rendering, markup, bindings
+        - The Rider plugin
+        - The project templates
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest way to see it. A small project or a piece of AUML that shows it helps most.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The Adamantium.UI package version, or the commit if you build from source; for the Rider plugin, its version.
+      placeholder: 0.1.0-alpha
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      description: For anything drawn wrong or not at all.
+      placeholder: NVIDIA GeForce RTX 3060, driver 596.83
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: textarea
+    id: details
+    attributes:
+      label: Exception, log or screenshot
+      description: The full exception with its stack trace, if there is one.

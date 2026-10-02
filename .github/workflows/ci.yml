@@ -47,7 +47,7 @@ jobs:
             code=false
             while IFS= read -r f; do
               case "$f" in
-                ""|*.md|LICENSE|NOTICE|*icon.png|.gitignore|*.DotSettings|editors/*|.github/images/*) ;;
+                ""|*.md|LICENSE|NOTICE|*icon.png|.gitignore|*.DotSettings|editors/*|.github/images/*|.github/ISSUE_TEMPLATE/*) ;;
                 *) code=true ;;
               esac
             done < <(git diff --name-only "$range")
