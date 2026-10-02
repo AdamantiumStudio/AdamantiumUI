@@ -1,4 +1,5 @@
-﻿using Adamantium.Core.TypeParsing;
+﻿using System.Reflection;
+using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Resources.Triggers;
 
@@ -6,6 +7,10 @@ namespace Adamantium.UI.Core.TypeParsers;
 
 public class SelectorParser : ITypeParser<StyleSelector>
 {
+    private static readonly object IndexGate = new();
+    private static Dictionary<string, Type> _typesByName;
+    private static int _indexedAssemblies;
+
     public StyleSelector Parse(string value)
     {
         var splitResult = value.Split([',', ' '],
@@ -53,22 +58,40 @@ public class SelectorParser : ITypeParser<StyleSelector>
         return selector;
     }
 
-    // A selector names a CONTROL, so a type that cannot be styled is not a candidate however early it turns up: the
-    // lookup is by simple name across every loaded assembly, and Selector="PropertyRow" bound to System.Reflection's
-    // MetadataBuilder+PropertyRow. Path, Image, Panel and Border are one referenced package from the same fate.
     private static Type Resolve(string name)
     {
-        Type fallback = null;
-        foreach (var type in Adamantium.Core.Reflection.LoadableTypes.FromLoadedAssemblies())
+        lock (IndexGate)
         {
-            if (type.Name != name) continue;
-            if (typeof(IFundamentalUIComponent).IsAssignableFrom(type)) return type;
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            if (_typesByName == null || assemblies.Length != _indexedAssemblies)
+            {
+                _typesByName = IndexByName(assemblies);
+                _indexedAssemblies = assemblies.Length;
+            }
 
-            fallback ??= type;
+            return _typesByName.TryGetValue(name, out var type) ? type : null;
+        }
+    }
+
+    private static Dictionary<string, Type> IndexByName(Assembly[] assemblies)
+    {
+        var index = new Dictionary<string, Type>();
+        foreach (var type in assemblies.SelectMany(Adamantium.Core.Reflection.LoadableTypes.Of))
+        {
+            if (!index.TryGetValue(type.Name, out var held))
+            {
+                index[type.Name] = type;
+            }
+            else if (!IsControl(held) && IsControl(type))
+            {
+                index[type.Name] = type;
+            }
         }
 
-        return fallback;
+        return index;
     }
+
+    private static bool IsControl(Type type) => typeof(IFundamentalUIComponent).IsAssignableFrom(type);
 
     // Splits "TabControl[TabStripPlacement=Left]" into the structural prefix ("TabControl") + one condition per bracket
     // group (added to the selector), tolerating several groups ("X[A=1][B=2]"). A group without '=' is ignored.
