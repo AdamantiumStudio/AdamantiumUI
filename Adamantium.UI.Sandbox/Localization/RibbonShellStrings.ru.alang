@@ -24,6 +24,23 @@
     <Phrase Key="Customize" Text="Настроить"/>
     <Phrase Key="QuickAccess" Text="Быстрый доступ"/>
     <Phrase Key="QuickAccessHint" Text="Выберите команды, которые стоит держать на расстоянии одного щелчка."/>
+    <Phrase Key="ChooseCommandsFrom" Text="Выбрать команды из"/>
+    <Phrase Key="CommandSource" Select="source"
+            All="Все команды"
+            Home="Вкладка «Главная»"
+            Modeling="Вкладка «Моделирование»"
+            Materials="Вкладка «Материалы»"
+            View="Вкладка «Вид»"
+            Geometry="Инструменты меша: Геометрия"
+            Uv="Инструменты меша: UV"
+            Light="Инструменты света: Свет"/>
+    <Phrase Key="InTheBar" Text="На панели"/>
+    <Phrase Key="AddToBar" Text="Добавить"/>
+    <Phrase Key="RemoveFromBar" Text="Убрать"/>
+    <Phrase Key="MoveUp" Text="Выше"/>
+    <Phrase Key="MoveDown" Text="Ниже"/>
+    <Phrase Key="ShowBelowRibbon" Text="Показывать панель под лентой"/>
+    <Phrase Key="ResetBar" Text="Сбросить"/>
     <Phrase Key="Exit" Text="Выход"/>
 
     <Phrase Key="Home" Text="Главная"/>
@@ -96,6 +113,7 @@
     <Phrase Key="SnapToFaces" Text="Привязка к граням"/>
 
     <Phrase Key="Library" Text="Библиотека"/>
+    <Phrase Key="NewMaterial" Text="Новый материал"/>
     <Phrase Key="NewMaterialTip" Text="Создать материал"/>
     <Phrase Key="Swatch" Text="Образец"/>
     <Phrase Key="SwatchTip" Text="Команда, у которой значок — цвет, нарисованный её собственным шаблоном"/>
@@ -124,6 +142,102 @@
     <Phrase Key="Emission" Text="Излучение"/>
     <Phrase Key="AddLight" Text="Добавить свет"/>
 
+    <Phrase Key="Modules" Text="Модули"/>
+    <Phrase Key="SurfaceModule" Text="Поверхность"/>
+    <Phrase Key="SurfaceModuleInfo" Text="Рельеф, зоны, дороги"/>
+    <Phrase Key="SpaceModule" Text="Космос"/>
+    <Phrase Key="SpaceModuleInfo" Text="Звёзды, планеты, орбиты"/>
+    <Phrase Key="ModuleCatalog" Text="Каталог модулей..."/>
+    <Phrase Key="ModuleSets" Text="Наборы по типу документа"/>
+    <Phrase Key="CoreOnly" Text="Только ядро"/>
+    <Phrase Key="SurfaceMap" Text="Карта поверхности"/>
+    <Phrase Key="StarSystem" Text="Звёздная система"/>
+    <Phrase Key="SurfaceHeader" Text="ПОВЕРХНОСТЬ"/>
+    <Phrase Key="SpaceHeader" Text="КОСМОС"/>
+    <Phrase Key="Terrain" Text="Рельеф"/>
+    <Phrase Key="Sculpt" Text="Лепка"/>
+    <Phrase Key="Raise" Text="Поднять"/>
+    <Phrase Key="Lower" Text="Опустить"/>
+    <Phrase Key="Smooth" Text="Сгладить"/>
+    <Phrase Key="System" Text="Система"/>
+    <Phrase Key="Bodies" Text="Тела"/>
+    <Phrase Key="Star" Text="Звезда"/>
+    <Phrase Key="Planet" Text="Планета"/>
+    <Phrase Key="Moon" Text="Луна"/>
+
+    <Phrase Key="InteriorsModule" Text="Интерьеры"/>
+    <Phrase Key="InteriorsModuleInfo" Text="Помещения, двери, свет в комнатах"/>
+    <Phrase Key="CharactersModule" Text="Персонажи"/>
+    <Phrase Key="CharactersModuleInfo" Text="Скелеты, риг, анимация"/>
+    <Phrase Key="StrategyModule" Text="Стратегия"/>
+    <Phrase Key="StrategyModuleInfo" Text="Юниты, ресурсы, приказы"/>
+    <Phrase Key="SoundModule" Text="Звук"/>
+    <Phrase Key="SoundModuleInfo" Text="Звуки мира, эхо по зонам, музыка"/>
+    <Phrase Key="VegetationModule" Text="Растительность"/>
+    <Phrase Key="VegetationModuleInfo" Text="Леса и трава, рост по биомам"/>
+    <Phrase Key="WaterModule" Text="Вода"/>
+    <Phrase Key="WaterModuleInfo" Text="Реки, озёра, течения"/>
+    <Phrase Key="DestructionModule" Text="Разрушения"/>
+    <Phrase Key="DestructionModuleInfo" Text="Катаклизмы, трещины, обломки"/>
+    <Phrase Key="SurfaceAdds" Text="Вкладка: Рельеф"/>
+    <Phrase Key="SpaceAdds" Text="Вкладка: Система"/>
+    <Phrase Key="InteriorsAdds" Text="Вкладки: Помещения, Освещение"/>
+    <Phrase Key="CharactersAdds" Text="Вкладки: Скелет, Анимация"/>
+    <Phrase Key="StrategyAdds" Text="Вкладки: Юниты, Ресурсы"/>
+    <Phrase Key="SoundAdds" Text="Группы в «Окружении» и «Запуске»"/>
+    <Phrase Key="VegetationAdds" Text="Группы в «Генерации» и «Окружении»"/>
+    <Phrase Key="WaterAdds" Text="Вкладка: Вода"/>
+    <Phrase Key="DestructionAdds" Text="Группы в «Генерации» и «Запуске»"/>
+    <Phrase Key="SurfaceContent" Text="4 участка рельефа · 12 зон · 7 дорог"/>
+    <Phrase Key="SpaceContent" Text="1 звезда · 6 планет · 9 лун"/>
+    <Phrase Key="CharactersContent" Text="3 скелета · 14 анимаций"/>
+    <Phrase Key="SurfaceDependents" Text="2 объекта с коллайдером рельефа, граф правил «Посёлки»"/>
+    <Phrase Key="SpaceDependents" Text="Путь камеры «Облёт»"/>
+
+    <Phrase Key="ModuleCatalogTitle" Text="Каталог модулей"/>
+    <Phrase Key="FindModule" Text="Найти модуль"/>
+    <Phrase Key="InstallFromFile" Text="Установить из файла..."/>
+    <Phrase Key="ModuleFiles" Text="Сборки модулей"/>
+    <Phrase Key="CloseCatalog" Text="Закрыть каталог"/>
+    <Phrase Key="CatalogFilter" Select="filter"
+            All="Все"
+            InDocument="В документе"
+            Installed="Установлены"
+            Updates="Обновления"/>
+    <Phrase Key="Section" Select="section"
+            All="Все"
+            World="Мир и рельеф"
+            Space="Космос"
+            Buildings="Здания и интерьеры"
+            Characters="Персонажи"
+            Gameplay="Геймплей"
+            Sound="Звук"/>
+    <Phrase Key="ModuleState" Select="state"
+            InDocument="В документе"
+            Installed="Установлен"
+            Detached="Отключён · данные в файле"
+            UpdateAvailable="Есть обновление"
+            Available="Доступен"/>
+    <Phrase Key="ShowTabs" Text="Показывать вкладки"/>
+    <Phrase Key="ShowTabsHint" Text="Спрятанный модуль работает — прячутся только его вкладки."/>
+    <Phrase Key="InThisDocument" Text="В документе"/>
+    <Phrase Key="DetachFromDocument" Text="Отключить от документа..."/>
+    <Phrase Key="DetachTitle" Text="Отключить от этого документа?"/>
+    <Phrase Key="DetachText" Text="Вкладки модуля уйдут из ленты, его системы перестанут работать в этом документе. Данные останутся в файле: подключите модуль снова — и всё вернётся."/>
+    <Phrase Key="StaysInFile" Text="Останется в файле"/>
+    <Phrase Key="GetsMarked" Text="Получит отметку"/>
+    <Phrase Key="MarkedHint" Text="Отмеченное не пропадает: оно ждёт модуль, а вкладка «Проверка» показывает, где оно."/>
+    <Phrase Key="Detach" Text="Отключить"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="AttachToDocument" Text="Подключить к документу"/>
+    <Phrase Key="AttachAgain" Text="Подключить снова"/>
+    <Phrase Key="DeleteModuleData" Text="Удалить его данные из документа..."/>
+    <Phrase Key="DeleteDataTitle" Text="Удалить данные насовсем?"/>
+    <Phrase Key="DeleteDataText" Text="Всё, что модуль сделал в этом документе, будет удалено. Подключённый снова, он начнёт с нуля."/>
+    <Phrase Key="InstallModule" Text="Установить"/>
+    <Phrase Key="UpdateModule" Text="Обновить"/>
+    <Phrase Key="UninstallModule" Text="Удалить из редактора"/>
+
     <Phrase Key="Status" Select="action"
             Ready="Готово."
             Pasted="Вставлено из буфера обмена."
@@ -145,6 +259,7 @@
             Extruded="Выбранные грани выдавлены."
             Bevelled="На выбранных рёбрах сняты фаски."
             Subdivided="Меш подразделён."
+            Unwrapped="Развёртка UV готова."
             NewMaterial="Создан новый материал."
             EditingAlbedo="Правка канала альбедо."
             EditingNormal="Правка канала нормалей."
@@ -165,6 +280,8 @@
             RemovedFromQuickAccess="Убрано с панели быстрого доступа."
             QuickAccessBelow="Панель быстрого доступа перенесена под ленту."
             QuickAccessInCaption="Панель быстрого доступа возвращена в заголовок."
+            QuickAccessReordered="Порядок команд на панели быстрого доступа изменён."
+            QuickAccessReset="Панель быстрого доступа возвращена к исходной."
             Imported="Импортирован файл {format}."
             Exported="Сцена экспортирована в {format}."
             NewScene="Новая сцена."
@@ -172,5 +289,19 @@
             ExitRequested="Запрошен выход."
             Saved="Сцена сохранена."
             Undone="Отменено."
-            Redone="Повторено."/>
+            Redone="Повторено."
+            ModuleCatalogRequested="Запрошен каталог модулей."
+            ModuleToolUsed="Модуль выполнил свою команду."
+            ModuleInstalled="Модуль установлен: подключите его к документу."
+            ModuleAlreadyInstalled="Модули из этого файла уже установлены."
+            NotAModule="Этот файл — не сборка, которую редактор может загрузить."
+            NoModuleInFile="В сборке нет модулей."
+            NoFileDialog="В этой системе нет файлового диалога."
+            ModulesChanged="Модули документа изменены."
+            Raised="Рельеф поднят."
+            Lowered="Рельеф опущен."
+            Smoothed="Рельеф сглажен."
+            AddedStar="Добавлена звезда."
+            AddedPlanet="Добавлена планета."
+            AddedMoon="Добавлена луна."/>
 </Language>

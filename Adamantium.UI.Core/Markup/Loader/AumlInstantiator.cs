@@ -544,14 +544,24 @@ internal sealed class AumlInstantiator
 
     private BindingBase BuildLocalized(AumlAstLocalizedStringNode node)
     {
-        var type = (_resolver.Resolve(node.TableFullName) as ReflectionResolvedType)?.ClrType;
-        if (Localize.TableOf(type) is not { } table)
+        LocalizedStrings table = null;
+        if (node.TableSource == null)
         {
-            _diagnostics.Add($"The language table {node.TableFullName} is not built yet: build the project to preview its strings");
-            return null;
+            var type = (_resolver.Resolve(node.TableFullName) as ReflectionResolvedType)?.ClrType;
+            table = Localize.TableOf(type);
+            if (table == null)
+            {
+                _diagnostics.Add($"The language table {node.TableFullName} is not built yet: build the project to preview its strings");
+                return null;
+            }
         }
 
         var localize = new Localize(table, node.Key);
+        if (node.TableSource != null)
+        {
+            localize.TableSource = Followed(node.TableSource);
+        }
+
         if (node.KeySource != null)
         {
             localize.KeySource = Followed(node.KeySource);

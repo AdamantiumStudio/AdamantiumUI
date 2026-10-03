@@ -764,12 +764,21 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     /// <summary>Sets a value WITHOUT changing its source (WPF's <c>SetCurrentValue</c>) - for user input into a
     /// possibly two-way bound property. A plain SetValue lands at Local, which outranks Binding and would MASK it
-    /// permanently. This writes into the slot the value comes from, capped at Binding.</summary>
+    /// permanently. This writes into the slot the value comes from, capped at Binding - except a slot a
+    /// <c>{TemplateBinding}</c> feeds, which keeps it: raised to Binding, the value would mask the template binding and
+    /// the templated parent could never set the property again.</summary>
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
         var basePriority = GetBaseValuePriority(property);
-        var priority = basePriority <= ValuePriority.Binding ? basePriority : ValuePriority.Binding;
+        var priority = basePriority <= ValuePriority.Binding || IsFedByTemplateBinding(property, basePriority)
+            ? basePriority
+            : ValuePriority.Binding;
         SetValue(property, value, priority);
+    }
+
+    private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)
+    {
+        return basePriority == ValuePriority.Template && Data.TemplateBindingExpression.Feeds(this, property);
     }
 
     /// <summary>

@@ -70,6 +70,20 @@ public class RibbonTests
         });
     }
 
+    // A tab's label changes - with the language, say - after its header is in the strip; the strip says what the tab says.
+    [Test]
+    public void TheHeader_FollowsTheTabsLabel()
+    {
+        var ribbon = WithTabs("Home", "View");
+        ribbon.Measure(new Size(800, 200));
+        ribbon.Arrange(new Rect(0, 0, 800, 200));
+        var header = (RibbonTabHeader)ribbon.ItemContainerGenerator.ContainerFromIndex(0);
+
+        ((RibbonTab)ribbon.Items[0]).Header = "Главная";
+
+        Assert.That(header.Content, Is.EqualTo("Главная"));
+    }
+
     // Selecting reflects onto the strip: exactly one header is lit, and it is the open tab's.
     [Test]
     public void SelectingATab_LightsItsHeaderAndOnlyThatOne()

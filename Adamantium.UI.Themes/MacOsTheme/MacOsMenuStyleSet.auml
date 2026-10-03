@@ -28,14 +28,19 @@
                         <Border x:Name="Root" Background="{TemplateBinding Background}"
                                 CornerRadius="4" Margin="5 0" Padding="10 3" MinHeight="22">
                             <Grid ColumnDefinitions="22,*,Auto,Auto">
-                                <ContentPresenter Grid.Column="0" Content="{TemplateBinding Icon}"
+                                <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Path x:Name="CheckGlyph" Grid.Column="0"
+                                        Data="M0,5 L4,9 L12,1"
+                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Visibility="Collapsed"/>
                                 <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
                                         Content="{TemplateBinding Header}"
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
-                                        HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="Gesture" Grid.Column="2" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorSecondary}"
                                         FontSize="{ResourceReference FontSizeCaption}"
@@ -51,9 +56,11 @@
 
                         <!-- The submenu lives in the ROW's template - a row is what opens one - so it belongs to any
                              template that restates the row. No PlacementTarget: the popup falls back to this Grid, which
-                             overlaps the row, so Placement=Right opens just past its right edge. The card is built on
+                             overlaps the row, so Placement=Right opens just past its right edge, its top raised by the
+                             card's border and padding so the first row sits level with this one. The card is built on
                              FIRST OPEN, so a leaf row never pays to build one. -->
-                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" FlipToFit="True"
+                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" PlacementAlignment="Start" FlipToFit="True"
+                                VerticalOffset="-5"
                                 IsOpen="{TemplateBinding IsSubmenuOpen}">
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
@@ -78,9 +85,16 @@
             <Setter TargetName="Root" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
             <Setter TargetName="Gesture" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ThemeResource AccentForegroundColor}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
+        </PropertyTrigger>
+        <!-- A checked row shows the check mark in the icon gutter, in place of its icon. -->
+        <PropertyTrigger Property="IsChecked" Value="true">
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>

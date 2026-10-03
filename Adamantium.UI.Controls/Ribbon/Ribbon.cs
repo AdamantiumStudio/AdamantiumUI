@@ -145,9 +145,10 @@ public class Ribbon : Selector
     public static void SetQuickAccessItems(IAdamantiumComponent element, IEnumerable value) =>
         element.SetValue(QuickAccessItemsProperty, value);
 
-    /// <summary>Whether this command is in the bar right now: either the visual says so outright, or an item with its key
-    /// is in the collection the ribbon was pointed at. Asked afresh every time the menu opens, so no one has to keep the
-    /// answer in step.</summary>
+    /// <summary>Whether this command is in the bar right now: either the visual says so outright, or its item is in the
+    /// collection the ribbon was pointed at - the item it is drawn for (its DataContext, when that is an
+    /// <see cref="IQuickAccessItem"/>), else one with its key or its action. Asked afresh every time the menu opens, so
+    /// no one has to keep the answer in step.</summary>
     public static bool IsShownInQuickAccess(IAdamantiumComponent command)
     {
         if (command == null) return false;
@@ -155,6 +156,12 @@ public class Ribbon : Selector
 
         var items = GetQuickAccessItems(command);
         if (items == null) return false;
+
+        // A command drawn for an item of the bar's kind names it exactly; another item running the same action is not it.
+        if ((command as IFundamentalUIComponent)?.DataContext is IQuickAccessItem own)
+        {
+            return items.Cast<object>().Any(item => ReferenceEquals(item, own));
+        }
 
         var key = GetQuickAccessKey(command);
         var action = (command as Primitives.ButtonBase)?.Command;
@@ -210,56 +217,6 @@ public class Ribbon : Selector
 
     public static void SetRemoveFromQuickAccessCommand(IAdamantiumComponent element, ICommand value) =>
         element.SetValue(RemoveFromQuickAccessCommandProperty, value);
-
-    /// <summary>Every command that may go in the quick-access bar, walked over the items so unrealized tabs are
-    /// included.</summary>
-    public IEnumerable<IUIComponent> QuickAccessCandidates
-    {
-        get
-        {
-            foreach (var item in Items)
-            {
-                if (item is not RibbonTab tab) continue;
-
-                foreach (var groupItem in tab.Items)
-                {
-                    if (groupItem is not RibbonGroup group) continue;
-
-                    foreach (var command in group.Items)
-                    {
-                        if (command is IUIComponent ui && GetCanAddToQuickAccess(ui))
-                        {
-                            yield return ui;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>Puts the command given as its parameter in the bar, or takes it out - whichever it is not. This is what
-    /// a customization page's rows run, so that asking is BINDABLE: without it the only way to ask from markup would be
-    /// a view model reaching for control types, or a behavior, and neither is a thing an ordinary screen should need.</summary>
-    public ICommand ToggleQuickAccess => _toggleQuickAccess ??= new ToggleQuickAccessCommand();
-
-    private ICommand _toggleQuickAccess;
-
-    private sealed class ToggleQuickAccessCommand : ICommand
-    {
-        public event EventHandler CanExecuteChanged;
-
-        public bool CanExecute(object parameter = null) =>
-            parameter is IUIComponent command && GetCanAddToQuickAccess(command);
-
-        public void Execute(object parameter = null)
-        {
-            if (parameter is not IUIComponent command) return;
-
-            RequestQuickAccess(command, !IsShownInQuickAccess(command));
-        }
-
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
 
     /// <summary>Asks for <paramref name="command"/> to be put in the bar (or taken out of it): raises the routed event
     /// and runs the bound command with the same argument. Both, because a host with code hears the event, and a view
@@ -354,6 +311,204 @@ public class Ribbon : Selector
         if (e.NewValue is RibbonApplicationMenu menu)
         {
             ribbon.AddLogicalChild(menu);
+        }
+    }
+
+    /// <summary>Whatever the application puts in the strip right after the "File" button - a few commands of its own,
+    /// such as a drop-down of what the document is made of. Its commands take key tips with the strip's.</summary>
+    public static readonly AdamantiumProperty StripContentProperty = AdamantiumProperty.Register(nameof(StripContent),
+        typeof(object), typeof(Ribbon), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnStripContentChanged));
+
+    public object StripContent
+    {
+        get => GetValue(StripContentProperty);
+        set => SetValue(StripContentProperty, value);
+    }
+
+    private static void OnStripContentChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (sender is not Ribbon ribbon) return;
+
+        if (e.OldValue is IFundamentalUIComponent old)
+        {
+            ribbon.RemoveLogicalChild(old);
+        }
+        if (e.NewValue is IFundamentalUIComponent content)
+        {
+            ribbon.AddLogicalChild(content);
+        }
+    }
+
+    /// <summary>A sheet of the application's own that opens out of the strip in place of the band, the ribbon's width,
+    /// over what lies under it - a catalog, a page of settings: more room than a menu has, without leaving the
+    /// window. Shown while <see cref="IsDrawerOpen"/>.</summary>
+    public static readonly AdamantiumProperty DrawerProperty = AdamantiumProperty.Register(nameof(Drawer),
+        typeof(object), typeof(Ribbon), new PropertyMetadata(null, OnDrawerChanged));
+
+    public object Drawer
+    {
+        get => GetValue(DrawerProperty);
+        set => SetValue(DrawerProperty, value);
+    }
+
+    /// <summary>Whether the <see cref="Drawer"/> is out. A press outside it, or Escape, puts it away and clears this.</summary>
+    public static readonly AdamantiumProperty IsDrawerOpenProperty = AdamantiumProperty.Register(nameof(IsDrawerOpen),
+        typeof(bool), typeof(Ribbon), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
+
+    public bool IsDrawerOpen
+    {
+        get => GetValue<bool>(IsDrawerOpenProperty);
+        set => SetValue(IsDrawerOpenProperty, value);
+    }
+
+    /// <summary>What the document is made of - its modules - each bringing a <see cref="RibbonTabSet"/>: its tabs under a
+    /// ledge of its own, after the ribbon's own tabs. A module that leaves the source takes its tabs with it.</summary>
+    public static readonly AdamantiumProperty TabSetsSourceProperty = AdamantiumProperty.Register(nameof(TabSetsSource),
+        typeof(IEnumerable), typeof(Ribbon), new PropertyMetadata(null, OnTabSetsSourceChanged));
+
+    public IEnumerable TabSetsSource
+    {
+        get => GetValue<IEnumerable>(TabSetsSourceProperty);
+        set => SetValue(TabSetsSourceProperty, value);
+    }
+
+    /// <summary>The piece of view a module's tabs are built from: a <see cref="RibbonTabSet"/> bound against the module.</summary>
+    public static readonly AdamantiumProperty TabSetTemplateProperty = AdamantiumProperty.Register(nameof(TabSetTemplate),
+        typeof(DataTemplate), typeof(Ribbon), new PropertyMetadata(null, OnTabSetTemplateChanged));
+
+    public DataTemplate TabSetTemplate
+    {
+        get => GetValue<DataTemplate>(TabSetTemplateProperty);
+        set => SetValue(TabSetTemplateProperty, value);
+    }
+
+    /// <summary>Picks each module's own <see cref="TabSetTemplate"/> - modules bring different tabs.</summary>
+    public static readonly AdamantiumProperty TabSetTemplateSelectorProperty = AdamantiumProperty.Register(
+        nameof(TabSetTemplateSelector), typeof(DataTemplateSelector), typeof(Ribbon),
+        new PropertyMetadata(null, OnTabSetTemplateChanged));
+
+    public DataTemplateSelector TabSetTemplateSelector
+    {
+        get => GetValue<DataTemplateSelector>(TabSetTemplateSelectorProperty);
+        set => SetValue(TabSetTemplateSelectorProperty, value);
+    }
+
+    private static void OnTabSetsSourceChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (sender is not Ribbon ribbon) return;
+
+        if (e.OldValue is INotifyCollectionChanged oldSource)
+        {
+            oldSource.CollectionChanged -= ribbon.OnTabSetsCollectionChanged;
+        }
+
+        if (e.NewValue is INotifyCollectionChanged newSource)
+        {
+            newSource.CollectionChanged += ribbon.OnTabSetsCollectionChanged;
+        }
+
+        ribbon.ShowTabSets();
+    }
+
+    private static void OnTabSetTemplateChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (sender is not Ribbon ribbon) return;
+
+        foreach (var item in new List<object>(ribbon._tabSets.Keys))
+        {
+            ribbon.HideTabSet(item);
+        }
+
+        ribbon.ShowTabSets();
+    }
+
+    private void OnTabSetsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => ShowTabSets();
+
+    private void ShowTabSets()
+    {
+        var wanted = new List<object>();
+        if (TabSetsSource != null)
+        {
+            foreach (var item in TabSetsSource)
+            {
+                wanted.Add(item);
+            }
+        }
+
+        foreach (var item in new List<object>(_tabSets.Keys))
+        {
+            if (!wanted.Contains(item))
+            {
+                HideTabSet(item);
+            }
+        }
+
+        foreach (var item in wanted)
+        {
+            if (!_tabSets.ContainsKey(item))
+            {
+                ShowTabSet(item);
+            }
+        }
+    }
+
+    private void ShowTabSet(object item)
+    {
+        var template = TabSetTemplateSelector?.SelectTemplate(item, this) ?? TabSetTemplate;
+        var built = template?.Build(this);
+        if (built?.RootComponent is not RibbonTabSet set)
+        {
+            built?.Destroy();
+            return;
+        }
+
+        set.DataContext = item;
+
+        var group = new RibbonContextualGroup { Key = $"{nameof(RibbonTabSet)}{++_tabSetCount}" };
+        Follow(group, nameof(RibbonContextualGroup.Header), set, nameof(RibbonTabSet.Header));
+        Follow(group, nameof(RibbonContextualGroup.Accent), set, nameof(RibbonTabSet.Accent));
+        Follow(group, nameof(RibbonContextualGroup.IsActive), set, nameof(RibbonTabSet.IsActive));
+        ContextualGroups.Add(group);
+
+        foreach (var tab in set.Tabs)
+        {
+            tab.ContextualGroupKey = group.Key;
+            tab.DataContext = item;
+            Items.Add(tab);
+        }
+
+        _tabSets[item] = (set, built, group);
+    }
+
+    private static void Follow(RibbonContextualGroup group, string property, RibbonTabSet set, string setProperty)
+    {
+        group.SetBinding(property, new Core.Data.Binding(setProperty) { Source = set, IsImmediate = true });
+    }
+
+    private void HideTabSet(object item)
+    {
+        if (!_tabSets.Remove(item, out var shown)) return;
+
+        foreach (var tab in shown.Set.Tabs)
+        {
+            Items.Remove(tab);
+        }
+
+        ContextualGroups.Remove(shown.Group);
+        shown.Built.Destroy();
+    }
+
+    private static void OnDrawerChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (sender is not Ribbon ribbon) return;
+
+        if (e.OldValue is IFundamentalUIComponent old)
+        {
+            ribbon.RemoveLogicalChild(old);
+        }
+        if (e.NewValue is IFundamentalUIComponent content)
+        {
+            ribbon.AddLogicalChild(content);
         }
     }
 
@@ -458,6 +613,7 @@ public class Ribbon : Selector
     private IUIComponent _contentHost;
     private IUIComponent _strip;                 // the tab headers - a key-tip level, without the tab bodies
     private IUIComponent _applicationMenuHost;   // "File", which stands at the head of the strip
+    private IUIComponent _stripContentHost;
 
     /// <summary>Where the selected tab is shown - what a tab header hands the key-tip session as its next level, since
     /// a tab's commands live here and not under the strip.</summary>
@@ -471,7 +627,10 @@ public class Ribbon : Selector
     private Decorators.Decorator _bandHost;
     private Decorators.Decorator _flyoutHost;
     private Popup _flyout;
+    private Popup _drawer;
     private Primitives.ToggleButton _minimizeButton;
+    private readonly Dictionary<object, (RibbonTabSet Set, TemplateResult Built, RibbonContextualGroup Group)> _tabSets = new();
+    private int _tabSetCount;
 
     public override void OnApplyTemplate()
     {
@@ -479,6 +638,7 @@ public class Ribbon : Selector
         _contentHost = GetTemplateChild("PART_SelectedContentHost") as IUIComponent;
         _strip = GetTemplateChild("PART_ItemsPresenter") as IUIComponent;
         _applicationMenuHost = GetTemplateChild("PART_ApplicationMenuHost") as IUIComponent;
+        _stripContentHost = GetTemplateChild("PART_StripContentHost") as IUIComponent;
         _bandHost = GetTemplateChild("PART_BandHost") as Decorators.Decorator;
         _flyoutHost = GetTemplateChild("PART_FlyoutHost") as Decorators.Decorator;
 
@@ -493,6 +653,13 @@ public class Ribbon : Selector
             _flyout.IgnoreTargetPress = true;
         }
 
+        DetachDrawer();
+        _drawer = GetTemplateChild("PART_Drawer") as Popup;
+        if (_drawer != null)
+        {
+            _drawer.Closed += OnDrawerClosed;
+        }
+
         if (_minimizeButton != null)
         {
             _minimizeButton.Click -= OnMinimizeButtonClick;
@@ -505,6 +672,24 @@ public class Ribbon : Selector
 
         HostSelectedContent();
     }
+
+    public override void OnRemoveTemplate()
+    {
+        base.OnRemoveTemplate();
+        DetachDrawer();
+    }
+
+    private void DetachDrawer()
+    {
+        if (_drawer != null)
+        {
+            _drawer.Closed -= OnDrawerClosed;
+        }
+
+        _drawer = null;
+    }
+
+    private void OnDrawerClosed(object sender, EventArgs e) => SetCurrentValue(IsDrawerOpenProperty, false);
 
     private void OnMinimizeButtonClick(object sender, RoutedEventArgs e) => IsMinimized = !IsMinimized;
 
@@ -641,6 +826,7 @@ public class Ribbon : Selector
         }
 
         HookKeyTips();
+        ShowTabSets();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -791,13 +977,14 @@ public class Ribbon : Selector
     }
 
     /// <summary>What the FIRST level is gathered from - named places, not "the window": the tab strip, the application
-    /// menu, and every quick-access bar the window shows. Walking a common ancestor would badge the open tab's commands
+    /// menu, the strip content, and every quick-access bar the window shows. Walking a common ancestor would badge the open tab's commands
     /// too, and those are the level below.</summary>
     private IReadOnlyList<IUIComponent> TopLevelRoots()
     {
         var roots = new List<IUIComponent>();
         if (_strip != null) roots.Add(_strip);
         if (_applicationMenuHost != null) roots.Add(_applicationMenuHost);
+        if (_stripContentHost != null) roots.Add(_stripContentHost);
 
         foreach (var bar in (RootVisual as IUIComponent)?.GetVisualDescendants().OfType<RibbonQuickAccess>()
                             ?? [])
@@ -879,7 +1066,18 @@ public class Ribbon : Selector
             // An authored tab carries its own label; a data item IS the label and is drawn through the ItemTemplate.
             var tab = item as RibbonTab;
             header.DataContext = item;
-            header.Content = tab != null ? tab.Header : item;
+
+            // Followed, not copied: a tab's label changes with the language, and the strip has to say what the tab says.
+            if (tab != null)
+            {
+                header.SetBinding(ContentControl.ContentProperty,
+                    new Core.Data.Binding(nameof(RibbonTab.Header)) { Source = tab, IsImmediate = true });
+            }
+            else
+            {
+                header.Content = item;
+            }
+
             header.ContentTemplate = tab?.HeaderTemplate ?? ItemTemplate;
             header.ContentTemplateSelector = ItemTemplateSelector;
 

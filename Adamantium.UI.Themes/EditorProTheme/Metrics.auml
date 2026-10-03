@@ -188,6 +188,9 @@
     <sys:Double x:Key="MenuIconGutter">20</sys:Double>
     <sys:Double x:Key="MenuMinWidth">140</sys:Double>
     <Thickness x:Key="MenuCardPadding">2</Thickness>
+    <!-- How far a submenu's card rises above its row: the card's padding and border, so its first row is level with the
+         row that opened it. -->
+    <sys:Double x:Key="MenuSubmenuRise">-3</sys:Double>
     <Thickness x:Key="MenuGestureInset">16 0 0 0</Thickness>
     <Thickness x:Key="MenuChevronInset">8 0 0 0</Thickness>
     <sys:Double x:Key="CheckBoxSize">14</sys:Double>

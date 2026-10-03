@@ -17,6 +17,7 @@ public class RibbonQuickAccessEventArgs : RoutedEventArgs
         Source = command;
         Command = command;
 
+        Item = (command as IFundamentalUIComponent)?.DataContext as IQuickAccessItem;
         Icon = Ribbon.GetIcon(command);
         Key = Ribbon.GetQuickAccessKey(command);
         Label = (command as ContentControl)?.Content?.ToString();
@@ -43,6 +44,11 @@ public class RibbonQuickAccessEventArgs : RoutedEventArgs
     /// <summary>The ribbon command that was asked about. Held so an application can read whatever else it needs off it -
     /// but it is NOT what should be stored: a control outlives nothing, and re-templating replaces it.</summary>
     public IUIComponent Command { get; }
+
+    /// <summary>The item the command is drawn for, when the application builds its commands from data: its DataContext,
+    /// if that is an <see cref="IQuickAccessItem"/>. This is the item to put in the bar or take out - nothing has to be
+    /// rebuilt from the description below.</summary>
+    public IQuickAccessItem Item { get; }
 
     /// <summary>What marks the command - the small icon it draws in the bar.</summary>
     public object Icon { get; }

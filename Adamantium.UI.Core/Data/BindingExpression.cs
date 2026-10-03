@@ -76,6 +76,7 @@ public class BindingExpression : BindingExpressionBase
    private List<(object Owner, string Segment)> _passed;
    private bool _reconnectPending;
    private IUIComponent _awaitingAttach;
+   private IFundamentalUIComponent _contextOwner;
 
    internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
 
@@ -269,8 +270,42 @@ public class BindingExpression : BindingExpressionBase
       UnwatchPassed();
       _passed?.Clear();
       StopAwaitingAttach();
+      WatchContextOwner(null);
       ReleaseSource();
    }
+
+   private object ContextRoot()
+   {
+      var element = DataContextSource;
+      if (element == null || !ReferenceEquals(element, Target) || TargetProperty != FundamentalUIComponent.DataContextProperty)
+      {
+         return element?.DataContext;
+      }
+
+      WatchContextOwner(NearestElement(element.InheritanceParent));
+      return _contextOwner?.DataContext;
+   }
+
+   private void WatchContextOwner(IFundamentalUIComponent owner)
+   {
+      if (ReferenceEquals(owner, _contextOwner))
+      {
+         return;
+      }
+
+      if (_contextOwner != null)
+      {
+         _contextOwner.DataContextChanged -= OnContextOwnerChanged;
+      }
+
+      _contextOwner = owner;
+      if (_contextOwner != null)
+      {
+         _contextOwner.DataContextChanged += OnContextOwnerChanged;
+      }
+   }
+
+   private void OnContextOwnerChanged(object sender, AdamantiumPropertyChangedEventArgs e) => EstablishConnection();
 
    internal override void Retry()
    {
@@ -398,7 +433,7 @@ public class BindingExpression : BindingExpressionBase
       Status = BindingStatus.Active;
 
       var named = Binding.Source == null && !string.IsNullOrEmpty(Binding.ElementName);
-      var root = Binding.Source ?? (named ? ResolveElementName() : DataContextSource?.DataContext);
+      var root = Binding.Source ?? (named ? ResolveElementName() : ContextRoot());
       var path = Binding.Path?.Path;
       if (root == null)
       {

@@ -24,6 +24,23 @@
     <Phrase Key="Customize" Text="Customize"/>
     <Phrase Key="QuickAccess" Text="Quick access"/>
     <Phrase Key="QuickAccessHint" Text="Pick the commands worth keeping one click away."/>
+    <Phrase Key="ChooseCommandsFrom" Text="Choose commands from"/>
+    <Phrase Key="CommandSource" Select="source"
+            All="All commands"
+            Home="The Home tab"
+            Modeling="The Modeling tab"
+            Materials="The Materials tab"
+            View="The View tab"
+            Geometry="Mesh tools: Geometry"
+            Uv="Mesh tools: UV"
+            Light="Light tools: Light"/>
+    <Phrase Key="InTheBar" Text="In the bar"/>
+    <Phrase Key="AddToBar" Text="Add"/>
+    <Phrase Key="RemoveFromBar" Text="Remove"/>
+    <Phrase Key="MoveUp" Text="Move up"/>
+    <Phrase Key="MoveDown" Text="Move down"/>
+    <Phrase Key="ShowBelowRibbon" Text="Show the bar below the ribbon"/>
+    <Phrase Key="ResetBar" Text="Reset"/>
     <Phrase Key="Exit" Text="Exit"/>
 
     <Phrase Key="Home" Text="Home"/>
@@ -96,6 +113,7 @@
     <Phrase Key="SnapToFaces" Text="Snap to faces"/>
 
     <Phrase Key="Library" Text="Library"/>
+    <Phrase Key="NewMaterial" Text="New material"/>
     <Phrase Key="NewMaterialTip" Text="Create a material"/>
     <Phrase Key="Swatch" Text="Swatch"/>
     <Phrase Key="SwatchTip" Text="A command whose icon is a color, drawn by its own template"/>
@@ -124,6 +142,102 @@
     <Phrase Key="Emission" Text="Emission"/>
     <Phrase Key="AddLight" Text="Add light"/>
 
+    <Phrase Key="Modules" Text="Modules"/>
+    <Phrase Key="SurfaceModule" Text="Surface"/>
+    <Phrase Key="SurfaceModuleInfo" Text="Terrain, zones, roads"/>
+    <Phrase Key="SpaceModule" Text="Space"/>
+    <Phrase Key="SpaceModuleInfo" Text="Stars, planets, orbits"/>
+    <Phrase Key="ModuleCatalog" Text="Module catalog..."/>
+    <Phrase Key="ModuleSets" Text="Sets by document type"/>
+    <Phrase Key="CoreOnly" Text="Core only"/>
+    <Phrase Key="SurfaceMap" Text="Surface map"/>
+    <Phrase Key="StarSystem" Text="Star system"/>
+    <Phrase Key="SurfaceHeader" Text="SURFACE"/>
+    <Phrase Key="SpaceHeader" Text="SPACE"/>
+    <Phrase Key="Terrain" Text="Terrain"/>
+    <Phrase Key="Sculpt" Text="Sculpt"/>
+    <Phrase Key="Raise" Text="Raise"/>
+    <Phrase Key="Lower" Text="Lower"/>
+    <Phrase Key="Smooth" Text="Smooth"/>
+    <Phrase Key="System" Text="System"/>
+    <Phrase Key="Bodies" Text="Bodies"/>
+    <Phrase Key="Star" Text="Star"/>
+    <Phrase Key="Planet" Text="Planet"/>
+    <Phrase Key="Moon" Text="Moon"/>
+
+    <Phrase Key="InteriorsModule" Text="Interiors"/>
+    <Phrase Key="InteriorsModuleInfo" Text="Rooms, doors, lights inside"/>
+    <Phrase Key="CharactersModule" Text="Characters"/>
+    <Phrase Key="CharactersModuleInfo" Text="Skeletons, rigs, animation"/>
+    <Phrase Key="StrategyModule" Text="Strategy"/>
+    <Phrase Key="StrategyModuleInfo" Text="Units, resources, orders"/>
+    <Phrase Key="SoundModule" Text="Sound"/>
+    <Phrase Key="SoundModuleInfo" Text="World sounds, echo by zone, music"/>
+    <Phrase Key="VegetationModule" Text="Vegetation"/>
+    <Phrase Key="VegetationModuleInfo" Text="Forests and grass, growing by biome"/>
+    <Phrase Key="WaterModule" Text="Water"/>
+    <Phrase Key="WaterModuleInfo" Text="Rivers, lakes, currents"/>
+    <Phrase Key="DestructionModule" Text="Destruction"/>
+    <Phrase Key="DestructionModuleInfo" Text="Cataclysms, cracks, debris"/>
+    <Phrase Key="SurfaceAdds" Text="Tab: Terrain"/>
+    <Phrase Key="SpaceAdds" Text="Tab: System"/>
+    <Phrase Key="InteriorsAdds" Text="Tabs: Rooms, Lighting"/>
+    <Phrase Key="CharactersAdds" Text="Tabs: Skeleton, Animation"/>
+    <Phrase Key="StrategyAdds" Text="Tabs: Units, Resources"/>
+    <Phrase Key="SoundAdds" Text="Groups in Environment and Play"/>
+    <Phrase Key="VegetationAdds" Text="Groups in Generate and Environment"/>
+    <Phrase Key="WaterAdds" Text="Tab: Water"/>
+    <Phrase Key="DestructionAdds" Text="Groups in Generate and Play"/>
+    <Phrase Key="SurfaceContent" Text="4 terrain tiles · 12 zones · 7 roads"/>
+    <Phrase Key="SpaceContent" Text="1 star · 6 planets · 9 moons"/>
+    <Phrase Key="CharactersContent" Text="3 skeletons · 14 animation clips"/>
+    <Phrase Key="SurfaceDependents" Text="2 objects with a terrain collider, the Settlements rules graph"/>
+    <Phrase Key="SpaceDependents" Text="The Flyby camera path"/>
+
+    <Phrase Key="ModuleCatalogTitle" Text="Module catalog"/>
+    <Phrase Key="FindModule" Text="Find a module"/>
+    <Phrase Key="InstallFromFile" Text="Install from file..."/>
+    <Phrase Key="ModuleFiles" Text="Module assemblies"/>
+    <Phrase Key="CloseCatalog" Text="Close the catalog"/>
+    <Phrase Key="CatalogFilter" Select="filter"
+            All="All"
+            InDocument="In this document"
+            Installed="Installed"
+            Updates="Updates"/>
+    <Phrase Key="Section" Select="section"
+            All="All"
+            World="World and terrain"
+            Space="Space"
+            Buildings="Buildings and interiors"
+            Characters="Characters"
+            Gameplay="Gameplay"
+            Sound="Sound"/>
+    <Phrase Key="ModuleState" Select="state"
+            InDocument="In this document"
+            Installed="Installed"
+            Detached="Detached · data in the file"
+            UpdateAvailable="Update available"
+            Available="Available"/>
+    <Phrase Key="ShowTabs" Text="Show its tabs"/>
+    <Phrase Key="ShowTabsHint" Text="A hidden module still works - only its tabs are put away."/>
+    <Phrase Key="InThisDocument" Text="In this document"/>
+    <Phrase Key="DetachFromDocument" Text="Detach from the document..."/>
+    <Phrase Key="DetachTitle" Text="Detach from this document?"/>
+    <Phrase Key="DetachText" Text="Its tabs leave the ribbon and its systems stop working in this document. Its data stays in the file: attach it again and everything is back."/>
+    <Phrase Key="StaysInFile" Text="Stays in the file"/>
+    <Phrase Key="GetsMarked" Text="Gets marked"/>
+    <Phrase Key="MarkedHint" Text="Nothing marked is lost: it waits for the module, and the Validate tab shows where it is."/>
+    <Phrase Key="Detach" Text="Detach"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="AttachToDocument" Text="Attach to the document"/>
+    <Phrase Key="AttachAgain" Text="Attach again"/>
+    <Phrase Key="DeleteModuleData" Text="Delete its data from the document..."/>
+    <Phrase Key="DeleteDataTitle" Text="Delete its data for good?"/>
+    <Phrase Key="DeleteDataText" Text="What the module made in this document is deleted. Attached again, it starts from nothing."/>
+    <Phrase Key="InstallModule" Text="Install"/>
+    <Phrase Key="UpdateModule" Text="Update"/>
+    <Phrase Key="UninstallModule" Text="Remove from the editor"/>
+
     <Phrase Key="Status" Select="action"
             Ready="Ready."
             Pasted="Pasted from the clipboard."
@@ -145,6 +259,7 @@
             Extruded="Extruded the selected faces."
             Bevelled="Bevelled the selected edges."
             Subdivided="Subdivided the mesh."
+            Unwrapped="Unwrapped the UVs."
             NewMaterial="Created a new material."
             EditingAlbedo="Editing the albedo channel."
             EditingNormal="Editing the normal channel."
@@ -165,6 +280,8 @@
             RemovedFromQuickAccess="Removed from the quick-access bar."
             QuickAccessBelow="Quick access moved below the ribbon."
             QuickAccessInCaption="Quick access moved back to the caption."
+            QuickAccessReordered="The quick-access bar was reordered."
+            QuickAccessReset="The quick-access bar is back to its defaults."
             Imported="Imported a {format} file."
             Exported="Exported the scene as {format}."
             NewScene="New scene."
@@ -172,5 +289,19 @@
             ExitRequested="Exit requested."
             Saved="Scene saved."
             Undone="Undone."
-            Redone="Redone."/>
+            Redone="Redone."
+            ModuleCatalogRequested="Asked for the module catalog."
+            ModuleToolUsed="The module ran its command."
+            ModuleInstalled="The module is installed: attach it to the document."
+            ModuleAlreadyInstalled="The modules of this file are installed already."
+            NotAModule="The file is no assembly the editor can load."
+            NoModuleInFile="The assembly holds no module."
+            NoFileDialog="There is no file dialog on this system."
+            ModulesChanged="The document's modules changed."
+            Raised="Terrain raised."
+            Lowered="Terrain lowered."
+            Smoothed="Terrain smoothed."
+            AddedStar="Star added."
+            AddedPlanet="Planet added."
+            AddedMoon="Moon added."/>
 </Language>

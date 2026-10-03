@@ -1283,10 +1283,19 @@ public class CodeGenerationContext
     // plain value.
     private string EmitLocalizedBinding(AumlAstLocalizedStringNode localized, IDiagnosticSink diagnostics, bool isResource)
     {
-        var table = Qualified(localized.TableFullName);
         var name = GenerateNextElementName("localized");
-        var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
-        TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+        if (localized.TableSource != null)
+        {
+            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}(null, null);");
+            TextGenerator.WriteLine($"{name}.TableSource = {Followed(localized.TableSource)};");
+        }
+        else
+        {
+            var table = Qualified(localized.TableFullName);
+            var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
+            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+        }
+
         if (localized.KeySource != null)
         {
             TextGenerator.WriteLine($"{name}.KeySource = {Followed(localized.KeySource)};");

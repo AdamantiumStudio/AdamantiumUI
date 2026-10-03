@@ -34,6 +34,15 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public static readonly AdamantiumProperty CommandParameterProperty = AdamantiumProperty.Register(nameof(CommandParameter),
         typeof(object), typeof(MenuItem), new PropertyMetadata(null, OnCommandParameterChanged));
 
+    public static readonly AdamantiumProperty IsCheckableProperty = AdamantiumProperty.Register(nameof(IsCheckable),
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsCheckedProperty = AdamantiumProperty.Register(nameof(IsChecked),
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
+
+    public static readonly AdamantiumProperty StaysOpenOnClickProperty = AdamantiumProperty.Register(nameof(StaysOpenOnClick),
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
     // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
     // looking ordinary and doing nothing when clicked. The subscription is WEAK (the relay holds the row weakly), so a
     // command owned by a long-lived view-model does not keep a dismissed menu's rows alive - a menu is built and thrown
@@ -105,6 +114,15 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
 
     public object CommandParameter { get => GetValue<object>(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
 
+    /// <summary>Whether choosing the row flips <see cref="IsChecked"/>.</summary>
+    public bool IsCheckable { get => GetValue<bool>(IsCheckableProperty); set => SetValue(IsCheckableProperty, value); }
+
+    /// <summary>Whether the row is checked; the theme draws a check mark in the icon gutter. Binds two-way by default.</summary>
+    public bool IsChecked { get => GetValue<bool>(IsCheckedProperty); set => SetValue(IsCheckedProperty, value); }
+
+    /// <summary>Whether the menu stays open after the row is chosen - for a list of switches flipped one after another.</summary>
+    public bool StaysOpenOnClick { get => GetValue<bool>(StaysOpenOnClickProperty); set => SetValue(StaysOpenOnClickProperty, value); }
+
     /// <summary>True when the item has children (a submenu parent). Read-only.</summary>
     public bool HasItems { get => GetValue<bool>(HasItemsProperty); private set => SetValue(HasItemsProperty, value); }
 
@@ -158,9 +176,17 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     {
         if (item is ISeparatorItem { IsSeparator: true }) return new Separator();
         if (ItemTemplate is not HierarchicalDataTemplate) return base.GetContainerForItem(item);
-        var container = CreateContainer(ItemContainerStyle);
-        container.OwnerMenu = this;   // so a child hovering cancels THIS item's submenu-close timer
-        return container;
+        return CreateContainer(ItemContainerStyle);
+    }
+
+    protected internal override void PrepareContainer(IUIComponent container, object item)
+    {
+        if (container is MenuItem row)
+        {
+            row.OwnerMenu = this;
+        }
+
+        base.PrepareContainer(container, item);
     }
 
     /// <summary>The MenuItem whose submenu this row lives in (null for a ContextMenu's own top-level rows).</summary>
@@ -232,6 +258,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     private void OnDescendantClicked(object sender, RoutedEventArgs e)
     {
         if (ReferenceEquals(e.Source, this)) return;   // our own re-raise, already bubbling outward
+        if (KeepsMenuOpen(e)) return;
         IsSubmenuOpen = false;
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
     }
@@ -285,7 +312,28 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(sender, e);
-        if (Invoke()) e.Handled = true;
+        if (IsOnAButtonInside(e.OriginalSource as IUIComponent))
+        {
+            return;
+        }
+
+        if (Invoke())
+        {
+            e.Handled = true;
+        }
+    }
+
+    private bool IsOnAButtonInside(IUIComponent pressed)
+    {
+        for (var node = pressed; node != null && !ReferenceEquals(node, this); node = node.VisualParent)
+        {
+            if (node is ButtonBase)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Enter and Space do what a click does. A menu row is not a <see cref="Primitives.ButtonBase"/> - it is an
@@ -312,10 +360,20 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
 
         if (!IsEnabled) return false;
 
+        if (IsCheckable)
+        {
+            SetCurrentValue(IsCheckedProperty, !IsChecked);
+        }
+
         if (Command != null && Command.CanExecute(CommandParameter))
             Command.Execute(CommandParameter);
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
         return true;
+    }
+
+    internal static bool KeepsMenuOpen(RoutedEventArgs e)
+    {
+        return e.OriginalSource is MenuItem { StaysOpenOnClick: true };
     }
 
     // Close the submenus of THIS item's siblings (the other rows in the same menu), so hovering across rows swaps which

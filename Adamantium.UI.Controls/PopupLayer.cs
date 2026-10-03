@@ -5,6 +5,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
 
@@ -22,6 +23,7 @@ public class PopupLayer
     // (Popup.Open/Close -> Add/Remove: a dialog opened from a command, a light-dismissed menu). Without this a popup
     // opened/closed mid-render corrupts the enumeration ("Collection was modified"). Guard every touch.
     private readonly object _sync = new();
+    private MouseButtonEventHandler _overlayPress;
 
     /// <summary>The laid-out child of every open popup (declaration order = back-to-front), for the overlay to render.</summary>
     public IReadOnlyList<IUIComponent> Roots
@@ -57,7 +59,7 @@ public class PopupLayer
         // than one way onto it - an OverlayWindow is added to the layer DIRECTLY, never through IsOpen. Registering in
         // the IsOpen path alone left a dialog's content with no route back to the window, so the keyboard could move
         // around inside it with no focus ring anywhere: the ring asks for the window's adorner layer and got null.
-        if (Owner != null && popup.ChildValue is { } overlayRoot) Popup.RegisterOverlayRoot(overlayRoot, Owner);
+        if (Owner != null && popup.ChildValue is { } overlayRoot) Popup.RegisterOverlayRoot(overlayRoot, Owner, popup);
         // Its render units were disposed when it last closed, but its components are still geometry-VALID (closing doesn't
         // invalidate layout), so a clean reopen would record nothing and the cache would "reuse" the disposed units (the
         // fill + border vanish, only re-dirtied text rebuilds). Mark the whole subtree dirty so the next layout re-measures
@@ -66,6 +68,9 @@ public class PopupLayer
         // Attaching gives the content the normal lifecycle (OnAttached, triggers); its layout stays this layer's job, see
         // RemeasureIfDirty.
         AttachToOwner(popup.ChildValue as UIComponent);
+
+        _overlayPress ??= (_, e) => Popup.PressedInOverlay(Owner, e);
+        (popup.ChildValue as IInputComponent)?.AddHandler(Mouse.PreviewMouseDownEvent, _overlayPress, handledEventsToo: true);
     }
 
     public void Remove(Popup popup)
@@ -76,6 +81,11 @@ public class PopupLayer
             if (popup.ChildValue is IUIComponent c) _lastRect.Remove(c);   // ChildValue = lock-free field (see Roots): no component lock under _sync
         }
         if (popup.ChildValue is not { } overlayRoot) return;
+        if (_overlayPress != null)
+        {
+            (overlayRoot as IInputComponent)?.RemoveHandler(Mouse.PreviewMouseDownEvent, _overlayPress);
+        }
+
         // Take the ring down BEFORE the way back out is forgotten - after that nothing inside can reach the layer.
         (Owner as Adorners.IAdornerHost)?.AdornerLayer.ClearFocusWithin(overlayRoot);
         Popup.UnregisterOverlayRoot(overlayRoot);
@@ -249,16 +259,15 @@ public class PopupLayer
             tx = t.X; ty = t.Y; tw = target.RenderSize.Width; th = target.RenderSize.Height;
         }
 
-        // Top/Bottom center horizontally over the target; Left/Right center vertically - the natural tooltip anchor.
-        var cx = tx + (tw - size.Width) / 2;
-        var cy = ty + (th - size.Height) / 2;
+        var cx = Align(tx, tw, size.Width);
+        var cy = Align(ty, th, size.Height);
         double x, y;
         switch (popup.Placement)
         {
             case PlacementMode.Top:      x = cx; y = FlipY(ty - size.Height, ty + th, above: true);   break;
             case PlacementMode.Left:     x = tx - size.Width;  y = cy;             break;
             case PlacementMode.Right:    x = tx + tw;          y = cy;             break;
-            case PlacementMode.Center:   x = cx; y = cy;                           break;
+            case PlacementMode.Center:   x = tx + (tw - size.Width) / 2; y = ty + (th - size.Height) / 2; break;
             case PlacementMode.Relative: x = tx; y = ty;                           break;
             default:                     x = cx; y = FlipY(ty + th, ty - size.Height, above: false);  break;   // Bottom
         }
@@ -274,6 +283,13 @@ public class PopupLayer
             var roomFlipped = above ? windowSize.Height - (ty + th) : ty;
             return (size.Height <= roomPrimary || roomPrimary >= roomFlipped) ? primary : flipped;
         }
+
+        double Align(double start, double length, double extent) => popup.PlacementAlignment switch
+        {
+            PlacementAlignment.Start => start,
+            PlacementAlignment.End => start + length - extent,
+            _ => start + (length - extent) / 2
+        };
         x += popup.HorizontalOffset;
         y += popup.VerticalOffset;
 

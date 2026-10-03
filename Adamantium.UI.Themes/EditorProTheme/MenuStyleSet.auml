@@ -34,15 +34,20 @@
                             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                                 <!-- The gutter is always reserved, with or without an icon, so every label in the menu
                                      starts on the same vertical line. -->
-                                <ContentPresenter Grid.Column="0" Content="{TemplateBinding Icon}"
+                                <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
                                         Width="{ResourceReference MenuIconGutter}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Path x:Name="CheckGlyph" Grid.Column="0"
+                                        Data="M0,5 L4,9 L12,1"
+                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Visibility="Collapsed"/>
                                 <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
                                         Content="{TemplateBinding Header}"
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
-                                        HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 <!-- The shortcut, a step down in size and color: it is a reminder, not a label. -->
                                 <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorTertiary}"
@@ -60,8 +65,10 @@
                             </Grid>
                         </Border>
                         <!-- No PlacementTarget: the popup falls back to its visual parent - this template's root grid,
-                             which overlaps the row - so Placement=Right opens just past the row's right edge. -->
-                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" FlipToFit="True"
+                             which overlaps the row - so Placement=Right opens just past the row's right edge, its first
+                             row level with this one. -->
+                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" PlacementAlignment="Start" FlipToFit="True"
+                                VerticalOffset="{ResourceReference MenuSubmenuRise}"
                                 IsOpen="{TemplateBinding IsSubmenuOpen}">
                             <!-- Built LAZILY on first open, so a leaf that never opens a submenu never pays to build
                                  and theme one. -->
@@ -93,6 +100,12 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                     Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
+        </PropertyTrigger>
+        <!-- A checked row shows the check mark in the icon gutter, in place of its icon. -->
+        <PropertyTrigger Property="IsChecked" Value="true">
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>

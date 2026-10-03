@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="Ledge" Text="ROADS"/>
+    <Phrase Key="Roads" Text="Roads"/>
+    <Phrase Key="RoadsInfo" Text="Roads, bridges and crossings"/>
+    <Phrase Key="RoadsAdds" Text="Tab: Roads"/>
+    <Phrase Key="Build" Text="Build"/>
+    <Phrase Key="LayRoad" Text="Lay a road"/>
+    <Phrase Key="Bridge" Text="Bridge"/>
+    <Phrase Key="Crossing" Text="Crossing"/>
+</Language>

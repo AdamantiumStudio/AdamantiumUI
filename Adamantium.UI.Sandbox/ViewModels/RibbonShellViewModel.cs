@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Adamantium.Core.Commands;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Sandbox.Localization;
+using Adamantium.UI.Sandbox.ModuleLoading;
+using Adamantium.UI.Sandbox.Modules;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -41,22 +45,23 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>Set by Cut/Copy; gates Paste.</summary>
     [Bindable, Affects(nameof(PasteCommand))] private bool _hasClipboard;
 
-    // Two-way bound to RibbonToggleButtons, read back by the document surface.
-    [Bindable] private bool _showGrid = true;
-    [Bindable] private bool _showGizmos = true;
-    [Bindable] private bool _wireframe;
-    [Bindable] private bool _snapToGrid;
-
     [Bindable] private double _gridSize = 1.0;
 
     /// <summary>Read by BOTH quick-access bars - the one in the caption and the one in the ribbon's footer row. Each
     /// shows itself only while this names its own slot; the collection they list is this one view model's.</summary>
     [Bindable] private RibbonQuickAccessPlacement _quickAccessPlacement = RibbonQuickAccessPlacement.Caption;
 
-    [Bindable] private ShadingMode _shadingMode = ShadingMode.Lit;
+    /// <summary>Which tab's commands the customize page offers.</summary>
+    [Bindable] private ShellTab _commandSource = ShellTab.All;
 
-    /// <summary>An icon held as DATA - plain path text, converted to a Geometry by the binding.</summary>
-    public string MaterialIcon => "M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5";
+    /// <summary>The command picked among those the page offers.</summary>
+    [Bindable, Affects(nameof(AddToBarCommand))] private ShellCommand _selectedChoice;
+
+    /// <summary>The command picked in the bar's list on the page.</summary>
+    [Bindable, Affects(nameof(RemoveFromBarCommand), nameof(MoveUpInBarCommand), nameof(MoveDownInBarCommand))]
+    private ShellCommand _selectedBarItem;
+
+    [Bindable] private ShadingMode _shadingMode = ShadingMode.Lit;
 
     public IEnumerable<ShadingMode> ShadingModes { get; } = Enum.GetValues<ShadingMode>();
 
@@ -152,6 +157,8 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void Subdivide() => LastAction = RibbonAction.Subdivided;
 
+    [Command] private void Unwrap() => LastAction = RibbonAction.Unwrapped;
+
     [Command] private void NewMaterial() => LastAction = RibbonAction.NewMaterial;
 
     [Command] private void EditAlbedo() => LastAction = RibbonAction.EditingAlbedo;
@@ -192,6 +199,481 @@ public partial class RibbonShellViewModel : IWindowAware
     /// belong together - and the strip stops paying the ledge row's height.</summary>
     [Bindable] private bool _showContextHeader = true;
 
+    /// <summary>The module catalog is out - the drawer the ribbon opens in place of its band.</summary>
+    [Bindable] private bool _isModuleCatalogOpen;
+
+    [Bindable] private ModuleCatalogFilter _catalogFilter = ModuleCatalogFilter.All;
+
+    [Bindable] private ModuleSection _catalogSection = ModuleSection.All;
+
+    [Bindable] private string _catalogSearch = string.Empty;
+
+    /// <summary>The module the catalog tells about.</summary>
+    [Bindable] private EditorModule _selectedModule;
+
+    private ObservableCollection<EditorModule> _modules;
+
+    private readonly Dictionary<EditorModule, ModulesMenuRow> _moduleRows = [];
+
+    private IReadOnlyList<ModulesMenuRow> _menuTail;
+
+    private ShellCommands _commands;
+
+    private ObservableCollection<ShellCommand> _quickAccess;
+
+    public RibbonShellViewModel()
+    {
+        foreach (var module in Modules)
+        {
+            Take(module);
+        }
+
+        SelectedModule = Surface;
+        ShowCatalog();
+        ShowModulesMenu();
+
+        QuickAccess.CollectionChanged += OnQuickAccessChanged;
+        ShowChoices();
+    }
+
+    /// <summary>Every command of the shell, as data: the ribbon's buttons, the quick-access bar and the customize page all
+    /// draw from it. Built on first read - the commands it runs are generated, so they exist by then.</summary>
+    public ShellCommands Commands => _commands ??= new ShellCommands(this);
+
+    /// <summary>The quick-access bar: commands of <see cref="Commands"/>, in the order the user put them. Both bars and
+    /// the ribbon read it; only the customize page and the ribbon's requests change it.</summary>
+    public ObservableCollection<ShellCommand> QuickAccess => _quickAccess ??= [.. DefaultQuickAccess];
+
+    /// <summary>The tabs the customize page can offer commands from.</summary>
+    public IReadOnlyList<ShellTab> CommandSources { get; } =
+    [
+        ShellTab.All, ShellTab.Home, ShellTab.Modeling, ShellTab.Materials, ShellTab.View, ShellTab.Geometry, ShellTab.Uv,
+        ShellTab.Light
+    ];
+
+    /// <summary>The commands the customize page offers: those of <see cref="CommandSource"/> not in the bar yet.</summary>
+    public ObservableCollection<ShellCommand> CommandChoices { get; } = [];
+
+    /// <summary>The bar below the ribbon rather than in the caption.</summary>
+    public bool IsQuickAccessBelow
+    {
+        get => QuickAccessPlacement == RibbonQuickAccessPlacement.BelowRibbon;
+        set => QuickAccessPlacement = value ? RibbonQuickAccessPlacement.BelowRibbon : RibbonQuickAccessPlacement.Caption;
+    }
+
+    public bool HasChoice => SelectedChoice != null;
+
+    public bool HasBarItem => SelectedBarItem != null;
+
+    public bool CanMoveUpInBar => HasBarItem && QuickAccess.IndexOf(SelectedBarItem) > 0;
+
+    public bool CanMoveDownInBar => HasBarItem && QuickAccess.IndexOf(SelectedBarItem) < QuickAccess.Count - 1;
+
+    private IReadOnlyList<ShellCommand> DefaultQuickAccess => [Commands.Save, Commands.Undo, Commands.Redo];
+
+    partial void OnCommandSourceChanged(ShellTab value) => ShowChoices();
+
+    partial void OnQuickAccessPlacementChanged(RibbonQuickAccessPlacement value) =>
+        RaisePropertyChanged(nameof(IsQuickAccessBelow));
+
+    private void OnQuickAccessChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        ShowChoices();
+        MoveUpInBarCommand.RaiseCanExecuteChanged();
+        MoveDownInBarCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ShowChoices()
+    {
+        Show(CommandChoices, Commands.All
+            .Where(command => !QuickAccess.Contains(command))
+            .Where(command => CommandSource == ShellTab.All || command.Tabs.HasFlag(CommandSource))
+            .ToList());
+    }
+
+    [Command(CanExecute = nameof(HasChoice))] private void AddToBar()
+    {
+        var command = SelectedChoice;
+        PutInBar(command);
+        SelectedBarItem = command;
+    }
+
+    [Command(CanExecute = nameof(HasBarItem))] private void RemoveFromBar()
+    {
+        var index = QuickAccess.IndexOf(SelectedBarItem);
+        TakeOutOfBar(SelectedBarItem);
+        SelectedBarItem = QuickAccess.Count == 0 ? null : QuickAccess[Math.Min(index, QuickAccess.Count - 1)];
+    }
+
+    [Command(CanExecute = nameof(CanMoveUpInBar))] private void MoveUpInBar() => MoveInBar(-1);
+
+    [Command(CanExecute = nameof(CanMoveDownInBar))] private void MoveDownInBar() => MoveInBar(1);
+
+    private void MoveInBar(int step)
+    {
+        var command = SelectedBarItem;
+        var index = QuickAccess.IndexOf(command);
+        QuickAccess.Move(index, index + step);
+        SelectedBarItem = command;
+        LastAction = RibbonAction.QuickAccessReordered;
+    }
+
+    [Command] private void ResetQuickAccess()
+    {
+        QuickAccess.Clear();
+        foreach (var command in DefaultQuickAccess)
+        {
+            QuickAccess.Add(command);
+        }
+
+        SelectedBarItem = null;
+        LastAction = RibbonAction.QuickAccessReset;
+    }
+
+    private void PutInBar(ShellCommand command)
+    {
+        if (QuickAccess.Contains(command))
+        {
+            return;
+        }
+
+        QuickAccess.Add(command);
+        LastAction = RibbonAction.AddedToQuickAccess;
+    }
+
+    private void TakeOutOfBar(ShellCommand command)
+    {
+        if (QuickAccess.Remove(command))
+        {
+            LastAction = RibbonAction.RemovedFromQuickAccess;
+        }
+    }
+
+    /// <summary>The modules of the document, in the catalog's order - what brings its tabs to the ribbon.</summary>
+    public ObservableCollection<EditorModule> DocumentModules { get; } = [];
+
+    /// <summary>The rows of the "Modules" drop-down: every module of the document, then the catalog and the sets.</summary>
+    public ObservableCollection<ModulesMenuRow> ModulesMenu { get; } = [];
+
+    /// <summary>The modules the document is made of, in the "Modules" drop-down next to "File". Each one brings its
+    /// own tabs - a context that stays in the strip while the module is in the document and shown.</summary>
+    public EditorModule Surface { get; } = new()
+    {
+        Phrases = RibbonShellStrings.Current,
+        Name = nameof(RibbonShellStrings.SurfaceModule),
+        Info = nameof(RibbonShellStrings.SurfaceModuleInfo),
+        Adds = nameof(RibbonShellStrings.SurfaceAdds),
+        Content = nameof(RibbonShellStrings.SurfaceContent),
+        Dependents = nameof(RibbonShellStrings.SurfaceDependents),
+        Version = "1.2",
+        Accent = "#2E8B62",
+        Icon = "M1,13 L6,6 L9,10 L11,7 L15,13 Z",
+        Section = ModuleSection.World,
+        State = EditorModuleState.InDocument
+    };
+
+    public EditorModule Space { get; } = new()
+    {
+        Phrases = RibbonShellStrings.Current,
+        Name = nameof(RibbonShellStrings.SpaceModule),
+        Info = nameof(RibbonShellStrings.SpaceModuleInfo),
+        Adds = nameof(RibbonShellStrings.SpaceAdds),
+        Content = nameof(RibbonShellStrings.SpaceContent),
+        Dependents = nameof(RibbonShellStrings.SpaceDependents),
+        Version = "1.0",
+        Accent = "#6A58C9",
+        Icon = "M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M1,10 L15,6",
+        Section = ModuleSection.Space,
+        State = EditorModuleState.InDocument,
+        IsShown = false
+    };
+
+    /// <summary>Every module the editor knows of - those in the document and those it could take.</summary>
+    public ObservableCollection<EditorModule> Modules => _modules ??=
+    [
+        Surface,
+        Space,
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.InteriorsModule),
+            Info = nameof(RibbonShellStrings.InteriorsModuleInfo),
+            Adds = nameof(RibbonShellStrings.InteriorsAdds),
+            Version = "0.9",
+            Accent = "#C98A3E",
+            Icon = "M2,14 L2,6 L8,2 L14,6 L14,14 Z M6,14 L6,9 L10,9 L10,14",
+            Section = ModuleSection.Buildings,
+            State = EditorModuleState.Installed
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.CharactersModule),
+            Info = nameof(RibbonShellStrings.CharactersModuleInfo),
+            Adds = nameof(RibbonShellStrings.CharactersAdds),
+            Content = nameof(RibbonShellStrings.CharactersContent),
+            Version = "0.8",
+            Accent = "#C2557A",
+            Icon = "M8,2 A2.5,2.5 0 1 0 8,7 A2.5,2.5 0 1 0 8,2 M3,14 C3,10 5,9 8,9 C11,9 13,10 13,14",
+            Section = ModuleSection.Characters,
+            State = EditorModuleState.Detached
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.StrategyModule),
+            Info = nameof(RibbonShellStrings.StrategyModuleInfo),
+            Adds = nameof(RibbonShellStrings.StrategyAdds),
+            Version = "0.5",
+            Accent = "#3F8FBF",
+            Icon = "M3,14 L3,2 M3,2 L12,2 L10,5 L12,8 L3,8",
+            Section = ModuleSection.Gameplay,
+            State = EditorModuleState.Installed
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.SoundModule),
+            Info = nameof(RibbonShellStrings.SoundModuleInfo),
+            Adds = nameof(RibbonShellStrings.SoundAdds),
+            Version = "1.0",
+            Accent = "#B39A2E",
+            Icon = "M2,6 L2,10 L5,10 L9,13 L9,3 L5,6 Z M11,6 A3,3 0 0 1 11,10",
+            Section = ModuleSection.Sound,
+            State = EditorModuleState.UpdateAvailable
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.VegetationModule),
+            Info = nameof(RibbonShellStrings.VegetationModuleInfo),
+            Adds = nameof(RibbonShellStrings.VegetationAdds),
+            Version = "0.7",
+            Accent = "#5E9E3A",
+            Icon = "M8,1 L3,8 L6,8 L2,13 L14,13 L10,8 L13,8 Z M8,13 L8,15",
+            Section = ModuleSection.World,
+            State = EditorModuleState.Available
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.WaterModule),
+            Info = nameof(RibbonShellStrings.WaterModuleInfo),
+            Adds = nameof(RibbonShellStrings.WaterAdds),
+            Version = "0.6",
+            Accent = "#3A7FC9",
+            Icon = "M8,2 C10,6 12,8 12,10 A4,4 0 0 1 4,10 C4,8 6,6 8,2 Z",
+            Section = ModuleSection.World,
+            State = EditorModuleState.Available
+        },
+        new EditorModule
+        {
+            Phrases = RibbonShellStrings.Current,
+            Name = nameof(RibbonShellStrings.DestructionModule),
+            Info = nameof(RibbonShellStrings.DestructionModuleInfo),
+            Adds = nameof(RibbonShellStrings.DestructionAdds),
+            Version = "0.4",
+            Accent = "#C0643F",
+            Icon = "M2,2 L6,6 L4,8 L8,12 M8,12 L10,10 L14,14",
+            Section = ModuleSection.World,
+            State = EditorModuleState.Available
+        }
+    ];
+
+    /// <summary>The modules the catalog lists under its filter, section and search.</summary>
+    public ObservableCollection<EditorModule> CatalogModules { get; } = [];
+
+    public IReadOnlyList<ModuleCatalogFilter> CatalogFilters { get; } = Enum.GetValues<ModuleCatalogFilter>();
+
+    public IReadOnlyList<ModuleSection> CatalogSections { get; } = Enum.GetValues<ModuleSection>();
+
+    /// <summary>How many modules are in the document - the count beside "Modules" in the strip.</summary>
+    public int ModuleCount => Modules.Count(module => module.IsInDocument);
+
+    partial void OnCatalogFilterChanged(ModuleCatalogFilter value) => ShowCatalog();
+
+    partial void OnCatalogSectionChanged(ModuleSection value) => ShowCatalog();
+
+    partial void OnCatalogSearchChanged(string value) => ShowCatalog();
+
+    partial void OnIsModuleCatalogOpenChanged(bool value)
+    {
+        foreach (var module in Modules)
+        {
+            module.ForgetQuestions();
+        }
+    }
+
+    private void Take(EditorModule module)
+    {
+        module.PropertyChanged += OnModuleChanged;
+        module.Report = done => LastAction = Enum.TryParse<RibbonAction>(done, out var action)
+            ? action
+            : RibbonAction.ModuleToolUsed;
+    }
+
+    private void OnModuleChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(EditorModule.State))
+        {
+            return;
+        }
+
+        RaisePropertyChanged(nameof(ModuleCount));
+        LastAction = RibbonAction.ModulesChanged;
+        ShowCatalog();
+        ShowModulesMenu();
+    }
+
+    private void ShowCatalog()
+    {
+        var search = CatalogSearch?.Trim() ?? string.Empty;
+        Show(CatalogModules, Modules.Where(module => Fits(module, search)).ToList());
+    }
+
+    private void ShowModulesMenu()
+    {
+        _menuTail ??=
+        [
+            new ModulesMenuRow { IsSeparator = true },
+            new ModulesMenuRow { Title = nameof(RibbonShellStrings.ModuleCatalog), Command = OpenModuleCatalogCommand },
+            new ModulesMenuRow
+            {
+                Title = nameof(RibbonShellStrings.ModuleSets),
+                Children =
+                [
+                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.CoreOnly), Command = UseCoreOnlyCommand },
+                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.SurfaceMap), Command = UseSurfaceMapCommand },
+                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.StarSystem), Command = UseStarSystemCommand }
+                ]
+            }
+        ];
+
+        var inDocument = Modules.Where(module => module.IsInDocument).ToList();
+        Show(DocumentModules, inDocument);
+        Show(ModulesMenu, inDocument.Select(RowOf).Concat(_menuTail).ToList());
+    }
+
+    private ModulesMenuRow RowOf(EditorModule module)
+    {
+        if (!_moduleRows.TryGetValue(module, out var row))
+        {
+            _moduleRows[module] = row = new ModulesMenuRow { Module = module };
+        }
+
+        return row;
+    }
+
+    private static void Show<T>(ObservableCollection<T> shown, IReadOnlyList<T> wanted)
+    {
+        for (var i = shown.Count - 1; i >= 0; i--)
+        {
+            if (!wanted.Contains(shown[i]))
+            {
+                shown.RemoveAt(i);
+            }
+        }
+
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            if (i >= shown.Count || !Equals(shown[i], wanted[i]))
+            {
+                shown.Insert(i, wanted[i]);
+            }
+        }
+    }
+
+    private bool Fits(EditorModule module, string search)
+    {
+        var listed = CatalogFilter switch
+        {
+            ModuleCatalogFilter.InDocument => module.IsInDocument,
+            ModuleCatalogFilter.Installed => module.State != EditorModuleState.Available,
+            ModuleCatalogFilter.Updates => module.State == EditorModuleState.UpdateAvailable,
+            _ => true
+        };
+        if (!listed)
+        {
+            return false;
+        }
+
+        if (CatalogSection != ModuleSection.All && module.Section != CatalogSection)
+        {
+            return false;
+        }
+
+        return search.Length == 0
+               || Languages.Say(module.Phrases, module.Name).Contains(search, StringComparison.CurrentCultureIgnoreCase)
+               || Languages.Say(module.Phrases, module.Info).Contains(search, StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    [Command] private void OpenModuleCatalog()
+    {
+        IsModuleCatalogOpen = true;
+        LastAction = RibbonAction.ModuleCatalogRequested;
+    }
+
+    [Command] private void CloseModuleCatalog() => IsModuleCatalogOpen = false;
+
+    [Command] private void InstallModuleFromFile()
+    {
+        if (!FileDialog.IsAvailable)
+        {
+            LastAction = RibbonAction.NoFileDialog;
+            return;
+        }
+
+        var path = FileDialog.Open(new OpenFileRequest
+        {
+            Title = RibbonShellStrings.InstallFromFile,
+            FileTypes = [new FileType(RibbonShellStrings.ModuleFiles, "*.dll")],
+            Key = "sandbox.modules.install"
+        });
+        if (path == null)
+        {
+            return;
+        }
+
+        var loaded = ModuleAssembly.Load(path);
+        if (loaded.Failed)
+        {
+            LastAction = RibbonAction.NotAModule;
+            return;
+        }
+
+        var fresh = loaded.Modules.Where(module => Modules.All(known => known.GetType().FullName != module.GetType().FullName)).ToList();
+        if (fresh.Count == 0)
+        {
+            LastAction = loaded.Modules.Count == 0 ? RibbonAction.NoModuleInFile : RibbonAction.ModuleAlreadyInstalled;
+            return;
+        }
+
+        foreach (var module in fresh)
+        {
+            Take(module);
+            Modules.Add(module);
+        }
+
+        ShowCatalog();
+        SelectedModule = fresh[0];
+        LastAction = RibbonAction.ModuleInstalled;
+    }
+
+    [Command] private void UseCoreOnly() => UseModules(false, false);
+
+    [Command] private void UseSurfaceMap() => UseModules(true, false);
+
+    [Command] private void UseStarSystem() => UseModules(false, true);
+
+    private void UseModules(bool surface, bool space)
+    {
+        Surface.State = surface ? EditorModuleState.InDocument : EditorModuleState.Installed;
+        Surface.IsShown = true;
+        Space.State = space ? EditorModuleState.InDocument : EditorModuleState.Installed;
+        Space.IsShown = true;
+        LastAction = RibbonAction.ModulesChanged;
+    }
+
     // Home carries a real editor's worth of groups, so the band's LAST resort - scrolling, once every group has been
     // collapsed and it still does not fit - is reachable by dragging the window narrow.
     [Command] private void AlignLeft() => LastAction = RibbonAction.AlignedLeft;
@@ -218,102 +700,22 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void Annotate() => LastAction = RibbonAction.Annotating;
 
-    // The ribbon hands over a DESCRIPTION and never touches this collection - the shell decides what its own items are
-    // made of. Here they are WindowCommands, the type the caption bar already lists.
+    // A ribbon command is drawn for a command of the catalog, and the request hands that one over - the bar holds the
+    // catalog's own commands, so nothing is rebuilt from a description and nothing is kept in step.
     [Command] private void AddToQuickAccess(object request)
     {
-        if (request is not RibbonQuickAccessEventArgs asked) return;
-
-
-        var item = new QuickAccessCommand
+        if (request is RibbonQuickAccessEventArgs { Item: ShellCommand command })
         {
-            IconData = asked.Icon as string,
-            Label = asked.Label,
-            ToolTip = asked.ToolTip as string,
-            Key = asked.Key,
-            Command = asked.Action,
-            CommandParameter = asked.ActionParameter,
-            // What is not a button (a slider) hands over its own compact form; a button leaves this null and is drawn
-            // by the bar's default.
-            QuickAccessTemplate = asked.Template,
-            DropDownItems = asked.DropDownItems,
-            DropDownItemTemplate = asked.DropDownItemTemplate
-        };
-
-        // A command WITH a state is one this view model already keeps a property for, so the item shows THAT property -
-        // the button in the caption and the button in the ribbon end up two views of one value. Which command is which is
-        // said in the markup by key; nothing here holds a control.
-        Mirror(item, asked.Key as string);
-
-        QuickAccess.Add(item);
-
-        // Nothing is written back to the ribbon: it is pointed at this collection (Ribbon.QuickAccessItems in the view)
-        // and recognizes its own commands in it by key. A view model that kept the ribbon's control to mark it would be
-        // holding a control.
-        LastAction = RibbonAction.AddedToQuickAccess;
-    }
-
-    // Which of this view model's own states each named command shows. A command that names none stays a plain button.
-    private void Mirror(QuickAccessCommand item, string key)
-    {
-        switch (key)
-        {
-            case "ShowGrid":
-                Mirror(item, nameof(ShowGrid), () => ShowGrid, value => ShowGrid = value);
-                break;
-            case "ShowGizmos":
-                Mirror(item, nameof(ShowGizmos), () => ShowGizmos, value => ShowGizmos = value);
-                break;
-            case "Wireframe":
-                Mirror(item, nameof(Wireframe), () => Wireframe, value => Wireframe = value);
-                break;
-            case "SnapToGrid":
-                Mirror(item, nameof(SnapToGrid), () => SnapToGrid, value => SnapToGrid = value);
-                break;
+            PutInBar(command);
         }
     }
-
-    // ONE value, two views of it: writing either side lands on the property, and the other side is told. No guard is
-    // needed - a write that changes nothing raises nothing.
-    private void Mirror(QuickAccessCommand item, string property, Func<bool> read, Action<bool> write)
-    {
-        item.IsChecked = read();
-        item.PropertyChanged += (_, _) => write(item.IsChecked == true);
-
-        void Follow(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != property) return;
-
-            item.IsChecked = read();
-        }
-
-        PropertyChanged += Follow;
-        _mirrors[item] = Follow;
-    }
-
-    private readonly Dictionary<QuickAccessCommand, System.ComponentModel.PropertyChangedEventHandler> _mirrors = [];
 
     [Command] private void RemoveFromQuickAccess(object request)
     {
-        if (request is not RibbonQuickAccessEventArgs asked) return;
-
-        for (var i = QuickAccess.Count - 1; i >= 0; i--)
+        if (request is RibbonQuickAccessEventArgs { Item: ShellCommand command })
         {
-            var item = QuickAccess[i] as QuickAccessCommand;
-            var same = asked.Key != null
-                ? Equals(item?.Key, asked.Key)
-                : item?.Command != null && ReferenceEquals(item.Command, asked.Action);
-            if (!same) continue;
-
-            if (_mirrors.Remove(item, out var follow))
-            {
-                PropertyChanged -= follow;
-            }
-
-            QuickAccess.RemoveAt(i);
+            TakeOutOfBar(command);
         }
-
-        LastAction = RibbonAction.RemovedFromQuickAccess;
     }
 
     [Command] private void MoveQuickAccess()
@@ -355,15 +757,4 @@ public partial class RibbonShellViewModel : IWindowAware
         HasSelection = true;
         LastAction = added;
     }
-
-    // On the SHELL, not on either control: the user reorders it and it outlives a session. Lazy, so the generated
-    // commands exist by first bind.
-    private ObservableCollection<WindowCommand> _quickAccess;
-
-    public ObservableCollection<WindowCommand> QuickAccess => _quickAccess ??=
-    [
-        new WindowCommand { IconData = "M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2", Label = RibbonShellStrings.Save, ToolTip = RibbonShellStrings.SaveTip, Command = SaveCommand },
-        new WindowCommand { IconData = "M6,4 L2,7 L6,10 M2,7 L10,7 A3,3 0 0 1 10,13 L8,13", Label = RibbonShellStrings.Undo, ToolTip = RibbonShellStrings.Undo, Command = UndoCommand },
-        new WindowCommand { IconData = "M8,4 L12,7 L8,10 M12,7 L4,7 A3,3 0 0 0 4,13 L6,13", Label = RibbonShellStrings.Redo, ToolTip = RibbonShellStrings.Redo, Command = RedoCommand },
-    ];
 }

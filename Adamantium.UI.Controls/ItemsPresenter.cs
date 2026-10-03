@@ -33,11 +33,23 @@ public class ItemsPresenter : InputUIComponent
         Rebuild();
     }
 
-    /// <summary>Rebuilds the items panel (e.g. the ItemsPanel template changed) and refills it.</summary>
+    /// <summary>Rebuilds the items panel (e.g. the ItemsPanel template changed) and refills it. The panel it replaces lets
+    /// go of its containers and stops hosting, and the generator forgets them: a virtualizing panel realizes only what it
+    /// finds unrealized, and would otherwise find every item realized - in the panel it replaced.</summary>
     internal void Rebuild()
     {
         if (_panel != null)
         {
+            if (_panel is VirtualizingPanel replaced)
+            {
+                replaced.DetachOwner();
+            }
+            else
+            {
+                _panel.Children.Clear();
+            }
+
+            _owner?.ItemContainerGenerator.Clear();
             RemoveVisualChild(_panel);
             RemoveLogicalChild(_panel);
             _panel = null;
@@ -55,7 +67,7 @@ public class ItemsPresenter : InputUIComponent
         else
             Refresh();                          // non-virtualizing panel: realize every container up front
 
-        // Nothing is invalidated by hand here. A container carried into the new panel re-attaches, and re-attaching is
+        // Nothing is invalidated by hand here. A container placed in the new panel re-attaches, and re-attaching is
         // where an element settles the layout debt it could not register while it was out of a tree - see
         // MeasurableUIComponent.OnAttachedToVisualTree, which re-registers what has a constraint of its own and tells the
         // parent to re-read the rest. Repeating that here was one mechanism written twice.

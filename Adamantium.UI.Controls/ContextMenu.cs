@@ -206,7 +206,15 @@ public class ContextMenu : ItemsControl
 
     private void OnMenuScrolled(object sender, EventArgs e) => CloseAllSubmenus();
 
-    private void OnItemClicked(object sender, RoutedEventArgs e) => IsOpen = false;
+    private void OnItemClicked(object sender, RoutedEventArgs e)
+    {
+        if (MenuItem.KeepsMenuOpen(e))
+        {
+            return;
+        }
+
+        IsOpen = false;
+    }
 
     // The popup light-dismissed (a press outside the menu's overlay) - drive our IsOpen false so the whole menu tears down.
     private void OnPopupClosed(object sender, EventArgs e) => IsOpen = false;

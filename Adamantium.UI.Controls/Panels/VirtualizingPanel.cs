@@ -166,6 +166,20 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         InvalidateMeasure();
     }
 
+    /// <summary>Gives up hosting the items: lets go of every container it holds and realizes nothing from here on. The
+    /// panel that replaces it does - a replaced panel still measured once more would otherwise take them all back.</summary>
+    internal void DetachOwner()
+    {
+        foreach (var child in VisualChildren.ToList())
+        {
+            RemoveVisualChild(child);
+            RemoveLogicalChild(child);
+        }
+
+        ResetSkeletons();
+        Owner = null;
+    }
+
     /// <summary>Drops the realized window AND the pooled containers (e.g. the collection reset) so the next measure
     /// rebuilds from scratch. Detaches every container the panel holds (realized + pooled), not just the visible ones.</summary>
     internal void Revirtualize()

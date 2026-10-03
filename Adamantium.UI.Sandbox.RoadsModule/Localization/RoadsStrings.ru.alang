@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="Ledge" Text="ДОРОГИ"/>
+    <Phrase Key="Roads" Text="Дороги"/>
+    <Phrase Key="RoadsInfo" Text="Дороги, мосты и переезды"/>
+    <Phrase Key="RoadsAdds" Text="Вкладка: Дороги"/>
+    <Phrase Key="Build" Text="Строительство"/>
+    <Phrase Key="LayRoad" Text="Проложить дорогу"/>
+    <Phrase Key="Bridge" Text="Мост"/>
+    <Phrase Key="Crossing" Text="Переезд"/>
+</Language>

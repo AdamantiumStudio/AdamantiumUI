@@ -10,6 +10,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
 {
     private readonly Dictionary<string, BindingExpressionBase> _arguments = new();
     private BindingExpressionBase _key;
+    private BindingExpressionBase _table;
     private bool _connecting;
     private FundamentalUIComponent _waitingOn;
 
@@ -30,6 +31,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
         // Each argument publishes its value as it connects; the string is written once, when all of them have one.
         _connecting = true;
+        _table = Follow(Localize.TableSource);
         _key = Follow(Localize.KeySource);
         foreach (var (name, value) in Localize.Arguments)
         {
@@ -92,7 +94,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
             _waitingOn = null;
         }
 
-        foreach (var argument in _arguments.Values.Append(_key).Where(a => a != null))
+        foreach (var argument in _arguments.Values.Append(_key).Append(_table).Where(a => a != null))
         {
             argument.ValueChanged -= OnArgumentChanged;
             argument.CloseConnection();
@@ -100,6 +102,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
         _arguments.Clear();
         _key = null;
+        _table = null;
     }
 
     public override void UpdateTarget()
@@ -126,25 +129,26 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
     private object Compose()
     {
-        var table = Localize.Table;
-        if (table == null)
+        var table = Localize.TableSource != null ? _table?.ProducedValue as LocalizedStrings : Localize.Table;
+        if (table == null && Localize.TableSource == null)
         {
             Fail($"{{Localize {Localize.Key}}} has no table");
             return Localize.FallbackValue;
         }
 
-        // A key read from a binding names a kind of thing, and a name the table has no word for is said as it is - an
-        // application's own tool keeps the name it was given. Such a word takes the arguments it uses and leaves the rest.
-        if (Localize.KeySource != null)
+        // A key or a table read from a binding names a kind of thing, and a name with no word for it - or no table yet -
+        // is said as it is: an application's own tool keeps the name it was given. Such a word takes the arguments it
+        // uses and leaves the rest.
+        if (Localize.KeySource != null || Localize.TableSource != null)
         {
-            var key = _key?.ProducedValue?.ToString();
+            var key = Localize.KeySource != null ? _key?.ProducedValue?.ToString() : Localize.Key;
             Status = BindingStatus.Active;
             if (string.IsNullOrEmpty(key))
             {
                 return Localize.TargetNullValue;
             }
 
-            return table.TryText(key, Argument, FormatCulture, out var word) ? word : key;
+            return table != null && table.TryText(key, Argument, FormatCulture, out var word) ? word : key;
         }
 
         if (!table.TryText(Localize.Key, Argument, FormatCulture, out var text))

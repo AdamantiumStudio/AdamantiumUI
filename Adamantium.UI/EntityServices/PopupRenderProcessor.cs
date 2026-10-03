@@ -12,9 +12,9 @@ namespace Adamantium.UI.EntityServices;
 
 /// <summary>
 /// The popup stage: draws the open popups' children (tooltips, in-window popups) ON TOP of the content AND the adorner
-/// overlay, in the SAME frame, within the window. Each frame it asks the window to re-evaluate popup placements
-/// (<see cref="IWindow.LayoutPopups"/>) so a popup follows a moving target, then builds + renders their subtrees. Runs
-/// like the adorner stage (PreRender dispatches stroke compute in beforeRenderPass; Draw rasterizes in the render pass).
+/// overlay, in the SAME frame, within the window. It builds + renders the subtrees the window's layout pass laid out
+/// (<see cref="IWindow.LayoutPopups"/>, on the loop thread) - it measures nothing itself. Runs like the adorner stage
+/// (PreRender dispatches stroke compute in beforeRenderPass; Draw rasterizes in the render pass).
 /// </summary>
 public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
 {
@@ -64,10 +64,6 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
 
         var window = AssociatedService.Window;
         var projection = window.GetProjectionMatrix();
-        // Re-evaluate popup positions from their targets' CURRENT world positions (follow a moving target) - cheap, and
-        // it is what flags dirty content (a re-measure clears IsGeometryValid) that the rebuild gate below reads.
-        window.LayoutPopups();
-
         var flat = Flatten(window.PopupRoots, window);
 
         // These are OURS to redraw, so their dirty marks are ours too. Sharing one set with the content meant a hovered

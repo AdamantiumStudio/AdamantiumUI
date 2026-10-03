@@ -104,6 +104,121 @@ public class ItemsControlTests
         Assert.That(authored.Content, Is.EqualTo("written by hand"));
     }
 
+    // An element has one place. A list handed another part's element - a page listing a ribbon's buttons - must not pull
+    // it out of where it stands: the ribbon's group would be left empty, and nothing would put the button back.
+    [Test]
+    public void AnElementStandingElsewhere_IsLeftWhereItStands()
+    {
+        var button = new Border();
+        var home = new StackPanel();
+        home.Children.Add(button);
+
+        var ic = ArrangedItemsControl(new[] { button });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(button.VisualParent, Is.SameAs(home));
+            Assert.That(home.Children, Does.Contain(button));
+            Assert.That(ic.ItemContainerGenerator.ContainerFromIndex(0), Is.Not.SameAs(button), "its slot keeps a stand-in");
+        });
+    }
+
+    // ...and an element written into another list belongs to it before that list ever shows it: a tab never opened still
+    // owns its buttons.
+    [Test]
+    public void AnElementWrittenIntoAnotherList_IsNotTaken_EvenBeforeThatListShowsIt()
+    {
+        var button = new Border();
+        var owner = new ItemsControl();
+        owner.Items.Add(button);
+
+        ArrangedItemsControl(new[] { button });
+
+        Assert.That(button.VisualParent, Is.Null);
+    }
+
+    // A control may hand its own items to a list of its template - a tab control's ordinary and pinned rows do. That list
+    // shows them for the control they were written into; it takes nothing from anyone.
+    [Test]
+    public void AListInTheOwnersTemplate_ShowsTheOwnersElements()
+    {
+        var button = new Border();
+        ItemsControl inner = null;
+        var owner = new ItemsControl();
+        owner.Items.Add(button);
+        owner.Template = new ControlTemplate(() =>
+        {
+            inner = new ItemsControl { Template = ItemsPresenterTemplate(), ItemsSource = owner.Items };
+            return new TemplateResult { RootComponent = inner };
+        });
+
+        owner.Measure(new Size(500, 500));
+        owner.Arrange(new Rect(0, 0, 500, 500));
+
+        Assert.That(button.VisualParent, Is.SameAs(inner.ItemsHostPanel));
+    }
+
+    // A list told to lay its items out in another panel shows them there, whatever kind of panel either one is. A
+    // virtualizing panel that took over used to find every item already realized - in the panel it replaced - and showed
+    // nothing; and the replaced panel, measured once more, took back whatever the new one had.
+    [TestCase("StackPanel")]
+    [TestCase("WrapPanel")]
+    [TestCase("Grid")]
+    public void SwitchingTheItemsPanel_ShowsTheItemsInTheNewOne(string kind)
+    {
+        var template = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Height = 20, Width = 20 } });
+        var ic = new ItemsControl
+        {
+            Width = 500,
+            Height = 500,
+            ItemTemplate = template,
+            ItemsSource = new[] { 1, 2, 3 },
+            Template = ItemsPresenterTemplate()
+        };
+        WindowExtension.UpdateTree(ic);
+
+        ic.ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult
+        {
+            RootComponent = kind switch
+            {
+                "StackPanel" => new StackPanel(),
+                "WrapPanel" => new WrapPanel(),
+                _ => new Grid()
+            }
+        });
+        WindowExtension.UpdateTree(ic);
+
+        var panel = ic.ItemsHostPanel;
+        var hosts = Enumerable.Range(0, 3)
+            .Select(i => ic.ItemContainerGenerator.ContainerFromIndex(i)?.VisualParent)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel, Is.InstanceOf(kind == "StackPanel" ? typeof(StackPanel) : kind == "WrapPanel" ? typeof(WrapPanel) : typeof(Grid)));
+            Assert.That(hosts, Has.All.SameAs(panel), "every item stands in the new panel");
+        });
+    }
+
+    // What the list was given and took is its own: a rebuilt panel takes it again rather than calling it a stranger.
+    [Test]
+    public void AnElementTheListTook_ComesBackWhenItsPanelIsRebuilt()
+    {
+        var free = new Border();
+        var ic = ArrangedItemsControl(new[] { free });
+        var first = free.VisualParent;
+
+        ic.ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult { RootComponent = new Grid() });
+        ic.Measure(new Size(500, 500));
+        ic.Arrange(new Rect(0, 0, 500, 500));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.Not.Null);
+            Assert.That(free.VisualParent, Is.SameAs(ic.ItemsHostPanel));
+        });
+    }
+
     [Test]
     public void VirtualizingStackPanelRealizesOnlyVisibleWindow()
     {

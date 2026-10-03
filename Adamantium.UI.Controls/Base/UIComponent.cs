@@ -940,7 +940,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         if (VisualParent is IRootVisualComponent || VisualParent?.IsAttachedToVisualTree == true)
         {
-            var root =  this.GetVisualAncestors().OfType<IRootVisualComponent>().FirstOrDefault();
+            var root = VisualParent as IRootVisualComponent ?? VisualParent.RootVisual;
             var e = new VisualTreeAttachmentEventArgs(root, this);
             AttachedToVisualTree(e);
         }

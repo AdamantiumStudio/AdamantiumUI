@@ -17,7 +17,7 @@
         <DataTemplate x:Key="QuickAccessToggleTemplate">
             <ToggleButton Classes="QuickAccessButton"
                           Ribbon.IsInQuickAccess="True"
-                          ToolTip="{Binding ToolTip}"
+                          ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
                           IsChecked="{Binding IsChecked, Mode=TwoWay}">
                 <!-- Taking it back out is done here too - the same row the ordinary button offers. -->
                 <ToggleButton.ContextMenu>
@@ -32,20 +32,88 @@
                       VerticalAlignment="Center"/>
             </ToggleButton>
         </DataTemplate>
+
+        <!-- A command that drops its rows: the menu is built here, from the rows the command holds. -->
+        <DataTemplate x:Key="QuickAccessDropDownTemplate">
+            <RibbonDropDownButton Ribbon.Size="Small"
+                                  Ribbon.Icon="{Binding Icon}"
+                                  Ribbon.IsInQuickAccess="True"
+                                  ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
+                                  Foreground="{Ancestor RibbonQuickAccess, Foreground}"
+                                  Background="Transparent"
+                                  BackgroundPointerOver="{ResourceReference OnAccentShadePointerOver}"
+                                  BackgroundPressed="{ResourceReference OnAccentShadePressed}"
+                                  BorderThickness="0"
+                                  CornerRadius="4"
+                                  Padding="6 0"
+                                  Height="26">
+                <RibbonDropDownButton.ContextMenu>
+                    <ContextMenu>
+                        <RibbonQuickAccessMenuItem/>
+                    </ContextMenu>
+                </RibbonDropDownButton.ContextMenu>
+                <RibbonDropDownButton.DropDownMenu>
+                    <ContextMenu ItemsSource="{Binding DropDownItems}">
+                        <ContextMenu.ItemTemplate>
+                            <DataTemplate>
+                                <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
+                                          Command="{Binding Command}"/>
+                            </DataTemplate>
+                        </ContextMenu.ItemTemplate>
+                    </ContextMenu>
+                </RibbonDropDownButton.DropDownMenu>
+            </RibbonDropDownButton>
+        </DataTemplate>
+
+        <!-- A command that runs, with its other ways beside it: both halves stay. -->
+        <DataTemplate x:Key="QuickAccessSplitTemplate">
+            <RibbonSplitButton Ribbon.Size="Small"
+                               Ribbon.Icon="{Binding Icon}"
+                               Ribbon.IsInQuickAccess="True"
+                               ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
+                               Command="{Binding Command}"
+                               CommandParameter="{Binding CommandParameter}"
+                               Foreground="{Ancestor RibbonQuickAccess, Foreground}"
+                               Background="Transparent"
+                               BackgroundPointerOver="{ResourceReference OnAccentShadePointerOver}"
+                               BackgroundPressed="{ResourceReference OnAccentShadePressed}"
+                               BorderThickness="0"
+                               CornerRadius="4"
+                               Padding="6 0"
+                               Height="26">
+                <RibbonSplitButton.ContextMenu>
+                    <ContextMenu>
+                        <RibbonQuickAccessMenuItem/>
+                    </ContextMenu>
+                </RibbonSplitButton.ContextMenu>
+                <RibbonSplitButton.DropDownMenu>
+                    <ContextMenu ItemsSource="{Binding DropDownItems}">
+                        <ContextMenu.ItemTemplate>
+                            <DataTemplate>
+                                <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
+                                          Command="{Binding Command}"/>
+                            </DataTemplate>
+                        </ContextMenu.ItemTemplate>
+                    </ContextMenu>
+                </RibbonSplitButton.DropDownMenu>
+            </RibbonSplitButton>
+        </DataTemplate>
     </ResourceContext.Resources>
 
     <Window.TitleBarLeadingContent>
         <!-- The bar lives in the CAPTION, outside the ribbon, so nothing inherits down to it - the command that takes a
              button back out is bound here, on the bar itself. -->
-        <RibbonQuickAccess ItemsSource="{Binding QuickAccess}" Margin="6 0 4 0"
+        <!-- WHICH visual a command gets is decided by the shell, because the items are the shell's own type. The
+             engine's default selector has no business knowing that this application's commands can be ON or OFF. -->
+        <RibbonQuickAccess ItemsSource="{Binding QuickAccess}"
+                           Margin="6 0 4 0"
                            Placement="{Binding QuickAccessPlacement}"
                            Ribbon.RemoveFromQuickAccessCommand="{Binding RemoveFromQuickAccessCommand}"
                            Foreground="{Ancestor TitleBar, Foreground}">
-            <!-- WHICH visual a command gets is decided HERE, by the shell, because the items are the shell's own type.
-                 The engine's default selector only knows "did the command bring a form of its own"; it has no business
-                 knowing that this application's commands can be ON or OFF. -->
             <RibbonQuickAccess.ItemTemplateSelector>
-                <ShellQuickAccessTemplateSelector Toggle="{ResourceReference QuickAccessToggleTemplate}"/>
+                <ShellQuickAccessTemplateSelector Toggle="{ResourceReference QuickAccessToggleTemplate}"
+                                                  DropDown="{ResourceReference QuickAccessDropDownTemplate}"
+                                                  Split="{ResourceReference QuickAccessSplitTemplate}"/>
             </RibbonQuickAccess.ItemTemplateSelector>
         </RibbonQuickAccess>
     </Window.TitleBarLeadingContent>
