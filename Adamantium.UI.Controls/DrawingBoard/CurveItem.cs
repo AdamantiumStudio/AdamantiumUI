@@ -69,7 +69,7 @@ public class CurveItem : ICanvasItem, ICanvasPoints
     /// <summary>How many points it is drawn through - a number an inspector can show and nothing else can.</summary>
     public int Count => _points.Count;
 
-    public string Title => $"{Kind} ({_points.Count})";
+    public int? Parts => _points.Count;
 
     /// <summary>The BODY only: a curve is reshaped by its points, and a box with eight grips round it would offer a
     /// second way to do it that fights the first.</summary>

@@ -76,7 +76,7 @@
 
         <TextBlock Grid.Row="0" Text="InfiniteCanvas" FontSize="18"/>
         <TextBlock Grid.Row="1" Margin="0,4,0,12" TextWrapping="WrapByWords"
-                   Text="A plane with no edges: the wheel zooms toward the cursor, the middle button or space pans, and Home - or a double click of the middle button - returns to the origin. What the plain left button does belongs to the TOOL - select, pen, or a shape. What is selected gets a frame with grips, in screen pixels; dragging those moves and resizes the whole selection at once. Delete removes it, Escape lets go."/>
+                   Text="{Localize CanvasPageStrings.Intro}"/>
 
         <!-- Everything that steers the canvas lives in the canvas's own panel. -->
 
@@ -89,12 +89,12 @@
                  OVER. In the other three modes it is hidden behind the ground and never seen. -->
             <StackPanel Orientation="Vertical" Margin="40,30,0,0" HorizontalAlignment="Left"
                         VerticalAlignment="Top" Width="320">
-                <TextBlock Text="Somebody else's screen" FontSize="16"/>
+                <TextBlock Text="{Localize CanvasPageStrings.OtherScreen}" FontSize="16"/>
                 <TextBlock Margin="0,6,0,0" TextWrapping="WrapByWords"
-                           Text="An ordinary page of controls. Turn Whiteboard on and the canvas above becomes glass: this stays live underneath while the pen draws over it."
+                           Text="{Localize CanvasPageStrings.OtherScreenHint}"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
-                <Button Content="A button" Margin="0,14,0,0" HorizontalAlignment="Left"/>
-                <CheckBox Content="A checkbox" Margin="0,10,0,0"/>
+                <Button Content="{Localize CanvasPageStrings.AButton}" Margin="0,14,0,0" HorizontalAlignment="Left"/>
+                <CheckBox Content="{Localize CanvasPageStrings.ACheckbox}" Margin="0,10,0,0"/>
                 <TextBox Text="A field" Margin="0,10,0,0" Width="200" HorizontalAlignment="Left"/>
             </StackPanel>
 

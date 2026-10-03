@@ -10,6 +10,10 @@ public abstract class BindingBase: MarkupExtension, ICloneable
 
    public string StringFormat { get; set; }
 
+   /// <summary>How this binding writes numbers and dates: "Invariant" or a culture name such as "de-DE". Unset follows
+   /// the application's language; set it only to depart from that language's rules.</summary>
+   public string Culture { get; set; }
+
    public object TargetNullValue { get; set; }
 
    public bool IsAsync { get; set; }
@@ -30,4 +34,8 @@ public abstract class BindingBase: MarkupExtension, ICloneable
    }
 
    public abstract object Clone();
+
+   /// <summary>The live expression this kind of binding is: not yet connected, writing to <paramref name="targetProperty"/>
+   /// of <paramref name="target"/>, or producing a value for a parent binding when the property is null.</summary>
+   public abstract BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty);
 }

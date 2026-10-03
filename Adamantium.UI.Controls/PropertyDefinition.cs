@@ -21,7 +21,7 @@ namespace Adamantium.UI.Controls;
 public abstract class PropertyDefinition : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null));
+        typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
     /// <summary>What this line reads and writes - a REAL binding against the object being inspected, with converters,
     /// formats, modes and <c>MultiBinding</c>. Not a member name, which can carry none of them.</summary>
@@ -29,7 +29,7 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         typeof(BindingBase), typeof(PropertyDefinition), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty DescriptionProperty = AdamantiumProperty.Register(nameof(Description),
-        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
+        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
     /// <summary>Whether the row's tip is its own VALUE rather than the description. For a line holding something longer
     /// than its cell - a path, an address - the one question asked of it is what it actually says, and the description
@@ -76,12 +76,12 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     /// <summary>Theme key of the action button's icon; empty keeps the "..." used for "there is more". An immediate
     /// action should show what it does.</summary>
     public static readonly AdamantiumProperty ActionIconProperty = AdamantiumProperty.Register(nameof(ActionIcon),
-        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
+        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
-    /// <summary>What the action button says it will do, on hover. "More" is what an undecorated one says, and it is a
-    /// promise the button has to keep.</summary>
+    /// <summary>What the action button says it will do, on hover. Empty keeps the theme's "More", and it is a promise
+    /// the button has to keep.</summary>
     public static readonly AdamantiumProperty ActionTipProperty = AdamantiumProperty.Register(nameof(ActionTip),
-        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
+        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
     /// <summary>What the value looks like when nobody is editing it. Null means the default look for its kind.</summary>
     public static readonly AdamantiumProperty ValueTemplateProperty = AdamantiumProperty.Register(nameof(ValueTemplate),
@@ -102,6 +102,11 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     // Says the line has to be built again. Here rather than in each definition because an event can only be raised by
     // the type that declares it, and what a kind of line changes shape for is the kind's own business.
     private protected void Relayout() => LayoutChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised when what a row SAYS for this line changed - its name, tip or button - and the row only has to
+    /// read it again. A language switch changes every one of them at once, and rebuilding the panel for that would be
+    /// a rebuild per line.</summary>
+    internal event EventHandler WordsChanged;
 
     public object Header
     {
@@ -255,6 +260,9 @@ public abstract class PropertyDefinition : FundamentalUIComponent
 
     private static void OnIsVisibleChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
         (component as PropertyDefinition)?.LayoutChanged?.Invoke(component, EventArgs.Empty);
+
+    private static void OnWordsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as PropertyDefinition)?.WordsChanged?.Invoke(component, EventArgs.Empty);
 
     // The row reads this when it is bound, so a line that gains its button while the inspector is open has to be told
     // to look again - the same reason IsVisible says so.
@@ -583,6 +591,18 @@ public class SolidColorBrushProperty : PropertyDefinition
 /// picker.</summary>
 public class ImageSourceProperty : PropertyDefinition
 {
+    /// <summary>What the file dialog the "..." opens asks. The theme says it in the application's language.</summary>
+    public static readonly AdamantiumProperty DialogTitleProperty = AdamantiumProperty.Register(nameof(DialogTitle),
+        typeof(String), typeof(ImageSourceProperty), new PropertyMetadata(null));
+
+    /// <summary>What that dialog calls the pictures it offers.</summary>
+    public static readonly AdamantiumProperty PicturesNameProperty = AdamantiumProperty.Register(nameof(PicturesName),
+        typeof(String), typeof(ImageSourceProperty), new PropertyMetadata(null));
+
+    /// <summary>...and what it calls every other file.</summary>
+    public static readonly AdamantiumProperty AllFilesNameProperty = AdamantiumProperty.Register(nameof(AllFilesName),
+        typeof(String), typeof(ImageSourceProperty), new PropertyMetadata(null));
+
     private DataTemplate _editor;
 
     public ImageSourceProperty()
@@ -590,12 +610,29 @@ public class ImageSourceProperty : PropertyDefinition
         // The row's own button, at DEFAULT priority so an application that wants to ask for a file its own way can
         // still bind one over it. A path is something a person points at rather than types.
         SetValue(ShowActionButtonProperty, true, ValuePriority.Default);
-        SetValue(ActionTipProperty, "Pick a picture", ValuePriority.Default);
         SetValue(ActionCommandProperty, new PickCommand(this), ValuePriority.Default);
 
         // THE PATH IS ITS OWN TIP: a file two folders deep does not fit the cell, and which file this is is the one
         // question asked of this row.
         SetValue(ValueAsTipProperty, true, ValuePriority.Default);
+    }
+
+    public String DialogTitle
+    {
+        get => GetValue<String>(DialogTitleProperty);
+        set => SetValue(DialogTitleProperty, value);
+    }
+
+    public String PicturesName
+    {
+        get => GetValue<String>(PicturesNameProperty);
+        set => SetValue(PicturesNameProperty, value);
+    }
+
+    public String AllFilesName
+    {
+        get => GetValue<String>(AllFilesNameProperty);
+        set => SetValue(AllFilesNameProperty, value);
     }
 
     protected internal override DataTemplate DefaultEditorTemplate =>
@@ -666,8 +703,12 @@ public class ImageSourceProperty : PropertyDefinition
 
             var path = FileDialog.Open(new OpenFileRequest
             {
-                Title = "Pick a picture",
-                FileTypes = Pictures,
+                Title = _line.DialogTitle,
+                FileTypes =
+                [
+                    new FileType(_line.PicturesName, "png", "jpg", "jpeg", "bmp", "gif", "tga", "tiff", "ico", "dds"),
+                    new FileType(_line.AllFilesName, "*")
+                ],
 
                 // ITS OWN MEMORY - the size it was left at and the folder pictures were last taken from, kept apart
                 // from every other dialog this application opens - and the window it belongs to, which is what decides
@@ -705,12 +746,6 @@ public class ImageSourceProperty : PropertyDefinition
     /// picture its own way calls to answer. The WRITING is the grid's, so an edit made by pointing at a file is the
     /// same edit a typed path is: reported once, and taken back the same way.</summary>
     public void Pick(String path) => Picked?.Invoke(this, path);
-
-    private static readonly IReadOnlyList<FileType> Pictures =
-    [
-        new("Pictures", "png", "jpg", "jpeg", "bmp", "gif", "tga", "tiff", "ico", "dds"),
-        new("All files", "*")
-    ];
 }
 
 /// <summary>A property that holds other properties: a vector, a color, a nested object. It has no value of its own -

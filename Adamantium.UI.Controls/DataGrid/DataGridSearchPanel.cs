@@ -13,13 +13,43 @@ namespace Adamantium.UI.Controls.DataGrid;
 /// every row, which is not something to spend per letter - measured at some 380 ms over ten thousand rows.</para></summary>
 public class DataGridSearchPanel : Control
 {
+    /// <summary>Where the search stands. The words for it are the theme's, made of this, <see cref="CurrentMatch"/> and
+    /// <see cref="MatchCount"/>.</summary>
+    public static readonly AdamantiumProperty StateProperty = AdamantiumProperty.Register(nameof(State),
+        typeof(DataGridSearchState), typeof(DataGridSearchPanel), new PropertyMetadata(DataGridSearchState.Idle));
+
+    /// <summary>Which of the cells found is the current one, counted from one.</summary>
+    public static readonly AdamantiumProperty CurrentMatchProperty = AdamantiumProperty.Register(nameof(CurrentMatch),
+        typeof(int), typeof(DataGridSearchPanel), new PropertyMetadata(0));
+
+    /// <summary>How many cells hold what was typed.</summary>
+    public static readonly AdamantiumProperty MatchCountProperty = AdamantiumProperty.Register(nameof(MatchCount),
+        typeof(int), typeof(DataGridSearchPanel), new PropertyMetadata(0));
+
     private TreeDataGrid _owner;
     private TextBox _text;
     private ButtonBase _find;
     private ButtonBase _next;
     private ButtonBase _previous;
     private ButtonBase _close;
-    private ContentControl _count;
+
+    public DataGridSearchState State
+    {
+        get => GetValue<DataGridSearchState>(StateProperty);
+        private set => SetValue(StateProperty, value);
+    }
+
+    public int CurrentMatch
+    {
+        get => GetValue<int>(CurrentMatchProperty);
+        private set => SetValue(CurrentMatchProperty, value);
+    }
+
+    public int MatchCount
+    {
+        get => GetValue<int>(MatchCountProperty);
+        private set => SetValue(MatchCountProperty, value);
+    }
 
     /// <summary>The grid this strip searches. Setting it REGISTERS the strip with that grid, which is what lets a new
     /// count reach it.</summary>
@@ -44,7 +74,6 @@ public class DataGridSearchPanel : Control
         _next = GetTemplateChild("PART_Next") as ButtonBase;
         _previous = GetTemplateChild("PART_Previous") as ButtonBase;
         _close = GetTemplateChild("PART_Close") as ButtonBase;
-        _count = GetTemplateChild("PART_Count") as ContentControl;
 
         // ENTER PRESSED, not KeyDown: a single-line TextBox handles its own keys and raises this instead, so a KeyDown
         // handler here saw everything EXCEPT the one key the strip cares about.
@@ -72,26 +101,24 @@ public class DataGridSearchPanel : Control
         _next = null;
         _previous = null;
         _close = null;
-        _count = null;
     }
 
     /// <summary>Brings the count in line with what the grid found.</summary>
     internal void Sync()
     {
-        if (_count == null) return;
-
         var total = Owner?.MatchCount ?? 0;
-        var current = Owner?.CurrentMatch ?? 0;
+        var walking = Owner?.IsSearching == true;
+
+        MatchCount = total;
+        CurrentMatch = Owner?.CurrentMatch ?? 0;
 
         // Nothing typed says nothing: an empty field with "0 of 0" under it reads as a failed search rather than as
         // a search that was never made.
         // A walk in progress says so: the count grows as the table is read, and a number that keeps changing with no
         // word beside it reads as a table that cannot make up its mind.
-        var walking = Owner?.IsSearching == true ? "…" : string.Empty;
-
-        _count.Content = string.IsNullOrEmpty(Owner?.SearchText) ? string.Empty
-            : total == 0 ? (walking.Length > 0 ? "searching…" : "no matches")
-            : $"{current} of {total}{walking}";
+        State = string.IsNullOrEmpty(Owner?.SearchText) ? DataGridSearchState.Idle
+            : total == 0 ? (walking ? DataGridSearchState.Searching : DataGridSearchState.NoMatches)
+            : walking ? DataGridSearchState.MatchesSoFar : DataGridSearchState.Matches;
     }
 
     // Enter SEARCHES, and searches again from where it stands - the same key that starts a find is the one that walks

@@ -25,7 +25,7 @@ public partial class SceneViewModel : TabPageViewModel
         _universe = universe;
         _universe.UseTool(Tool);
         _universe.IsSimulationPaused = IsMenuVisible;
-        Status = "Universe ready";
+        Status = SceneStatus.Ready;
 
         // A rebuilt view brings a new universe with a new camera: its home and speed are taken afresh on the next pulse.
         _home = null;
@@ -155,7 +155,7 @@ public partial class SceneViewModel : TabPageViewModel
     /// <summary>Whether a light is selected, so the panel shows its settings.</summary>
     [Bindable] private bool _hasSelectedLight;
 
-    [Bindable] private string _selectedLightName;
+    [Bindable] private LightType _selectedLightType;
 
     /// <summary>Whether the selected light has a range: every kind but a directional one.</summary>
     [Bindable] private bool _hasRange;
@@ -186,7 +186,7 @@ public partial class SceneViewModel : TabPageViewModel
     {
         if (_universe == null)
         {
-            Status = "Universe not ready yet";
+            Status = SceneStatus.NotReady;
             return;
         }
 
@@ -212,7 +212,7 @@ public partial class SceneViewModel : TabPageViewModel
     private void Show(Light light)
     {
         Light = null;
-        SelectedLightName = $"{light.Type} light";
+        SelectedLightType = light.Type;
         HasRange = light.Type != LightType.Directional;
         IsSpotSelected = light.Type == LightType.Spot;
         LightIntensity = light.Intensity;
@@ -249,8 +249,7 @@ public partial class SceneViewModel : TabPageViewModel
     }
 
     /// <summary>While the menu is open the game is paused; the scene is still drawn.</summary>
-    [Bindable, Affects(nameof(MenuButtonText), nameof(MouseLookEnabled))] private bool _isMenuVisible = true;
-    public string MenuButtonText => IsMenuVisible ? "Hide menu" : "Show menu";
+    [Bindable, Affects(nameof(MouseLookEnabled))] private bool _isMenuVisible = true;
 
     /// <summary>Mouse-look is allowed only while the menu is HIDDEN - so a click on the panel with the menu up doesn't
     /// grab and hide the cursor. Bound to the panel's IsMouseLookEnabled.</summary>
@@ -266,7 +265,12 @@ public partial class SceneViewModel : TabPageViewModel
         }
     }
 
-    [Bindable] private string _status = "F-15C Eagle";
+    /// <summary>Where the universe and its model stand, which model that is, and why it failed if it did.</summary>
+    [Bindable] private SceneStatus _status = SceneStatus.Loaded;
+
+    [Bindable] private string _model = "F-15C Eagle";
+
+    [Bindable] private string _loadError;
 
     [Command] private Task LoadF15() => Load("Models/F15C/F-15C_Eagle.dae", "F-15C Eagle");
 
@@ -276,20 +280,22 @@ public partial class SceneViewModel : TabPageViewModel
     {
         if (_universe == null)
         {
-            Status = "Universe not ready yet";
+            Status = SceneStatus.NotReady;
             return;
         }
 
-        Status = $"Loading {name}…";
+        Model = name;
+        Status = SceneStatus.Loading;
         try
         {
             await _universe.LoadAndAddModel(path);
-            Status = name;
+            Status = SceneStatus.Loaded;
         }
         catch (Exception exception)
         {
             // Otherwise the line would sit at "Loading …" while the cause went into an unobserved Task
-            Status = $"{name}: failed to load — {exception.GetBaseException().Message}";
+            LoadError = exception.GetBaseException().Message;
+            Status = SceneStatus.Failed;
             Console.WriteLine(exception);
         }
     }

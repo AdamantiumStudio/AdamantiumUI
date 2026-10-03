@@ -97,7 +97,7 @@
                                         VerticalAlignment="Center">
                                 <StackPanel x:Name="PageSizeGroup" Orientation="Horizontal" MarginRight="16"
                                             VerticalAlignment="Center">
-                                    <TextBlock Text="Rows"
+                                    <TextBlock Text="{Localize DataPagerStrings.Rows}"
                                                VerticalAlignment="Center"
                                                MarginRight="6"
                                                Foreground="{TemplateBinding Foreground}"
@@ -114,7 +114,7 @@
                                 </StackPanel>
 
                                 <StackPanel x:Name="PageInputGroup" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="Page"
+                                    <TextBlock Text="{Localize DataPagerStrings.Page}"
                                                VerticalAlignment="Center"
                                                MarginRight="6"
                                                Foreground="{TemplateBinding Foreground}"
@@ -129,7 +129,16 @@
                                                    Width="{ResourceReference PagerPageBoxWidth}"
                                                    MinWidth="{ResourceReference PagerPageBoxWidth}"
                                                    Height="{ResourceReference PagerButtonHeight}"/>
-                                    <TextBlock Text="{TemplateBinding PageCountText}"
+                                    <TextBlock x:Name="PageCountLabel"
+                                               Text="{Localize DataPagerStrings.OfCount, count={TemplateBinding PageCount}}"
+                                               VerticalAlignment="Center"
+                                               MarginLeft="6"
+                                               Foreground="{TemplateBinding Foreground}"
+                                               FontSize="{TemplateBinding FontSize}"/>
+                                    <!-- "of ?" while the end has not been found - see Fluent's set. -->
+                                    <TextBlock x:Name="UnknownCountLabel"
+                                               Text="{Localize DataPagerStrings.OfUnknown}"
+                                               Visibility="Collapsed"
                                                VerticalAlignment="Center"
                                                MarginLeft="6"
                                                Foreground="{TemplateBinding Foreground}"
@@ -169,6 +178,13 @@
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsPageInput" Value="false">
             <Setter TargetName="PageInputGroup" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsEndKnown" Value="false">
+            <Setter TargetName="PageCountLabel" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="UnknownCountLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="PageCount" Value="0">
+            <Setter TargetName="PageCountLabel" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
     </Style>
 

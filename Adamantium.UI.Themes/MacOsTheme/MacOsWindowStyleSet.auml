@@ -14,7 +14,7 @@
         <!-- The title dims when the window loses focus, which on a Mac is the main way an inactive window says so. -->
         <Setter Property="TitleBarForeground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="InactiveTitleBarForeground" Value="{ObservableResource TextFillColorSecondary}"/>
-        <Setter Property="LoadingIndicatorText" Value="Switching theme…"/>
+        <Setter Property="LoadingIndicatorText" Value="{Localize WindowStrings.SwitchingTheme}"/>
     </Style>
 
     <Style Selector="Window">

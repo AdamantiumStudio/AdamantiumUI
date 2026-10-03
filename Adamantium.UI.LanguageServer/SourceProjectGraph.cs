@@ -85,7 +85,15 @@ public static class SourceProjectGraph
             foreach (var dependency in TransitiveDependencies(node))
                 references.Add(compilations[dependency.CsprojPath].ToMetadataReference());
 
-            var compilation = CSharpCompilation.Create(node.AssemblyName, trees, references, Options);
+            Compilation compilation = CSharpCompilation.Create(node.AssemblyName, trees, references, Options);
+            var project = LanguageProject.Load(node.CsprojPath);
+            var languageFiles = LanguageTableRun.Texts(project, _ => null);
+            if (languageFiles.Count > 0)
+            {
+                // The string tables are generated from the language files: the build's generator makes them here too.
+                compilation = LanguageTableRun.Run(compilation, project, languageFiles, out _);
+            }
+
             compilations[node.CsprojPath] = compilation;
             CollectXmlnsMappings(compilation, xmlnsMappings);
         }

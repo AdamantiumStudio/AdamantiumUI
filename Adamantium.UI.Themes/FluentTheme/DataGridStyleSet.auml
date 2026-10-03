@@ -10,6 +10,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="RowHeight" Value="28"/>
+        <Setter Property="NewRowHint" Value="{Localize DataGridStrings.AddRecord}"/>
         <!-- Where a dragged column would land. The accent, because it is an ANSWER to a gesture in progress, not part
              of the table's chrome. -->
         <Setter Property="DropIndicatorBrush" Value="{ThemeResource AccentFillColorDefault}"/>
@@ -50,7 +51,7 @@
                                     BorderThickness="1 0 0 0">
                                 <Border x:Name="PART_ChooserButton" Height="32" VerticalAlignment="Top"
                                         Background="Transparent" Cursor="Hand"
-                                        ToolTipService.ToolTip="Choose columns">
+                                        ToolTipService.ToolTip="{Localize DataGridStrings.ChooseColumns}">
                                     <Image Source="{ResourceReference ColumnsIcon}" Width="12" Height="12"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
@@ -184,7 +185,7 @@
 
                             <Border Grid.Column="2" x:Name="PART_FilterButton"
                                     Width="18" Margin="4 0 0 0" Background="Transparent" CornerRadius="4"
-                                    Cursor="Hand" Visibility="Collapsed" ToolTipService.ToolTip="Filter">
+                                    Cursor="Hand" Visibility="Collapsed" ToolTipService.ToolTip="{Localize DataGridStrings.Filter}">
                                 <Image x:Name="FilterGlyph"
                                        Source="{ResourceReference FilterIcon}"
                                        Width="9" Height="9"
@@ -250,7 +251,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridFilterView">
                     <StackPanel Orientation="Vertical">
-                        <CheckBox x:Name="PART_SelectAll" Content="Select All" Margin="0 0 0 6"/>
+                        <CheckBox x:Name="PART_SelectAll" Content="{Localize DataGridStrings.SelectAll}" Margin="0 0 0 6"/>
 
                         <!-- The list CLIPS - see the macOS set. -->
                         <Border BorderBrush="{ObservableResource ControlStrokeColorDefault}"
@@ -266,27 +267,54 @@
                             </ListBox>
                         </Border>
 
-                        <TextBlock Text="Show rows with value that" Margin="0 10 0 4"
+                        <TextBlock Text="{Localize DataGridStrings.ShowRowsWhere}" Margin="0 10 0 4"
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                        <DropDown x:Name="PART_FirstOperator" Margin="0 0 0 4"/>
+                        <!-- One item per DataGridFilterOperator, in its order: the editor reads the position. -->
+                        <DropDown x:Name="PART_FirstOperator" Margin="0 0 0 4">
+                            <DropDownItem Content="{Localize DataGridStrings.IsEqualTo}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsNotEqualTo}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.Contains}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.DoesNotContain}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.StartsWith}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.EndsWith}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsGreaterThan}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsLessThan}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsEmpty}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsNotEmpty}"/>
+                        </DropDown>
                         <!-- aA = match case - see the macOS set. -->
                         <Grid ColumnDefinitions="*,Auto" Margin="0 0 0 4">
                             <TextBox Grid.Column="0" x:Name="PART_FirstValue"/>
                             <ToggleButton Grid.Column="1" x:Name="PART_FirstMatchCase" Content="aA"
-                                          Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="Match case"/>
+                                          Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="{Localize DataGridStrings.MatchCase}"/>
                         </Grid>
-                        <DropDown x:Name="PART_Logic" Margin="0 0 0 4"/>
-                        <DropDown x:Name="PART_SecondOperator" Margin="0 0 0 4"/>
+                        <!-- One item per DataGridFilterLogic, in its order. -->
+                        <DropDown x:Name="PART_Logic" Margin="0 0 0 4">
+                            <DropDownItem Content="{Localize DataGridStrings.And}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.Or}"/>
+                        </DropDown>
+                        <DropDown x:Name="PART_SecondOperator" Margin="0 0 0 4">
+                            <DropDownItem Content="{Localize DataGridStrings.IsEqualTo}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsNotEqualTo}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.Contains}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.DoesNotContain}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.StartsWith}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.EndsWith}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsGreaterThan}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsLessThan}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsEmpty}"/>
+                            <DropDownItem Content="{Localize DataGridStrings.IsNotEmpty}"/>
+                        </DropDown>
                         <Grid ColumnDefinitions="*,Auto" Margin="0 0 0 8">
                             <TextBox Grid.Column="0" x:Name="PART_SecondValue"/>
                             <ToggleButton Grid.Column="1" x:Name="PART_SecondMatchCase" Content="aA"
-                                          Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="Match case"/>
+                                          Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="{Localize DataGridStrings.MatchCase}"/>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,*">
-                            <Button Grid.Column="0" x:Name="PART_Apply" Content="Filter" Margin="0 0 4 0"/>
-                            <Button Grid.Column="1" x:Name="PART_Clear" Content="Clear Filter" Margin="4 0 0 0"/>
+                            <Button Grid.Column="0" x:Name="PART_Apply" Content="{Localize DataGridStrings.ApplyFilter}" Margin="0 0 4 0"/>
+                            <Button Grid.Column="1" x:Name="PART_Clear" Content="{Localize DataGridStrings.ClearFilter}" Margin="4 0 0 0"/>
                         </Grid>
                     </StackPanel>
                 </ControlTemplate>
@@ -561,23 +589,50 @@
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                             <TextBox Grid.Column="0" x:Name="PART_Text" MinWidth="160"/>
-                            <ContentControl Grid.Column="1" x:Name="PART_Count"
-                                            VerticalAlignment="Center" Margin="10 0"
-                                            FontSize="{ResourceReference FontSizeCaption}"
-                                            Foreground="{ObservableResource TextFillColorTertiary}"/>
+                            <!-- Where the search stands: one line per state, shown by the triggers below. -->
+                            <Grid Grid.Column="1" VerticalAlignment="Center" Margin="10 0">
+                                <TextBlock x:Name="SearchingLabel" Visibility="Collapsed"
+                                           Text="{Localize DataGridStrings.Searching}"
+                                           FontSize="{ResourceReference FontSizeCaption}"
+                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                <TextBlock x:Name="NoMatchesLabel" Visibility="Collapsed"
+                                           Text="{Localize DataGridStrings.NoMatches}"
+                                           FontSize="{ResourceReference FontSizeCaption}"
+                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                <TextBlock x:Name="MatchesLabel" Visibility="Collapsed"
+                                           Text="{Localize DataGridStrings.MatchOf, current={TemplateBinding CurrentMatch}, total={TemplateBinding MatchCount}}"
+                                           FontSize="{ResourceReference FontSizeCaption}"
+                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                <TextBlock x:Name="MatchesSoFarLabel" Visibility="Collapsed"
+                                           Text="{Localize DataGridStrings.MatchOfSoFar, current={TemplateBinding CurrentMatch}, total={TemplateBinding MatchCount}}"
+                                           FontSize="{ResourceReference FontSizeCaption}"
+                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                            </Grid>
                             <Button Grid.Column="2" x:Name="PART_Previous" Content="↑" MinWidth="32"
-                                    ToolTipService.ToolTip="Previous match"/>
+                                    ToolTipService.ToolTip="{Localize DataGridStrings.PreviousMatch}"/>
                             <Button Grid.Column="3" x:Name="PART_Next" Content="↓" MinWidth="32" Margin="4 0 0 0"
-                                    ToolTipService.ToolTip="Next match"/>
-                            <Button Grid.Column="4" x:Name="PART_Find" Content="Find" Margin="6 0 0 0"/>
+                                    ToolTipService.ToolTip="{Localize DataGridStrings.NextMatch}"/>
+                            <Button Grid.Column="4" x:Name="PART_Find" Content="{Localize DataGridStrings.Find}" Margin="6 0 0 0"/>
                             <!-- Closed from inside the strip - see the macOS set. -->
                             <Button Grid.Column="5" x:Name="PART_Close" Content="×" MinWidth="30" Margin="6 0 0 0"
-                                    ToolTipService.ToolTip="Close the search"/>
+                                    ToolTipService.ToolTip="{Localize DataGridStrings.CloseSearch}"/>
                         </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <PropertyTrigger Property="State" Value="Searching">
+            <Setter TargetName="SearchingLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="State" Value="NoMatches">
+            <Setter TargetName="NoMatchesLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="State" Value="Matches">
+            <Setter TargetName="MatchesLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="State" Value="MatchesSoFar">
+            <Setter TargetName="MatchesSoFarLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- Which columns are shown: one switch per column, DOWN the flyout rather than across a strip. A strip of them
@@ -617,7 +672,7 @@
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" x:Name="PART_Hint"
-                                       Text="Drag a column header here to group by it"
+                                       Text="{Localize DataGridStrings.GroupByHint}"
                                        VerticalAlignment="Center"
                                        FontSize="{ResourceReference FontSizeCaption}"
                                        Foreground="{ObservableResource TextFillColorTertiary}"/>
@@ -626,9 +681,9 @@
 
                             <!-- Folding the whole table - see the macOS set. -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="PART_ExpandAll" Content="Expand all" Visibility="Collapsed"
+                                <Button x:Name="PART_ExpandAll" Content="{Localize DataGridStrings.ExpandAll}" Visibility="Collapsed"
                                         FontSize="{ResourceReference FontSizeCaption}" Padding="10 2" Margin="6 0 0 0"/>
-                                <Button x:Name="PART_CollapseAll" Content="Collapse all" Visibility="Collapsed"
+                                <Button x:Name="PART_CollapseAll" Content="{Localize DataGridStrings.CollapseAll}" Visibility="Collapsed"
                                         FontSize="{ResourceReference FontSizeCaption}" Padding="10 2" Margin="6 0 0 0"/>
                             </StackPanel>
 
@@ -664,7 +719,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{ObservableResource ControlStrokeColorDefault}"
                             BorderThickness="1" CornerRadius="4" Padding="8 3"
-                            ToolTipService.ToolTip="Drag to change the nesting">
+                            ToolTipService.ToolTip="{Localize DataGridStrings.ChangeNesting}">
                         <StackPanel Orientation="Horizontal">
                             <ContentPresenter x:Name="PART_ContentPresenter"
                                     VerticalAlignment="Center"
@@ -673,7 +728,7 @@
                                     Content="{TemplateBinding Content}"/>
                             <!-- The × is a PART - see the macOS set. -->
                             <Border x:Name="PART_Remove" Margin="4 0 0 0" Padding="3 0" CornerRadius="3"
-                                    Background="Transparent" ToolTipService.ToolTip="Remove from the grouping">
+                                    Background="Transparent" ToolTipService.ToolTip="{Localize DataGridStrings.RemoveFromGrouping}">
                                 <TextBlock x:Name="RemoveGlyph" Text="×" VerticalAlignment="Center"
                                            Foreground="{ObservableResource TextFillColorTertiary}"/>
                             </Border>
@@ -719,14 +774,14 @@
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" x:Name="PART_Hint"
-                                       Text="Drag a column header here to sort by it; drag another to break its ties"
+                                       Text="{Localize DataGridStrings.SortByHint}"
                                        VerticalAlignment="Center"
                                        FontSize="{ResourceReference FontSizeCaption}"
                                        Foreground="{ObservableResource TextFillColorTertiary}"/>
                             <StackPanel Grid.Column="0" x:Name="PART_Chips"
                                         Orientation="Horizontal" VerticalAlignment="Center"/>
 
-                            <Button Grid.Column="1" x:Name="PART_Clear" Content="Clear sorting" Visibility="Collapsed"
+                            <Button Grid.Column="1" x:Name="PART_Clear" Content="{Localize DataGridStrings.ClearSorting}" Visibility="Collapsed"
                                     FontSize="{ResourceReference FontSizeCaption}" Padding="10 2" Margin="6 0 0 0"/>
 
                             <!-- Where a carried chip would land - see the grouping strip. -->
@@ -763,7 +818,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{ObservableResource ControlStrokeColorDefault}"
                             BorderThickness="1" CornerRadius="4" Padding="8 3"
-                            ToolTipService.ToolTip="Press to turn it around, drag to change which key decides">
+                            ToolTipService.ToolTip="{Localize DataGridStrings.SortKeyHint}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock x:Name="LevelText" VerticalAlignment="Center" Margin="0 0 5 0"
                                        Text="{TemplateBinding Level}"
@@ -777,7 +832,7 @@
                                        Foreground="{ObservableResource TextFillColorSecondary}"/>
                             <!-- The × is a PART - see the grouping chip. -->
                             <Border x:Name="PART_Remove" Margin="4 0 0 0" Padding="3 0" CornerRadius="3"
-                                    Background="Transparent" ToolTipService.ToolTip="Remove from the sorting">
+                                    Background="Transparent" ToolTipService.ToolTip="{Localize DataGridStrings.RemoveFromSorting}">
                                 <TextBlock x:Name="RemoveGlyph" Text="×" VerticalAlignment="Center"
                                            Foreground="{ObservableResource TextFillColorTertiary}"/>
                             </Border>
@@ -809,6 +864,8 @@
 
     <!-- The group row and a total. NOT tinted - see the macOS set. -->
     <Style Selector="DataGridGroupHeader">
+        <!-- The words its caption is made of: "Region: Iberia (12)". -->
+        <Setter Property="Phrases" Value="{x:Static DataGridStrings.Current}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Padding" Value="10 0"/>

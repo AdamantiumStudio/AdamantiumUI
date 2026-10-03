@@ -1,6 +1,7 @@
 using System;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
@@ -30,6 +31,12 @@ public class DataGridGroupHeader : ContentControl
         typeof(bool), typeof(DataGridGroupHeader),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
 
+    /// <summary>The words the caption is made of, from the theme: "Region: Iberia (12)", and what a group of empty
+    /// values is called. Without them the caption is the value alone.</summary>
+    public static readonly AdamantiumProperty PhrasesProperty = AdamantiumProperty.Register(nameof(Phrases),
+        typeof(LocalizedStrings), typeof(DataGridGroupHeader),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnCaptionChanged));
+
     public object Key
     {
         get => GetValue(KeyProperty);
@@ -54,17 +61,31 @@ public class DataGridGroupHeader : ContentControl
         set => SetValue(IsExpandedProperty, value);
     }
 
+    public LocalizedStrings Phrases
+    {
+        get => GetValue<LocalizedStrings>(PhrasesProperty);
+        set => SetValue(PhrasesProperty, value);
+    }
+
     // The caption IS the content, so a theme lays it out as it lays out any other content and needs to know nothing
-    // about groups.
+    // about groups. Said in the phrases' words and order, and again when the language changes.
     private static void OnCaptionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         if (component is not DataGridGroupHeader header) return;
 
         var value = DataGridColumnFilter.Text(header.Key);
-        if (string.IsNullOrEmpty(value)) value = "(blank)";
+        if (header.Phrases is not { } phrases)
+        {
+            header.Content = value;
+            return;
+        }
 
-        header.Content = header.GroupName is { Length: > 0 } name
-            ? $"{name}: {value}  ({header.Count})"
-            : $"{value}  ({header.Count})";
+        var named = header.GroupName is { Length: > 0 };
+        var caption = new Localize(phrases, named ? "GroupNamed" : "Group");
+        if (named) caption.Arguments["name"] = header.GroupName;
+        caption.Arguments["value"] = string.IsNullOrEmpty(value) ? new Localize(phrases, "Blank") : value;
+        caption.Arguments["count"] = header.Count;
+
+        header.SetBinding(ContentProperty, caption);
     }
 }

@@ -7,9 +7,9 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class SettingsPageViewModel : INavigationAware
 {
-    [Bindable] private string _status = "Settings";
+    [Bindable] private NavigationMode? _arrivedVia;
 
-    public void OnNavigatedTo(NavigationContext context) => Status = $"Settings - arrived via {context.Mode}";
+    public void OnNavigatedTo(NavigationContext context) => ArrivedVia = context.Mode;
     public void OnNavigatedFrom(NavigationContext context) { }
     public bool IsNavigationTarget(NavigationContext context) => true;
 }

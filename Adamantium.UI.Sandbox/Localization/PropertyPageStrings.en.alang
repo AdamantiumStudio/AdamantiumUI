@@ -1,0 +1,30 @@
+<Language>
+    <Phrase Key="Intro" Text="Two inspectors over two DIFFERENT objects - the left one written out in markup, the right one generated from the type. Every editable row is live: type, pick, tick, or drag a number sideways. Drag the grip on any row and all of them follow."/>
+    <Phrase Key="LeftCaption" Select="both" True="Written by hand - now over BOTH objects"
+            False="Written by hand - over Player, sections and properties declared in markup"/>
+    <Phrase Key="RightCaption" Select="both" True="Generated - now over BOTH objects"
+            False="Generated - over Enemy, PropertyDefinitionBuilder read the type, no markup at all"/>
+    <Phrase Key="Difference" Select="both"
+            True="Both are over Player AND Enemy. Rows the two agree on show that value; only rows they really differ on say 'multiple values' - fill one, both take it."
+            False="Two DIFFERENT objects, side by side - compare them. Tick the box to point both inspectors at both at once."/>
+
+    <Phrase Key="General" Text="General"/>
+    <Phrase Key="Name" Text="Name"/>
+    <Phrase Key="Enabled" Text="Enabled"/>
+    <Phrase Key="Tag" Text="Tag"/>
+    <Phrase Key="Guid" Text="Guid"/>
+    <Phrase Key="Transform" Text="Transform"/>
+    <Phrase Key="Position" Text="Position"/>
+    <Phrase Key="Physics" Text="Physics"/>
+    <Phrase Key="Mass" Text="Mass"/>
+    <Phrase Key="Visibility" Text="Visibility"/>
+    <Phrase Key="Material" Text="Material"/>
+    <Phrase Key="Tint" Text="Tint"/>
+    <Phrase Key="Fill" Text="Fill"/>
+
+    <Phrase Key="PointAtBoth" Text="Point both at both objects"/>
+    <Phrase Key="SearchOnRight" Text="Search on the right"/>
+    <Phrase Key="Action" Select="pressed" True="... pressed on the Tag line of: {target}" False="The ... button has not been pressed"/>
+    <Phrase Key="Target" Select="name" None="nothing" Other="{name}"/>
+    <Phrase Key="SameBrush" Text="the same brush, elsewhere on the page"/>
+</Language>

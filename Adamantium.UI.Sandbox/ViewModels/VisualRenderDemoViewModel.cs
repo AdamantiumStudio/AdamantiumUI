@@ -15,7 +15,7 @@ public partial class VisualRenderDemoViewModel : TabPageViewModel
     private readonly IVisualRenderer _renderer;
     private readonly IDragGhost _ghost;
 
-    public VisualRenderDemoViewModel(IVisualRenderer renderer, IDragGhost ghost) : base("Visual → Image")
+    public VisualRenderDemoViewModel(IVisualRenderer renderer, IDragGhost ghost) : base("VisualToImage")
     {
         _renderer = renderer;
         _ghost = ghost;

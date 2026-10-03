@@ -6,6 +6,13 @@
          template - the control draws its own ground, grid and axes; see Fluent's set. -->
     <Style Selector="InfiniteCanvas">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
+        <Setter Property="ExportTitle" Value="{Localize CanvasStrings.ExportTitle}"/>
+        <Setter Property="OpenTitle" Value="{Localize CanvasStrings.OpenTitle}"/>
+        <Setter Property="DrawingsName" Value="{Localize CanvasStrings.Drawings}"/>
+        <Setter Property="AllFilesName" Value="{Localize CanvasStrings.AllFiles}"/>
+        <Setter Property="DeleteTitle" Value="{Localize CanvasStrings.DeleteTitle}"/>
+        <Setter Property="ClearTitle" Value="{Localize CanvasStrings.ClearCanvas}"/>
+        <Setter Property="Phrases" Value="{x:Static CanvasStrings.Current}"/>
         <Setter Property="GridBrush" Value="{ObservableResource CanvasGridColor}"/>
         <Setter Property="AxisBrush" Value="{ObservableResource CanvasAxisColor}"/>
         <Setter Property="GridThickness" Value="1"/>
@@ -34,7 +41,7 @@
                             <Button x:Name="PART_OverlayGrip" Width="32" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
-                                    ToolTip="Drag to move the panel, click to fold it away">
+                                    ToolTip="{Localize CanvasStrings.MovePanel}">
                                 <Image Source="{ObservableResource GripIcon}" Width="12" Height="12"/>
                             </Button>
                             <ContentPresenter x:Name="PART_Overlay"/>
@@ -50,7 +57,7 @@
 
                             <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
 
-                            <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="Map"
+                            <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
                                 <CanvasMiniMap Width="200" Height="126" MinWidth="0" MinHeight="0"/>
                             </CanvasPane>
@@ -60,7 +67,7 @@
                                 <CanvasInspector/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="Add a node"
+                            <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="{Localize CanvasStrings.AddNode}"
                                         CanDrag="True" Width="210"
                                         IsNeeded="{TemplateBinding IsPaletteOpen}">
                                 <CanvasNodePalette/>
@@ -119,7 +126,7 @@
                         <!-- ONE ON EITHER SIDE, each pulling its own way - see Fluent's set. -->
                         <Border x:Name="PART_SizerLeft" DockPanel.Dock="Left" Width="8" Visibility="Collapsed"
                                 Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="Drag to set how wide the panel is">
+                                ToolTip="{Localize CanvasStrings.ResizePanel}">
                             <!-- A SHORT GRIP IN THE MIDDLE - see Fluent's set. -->
                             <Grid Height="56" VerticalAlignment="Center">
                                 <Border Width="1" HorizontalAlignment="Center"
@@ -137,7 +144,7 @@
 
                         <Border x:Name="PART_SizerRight" DockPanel.Dock="Right" Width="8" Visibility="Collapsed"
                                 Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="Drag to set how wide the panel is">
+                                ToolTip="{Localize CanvasStrings.ResizePanel}">
                             <Grid Height="56" VerticalAlignment="Center">
                                 <Border Width="1" HorizontalAlignment="Center"
                                         Background="{ObservableResource ControlStrokeColorDefault}"/>
@@ -157,17 +164,17 @@
                                     HorizontalAlignment="Left" MarginBottom="8">
                             <Button x:Name="PART_Grip" Width="32" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
-                                    ToolTip="Drag to move the panel, click to fold it away">
+                                    ToolTip="{Localize CanvasStrings.MovePanel}">
                                 <Image Source="{ObservableResource GripIcon}" Width="12" Height="12"/>
                             </Button>
                             <ToggleButton x:Name="PART_Snap" Width="32" Height="24" MarginLeft="5"
                                           MinWidth="0" MinHeight="0" Padding="0"
-                                          ToolTip="Stick to an edge when dropped near one">
+                                          ToolTip="{Localize CanvasStrings.StickToEdge}">
                                 <Image Source="{ObservableResource PaneSnapIcon}" Width="12" Height="12"/>
                             </ToggleButton>
                             <Button x:Name="PART_Turn" Width="32" Height="24" MarginLeft="5"
                                     MinWidth="0" MinHeight="0" Padding="0" Visibility="Collapsed"
-                                    ToolTip="Lay the tools out in a row or in a column">
+                                    ToolTip="{Localize CanvasStrings.ToolsLayout}">
                                 <Image Source="{ObservableResource PaneTurnIcon}" Width="12" Height="12"/>
                             </Button>
                         </StackPanel>
@@ -263,13 +270,13 @@
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
                             <RadioButton Classes="Toggle" GroupName="CanvasMode"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="Drawing - ink, shapes and text"
+                                         ToolTip="{Localize CanvasStrings.DrawingMode}"
                                          IsChecked="{TemplateBinding IsDrawing, Mode=TwoWay}">
                                 <Image Source="{ObservableResource ToolPenIcon}" Width="13" Height="13"/>
                             </RadioButton>
                             <RadioButton Classes="Toggle" GroupName="CanvasMode" MarginLeft="4"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="Graph - nodes and the wires between them"
+                                         ToolTip="{Localize CanvasStrings.GraphMode}"
                                          IsChecked="{TemplateBinding IsGraph, Mode=TwoWay}">
                                 <Image Source="{ObservableResource ToolNodeIcon}" Width="13" Height="13"/>
                             </RadioButton>
@@ -278,13 +285,13 @@
 
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="Properties of what is selected"
+                                         ToolTip="{Localize CanvasStrings.Properties}"
                                          IsChecked="{TemplateBinding ShowsProperties, Mode=TwoWay}">
                                 <Image Source="{ObservableResource FaceInspectorIcon}" Width="13" Height="13"/>
                             </RadioButton>
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace" MarginLeft="4"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="Everything on the plane, topmost first"
+                                         ToolTip="{Localize CanvasStrings.Layers}"
                                          IsChecked="{TemplateBinding ShowsStructure, Mode=TwoWay}">
                                 <Image Source="{ObservableResource FaceStructureIcon}" Width="13" Height="13"/>
                             </RadioButton>
@@ -295,47 +302,47 @@
                         <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" MarginTop="10">
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Draw a comment frame round what is selected"
+                                    ToolTip="{Localize CanvasStrings.CommentFrame}"
                                     Command="{Ancestor CanvasInspector, Canvas.FrameCommand}">
                                 <Image Source="{ObservableResource FrameIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Line the left edges up"
+                                    ToolTip="{Localize CanvasStrings.AlignLeft}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Left">
                                 <Image Source="{ObservableResource AlignLeftIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Line the middles up"
+                                    ToolTip="{Localize CanvasStrings.AlignCenter}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}"
                                     CommandParameter="HorizontalCenter">
                                 <Image Source="{ObservableResource AlignMiddleIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Line the right edges up"
+                                    ToolTip="{Localize CanvasStrings.AlignRight}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Right">
                                 <Image Source="{ObservableResource AlignRightIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Line the top edges up"
+                                    ToolTip="{Localize CanvasStrings.AlignTop}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Top">
                                 <Image Source="{ObservableResource AlignTopIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Equal gaps down a column"
+                                    ToolTip="{Localize CanvasStrings.DistributeVertically}"
                                     Command="{Ancestor CanvasInspector, Canvas.SpreadCommand}"
                                     CommandParameter="Vertical">
                                 <Image Source="{ObservableResource SpreadRowsIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Equal gaps across a row"
+                                    ToolTip="{Localize CanvasStrings.DistributeHorizontally}"
                                     Command="{Ancestor CanvasInspector, Canvas.SpreadCommand}"
                                     CommandParameter="Horizontal">
                                 <Image Source="{ObservableResource SpreadColumnsIcon}" Width="14" Height="14"/>
@@ -343,7 +350,7 @@
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
-                                    ToolTip="Bring the work into view - the F key does this too"
+                                    ToolTip="{Localize CanvasStrings.FitToView}"
                                     Command="{Ancestor CanvasInspector, Canvas.FitViewCommand}">
                                 <Image Source="{ObservableResource FitIcon}" Width="14" Height="14"/>
                             </Button>
@@ -352,19 +359,19 @@
                                  half of a canvas other people's tools have a claim on. -->
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="2"
                                     Visibility="{TemplateBinding DrawingActions}"
-                                    ToolTip="Export the drawing as SVG"
+                                    ToolTip="{Localize CanvasStrings.ExportSvg}"
                                     Command="{Ancestor CanvasInspector, Canvas.ExportSvgCommand}">
                                 <Image Source="{ObservableResource SaveIcon}" Width="13" Height="13"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="6"
                                     Visibility="{TemplateBinding DrawingActions}"
-                                    ToolTip="Open an SVG drawing"
+                                    ToolTip="{Localize CanvasStrings.OpenSvg}"
                                     Command="{Ancestor CanvasInspector, Canvas.ImportSvgCommand}">
                                 <Image Source="{ObservableResource OpenIcon}" Width="13" Height="13"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0"
-                                    ToolTip="Clear the canvas"
+                                    ToolTip="{Localize CanvasStrings.ClearCanvas}"
                                     Command="{Ancestor CanvasInspector, Canvas.ClearCommand}">
                                 <Image Source="{ObservableResource BinIcon}" Width="14" Height="14"/>
                             </Button>
@@ -402,7 +409,12 @@
                                  the plane lost them. -->
                             <!-- HOW MUCH IS ON THE PLANE - see Fluent's set: the list is where that is asked. -->
                             <DockPanel Visibility="{TemplateBinding StructureFace}" LastChildFill="True">
-                                <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Counted}" MarginBottom="6"
+                                <TextBlock x:Name="ItemCountLabel" DockPanel.Dock="Top" MarginBottom="6"
+                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding ItemCount}}"
+                                           Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                <TextBlock x:Name="NothingDrawnLabel" DockPanel.Dock="Top" MarginBottom="6"
+                                           Visibility="Collapsed"
+                                           Text="{Localize CanvasStrings.NothingDrawn}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                                 <TreeView MaxHeight="300" MinWidth="0"
                                           ItemsSource="{TemplateBinding Structure}"
@@ -410,13 +422,27 @@
                                           ItemActivatedCommand="{Ancestor CanvasInspector, Canvas.ZoomToCommand}">
                                     <TreeView.ItemTemplate>
                                         <HierarchicalDataTemplate ItemsSource="{Binding Inside}">
-                                            <TextBlock Text="{Binding Title}" TextTrimming="CharEllipses"/>
+                                            <!-- What it is, how many parts, what it was called - see Fluent's set. -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Localize CanvasStrings, Key={Binding Sort}}"/>
+                                                <TextBlock Text="{Binding Parts}" MarginLeft="6"
+                                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                                <TextBlock Text="{Binding Title}" MarginLeft="6" TextTrimming="CharEllipses"
+                                                           Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                            </StackPanel>
                                         </HierarchicalDataTemplate>
                                     </TreeView.ItemTemplate>
                                 </TreeView>
                             </DockPanel>
                         </Grid>
                     </DockPanel>
+
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="ItemCount" Value="0">
+                            <Setter TargetName="ItemCountLabel" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="NothingDrawnLabel" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -431,12 +457,12 @@
                         <Grid MarginBottom="8">
                             <TextBox Text="{TemplateBinding Search, Mode=TwoWay}"
                                      Padding="8 0 26 0"
-                                     ToolTip="Narrow the list"/>
+                                     ToolTip="{Localize CanvasStrings.NarrowList}"/>
                             <Button x:Name="PART_Clear" Width="20" Height="20" MinWidth="0" MinHeight="0"
                                     Padding="0" MarginRight="6" Visibility="Collapsed"
                                     HorizontalAlignment="Right" VerticalAlignment="Center"
                                     Command="{Ancestor CanvasNodePalette, ClearSearchCommand}"
-                                    ToolTip="Clear the search">
+                                    ToolTip="{Localize CanvasStrings.ClearSearch}">
                                 <Image Source="{ResourceReference CloseIcon}" Width="9" Height="9"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
@@ -457,7 +483,7 @@
                         </TreeView>
 
                         <StackPanel Orientation="Horizontal" MarginTop="8" HorizontalAlignment="Right">
-                            <Button Content="Cancel" Height="28" MinWidth="0" Padding="12,0"
+                            <Button Content="{Localize CanvasStrings.Cancel}" Height="28" MinWidth="0" Padding="12,0"
                                     Command="{Ancestor CanvasNodePalette, CloseCommand}"/>
                         </StackPanel>
                     </StackPanel>
@@ -472,6 +498,47 @@
         </Setter>
     </Style>
 
+    <!-- What the canvas asks before it takes something away - see Fluent's set. -->
+    <Style Selector="CanvasQuestion">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CanvasQuestion">
+                    <StackPanel Orientation="Vertical" Width="360" Margin="18">
+                        <TextBlock x:Name="RemoveSomeLabel" TextWrapping="WrapByWords" MarginBottom="20"
+                                   Text="{Localize CanvasStrings.RemoveObjects, count={TemplateBinding Count}}"/>
+                        <TextBlock x:Name="RemoveOneLabel" Visibility="Collapsed" TextWrapping="WrapByWords" MarginBottom="20"
+                                   Text="{Localize CanvasStrings.RemoveIt}"/>
+                        <TextBlock x:Name="ClearLabel" Visibility="Collapsed" TextWrapping="WrapByWords" MarginBottom="20"
+                                   Text="{Localize CanvasStrings.RemoveAll, count={TemplateBinding Count}}"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="PART_Yes" MinWidth="96" MarginRight="8">
+                                <Grid>
+                                    <TextBlock x:Name="DeleteText" Text="{Localize CanvasStrings.DeleteAnswer}"/>
+                                    <TextBlock x:Name="ClearText" Visibility="Collapsed" Text="{Localize CanvasStrings.ClearAnswer}"/>
+                                </Grid>
+                            </Button>
+                            <Button x:Name="PART_No" MinWidth="96" Content="{Localize CanvasStrings.Cancel}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="Kind" Value="DeleteSelection"/>
+                <Condition Property="Count" Value="1"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="RemoveSomeLabel" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="RemoveOneLabel" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <PropertyTrigger Property="Kind" Value="Clear">
+            <Setter TargetName="RemoveSomeLabel" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="ClearLabel" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="DeleteText" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="ClearText" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
+
     <!-- The SELECTION BAR - see Fluent's set for what is on it and why it is pictures. Roomier, like everything in
          this theme. -->
     <Style Selector="CanvasSelectionBar">
@@ -483,13 +550,13 @@
                              three things it actually is. -->
                         <Button x:Name="PART_Front" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Bring to the front of paint order"
+                                ToolTip="{Localize CanvasStrings.BringToFront}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.BringToFrontCommand}">
                             <Image Source="{ObservableResource BringToFrontIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Back" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Send to the back"
+                                ToolTip="{Localize CanvasStrings.SendToBack}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.SendToBackCommand}">
                             <Image Source="{ObservableResource SendToBackIcon}" Width="14" Height="14"/>
                         </Button>
@@ -497,30 +564,30 @@
                         <!-- ONE PLACE AT A TIME - see Fluent's set: the ends are not where arranging happens. -->
                         <Button x:Name="PART_Forward" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Bring over the thing in front of it"
+                                ToolTip="{Localize CanvasStrings.BringForward}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.BringForwardCommand}">
                             <Image Source="{ObservableResource BringForwardIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Backward" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Send under the thing behind it"
+                                ToolTip="{Localize CanvasStrings.SendBackward}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.SendBackwardCommand}">
                             <Image Source="{ObservableResource SendBackwardIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Group" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Make one thing of it (Ctrl+G)"
+                                ToolTip="{Localize CanvasStrings.Group}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.GroupCommand}">
                             <Image Source="{ObservableResource GroupIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Ungroup" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
-                                ToolTip="Break it open again (Ctrl+Shift+G)"
+                                ToolTip="{Localize CanvasStrings.Ungroup}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.UngroupCommand}">
                             <Image Source="{ObservableResource UngroupIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button Width="28" Height="26" MinWidth="0" MinHeight="0" Padding="0"
-                                ToolTip="Take it away"
+                                ToolTip="{Localize CanvasStrings.Delete}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.DeleteCommand}">
                             <Image Source="{ObservableResource BinIcon}" Width="14" Height="14"/>
                         </Button>
@@ -548,40 +615,40 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginRight="8"
                                 Command="{Ancestor CanvasViewBar, Canvas.UndoCommand}"
-                                ToolTip="Undo (Ctrl+Z)">
+                                ToolTip="{Localize CanvasStrings.Undo}">
                             <Image Source="{ObservableResource UndoIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginRight="12"
                                 Command="{Ancestor CanvasViewBar, Canvas.RedoCommand}"
-                                ToolTip="Redo (Ctrl+Y)">
+                                ToolTip="{Localize CanvasStrings.Redo}">
                             <Image Source="{ObservableResource RedoIcon}" Width="14" Height="14"/>
                         </Button>
 
                         <Button Content="-" Width="30" Height="28" MinWidth="0" Padding="0"
                                 Command="{Ancestor CanvasViewBar, Canvas.ZoomOutCommand}"
-                                ToolTip="Zoom out"/>
+                                ToolTip="{Localize CanvasStrings.ZoomOut}"/>
                         <TextBlock Text="{TemplateBinding ZoomText}" MinWidth="58" MarginLeft="8" MarginRight="8"
                                    VerticalAlignment="Center"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center"/>
                         <Button Content="+" Width="30" Height="28" MinWidth="0" Padding="0"
                                 Command="{Ancestor CanvasViewBar, Canvas.ZoomInCommand}"
-                                ToolTip="Zoom in"/>
+                                ToolTip="{Localize CanvasStrings.ZoomIn}"/>
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="10"
                                 Command="{Ancestor CanvasViewBar, Canvas.HomeCommand}"
-                                ToolTip="Back to the view kept beside this button">
+                                ToolTip="{Localize CanvasStrings.GoHome}">
                             <Image Source="{ObservableResource HomeIcon}" Width="12" Height="12"/>
                         </Button>
                         <!-- WHICH VIEW HOME MEANS - see Fluent's set. -->
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="6"
                                 Command="{Ancestor CanvasViewBar, Canvas.RememberViewCommand}"
-                                ToolTip="Keep this view as the one Home goes back to">
+                                ToolTip="{Localize CanvasStrings.KeepHome}">
                             <Image Source="{ObservableResource KeepViewIcon}" Width="12" Height="12"/>
                         </Button>
                         <!-- Offered only where it does something - see Fluent's set. -->
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="6"
                                 Visibility="{Ancestor CanvasViewBar, Canvas.KeepsHomeFace}"
                                 Command="{Ancestor CanvasViewBar, Canvas.ForgetViewCommand}"
-                                ToolTip="Give up the kept view - Home goes back to the origin at one to one">
+                                ToolTip="{Localize CanvasStrings.ForgetHome}">
                             <Image Source="{ObservableResource ForgetViewIcon}" Width="12" Height="12"/>
                         </Button>
                     </StackPanel>
@@ -594,6 +661,7 @@
          editor's. Rounder and roomier, like everything in this theme, and the sockets are circles: this theme has no
          square corners to speak of anywhere else either. -->
     <Style Selector="CanvasNode">
+        <Setter Property="Phrases" Value="{x:Static CanvasStrings.Current}"/>
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
         <Setter Property="BorderBrush" Value="{ObservableResource ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -630,7 +698,7 @@
                                                           Width="18" Height="18" MinWidth="0" MinHeight="0" Padding="0"
                                                           MarginLeft="8" VerticalAlignment="Center"
                                                           Background="Transparent" BorderThickness="0"
-                                                          ToolTip="Fold the node down to its title"
+                                                          ToolTip="{Localize CanvasStrings.FoldNode}"
                                                           IsChecked="{TemplateBinding IsCollapsed, Mode=TwoWay}"
                                                           BackgroundChecked="Transparent"
                                                           BorderBrushChecked="Transparent"
@@ -722,7 +790,7 @@
                                                     <Border CanvasNode.IsSocketGrip="True" Background="Transparent"
                                                             Width="12" Height="14" MinWidth="0" MinHeight="0"
                                                             MarginLeft="8" VerticalAlignment="Center" Cursor="SizeAll"
-                                                            ToolTipService.ToolTip="Drag to move this socket">
+                                                            ToolTipService.ToolTip="{Localize CanvasStrings.MoveSocket}">
                                                         <Path Fill="{ObservableResource TextFillColorTertiary}"
                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
                                                               Data="M0,0 L2,0 L2,2 L0,2 Z M4,0 L6,0 L6,2 L4,2 Z M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M0,8 L2,8 L2,10 L0,10 Z M4,8 L6,8 L6,10 L4,10 Z"/>
@@ -754,7 +822,7 @@
                                                     <Border CanvasNode.IsSocketGrip="True" Background="Transparent"
                                                             Width="12" Height="14" MinWidth="0" MinHeight="0"
                                                             MarginRight="8" VerticalAlignment="Center" Cursor="SizeAll"
-                                                            ToolTipService.ToolTip="Drag to move this socket">
+                                                            ToolTipService.ToolTip="{Localize CanvasStrings.MoveSocket}">
                                                         <Path Fill="{ObservableResource TextFillColorTertiary}"
                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
                                                               Data="M0,0 L2,0 L2,2 L0,2 Z M4,0 L6,0 L6,2 L4,2 Z M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M0,8 L2,8 L2,10 L0,10 Z M4,8 L6,8 L6,10 L4,10 Z"/>

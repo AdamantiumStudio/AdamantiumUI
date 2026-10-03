@@ -1,0 +1,6 @@
+<Language>
+    <Phrase Key="Rows" Text="Rows"/>
+    <Phrase Key="Page" Text="Page"/>
+    <Phrase Key="OfCount" Text="of {count}"/>
+    <Phrase Key="OfUnknown" Text="of ?"/>
+</Language>

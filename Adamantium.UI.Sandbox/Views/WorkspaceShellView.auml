@@ -5,16 +5,17 @@
          region through the VM. -->
     <Grid RowDefinitions="Auto,*" Margin="16">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="A TabControl driven purely by the navigation manager" VerticalAlignment="Center" Margin="0,0,16,0"/>
-            <Button Content="Open Doc"   Command="{Binding OpenDocCommand}"   Width="100" Height="32" Margin="0,0,8,0"/>
-            <Button Content="Open Chart" Command="{Binding OpenChartCommand}" Width="100" Height="32" Margin="0,0,8,0"/>
-            <Button Content="Close tab"  Command="{Binding CloseTabCommand}"  Width="90"  Height="32"/>
+            <TextBlock Text="{Localize WorkspaceStrings.DrivenByNavigation}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+            <Button Content="{Localize WorkspaceStrings.OpenDoc}"   Command="{Binding OpenDocCommand}"   MinWidth="100" Height="32" Margin="0,0,8,0"/>
+            <Button Content="{Localize WorkspaceStrings.OpenChart}" Command="{Binding OpenChartCommand}" MinWidth="100" Height="32" Margin="0,0,8,0"/>
+            <Button Content="{Localize WorkspaceStrings.CloseTab}"  Command="{Binding CloseTabCommand}"  MinWidth="90"  Height="32"/>
         </StackPanel>
 
+        <!-- A page names its kind by a key of the workspace's phrases, and its number fills it in. -->
         <TabControl Grid.Row="1" nav:RegionManager.RegionName="workspace">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Title}" VerticalTextAlignment="Center"/>
+                    <TextBlock Text="{Localize WorkspaceStrings, Key={Binding Kind}, number={Binding Number}}" VerticalTextAlignment="Center"/>
                 </DataTemplate>
             </TabControl.ItemTemplate>
         </TabControl>

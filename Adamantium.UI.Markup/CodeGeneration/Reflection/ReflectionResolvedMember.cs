@@ -51,6 +51,9 @@ public class ReflectionResolvedMember : IResolvedMember
         _ => false
     };
 
+    public IReadOnlyList<string> ParameterNames =>
+        _member is MethodBase method ? method.GetParameters().Select(p => p.Name).ToList() : [];
+
     public ResolvedMemberKind MemberKind => _member.MemberType switch
     {
         MemberTypes.Field => ResolvedMemberKind.Field,

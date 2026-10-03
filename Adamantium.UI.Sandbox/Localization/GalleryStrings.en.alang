@@ -1,0 +1,55 @@
+<Language>
+    <Phrase Key="TabPlacement" Text="Tab strip placement:"/>
+    <Phrase Key="ContentSlide" Text="Content slide:"/>
+    <Phrase Key="Indicator" Text="Indicator:"/>
+    <Phrase Key="Loading" Text="Loading..."/>
+
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="None" Text="None"/>
+    <Phrase Key="SlideLeft" Text="Slide left"/>
+    <Phrase Key="SlideRight" Text="Slide right"/>
+    <Phrase Key="SlideUp" Text="Slide up"/>
+    <Phrase Key="SlideDown" Text="Slide down"/>
+    <Phrase Key="Inner" Text="Inner"/>
+    <Phrase Key="Outer" Text="Outer"/>
+
+    <Phrase Key="Navigation" Text="Navigation"/>
+    <Phrase Key="VisualToImage" Text="Visual → Image"/>
+    <Phrase Key="DragDrop" Text="Drag &amp; Drop"/>
+    <Phrase Key="Buttons" Text="Buttons"/>
+    <Phrase Key="DataGrid" Text="Data grid"/>
+    <Phrase Key="PropertyGrid" Text="Property grid"/>
+    <Phrase Key="Tabs" Text="Tabs"/>
+    <Phrase Key="Menus" Text="Menus"/>
+    <Phrase Key="Trees" Text="Trees"/>
+    <Phrase Key="Splitter" Text="Splitter"/>
+    <Phrase Key="ColorPicker" Text="Color Picker"/>
+    <Phrase Key="Ranges" Text="Ranges"/>
+    <Phrase Key="Keyboard" Text="Keyboard"/>
+    <Phrase Key="Resources" Text="Resources"/>
+    <Phrase Key="Markup" Text="Markup"/>
+    <Phrase Key="ScrollBar" Text="ScrollBar"/>
+    <Phrase Key="Lists" Text="Lists"/>
+    <Phrase Key="Shapes" Text="Shapes"/>
+    <Phrase Key="Loaders" Text="Loaders"/>
+    <Phrase Key="Animations" Text="Animations"/>
+    <Phrase Key="Text" Text="Text"/>
+    <Phrase Key="SlidePanel" Text="SlidePanel"/>
+    <Phrase Key="Image" Text="Image"/>
+    <Phrase Key="VectorIcons" Text="Vector icons"/>
+    <Phrase Key="Layout" Text="Layout"/>
+    <Phrase Key="Clipping" Text="Clipping"/>
+    <Phrase Key="Opacity" Text="Opacity"/>
+    <Phrase Key="Viewbox" Text="Viewbox"/>
+    <Phrase Key="ZoomBox" Text="ZoomBox"/>
+    <Phrase Key="InfiniteCanvas" Text="Infinite canvas"/>
+    <Phrase Key="Tiles3D" Text="Tiles 3D"/>
+    <Phrase Key="Instancing" Text="Instancing"/>
+    <Phrase Key="Transforms" Text="Transforms"/>
+    <Phrase Key="Scene" Text="Scene"/>
+    <Phrase Key="Docking" Text="Docking"/>
+    <Phrase Key="Brushes" Text="Brushes"/>
+</Language>

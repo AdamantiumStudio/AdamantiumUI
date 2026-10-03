@@ -1,13 +1,11 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Demo enum for the DropDown: the [Display] names are what the dropdown shows, while the bound value stays the
-/// enum member - the friendly-name binding WPF never did for free.</summary>
+/// <summary>Demo enum for the DropDown: the view says each member by its name, while the bound value stays the enum
+/// member.</summary>
 public enum Priority
 {
-    [Display(Name = "Low priority")] Low,
-    [Display(Name = "Normal priority")] Normal,
-    [Display(Name = "High priority")] High,
-    [Display(Name = "Critical - drop everything")] Critical,
+    Low,
+    Normal,
+    High,
+    Critical,
 }

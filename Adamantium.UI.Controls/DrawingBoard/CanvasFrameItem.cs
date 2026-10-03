@@ -58,8 +58,6 @@ public class CanvasFrameItem : ICanvasItem
 
     public Rect Bounds => World;
 
-    string ICanvasItem.Title => string.IsNullOrEmpty(Title) ? "Frame" : $"Frame \"{Title}\"";
-
     /// <summary>ONLY THE TITLE STRIP answers the pointer. A frame is mostly empty by design - what is inside it is the
     /// point - and one that could be picked up by its middle would be a sheet nobody could click through.</summary>
     public bool HitTest(Vector2 world, double tolerance)

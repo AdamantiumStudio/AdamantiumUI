@@ -12,7 +12,7 @@ public class TextureTool : ElementTool
     {
         Name = "Texture";
         Icon = "ToolTextureIcon";
-        Description = "place a surface to paint a picture on";
+        Description = "TextureDescription";
         Shortcut = Key.I;
 
         // A BUTTON OF ITS OWN in the rail: what it puts down is the engine's, unlike the controls an application

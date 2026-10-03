@@ -1,0 +1,31 @@
+<Language>
+    <Phrase Key="SingleSelect" Text="Single select"/>
+    <Phrase Key="Add" Text="Add"/>
+    <Phrase Key="Remove" Text="Remove"/>
+    <Phrase Key="MultipleSelect" Text="Multiple select"/>
+    <Phrase Key="SelectedSingle" Text="Selected (single):"/>
+
+    <Phrase Key="LargeTitle" Text="Large list — 20 000 rows, filtered live and paged"/>
+    <Phrase Key="Search" Text="Search"/>
+    <Phrase Key="PartsToShow" Text="Parts to show"/>
+    <Phrase Key="FirstLast" Text="First/Last"/>
+    <Phrase Key="PreviousNext" Text="Previous/Next"/>
+    <Phrase Key="Numbers" Text="Numbers"/>
+    <Phrase Key="RowsPerPage" Text="Rows per page"/>
+    <Phrase Key="PageInput" Text="Page input"/>
+    <Phrase Key="PageSizes" Text="Page sizes on offer"/>
+    <Phrase Key="AddStep" Text="Add a step"/>
+    <Phrase Key="DropInUse" Text="Drop the one in use"/>
+    <Phrase Key="Now" Text="now:"/>
+
+    <Phrase Key="ServerTitle" Text="A server that hands out one page at a time — 237 rows it will not count for you"/>
+    <Phrase Key="AnswersIn" Text="Answers in"/>
+    <Phrase Key="Ms" Text="ms"/>
+    <Phrase Key="FailNext" Text="Fail the next page"/>
+    <Phrase Key="AskAgain" Text="Ask again"/>
+    <Phrase Key="Server" Select="state" Loading="loading page {page}…" Armed="armed: the next page will fail"
+            Failed="failed: {error} — the page you were on is still here" Shown="page {page}, {known}"/>
+    <Phrase Key="Known" Select="count" None="? rows known" Other="{count} rows known"/>
+
+    <Phrase Key="NarrowTitle" Text="The same view, 420 wide — the row sheds what does not fit"/>
+</Language>

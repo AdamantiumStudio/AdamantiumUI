@@ -72,15 +72,21 @@ public partial class ListsViewModel : TabPageViewModel
     /// <summary>The paged source the second list and its pager both look at.</summary>
     public AsyncPagedSource Server { get; }
 
-    /// <summary>What the server is doing, in words - the only place the reader can see a request that is in flight, a
-    /// total that is not known yet, or a page that failed to arrive.</summary>
-    [Bindable] private string _serverStatus = string.Empty;
+    /// <summary>What the server is doing - the only place the reader can see a request that is in flight, a total that is
+    /// not known yet, or a page that failed to arrive - with the page, the rows known so far and the failure.</summary>
+    [Bindable] private ServerState _serverState = ServerState.Loading;
+
+    [Bindable] private int _serverPage = 1;
+
+    [Bindable] private int? _serverTotal;
+
+    [Bindable] private string _serverError;
 
     [Command]
     private void FailNextServerRequest()
     {
         _failNextRequest = true;
-        ServerStatus = "armed: the next page will fail";
+        ServerState = ServerState.Armed;
     }
 
     [Command]
@@ -109,12 +115,12 @@ public partial class ListsViewModel : TabPageViewModel
 
     private void OnServerChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        var total = Server.TotalItemCount is { } count ? count.ToString() : "?";
-        ServerStatus = Server.IsPageChanging
-            ? $"loading page {Server.PageIndex + 1}…"
-            : Server.LastError is { } error
-                ? $"failed: {error.Message} — the page you were on is still here"
-                : $"page {Server.PageIndex + 1}, {total} rows known";
+        ServerPage = Server.PageIndex + 1;
+        ServerTotal = Server.TotalItemCount;
+        ServerError = Server.LastError?.Message;
+        ServerState = Server.IsPageChanging
+            ? ServerState.Loading
+            : Server.LastError != null ? ServerState.Failed : ServerState.Shown;
     }
 
     /// <summary>The page sizes this stand offers - NOT the control's own 10/25/50/100, on purpose: the progression
@@ -178,6 +184,15 @@ public partial class ListsViewModel : TabPageViewModel
             ? null
             : o => ((BigItem)o).Name.Contains(text, System.StringComparison.OrdinalIgnoreCase);
     }
+}
+
+/// <summary>What the simulated server of the lists page is doing.</summary>
+public enum ServerState
+{
+    Loading,
+    Armed,
+    Failed,
+    Shown,
 }
 
 /// <summary>A row of the large list: something to show and something to sort by.</summary>

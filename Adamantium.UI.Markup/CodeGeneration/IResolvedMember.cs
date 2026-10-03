@@ -16,5 +16,8 @@ public interface IResolvedMember
 
     bool IsPublic { get; }
 
+    /// <summary>A method's parameters by name, in order; empty for any other member.</summary>
+    IReadOnlyList<string> ParameterNames { get; }
+
     ResolvedMemberKind MemberKind { get; }
 }

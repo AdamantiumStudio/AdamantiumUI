@@ -1,0 +1,6 @@
+<Language>
+    <Phrase Key="Title" Text="ZoomBox — колесо: масштаб к курсору · перетаскивание: сдвиг · полосы прокрутки сами"/>
+    <Phrase Key="Hint" Text="Ползунки привязаны в обе стороны к ScaleX / ScaleY через ElementName (привязка элемента к элементу). Масштаб колесом двигает оба."/>
+    <Phrase Key="ScaleX" Text="Масштаб X"/>
+    <Phrase Key="ScaleY" Text="Масштаб Y"/>
+</Language>

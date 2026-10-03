@@ -1,0 +1,37 @@
+<Language>
+    <Phrase Key="MenuButton" Select="visible" True="Скрыть меню" False="Показать меню"/>
+    <Phrase Key="CameraSpeed" Text="Скорость камеры"/>
+    <Phrase Key="ResetCamera" Text="Сбросить камеру"/>
+    <Phrase Key="Tool" Text="Инструмент"/>
+    <Phrase Key="Select" Text="Выбор"/>
+    <Phrase Key="Move" Text="Перемещение"/>
+    <Phrase Key="Rotate" Text="Поворот"/>
+    <Phrase Key="Scale" Text="Масштаб"/>
+    <Phrase Key="Pivot" Text="Опорная точка"/>
+
+    <Phrase Key="Lights" Text="Свет"/>
+    <Phrase Key="AddPoint" Text="Точечный свет"/>
+    <Phrase Key="AddSpot" Text="Прожектор"/>
+    <Phrase Key="AddDirectional" Text="Направленный"/>
+    <Phrase Key="LightName" Select="type" Ambient="Фоновый свет" Directional="Направленный свет" Point="Точечный свет"
+            Spot="Прожектор"/>
+    <Phrase Key="Color" Text="Цвет"/>
+    <Phrase Key="Intensity" Text="Яркость"/>
+    <Phrase Key="Range" Text="Дальность"/>
+    <Phrase Key="ConeAngle" Text="Угол конуса"/>
+    <Phrase Key="DeleteLight" Text="Удалить свет"/>
+
+    <Phrase Key="FrameCost" Text="{ms:F2} мс/кадр"/>
+
+    <Phrase Key="MoveKeys" Text="WASD — движение, мышь — осмотреться"/>
+    <Phrase Key="UpDownKeys" Text="Q / E — вверх / вниз"/>
+    <Phrase Key="SpeedKeys" Text="Numpad + / − — удвоить или уменьшить вдвое скорость"/>
+    <Phrase Key="CameraKeys" Text="F1 — свободная камера, F3 / F4 / F5 — следовать за моделью"/>
+
+    <Phrase Key="Menu" Text="МЕНЮ"/>
+    <Phrase Key="Continue" Text="Продолжить"/>
+    <Phrase Key="LoadF15" Text="Загрузить F-15"/>
+    <Phrase Key="LoadMonkey" Text="Загрузить обезьяну"/>
+    <Phrase Key="Status" Select="status" Ready="Вселенная готова" NotReady="Вселенная ещё не готова" Loading="Загрузка: {model}…"
+            Loaded="{model}" Failed="{model}: не удалось загрузить — {error}"/>
+</Language>

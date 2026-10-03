@@ -2,7 +2,7 @@
         xmlns="http://adamantium/ui"
         xmlns:x="http://adamantium/ui/xaml/extensions"
         x:CreateInDesignTime="False"
-        Title="Workspace"
+        Title="{Localize WorkspaceStrings.Workspace}"
         Width="900"
         Height="600">
 </Window>

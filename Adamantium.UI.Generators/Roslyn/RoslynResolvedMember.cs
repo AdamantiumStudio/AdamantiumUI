@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Adamantium.UI.Markup.CodeGeneration;
 using Microsoft.CodeAnalysis;
 
@@ -59,6 +60,9 @@ public class RoslynResolvedMember : IResolvedMember
     public bool IsStatic => _symbol.IsStatic;
 
     public bool IsPublic => _symbol.DeclaredAccessibility == Accessibility.Public;
+
+    public IReadOnlyList<string> ParameterNames =>
+        _symbol is IMethodSymbol method ? method.Parameters.Select(p => p.Name).ToList() : [];
 
     public ResolvedMemberKind MemberKind =>
         _symbol.Kind switch

@@ -4,11 +4,17 @@
     <!-- One of the brushes tab's stands, navigated into its region under the key "Gradients". The DataContext is the
          tab's own view-model - the locator sets it - so every binding here reads exactly as it did when this markup
          lived on the tab, and leaving the stand drops this view instead of leaving it hidden. -->
+    <!-- A member of an enum said in the tab's words, for every drop-down of one. -->
+    <ResourceContext.Resources>
+        <DataTemplate x:Key="BrushWord">
+            <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
+        </DataTemplate>
+    </ResourceContext.Resources>
     <StackPanel Orientation="Vertical">
 
         <!-- THE LIVE ONE. The rows on the tab are fixed samples; this is the same three brushes with one set of stops
              driving all of them, so switching the kind changes the GEOMETRY and nothing else. -->
-        <TextBlock Text="Gradient — live (one set of stops, three geometries)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.GradientTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" MarginBottom="24">
             <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Margin="10">
                 <Rectangle Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Fill="{Binding LiveGradient}"
@@ -25,19 +31,20 @@
                          Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Star}"/>
             </Grid>
             <StackPanel Orientation="Vertical" Width="330" MarginLeft="16" VerticalAlignment="Center">
-                <TextBlock Text="Geometry" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientKinds}" SelectedItem="{Binding GradientKind, Mode=TwoWay}" Width="300" MarginBottom="10"/>
+                <TextBlock Text="{Localize BrushesStrings.Geometry}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding GradientKinds}" SelectedItem="{Binding GradientKind, Mode=TwoWay}" Width="300" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
 
                 <!-- Only the linear one runs along a direction; on the other two an angle would mean nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Linear}">
-                    <TextBlock Text="Direction — degrees" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.DirectionDegrees}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
                         <Slider Value="{Binding GradientAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="360" SmallChange="1" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding GradientAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
                     </StackPanel>
-                    <TextBlock Text="Span — shorten it to see Reflect and Repeat" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.Span}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
                         <Slider Value="{Binding GradientSpan, Mode=TwoWay}" Minimum="0.1" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0.1" Maximum="1" SmallChange="0.05" StringFormat="N2"
@@ -47,7 +54,7 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Radial}">
-                    <TextBlock Text="Radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.Radius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
                         <Slider Value="{Binding GradientRadius, Mode=TwoWay}" Minimum="0.05" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0.05" Maximum="1" SmallChange="0.05" StringFormat="N2"
@@ -57,7 +64,7 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Conic}">
-                    <TextBlock Text="Start angle — where the sweep begins" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.SweepStart}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
                         <Slider Value="{Binding GradientStartAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="360" SmallChange="1" StringFormat="N0"
@@ -68,7 +75,7 @@
 
                 <!-- Only the rectangle has corners to round; on the other figures the number would drive nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="Corner radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
                         <Slider Value="{Binding GradientCorner, Mode=TwoWay}" Minimum="0" Maximum="120" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="120" SmallChange="1" StringFormat="N0"
@@ -77,19 +84,21 @@
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="Outside the stops" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientSpreads}" SelectedItem="{Binding GradientSpread, Mode=TwoWay}" Width="300" MarginBottom="10"/>
+                <TextBlock Text="{Localize BrushesStrings.OutsideStops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding GradientSpreads}" SelectedItem="{Binding GradientSpread, Mode=TwoWay}" Width="300" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
 
-                <TextBlock Text="Interpolated in" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientInterpolations}" SelectedItem="{Binding GradientInterpolation, Mode=TwoWay}" Width="300" MarginBottom="10"/>
+                <TextBlock Text="{Localize BrushesStrings.InterpolatedIn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding GradientInterpolations}" SelectedItem="{Binding GradientInterpolation, Mode=TwoWay}" Width="300" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
 
-                <TextBlock Text="Stops — start / end, and an optional middle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Stops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor1, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor3, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor2, Mode=TwoWay}"/>
                 </StackPanel>
-                <CheckBox Content="Middle stop" IsChecked="{Binding GradientMidStop, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox Content="{Localize BrushesStrings.MiddleStop}" IsChecked="{Binding GradientMidStop, Mode=TwoWay}" MarginBottom="6"/>
                 <StackPanel Orientation="Horizontal">
                     <Slider Value="{Binding GradientMidOffset, Mode=TwoWay}" Minimum="0.05" Maximum="0.95" IsMoveToPointEnabled="true" Width="190"/>
                     <NumericUpDown Width="96" Minimum="0.05" Maximum="0.95" SmallChange="0.05" StringFormat="N2"
@@ -101,7 +110,7 @@
 
         <!-- The authored reference rows belong to THIS stand: the live panel above drives one brush, and these are the
              fixed cases it can be compared against - every geometry, every spread method, both interpolation spaces. -->
-        <TextBlock Text="Linear gradients — rectangles" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.LinearTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <!-- diagonal, 3 stops -->
             <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
@@ -133,7 +142,7 @@
             </Rectangle>
         </WrapPanel>
 
-        <TextBlock Text="Radial gradients — rectangles" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.RadialTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <!-- centered spotlight -->
             <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
@@ -156,7 +165,7 @@
             </Rectangle>
         </WrapPanel>
 
-        <TextBlock Text="Conic gradients — angular sweep" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.ConicTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <!-- full-spectrum sweep (a color wheel's hue): start at top, clockwise; last stop meets the first -->
             <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
@@ -211,7 +220,7 @@
             </Ellipse>
         </WrapPanel>
 
-        <TextBlock Text="Gradients — ellipses" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.EllipsesTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <Ellipse Width="120" Height="120" Margin="10">
                 <Ellipse.Fill>
@@ -232,7 +241,7 @@
             </Ellipse>
         </WrapPanel>
 
-        <TextBlock Text="Gradients — arbitrary shapes (Polygon / Path)" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.ShapesTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <RegularPolygon Width="120" Height="120" Corners="{Binding ShapeCornerCount}" StartAngle="{Binding ShapeStartAngle}" Margin="10">
                 <RegularPolygon.Fill>
@@ -262,7 +271,7 @@
             </Path>
         </WrapPanel>
 
-        <TextBlock Text="Spread method — Pad / Reflect / Repeat (stops span 0..0.5)" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.SpreadTitle}" FontSize="18" Margin="0,20,0,10"/>
         <WrapPanel Orientation="Horizontal">
             <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
                 <Rectangle.Fill>
@@ -290,10 +299,10 @@
             </Rectangle>
         </WrapPanel>
 
-        <TextBlock Text="Gradient interpolation — sRGB vs OKLab" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.InterpolationTitle}" FontSize="18" Margin="0,20,0,10"/>
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical" MarginRight="24">
-                <TextBlock Text="sRGB — muddy midpoints" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="4"/>
+                <TextBlock Text="{Localize BrushesStrings.SrgbMuddy}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="4"/>
                 <Rectangle Width="300" Height="40" CornerRadius="8" MarginBottom="8">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5" ColorInterpolationMode="Srgb">
@@ -312,7 +321,7 @@
                 </Rectangle>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="OKLab — perceptual" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="4"/>
+                <TextBlock Text="{Localize BrushesStrings.OklabPerceptual}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="4"/>
                 <Rectangle Width="300" Height="40" CornerRadius="8" MarginBottom="8">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5" ColorInterpolationMode="Oklab">
@@ -334,7 +343,7 @@
 
         <!-- OKLab on ARBITRARY geometry: a Polygon fill routes through the general-geometry gradient batch, so this
              proves the interp mode flows there too (left sRGB, right OKLab; same blue->yellow stops). -->
-        <TextBlock Text="…and on arbitrary geometry (Polygon) — left sRGB, right OKLab"
+        <TextBlock Text="{Localize BrushesStrings.ArbitraryInterpolation}"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    MarginTop="12"
                    MarginBottom="6"/>

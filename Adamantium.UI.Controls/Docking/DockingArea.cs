@@ -594,7 +594,7 @@ public class DockingArea : Panel
         // undockable itself (a group goes only where every pane in it may). It opens in a window of its own instead.
         if (zone is DockZone.Floating || (pane.Allowed & (DockZone.Center | DockZone.Edges)) == 0)
         {
-            FloatNew(id, pane.Header?.ToString() ?? "Panel");
+            FloatNew(id, pane.Header?.ToString());
             return id;
         }
 
@@ -725,7 +725,7 @@ public class DockingArea : Panel
                                  "stay docked - moving it to a window of its own.");
 
         RebuildFamily();
-        FloatNew(id, pane.Header?.ToString() ?? "Panel");
+        FloatNew(id, pane.Header?.ToString());
     }
 
     // --- Saving and restoring the arrangement -----------------------------------------------------------------------
@@ -846,7 +846,7 @@ public class DockingArea : Panel
             if (_panesById.TryGetValue(id, out var pane)) return pane.Header?.ToString() ?? id;
         }
 
-        return "Panel";
+        return string.Empty;
     }
 
     // Where each floating window is NOW - the one piece of absolute geometry a layout keeps, and the reason a panel
@@ -1187,7 +1187,7 @@ public class DockingArea : Panel
 
         Rebuild();   // the pane leaves this tree before the floating area claims it: one component, one parent
 
-        var floating = Float(root, pane.Header?.ToString() ?? "Pane", out var pieceWindow, was);
+        var floating = Float(root, pane.Header?.ToString(), out var pieceWindow, was);
         Show(floating, pieceWindow, grabX);
 
         // What was just carried out IS what is being worked in. Waiting for the window's activation instead left the
@@ -1212,7 +1212,7 @@ public class DockingArea : Panel
         if ((AllowedFor(node) & DockZone.Floating) == 0) return false;   // one pane refusing to float holds the panel
         if (Refuses(new PaneTearingOffEventArgs([..node.PaneIds], isWholePanel: true))) return false;
 
-        var title = control.Title?.ToString() ?? "Panel";
+        var title = control.Title?.ToString();
         var grabX = screenPosition.X - control.PointToScreen(Vector2.Zero).X;
 
         // The panel keeps the size it was docked at - read before it leaves the tree.
@@ -2226,7 +2226,7 @@ public class DockingArea : Panel
         {
             var id = EnsureId(pane);
             RegisterPane(id, pane);
-            FloatNew(id, pane.Header?.ToString() ?? "Panel");
+            FloatNew(id, pane.Header?.ToString());
         }
 
         OpenDeferredPanes();

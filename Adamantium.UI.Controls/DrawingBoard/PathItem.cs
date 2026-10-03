@@ -62,8 +62,6 @@ public class PathItem : ICanvasItem, ICanvasTransformed
 
     public string Sort => nameof(PathItem);
 
-    public string Title => "Path";
-
     public Rect Bounds => World;
 
     public Double X

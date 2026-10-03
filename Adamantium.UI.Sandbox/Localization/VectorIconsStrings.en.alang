@@ -1,0 +1,17 @@
+<Language>
+    <Phrase Key="EverySize" Text="One drawing, every size"/>
+    <Phrase Key="EverySizeHint" Text="All six below are the SAME DrawingImage resource. Nothing is rasterized: each is replayed through its own placement, so the edges stay clean at any size and a DPI change costs nothing."/>
+    <Phrase Key="ShowcaseSize" Text="Showcase size"/>
+    <Phrase Key="GroupRotation" Text="Group rotation (badge)"/>
+    <Phrase Key="Colors" Text="Colors — one edit, every size"/>
+    <Phrase Key="Accent" Text="Accent"/>
+    <Phrase Key="Body" Text="Body"/>
+    <Phrase Key="Caption" Text="Caption"/>
+
+    <Phrase Key="Transform" Text="A transform inside the drawing"/>
+    <Phrase Key="TransformHint" Text="The cross belongs to a nested DrawingGroup with its own Transform. Its geometry never changes — only where the group puts it — so the two sizes below stay one shared mesh while they turn."/>
+    <Phrase Key="Raster" Text="Raster fallback: a drawing as a texture"/>
+    <Phrase Key="RasterHint" Text="An ImageBrush samples a TEXTURE, so it cannot replay a drawing. The drawing is baked once at the size the fill needs and sampled from there; the vector path stays the default, this is the fallback."/>
+    <Phrase Key="Text" Text="Text inside a drawing"/>
+    <Phrase Key="TextHint" Text="A GlyphRunDrawing is re-shaped at the size it is drawn at, so the big tile gets glyphs shaped for the big tile rather than stretched ones."/>
+</Language>

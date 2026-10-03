@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Behaviors;
@@ -27,23 +28,21 @@ public class DockingPolicyBehavior : Behavior<DockingArea>
     /// <summary>Says what was answered, out loud. Through the VIEW MODEL rather than a property on this behavior: a
     /// behavior is not an element of the visual tree, so nothing in the markup can bind to it by name - the view model
     /// is what both the view and this share.</summary>
-    private void Answer(string text)
+    private void Answer(ViewModels.DockingAnswer answer, IEnumerable<string> panes, DockZone zone = DockZone.None)
     {
         if (_area?.DataContext is ViewModels.DockingViewModel viewModel)
         {
-            viewModel.LastAnswer = text;
+            viewModel.Answer(answer, string.Join(", ", panes), zone);
         }
     }
 
     private void OnTearingOff(object sender, PaneTearingOffEventArgs e)
     {
-        var what = e.IsWholePanel ? "panel" : "tab";
-
-        Answer($"Tearing off the {what} ({string.Join(", ", e.Panes)}) - allowed.");
+        Answer(e.IsWholePanel ? ViewModels.DockingAnswer.PanelTornOff : ViewModels.DockingAnswer.TabTornOff, e.Panes);
     }
 
     private void OnDocking(object sender, PaneDockingEventArgs e)
     {
-        Answer($"Docking {string.Join(", ", e.Panes)} to the {e.Zone} - allowed.");
+        Answer(ViewModels.DockingAnswer.Docked, e.Panes, e.Zone);
     }
 }

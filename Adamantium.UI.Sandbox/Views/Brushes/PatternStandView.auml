@@ -3,8 +3,14 @@
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the brushes tab's region under the key "Pattern"; the DataContext is the tab's own view-model.
          The figure picker is not repeated here - it lives above the stands, as one choice for all of them. -->
+    <!-- A member of an enum said in the tab's words, for every drop-down of one. -->
+    <ResourceContext.Resources>
+        <DataTemplate x:Key="BrushWord">
+            <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
+        </DataTemplate>
+    </ResourceContext.Resources>
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Pattern — live (pick a type; drag cell size, corner radius and colors)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.PatternTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Margin="10">
                 <Rectangle Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Fill="{Binding LivePattern}"
@@ -24,7 +30,7 @@
                 <!-- Only for the polygon: on a rect or an ellipse these two numbers mean nothing, and a control that
                      does nothing is worse than one that is not there. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="Corners — 3 is a triangle, enough of them a circle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
                         <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -32,7 +38,7 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock Text="Start angle — where corner 0 sits" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -41,9 +47,10 @@
                                        Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Pattern type" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding PatternTypes}" SelectedItem="{Binding PatternKind, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <TextBlock Text="Cell size" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.PatternType}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding PatternTypes}" SelectedItem="{Binding PatternKind, Mode=TwoWay}" Width="280" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
+                <TextBlock Text="{Localize BrushesStrings.CellSize}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding PatternCell, Mode=TwoWay}" Minimum="6" Maximum="60" Width="186"/>
                     <NumericUpDown Width="88" Minimum="6" Maximum="60" SmallChange="1"
@@ -52,7 +59,7 @@
                                    Value="{Binding PatternCell, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Visibility="{Binding PatternKind, Converter={conv:PatternParamVisibilityConverter}, ConverterParameter=Hatch}">
-                    <TextBlock Text="Hatch angle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.HatchAngle}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding PatternHatchAngle, Mode=TwoWay}" Minimum="0" Maximum="180" Width="186"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="180" SmallChange="1"
@@ -62,7 +69,7 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="Corner radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding PatternRadius, Mode=TwoWay}" Minimum="0" Maximum="100" Width="186"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"
@@ -71,7 +78,7 @@
                                        Value="{Binding PatternRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Colors (background / feature)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.PatternColors}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal">
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding PatternColor1, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding PatternColor2, Mode=TwoWay}"/>

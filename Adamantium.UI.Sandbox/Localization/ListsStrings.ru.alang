@@ -1,0 +1,31 @@
+<Language>
+    <Phrase Key="SingleSelect" Text="Одиночный выбор"/>
+    <Phrase Key="Add" Text="Добавить"/>
+    <Phrase Key="Remove" Text="Удалить"/>
+    <Phrase Key="MultipleSelect" Text="Множественный выбор"/>
+    <Phrase Key="SelectedSingle" Text="Выбрано (одиночный):"/>
+
+    <Phrase Key="LargeTitle" Text="Большой список — 20 000 строк, живой фильтр и страницы"/>
+    <Phrase Key="Search" Text="Поиск"/>
+    <Phrase Key="PartsToShow" Text="Что показывать"/>
+    <Phrase Key="FirstLast" Text="Первая/последняя"/>
+    <Phrase Key="PreviousNext" Text="Назад/вперёд"/>
+    <Phrase Key="Numbers" Text="Номера"/>
+    <Phrase Key="RowsPerPage" Text="Строк на странице"/>
+    <Phrase Key="PageInput" Text="Ввод страницы"/>
+    <Phrase Key="PageSizes" Text="Предлагаемые размеры страницы"/>
+    <Phrase Key="AddStep" Text="Добавить шаг"/>
+    <Phrase Key="DropInUse" Text="Убрать текущий"/>
+    <Phrase Key="Now" Text="сейчас:"/>
+
+    <Phrase Key="ServerTitle" Text="Сервер, который отдаёт по одной странице — 237 строк, которые он за вас не посчитает"/>
+    <Phrase Key="AnswersIn" Text="Отвечает за"/>
+    <Phrase Key="Ms" Text="мс"/>
+    <Phrase Key="FailNext" Text="Сорвать следующую страницу"/>
+    <Phrase Key="AskAgain" Text="Спросить снова"/>
+    <Phrase Key="Server" Select="state" Loading="загрузка страницы {page}…" Armed="взведено: следующая страница сорвётся"
+            Failed="сбой: {error} — страница, на которой вы были, осталась" Shown="страница {page}, {known}"/>
+    <Phrase Key="Known" Select="count" None="строк известно: ?" Other="строк известно: {count}"/>
+
+    <Phrase Key="NarrowTitle" Text="Тот же вид шириной 420 — строка сбрасывает то, что не помещается"/>
+</Language>

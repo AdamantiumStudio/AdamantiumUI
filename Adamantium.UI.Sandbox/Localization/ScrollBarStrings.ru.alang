@@ -1,0 +1,5 @@
+<Language>
+    <Phrase Key="OneValue" Text="Горизонтальная и вертикальная ScrollBar на одном значении"/>
+    <Phrase Key="Offset" Text="Смещение:"/>
+    <Phrase Key="DragToPan" Text="Тяните, чтобы сдвинуть (как на сенсоре, с инерцией)"/>
+</Language>

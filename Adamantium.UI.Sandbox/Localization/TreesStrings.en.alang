@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Title" Text="TreeView — a real file system"/>
+    <Phrase Key="Hint" Text="Pointed at a drive and built lazily: each folder reads its contents only when you expand it (a folder like System32 has thousands of siblings — a stress test for the coming virtualization). Double-click a folder to expand/collapse; pick the drive and selection mode below."/>
+    <Phrase Key="Drive" Text="Drive:"/>
+    <Phrase Key="SelectionMode" Text="Selection mode:"/>
+    <Phrase Key="Refresh" Text="Refresh"/>
+    <Phrase Key="ExpandSelected" Text="Expand selected (from VM)"/>
+    <Phrase Key="Single" Text="Single"/>
+    <Phrase Key="Multiple" Text="Multiple"/>
+    <Phrase Key="Extended" Text="Extended"/>
+</Language>

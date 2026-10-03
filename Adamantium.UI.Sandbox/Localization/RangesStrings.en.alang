@@ -1,0 +1,28 @@
+<Language>
+    <Phrase Key="OneValue" Text="One value, many controls"/>
+    <Phrase Key="Progress" Text="Progress (bound to the same value):"/>
+    <Phrase Key="Range" Text="Range (two bounds on the same scale):"/>
+    <Phrase Key="Maximum" Text="Maximum (rescales all of the above):"/>
+    <Phrase Key="ResetAll" Text="Reset all"/>
+
+    <Phrase Key="NumericTitle" Text="Numeric up-down"/>
+    <Phrase Key="Split" Text="Split"/>
+    <Phrase Key="SwapButtons" Text="Swap the buttons"/>
+    <Phrase Key="StringFormat" Text="String format"/>
+    <Phrase Key="IntegersOnly" Text="Integers only"/>
+    <Phrase Key="DragSideways" Text="Drag me sideways"/>
+    <Phrase Key="ReadOnly" Text="Read-only"/>
+    <Phrase Key="DragCursorLeft" Text="Drag cursor, left:"/>
+    <Phrase Key="DragCursorRight" Text="right:"/>
+
+    <Phrase Key="RingTitle" Text="Ring progress"/>
+    <Phrase Key="ArcStart" Text="Arc start:"/>
+    <Phrase Key="Direction" Text="Direction:"/>
+
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Clockwise" Text="Clockwise"/>
+    <Phrase Key="CounterClockwise" Text="Counterclockwise"/>
+</Language>

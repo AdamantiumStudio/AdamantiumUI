@@ -4,6 +4,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -103,6 +104,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             rail._canvas.ToolsChanged -= rail.OnToolsChanged;
             rail._canvas.ToolChanged -= rail.OnToolChanged;
             rail._canvas.ModeChanged -= rail.OnToolsChanged;
+            rail._canvas.PhrasesChanged -= rail.OnToolsChanged;
         }
 
         rail._canvas = e.NewValue as InfiniteCanvas;
@@ -111,8 +113,10 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
         {
             rail._canvas.ToolsChanged += rail.OnToolsChanged;
             rail._canvas.ToolChanged += rail.OnToolChanged;
-            // A mode change is a change to WHICH tools there are, which is the same rebuild.
+            // A mode change is a change to WHICH tools there are, which is the same rebuild; new words are what they
+            // are called.
             rail._canvas.ModeChanged += rail.OnToolsChanged;
+            rail._canvas.PhrasesChanged += rail.OnToolsChanged;
         }
 
         rail.Rebuild();
@@ -210,7 +214,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             }
             else
             {
-                button.Content = tool.Name;
+                Say(button, ContentControl.ContentProperty, NameOf(tool));
             }
 
             button.Click += OnToolPicked;
@@ -235,9 +239,12 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             MinWidth = 0,
             MinHeight = 0,
             Padding = new Thickness(0),
-            Margin = new Thickness(0, 0, gap, gap),
-            ToolTip = name
+            Margin = new Thickness(0, 0, gap, gap)
         };
+
+        var tip = new Text.TextBlock();
+        Say(tip, Text.TextBlock.TextProperty, name);
+        button.ToolTip = tip;
 
         var image = new Image { Width = IconSize, Height = IconSize };
         new ObservableResource(GroupIcon).Apply(image, nameof(Image.Source));
@@ -394,12 +401,13 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             row.Children.Add(image);
         }
 
-        row.Children.Add(new Text.TextBlock
+        var named = new Text.TextBlock
         {
-            Text = string.IsNullOrEmpty(tool.Name) ? tool.GetType().Name : tool.Name,
             VerticalAlignment = VerticalAlignment.Center,
             VerticalTextAlignment = Graphics.Fonts.VerticalTextAlignment.Center
-        });
+        };
+        Say(named, Text.TextBlock.TextProperty, NameOf(tool));
+        row.Children.Add(named);
 
         return row;
     }
@@ -428,12 +436,47 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
         popup.IsOpen = false;
     }
 
-    private static string Tip(ICanvasTool tool)
+    // The tip: the name with the key that picks the tool, in the order the language puts them, and what the tool does
+    // under it.
+    private object Tip(ICanvasTool tool)
     {
-        var name = string.IsNullOrEmpty(tool.Name) ? tool.GetType().Name : tool.Name;
-        var key = tool.Shortcut == Key.None ? string.Empty : $" ({tool.Shortcut})";
-        var about = string.IsNullOrEmpty(tool.Description) ? string.Empty : $" - {tool.Description}";
+        var name = NameOf(tool);
+        var title = new Text.TextBlock();
+        if (tool.Shortcut != Key.None && Has(ShortcutPhrase))
+        {
+            var named = new Localize(_canvas.Phrases, ShortcutPhrase);
+            named.Arguments["name"] = Has(name) ? new Localize(_canvas.Phrases, name) : name;
+            named.Arguments["key"] = tool.Shortcut.ToString();
+            title.SetBinding(Text.TextBlock.TextProperty, named);
+        }
+        else
+        {
+            Say(title, Text.TextBlock.TextProperty, name);
+        }
 
-        return name + key + about;
+        if (string.IsNullOrEmpty(tool.Description)) return title;
+
+        var about = new Text.TextBlock();
+        Say(about, Text.TextBlock.TextProperty, tool.Description);
+
+        var tip = new StackPanel { Orientation = Orientation.Vertical };
+        tip.Children.Add(title);
+        tip.Children.Add(about);
+        return tip;
+    }
+
+    // The phrase that puts a tool's name and its key together.
+    private const string ShortcutPhrase = "ToolShortcut";
+
+    private static string NameOf(ICanvasTool tool) => string.IsNullOrEmpty(tool.Name) ? tool.GetType().Name : tool.Name;
+
+    private bool Has(string key) =>
+        _canvas?.Phrases is ILanguageTable phrases && !string.IsNullOrEmpty(key) && phrases.Keys.Contains(key);
+
+    // A word of the canvas's phrases, followed as the language changes; a name the phrases lack is said as it is.
+    private void Say(AdamantiumComponent target, AdamantiumProperty property, string key)
+    {
+        if (Has(key)) target.SetBinding(property, new Localize(_canvas.Phrases, key));
+        else target.SetValue(property, key);
     }
 }

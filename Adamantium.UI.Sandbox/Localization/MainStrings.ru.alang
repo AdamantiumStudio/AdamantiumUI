@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="WindowTitle" Text="Окно Adamantium"/>
+    <Phrase Key="Diagnostics" Text="Диагностика"/>
+    <Phrase Key="AnalyticAa" Text="Аналитическое сглаживание"/>
+    <Phrase Key="Presentation" Text="Вывод кадров"/>
+    <Phrase Key="Language" Text="Язык"/>
+    <Phrase Key="Theme" Text="Тема"/>
+    <Phrase Key="SwitchTheme" Text="Сменить"/>
+    <Phrase Key="ToggleVariant" Text="Тёмная / светлая"/>
+    <Phrase Key="LastDialog" Select="result" None="(нет)" Ok="Диалог: ОК" Cancel="Диалог: отмена" Yes="Диалог: да" No="Диалог: нет"/>
+    <Phrase Key="ApplyChanges" Text="Применить изменения к текущей сцене?"/>
+
+    <Phrase Key="Workspace" Text="Рабочая область"/>
+    <Phrase Key="OpenWorkspace" Text="Открыть окно рабочей области"/>
+    <Phrase Key="Ribbon" Text="Лента"/>
+    <Phrase Key="OpenRibbon" Text="Открыть окно с лентой"/>
+    <Phrase Key="Dialog" Text="Диалог"/>
+    <Phrase Key="ShowConfirm" Text="Показать диалог подтверждения"/>
+    <Phrase Key="Help" Text="Справка"/>
+    <Phrase Key="AboutSandbox" Text="О песочнице Adamantium"/>
+    <Phrase Key="ToggleDiagnostics" Text="Показать или скрыть панель диагностики"/>
+    <Phrase Key="ResizeMode" Text="Изменение размера"/>
+    <Phrase Key="ToggleGripResize" Text="Менять размер только за уголок"/>
+</Language>

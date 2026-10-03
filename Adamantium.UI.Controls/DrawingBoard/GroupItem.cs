@@ -99,7 +99,7 @@ public class GroupItem : ICanvasItem
         }
     }
 
-    public string Title => $"Group ({_children.Count})";
+    public int? Parts => _children.Count;
 
     /// <summary>How many things are in it, for an inspector line that says what this is.</summary>
     public int Count => _children.Count;

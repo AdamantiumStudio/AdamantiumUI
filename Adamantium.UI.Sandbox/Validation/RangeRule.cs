@@ -1,6 +1,7 @@
 using System;
 using Adamantium.UI.Controls.DataGrid;
 using Adamantium.UI.Core;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.Validation;
 
@@ -38,11 +39,11 @@ public class RangeRule : DataGridValidationRule
         }
         catch (Exception)
         {
-            return $"{value} is not a number";
+            return GridPageStrings.NotANumber(value);
         }
 
-        if (number < Min) return $"{number} is below the {Min} floor";
-        if (number > Max) return $"{number} is over the {Max} ceiling";
+        if (number < Min) return GridPageStrings.BelowFloor(number, Min);
+        if (number > Max) return GridPageStrings.OverCeiling(number, Max);
         return null;
     }
 }

@@ -1,0 +1,17 @@
+<Language>
+    <Phrase Key="Title" Text="Визуал → картинка (RenderTargetBitmap)"/>
+    <Phrase Key="Intro" Text="IVisualRenderer разбирает AUML слева в новое дерево, рисует его ВНЕ ЭКРАНА в текстуру, читает её обратно на CPU и возвращает картинку, которую рисует Image справа. Основа для призрака перетаскивания и VisualBrush/DrawingBrush."/>
+    <Phrase Key="Source" Text="Исходный AUML"/>
+    <Phrase Key="Render" Text="Нарисовать"/>
+    <Phrase Key="Rendered" Text="Нарисованная картинка (1:1, размер по содержимому)"/>
+
+    <Phrase Key="LiveTitle" Text="Живое дерево → картинка (отрисовка экранного элемента через параллельный кэш)"/>
+    <Phrase Key="LiveIntro" Text="Здесь снимается ЖИВОЙ интерактивный элемент: его поддерево рисуется через ОТДЕЛЬНЫЙ кэш отрисовки — никогда не вторым проходом в кэш окна, так что живая отрисовка не затронута. Переключите контролы слева, нажмите «Снимок», и картинка справа покажет их ТЕКУЩЕЕ состояние. Именно так призрак перетаскивания снимает то, что вы взяли."/>
+    <Phrase Key="LiveTree" Text="Живое интерактивное дерево"/>
+    <Phrase Key="IAmLive" Text="Я ЖИВОЕ дерево"/>
+    <Phrase Key="ToggleMe" Text="Переключи меня"/>
+    <Phrase Key="SnapshotLive" Text="Снимок живого дерева"/>
+    <Phrase Key="ShowGhost" Text="Показать призрак"/>
+    <Phrase Key="HideGhost" Text="Скрыть призрак"/>
+    <Phrase Key="Snapshot" Text="Снимок (1:1)"/>
+</Language>

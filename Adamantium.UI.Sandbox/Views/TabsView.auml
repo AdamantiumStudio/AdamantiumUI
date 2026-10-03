@@ -3,13 +3,13 @@
     <Grid RowDefinitions="Auto,*,Auto,*" Margin="24">
 
         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,10">
-            <TextBlock Text="A thousand tabs" FontSize="18"/>
+            <TextBlock Text="{Localize TabsStrings.ThousandTabs}" FontSize="18"/>
             <TextBlock Margin="0,4,0,0"
-                       Text="A virtualizing strip builds only the headers on screen. It needs a uniform slot to do it - slot n starts at n x TabWidth, so a tab that was never built still has an exact position. Turn it off and the same strip builds every tab: 2517ms of layout against 45ms."/>
+                       Text="{Localize TabsStrings.ThousandHint}"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <CheckBox Content="IsVirtualizing" IsChecked="{Binding IsVirtualizing, Mode=TwoWay}"/>
                 <TextBlock Margin="16,0,0,0" VerticalAlignment="Center"
-                           Text="Off: every tab is built and sized to its own title - watch the strip go ragged, and the window with it."/>
+                           Text="{Localize TabsStrings.OffHint}"/>
             </StackPanel>
         </StackPanel>
 
@@ -34,16 +34,16 @@
         </TabControl>
 
         <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,24,0,10">
-            <TextBlock Text="A capped strip" FontSize="18"/>
+            <TextBlock Text="{Localize TabsStrings.Capped}" FontSize="18"/>
             <TextBlock Margin="0,4,0,0"
-                       Text="MaxOpenedTabs is a ceiling on how many tabs may be open at once. Past it the OLDEST-opened tab is closed to make room, the way an editor's strip works - never the tab just opened, never the one being read, and never a pinned one."/>
+                       Text="{Localize TabsStrings.CappedHint}"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <TextBlock Text="Max opened tabs:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="{Localize TabsStrings.MaxOpened}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <NumericUpDown Width="90" InputMode="Integers"
                                Minimum="0" Maximum="12" SmallChange="1"
                                Value="{Binding MaxOpenedTabs, Mode=TwoWay}"/>
-                <TextBlock Text="0 turns the cap off" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                <Button Content="Open a tab" Command="{Binding AddTabCommand}" Height="32" Margin="16,0,0,0"/>
+                <TextBlock Text="{Localize TabsStrings.ZeroTurnsOff}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <Button Content="{Localize TabsStrings.OpenTab}" Command="{Binding AddTabCommand}" Height="32" Margin="16,0,0,0"/>
             </StackPanel>
         </StackPanel>
 

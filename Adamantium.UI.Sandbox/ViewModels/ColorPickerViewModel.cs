@@ -11,7 +11,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class ColorPickerViewModel : TabPageViewModel
 {
-    public ColorPickerViewModel() : base("Color Picker") { }
+    public ColorPickerViewModel() : base("ColorPicker") { }
 
     /// <summary>The shared picked color - bound two-way into the picker and pushed into the theme accent.</summary>
     [Bindable] private Color _pickedColor = new(0x3B, 0x82, 0xF6, 0xFF);

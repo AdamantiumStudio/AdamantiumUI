@@ -6,8 +6,8 @@
         <StackPanel Orientation="Vertical" Margin="24" HorizontalAlignment="Center">
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Text="3D flip tiles — hover to tilt, click to flip a tile" FontSize="16" VerticalAlignment="Center"/>
-                <Button Content="Flip all" Command="{Binding FlipAllCommand}" Width="120" Height="34" Margin="24,0,0,0"/>
+                <TextBlock Text="{Localize TilesStrings.Title}" FontSize="16" VerticalAlignment="Center"/>
+                <Button Content="{Localize TilesStrings.FlipAll}" Command="{Binding FlipAllCommand}" MinWidth="120" Height="34" Margin="24,0,0,0"/>
             </StackPanel>
 
             <!-- Columns and rows come from the view-model; tile size is derived from them and the space. The panel comes

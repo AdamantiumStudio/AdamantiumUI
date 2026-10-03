@@ -25,6 +25,7 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Core.Data.Binding),
         typeof(Adamantium.UI.Core.Data.MultiBinding),
         typeof(Adamantium.Core.TypeParsing.TypeParser),   // force-load Adamantium.Core so codegen resolves OUR TypeParser
+        typeof(Adamantium.UI.Markup.Localization.PluralRules),   // what a counted phrase of a table calls
     ];
 
     public const string WindowHeader =
@@ -100,6 +101,34 @@ internal static class AumlCodegenHarness
             driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
 
         return (driver, Compilation());
+    }
+
+    /// <summary>Runs both generators over several files (paths relative to the project) with extra build properties, and
+    /// compiles the result against <paramref name="references"/> as well.</summary>
+    public static GeneratedProject Project(IReadOnlyDictionary<string, string> files,
+        IReadOnlyDictionary<string, string> properties = null, IEnumerable<MetadataReference> references = null)
+    {
+        var options = new Dictionary<string, string>
+        {
+            ["build_property.RootNamespace"] = "Test.App",
+            ["build_property.projectdir"] = @"C:\Test\",
+        };
+        foreach (var property in properties ?? new Dictionary<string, string>())
+        {
+            options["build_property." + property.Key] = property.Value;
+        }
+
+        var driver = CSharpGeneratorDriver.Create(
+            generators: [new AumlCodeBehindGenerator().AsSourceGenerator(), new LanguageTableGenerator().AsSourceGenerator()],
+            additionalTexts: files.Select(f => (AdditionalText)new InMemoryAdditionalText(@"C:\Test\" + f.Key.Replace('/', '\\'), f.Value)),
+            parseOptions: null,
+            optionsProvider: new DictOptionsProvider(options));
+
+        var compilation = Compilation()
+            .WithAssemblyName("Probe" + Guid.NewGuid().ToString("N"))
+            .AddReferences(references ?? []);
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
+        return new GeneratedProject((CSharpCompilation)output, diagnostics);
     }
 
     private static CSharpCompilation Compilation()

@@ -1,0 +1,28 @@
+<Language>
+    <Phrase Key="OneValue" Text="Одно значение, много контролов"/>
+    <Phrase Key="Progress" Text="Прогресс (привязан к тому же значению):"/>
+    <Phrase Key="Range" Text="Диапазон (две границы на одной шкале):"/>
+    <Phrase Key="Maximum" Text="Максимум (перемасштабирует всё выше):"/>
+    <Phrase Key="ResetAll" Text="Сбросить всё"/>
+
+    <Phrase Key="NumericTitle" Text="Числовое поле со стрелками"/>
+    <Phrase Key="Split" Text="Раздельно"/>
+    <Phrase Key="SwapButtons" Text="Поменять кнопки местами"/>
+    <Phrase Key="StringFormat" Text="Формат строки"/>
+    <Phrase Key="IntegersOnly" Text="Только целые"/>
+    <Phrase Key="DragSideways" Text="Тяните меня вбок"/>
+    <Phrase Key="ReadOnly" Text="Только чтение"/>
+    <Phrase Key="DragCursorLeft" Text="Курсор протяжки, влево:"/>
+    <Phrase Key="DragCursorRight" Text="вправо:"/>
+
+    <Phrase Key="RingTitle" Text="Кольцевой прогресс"/>
+    <Phrase Key="ArcStart" Text="Начало дуги:"/>
+    <Phrase Key="Direction" Text="Направление:"/>
+
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Clockwise" Text="По часовой"/>
+    <Phrase Key="CounterClockwise" Text="Против часовой"/>
+</Language>

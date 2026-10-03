@@ -1,0 +1,16 @@
+<Language>
+    <Phrase Key="Title" Text="Animation cost bench"/>
+    <Phrase Key="Many" Text="1. Many animations"/>
+    <Phrase Key="ManyHint" Text="Each indicator runs its own infinite animation and repaints only itself, so the cost here should follow the COUNT. Watch which number moves: 'loop' is layout plus record, 'render' is presented frames."/>
+    <Phrase Key="Clear" Text="Clear"/>
+    <Phrase Key="Channels" Text="2. The same count, different channels"/>
+    <Phrase Key="ChannelsHint" Text="25 indicators per press, but of classes that animate DIFFERENT things. Ring/Dots move transforms only; Ripple also animates element Opacity (no compositor channel yet); Arc animates StrokeTrimEnd, which is geometry and rebuilds the stroke every frame. Equal counts, unequal cost - that is the whole point."/>
+    <Phrase Key="EveryKind" Text="+25 of EVERY kind"/>
+    <Phrase Key="AddKind" Text="+25 {kind}"/>
+    <Phrase Key="ClearAll" Text="Clear all"/>
+    <Phrase Key="Painters" Text="3. One animated brush, many painters"/>
+    <Phrase Key="PaintersHint" Text="Every card paints the SAME brush and ONE animation drives it - how the loading skeletons work. If the cost follows the card count rather than that single animation, the price is paid per painter."/>
+    <Phrase Key="TogglePulse" Text="Toggle pulse"/>
+    <Phrase Key="TenCards" Text="+10 cards"/>
+    <Phrase Key="HundredCards" Text="+100 cards"/>
+</Language>

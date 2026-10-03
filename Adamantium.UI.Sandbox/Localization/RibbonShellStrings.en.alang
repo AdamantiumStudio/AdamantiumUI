@@ -1,0 +1,176 @@
+<Language>
+    <Phrase Key="Title" Text="Ribbon — Adamantium editor shell"/>
+    <Phrase Key="SceneView" Text="Scene view"/>
+
+    <Phrase Key="File" Text="File"/>
+    <Phrase Key="New" Text="New"/>
+    <Phrase Key="NewScene" Text="New scene"/>
+    <Phrase Key="EmptyScene" Text="Empty scene"/>
+    <Phrase Key="FromTemplate" Text="From template"/>
+    <Phrase Key="Open" Text="Open"/>
+    <Phrase Key="RecentScenes" Text="Recent scenes"/>
+    <Phrase Key="Save" Text="Save"/>
+    <Phrase Key="SaveTip" Text="Save the scene"/>
+    <Phrase Key="Undo" Text="Undo"/>
+    <Phrase Key="Redo" Text="Redo"/>
+    <Phrase Key="Import" Text="Import"/>
+    <Phrase Key="ImportHint" Text="Bring a mesh into the open scene."/>
+    <Phrase Key="Export" Text="Export"/>
+    <Phrase Key="ExportHint" Text="Write the scene out in another format."/>
+    <Phrase Key="AdamantiumPackage" Text="Adamantium package"/>
+    <Phrase Key="Print" Text="Print"/>
+    <Phrase Key="PrintHint" Text="A sheet of the viewport as it stands."/>
+    <Phrase Key="Printer" Text="Printer"/>
+    <Phrase Key="Customize" Text="Customize"/>
+    <Phrase Key="QuickAccess" Text="Quick access"/>
+    <Phrase Key="QuickAccessHint" Text="Pick the commands worth keeping one click away."/>
+    <Phrase Key="Exit" Text="Exit"/>
+
+    <Phrase Key="Home" Text="Home"/>
+    <Phrase Key="Clipboard" Text="Clipboard"/>
+    <Phrase Key="Paste" Text="Paste"/>
+    <Phrase Key="PasteTip" Text="Paste the clipboard contents"/>
+    <Phrase Key="KeepFormatting" Text="Keep formatting"/>
+    <Phrase Key="ValuesOnly" Text="Values only"/>
+    <Phrase Key="PasteSpecial" Text="Paste special..."/>
+    <Phrase Key="Cut" Text="Cut"/>
+    <Phrase Key="Copy" Text="Copy"/>
+    <Phrase Key="Duplicate" Text="Duplicate"/>
+    <Phrase Key="Scene" Text="Scene"/>
+    <Phrase Key="Entity" Text="Entity"/>
+    <Phrase Key="EntityTip" Text="Add an empty entity"/>
+    <Phrase Key="EmptyEntity" Text="Empty entity"/>
+    <Phrase Key="Delete" Text="Delete"/>
+    <Phrase Key="SelectAll" Text="Select all"/>
+    <Phrase Key="SelectNone" Text="Select none"/>
+    <Phrase Key="View" Text="View"/>
+    <Phrase Key="Wireframe" Text="Wireframe"/>
+    <Phrase Key="Grid" Text="Grid"/>
+    <Phrase Key="Gizmos" Text="Gizmos"/>
+    <Phrase Key="HasSelection" Text="Has selection"/>
+    <Phrase Key="GridSize" Text="Grid size"/>
+    <Phrase Key="Backstage" Text="Backstage"/>
+    <Phrase Key="MoveQuickAccess" Text="Move QAT"/>
+    <Phrase Key="MoveQuickAccessTip" Text="Move the quick-access bar between the caption and the ribbon"/>
+    <Phrase Key="Materials" Text="Materials"/>
+    <Phrase Key="Arrange" Text="Arrange"/>
+    <Phrase Key="AlignLeft" Text="Align left"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Distribute" Text="Distribute"/>
+    <Phrase Key="Group" Text="Group"/>
+    <Phrase Key="Order" Text="Order"/>
+    <Phrase Key="Forward" Text="Forward"/>
+    <Phrase Key="Backward" Text="Backward"/>
+    <Phrase Key="Lighting" Text="Lighting"/>
+    <Phrase Key="Light" Text="Light"/>
+    <Phrase Key="Bake" Text="Bake"/>
+    <Phrase Key="Physics" Text="Physics"/>
+    <Phrase Key="Collider" Text="Collider"/>
+    <Phrase Key="Simulate" Text="Simulate"/>
+    <Phrase Key="Context" Text="Context"/>
+    <Phrase Key="Mesh" Text="Mesh"/>
+    <Phrase Key="MeshTip" Text="Pretend a mesh is selected - its tabs appear"/>
+    <Phrase Key="LightTip" Text="...and a second context, to see two ledges at once"/>
+    <Phrase Key="Ledge" Text="Ledge"/>
+    <Phrase Key="LedgeTip" Text="The ledge over a context's tabs - off, their color carries it and the strip stops paying its height"/>
+    <Phrase Key="Tools" Text="Tools"/>
+    <Phrase Key="Measure" Text="Measure"/>
+    <Phrase Key="Annotate" Text="Annotate"/>
+
+    <Phrase Key="Modeling" Text="Modeling"/>
+    <Phrase Key="Primitives" Text="Primitives"/>
+    <Phrase Key="Add" Text="Add"/>
+    <Phrase Key="AddTip" Text="Add a primitive"/>
+    <Phrase Key="Cube" Text="Cube"/>
+    <Phrase Key="Sphere" Text="Sphere"/>
+    <Phrase Key="Plane" Text="Plane"/>
+    <Phrase Key="Extrude" Text="Extrude"/>
+    <Phrase Key="Bevel" Text="Bevel"/>
+    <Phrase Key="Subdivide" Text="Subdivide"/>
+    <Phrase Key="Snapping" Text="Snapping"/>
+    <Phrase Key="Snap" Text="Snap"/>
+    <Phrase Key="SnapSettings" Text="Snap settings..."/>
+    <Phrase Key="ClearSnaps" Text="Clear all snaps"/>
+    <Phrase Key="SnapToVertices" Text="Snap to vertices"/>
+    <Phrase Key="SnapToEdges" Text="Snap to edges"/>
+    <Phrase Key="SnapToFaces" Text="Snap to faces"/>
+
+    <Phrase Key="Library" Text="Library"/>
+    <Phrase Key="NewMaterialTip" Text="Create a material"/>
+    <Phrase Key="Swatch" Text="Swatch"/>
+    <Phrase Key="SwatchTip" Text="A command whose icon is a color, drawn by its own template"/>
+    <Phrase Key="Channels" Text="Channels"/>
+    <Phrase Key="Albedo" Text="Albedo"/>
+    <Phrase Key="Normal" Text="Normal"/>
+    <Phrase Key="Roughness" Text="Roughness"/>
+    <Phrase Key="Preview" Text="Preview"/>
+    <Phrase Key="Shading" Text="Shading"/>
+    <Phrase Key="Lit" Text="Lit"/>
+    <Phrase Key="Unlit" Text="Unlit"/>
+    <Phrase Key="Normals" Text="Normals"/>
+    <Phrase Key="UvChecker" Text="UV checker"/>
+
+    <Phrase Key="Display" Text="Display"/>
+    <Phrase Key="Selection" Text="Selection"/>
+    <Phrase Key="All" Text="All"/>
+    <Phrase Key="None" Text="None"/>
+
+    <Phrase Key="MeshTools" Text="MESH TOOLS"/>
+    <Phrase Key="LightTools" Text="LIGHT TOOLS"/>
+    <Phrase Key="Geometry" Text="Geometry"/>
+    <Phrase Key="Edit" Text="Edit"/>
+    <Phrase Key="Uv" Text="UV"/>
+    <Phrase Key="Unwrap" Text="Unwrap"/>
+    <Phrase Key="Emission" Text="Emission"/>
+    <Phrase Key="AddLight" Text="Add light"/>
+
+    <Phrase Key="Status" Select="action"
+            Ready="Ready."
+            Pasted="Pasted from the clipboard."
+            PastedKeepingFormatting="Pasted, keeping the formatting."
+            PastedValuesOnly="Pasted the values only."
+            PasteSpecial="Paste special..."
+            SnapSettings="Snap settings..."
+            SnapsCleared="Snaps cleared."
+            Cut="Cut the selection."
+            Copied="Copied the selection."
+            Deleted="Deleted the selection."
+            Duplicated="Duplicated the selection."
+            SelectedAll="Selected everything."
+            SelectionCleared="Selection cleared."
+            AddedEntity="Added an empty entity."
+            AddedCube="Added a cube."
+            AddedSphere="Added a sphere."
+            AddedPlane="Added a plane."
+            Extruded="Extruded the selected faces."
+            Bevelled="Bevelled the selected edges."
+            Subdivided="Subdivided the mesh."
+            NewMaterial="Created a new material."
+            EditingAlbedo="Editing the albedo channel."
+            EditingNormal="Editing the normal channel."
+            EditingRoughness="Editing the roughness channel."
+            AlignedLeft="Aligned to the left."
+            Centered="Centered."
+            Distributed="Distributed evenly."
+            Grouped="Grouped the selection."
+            BroughtForward="Brought forward."
+            SentBackward="Sent backward."
+            AddedLight="Added a light."
+            Baking="Baking the lighting."
+            AddedCollider="Added a collider."
+            Simulating="Simulating."
+            Measuring="Measuring."
+            Annotating="Annotating."
+            AddedToQuickAccess="Added to the quick-access bar."
+            RemovedFromQuickAccess="Removed from the quick-access bar."
+            QuickAccessBelow="Quick access moved below the ribbon."
+            QuickAccessInCaption="Quick access moved back to the caption."
+            Imported="Imported a {format} file."
+            Exported="Exported the scene as {format}."
+            NewScene="New scene."
+            OpenedScene="Opened a scene."
+            ExitRequested="Exit requested."
+            Saved="Scene saved."
+            Undone="Undone."
+            Redone="Redone."/>
+</Language>

@@ -1,0 +1,35 @@
+<Language>
+    <Phrase Key="SharedTitle" Text="x:Shared=&quot;False&quot; — a value built per target, not shared"/>
+    <Phrase Key="SharedHint" Text="A setter writes the SAME object into every element it matches. Right-click both buttons in each pair."/>
+    <Phrase Key="SharedDefault" Text="Shared (the default)"/>
+    <Phrase Key="OneMenu" Text="One menu, shared by both"/>
+    <Phrase Key="OwnMenu" Text="This row's own menu"/>
+    <Phrase Key="RightClickMe" Text="right-click me"/>
+    <Phrase Key="AndMe" Text="...and me"/>
+    <Phrase Key="MenusOnDemand" Text="Neither menu exists until it is asked for: the card, and the menu's own template, are built on the first right-click."/>
+
+    <Phrase Key="StaticTitle" Text="x:Static — a value read straight out of C#"/>
+    <Phrase Key="StaticHint" Text="The size and the caption below are not stated in markup and not restated as resources - they are read from DemoMetrics."/>
+    <Phrase Key="StaticCaption" Text="read from C# by {{x:Static}}"/>
+
+    <Phrase Key="NullTitle" Text="x:Null — an explicit nothing"/>
+    <Phrase Key="NullHint" Text="The theme gives every Border its outline (BorderBrush). Neither box states one: the left keeps what the theme gave, the right says an explicit nothing and loses it."/>
+    <Phrase Key="ThemeOutline" Text="outline from the theme"/>
+    <Phrase Key="OutlineOff" Text="BorderBrush turned off"/>
+
+    <Phrase Key="DataTypeTitle" Text="x:DataType — the type a template is written against"/>
+    <Phrase Key="DataTypeHint" Text="Declared, not inferred. Nothing is generated from it: tooling resolves the bindings inside the template against it, and a name that does not resolve fails the build."/>
+    <Phrase Key="BoundThroughTemplate" Text="bound through a template that names its type"/>
+
+    <Phrase Key="LoadTitle" Text="x:Load — an element that is not there yet"/>
+    <Phrase Key="LoadHint" Text="Not hidden — ABSENT. While the condition is false the panel below is not constructed at all, and the counter says so. Turn it on and off again: it is parked, not rebuilt, so the counter never passes 1."/>
+    <Phrase Key="BuildPanel" Text="Build the panel — x:Load={{Binding HeavyShown}}"/>
+    <Phrase Key="TimesBuilt" Text="times constructed: {count}"/>
+    <Phrase Key="BuiltOnDemand" Text="built on demand"/>
+    <Phrase Key="BuiltOnDemandHint" Text="Everything in here - this panel, both captions, the rows below - exists only after the box above is ticked."/>
+
+    <Phrase Key="AskedTitle" Text="x:Load=&quot;False&quot; — waits to be asked for"/>
+    <Phrase Key="AskedHint" Text="No condition to answer, so nothing will ever build it on its own. The button's behavior reads the element's name, and reading it builds it. A one-way trip: there is no condition to put it back."/>
+    <Phrase Key="AskForIt" Text="Ask for it"/>
+    <Phrase Key="AskedByName" Text="asked for by name, built on the spot"/>
+</Language>

@@ -1,0 +1,30 @@
+<Language>
+    <Phrase Key="InWindow" Text="Drag &amp; Drop (in-window)"/>
+    <Phrase Key="InWindowHint" Text="Press an item and move past the threshold: it bakes into a ghost that follows the cursor (a real layered OS window). Release over a panel to drop - the panel's DropCommand moves the item in the view-model and the lists rebind."/>
+    <Phrase Key="OpenDropWindow" Text="Open drop window (cross-window test)"/>
+    <Phrase Key="OverrideCursor" Text="Override cursor over Animals"/>
+    <Phrase Key="Fruits" Text="Fruits"/>
+    <Phrase Key="HandleOnly" Text="Drag by handle only"/>
+    <Phrase Key="Spread" Text="Spread"/>
+    <Phrase Key="Animals" Text="Animals"/>
+    <Phrase Key="AcceptDrop" Text="Accept drop"/>
+    <Phrase Key="ColorsWrapPanel" Text="Colors (WrapPanel)"/>
+    <Phrase Key="Flow" Text="Flow:"/>
+    <Phrase Key="AcrossApplications" Text="Across applications (OS drag-drop)"/>
+    <Phrase Key="AcrossApplicationsHint" Text="The same commands, now over the OS bridge: drop files or text from Explorer / an editor into the left card, and drag the right card's items OUT into Notepad or an Explorer folder. Payloads cross as neutral formats (DataFormats.Text / DataFormats.Files) - the view-model never sees a platform type."/>
+    <Phrase Key="DropFromApp" Text="Drop from another app"/>
+    <Phrase Key="DropFromAppHint" Text="Drag files here from Explorer, or selected text from an editor."/>
+    <Phrase Key="Clear" Text="Clear"/>
+    <Phrase Key="Dropped" Select="kind" File="file: {value}" Image="image: PNG, {size}" Html="html: {value}"
+            Rtf="rtf: {value}" PlainText="text: {value}" InApp="in-app: {value}"/>
+    <Phrase Key="Bytes" Count="count" One="{count} byte" Other="{count} bytes"/>
+    <Phrase Key="DroppedPictures" Text="Dropped pictures"/>
+    <Phrase Key="DroppedPicturesHint" Text="Drop an image file here, or drag a picture straight out of a browser."/>
+    <Phrase Key="DragOut" Text="Drag out to another app"/>
+    <Phrase Key="DragOutHint" Text="AllowExternalDrag hands the whole gesture to the OS, ghost image and all. The notes also carry HTML and RTF - drop one into WordPad and the formatting survives. The file is written only if the drop lands."/>
+    <Phrase Key="TreeDwell" Text="Tree — dwell a folder to auto-expand"/>
+
+    <Phrase Key="Window" Text="Drag &amp; Drop Window"/>
+    <Phrase Key="Wildlife" Text="Wildlife"/>
+    <Phrase Key="WindowHint" Text="Drag items to/from the main window's lists."/>
+</Language>

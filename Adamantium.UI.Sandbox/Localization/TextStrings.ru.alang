@@ -1,0 +1,14 @@
+<Language>
+    <Phrase Key="FontSize" Text="Размер шрифта:"/>
+    <Phrase Key="Trimmed" Text="Обрезано до одной строки:"/>
+    <Phrase Key="FloatingWatermark" Text="Всплывающая подсказка"/>
+    <Phrase Key="Editable" Text="Редактируемое (в обе стороны с тем же Message):"/>
+    <Phrase Key="Message" Text="Сообщение"/>
+    <Phrase Key="FloatingTitle" Text="Всплывающая подсказка (пусто — поставьте фокус или печатайте):"/>
+    <Phrase Key="YourName" Text="Ваше имя"/>
+    <Phrase Key="ReadOnly" Text="Только чтение:"/>
+    <Phrase Key="MultiLine" Text="Многострочное (AcceptsReturn, без переноса → прокрутка по H и V):"/>
+    <Phrase Key="BindableRuns" Text="Привязываемые Run:"/>
+    <Phrase Key="YouTyped" Text="Вы набрали: "/>
+    <Phrase Key="Chars" Count="count" One="  ({count} символ)" Few="  ({count} символа)" Many="  ({count} символов)" Other="  ({count} символа)"/>
+</Language>

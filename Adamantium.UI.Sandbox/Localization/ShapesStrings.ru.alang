@@ -1,0 +1,79 @@
+<Language>
+    <Phrase Key="Gallery" Text="Галерея фигур — обводку каждой фигуры задаёт панель пера ниже:"/>
+    <Phrase Key="CubicBezier" Text="Кубическая кривая Безье"/>
+    <Phrase Key="QuadraticBezier" Text="Квадратичная кривая Безье"/>
+    <Phrase Key="Nurbs" Text="NURBS"/>
+    <Phrase Key="BSpline" Text="B-сплайн"/>
+
+    <Phrase Key="PenParameters" Text="Параметры обводки и пера:"/>
+    <Phrase Key="Thickness" Text="Толщина"/>
+    <Phrase Key="DashOn" Text="Штрих"/>
+    <Phrase Key="DashGap" Text="Пробел"/>
+    <Phrase Key="DashOffset" Text="Сдвиг штриха"/>
+    <Phrase Key="TrimStart" Text="Обрезка начала"/>
+    <Phrase Key="TrimEnd" Text="Обрезка конца"/>
+    <Phrase Key="Corner" Text="Скругление"/>
+    <Phrase Key="Samples" Text="Отсчёты"/>
+    <Phrase Key="DashStart" Text="Начало штриха"/>
+    <Phrase Key="DashEnd" Text="Конец штриха"/>
+    <Phrase Key="StartCap" Text="Начало линии"/>
+    <Phrase Key="EndCap" Text="Конец линии"/>
+    <Phrase Key="Join" Text="Стык"/>
+    <Phrase Key="DashFit" Text="Подгонка штриха"/>
+    <Phrase Key="Color" Text="Цвет"/>
+
+    <Phrase Key="NurbsParameters" Text="Параметры NURBS (у B-сплайна их нет):"/>
+    <Phrase Key="Weight" Text="Вес"/>
+    <Phrase Key="Degree" Text="Степень"/>
+    <Phrase Key="Uniform" Text="Равномерный"/>
+
+    <Phrase Key="Borders" Text="Рамки — неравная толщина и полупрозрачные кисти:"/>
+
+    <Phrase Key="Polygon" Text="Правильный многоугольник — от треугольника до круга одним числом:"/>
+    <Phrase Key="Corners" Text="Углы"/>
+    <Phrase Key="StartAngle" Text="Начальный угол"/>
+    <Phrase Key="Ring" Text="Кольцо"/>
+    <Phrase Key="Stroke" Text="Обводка"/>
+    <Phrase Key="StrokeAlpha" Text="Альфа обводки"/>
+    <Phrase Key="Width" Text="Ширина"/>
+    <Phrase Key="Height" Text="Высота"/>
+
+    <Phrase Key="Sectors" Text="Секторы — тот же эллипс, рассечённый прямой границей:"/>
+    <Phrase Key="Start" Text="Начало"/>
+    <Phrase Key="Sweep" Text="Размах"/>
+    <Phrase Key="Sector" Text="Сектор — замкнут через центр (выкл.: от края до края, замкнут хордой)"/>
+    <Phrase Key="Fill" Text="Заливка — без неё остаётся только контур, как у кольцевого индикатора"/>
+
+    <Phrase Key="Border" Text="Рамка — толщина на каждую сторону, радиус на каждый угол, всё рисует один экземпляр SDF:"/>
+    <Phrase Key="FlatSwatch" Text="Плоский образец:"/>
+    <Phrase Key="Alpha" Text="Альфа"/>
+    <Phrase Key="Sides" Text="Стороны"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="TopLeft" Text="Слева сверху"/>
+    <Phrase Key="TopRight" Text="Справа сверху"/>
+    <Phrase Key="BottomRight" Text="Справа снизу"/>
+    <Phrase Key="BottomLeft" Text="Слева снизу"/>
+
+    <Phrase Key="Overlap" Text="Полупрозрачное наложение — пересечение не должно быть темнее образца:"/>
+    <Phrase Key="ReferenceTone" Text="эталонный тон"/>
+    <Phrase Key="SelfCrossingStroke" Text="обводка пересекает себя"/>
+    <Phrase Key="SelfIntersectingOutline" Text="самопересекающийся контур"/>
+    <Phrase Key="FillAndStroke" Text="заливка + обводка, одна альфа"/>
+    <Phrase Key="TwoStrokes" Text="две обводки — ДОЛЖНЫ быть темнее"/>
+    <Phrase Key="DashedSelfCrossing" Text="пунктир пересекает себя"/>
+
+    <Phrase Key="HoverDash" Text="Наведите на линию, чтобы оживить её пунктир:"/>
+
+    <Phrase Key="Flat" Text="Плоский"/>
+    <Phrase Key="Square" Text="Квадратный"/>
+    <Phrase Key="ConvexTriangle" Text="Выпуклый треугольник"/>
+    <Phrase Key="ConcaveTriangle" Text="Вогнутый треугольник"/>
+    <Phrase Key="ConvexRound" Text="Выпуклый круглый"/>
+    <Phrase Key="ConcaveRound" Text="Вогнутый круглый"/>
+    <Phrase Key="Bevel" Text="Срез"/>
+    <Phrase Key="Miter" Text="Острый"/>
+    <Phrase Key="Round" Text="Круглый"/>
+</Language>

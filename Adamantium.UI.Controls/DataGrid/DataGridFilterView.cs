@@ -10,17 +10,12 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls.DataGrid;
 
 /// <summary>A column's filter editor: values to tick and two conditions joined by AND or OR, applied only by its buttons so
-/// rows do not move while it is composed. Fully templated (DataGridFilterStyleSet).</summary>
+/// rows do not move while it is composed. Fully templated (DataGridFilterStyleSet).
+/// <para>The template names the choices itself, in the application's language: the operator lists hold one item per
+/// <see cref="DataGridFilterOperator"/> and the joining list one per <see cref="DataGridFilterLogic"/>, in the order
+/// they are declared, and the editor reads which one is picked by its position.</para></summary>
 public class DataGridFilterView : Control
 {
-    private static readonly string[] OperatorNames =
-    [
-        "Is equal to", "Is not equal to", "Contains", "Does not contain", "Starts with", "Ends with",
-        "Is greater than", "Is less than", "Is empty", "Is not empty"
-    ];
-
-    private static readonly string[] LogicNames = ["And", "Or"];
-
     private CheckBox _selectAll;
     private ListBox _valueList;
     private DropDown _firstOperator;
@@ -91,9 +86,6 @@ public class DataGridFilterView : Control
         _clear = GetTemplateChild("PART_Clear") as ButtonBase;
 
         if (_valueList != null) _valueList.ItemsSource = Values;
-        if (_firstOperator != null) _firstOperator.ItemsSource = OperatorNames;
-        if (_secondOperator != null) _secondOperator.ItemsSource = OperatorNames;
-        if (_logic != null) _logic.ItemsSource = LogicNames;
 
         if (_selectAll != null) _selectAll.PropertyChanged += OnSelectAllToggled;
         if (_apply != null) _apply.Click += OnApply;

@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="WindowTitle" Text="Adamantium Window"/>
+    <Phrase Key="Diagnostics" Text="Diagnostics"/>
+    <Phrase Key="AnalyticAa" Text="Analytic AA"/>
+    <Phrase Key="Presentation" Text="Presentation"/>
+    <Phrase Key="Language" Text="Language"/>
+    <Phrase Key="Theme" Text="Theme"/>
+    <Phrase Key="SwitchTheme" Text="Switch"/>
+    <Phrase Key="ToggleVariant" Text="Dark / Light"/>
+    <Phrase Key="LastDialog" Select="result" None="(none)" Ok="Dialog: OK" Cancel="Dialog: Cancel" Yes="Dialog: Yes" No="Dialog: No"/>
+    <Phrase Key="ApplyChanges" Text="Apply changes to the current scene?"/>
+
+    <Phrase Key="Workspace" Text="Workspace"/>
+    <Phrase Key="OpenWorkspace" Text="Open workspace window"/>
+    <Phrase Key="Ribbon" Text="Ribbon"/>
+    <Phrase Key="OpenRibbon" Text="Open the ribbon window"/>
+    <Phrase Key="Dialog" Text="Dialog"/>
+    <Phrase Key="ShowConfirm" Text="Show a confirm dialog"/>
+    <Phrase Key="Help" Text="Help"/>
+    <Phrase Key="AboutSandbox" Text="About Adamantium Sandbox"/>
+    <Phrase Key="ToggleDiagnostics" Text="Toggle diagnostics panel"/>
+    <Phrase Key="ResizeMode" Text="Resize mode"/>
+    <Phrase Key="ToggleGripResize" Text="Toggle grip-only resize"/>
+</Language>

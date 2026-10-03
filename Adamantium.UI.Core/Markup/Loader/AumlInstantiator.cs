@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.MarkupExtensions;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
@@ -535,9 +536,41 @@ internal sealed class AumlInstantiator
                 "MultiBinding" => BuildMultiBindingFromObject(obj),
                 _ => null,
             },
+            AumlAstLocalizedStringNode localized => BuildLocalized(localized),
             _ => null,
         };
         return binding != null;
+    }
+
+    private BindingBase BuildLocalized(AumlAstLocalizedStringNode node)
+    {
+        var type = (_resolver.Resolve(node.TableFullName) as ReflectionResolvedType)?.ClrType;
+        if (Localize.TableOf(type) is not { } table)
+        {
+            _diagnostics.Add($"The language table {node.TableFullName} is not built yet: build the project to preview its strings");
+            return null;
+        }
+
+        var localize = new Localize(table, node.Key);
+        if (node.KeySource != null)
+        {
+            localize.KeySource = Followed(node.KeySource);
+        }
+
+        foreach (var argument in node.Arguments)
+        {
+            localize.Arguments[argument.Name] = Followed(argument.Value);
+        }
+
+        return localize;
+
+        object Followed(IAumlAstValueNode value) => value switch
+        {
+            _ when TryBuildBindingBase(value, out var binding) => binding,
+            AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } templateBinding =>
+                CreateMarkupObject(templateBinding),
+            _ => value?.GetTextValue(),
+        };
     }
 
     private Binding BuildBindingFromMarkup(AumlAstMarkupExtensionNode me)

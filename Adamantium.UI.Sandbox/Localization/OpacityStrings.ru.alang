@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Title" Text="Непрозрачность — каждое семейство должно гаснуть одинаково"/>
+    <Phrase Key="Intro" Text="Верхняя полоса лежит в контейнере, который гасит ползунок; нижняя — та же полоса при полной непрозрачности. Сравнивайте каждый образец с образцом под ним: они должны расходиться в ногу. Образец, который отстаёт, читает свою альфу иначе, чем соседи."/>
+    <Phrase Key="ContainerOpacity" Text="Непрозрачность контейнера"/>
+    <Phrase Key="ElementOpacity" Text="Непрозрачность элемента"/>
+    <Phrase Key="ElementHint" Text="(у каждого образца в гаснущей полосе, так что сравнивается ПРОИЗВЕДЕНИЕ)"/>
+
+    <Phrase Key="Rect" Text="прямоуг."/>
+    <Phrase Key="Ellipse" Text="эллипс"/>
+    <Phrase Key="Polygon" Text="многоуг."/>
+    <Phrase Key="Mesh" Text="сетка"/>
+    <Phrase Key="Text" Text="текст"/>
+    <Phrase Key="Gradient" Text="градиент"/>
+    <Phrase Key="Pattern" Text="узор"/>
+    <Phrase Key="Texture" Text="текстура"/>
+    <Phrase Key="Fractal" Text="фрактал"/>
+    <Phrase Key="Material" Text="материал"/>
+    <Phrase Key="Aura" Text="аура"/>
+    <Phrase Key="Shadow" Text="тень"/>
+    <Phrase Key="Stroke" Text="обводка"/>
+
+    <Phrase Key="SubtreeTitle" Text="Opacity (всё поддерево) против SelfOpacity (только этот элемент)"/>
+    <Phrase Key="Baseline" Text="эталон"/>
+</Language>

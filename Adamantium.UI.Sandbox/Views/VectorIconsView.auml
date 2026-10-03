@@ -104,10 +104,10 @@
                   VerticalScrollBarVisibility="Auto">
         <StackPanel Orientation="Vertical">
 
-            <TextBlock Text="One drawing, every size"
+            <TextBlock Text="{Localize VectorIconsStrings.EverySize}"
                        FontSize="18"
                        Margin="0,0,0,4"/>
-            <TextBlock Text="All six below are the SAME DrawingImage resource. Nothing is rasterized: each is replayed through its own placement, so the edges stay clean at any size and a DPI change costs nothing."
+            <TextBlock Text="{Localize VectorIconsStrings.EverySizeHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}"
                        TextWrapping="WrapByWords"
                        MarginBottom="14"/>
@@ -143,7 +143,7 @@
                         Margin="0,18,0,0">
                 <StackPanel Orientation="Vertical"
                             MarginRight="28">
-                    <TextBlock Text="Showcase size"
+                    <TextBlock Text="{Localize VectorIconsStrings.ShowcaseSize}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
@@ -160,7 +160,7 @@
                                    Foreground="{ResourceReference TextFillColorSecondary}"/>
                     </StackPanel>
 
-                    <TextBlock Text="Group rotation (badge)"
+                    <TextBlock Text="{Localize VectorIconsStrings.GroupRotation}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                Margin="0,12,0,2"/>
                     <StackPanel Orientation="Horizontal">
@@ -180,23 +180,23 @@
 
                 <StackPanel Orientation="Vertical"
                             VerticalAlignment="Top">
-                    <TextBlock Text="Colors — one edit, every size"
+                    <TextBlock Text="{Localize VectorIconsStrings.Colors}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="8"/>
-                    <TextBlock Text="Accent"
+                    <TextBlock Text="{Localize VectorIconsStrings.Accent}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="2"/>
                     <ColorPickerButton SelectedColor="{Binding Accent, Mode=TwoWay}"
                                        Width="200"
                                        Height="30"
                                        MarginBottom="12"/>
-                    <TextBlock Text="Body"
+                    <TextBlock Text="{Localize VectorIconsStrings.Body}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="2"/>
                     <ColorPickerButton SelectedColor="{Binding Body, Mode=TwoWay}"
                                        Width="200"
                                        Height="30"/>
-                    <TextBlock Text="Caption"
+                    <TextBlock Text="{Localize VectorIconsStrings.Caption}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                Margin="0,12,0,2"/>
                     <ColorPickerButton SelectedColor="{Binding CaptionColor, Mode=TwoWay}"
@@ -205,10 +205,10 @@
                 </StackPanel>
             </StackPanel>
 
-            <TextBlock Text="A transform inside the drawing"
+            <TextBlock Text="{Localize VectorIconsStrings.Transform}"
                        FontSize="18"
                        Margin="0,24,0,4"/>
-            <TextBlock Text="The cross belongs to a nested DrawingGroup with its own Transform. Its geometry never changes — only where the group puts it — so the two sizes below stay one shared mesh while they turn."
+            <TextBlock Text="{Localize VectorIconsStrings.TransformHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}"
                        TextWrapping="WrapByWords"
                        MarginBottom="12"/>
@@ -223,10 +223,10 @@
                        Height="56"/>
             </StackPanel>
 
-            <TextBlock Text="Raster fallback: a drawing as a texture"
+            <TextBlock Text="{Localize VectorIconsStrings.Raster}"
                        FontSize="18"
                        Margin="0,24,0,4"/>
-            <TextBlock Text="An ImageBrush samples a TEXTURE, so it cannot replay a drawing. The drawing is baked once at the size the fill needs and sampled from there; the vector path stays the default, this is the fallback."
+            <TextBlock Text="{Localize VectorIconsStrings.RasterHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}"
                        TextWrapping="WrapByWords"
                        MarginBottom="12"/>
@@ -249,10 +249,10 @@
                 </Ellipse>
             </StackPanel>
 
-            <TextBlock Text="Text inside a drawing"
+            <TextBlock Text="{Localize VectorIconsStrings.Text}"
                        FontSize="18"
                        Margin="0,24,0,4"/>
-            <TextBlock Text="A GlyphRunDrawing is re-shaped at the size it is drawn at, so the big tile gets glyphs shaped for the big tile rather than stretched ones."
+            <TextBlock Text="{Localize VectorIconsStrings.TextHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}"
                        TextWrapping="WrapByWords"
                        MarginBottom="12"/>

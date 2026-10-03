@@ -1,0 +1,118 @@
+<Language>
+    <Phrase Key="Intro" Text="10 000 rows, every fifth with a branch, and one of every column type. Double-click a cell to edit it; the panel on the right drives the rest."/>
+    <Phrase Key="NewAssembly" Text="New assembly"/>
+
+    <Phrase Key="Details" Text="Details"/>
+    <Phrase Key="Note" Text="Note"/>
+    <Phrase Key="Chart" Text="Chart"/>
+
+    <Phrase Key="Code" Text="Code"/>
+    <Phrase Key="Owner" Text="Owner"/>
+    <Phrase Key="Name" Text="Name"/>
+    <Phrase Key="Done" Text="Done"/>
+    <Phrase Key="Size" Text="Size"/>
+    <Phrase Key="Checksum" Text="Checksum"/>
+    <Phrase Key="Region" Text="Region"/>
+    <Phrase Key="Batch" Text="Batch"/>
+    <Phrase Key="Revision" Text="Revision"/>
+    <Phrase Key="Line" Text="Line"/>
+    <Phrase Key="Shift" Text="Shift"/>
+    <Phrase Key="Updated" Text="Updated"/>
+    <Phrase Key="Status" Text="Status"/>
+    <Phrase Key="FiledAsError" Text="The record is filed as an error"/>
+    <Phrase Key="DoneButError" Text="marked done and filed as an error"/>
+    <Phrase Key="NotANumber" Text="{value} is not a number"/>
+    <Phrase Key="BelowFloor" Text="{number} is below the {min} floor"/>
+    <Phrase Key="OverCeiling" Text="{number} is over the {max} ceiling"/>
+
+    <Phrase Key="Settings" Text="Grid settings"/>
+    <Phrase Key="Columns" Text="COLUMNS"/>
+    <Phrase Key="ChooseColumns" Text="Let the user choose columns"/>
+    <Phrase Key="FilterColumns" Text="Let the user filter columns"/>
+    <Phrase Key="NewRecordRow" Text="Row for a new record"/>
+    <Phrase Key="SaveLayout" Text="Save layout"/>
+    <Phrase Key="Restore" Text="Restore"/>
+    <Phrase Key="Layout" Select="action" None="Nothing saved yet" Saved="Saved {bytes}" Restored="Restored {columns}"/>
+    <Phrase Key="Bytes" Count="count" One="{count:N0} byte" Other="{count:N0} bytes"/>
+    <Phrase Key="ColumnCount" Count="count" One="{count} column" Other="{count} columns"/>
+
+    <Phrase Key="History" Text="HISTORY"/>
+    <Phrase Key="Undo" Text="Undo"/>
+    <Phrase Key="Redo" Text="Redo"/>
+    <Phrase Key="Step" Select="step" NothingToUndo="Nothing to take back" Undone="Took one back; {behind}, {ahead}"
+            Redone="Did one again; {behind}, {ahead}" NothingToRedo="Nothing to do again"/>
+    <Phrase Key="Behind" Select="more" True="more behind" False="nothing behind"/>
+    <Phrase Key="Ahead" Select="one" True="one ahead" False="none ahead"/>
+
+    <Phrase Key="Export" Text="EXPORT"/>
+    <Phrase Key="ExportCsv" Text="Export CSV"/>
+    <Phrase Key="ExportXlsx" Text="Export XLSX"/>
+    <Phrase Key="Exported" Select="state" Nothing="Nothing exported yet" NoDialog="No file dialog on this platform"
+            Canceled="Canceled" Written="{path}"/>
+    <Phrase Key="ExportTitle" Text="Export the table"/>
+    <Phrase Key="CsvFiles" Text="Comma-separated values"/>
+    <Phrase Key="XlsxFiles" Text="Excel workbook"/>
+    <Phrase Key="PinCode" Text="Pin Code left"/>
+    <Phrase Key="PinRegion" Text="Pin Region left"/>
+    <Phrase Key="PinStatus" Text="Pin Status right"/>
+
+    <Phrase Key="Search" Text="SEARCH"/>
+    <Phrase Key="SearchPanel" Text="Search panel"/>
+    <Phrase Key="SearchHint" Text="Type and press Enter; the arrows walk the matches. Escape or × closes the strip."/>
+    <Phrase Key="OwnMatchColors" Text="Own match colors"/>
+    <Phrase Key="EveryMatch" Text="Every match"/>
+    <Phrase Key="CurrentMatch" Text="The one you are on"/>
+    <Phrase Key="AlphaHint" Text="Keep the alpha down - it is a wash over the cell, not a plate."/>
+
+    <Phrase Key="Validation" Text="VALIDATION"/>
+    <Phrase Key="ValidationHint" Text="Size is accepted between these; the Status cell of a record filed as an error is marked by the record itself."/>
+    <Phrase Key="RefuseInvalid" Text="Refuse to leave an invalid cell"/>
+    <Phrase Key="From" Text="from"/>
+    <Phrase Key="To" Text="to"/>
+    <Phrase Key="WarnAbove" Text="warn above"/>
+    <Phrase Key="OwnErrorColor" Text="Own error color"/>
+    <Phrase Key="RejectedValue" Text="Rejected value"/>
+
+    <Phrase Key="Grouping" Text="GROUPING"/>
+    <Phrase Key="GroupingPanel" Text="Grouping panel"/>
+
+    <Phrase Key="Tree" Text="TREE"/>
+    <Phrase Key="TreeFromKeys" Text="Tree from keys, not nesting"/>
+    <Phrase Key="TreeSource" Select="keys" True="{records}, all at the top level - the tree is worked out from Code / ParentCode"
+            False="{records}, each holding its own children"/>
+    <Phrase Key="Records" Count="count" One="{count:N0} record" Other="{count:N0} records"/>
+
+    <Phrase Key="Sorting" Text="SORTING"/>
+    <Phrase Key="SortingPanel" Text="Sorting panel"/>
+
+    <Phrase Key="Totals" Text="TOTALS"/>
+    <Phrase Key="SizeColumn" Text="Size column"/>
+    <Phrase Key="CountRows" Text="Count rows in Code"/>
+    <Phrase Key="TotalsHint" Text="Totals stand under the table and in every group's header."/>
+    <Phrase Key="SizeTotal" Select="function" Sum="Σ {{0:N0}}" Average="avg {{0:N1}}" Min="min {{0:N0}}"
+            Max="max {{0:N0}}" Count="{{0:N0}} rows"/>
+    <Phrase Key="RowsTotal" Text="{{0:N0}} rows"/>
+
+    <Phrase Key="Rows" Text="ROWS"/>
+    <Phrase Key="RowNumbers" Text="Row numbers"/>
+    <Phrase Key="TintEvery" Text="Tint every Nth row"/>
+    <Phrase Key="TintHint" Text="2 = every other row; 0 = none"/>
+    <Phrase Key="TintColor" Text="Tint color"/>
+
+    <Phrase Key="Look" Text="LOOK"/>
+    <Phrase Key="GridLines" Text="Grid lines"/>
+    <Phrase Key="SelectionUnit" Text="Selection unit"/>
+    <Phrase Key="Editing" Text="editing a cell"/>
+
+    <Phrase Key="Sum" Text="Sum"/>
+    <Phrase Key="Average" Text="Average"/>
+    <Phrase Key="Min" Text="Min"/>
+    <Phrase Key="Max" Text="Max"/>
+    <Phrase Key="Count" Text="Count"/>
+    <Phrase Key="None" Text="None"/>
+    <Phrase Key="All" Text="All"/>
+    <Phrase Key="Horizontal" Text="Horizontal"/>
+    <Phrase Key="Vertical" Text="Vertical"/>
+    <Phrase Key="Cell" Text="Cell"/>
+    <Phrase Key="FullRow" Text="Full row"/>
+</Language>

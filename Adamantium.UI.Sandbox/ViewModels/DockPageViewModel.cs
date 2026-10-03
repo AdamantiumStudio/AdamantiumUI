@@ -15,7 +15,10 @@ public partial class DockPageViewModel : INavigationAware, IDockablePane, IResto
     public const string ZoneKey = "zone";
 
     [Bindable] private string _title = "Page";
-    [Bindable] private string _openedAt = "";
+
+    /// <summary>Where the pane was first opened - or that it came back with a saved layout instead.</summary>
+    [Bindable] private DockZone _openedIn;
+    [Bindable] private bool _restored;
 
     public string PaneId => Title;
     public string PaneTitle => Title;
@@ -32,12 +35,7 @@ public partial class DockPageViewModel : INavigationAware, IDockablePane, IResto
         // Only where it is first opened: the zone the pane already lives in belongs to the user by then, and the adapter
         // reads this when it CREATES the pane.
         PaneZone = context.Parameters.GetValue(ZoneKey, DockZone.Center);
-        OpenedAt = PaneZone switch
-        {
-            DockZone.Center => "the document well",
-            DockZone.Floating => "a window of its own - and float-only: it cannot be docked back",
-            _ => PaneZone.ToString().ToLowerInvariant()
-        };
+        OpenedIn = PaneZone;
     }
 
     public void OnNavigatedFrom(NavigationContext context)
@@ -49,7 +47,7 @@ public partial class DockPageViewModel : INavigationAware, IDockablePane, IResto
     public void RestoreFrom(string paneId)
     {
         Title = paneId;
-        OpenedAt = "restored with the layout";
+        Restored = true;
     }
 
     public bool IsNavigationTarget(NavigationContext context)

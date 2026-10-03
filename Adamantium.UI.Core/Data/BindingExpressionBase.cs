@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Adamantium.UI.Core.Diagnostics;
+using Adamantium.UI.Core.Localization;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -102,6 +103,10 @@ public abstract class BindingExpressionBase
    // the per-frame BindingUpdateQueue flush; reading the latest value is what makes N source changes collapse to one.
    internal virtual void ApplyPending() => UpdateTarget();
 
+   internal CultureInfo FormatCulture => Languages.CultureFor(BindingBase?.Culture);
+
+   internal virtual void OnLanguageChanged() => ScheduleUpdate();
+
    public abstract void EstablishConnection();
    public abstract void CloseConnection();
 
@@ -121,19 +126,20 @@ public abstract class BindingExpressionBase
    internal static bool CanHoldNothing(Type type)
       => type is not { IsValueType: true } || Nullable.GetUnderlyingType(type) != null;
 
-   internal static bool TryCoerce(object value, Type targetType, out object result)
+   internal static bool TryCoerce(object value, Type targetType, out object result, CultureInfo culture = null)
    {
       result = value;
       if (value == null || targetType == null || targetType.IsInstanceOfType(value)) return true;
+      culture ??= Languages.Culture;
       if (targetType == typeof(string))
       {
-         result = value.ToString();
+         result = value is IFormattable formattable ? formattable.ToString(null, culture) : value.ToString();
          return true;
       }
 
       try
       {
-         result = Convert.ChangeType(value, Nullable.GetUnderlyingType(targetType) ?? targetType, CultureInfo.CurrentCulture);
+         result = Convert.ChangeType(value, Nullable.GetUnderlyingType(targetType) ?? targetType, culture);
          return true;
       }
       catch

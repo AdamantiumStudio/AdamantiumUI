@@ -548,7 +548,8 @@ public partial class BrushesViewModel : TabPageViewModel
         DesktopWallpaperSource, "tile-sample.png", "elephant.png", "ColoredImage.jpg", "texture2.jpg", "texture.jpg"
     };
 
-    private const string DesktopWallpaperSource = "Desktop wallpaper";
+    /// <summary>The desktop's own wallpaper among the file names, as the key of the phrase the view says it with.</summary>
+    private const string DesktopWallpaperSource = nameof(Localization.BrushesStrings.DesktopWallpaper);
 
     public MaterialAnchor[] MaterialAnchors { get; } = Enum.GetValues<MaterialAnchor>();
 

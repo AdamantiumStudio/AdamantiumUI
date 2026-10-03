@@ -282,7 +282,27 @@ public class DropDown : Selector
             UpdateDisplayContent();
     }
 
-    private void UpdateDisplayContent() => DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : Placeholder;
+    private DropDownItem _shown;
+
+    private void UpdateDisplayContent()
+    {
+        // The header holds what the picked row HOLDS, read once - so a row whose words change, the language switched
+        // under it, has to be read again.
+        var shown = SelectedItem as DropDownItem;
+        if (!ReferenceEquals(shown, _shown))
+        {
+            if (_shown != null) _shown.PropertyChanged -= OnShownChanged;
+            _shown = shown;
+            if (_shown != null) _shown.PropertyChanged += OnShownChanged;
+        }
+
+        DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : Placeholder;
+    }
+
+    private void OnShownChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == ContentControl.ContentProperty) UpdateDisplayContent();
+    }
 
     // What actually shows for an item. With a user ItemTemplate the raw item flows through (the template formats it). With
     // no template, an ENUM value shows its friendly name from [Display(Name)] / [Description] - the thing WPF ignored - so

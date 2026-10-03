@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -24,7 +25,7 @@ public partial class WorkspaceShellViewModel : IWindowAware
 
     // IWindowAware: which shell to host this in, plus its caption/size - all without touching a UI type.
     public string WindowShellKey => WorkspaceRegion;
-    public string Title => "Workspace";
+    public string Title => WorkspaceStrings.Workspace;
     public double Width => 900;
     public double Height => 600;
 

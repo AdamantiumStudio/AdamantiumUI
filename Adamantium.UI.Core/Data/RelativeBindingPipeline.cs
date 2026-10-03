@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -27,7 +26,7 @@ internal static class RelativeBindingPipeline
         else
         {
             value = converter != null
-                ? converter.Convert(raw, targetType, converterParameter, CultureInfo.CurrentCulture)
+                ? converter.Convert(raw, targetType, converterParameter, Localization.Languages.Culture)
                 : raw;
         }
 

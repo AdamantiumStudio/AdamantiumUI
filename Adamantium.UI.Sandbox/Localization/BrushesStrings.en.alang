@@ -1,0 +1,263 @@
+<Language>
+    <!-- The tab and its stands. -->
+    <Phrase Key="Title" Text="Brushes — live"/>
+    <Phrase Key="Gradients" Text="Gradients"/>
+    <Phrase Key="MeshGradient" Text="Mesh gradient"/>
+    <Phrase Key="Pattern" Text="Pattern"/>
+    <Phrase Key="Noise" Text="Noise"/>
+    <Phrase Key="Fractal" Text="Fractal"/>
+    <Phrase Key="Image" Text="Image"/>
+    <Phrase Key="NineSlice" Text="Nine-slice"/>
+    <Phrase Key="Drawing" Text="Drawing"/>
+    <Phrase Key="Visual" Text="Visual"/>
+    <Phrase Key="Material" Text="Material"/>
+    <Phrase Key="AuraShadow" Text="Aura / Shadow"/>
+    <Phrase Key="PaintItOn" Text="Paint it on"/>
+
+    <!-- What every stand has. -->
+    <Phrase Key="CornersHint" Text="Corners — 3 is a triangle, enough of them a circle"/>
+    <Phrase Key="StartAngleHint" Text="Start angle — where corner 0 sits"/>
+    <Phrase Key="CornerRadius" Text="Corner radius"/>
+    <Phrase Key="Width" Text="Width"/>
+    <Phrase Key="Height" Text="Height"/>
+    <Phrase Key="Tint" Text="Tint"/>
+    <Phrase Key="Opacity" Text="Opacity"/>
+    <Phrase Key="Color" Text="Color"/>
+    <Phrase Key="TileMode" Text="Tile mode"/>
+    <Phrase Key="Scale" Text="Scale"/>
+
+    <!-- Gradient. -->
+    <Phrase Key="GradientTitle" Text="Gradient — live (one set of stops, three geometries)"/>
+    <Phrase Key="Geometry" Text="Geometry"/>
+    <Phrase Key="DirectionDegrees" Text="Direction — degrees"/>
+    <Phrase Key="Span" Text="Span — shorten it to see Reflect and Repeat"/>
+    <Phrase Key="Radius" Text="Radius"/>
+    <Phrase Key="SweepStart" Text="Start angle — where the sweep begins"/>
+    <Phrase Key="OutsideStops" Text="Outside the stops"/>
+    <Phrase Key="InterpolatedIn" Text="Interpolated in"/>
+    <Phrase Key="Stops" Text="Stops — start / end, and an optional middle"/>
+    <Phrase Key="MiddleStop" Text="Middle stop"/>
+    <Phrase Key="LinearTitle" Text="Linear gradients — rectangles"/>
+    <Phrase Key="RadialTitle" Text="Radial gradients — rectangles"/>
+    <Phrase Key="ConicTitle" Text="Conic gradients — angular sweep"/>
+    <Phrase Key="EllipsesTitle" Text="Gradients — ellipses"/>
+    <Phrase Key="ShapesTitle" Text="Gradients — arbitrary shapes (Polygon / Path)"/>
+    <Phrase Key="SpreadTitle" Text="Spread method — Pad / Reflect / Repeat (stops span 0..0.5)"/>
+    <Phrase Key="InterpolationTitle" Text="Gradient interpolation — sRGB vs OKLab"/>
+    <Phrase Key="SrgbMuddy" Text="sRGB — muddy midpoints"/>
+    <Phrase Key="OklabPerceptual" Text="OKLab — perceptual"/>
+    <Phrase Key="ArbitraryInterpolation" Text="…and on arbitrary geometry (Polygon) — left sRGB, right OKLab"/>
+
+    <!-- Mesh gradient. -->
+    <Phrase Key="MeshTitle" Text="Mesh gradient — live (four corners, pick each)"/>
+    <Phrase Key="MeshTop" Text="Corners (top-left / top-right)"/>
+    <Phrase Key="MeshBottom" Text="Corners (bottom-left / bottom-right)"/>
+
+    <!-- Pattern. -->
+    <Phrase Key="PatternTitle" Text="Pattern — live (pick a type; drag cell size, corner radius and colors)"/>
+    <Phrase Key="PatternType" Text="Pattern type"/>
+    <Phrase Key="CellSize" Text="Cell size"/>
+    <Phrase Key="HatchAngle" Text="Hatch angle"/>
+    <Phrase Key="PatternColors" Text="Colors (background / feature)"/>
+
+    <!-- Image. -->
+    <Phrase Key="ImageTitle" Text="ImageBrush — live (tile it, mirror it, or fit one copy)"/>
+    <Phrase Key="StretchWhileNone" Text="Stretch (only while Tile mode is None)"/>
+    <Phrase Key="TileSize" Text="Tile size"/>
+    <Phrase Key="GridRotationTiling" Text="Grid rotation — turns the TILING"/>
+
+    <!-- Drawing. -->
+    <Phrase Key="DrawingTitle" Text="DrawingBrush — live (a drawing as a fill: viewbox, viewport, stretch, tiling)"/>
+    <Phrase Key="StretchOneTile" Text="Stretch — fits the content inside ONE tile"/>
+    <Phrase Key="AlignXRoom" Text="Alignment X (only while the fit leaves room)"/>
+    <Phrase Key="AlignX" Text="Alignment X"/>
+    <Phrase Key="AlignY" Text="Alignment Y"/>
+    <Phrase Key="ViewportUnits" Text="Viewport units — px, or a fraction of the shape"/>
+    <Phrase Key="ViewportSize" Text="Viewport size — one tile (sizes the SINGLE copy too, so None puts it in a corner)"/>
+    <Phrase Key="ViewportOriginX" Text="Viewport origin X — shifts the whole grid"/>
+    <Phrase Key="ViewportOriginY" Text="Viewport origin Y"/>
+    <Phrase Key="ViewboxX" Text="Viewbox X — which part of the drawing a tile shows"/>
+    <Phrase Key="ViewboxY" Text="Viewbox Y"/>
+    <Phrase Key="ViewboxSize" Text="Viewbox size — 1 is the whole drawing"/>
+    <Phrase Key="GridRotationContent" Text="Grid rotation — turns the TILING, not the content"/>
+
+    <!-- Visual. -->
+    <Phrase Key="VisualTitle" Text="VisualBrush — live (a real element as the fill)"/>
+    <Phrase Key="SourceDragMe" Text="The source (drag me)"/>
+    <Phrase Key="LiveElement" Text="I am a live element"/>
+    <Phrase Key="StretchSource" Text="Stretch — fits the source inside ONE tile"/>
+    <Phrase Key="AlignmentHint" Text="Alignment moves the source only where the fit LEFT ROOM, and Uniform leaves room on exactly ONE axis. The source is 240×150 in a square tile: Uniform fills the width, so only Y can move; UniformToFill crops the width instead, so only X can; Fill leaves no room at all."/>
+    <Phrase Key="TileSizePx" Text="Tile size (px) — smaller than the shape starts tiling"/>
+    <Phrase Key="GridRotation" Text="Grid rotation"/>
+
+    <!-- Fractal. -->
+    <Phrase Key="FractalTitle" Text="Fractal — live (toggle auto-morph, drag every parameter)"/>
+    <Phrase Key="Formula" Text="Formula"/>
+    <Phrase Key="AutoMorph" Text="Auto-morph (real-time)"/>
+    <Phrase Key="MandelbrotMode" Text="Mandelbrot mode (C = pixel; off = Julia)"/>
+    <Phrase Key="Power" Text="Power — Multibrot exponent d"/>
+    <Phrase Key="Zoom" Text="Zoom (log, ×)"/>
+    <Phrase Key="Iterations" Text="Iterations"/>
+    <Phrase Key="MorphSpeed" Text="Morph speed"/>
+    <Phrase Key="JuliaX" Text="C.x (Julia constant)"/>
+    <Phrase Key="JuliaY" Text="C.y (Julia constant)"/>
+    <Phrase Key="PanX" Text="Pan X — fine, ×(1/zoom), stays precise deep (drag the fractal for coarse)"/>
+    <Phrase Key="PanY" Text="Fine pan Y — ×(1/zoom)"/>
+    <Phrase Key="FractalColors" Text="Colors — click a swatch to edit"/>
+    <Phrase Key="ColorInside" Text="Color 1 (inside / edge)"/>
+    <Phrase Key="ColorOutside" Text="Color 2 (escaping outside)"/>
+    <Phrase Key="DragFractal" Text="Drag the fractal to pan, wheel to zoom toward the cursor (built into FractalView)."/>
+    <Phrase Key="FractalSamples" Text="Fractal brush — fixed samples"/>
+
+    <!-- Nine-slice. -->
+    <Phrase Key="NineTitle" Text="Nine-slice — live (drag the size: the corners keep theirs, the edges give)"/>
+    <Phrase Key="Skin" Text="Skin"/>
+    <Phrase Key="Cut" Text="Cut — where the SOURCE is cut (0.25 = these skins' own 16px frame; move it and the pieces take each other's pixels)"/>
+    <Phrase Key="Border" Text="Border (0 = the source's own pixels)"/>
+    <Phrase Key="EdgeMode" Text="Edge mode"/>
+    <Phrase Key="DrawCenter" Text="Draw the center"/>
+    <Phrase Key="TileCenter" Text="Tile the center too (off = stretched, as CSS border-image does)"/>
+    <Phrase Key="NineBrushTitle" Text="NineSliceBrush — one picture, any size, corners never distort"/>
+    <Phrase Key="NineHint" Text="The source is 64×64 with a 16px frame (Slice = 0.25). Compare with the plain ImageBrush below: the same picture stretched."/>
+    <Phrase Key="StretchedEdges" Text="stretched edges"/>
+    <Phrase Key="RepeatedEdges" Text="repeated edges"/>
+    <Phrase Key="FrameOnly" Text="frame only (DrawCenter=False)"/>
+    <Phrase Key="PlainImage" Text="…and the same picture as a plain ImageBrush — stretched, corners and all"/>
+    <Phrase Key="Tinted" Text="tinted"/>
+
+    <!-- Noise. -->
+    <Phrase Key="NoiseTitle" Text="Noise — live (drag to re-bake; tick “Mid color” for a 3-color gradient-map ramp)"/>
+    <Phrase Key="NoiseType" Text="Noise type"/>
+    <Phrase Key="Animate" Text="Animate (flow — best with Worley)"/>
+    <Phrase Key="FlowSpeed" Text="Flow speed"/>
+    <Phrase Key="Octaves" Text="Octaves"/>
+    <Phrase Key="Seed" Text="Seed"/>
+    <Phrase Key="Lacunarity" Text="Lacunarity"/>
+    <Phrase Key="Gain" Text="Gain"/>
+    <Phrase Key="FirePalette" Text="Fire palette (off = use colors below)"/>
+    <Phrase Key="MidColor" Text="Mid color (3-color gradient-map ramp)"/>
+    <Phrase Key="NoiseColors" Text="Colors (low / mid / high — mid used only when ticked)"/>
+    <Phrase Key="NoiseTypesTitle" Text="Noise types (all selectable in the live panel above)"/>
+    <Phrase Key="WorleyFlow" Text="Worley (flow)"/>
+    <Phrase Key="CombustibleFire" Text="Combustible (fire)"/>
+    <Phrase Key="CombustibleCustom" Text="Combustible (custom)"/>
+
+    <!-- Material. -->
+    <Phrase Key="MaterialTitle" Text="Material brush — the fill is what is behind it"/>
+    <Phrase Key="MaterialKind" Text="Material — acrylic and glass share a capture and differ in treatment; mica differs in source"/>
+    <Phrase Key="SittingOver" Text="Sitting over"/>
+    <Phrase Key="SourceHint" Text="Source — the desktop's own wallpaper, or one of ours. They differ in DETAIL: the tile hides the drag wobble, texture.jpg shows it at its worst"/>
+    <Phrase Key="DesktopWallpaper" Text="Desktop wallpaper"/>
+    <Phrase Key="AnchorHint" Text="Anchor — what the picture is pinned to"/>
+    <Phrase Key="ElementOpacity" Text="Element opacity — the whole thing fades, tint and pen together"/>
+    <Phrase Key="StrokeHint" Text="Stroke — the pen rides the SAME pass as the fill, so a framed material is one draw"/>
+    <Phrase Key="TintStrength" Text="Tint strength — glass takes its color from behind, so keep it low there"/>
+    <Phrase Key="GrainScale" Text="Grain scale — px per fiber clump, per scratch of the grinding, or per annual ring"/>
+    <Phrase Key="GrainDirection" Text="Grain direction — which way the pile is combed, the grinding runs, or the trunk lay"/>
+    <Phrase Key="Roughness" Text="Roughness — 0 is a mirror; on cloth how far the sheen spreads, on wood the varnish"/>
+    <Phrase Key="LightAngle" Text="Light angle — where the light comes from"/>
+    <Phrase Key="LightElevation" Text="Light elevation — 0 grazes the nap, 1 flattens it"/>
+    <Phrase Key="ClothColor" Text="Cloth color"/>
+    <Phrase Key="SheenColor" Text="Sheen color — the light caught on the tips of the fibers"/>
+    <Phrase Key="MetalHint" Text="Metal — a starting point; every knob below stays free"/>
+    <Phrase Key="MetalColor" Text="Metal color — gray is steel, yellow is gold, pink is copper"/>
+    <Phrase Key="EnvironmentHint" Text="Environment — what it reflects. Procedural: behind a UI there is no room"/>
+    <Phrase Key="Timber" Text="Timber — a starting point; every knob above stays free"/>
+    <Phrase Key="WoodCutHint" Text="Cut — where the saw crossed the rings. Same tree, four figures"/>
+    <Phrase Key="Varnished" Text="Varnished — a clear coat that shows the room and glares along the edge"/>
+    <Phrase Key="EarlyWood" Text="Early wood — the broad pale band grown in spring"/>
+    <Phrase Key="LateWood" Text="Late wood — the narrow dark band that closes each ring"/>
+    <Phrase Key="Blur" Text="Blur — how wide the frosting scatters"/>
+    <Phrase Key="Refraction" Text="Refraction — how hard the rim bends what is behind"/>
+    <Phrase Key="Grain" Text="Grain — hides the banding an 8-bit capture brings"/>
+    <Phrase Key="TintColor" Text="Tint color"/>
+
+    <!-- Aura / shadow. -->
+    <Phrase Key="AuraTitle" Text="Aura / Shadow — live (the band is drawn OUTSIDE the element; the margin is yours to leave)"/>
+    <Phrase Key="ClipToBox" Text="Clip to the element's box"/>
+    <Phrase Key="MarginHint" Text="Margin — layout, not a band setting. With the clip on, drop it below the radius and the band is cut: bounds are never grown to fit a glow."/>
+    <Phrase Key="AuraOn" Text="AURA — no direction"/>
+    <Phrase Key="AuraRadius" Text="Radius — how far it reaches"/>
+    <Phrase Key="AuraSpread" Text="Spread — solid rim before the fade"/>
+    <Phrase Key="AuraInner" Text="Inner (glow inward — needs no margin at all)"/>
+    <Phrase Key="Alive" Text="ALIVE — the reach breathes"/>
+    <Phrase Key="TurbulenceHint" Text="Turbulence — how far the reach wanders (0 = still)"/>
+    <Phrase Key="Flow" Text="Flow — how fast it drifts"/>
+    <Phrase Key="Detail" Text="Detail — how many tongues run around it"/>
+    <Phrase Key="Palette" Text="Palette — travel four colors instead of one"/>
+    <Phrase Key="FourColors" Text="The four it travels through"/>
+    <Phrase Key="ShadowOn" Text="SHADOW — thrown where the light is not"/>
+    <Phrase Key="Offset" Text="Offset X / Y"/>
+    <Phrase Key="BlurRadius" Text="Blur radius — how soft the edge is"/>
+    <Phrase Key="ShadowSpread" Text="Spread — how HIGH it floats (negative peeks out from one edge)"/>
+    <Phrase Key="ShadowInner" Text="Inner (inset — the pressed look)"/>
+
+    <!-- The members of every enum a stand offers, said by their names. -->
+    <Phrase Key="Linear" Text="Linear"/>
+    <Phrase Key="Radial" Text="Radial"/>
+    <Phrase Key="Conic" Text="Conic"/>
+    <Phrase Key="Pad" Text="Pad"/>
+    <Phrase Key="Reflect" Text="Reflect"/>
+    <Phrase Key="Repeat" Text="Repeat"/>
+    <Phrase Key="Srgb" Text="sRGB"/>
+    <Phrase Key="Oklab" Text="OKLab"/>
+    <Phrase Key="None" Text="None"/>
+    <Phrase Key="Tile" Text="Tile"/>
+    <Phrase Key="FlipX" Text="Flip X"/>
+    <Phrase Key="FlipY" Text="Flip Y"/>
+    <Phrase Key="FlipXY" Text="Flip X and Y"/>
+    <Phrase Key="Fill" Text="Fill"/>
+    <Phrase Key="Uniform" Text="Uniform"/>
+    <Phrase Key="UniformToFill" Text="Uniform to fill"/>
+    <Phrase Key="RelativeToBoundingBox" Text="Fraction of the shape"/>
+    <Phrase Key="Absolute" Text="Pixels"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="Stretch" Text="Stretch"/>
+    <Phrase Key="Round" Text="Round"/>
+    <Phrase Key="Rectangle" Text="Rectangle"/>
+    <Phrase Key="Ellipse" Text="Ellipse"/>
+    <Phrase Key="Polygon" Text="Polygon"/>
+    <Phrase Key="Star" Text="Star"/>
+    <Phrase Key="Acrylic" Text="Acrylic"/>
+    <Phrase Key="Mica" Text="Mica"/>
+    <Phrase Key="LiquidGlass" Text="Liquid glass"/>
+    <Phrase Key="Velvet" Text="Velvet"/>
+    <Phrase Key="Metal" Text="Metal"/>
+    <Phrase Key="Wood" Text="Wood"/>
+    <Phrase Key="Desktop" Text="Desktop"/>
+    <Phrase Key="Window" Text="Window"/>
+    <Phrase Key="Element" Text="Element"/>
+    <Phrase Key="Flat" Text="Flat"/>
+    <Phrase Key="Quarter" Text="Quarter"/>
+    <Phrase Key="End" Text="End"/>
+    <Phrase Key="Burl" Text="Burl"/>
+    <Phrase Key="LivingNoise" Text="Living noise"/>
+    <Phrase Key="Checkerboard" Text="Checkerboard"/>
+    <Phrase Key="Gradient" Text="Gradient"/>
+    <Phrase Key="Picture" Text="Picture"/>
+    <Phrase Key="Stripes" Text="Stripes"/>
+    <Phrase Key="Dots" Text="Dots"/>
+    <Phrase Key="Grid" Text="Grid"/>
+    <Phrase Key="Hexagon" Text="Hexagon"/>
+    <Phrase Key="Hatch" Text="Hatch"/>
+    <Phrase Key="Weave" Text="Weave"/>
+    <Phrase Key="Simplex" Text="Simplex"/>
+    <Phrase Key="Perlin" Text="Perlin"/>
+    <Phrase Key="Value" Text="Value"/>
+    <Phrase Key="Worley" Text="Worley"/>
+    <Phrase Key="Ridged" Text="Ridged"/>
+    <Phrase Key="Turbulence" Text="Turbulence"/>
+    <Phrase Key="VoronoiBorders" Text="Voronoi borders"/>
+    <Phrase Key="CombustibleVoronoi" Text="Combustible Voronoi"/>
+    <Phrase Key="Circuit" Text="Circuit"/>
+    <Phrase Key="Quadratic" Text="Quadratic"/>
+    <Phrase Key="BurningShip" Text="Burning ship"/>
+    <Phrase Key="Tricorn" Text="Tricorn"/>
+    <Phrase Key="Celtic" Text="Celtic"/>
+    <Phrase Key="Multibrot" Text="Multibrot"/>
+    <Phrase Key="Newton" Text="Newton"/>
+</Language>

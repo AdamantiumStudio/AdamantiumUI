@@ -4,6 +4,7 @@ using System.Linq;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -14,7 +15,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 public partial class DragDropWindowViewModel : IWindowAware
 {
     public string WindowShellKey => "dragdrop";
-    public string Title => "Drag & Drop Window";
+    public string Title => DragDropStrings.Window;
     public double Width => 360;
     public double Height => 480;
 

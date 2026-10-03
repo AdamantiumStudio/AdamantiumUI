@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Title" Text="TreeView — настоящая файловая система"/>
+    <Phrase Key="Hint" Text="Направлено на диск и строится лениво: каждая папка читает содержимое, только когда её раскрывают (у папки вроде System32 тысячи соседей — нагрузочный тест для будущей виртуализации). Двойной щелчок раскрывает и сворачивает папку; диск и режим выделения выбираются ниже."/>
+    <Phrase Key="Drive" Text="Диск:"/>
+    <Phrase Key="SelectionMode" Text="Режим выделения:"/>
+    <Phrase Key="Refresh" Text="Обновить"/>
+    <Phrase Key="ExpandSelected" Text="Раскрыть выбранное (из VM)"/>
+    <Phrase Key="Single" Text="Одиночный"/>
+    <Phrase Key="Multiple" Text="Множественный"/>
+    <Phrase Key="Extended" Text="Расширенный"/>
+</Language>

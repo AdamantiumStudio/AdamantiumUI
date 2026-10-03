@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Title" Text="Контекстное меню — построено вью-моделью"/>
+    <Phrase Key="Hint" Text="Щёлкните поверхность правой кнопкой. Вложенные подменю (▸) и разделители приходят из MenusViewModel через HierarchicalDataTemplate — в виде ничего не захардкожено."/>
+    <Phrase Key="RightClickMe" Text="Щёлкните правой кнопкой  —  вложенные подменю (▸) и разделители, всё из VM"/>
+    <Phrase Key="LastAction" Text="Последнее действие:"/>
+    <Phrase Key="Report" Select="pick" Nothing="— пока ничего (щёлкните поверхность правой кнопкой и выберите пункт)" Item="Выбрано: {item}"
+            ItemFrom="Выбрано: {from} · {item}"/>
+
+    <Phrase Key="Cut" Text="Вырезать"/>
+    <Phrase Key="Copy" Text="Копировать"/>
+    <Phrase Key="Paste" Text="Вставить"/>
+    <Phrase Key="Zoom" Text="Масштаб"/>
+    <Phrase Key="ResetZoom" Text="Сбросить до 100%"/>
+    <Phrase Key="FitToWindow" Text="Вписать в окно"/>
+    <Phrase Key="Presets" Text="Заготовки"/>
+    <Phrase Key="Arrange" Text="Упорядочить"/>
+    <Phrase Key="BringToFront" Text="На передний план"/>
+    <Phrase Key="SendToBack" Text="На задний план"/>
+    <Phrase Key="RecentFiles" Text="Недавние файлы"/>
+    <Phrase Key="Open" Text="Открыть"/>
+    <Phrase Key="Reveal" Text="Показать в Проводнике"/>
+    <Phrase Key="RemoveFromList" Text="Убрать из списка"/>
+    <Phrase Key="Properties" Text="Свойства…"/>
+</Language>

@@ -1,0 +1,30 @@
+<Language>
+    <Phrase Key="InWindow" Text="Перетаскивание (внутри окна)"/>
+    <Phrase Key="InWindowHint" Text="Нажмите на элемент и сдвиньте за порог: он превращается в призрак, который следует за курсором (настоящее многослойное окно ОС). Отпустите над панелью: её DropCommand переносит элемент во вью-модели, и списки перепривязываются."/>
+    <Phrase Key="OpenDropWindow" Text="Открыть окно для броска (проверка между окнами)"/>
+    <Phrase Key="OverrideCursor" Text="Свой курсор над «Животными»"/>
+    <Phrase Key="Fruits" Text="Фрукты"/>
+    <Phrase Key="HandleOnly" Text="Тянуть только за ручку"/>
+    <Phrase Key="Spread" Text="Раздвигать"/>
+    <Phrase Key="Animals" Text="Животные"/>
+    <Phrase Key="AcceptDrop" Text="Принимать бросок"/>
+    <Phrase Key="ColorsWrapPanel" Text="Цвета (WrapPanel)"/>
+    <Phrase Key="Flow" Text="Направление:"/>
+    <Phrase Key="AcrossApplications" Text="Между приложениями (перетаскивание ОС)"/>
+    <Phrase Key="AcrossApplicationsHint" Text="Те же команды, но через мост ОС: бросьте файлы или текст из Проводника или редактора в левую карточку и вытащите элементы правой карточки в Блокнот или папку Проводника. Данные передаются в нейтральных форматах (DataFormats.Text / DataFormats.Files) — вью-модель не видит типов платформы."/>
+    <Phrase Key="DropFromApp" Text="Бросок из другого приложения"/>
+    <Phrase Key="DropFromAppHint" Text="Перетащите сюда файлы из Проводника или выделенный текст из редактора."/>
+    <Phrase Key="Clear" Text="Очистить"/>
+    <Phrase Key="Dropped" Select="kind" File="файл: {value}" Image="картинка: PNG, {size}" Html="html: {value}"
+            Rtf="rtf: {value}" PlainText="текст: {value}" InApp="из приложения: {value}"/>
+    <Phrase Key="Bytes" Count="count" One="{count} байт" Few="{count} байта" Many="{count} байт" Other="{count} байта"/>
+    <Phrase Key="DroppedPictures" Text="Брошенные картинки"/>
+    <Phrase Key="DroppedPicturesHint" Text="Бросьте сюда файл картинки или перетащите картинку прямо из браузера."/>
+    <Phrase Key="DragOut" Text="Вытащить в другое приложение"/>
+    <Phrase Key="DragOutHint" Text="AllowExternalDrag отдаёт ОС весь жест вместе с призраком. Заметки несут ещё HTML и RTF — бросьте одну в WordPad, и форматирование сохранится. Файл пишется, только если бросок состоялся."/>
+    <Phrase Key="TreeDwell" Text="Дерево — задержитесь над папкой, и она раскроется"/>
+
+    <Phrase Key="Window" Text="Окно перетаскивания"/>
+    <Phrase Key="Wildlife" Text="Дикая природа"/>
+    <Phrase Key="WindowHint" Text="Перетаскивайте элементы в списки главного окна и обратно."/>
+</Language>

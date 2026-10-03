@@ -546,26 +546,27 @@ public class DataPagerTests
 
     // ---- "Page [n] of N" ------------------------------------------------------------------------------------------
 
-    /// <summary>The box's value and the tail beside it are separate from the sentence, because one of them is edited.</summary>
+    /// <summary>The box holds the page and the count stands beside it; the words round them are the theme's.</summary>
     [Test]
-    public void ThePageBoxAndItsTail_ReportWhereTheReaderIs()
+    public void ThePageBoxAndTheCount_ReportWhereTheReaderIs()
     {
         var pager = Pager(10000, 10);
 
         Assert.That(pager.PageNumberText, Is.EqualTo("11"));
-        Assert.That(pager.PageCountText, Is.EqualTo("of 10000"));
-        Assert.That(pager.PageText, Is.EqualTo("Page 11 of 10000"));
+        Assert.That(pager.PageCount, Is.EqualTo(10000));
+        Assert.That(pager.IsEndKnown, Is.True);
     }
 
-    /// <summary>With the end still unknown the tail says so rather than naming a number the pager does not have.</summary>
+    /// <summary>With the end still unknown the pager says so rather than naming a number it does not have.</summary>
     [Test]
-    public async Task WithAnUnknownTotal_TheTailSaysSoRatherThanNamingAZero()
+    public async Task WithAnUnknownTotal_TheEndIsNotKnownRatherThanAZero()
     {
         var server = Server([null, null], ["a", "b", "c"], ["d", "e", "f"]);
         var pager = new DataPager { PageSize = 3, Source = server };
         await server.MoveToPageAsync(0);
 
         Assert.That(pager.PageNumberText, Is.EqualTo("1"));
-        Assert.That(pager.PageCountText, Is.EqualTo("of ?"));
+        Assert.That(pager.IsEndKnown, Is.False);
+        Assert.That(pager.PageCount, Is.EqualTo(-1));
     }
 }

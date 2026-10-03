@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
@@ -154,19 +154,11 @@ public class DataPager : Control
     public static readonly AdamantiumProperty CanGoForwardProperty = AdamantiumProperty.Register(nameof(CanGoForward),
         typeof(bool), typeof(DataPager), new PropertyMetadata(false));
 
-    /// <summary>Where the reader is, as a sentence: "Page 3 of 12", or "Page 3 of ?" while the end has not been found.
-    /// A question mark rather than a number the pager does not have - "of 0" would be a lie with a straight face.</summary>
-    public static readonly AdamantiumProperty PageTextProperty = AdamantiumProperty.Register(nameof(PageText),
-        typeof(string), typeof(DataPager), new PropertyMetadata(string.Empty));
-
-    /// <summary>The current page as a bare number, counted from one - what the box a reader types into holds. Separate
-    /// from <see cref="PageText"/> because that is a sentence and this is an editable value.</summary>
+    /// <summary>The current page as a bare number, counted from one - what the box a reader types into holds. The words
+    /// around it ("Page 3 of 12", "of ?" while the end has not been found) are the theme's, made of this,
+    /// <see cref="PageCount"/> and <see cref="IsEndKnown"/>.</summary>
     public static readonly AdamantiumProperty PageNumberTextProperty = AdamantiumProperty.Register(
         nameof(PageNumberText), typeof(string), typeof(DataPager), new PropertyMetadata(string.Empty));
-
-    /// <summary>The tail of the sentence the box sits inside: "of 12", or "of ?" while the end has not been found.</summary>
-    public static readonly AdamantiumProperty PageCountTextProperty = AdamantiumProperty.Register(
-        nameof(PageCountText), typeof(string), typeof(DataPager), new PropertyMetadata(string.Empty));
 
     /// <summary>The row of page numbers, gaps included - see <see cref="PagerPageItem"/>. Rebuilt whenever the page or
     /// the count moves.</summary>
@@ -311,25 +303,11 @@ public class DataPager : Control
         private set => SetValue(CanGoForwardProperty, value);
     }
 
-    /// <inheritdoc cref="PageTextProperty"/>
-    public string PageText
-    {
-        get => GetValue<string>(PageTextProperty);
-        private set => SetValue(PageTextProperty, value);
-    }
-
     /// <inheritdoc cref="PageNumberTextProperty"/>
     public string PageNumberText
     {
         get => GetValue<string>(PageNumberTextProperty);
         private set => SetValue(PageNumberTextProperty, value);
-    }
-
-    /// <inheritdoc cref="PageCountTextProperty"/>
-    public string PageCountText
-    {
-        get => GetValue<string>(PageCountTextProperty);
-        private set => SetValue(PageCountTextProperty, value);
     }
 
     /// <inheritdoc cref="PageItemsProperty"/>
@@ -708,7 +686,7 @@ public class DataPager : Control
     }
 
     private PagerPageItem Numbered(int pageIndex, int current) =>
-        new((pageIndex + 1).ToString(CultureInfo.CurrentCulture), pageIndex == current, true, new GoToPage(this, pageIndex));
+        new((pageIndex + 1).ToString(Languages.Culture), pageIndex == current, true, new GoToPage(this, pageIndex));
 
     private PagerPageItem Gap(int target) => new("…", false, true, new GoToPage(this, target));
 
@@ -764,9 +742,7 @@ public class DataPager : Control
             IsPageChanging = false;
             CanGoBack = false;
             CanGoForward = false;
-            PageText = string.Empty;
             PageNumberText = string.Empty;
-            PageCountText = string.Empty;
             PageItems = [];
             return;
         }
@@ -782,10 +758,7 @@ public class DataPager : Control
 
         CanGoBack = _paged.CanChangePage && _paged.PageIndex > 0;
         CanGoForward = _paged.CanChangePage && (!pages.HasValue || _paged.PageIndex < pages.Value - 1);
-        var countText = pages.HasValue ? pages.Value.ToString(CultureInfo.CurrentCulture) : "?";
-        PageNumberText = (_paged.PageIndex + 1).ToString(CultureInfo.CurrentCulture);
-        PageCountText = $"of {countText}";
-        PageText = $"Page {PageNumberText} {PageCountText}";
+        PageNumberText = (_paged.PageIndex + 1).ToString(Languages.Culture);
 
         if (_pageBox is { IsFocused: false }) RefreshPageBox();
 

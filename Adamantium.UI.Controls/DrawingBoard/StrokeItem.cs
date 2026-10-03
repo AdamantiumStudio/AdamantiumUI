@@ -84,7 +84,7 @@ public class StrokeItem : ICanvasItem
 
     /// <summary>How long the stroke is, because one stroke looks like another in a list and the count is the only
     /// thing that tells them apart at a glance.</summary>
-    public string Title => $"Stroke ({_points.Count})";
+    public int? Parts => _points.Count;
 
 
     /// <summary>Where it stands in paint order - stamped by the scene. See ICanvasItem.Order.</summary>

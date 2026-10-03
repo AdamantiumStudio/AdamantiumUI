@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -126,7 +127,7 @@ internal sealed class BoundValue : FundamentalUIComponent
         // The USER'S culture first - "2,5" is what a Russian keyboard produces and what the editor showed him - and the
         // invariant one after it, because a value that came from a file or from code is written "2.5" whatever the
         // machine is set to. Trying only one of the two makes half the sources unparsable.
-        return Convert(edited, underlying, CultureInfo.CurrentCulture, out value)
+        return Convert(edited, underlying, Languages.Culture, out value)
                || Convert(edited, underlying, CultureInfo.InvariantCulture, out value);
     }
 

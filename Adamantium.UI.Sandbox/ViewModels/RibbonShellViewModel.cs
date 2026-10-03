@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Adamantium.Core.Commands;
@@ -6,6 +6,7 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -15,12 +16,15 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 public partial class RibbonShellViewModel : IWindowAware
 {
     public string WindowShellKey => "ribbon";
-    public string Title => "Ribbon — Adamantium editor shell";
+    public string Title => RibbonShellStrings.Title;
     public double Width => 1180;
     public double Height => 720;
 
-    /// <summary>The demo's stand-in for a document.</summary>
-    [Bindable] private string _status = "Ready.";
+    /// <summary>The demo's stand-in for a document: what was done last, which the status line says.</summary>
+    [Bindable] private RibbonAction _lastAction = RibbonAction.Ready;
+
+    /// <summary>The file format the last import or export was in.</summary>
+    [Bindable] private string _format;
 
     // This window has its OWN swapchain, so its presentation is its own setting - which is the point of comparing the
     // two shells side by side: one can run unthrottled while the other stays tear-free, in one process.
@@ -49,29 +53,29 @@ public partial class RibbonShellViewModel : IWindowAware
     /// shows itself only while this names its own slot; the collection they list is this one view model's.</summary>
     [Bindable] private RibbonQuickAccessPlacement _quickAccessPlacement = RibbonQuickAccessPlacement.Caption;
 
-    [Bindable] private string _shadingMode = "Lit";
+    [Bindable] private ShadingMode _shadingMode = ShadingMode.Lit;
 
     /// <summary>An icon held as DATA - plain path text, converted to a Geometry by the binding.</summary>
     public string MaterialIcon => "M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5";
 
-    public IEnumerable<string> ShadingModes { get; } = ["Lit", "Unlit", "Normals", "UV checker"];
+    public IEnumerable<ShadingMode> ShadingModes { get; } = Enum.GetValues<ShadingMode>();
 
     // The gates name the generated [Bindable] properties directly - both halves come out of one generator pass.
-    [Command(CanExecute = nameof(HasClipboard))] private void Paste() => Status = "Pasted from the clipboard.";
+    [Command(CanExecute = nameof(HasClipboard))] private void Paste() => LastAction = RibbonAction.Pasted;
 
-    [Command] private void PasteKeepFormatting() => Status = "Pasted, keeping the formatting.";
+    [Command] private void PasteKeepFormatting() => LastAction = RibbonAction.PastedKeepingFormatting;
 
-    [Command] private void PasteValuesOnly() => Status = "Pasted the values only.";
+    [Command] private void PasteValuesOnly() => LastAction = RibbonAction.PastedValuesOnly;
 
-    [Command] private void PasteSpecial() => Status = "Paste special...";
+    [Command] private void PasteSpecial() => LastAction = RibbonAction.PasteSpecial;
 
     /// <summary>The rows of Paste's drop-down, as DATA - which is what lets the command be put in the quick-access bar
     /// and keep its arrow there. Built on first read: the commands are generated, so they exist by then.</summary>
     public IReadOnlyList<MenuCommand> PasteOptions => _pasteOptions ??=
     [
-        new MenuCommand { Header = "Keep formatting", Command = PasteKeepFormattingCommand },
-        new MenuCommand { Header = "Values only", Command = PasteValuesOnlyCommand },
-        new MenuCommand { Header = "Paste special...", Command = PasteSpecialCommand }
+        new MenuCommand { Header = nameof(RibbonShellStrings.KeepFormatting), Command = PasteKeepFormattingCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.ValuesOnly), Command = PasteValuesOnlyCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.PasteSpecial), Command = PasteSpecialCommand }
     ];
 
     private IReadOnlyList<MenuCommand> _pasteOptions;
@@ -79,10 +83,10 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>The rows of Add's drop-down - data for the same reason.</summary>
     public IReadOnlyList<MenuCommand> PrimitiveOptions => _primitiveOptions ??=
     [
-        new MenuCommand { Header = "Cube", Command = AddCubeCommand },
-        new MenuCommand { Header = "Sphere", Command = AddSphereCommand },
-        new MenuCommand { Header = "Plane", Command = AddPlaneCommand },
-        new MenuCommand { Header = "Empty entity", Command = AddEntityCommand }
+        new MenuCommand { Header = nameof(RibbonShellStrings.Cube), Command = AddCubeCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.Sphere), Command = AddSphereCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.Plane), Command = AddPlaneCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.EmptyEntity), Command = AddEntityCommand }
     ];
 
     private IReadOnlyList<MenuCommand> _primitiveOptions;
@@ -92,69 +96,69 @@ public partial class RibbonShellViewModel : IWindowAware
     /// template the view points <c>Ribbon.CommandContextMenuTemplate</c> at.</summary>
     public IReadOnlyList<MenuCommand> SnapMenuRows => _snapMenuRows ??=
     [
-        new MenuCommand { Header = "Snap settings...", Command = SnapSettingsCommand },
-        new MenuCommand { Header = "Clear all snaps", Command = ClearSnapsCommand }
+        new MenuCommand { Header = nameof(RibbonShellStrings.SnapSettings), Command = SnapSettingsCommand },
+        new MenuCommand { Header = nameof(RibbonShellStrings.ClearSnaps), Command = ClearSnapsCommand }
     ];
 
     private IReadOnlyList<MenuCommand> _snapMenuRows;
 
-    [Command] private void SnapSettings() => Status = "Snap settings...";
+    [Command] private void SnapSettings() => LastAction = RibbonAction.SnapSettings;
 
-    [Command] private void ClearSnaps() => Status = "Snaps cleared.";
+    [Command] private void ClearSnaps() => LastAction = RibbonAction.SnapsCleared;
 
     [Command(CanExecute = nameof(HasSelection))] private void Cut()
     {
         HasClipboard = true;
-        Status = "Cut the selection.";
+        LastAction = RibbonAction.Cut;
     }
 
     [Command(CanExecute = nameof(HasSelection))] private void Copy()
     {
         HasClipboard = true;
-        Status = "Copied the selection.";
+        LastAction = RibbonAction.Copied;
     }
 
     [Command(CanExecute = nameof(HasSelection))] private void Delete()
     {
         HasSelection = false;
-        Status = "Deleted the selection.";
+        LastAction = RibbonAction.Deleted;
     }
 
-    [Command(CanExecute = nameof(HasSelection))] private void Duplicate() => Status = "Duplicated the selection.";
+    [Command(CanExecute = nameof(HasSelection))] private void Duplicate() => LastAction = RibbonAction.Duplicated;
 
     [Command] private void SelectAll()
     {
         HasSelection = true;
-        Status = "Selected everything.";
+        LastAction = RibbonAction.SelectedAll;
     }
 
     [Command] private void SelectNone()
     {
         HasSelection = false;
-        Status = "Selection cleared.";
+        LastAction = RibbonAction.SelectionCleared;
     }
 
-    [Command] private void AddEntity() => Status = "Added an empty entity.";
+    [Command] private void AddEntity() => LastAction = RibbonAction.AddedEntity;
 
-    [Command] private void AddCube() => Add("cube");
+    [Command] private void AddCube() => Add(RibbonAction.AddedCube);
 
-    [Command] private void AddSphere() => Add("sphere");
+    [Command] private void AddSphere() => Add(RibbonAction.AddedSphere);
 
-    [Command] private void AddPlane() => Add("plane");
+    [Command] private void AddPlane() => Add(RibbonAction.AddedPlane);
 
-    [Command] private void Extrude() => Status = "Extruded the selected faces.";
+    [Command] private void Extrude() => LastAction = RibbonAction.Extruded;
 
-    [Command] private void Bevel() => Status = "Bevelled the selected edges.";
+    [Command] private void Bevel() => LastAction = RibbonAction.Bevelled;
 
-    [Command] private void Subdivide() => Status = "Subdivided the mesh.";
+    [Command] private void Subdivide() => LastAction = RibbonAction.Subdivided;
 
-    [Command] private void NewMaterial() => Status = "Created a new material.";
+    [Command] private void NewMaterial() => LastAction = RibbonAction.NewMaterial;
 
-    [Command] private void EditAlbedo() => Status = "Editing the albedo channel.";
+    [Command] private void EditAlbedo() => LastAction = RibbonAction.EditingAlbedo;
 
-    [Command] private void EditNormal() => Status = "Editing the normal channel.";
+    [Command] private void EditNormal() => LastAction = RibbonAction.EditingNormal;
 
-    [Command] private void EditRoughness() => Status = "Editing the roughness channel.";
+    [Command] private void EditRoughness() => LastAction = RibbonAction.EditingRoughness;
 
     /// <summary>The gallery's choices. DATA, so the dropped-down gallery can build its own cells from the same template.</summary>
     private static readonly MaterialSwatch[] MaterialChoices =
@@ -190,29 +194,29 @@ public partial class RibbonShellViewModel : IWindowAware
 
     // Home carries a real editor's worth of groups, so the band's LAST resort - scrolling, once every group has been
     // collapsed and it still does not fit - is reachable by dragging the window narrow.
-    [Command] private void AlignLeft() => Status = "Aligned to the left.";
+    [Command] private void AlignLeft() => LastAction = RibbonAction.AlignedLeft;
 
-    [Command] private void AlignCenter() => Status = "Centered.";
+    [Command] private void AlignCenter() => LastAction = RibbonAction.Centered;
 
-    [Command] private void Distribute() => Status = "Distributed evenly.";
+    [Command] private void Distribute() => LastAction = RibbonAction.Distributed;
 
-    [Command] private void GroupSelection() => Status = "Grouped the selection.";
+    [Command] private void GroupSelection() => LastAction = RibbonAction.Grouped;
 
-    [Command] private void BringForward() => Status = "Brought forward.";
+    [Command] private void BringForward() => LastAction = RibbonAction.BroughtForward;
 
-    [Command] private void SendBackward() => Status = "Sent backward.";
+    [Command] private void SendBackward() => LastAction = RibbonAction.SentBackward;
 
-    [Command] private void AddLight() => Status = "Added a light.";
+    [Command] private void AddLight() => LastAction = RibbonAction.AddedLight;
 
-    [Command] private void BakeLighting() => Status = "Baking the lighting.";
+    [Command] private void BakeLighting() => LastAction = RibbonAction.Baking;
 
-    [Command] private void AddCollider() => Status = "Added a collider.";
+    [Command] private void AddCollider() => LastAction = RibbonAction.AddedCollider;
 
-    [Command] private void Simulate() => Status = "Simulating.";
+    [Command] private void Simulate() => LastAction = RibbonAction.Simulating;
 
-    [Command] private void Measure() => Status = "Measuring.";
+    [Command] private void Measure() => LastAction = RibbonAction.Measuring;
 
-    [Command] private void Annotate() => Status = "Annotating.";
+    [Command] private void Annotate() => LastAction = RibbonAction.Annotating;
 
     // The ribbon hands over a DESCRIPTION and never touches this collection - the shell decides what its own items are
     // made of. Here they are WindowCommands, the type the caption bar already lists.
@@ -246,7 +250,7 @@ public partial class RibbonShellViewModel : IWindowAware
         // Nothing is written back to the ribbon: it is pointed at this collection (Ribbon.QuickAccessItems in the view)
         // and recognizes its own commands in it by key. A view model that kept the ribbon's control to mark it would be
         // holding a control.
-        Status = "Added to the quick-access bar.";
+        LastAction = RibbonAction.AddedToQuickAccess;
     }
 
     // Which of this view model's own states each named command shows. A command that names none stays a plain button.
@@ -309,14 +313,14 @@ public partial class RibbonShellViewModel : IWindowAware
             QuickAccess.RemoveAt(i);
         }
 
-        Status = "Removed from the quick-access bar.";
+        LastAction = RibbonAction.RemovedFromQuickAccess;
     }
 
     [Command] private void MoveQuickAccess()
     {
         var below = QuickAccessPlacement == RibbonQuickAccessPlacement.Caption;
         QuickAccessPlacement = below ? RibbonQuickAccessPlacement.BelowRibbon : RibbonQuickAccessPlacement.Caption;
-        Status = below ? "Quick access moved below the ribbon." : "Quick access moved back to the caption.";
+        LastAction = below ? RibbonAction.QuickAccessBelow : RibbonAction.QuickAccessInCaption;
     }
 
     /// <summary>Which shape the File menu takes - the window-wide backstage, or the panel dropped under the button.</summary>
@@ -324,30 +328,32 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void Import(object format)
     {
-        Status = $"Imported a {format} file.";
+        Format = format as string;
+        LastAction = RibbonAction.Imported;
     }
 
     [Command] private void Export(object format)
     {
-        Status = $"Exported the scene as {format}.";
+        Format = format as string;
+        LastAction = RibbonAction.Exported;
     }
 
-    [Command] private void NewScene() => Status = "New scene.";
+    [Command] private void NewScene() => LastAction = RibbonAction.NewScene;
 
-    [Command] private void OpenScene() => Status = "Opened a scene.";
+    [Command] private void OpenScene() => LastAction = RibbonAction.OpenedScene;
 
-    [Command] private void Exit() => Status = "Exit requested.";
+    [Command] private void Exit() => LastAction = RibbonAction.ExitRequested;
 
-    [Command] private void Save() => Status = "Scene saved.";
+    [Command] private void Save() => LastAction = RibbonAction.Saved;
 
-    [Command] private void Undo() => Status = "Undone.";
+    [Command] private void Undo() => LastAction = RibbonAction.Undone;
 
-    [Command] private void Redo() => Status = "Redone.";
+    [Command] private void Redo() => LastAction = RibbonAction.Redone;
 
-    private void Add(string what)
+    private void Add(RibbonAction added)
     {
         HasSelection = true;
-        Status = $"Added a {what}.";
+        LastAction = added;
     }
 
     // On the SHELL, not on either control: the user reorders it and it outlives a session. Lazy, so the generated
@@ -356,8 +362,8 @@ public partial class RibbonShellViewModel : IWindowAware
 
     public ObservableCollection<WindowCommand> QuickAccess => _quickAccess ??=
     [
-        new WindowCommand { IconData = "M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2", Label = "Save", ToolTip = "Save the scene", Command = SaveCommand },
-        new WindowCommand { IconData = "M6,4 L2,7 L6,10 M2,7 L10,7 A3,3 0 0 1 10,13 L8,13", Label = "Undo", ToolTip = "Undo", Command = UndoCommand },
-        new WindowCommand { IconData = "M8,4 L12,7 L8,10 M12,7 L4,7 A3,3 0 0 0 4,13 L6,13", Label = "Redo", ToolTip = "Redo", Command = RedoCommand },
+        new WindowCommand { IconData = "M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2", Label = RibbonShellStrings.Save, ToolTip = RibbonShellStrings.SaveTip, Command = SaveCommand },
+        new WindowCommand { IconData = "M6,4 L2,7 L6,10 M2,7 L10,7 A3,3 0 0 1 10,13 L8,13", Label = RibbonShellStrings.Undo, ToolTip = RibbonShellStrings.Undo, Command = UndoCommand },
+        new WindowCommand { IconData = "M8,4 L12,7 L8,10 M12,7 L4,7 A3,3 0 0 0 4,13 L6,13", Label = RibbonShellStrings.Redo, ToolTip = RibbonShellStrings.Redo, Command = RedoCommand },
     ];
 }

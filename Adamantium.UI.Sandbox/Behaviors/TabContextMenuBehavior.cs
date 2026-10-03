@@ -4,6 +4,8 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core.Behaviors;
+using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
@@ -44,16 +46,21 @@ public class TabContextMenuBehavior : Behavior<DockingArea>
     {
         var menu = new ContextMenu();
 
-        menu.Items.Add(Item("Close", () => _ = _area.ClosePaneAsync(pane.Id)));
-        menu.Items.Add(Item("Close other tabs", () => _ = _area.CloseOtherPanesAsync(pane.Id)));
-        menu.Items.Add(Item("Close all tabs in this panel", () => _ = _area.ClosePanesOfGroupAsync(pane.Id)));
-        menu.Items.Add(Item("Close all but pinned", () => _ = _area.CloseUnpinnedPanesAsync(pane.Id)));
-        menu.Items.Add(Item("Close all tabs (everywhere)", () => _ = _area.CloseAllPanesAsync()));
-        menu.Items.Add(Item("Pin / unpin this tab", () => pane.IsPinned = !pane.IsPinned));
+        menu.Items.Add(Item(nameof(DockingStrings.CloseTab), () => _ = _area.ClosePaneAsync(pane.Id)));
+        menu.Items.Add(Item(nameof(DockingStrings.CloseOthers), () => _ = _area.CloseOtherPanesAsync(pane.Id)));
+        menu.Items.Add(Item(nameof(DockingStrings.ClosePanel), () => _ = _area.ClosePanesOfGroupAsync(pane.Id)));
+        menu.Items.Add(Item(nameof(DockingStrings.CloseUnpinned), () => _ = _area.CloseUnpinnedPanesAsync(pane.Id)));
+        menu.Items.Add(Item(nameof(DockingStrings.CloseAll), () => _ = _area.CloseAllPanesAsync()));
+        menu.Items.Add(Item(nameof(DockingStrings.TogglePin), () => pane.IsPinned = !pane.IsPinned));
 
         return menu;
     }
 
-    private static MenuItem Item(string header, System.Action execute) =>
-        new() { Header = header, Command = new AdamantiumCommand(execute) };
+    // Bound, not written: the menu is built once and has to follow the language from then on.
+    private static MenuItem Item(string phrase, System.Action execute)
+    {
+        var item = new MenuItem { Command = new AdamantiumCommand(execute) };
+        item.SetBinding(MenuItem.HeaderProperty, new Localize(DockingStrings.Current, phrase));
+        return item;
+    }
 }

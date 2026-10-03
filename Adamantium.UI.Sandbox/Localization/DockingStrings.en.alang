@@ -1,0 +1,75 @@
+<Language>
+    <Phrase Key="Intro" Text="An editor-shaped arrangement written as ZONES only. Nothing here says what share of what a group takes - the author writes WHERE (center, right, bottom) and the split tree is derived from that. Drag the grips between the areas: they rewrite the layout's own shares, which is the number a save would read."/>
+
+    <Phrase Key="Pane" Text="Pane"/>
+    <Phrase Key="CreateIn" Text="Create in"/>
+    <Phrase Key="Navigate" Text="Navigate"/>
+    <Phrase Key="NewPane" Text="New pane"/>
+    <Phrase Key="SaveLayout" Text="Save layout"/>
+    <Phrase Key="Restore" Text="Restore"/>
+    <Phrase Key="Forget" Text="Forget"/>
+    <Phrase Key="PinnedRow" Text="Pinned tabs in a separate row"/>
+
+    <Phrase Key="Scene" Text="Scene"/>
+    <Phrase Key="Game" Text="Game"/>
+    <Phrase Key="Inspector" Text="Inspector"/>
+    <Phrase Key="Hierarchy" Text="Hierarchy"/>
+    <Phrase Key="Properties" Text="Properties"/>
+    <Phrase Key="Console" Text="Console"/>
+    <Phrase Key="Output" Text="Output"/>
+    <Phrase Key="Errors" Text="Errors"/>
+    <Phrase Key="ErrorsHint" Text="Errors - center, top or bottom only; never the sides (Pane.Allowed)"/>
+    <Phrase Key="Unsaved" Text="Unsaved changes (refuses to close outright)"/>
+    <Phrase Key="AskFirst" Text="Ask in a dialog before closing"/>
+
+    <Phrase Key="CloseTab" Text="Close"/>
+    <Phrase Key="CloseOthers" Text="Close other tabs"/>
+    <Phrase Key="ClosePanel" Text="Close all tabs in this panel"/>
+    <Phrase Key="CloseUnpinned" Text="Close all but pinned"/>
+    <Phrase Key="CloseAll" Text="Close all tabs (everywhere)"/>
+    <Phrase Key="TogglePin" Text="Pin / unpin this tab"/>
+
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="Floating" Text="Floating"/>
+
+    <Phrase Key="Answer" Select="answer"
+            NothingAsked="Nothing asked yet. Try dropping a fourth tab into a panel, or pulling out a panel's only tab."
+            Refused="REFUSED: '{panes}' has unsaved changes. Untick the box in it and try again."
+            UserClosed="User said close '{panes}'."
+            UserKept="User kept '{panes}' open - and stopped the rest of the operation."
+            Unsaved="'{panes}' now has unsaved changes - closing it will be refused outright."
+            Saved="'{panes}' is saved again - it will close normally."
+            Asks="Closing '{panes}' will now ASK first, in a dialog."
+            DoesNotAsk="'{panes}' closes without asking."
+            OwnRow="Pinned tabs get a row of their own."
+            SharedRow="Pinned tabs share the row with the rest."
+            PanelTornOff="Tearing off the panel ({panes}) - allowed."
+            TabTornOff="Tearing off the tab ({panes}) - allowed."
+            Docked="Docking {panes} {zone} - allowed."/>
+    <Phrase Key="ZoneTo" Select="zone" Center="to the center" Left="to the left" Right="to the right" Top="to the top"
+            Bottom="to the bottom" Floating="into a window of its own"/>
+
+    <Phrase Key="Layout" Select="report"
+            Pending="Reading the saved layout..."
+            NoSavedLayout="No saved layout yet ({file}). Rearrange the panels and press Save."
+            RestoredFromFile="Restored the layout saved in {file}."
+            Unreadable="The saved layout could not be read - starting from the arrangement in the markup."
+            NotOnScreen="Nothing to save - the area is not on screen yet."
+            SavedToFile="Saved to {file}. Rearrange things and press Restore - or restart the app, it survives that."
+            NothingSaved="Nothing saved yet - press Save first."
+            Restored="Restored. Documents are NOT part of it: Pane.Restore says they belong to a session, not to the workspace."
+            NamesNothing="The saved text names nothing this area still has."
+            Forgotten="Forgotten. Next start gives you the arrangement written in the markup."/>
+
+    <Phrase Key="CloseDocument" Text="Close document"/>
+    <Phrase Key="CloseQuestion" Text="Close '{pane}'?"/>
+
+    <Phrase Key="OpenedByRegion" Text="Opened by the region, not by the markup. Navigating to this name again activates this very tab - wherever it has been dragged to since."/>
+    <Phrase Key="Origin" Select="restored" True="restored with the layout" False="{zone}"/>
+    <Phrase Key="OpenedIn" Select="zone" Center="the document well" Floating="a window of its own - and float-only: it cannot be docked back"
+            Left="left" Top="top" Right="right" Bottom="bottom"/>
+</Language>

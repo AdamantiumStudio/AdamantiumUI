@@ -1,4 +1,5 @@
 using Adamantium.MVVM;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -34,15 +35,17 @@ public partial class MarkupViewModel : TabPageViewModel
         HeavyBuilds++;
     }
 
-    /// <summary>The two rows of each x:Shared arm. Plain strings: the section is about the SETTER, not about the data.</summary>
-    public string[] SharedRows { get; } = ["right-click me", "...and me"];
+    /// <summary>The two rows of each x:Shared arm, as the keys of their phrases. Plain strings: the section is about the
+    /// SETTER, not about the data.</summary>
+    public string[] SharedRows { get; } = [nameof(MarkupStrings.RightClickMe), nameof(MarkupStrings.AndMe)];
 
-    public string[] OwnRows { get; } = ["right-click me", "...and me"];
+    public string[] OwnRows { get; } = [nameof(MarkupStrings.RightClickMe), nameof(MarkupStrings.AndMe)];
 
-    /// <summary>Rows for the x:DataType section - plain data, so the template's declared type is a real one.</summary>
+    /// <summary>Rows for the x:DataType section - plain data, so the template's declared type is a real one. A title is
+    /// a phrase key, or a line of markup said as it is.</summary>
     public MarkupRow[] Rows { get; } =
     [
-        new MarkupRow("bound through a template that names its type"),
+        new MarkupRow(nameof(MarkupStrings.BoundThroughTemplate)),
         new MarkupRow("x:DataType=\"local:ViewModels.MarkupRow\""),
     ];
 }

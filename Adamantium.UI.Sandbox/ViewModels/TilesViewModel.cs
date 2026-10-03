@@ -28,7 +28,7 @@ public partial class TilesViewModel : TabPageViewModel
 
     [Command] private void FlipAll() => AllFlipped = !AllFlipped;
 
-    public TilesViewModel() : base("Tiles 3D")
+    public TilesViewModel() : base("Tiles3D")
     {
         var tiles = new List<TileItem>(ColumnCount * RowCount);
         for (var row = 0; row < RowCount; row++)

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Globalization;
+using Adamantium.UI.Core.Localization;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -26,6 +26,11 @@ public class MultiBindingExpression : BindingExpressionBase
    public override void EstablishConnection()
    {
       CloseConnection();
+      if (!IsProducer)
+      {
+         Languages.Follow(this);
+      }
+
       // Establish children with combine suspended: each child publishes its initial value as it connects, but we
       // must not combine until ALL children exist (a partial value array breaks a fixed-arity StringFormat/converter).
       _suspendRefresh = true;
@@ -42,13 +47,8 @@ public class MultiBindingExpression : BindingExpressionBase
    }
 
    // Children share our Target (so they resolve against the same DataContext) but have NO target property — their
-   // values feed our converter. A child may itself be a MultiBinding, which is what enables nesting.
-   private BindingExpressionBase CreateChild(BindingBase childBinding) => childBinding switch
-   {
-      MultiBinding _ => new MultiBindingExpression(Target, null, childBinding),
-      Binding _ => new BindingExpression(Target, (AdamantiumProperty)null, childBinding),
-      _ => null,
-   };
+   // values feed our converter. A child may be any kind of binding, a MultiBinding too, which is what enables nesting.
+   private BindingExpressionBase CreateChild(BindingBase childBinding) => childBinding?.CreateExpression(Target, null);
 
    private void OnChildValueChanged(BindingExpressionBase child)
    {
@@ -78,9 +78,9 @@ public class MultiBindingExpression : BindingExpressionBase
       var targetType = TargetProperty?.PropertyType ?? typeof(object);
       object result;
       if (MultiBinding.Converter != null)
-         result = MultiBinding.Converter.Convert(values, targetType, MultiBinding.ConverterParameter, CultureInfo.CurrentCulture);
+         result = MultiBinding.Converter.Convert(values, targetType, MultiBinding.ConverterParameter, FormatCulture);
       else if (!string.IsNullOrEmpty(MultiBinding.StringFormat))
-         result = string.Format(MultiBinding.StringFormat, values);
+         result = string.Format(FormatCulture, MultiBinding.StringFormat, values);
       else
          // No converter and no StringFormat: a multi-binding has no single natural value — hand back the array.
          return values;
@@ -89,8 +89,11 @@ public class MultiBindingExpression : BindingExpressionBase
       return result ?? MultiBinding.TargetNullValue ?? MultiBinding.FallbackValue;
    }
 
+   internal override void OnLanguageChanged() => Refresh();
+
    public override void CloseConnection()
    {
+      Languages.Unfollow(this);
       foreach (var child in _children)
       {
          child.ValueChanged -= OnChildValueChanged;

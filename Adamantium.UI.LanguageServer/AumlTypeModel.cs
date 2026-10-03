@@ -21,6 +21,7 @@ public sealed class AumlTypeModel
     // The project's own AUML views (<View>/<Window> roots), pre-registered from the .auml files so they're recognized
     // and complete like framework controls even though the source generator hasn't emitted their classes.
     private readonly List<IResolvedType> _localViews = new();
+    private IReadOnlyList<LanguageTableInfo> _languageTables;
 
     private AumlTypeModel(ITypeResolver resolver, Compilation compilation)
     {
@@ -30,6 +31,9 @@ public sealed class AumlTypeModel
 
     /// <summary>The backing compilation — go-to-definition uses it to map a metadata symbol back to its source dll.</summary>
     public Compilation Compilation { get; }
+
+    /// <summary>The language tables <c>{Localize}</c> can name.</summary>
+    public IReadOnlyList<LanguageTableInfo> LanguageTables => _languageTables ??= LanguageServer.LanguageTables.Collect(Compilation);
 
     public static AumlTypeModel Build(IEnumerable<string> assemblyPaths, IEnumerable<string> sourceFiles = null)
     {

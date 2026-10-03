@@ -1,0 +1,75 @@
+<Language>
+    <Phrase Key="Intro" Text="Раскладка как у редактора, записанная одними ЗОНАМИ. Здесь нигде не сказано, какую долю чего занимает группа: автор пишет ГДЕ (центр, справа, снизу), а дерево разбиения выводится из этого. Тяните ручки между областями — они переписывают собственные доли раскладки, именно их и прочитает сохранение."/>
+
+    <Phrase Key="Pane" Text="Панель"/>
+    <Phrase Key="CreateIn" Text="Создать в"/>
+    <Phrase Key="Navigate" Text="Перейти"/>
+    <Phrase Key="NewPane" Text="Новая панель"/>
+    <Phrase Key="SaveLayout" Text="Сохранить раскладку"/>
+    <Phrase Key="Restore" Text="Восстановить"/>
+    <Phrase Key="Forget" Text="Забыть"/>
+    <Phrase Key="PinnedRow" Text="Закреплённые вкладки отдельным рядом"/>
+
+    <Phrase Key="Scene" Text="Сцена"/>
+    <Phrase Key="Game" Text="Игра"/>
+    <Phrase Key="Inspector" Text="Инспектор"/>
+    <Phrase Key="Hierarchy" Text="Иерархия"/>
+    <Phrase Key="Properties" Text="Свойства"/>
+    <Phrase Key="Console" Text="Консоль"/>
+    <Phrase Key="Output" Text="Вывод"/>
+    <Phrase Key="Errors" Text="Ошибки"/>
+    <Phrase Key="ErrorsHint" Text="Ошибки — только в центр, наверх или вниз, никогда по бокам (Pane.Allowed)"/>
+    <Phrase Key="Unsaved" Text="Несохранённые изменения (закрыть сразу нельзя)"/>
+    <Phrase Key="AskFirst" Text="Спросить в диалоге перед закрытием"/>
+
+    <Phrase Key="CloseTab" Text="Закрыть"/>
+    <Phrase Key="CloseOthers" Text="Закрыть другие вкладки"/>
+    <Phrase Key="ClosePanel" Text="Закрыть все вкладки этой панели"/>
+    <Phrase Key="CloseUnpinned" Text="Закрыть все, кроме закреплённых"/>
+    <Phrase Key="CloseAll" Text="Закрыть все вкладки (везде)"/>
+    <Phrase Key="TogglePin" Text="Закрепить / открепить вкладку"/>
+
+    <Phrase Key="Center" Text="Центр"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="Floating" Text="Отдельное окно"/>
+
+    <Phrase Key="Answer" Select="answer"
+            NothingAsked="Пока ни о чём не спрашивали. Попробуйте бросить четвёртую вкладку в панель или вытащить единственную вкладку панели."
+            Refused="ОТКАЗАНО: в «{panes}» есть несохранённые изменения. Снимите в ней флажок и попробуйте снова."
+            UserClosed="Пользователь решил закрыть «{panes}»."
+            UserKept="Пользователь оставил «{panes}» открытой — и остановил остаток операции."
+            Unsaved="В «{panes}» теперь есть несохранённые изменения — закрыть её сразу будет нельзя."
+            Saved="«{panes}» снова сохранена — закроется как обычно."
+            Asks="Перед закрытием «{panes}» теперь СПРОСИТ в диалоге."
+            DoesNotAsk="«{panes}» закрывается без вопросов."
+            OwnRow="Закреплённые вкладки получают свой ряд."
+            SharedRow="Закреплённые вкладки делят ряд с остальными."
+            PanelTornOff="Отрыв панели ({panes}) — разрешён."
+            TabTornOff="Отрыв вкладки ({panes}) — разрешён."
+            Docked="Стыковка {panes} {zone} — разрешена."/>
+    <Phrase Key="ZoneTo" Select="zone" Center="в центр" Left="влево" Right="вправо" Top="наверх"
+            Bottom="вниз" Floating="в отдельное окно"/>
+
+    <Phrase Key="Layout" Select="report"
+            Pending="Читаю сохранённую раскладку…"
+            NoSavedLayout="Сохранённой раскладки пока нет ({file}). Переставьте панели и нажмите «Сохранить»."
+            RestoredFromFile="Восстановлена раскладка, сохранённая в {file}."
+            Unreadable="Сохранённую раскладку не удалось прочитать — начинаю с раскладки из разметки."
+            NotOnScreen="Нечего сохранять — области ещё нет на экране."
+            SavedToFile="Сохранено в {file}. Переставьте что-нибудь и нажмите «Восстановить» — или перезапустите приложение, раскладка это переживёт."
+            NothingSaved="Пока ничего не сохранено — сначала нажмите «Сохранить»."
+            Restored="Восстановлено. Документы в раскладку НЕ входят: Pane.Restore говорит, что они принадлежат сеансу, а не рабочей области."
+            NamesNothing="Сохранённый текст не называет ничего, что ещё есть в этой области."
+            Forgotten="Забыто. При следующем запуске будет раскладка из разметки."/>
+
+    <Phrase Key="CloseDocument" Text="Закрыть документ"/>
+    <Phrase Key="CloseQuestion" Text="Закрыть «{pane}»?"/>
+
+    <Phrase Key="OpenedByRegion" Text="Открыта регионом, а не разметкой. Переход к этому имени снова активирует именно эту вкладку — куда бы её ни перетащили с тех пор."/>
+    <Phrase Key="Origin" Select="restored" True="восстановлена вместе с раскладкой" False="{zone}"/>
+    <Phrase Key="OpenedIn" Select="zone" Center="область документов" Floating="отдельное окно — и только плавающая: пристыковать обратно нельзя"
+            Left="слева" Top="сверху" Right="справа" Bottom="снизу"/>
+</Language>

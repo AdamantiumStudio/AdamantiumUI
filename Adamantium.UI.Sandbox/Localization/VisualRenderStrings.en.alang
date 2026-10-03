@@ -1,0 +1,17 @@
+<Language>
+    <Phrase Key="Title" Text="Visual → Image (RenderTargetBitmap)"/>
+    <Phrase Key="Intro" Text="IVisualRenderer parses the AUML on the left into a fresh tree, renders it OFF-SCREEN into a texture, reads it back on the CPU, and returns a bitmap the Image on the right draws. The foundation for the drag-drop ghost and VisualBrush/DrawingBrush."/>
+    <Phrase Key="Source" Text="AUML source"/>
+    <Phrase Key="Render" Text="Render"/>
+    <Phrase Key="Rendered" Text="Rendered bitmap (1:1, auto-sized)"/>
+
+    <Phrase Key="LiveTitle" Text="Live tree → Image (parallel-cache render of the on-screen element)"/>
+    <Phrase Key="LiveIntro" Text="This snapshots a LIVE, interactive element by rendering its subtree through a SEPARATE render cache - never a second render into the window's cache, so the live render is untouched. Toggle the controls on the left, hit Snapshot, and the bitmap on the right reflects their CURRENT state. This is exactly how the drag ghost captures what you grab."/>
+    <Phrase Key="LiveTree" Text="Live, interactive tree"/>
+    <Phrase Key="IAmLive" Text="I am a LIVE tree"/>
+    <Phrase Key="ToggleMe" Text="Toggle me"/>
+    <Phrase Key="SnapshotLive" Text="Snapshot live tree"/>
+    <Phrase Key="ShowGhost" Text="Show ghost"/>
+    <Phrase Key="HideGhost" Text="Hide ghost"/>
+    <Phrase Key="Snapshot" Text="Snapshot (1:1)"/>
+</Language>

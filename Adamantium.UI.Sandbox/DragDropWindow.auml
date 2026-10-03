@@ -2,7 +2,7 @@
         xmlns="http://adamantium/ui"
         xmlns:x="http://adamantium/ui/xaml/extensions"
         x:CreateInDesignTime="False"
-        Title="Drag &amp; Drop Window"
+        Title="{Localize DragDropStrings.Window}"
         Width="360"
         Height="480">
 </Window>

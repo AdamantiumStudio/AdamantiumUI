@@ -1,0 +1,21 @@
+<Language>
+    <Phrase Key="Title" Text="SlidePanel — выезжает от края окна поверх всего содержимого."/>
+    <Phrase Key="Hint" Text="Поперечная ось всегда заполняет окно; толщину задаёт содержимое или явный размер (FullWindow закрывает всё)."/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="FullWindow" Text="На всё окно"/>
+
+    <Phrase Key="LeftPanel" Text="Левая панель"/>
+    <Phrase Key="LeftDocked" Text="Прижата к ЛЕВОМУ краю, на всю высоту окна."/>
+    <Phrase Key="HowToClose" Text="Переключите переключатель или нажмите ×, чтобы закрыть."/>
+    <Phrase Key="RightPanel" Text="Правая панель"/>
+    <Phrase Key="RightDocked" Text="Правый край, на всю высоту окна."/>
+    <Phrase Key="TopPanel" Text="Верхняя панель"/>
+    <Phrase Key="TopDocked" Text="Верхний край, на всю ширину окна."/>
+    <Phrase Key="BottomPanel" Text="Нижняя панель"/>
+    <Phrase Key="BottomDocked" Text="Нижний край, на всю ширину окна."/>
+    <Phrase Key="FullPanel" Text="Панель на всё окно"/>
+    <Phrase Key="FullCovers" Text="Эта закрывает ВСЁ окно (FullWindow=True) и выезжает слева."/>
+</Language>

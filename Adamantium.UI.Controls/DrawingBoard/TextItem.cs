@@ -102,7 +102,7 @@ public class TextItem : ICanvasItem
     /// <summary>What it says, cut short. A list of pieces of text where every row reads "Text" is a list of nothing.
     /// </summary>
     public string Title => string.IsNullOrWhiteSpace(Text)
-        ? "Text"
+        ? string.Empty
         : Text.Length <= 24 ? Text : Text[..24] + "...";
 
 

@@ -143,7 +143,9 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
             var patterns = new string[type.Extensions.Count];
             for (var i = 0; i < patterns.Length; i++) patterns[i] = "*." + type.Extensions[i];
 
-            specs.Add(new FilterSpec { Name = type.Name, Patterns = string.Join(";", patterns) });
+            // An unnamed type is called by its patterns: an empty line in the list is a choice nobody can read.
+            var joined = string.Join(";", patterns);
+            specs.Add(new FilterSpec { Name = string.IsNullOrEmpty(type.Name) ? joined : type.Name, Patterns = joined });
         }
 
         return specs.ToArray();

@@ -84,7 +84,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
 
     // OS interop. Everything dropped in from ANOTHER application lands here, and the
     // "export" items below can be dragged OUT into one - both through the same commands an in-app drop uses.
-    [Bindable] private ObservableCollection<string> _dropped = new();
+    [Bindable] private ObservableCollection<Models.DroppedEntry> _dropped = new();
 
     // Pictures dropped INTO the app, kept as the encoded bytes they arrived as - the view turns them into something
     // showable through a converter. A file drop counts too: Explorer hands over PATHS, never a bitmap, so a dragged
@@ -99,7 +99,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
 
     private readonly INavigationService _navigation;
 
-    public DragDropDemoViewModel(INavigationService navigation) : base("Drag & Drop")
+    public DragDropDemoViewModel(INavigationService navigation) : base("DragDrop")
     {
         _navigation = navigation;
     }
@@ -113,7 +113,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         CollectPictures(e);
         // Land WHERE the drop happened: the engine reports the item the caret sat before (null = past the last one).
         // Appending regardless would throw away the insertion cue the user was aiming with.
-        var at = e.InsertBefore is string before && Dropped.IndexOf(before) is var index and >= 0 ? index : Dropped.Count;
+        var at = e.InsertBefore is Models.DroppedEntry before && Dropped.IndexOf(before) is var index and >= 0 ? index : Dropped.Count;
         foreach (var entry in Describe(e))
         {
             Dropped.Insert(at > Dropped.Count ? Dropped.Count : at, entry);
@@ -121,30 +121,30 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         }
     }
 
-    // One line per dropped thing, labeled by where it came from.
-    private static IEnumerable<string> Describe(DragDropEventArgs e)
+    // One entry per dropped thing, kept with where it came from; the view says it.
+    private static IEnumerable<Models.DroppedEntry> Describe(DragDropEventArgs e)
     {
         if (e.Data?.Get(DataFormats.Files) is string[] files && files.Length > 0)
         {
-            return files.Select(file => $"file: {file}");
+            return files.Select(file => new Models.DroppedEntry(Models.DroppedKind.File, file));
         }
         if (e.Data?.Get(DataFormats.Image) is byte[] image)
         {
-            return [$"image: PNG, {image.Length} bytes"];
+            return [new Models.DroppedEntry(Models.DroppedKind.Image, image.Length)];
         }
         if (e.Data?.Get(DataFormats.Html) is string html)
         {
-            return [$"html: {html}"];
+            return [new Models.DroppedEntry(Models.DroppedKind.Html, html)];
         }
         if (e.Data?.Get(DataFormats.Rtf) is string rtf)
         {
-            return [$"rtf: {rtf}"];
+            return [new Models.DroppedEntry(Models.DroppedKind.Rtf, rtf)];
         }
         if (e.Data?.Get(DataFormats.Text) is string text)
         {
-            return [$"text: {text}"];
+            return [new Models.DroppedEntry(Models.DroppedKind.PlainText, text)];
         }
-        return ItemsOf(e).Select(item => $"in-app: {item}");
+        return ItemsOf(e).Select(item => new Models.DroppedEntry(Models.DroppedKind.InApp, item));
     }
 
     // Anything picture-shaped in the drop, kept as bytes. Two sources, because the two are genuinely different drags:

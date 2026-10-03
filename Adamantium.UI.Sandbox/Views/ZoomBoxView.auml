@@ -7,13 +7,13 @@
     <ScrollViewer>
     <StackPanel Orientation="Vertical" Margin="24">
 
-        <TextBlock Text="ZoomBox — wheel: zoom to cursor · drag: pan · scrollbars auto"
+        <TextBlock Text="{Localize ZoomBoxStrings.Title}"
                    FontSize="18" MarginBottom="4"/>
-        <TextBlock Text="The sliders are two-way bound to ScaleX / ScaleY by ElementName (element-to-element binding). Wheel-zoom moves both."
+        <TextBlock Text="{Localize ZoomBoxStrings.Hint}"
                    FontSize="13" Foreground="#94A3B8" MarginBottom="16"/>
 
         <StackPanel Orientation="Horizontal" MarginBottom="10">
-            <TextBlock Text="Scale X" Width="56" VerticalAlignment="Center"/>
+            <TextBlock Text="{Localize ZoomBoxStrings.ScaleX}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
             <Slider Width="240" Minimum="0.15" Maximum="6"
                     Value="{Binding ScaleX, ElementName=Zoom, Mode=TwoWay}" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding ScaleX, ElementName=Zoom}" Width="60" HorizontalTextAlignment="Right"
@@ -21,7 +21,7 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" MarginBottom="16">
-            <TextBlock Text="Scale Y" Width="56" VerticalAlignment="Center"/>
+            <TextBlock Text="{Localize ZoomBoxStrings.ScaleY}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
             <Slider Width="240" Minimum="0.15" Maximum="6"
                     Value="{Binding ScaleY, ElementName=Zoom, Mode=TwoWay}" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding ScaleY, ElementName=Zoom}" Width="60" HorizontalTextAlignment="Right"

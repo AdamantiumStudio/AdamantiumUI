@@ -43,10 +43,14 @@ public class Binding : BindingBase
          Delay = Delay,
          FallbackValue = FallbackValue,
          StringFormat = StringFormat,
+         Culture = Culture,
          TargetNullValue = TargetNullValue,
          ElementName = ElementName,
       };
    }
+
+   public override BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty) =>
+      new BindingExpression(target, targetProperty, this);
 
    public BindingMode Mode { get; set; }
    public object Source { get; set; }

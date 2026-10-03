@@ -1,0 +1,43 @@
+<Language>
+    <Phrase Key="Playground" Text="Площадка растяжения"/>
+    <Phrase Key="StretchLabel" Text="Растяжение:"/>
+    <Phrase Key="DirectionLabel" Text="Направление:"/>
+    <Phrase Key="HorizontalLabel" Text="По горизонтали:"/>
+    <Phrase Key="VerticalLabel" Text="По вертикали:"/>
+    <Phrase Key="BoxWidth" Text="Ширина рамки:"/>
+    <Phrase Key="BoxHeight" Text="Высота рамки:"/>
+    <Phrase Key="ElementSize" Text="Размер элемента:"/>
+
+    <Phrase Key="Formats" Text="Форматы и анимация"/>
+    <Phrase Key="OpacityLabel" Text="Непрозрачность:"/>
+    <Phrase Key="MipLevel" Text="PNG (мип-уровень 2)"/>
+
+    <Phrase Key="AnimationControl" Text="Управление анимацией"/>
+    <Phrase Key="AnimationHint" Text="Каждый источник играет по своим правилам: диапазон кадров, который он повторяет, задержка между кадрами, идёт ли он вообще и четыре радиуса углов. Число кадров сообщает САМА картинка, когда её файл раскодирован, — оно и ограничивает ползунки диапазона."/>
+    <Phrase Key="PlayPause" Select="playing" True="Пауза" False="Играть"/>
+    <Phrase Key="FrameCount" Text="кадров:"/>
+    <Phrase Key="Delay" Text="Задержка (мс):"/>
+    <Phrase Key="Frames" Text="Кадры:"/>
+    <Phrase Key="TopLeft" Text="Слева сверху:"/>
+    <Phrase Key="BottomLeft" Text="Слева снизу:"/>
+    <Phrase Key="TopRight" Text="Справа сверху:"/>
+    <Phrase Key="BottomRight" Text="Справа снизу:"/>
+
+    <Phrase Key="None" Text="Нет"/>
+    <Phrase Key="Fill" Text="Заполнить"/>
+    <Phrase Key="Uniform" Text="Пропорционально"/>
+    <Phrase Key="UniformToFill" Text="Пропорционально с заполнением"/>
+    <Phrase Key="Both" Text="В обе стороны"/>
+    <Phrase Key="DownOnly" Text="Только уменьшать"/>
+    <Phrase Key="UpOnly" Text="Только увеличивать"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="Stretch" Text="Растянуть"/>
+    <Phrase Key="Forward" Text="Вперёд"/>
+    <Phrase Key="Backward" Text="Назад"/>
+    <Phrase Key="ForwardLooped" Text="Вперёд по кругу"/>
+    <Phrase Key="BackwardLooped" Text="Назад по кругу"/>
+</Language>

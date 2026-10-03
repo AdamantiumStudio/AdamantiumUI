@@ -35,7 +35,7 @@ public class SelectTool : ICanvasTool
 
     public Key Shortcut { get; set; } = Key.V;
 
-    public string Description { get; set; } = "select, move and resize";
+    public string Description { get; set; } = "SelectDescription";
 
     /// <summary>Pulling a WIRE out of a socket, which this tool offers the press to FIRST.
     /// <para>Here rather than in a tool of its own because that is what a node editor is: nothing to switch to, the

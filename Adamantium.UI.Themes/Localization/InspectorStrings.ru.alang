@@ -1,0 +1,116 @@
+<Language>
+    <Phrase Key="Layer" Text="Слой"/>
+    <Phrase Key="Index" Text="Номер"/>
+    <Phrase Key="StrokeItem" Text="Штрих"/>
+    <Phrase Key="Color" Text="Цвет"/>
+    <Phrase Key="Thickness" Text="Толщина"/>
+    <Phrase Key="Position" Text="Положение"/>
+    <Phrase Key="Size" Text="Размер"/>
+    <Phrase Key="Width" Text="Ширина"/>
+    <Phrase Key="Height" Text="Высота"/>
+    <Phrase Key="Shape" Text="Фигура"/>
+    <Phrase Key="Fill" Text="Заливка"/>
+    <Phrase Key="Stroke" Text="Обводка"/>
+    <Phrase Key="Transform" Text="Преобразование"/>
+    <Phrase Key="Angle" Text="Угол"/>
+    <Phrase Key="SkewX" Text="Наклон X"/>
+    <Phrase Key="SkewY" Text="Наклон Y"/>
+    <Phrase Key="Corner" Text="Скругление"/>
+    <Phrase Key="TopLeft" Text="Слева сверху"/>
+    <Phrase Key="TopRight" Text="Справа сверху"/>
+    <Phrase Key="BottomRight" Text="Справа снизу"/>
+    <Phrase Key="BottomLeft" Text="Слева снизу"/>
+    <Phrase Key="Polygon" Text="Многоугольник"/>
+    <Phrase Key="Sides" Text="Сторон"/>
+    <Phrase Key="Head" Text="Наконечник"/>
+    <Phrase Key="Start" Text="Начало"/>
+    <Phrase Key="End" Text="Конец"/>
+    <Phrase Key="Length" Text="Длина"/>
+    <Phrase Key="Text" Text="Текст"/>
+    <Phrase Key="Frame" Text="Рамка"/>
+    <Phrase Key="Title" Text="Заголовок"/>
+    <Phrase Key="Outline" Text="Контур"/>
+    <Phrase Key="Wash" Text="Заливка"/>
+    <Phrase Key="TitleBar" Text="Полоса заголовка"/>
+    <Phrase Key="Path" Text="Путь"/>
+    <Phrase Key="Curve" Text="Кривая"/>
+    <Phrase Key="CurveKind" Text="Вид"/>
+    <Phrase Key="Points" Text="Точек"/>
+    <Phrase Key="Bezier" Text="Безье"/>
+    <Phrase Key="Order" Text="Порядок"/>
+    <Phrase Key="Nurbs" Text="NURBS"/>
+    <Phrase Key="Degree" Text="Степень"/>
+    <Phrase Key="Even" Text="Равномерно"/>
+    <Phrase Key="Group" Text="Группа"/>
+    <Phrase Key="Holds" Text="Содержит"/>
+    <Phrase Key="Control" Text="Элемент"/>
+    <Phrase Key="Label" Text="Подпись"/>
+    <Phrase Key="Look" Text="Оформление"/>
+    <Phrase Key="Background" Text="Фон"/>
+    <Phrase Key="Foreground" Text="Передний план"/>
+    <Phrase Key="Border" Text="Граница"/>
+    <Phrase Key="Opacity" Text="Непрозрачность"/>
+    <Phrase Key="Picture" Text="Изображение"/>
+    <Phrase Key="Source" Text="Источник"/>
+    <Phrase Key="PictureFill" Text="Вписывание"/>
+    <Phrase Key="Repeat" Text="Повтор"/>
+    <Phrase Key="Tile" Text="Плитка"/>
+    <Phrase Key="ShowPicture" Text="Показывать изображение"/>
+    <Phrase Key="Ground" Text="Подложка"/>
+    <Phrase Key="Tint" Text="Тонировка"/>
+    <Phrase Key="Pixels" Text="Пиксели"/>
+    <Phrase Key="Node" Text="Узел"/>
+    <Phrase Key="Kind" Text="Тип"/>
+    <Phrase Key="Accent" Text="Акцент"/>
+    <Phrase Key="Folded" Text="Свёрнут"/>
+    <Phrase Key="In" Text="Входы"/>
+    <Phrase Key="Out" Text="Выходы"/>
+    <Phrase Key="Name" Text="Имя"/>
+    <Phrase Key="Takes" Text="Вмещает"/>
+    <Phrase Key="Pen" Text="Перо"/>
+    <Phrase Key="Eraser" Text="Ластик"/>
+    <Phrase Key="Diameter" Text="Диаметр"/>
+    <Phrase Key="Canvas" Text="Холст"/>
+    <Phrase Key="Grid" Text="Сетка"/>
+    <Phrase Key="Snap" Text="Привязка"/>
+    <Phrase Key="Readout" Text="Координаты"/>
+    <Phrase Key="Zoom" Text="Масштаб"/>
+    <Phrase Key="Now" Text="Сейчас"/>
+    <Phrase Key="Least" Text="Наименьший"/>
+    <Phrase Key="Most" Text="Наибольший"/>
+    <Phrase Key="Origin" Text="Начало координат"/>
+    <Phrase Key="Home" Text="Домой"/>
+    <Phrase Key="Remember" Text="Запоминать"/>
+    <Phrase Key="Panels" Text="Панели"/>
+    <Phrase Key="Camera" Text="Камера"/>
+    <Phrase Key="Tool" Text="Инструмент"/>
+    <Phrase Key="Confirm" Text="Подтверждать"/>
+
+    <Phrase Key="AngleShapeHint" Text="Градусы по часовой стрелке, вокруг середины фигуры"/>
+    <Phrase Key="AngleControlHint" Text="Градусы по часовой стрелке, вокруг середины элемента"/>
+    <Phrase Key="HeadLengthHint" Text="Длина наконечника в толщинах линии"/>
+    <Phrase Key="HeadWidthHint" Text="Ширина наконечника у основания в толщинах линии"/>
+    <Phrase Key="WashHint" Text="Лежит под узлами, поэтому делайте её бледной — она не должна мешать их читать"/>
+    <Phrase Key="TitleBarHint" Text="Высота полосы — за неё рамку и перетаскивают"/>
+    <Phrase Key="BezierOrderHint" Text="Кривая Безье через N+1 точку имеет степень N — чтобы её изменить, добавьте или уберите точку"/>
+    <Phrase Key="NurbsDegreeHint" Text="При нуле степень следует за числом точек"/>
+    <Phrase Key="EvenHint" Text="Расположены ли узлы равномерно"/>
+    <Phrase Key="SourceHint" Text="Изображение, которое здесь показано"/>
+    <Phrase Key="PictureFillHint" Text="Как изображение вписано в элемент"/>
+    <Phrase Key="RepeatHint" Text="Повторяется ли изображение и отражается ли каждая вторая копия"/>
+    <Phrase Key="ShowPictureHint" Text="Рисовать изображение или оставить только подложку под ним"/>
+    <Phrase Key="GroundHint" Text="Когда рисуется цвет фона: только пока нет изображения, также под ним или никогда"/>
+    <Phrase Key="TintHint" Text="Цвет, на который умножается изображение; белый оставляет его как есть"/>
+    <Phrase Key="NodeKindHint" Text="Что это за узел — по нему приложение узнаёт, что узел делает"/>
+    <Phrase Key="FoldedHint" Text="Свернуть узел до полосы заголовка; гнёзда переходят на края"/>
+    <Phrase Key="SocketKindHint" Text="Что через него проходит — гнёзда соединяются, если типы совпадают; гнездо без типа принимает любое"/>
+    <Phrase Key="TakesHint" Text="Сколько связей может сюда прийти — ноль значит сколько угодно; полное гнездо теряет самую старую"/>
+    <Phrase Key="PanelsHint" Text="Где стоят панели, какой ширины их сделали и какие свёрнуты."/>
+    <Phrase Key="CameraHint" Text="Куда смотрела камера."/>
+    <Phrase Key="ConfirmHint" Text="Спрашивать перед удалением выделенного. Очистка всего холста спрашивает всегда."/>
+
+    <Phrase Key="ActualSize" Text="Подогнать под размер изображения в пикселях"/>
+    <Phrase Key="RemoveSocket" Text="Удалить это гнездо"/>
+    <Phrase Key="AddInput" Text="Добавить вход"/>
+    <Phrase Key="AddOutput" Text="Добавить выход"/>
+</Language>

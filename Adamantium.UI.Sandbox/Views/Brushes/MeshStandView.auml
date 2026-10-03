@@ -5,7 +5,7 @@
          by the locator, so the bindings read as they did on the tab. The figure picker is NOT repeated here - it lives
          above the stands now, because it is one choice for all of them. -->
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Mesh gradient — live (four corners, pick each)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.MeshTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Margin="10">
                 <Rectangle Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" Fill="{Binding LiveMesh}"
@@ -25,7 +25,7 @@
                 <!-- Only for the polygon: on a rect or an ellipse these two numbers mean nothing, and a control that
                      does nothing is worse than one that is not there. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="Corners — 3 is a triangle, enough of them a circle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
                         <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -33,7 +33,7 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock Text="Start angle — where corner 0 sits" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -42,18 +42,18 @@
                                        Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Corners (top-left / top-right)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.MeshTop}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MeshTopLeft, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MeshTopRight, Mode=TwoWay}"/>
                 </StackPanel>
-                <TextBlock Text="Corners (bottom-left / bottom-right)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.MeshBottom}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MeshBottomLeft, Mode=TwoWay}" MarginRight="8"/>
                     <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MeshBottomRight, Mode=TwoWay}"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="Corner radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
                         <Slider Value="{Binding MeshRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="100" Width="186"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"

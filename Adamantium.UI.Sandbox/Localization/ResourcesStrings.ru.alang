@@ -1,0 +1,28 @@
+<Language>
+    <Phrase Key="Title" Text="ObservableResource (живой) против ResourceReference (статичный)"/>
+    <Phrase Key="ThemePalette" Text="Палитра темы (SystemFillColorCritical) — нажмите ↑ тёмная / ↓ светлая, чтобы сменить тему:"/>
+    <Phrase Key="Static" Text="ResourceReference — статичный"/>
+    <Phrase Key="Live" Text="ObservableResource — живой"/>
+    <Phrase Key="CycleCritical" Text="Сменить критический цвет"/>
+    <Phrase Key="CaptionLeft" Text="Кнопки заголовка слева"/>
+    <Phrase Key="Formats" Text="Числа и даты на языке приложения:"/>
+
+    <Phrase Key="AccentTitle" Text="Акцент темы ({{ThemeResource}}) — живая перекраска всех акцентных контролов:"/>
+    <Phrase Key="Toggle" Text="Переключатель"/>
+    <Phrase Key="Checked" Text="Отмечен"/>
+    <Phrase Key="Selected" Text="Выбран"/>
+    <Phrase Key="CycleAccent" Text="Сменить акцент"/>
+
+    <Phrase Key="LocalTitle" Text="Встроенный локальный ресурс (ResourceContext.Resources — только для этой панели):"/>
+    <Phrase Key="CycleLocal" Text="Сменить локальный акцент"/>
+    <Phrase Key="GlobalTitle" Text="Глобальный ресурс (ResourceLink Scope=Global — переживает смену темы):"/>
+    <Phrase Key="CycleGlobal" Text="Сменить глобальный акцент"/>
+
+    <Phrase Key="ScopeTitle" Text="Область темы — поддерево со своим вариантом"/>
+    <Phrase Key="ScopeHint" Text="Каждая панель называет свой вариант, поэтому переключение светлой/тёмной темы приложения в панели диагностики их не трогает."/>
+    <Phrase Key="VariantLight" Text="Вариант: светлый"/>
+    <Phrase Key="VariantDark" Text="Вариант: тёмный"/>
+    <Phrase Key="VariantSystem" Text="Вариант: как в системе"/>
+    <Phrase Key="VariantOwn" Text="Вариант: свой"/>
+    <Phrase Key="Dark" Text="Тёмный"/>
+</Language>

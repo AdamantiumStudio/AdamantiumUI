@@ -1,0 +1,32 @@
+<Language>
+    <Phrase Key="ViewModelNavigation" Text="Навигация по вью-моделям"/>
+    <Phrase Key="Home" Text="Главная"/>
+    <Phrase Key="DetailsWithId" Text="Подробности (id=42)"/>
+    <Phrase Key="Settings" Text="Настройки"/>
+    <Phrase Key="Back" Text="Назад"/>
+    <Phrase Key="Forward" Text="Вперёд"/>
+    <Phrase Key="AllowDuplicateWindows" Text="Разрешить повторные окна"/>
+    <Phrase Key="DialogsAsWindows" Text="Показывать диалоги отдельными окнами"/>
+    <Phrase Key="ShowOverlayWindow" Text="Показать окно-оверлей"/>
+    <Phrase Key="ShowModalOverlay" Text="Показать модальный оверлей"/>
+    <Phrase Key="ItemsControlRegion" Text="Регион ItemsControl"/>
+    <Phrase Key="AddCard" Text="Добавить карточку"/>
+    <Phrase Key="Clear" Text="Очистить"/>
+
+    <Phrase Key="HomeMessage" Text="Главная — начальная страница региона. Переходите по типу вью-модели кнопками выше."/>
+    <Phrase Key="ArrivedVia" Select="mode" None="Сюда ещё не переходили" New="Открыта как новая страница" Back="Открыта переходом назад" Forward="Открыта переходом вперёд" Refresh="Открыта обновлением"/>
+    <Phrase Key="Details" Text="Подробности"/>
+    <Phrase Key="ItemId" Text="Id записи:"/>
+    <Phrase Key="UnsavedChanges" Text="Несохранённые изменения (не дают уйти со страницы)"/>
+    <Phrase Key="Card" Text="Карточка {number}"/>
+
+    <Phrase Key="OverlayWindow" Text="Окно-оверлей"/>
+    <Phrase Key="OverlayWindowNumbered" Text="Окно-оверлей {number}"/>
+    <Phrase Key="OverlayHint" Text="Тяните за заголовок (X/Y меняются на лету) или двигайте окно из вью-модели."/>
+    <Phrase Key="RenameTitle" Text="Переименовать"/>
+    <Phrase Key="Renamed" Text="Переименовано {number}"/>
+    <Phrase Key="MoveFromViewModel" Text="Сдвинуть (VM)"/>
+    <Phrase Key="CloseFromViewModel" Text="Закрыть из VM"/>
+    <Phrase Key="ModalOverlay" Text="Модальный оверлей"/>
+    <Phrase Key="ModalOverlayMessage" Text="Это модальное окно затемняет и блокирует окно под собой. Тяните за заголовок."/>
+</Language>

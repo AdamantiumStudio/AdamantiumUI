@@ -13,8 +13,8 @@
             </Style>
         </Border.Styles>
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Wildlife" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="4"/>
-            <TextBlock Text="Drag items to/from the main window's lists." FontSize="12"
+            <TextBlock Text="{Localize DragDropStrings.Wildlife}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="4"/>
+            <TextBlock Text="{Localize DragDropStrings.WindowHint}" FontSize="12"
                        Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="10"/>
             <ListBox ItemsSource="{Binding Items}" SelectedItems="{Binding Selection}"
                      SelectionMode="Extended" Background="Transparent">

@@ -1,0 +1,26 @@
+<Language>
+    <Phrase Key="Running" Text="Running"/>
+    <Phrase Key="OneSwitch" Text="one switch drives every indicator on the page"/>
+    <Phrase Key="Zoom" Text="Zoom"/>
+
+    <Phrase Key="Ring" Text="Ring"/>
+    <Phrase Key="RingHint" Text="a sweeping arc, spinning"/>
+    <Phrase Key="Dots" Text="Dots"/>
+    <Phrase Key="DotsHint" Text="one wave, three delays"/>
+    <Phrase Key="Ripple" Text="Ripple"/>
+    <Phrase Key="RippleHint" Text="rings growing out of the center"/>
+    <Phrase Key="Bar" Text="Bar"/>
+    <Phrase Key="BarHint" Text="an indeterminate sweep"/>
+    <Phrase Key="Arc" Text="Arc"/>
+    <Phrase Key="ArcHint" Text="the arc itself grows and shrinks"/>
+    <Phrase Key="Ants" Text="Marching ants"/>
+    <Phrase Key="AntsHint" Text="dashes travel along the ring"/>
+    <Phrase Key="Heartbeat" Text="Heartbeat"/>
+    <Phrase Key="HeartbeatHint" Text="two beats, then a rest"/>
+    <Phrase Key="Equalizer" Text="Equalizer"/>
+    <Phrase Key="EqualizerHint" Text="bars on mismatched periods"/>
+    <Phrase Key="Flip" Text="Flip"/>
+    <Phrase Key="FlipHint" Text="cards turning in perspective (3D)"/>
+    <Phrase Key="Shimmer" Text="Shimmer"/>
+    <Phrase Key="ShimmerHint" Text="a gradient band sweeping a card"/>
+</Language>

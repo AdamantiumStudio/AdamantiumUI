@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -1384,15 +1385,80 @@ public partial class InfiniteCanvas : Control
         return false;
     }
 
+    /// <summary>The words the canvas names things with, from the theme: a tool's name and description, a new socket,
+    /// a new comment frame. A tool's name is a key of this table where the table has it, and is said as it is where it
+    /// does not - which is how an application's own tool keeps the name it was given.</summary>
+    public static readonly AdamantiumProperty PhrasesProperty = AdamantiumProperty.Register(nameof(Phrases),
+        typeof(LocalizedStrings), typeof(InfiniteCanvas), new PropertyMetadata(null, OnPhrasesChanged));
+
+    public LocalizedStrings Phrases
+    {
+        get => GetValue<LocalizedStrings>(PhrasesProperty);
+        set => SetValue(PhrasesProperty, value);
+    }
+
+    /// <summary>Raised when <see cref="Phrases"/> is replaced, so what the canvas named with it can be named again.</summary>
+    public event EventHandler PhrasesChanged;
+
+    private static void OnPhrasesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.PhrasesChanged?.Invoke(component, EventArgs.Empty);
+
+    /// <summary>The phrase <paramref name="key"/> of <see cref="Phrases"/> in the application's language, its
+    /// placeholders filled by name - for a thing named once, as it is made. The key itself where there is no such
+    /// phrase.</summary>
+    public string Say(string key, params (string Name, object Value)[] arguments) =>
+        Languages.Say(Phrases, key, arguments);
+
+    /// <summary>What the dialog that writes the drawing out asks. The theme says it, and the three below, in the
+    /// application's language.</summary>
+    public static readonly AdamantiumProperty ExportTitleProperty = AdamantiumProperty.Register(nameof(ExportTitle),
+        typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    /// <summary>What the dialog that reads a drawing in asks.</summary>
+    public static readonly AdamantiumProperty OpenTitleProperty = AdamantiumProperty.Register(nameof(OpenTitle),
+        typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    /// <summary>What both dialogs call the drawings they offer.</summary>
+    public static readonly AdamantiumProperty DrawingsNameProperty = AdamantiumProperty.Register(nameof(DrawingsName),
+        typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    /// <summary>...and what they call every other file.</summary>
+    public static readonly AdamantiumProperty AllFilesNameProperty = AdamantiumProperty.Register(nameof(AllFilesName),
+        typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    public String ExportTitle
+    {
+        get => GetValue<String>(ExportTitleProperty);
+        set => SetValue(ExportTitleProperty, value);
+    }
+
+    public String OpenTitle
+    {
+        get => GetValue<String>(OpenTitleProperty);
+        set => SetValue(OpenTitleProperty, value);
+    }
+
+    public String DrawingsName
+    {
+        get => GetValue<String>(DrawingsNameProperty);
+        set => SetValue(DrawingsNameProperty, value);
+    }
+
+    public String AllFilesName
+    {
+        get => GetValue<String>(AllFilesNameProperty);
+        set => SetValue(AllFilesNameProperty, value);
+    }
+
     private void ExportSvg()
     {
         if (!FileDialog.IsAvailable) return;
 
         var chosen = FileDialog.Save(new SaveFileRequest
         {
-            Title = "Export the drawing",
+            Title = ExportTitle,
             DefaultExtension = "svg",
-            FileTypes = SvgFiles,
+            FileTypes = SvgFiles(),
 
             // ITS OWN MEMORY, and its own window. The first means this dialog comes back the size it was left and in
             // the folder a drawing was last written to - not wherever some other dialog of this application was. The
@@ -1430,8 +1496,8 @@ public partial class InfiniteCanvas : Control
 
         var chosen = FileDialog.Open(new OpenFileRequest
         {
-            Title = "Open a drawing",
-            FileTypes = SvgFiles,
+            Title = OpenTitle,
+            FileTypes = SvgFiles(),
             Key = "canvas.svg.import",
             Owner = GetWindow()?.Handle ?? IntPtr.Zero
         });
@@ -1468,10 +1534,10 @@ public partial class InfiniteCanvas : Control
         SvgRead?.Invoke(this, new CanvasSvgReadEventArgs(made.Count, skipped, null));
     }
 
-    private static readonly IReadOnlyList<FileType> SvgFiles =
+    private IReadOnlyList<FileType> SvgFiles() =>
     [
-        new("Drawings", "svg"),
-        new("All files", "*")
+        new(DrawingsName, "svg"),
+        new(AllFilesName, "*")
     ];
 
     private static CanvasAlignment? Edge(object said) => said switch
