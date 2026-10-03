@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="StretchTitle" Text="Stretch — one 120×80 card scaled into a 220×160 box"/>
+    <Phrase Key="DirectionTitle" Text="StretchDirection (Uniform) — big box (220×160), 120×80 card"/>
+    <Phrase Key="ScalesUp" Text="Both (scales up)"/>
+    <Phrase Key="StaysSmall" Text="DownOnly (stays 120×80)"/>
+    <Phrase Key="ScaleTitle" Text="LayoutTransform — A[100×50], B is 100×50 scaled ×1.5 (footprint must be 150×75, so C starts at x=250)"/>
+    <Phrase Key="RotationTitle" Text="LayoutTransform, ROTATION — B is the same 100×50 turned 90°, so its footprint is 50×100 and C starts at x=150. A turned label is what a collapsed docking panel is made of."/>
+    <Phrase Key="TextTitle" Text="The same turn on TEXT, stacked down a column - which is exactly a collapsed tool strip: the column is as wide as the text is TALL, not as long as the words."/>
+    <Phrase Key="Inspector" Text="Inspector"/>
+    <Phrase Key="Hierarchy" Text="Hierarchy"/>
+    <Phrase Key="Properties" Text="Properties"/>
+</Language>

@@ -1,4 +1,4 @@
-﻿<View xmlns="http://adamantium/ui"
+<View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
     <!-- An editor shell: a ribbon band, a document surface, a status line. Exercises the three command sizes, commands
@@ -18,25 +18,25 @@
             <!-- "File": a command that opens a menu, so the flyout is the ContextMenu one already is. The two-pane
                  version - recent files beside the commands - is a later step. -->
             <Ribbon.ApplicationMenu>
-                <RibbonApplicationMenu Header="File" IsBackstage="{Binding IsBackstage}">
+                <RibbonApplicationMenu Header="{Localize RibbonShellStrings.File}" IsBackstage="{Binding IsBackstage}">
                     <!-- A row with a PAGE opens it beside the rail and stays lit; a row without one is a command that
                          runs and closes the backstage behind it. -->
-                    <RibbonApplicationMenuItem Content="New" Icon="M8,2 L8,14 M2,8 L14,8">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.New}" Icon="M8,2 L8,14 M2,8 L14,8">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="New scene" FontSize="28" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.NewScene}" FontSize="28" Margin="0 0 0 18"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Empty scene" Command="{Binding NewSceneCommand}" Margin="0 0 10 0"/>
-                                    <Button Content="From template" Command="{Binding NewSceneCommand}"/>
+                                    <Button Content="{Localize RibbonShellStrings.EmptyScene}" Command="{Binding NewSceneCommand}" Margin="0 0 10 0"/>
+                                    <Button Content="{Localize RibbonShellStrings.FromTemplate}" Command="{Binding NewSceneCommand}"/>
                                 </StackPanel>
                             </StackPanel>
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>
 
-                    <RibbonApplicationMenuItem Content="Open" Icon="M2,4 L7,4 L8,6 L14,6 L14,13 L2,13 Z">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Open}" Icon="M2,4 L7,4 L8,6 L14,6 L14,13 L2,13 Z">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="Recent scenes" FontSize="28" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.RecentScenes}" FontSize="28" Margin="0 0 0 18"/>
                                 <Button Content="city-block.scene" Command="{Binding OpenSceneCommand}" Margin="0 0 0 6"/>
                                 <Button Content="character-rig.scene" Command="{Binding OpenSceneCommand}" Margin="0 0 0 6"/>
                                 <Button Content="lighting-study.scene" Command="{Binding OpenSceneCommand}"/>
@@ -44,16 +44,16 @@
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>
 
-                    <RibbonApplicationMenuItem Content="Save" Command="{Binding SaveCommand}"
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Save}" Command="{Binding SaveCommand}"
                                                Icon="M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2"/>
 
                     <!-- The rows the pane-follows-the-pointer behavior is worth seeing on: run the pointer down
                          Import / Export / Print and the right half changes under it, with nothing clicked. -->
-                    <RibbonApplicationMenuItem Content="Import" Icon="M8,2 L8,10 M5,7 L8,10 L11,7 M3,13 L13,13">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Import}" Icon="M8,2 L8,10 M5,7 L8,10 L11,7 M3,13 L13,13">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="Import" FontSize="28" Margin="0 0 0 6"/>
-                                <TextBlock Text="Bring a mesh into the open scene." Opacity="0.7" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.Import}" FontSize="28" Margin="0 0 0 6"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.ImportHint}" Opacity="0.7" Margin="0 0 0 18"/>
                                 <Button Content="Wavefront .obj" Command="{Binding ImportCommand}" CommandParameter=".obj" Margin="0 0 0 6"/>
                                 <Button Content="Autodesk .fbx" Command="{Binding ImportCommand}" CommandParameter=".fbx" Margin="0 0 0 6"/>
                                 <Button Content="Khronos .gltf" Command="{Binding ImportCommand}" CommandParameter=".gltf"/>
@@ -61,24 +61,24 @@
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>
 
-                    <RibbonApplicationMenuItem Content="Export" Icon="M8,10 L8,2 M5,5 L8,2 L11,5 M3,13 L13,13">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Export}" Icon="M8,10 L8,2 M5,5 L8,2 L11,5 M3,13 L13,13">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="Export" FontSize="28" Margin="0 0 0 6"/>
-                                <TextBlock Text="Write the scene out in another format." Opacity="0.7" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.Export}" FontSize="28" Margin="0 0 0 6"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.ExportHint}" Opacity="0.7" Margin="0 0 0 18"/>
                                 <Button Content="Wavefront .obj" Command="{Binding ExportCommand}" CommandParameter=".obj" Margin="0 0 0 6"/>
                                 <Button Content="Khronos .gltf" Command="{Binding ExportCommand}" CommandParameter=".gltf" Margin="0 0 0 6"/>
-                                <Button Content="Adamantium package" Command="{Binding ExportCommand}" CommandParameter=".apkg"/>
+                                <Button Content="{Localize RibbonShellStrings.AdamantiumPackage}" Command="{Binding ExportCommand}" CommandParameter=".apkg"/>
                             </StackPanel>
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>
 
-                    <RibbonApplicationMenuItem Content="Print" Icon="M4,6 L4,2 L12,2 L12,6 M4,10 L12,10 L12,14 L4,14 Z M2,6 L14,6 L14,10 L2,10 Z">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Print}" Icon="M4,6 L4,2 L12,2 L12,6 M4,10 L12,10 L12,14 L4,14 Z M2,6 L14,6 L14,10 L2,10 Z">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="Print" FontSize="28" Margin="0 0 0 6"/>
-                                <TextBlock Text="A sheet of the viewport as it stands." Opacity="0.7" Margin="0 0 0 18"/>
-                                <TextBlock Text="Printer" Margin="0 0 0 4" Opacity="0.7"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.Print}" FontSize="28" Margin="0 0 0 6"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.PrintHint}" Opacity="0.7" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.Printer}" Margin="0 0 0 4" Opacity="0.7"/>
                                 <DropDown Width="200" HorizontalAlignment="Left" SelectedIndex="0">
                                     <DropDownItem Content="Microsoft Print to PDF"/>
                                     <DropDownItem Content="Office printer (2nd floor)"/>
@@ -89,11 +89,11 @@
 
                     <!-- The ONE place commands are moved to the quick-access bar from - the application's own page, as
                          Word's is its own dialog. The ribbon only furnishes the list and carries the request. -->
-                    <RibbonApplicationMenuItem Content="Customize" Icon="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Customize}" Icon="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
-                                <TextBlock Text="Quick access" FontSize="28" Margin="0 0 0 6"/>
-                                <TextBlock Text="Pick the commands worth keeping one click away." Opacity="0.7" Margin="0 0 0 18"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.QuickAccess}" FontSize="28" Margin="0 0 0 6"/>
+                                <TextBlock Text="{Localize RibbonShellStrings.QuickAccessHint}" Opacity="0.7" Margin="0 0 0 18"/>
                                 <ItemsControl ItemsSource="{Binding QuickAccessCandidates, ElementName=Band}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -111,7 +111,7 @@
                          always stands on a chosen row. -->
                     <RibbonApplicationMenu.AuxiliaryPaneContent>
                         <StackPanel>
-                            <TextBlock Text="Recent scenes" FontSize="20" Margin="0 0 0 14"/>
+                            <TextBlock Text="{Localize RibbonShellStrings.RecentScenes}" FontSize="20" Margin="0 0 0 14"/>
                             <TextBlock Text="city-block.scene" Margin="0 0 0 6" Opacity="0.75"/>
                             <TextBlock Text="character-rig.scene" Margin="0 0 0 6" Opacity="0.75"/>
                             <TextBlock Text="lighting-study.scene" Opacity="0.75"/>
@@ -120,7 +120,7 @@
 
                     <RibbonApplicationMenu.FooterPaneContent>
                         <StackPanel Margin="0 0 0 12">
-                            <RibbonApplicationMenuItem Content="Exit" Command="{Binding ExitCommand}"
+                            <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Exit}" Command="{Binding ExitCommand}"
                                                        Icon="M6,3 L3,3 L3,13 L6,13 M9,5 L12,8 L9,11 M12,8 L6,8"/>
                         </StackPanel>
                     </RibbonApplicationMenu.FooterPaneContent>
@@ -139,12 +139,12 @@
             <!-- ================= HOME ================= -->
             <!-- Alt shows the letters; these are stated so they read like Office's rather than being worked out from
                  the labels. Everything unnamed still gets one - see KeyTipService.AutoAssign. -->
-            <RibbonTab Header="Home" KeyTipService.KeyTip="H">
-                <RibbonGroup Header="Clipboard" Icon="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2">
+            <RibbonTab Header="{Localize RibbonShellStrings.Home}" KeyTipService.KeyTip="H">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Clipboard}" Icon="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2">
                     <!-- Split: the body pastes, the arrow offers the rarer ways to paste. Both halves are disabled
                          together - the command gates the whole thing. -->
-                    <RibbonSplitButton Content="Paste" Command="{Binding PasteCommand}"
-                                       ToolTip="Paste the clipboard contents"
+                    <RibbonSplitButton Content="{Localize RibbonShellStrings.Paste}" Command="{Binding PasteCommand}"
+                                       ToolTip="{Localize RibbonShellStrings.PasteTip}"
                                        Icon="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2">
                         <!-- The rows are DATA, not MenuItem controls: that is what lets this command sit in the
                              quick-access bar and keep its arrow - the bar builds its own menu from the same list. -->
@@ -152,47 +152,47 @@
                             <ContextMenu ItemsSource="{Binding PasteOptions}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Binding Header}" Command="{Binding Command}"/>
+                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}" Command="{Binding Command}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
                             </ContextMenu>
                         </RibbonSplitButton.DropDownMenu>
                     </RibbonSplitButton>
                     <!-- Medium: small icon, label beside it - three stack into one column. -->
-                    <RibbonButton Content="Cut" MaxSize="Medium" Command="{Binding CutCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Cut}" MaxSize="Medium" Command="{Binding CutCommand}"
                                   Icon="M3,2 L13,12 M13,2 L3,12"/>
-                    <RibbonButton Content="Copy" MaxSize="Medium" Command="{Binding CopyCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Copy}" MaxSize="Medium" Command="{Binding CopyCommand}"
                                   Icon="M3,3 L10,3 L10,11 L3,11 Z M6,6 L13,6 L13,14 L6,14 Z"/>
-                    <RibbonButton Content="Duplicate" MaxSize="Medium" Command="{Binding DuplicateCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Duplicate}" MaxSize="Medium" Command="{Binding DuplicateCommand}"
                                   Icon="M2,2 L10,2 L10,10 L2,10 Z M6,6 L14,6 L14,14 L6,14 Z"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Scene" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14">
-                    <RibbonButton Content="Entity" Command="{Binding AddEntityCommand}"
-                                  ToolTip="Add an empty entity"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Scene}" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Entity}" Command="{Binding AddEntityCommand}"
+                                  ToolTip="{Localize RibbonShellStrings.EntityTip}"
                                   Icon="M8,2 L8,14 M2,8 L14,8"/>
-                    <RibbonButton Content="Delete" MaxSize="Medium" Command="{Binding DeleteCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Delete}" MaxSize="Medium" Command="{Binding DeleteCommand}"
                                   Icon="M3,4 L13,4 M5,4 L5,14 L11,14 L11,4 M6,2 L10,2"/>
-                    <RibbonButton Content="Select all" MaxSize="Medium" CollapseToSmall="Never" Command="{Binding SelectAllCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectAll}" MaxSize="Medium" CollapseToSmall="Never" Command="{Binding SelectAllCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z"/>
-                    <RibbonButton Content="Select none" MaxSize="Medium" Command="{Binding SelectNoneCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectNone}" MaxSize="Medium" Command="{Binding SelectNoneCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="View" Icon="M2,8 A6,4 0 0 0 14,8 A6,4 0 0 0 2,8 M8,6 A2,2 0 1 0 8,10 A2,2 0 1 0 8,6">
+                <RibbonGroup Header="{Localize RibbonShellStrings.View}" Icon="M2,8 A6,4 0 0 0 14,8 A6,4 0 0 0 2,8 M8,6 A2,2 0 1 0 8,10 A2,2 0 1 0 8,6">
                     <!-- The same flags drive the surface below and the View tab. `Ribbon.QuickAccessKey` NAMES the
                          command: put one in the quick-access bar and the shell points its item at the same flag, so the
                          button in the caption and this one are two views of one value - not two values kept in step. -->
-                    <RibbonToggleButton Content="Wireframe"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}"
                                         Ribbon.QuickAccessKey="Wireframe"
                                         IsChecked="{Binding Wireframe, Mode=TwoWay}"
                                         Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"/>
-                    <RibbonToggleButton Content="Grid"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Grid}"
                                         MaxSize="Medium"
                                         Ribbon.QuickAccessKey="ShowGrid"
                                         IsChecked="{Binding ShowGrid, Mode=TwoWay}"
                                         Icon="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14 M2,6 L14,6 M2,10 L14,10"/>
-                    <RibbonToggleButton Content="Gizmos"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Gizmos}"
                                         MaxSize="Medium"
                                         Ribbon.QuickAccessKey="ShowGizmos"
                                         IsChecked="{Binding ShowGizmos, Mode=TwoWay}"
@@ -201,26 +201,26 @@
                     <Separator/>
                     <!-- A group hosts ORDINARY controls too. They state the same range through the ATTACHED form - a
                          Slider has no reason to grow a `MaxSize` of its own. -->
-                    <CheckBox Content="Has selection" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="4 2"
+                    <CheckBox Content="{Localize RibbonShellStrings.HasSelection}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="4 2"
                               IsChecked="{Binding HasSelection, Mode=TwoWay}"/>
-                    <TextBlock Text="Grid size" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
+                    <TextBlock Text="{Localize RibbonShellStrings.GridSize}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
                     <!-- Not offered to the quick-access bar at all: a 120-wide control does not belong in a caption
                          strip shared with the window title. Word makes the same call - its zoom slider lives in the
                          status bar and cannot be added either. -->
                     <Slider Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Ribbon.CanAddToQuickAccess="False"
                             Width="120" Margin="4 2"
                             Minimum="0.1" Maximum="4" Value="{Binding GridSize, Mode=TwoWay}"/>
-                    <CheckBox Content="Backstage" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="4 2"
+                    <CheckBox Content="{Localize RibbonShellStrings.Backstage}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="4 2"
                               IsChecked="{Binding IsBackstage, Mode=TwoWay}"/>
                     <Separator/>
-                    <RibbonButton Content="Move QAT" MaxSize="Medium" Command="{Binding MoveQuickAccessCommand}"
-                                  ToolTip="Move the quick-access bar between the caption and the ribbon"
+                    <RibbonButton Content="{Localize RibbonShellStrings.MoveQuickAccess}" MaxSize="Medium" Command="{Binding MoveQuickAccessCommand}"
+                                  ToolTip="{Localize RibbonShellStrings.MoveQuickAccessTip}"
                                   Icon="M3,4 L13,4 M3,8 L13,8 M6,11 L8,13 L10,11"/>
                 </RibbonGroup>
 
                 <!-- A gallery: the choice IS the picture, so it is shown rather than listed. Its items are DATA - the
                      dropped-down copy builds its own cells from the same template. -->
-                <RibbonGroup Header="Materials" ShrinkSteps="None" Icon="M3,3 L13,3 L13,13 L3,13 Z M3,8 L13,8 M8,3 L8,13">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Materials}" ShrinkSteps="None" Icon="M3,3 L13,3 L13,13 L3,13 Z M3,8 L13,8 M8,3 L8,13">
                     <RibbonGallery ItemsSource="{Binding Materials}"
                                    SelectedItem="{Binding SelectedMaterial, Mode=TwoWay}"
                                    Columns="4"
@@ -244,98 +244,98 @@
                     </RibbonGallery>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Arrange" ShrinkSteps="None" Icon="M2,3 L14,3 M2,8 L10,8 M2,13 L14,13">
-                    <RibbonButton Content="Align left" MaxSize="Medium" Command="{Binding AlignLeftCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Arrange}" ShrinkSteps="None" Icon="M2,3 L14,3 M2,8 L10,8 M2,13 L14,13">
+                    <RibbonButton Content="{Localize RibbonShellStrings.AlignLeft}" MaxSize="Medium" Command="{Binding AlignLeftCommand}"
                                   Icon="M2,2 L2,14 M4,5 L12,5 M4,11 L9,11"/>
-                    <RibbonButton Content="Center" MaxSize="Medium" Command="{Binding AlignCenterCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Center}" MaxSize="Medium" Command="{Binding AlignCenterCommand}"
                                   Icon="M8,2 L8,14 M4,5 L12,5 M6,11 L10,11"/>
-                    <RibbonButton Content="Distribute" MaxSize="Medium" Command="{Binding DistributeCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Distribute}" MaxSize="Medium" Command="{Binding DistributeCommand}"
                                   Icon="M2,2 L2,14 M14,2 L14,14 M8,5 L8,11"/>
-                    <RibbonButton Content="Group" MaxSize="Medium" Command="{Binding GroupSelectionCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Group}" MaxSize="Medium" Command="{Binding GroupSelectionCommand}"
                                   Icon="M3,3 L9,3 L9,9 L3,9 Z M7,7 L13,7 L13,13 L7,13 Z"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Order" ShrinkSteps="None" Icon="M3,3 L11,3 L11,11 L3,11 Z M5,5 L13,5 L13,13 L5,13 Z">
-                    <RibbonButton Content="Forward" MaxSize="Medium" Command="{Binding BringForwardCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Order}" ShrinkSteps="None" Icon="M3,3 L11,3 L11,11 L3,11 Z M5,5 L13,5 L13,13 L5,13 Z">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Forward}" MaxSize="Medium" Command="{Binding BringForwardCommand}"
                                   Icon="M8,3 L8,13 M5,6 L8,3 L11,6"/>
-                    <RibbonButton Content="Backward" MaxSize="Medium" Command="{Binding SendBackwardCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Backward}" MaxSize="Medium" Command="{Binding SendBackwardCommand}"
                                   Icon="M8,3 L8,13 M5,10 L8,13 L11,10"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Lighting" ShrinkSteps="None" Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5">
-                    <RibbonButton Content="Light" Command="{Binding AddLightCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Lighting}" ShrinkSteps="None" Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Light}" Command="{Binding AddLightCommand}"
                                   Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"/>
-                    <RibbonButton Content="Bake" MaxSize="Medium" Command="{Binding BakeLightingCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bake}" MaxSize="Medium" Command="{Binding BakeLightingCommand}"
                                   Icon="M3,12 L13,12 M5,12 L5,7 M8,12 L8,4 M11,12 L11,9"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Physics" ShrinkSteps="None" Icon="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8">
-                    <RibbonButton Content="Collider" MaxSize="Medium" Command="{Binding AddColliderCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Physics}" ShrinkSteps="None" Icon="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Collider}" MaxSize="Medium" Command="{Binding AddColliderCommand}"
                                   Icon="M3,3 L13,3 L13,13 L3,13 Z M3,3 L13,13 M13,3 L3,13"/>
-                    <RibbonButton Content="Simulate" MaxSize="Medium" Command="{Binding SimulateCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Simulate}" MaxSize="Medium" Command="{Binding SimulateCommand}"
                                   Icon="M5,3 L13,8 L5,13 Z"/>
                 </RibbonGroup>
 
                 <!-- What the contextual tabs hang on. Two toggles rather than a real selection: the point on show is
                      the STRIP - one context, two contexts, and the order they arrive in. -->
-                <RibbonGroup Header="Context" ShrinkSteps="None" Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z">
-                    <RibbonToggleButton Content="Mesh" MaxSize="Medium"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Context}" ShrinkSteps="None" Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z">
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Mesh}" MaxSize="Medium"
                                         IsChecked="{Binding HasMeshSelection, Mode=TwoWay}"
-                                        ToolTip="Pretend a mesh is selected - its tabs appear"
+                                        ToolTip="{Localize RibbonShellStrings.MeshTip}"
                                         Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"/>
-                    <RibbonToggleButton Content="Light" MaxSize="Medium"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Light}" MaxSize="Medium"
                                         IsChecked="{Binding HasLightSelection, Mode=TwoWay}"
-                                        ToolTip="...and a second context, to see two ledges at once"
+                                        ToolTip="{Localize RibbonShellStrings.LightTip}"
                                         Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"/>
-                    <RibbonToggleButton Content="Ledge" MaxSize="Medium"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Ledge}" MaxSize="Medium"
                                         IsChecked="{Binding ShowContextHeader, Mode=TwoWay}"
-                                        ToolTip="The ledge over a context's tabs - off, their color carries it and the strip stops paying its height"
+                                        ToolTip="{Localize RibbonShellStrings.LedgeTip}"
                                         Icon="M2,4 L14,4 L14,7 L2,7 Z M2,10 L6,10 M8,10 L14,10"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Tools" ShrinkSteps="None" Icon="M3,13 L13,3 M10,3 L13,3 L13,6">
-                    <RibbonButton Content="Measure" MaxSize="Medium" Command="{Binding MeasureCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Tools}" ShrinkSteps="None" Icon="M3,13 L13,3 M10,3 L13,3 L13,6">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Measure}" MaxSize="Medium" Command="{Binding MeasureCommand}"
                                   Icon="M2,6 L14,6 L14,10 L2,10 Z M5,6 L5,8 M8,6 L8,8 M11,6 L11,8"/>
-                    <RibbonButton Content="Annotate" MaxSize="Medium" Command="{Binding AnnotateCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Annotate}" MaxSize="Medium" Command="{Binding AnnotateCommand}"
                                   Icon="M3,3 L11,3 L11,11 L7,11 L4,14 L4,11 L3,11 Z"/>
                 </RibbonGroup>
             </RibbonTab>
 
             <!-- ================= MODELING ================= -->
-            <RibbonTab Header="Modeling" KeyTipService.KeyTip="M">
-                <RibbonGroup Header="Primitives" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z">
+            <RibbonTab Header="{Localize RibbonShellStrings.Modeling}" KeyTipService.KeyTip="M">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Primitives}" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z">
                     <!-- Drops a menu instead of doing something. The rows are DATA: a menu of MenuItem CONTROLS cannot
                          be in two places, so it would reach the quick-access bar as an arrow over nothing. -->
-                    <RibbonDropDownButton Content="Add" ToolTip="Add a primitive"
+                    <RibbonDropDownButton Content="{Localize RibbonShellStrings.Add}" ToolTip="{Localize RibbonShellStrings.AddTip}"
                                           Icon="M8,2 L8,14 M2,8 L14,8">
                         <RibbonDropDownButton.DropDownMenu>
                             <ContextMenu ItemsSource="{Binding PrimitiveOptions}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Binding Header}" Command="{Binding Command}"/>
+                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}" Command="{Binding Command}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
                             </ContextMenu>
                         </RibbonDropDownButton.DropDownMenu>
                     </RibbonDropDownButton>
-                    <RibbonButton Content="Cube" Command="{Binding AddCubeCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Cube}" Command="{Binding AddCubeCommand}"
                                   Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"/>
-                    <RibbonButton Content="Sphere" Command="{Binding AddSphereCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Sphere}" Command="{Binding AddSphereCommand}"
                                   Icon="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8"/>
-                    <RibbonButton Content="Plane" Command="{Binding AddPlaneCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Plane}" Command="{Binding AddPlaneCommand}"
                                   Icon="M2,10 L8,6 L14,10 L8,14 Z"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Mesh" Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8">
-                    <RibbonButton Content="Extrude" MaxSize="Medium" Command="{Binding ExtrudeCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Mesh}" Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Extrude}" MaxSize="Medium" Command="{Binding ExtrudeCommand}"
                                   Icon="M2,9 L8,5 L14,9 L8,13 Z M8,5 L8,1"/>
-                    <RibbonButton Content="Bevel" MaxSize="Medium" Command="{Binding BevelCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bevel}" MaxSize="Medium" Command="{Binding BevelCommand}"
                                   Icon="M3,13 L3,6 L6,3 L13,3 M3,6 L13,6 L13,3 M13,6 L13,13 L3,13"/>
-                    <RibbonButton Content="Subdivide" MaxSize="Medium" Command="{Binding SubdivideCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Subdivide}" MaxSize="Medium" Command="{Binding SubdivideCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Snapping"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Snapping}"
                              Icon="M8,2 L8,14 M2,8 L14,8 M5,5 L11,11 M11,5 L5,11">
                     <!-- THIS group's commands get the shell's OWN right-click menu instead of the ribbon's. The property
                          is inherited, so the same attribute on <Ribbon> would speak for the whole band; written here it
@@ -346,7 +346,7 @@
                             <ContextMenu ItemsSource="{Binding SnapMenuRows}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Binding Header}"
+                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
                                                   Command="{Binding Command}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
@@ -354,32 +354,32 @@
                         </DataTemplate>
                     </Ribbon.CommandContextMenuTemplate>
 
-                    <RibbonToggleButton Content="Snap"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Snap}"
                                         Ribbon.QuickAccessKey="SnapToGrid"
                                         IsChecked="{Binding SnapToGrid, Mode=TwoWay}"
                                         Icon="M8,2 L8,14 M2,8 L14,8 M5,5 L11,11 M11,5 L5,11"/>
                     <!-- Small: the icon alone, three to a column. MaxSize is a RANGE - the adaptive pass may only shrink. -->
-                    <RibbonToggleButton MaxSize="Small" ToolTip="Snap to vertices"
+                    <RibbonToggleButton MaxSize="Small" ToolTip="{Localize RibbonShellStrings.SnapToVertices}"
                                         Icon="M3,3 L5,3 L5,5 L3,5 Z M11,3 L13,3 L13,5 L11,5 Z M3,11 L5,11 L5,13 L3,13 Z M11,11 L13,11 L13,13 L11,13 Z"/>
-                    <RibbonToggleButton MaxSize="Small" ToolTip="Snap to edges"
+                    <RibbonToggleButton MaxSize="Small" ToolTip="{Localize RibbonShellStrings.SnapToEdges}"
                                         Icon="M3,3 L3,13 L13,13 M3,3 L13,13"/>
-                    <RibbonToggleButton MaxSize="Small" ToolTip="Snap to faces"
+                    <RibbonToggleButton MaxSize="Small" ToolTip="{Localize RibbonShellStrings.SnapToFaces}"
                                         Icon="M3,5 L13,5 L13,13 L3,13 Z M3,5 L8,9 L13,5"/>
                 </RibbonGroup>
             </RibbonTab>
 
             <!-- ================= MATERIALS ================= -->
-            <RibbonTab Header="Materials" KeyTipService.KeyTip="A">
-                <RibbonGroup Header="Library" Icon="M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5">
+            <RibbonTab Header="{Localize RibbonShellStrings.Materials}" KeyTipService.KeyTip="A">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Library}" Icon="M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5">
                     <!-- The icon BOUND from the view model as plain path text; the binding converts it to a Geometry. -->
-                    <RibbonButton Content="New" Command="{Binding NewMaterialCommand}"
-                                  ToolTip="Create a material"
+                    <RibbonButton Content="{Localize RibbonShellStrings.New}" Command="{Binding NewMaterialCommand}"
+                                  ToolTip="{Localize RibbonShellStrings.NewMaterialTip}"
                                   Icon="{Binding MaterialIcon}"/>
                     <!-- ...and an icon that is not path data at all: a COLOR, drawn as a disc by the command's own
                          template. -->
-                    <RibbonButton Content="Swatch" MaxSize="Medium" Icon="Coral"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Swatch}" MaxSize="Medium" Icon="Coral"
                                   Command="{Binding NewMaterialCommand}"
-                                  ToolTip="A command whose icon is a color, drawn by its own template">
+                                  ToolTip="{Localize RibbonShellStrings.SwatchTip}">
                         <RibbonButton.IconTemplate>
                             <DataTemplate>
                                 <Ellipse Width="14" Height="14" EllipseType="EdgeToEdge" Fill="{Binding}"/>
@@ -388,48 +388,54 @@
                     </RibbonButton>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Channels" Icon="M2,11 L5,7 L8,11 L11,5 L14,11">
-                    <RibbonButton Content="Albedo" MaxSize="Medium" Command="{Binding EditAlbedoCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Channels}" Icon="M2,11 L5,7 L8,11 L11,5 L14,11">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Albedo}" MaxSize="Medium" Command="{Binding EditAlbedoCommand}"
                                   Icon="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2"/>
-                    <RibbonButton Content="Normal" MaxSize="Medium" Command="{Binding EditNormalCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Normal}" MaxSize="Medium" Command="{Binding EditNormalCommand}"
                                   Icon="M2,12 L8,4 L14,12 Z"/>
-                    <RibbonButton Content="Roughness" MaxSize="Medium" Command="{Binding EditRoughnessCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Roughness}" MaxSize="Medium" Command="{Binding EditRoughnessCommand}"
                                   Icon="M2,11 L5,7 L8,11 L11,5 L14,11"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Preview" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5">
-                    <RibbonToggleButton Content="Wireframe" IsChecked="{Binding Wireframe, Mode=TwoWay}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Preview}" Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5">
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}" IsChecked="{Binding Wireframe, Mode=TwoWay}"
                                         Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"/>
-                    <TextBlock Text="Shading" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
+                    <TextBlock Text="{Localize RibbonShellStrings.Shading}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
                     <DropDown Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Width="140" Margin="4 2"
                               ItemsSource="{Binding ShadingModes}"
-                              SelectedItem="{Binding ShadingMode, Mode=TwoWay}"/>
+                              SelectedItem="{Binding ShadingMode, Mode=TwoWay}">
+                        <DropDown.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding}}"/>
+                            </DataTemplate>
+                        </DropDown.ItemTemplate>
+                    </DropDown>
                 </RibbonGroup>
             </RibbonTab>
 
             <!-- ================= VIEW ================= -->
-            <RibbonTab Header="View" KeyTipService.KeyTip="V">
-                <RibbonGroup Header="Display" Icon="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14">
-                    <RibbonToggleButton Content="Grid"
+            <RibbonTab Header="{Localize RibbonShellStrings.View}" KeyTipService.KeyTip="V">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Display}" Icon="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14">
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Grid}"
                                         Ribbon.QuickAccessKey="ShowGrid"
                                         IsChecked="{Binding ShowGrid, Mode=TwoWay}"
                                         Icon="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14 M2,6 L14,6 M2,10 L14,10"/>
-                    <RibbonToggleButton Content="Gizmos"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Gizmos}"
                                         Ribbon.QuickAccessKey="ShowGizmos"
                                         IsChecked="{Binding ShowGizmos, Mode=TwoWay}"
                                         Icon="M8,14 L8,4 M8,4 L5,7 M8,4 L11,7 M2,14 L14,14"/>
-                    <RibbonToggleButton Content="Wireframe"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}"
                                         Ribbon.QuickAccessKey="Wireframe"
                                         IsChecked="{Binding Wireframe, Mode=TwoWay}"
                                         Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="Selection" Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z">
-                    <RibbonButton Content="All" MaxSize="Medium" Command="{Binding SelectAllCommand}"
+                <RibbonGroup Header="{Localize RibbonShellStrings.Selection}" Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z">
+                    <RibbonButton Content="{Localize RibbonShellStrings.All}" MaxSize="Medium" Command="{Binding SelectAllCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z"/>
-                    <RibbonButton Content="None" MaxSize="Medium" Command="{Binding SelectNoneCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.None}" MaxSize="Medium" Command="{Binding SelectNoneCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z"/>
-                    <RibbonButton Content="Delete" MaxSize="Medium" Command="{Binding DeleteCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Delete}" MaxSize="Medium" Command="{Binding DeleteCommand}"
                                   Icon="M3,4 L13,4 M5,4 L5,14 L11,14 L11,4 M6,2 L10,2"/>
                 </RibbonGroup>
             </RibbonTab>
@@ -439,45 +445,45 @@
                  belongs to by key, because a group is not a visual and cannot be pointed at as an element. -->
             <Ribbon.ContextualGroups>
                 <RibbonContextualGroup Key="MeshTools"
-                                       Header="MESH TOOLS"
+                                       Header="{Localize RibbonShellStrings.MeshTools}"
                                        Accent="#B85C2E"
                                        ShowHeader="{Binding ShowContextHeader}"
                                        IsActive="{Binding HasMeshSelection}"/>
                 <RibbonContextualGroup Key="LightTools"
-                                       Header="LIGHT TOOLS"
+                                       Header="{Localize RibbonShellStrings.LightTools}"
                                        Accent="#3F7CBF"
                                        ShowHeader="{Binding ShowContextHeader}"
                                        IsActive="{Binding HasLightSelection}"/>
             </Ribbon.ContextualGroups>
 
             <!-- TWO tabs in one context: they stand together under ONE ledge spanning both. -->
-            <RibbonTab Header="Geometry" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="G">
-                <RibbonGroup Header="Edit" Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14">
-                    <RibbonButton Content="Extrude" Command="{Binding ExtrudeCommand}"
+            <RibbonTab Header="{Localize RibbonShellStrings.Geometry}" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="G">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Edit}" Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Extrude}" Command="{Binding ExtrudeCommand}"
                                   Icon="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M8,8 L8,14"/>
-                    <RibbonButton Content="Bevel" MaxSize="Medium" Command="{Binding BevelCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bevel}" MaxSize="Medium" Command="{Binding BevelCommand}"
                                   Icon="M3,13 L6,3 L10,3 L13,13 Z"/>
-                    <RibbonButton Content="Subdivide" MaxSize="Medium" Command="{Binding SubdivideCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Subdivide}" MaxSize="Medium" Command="{Binding SubdivideCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8"/>
                 </RibbonGroup>
             </RibbonTab>
 
-            <RibbonTab Header="UV" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="U">
-                <RibbonGroup Header="Unwrap" Icon="M2,2 L14,2 L14,14 L2,14 Z M2,8 L14,8 M8,2 L8,14">
-                    <RibbonButton Content="Unwrap" Command="{Binding SubdivideCommand}"
+            <RibbonTab Header="{Localize RibbonShellStrings.Uv}" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="U">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Unwrap}" Icon="M2,2 L14,2 L14,14 L2,14 Z M2,8 L14,8 M8,2 L8,14">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Unwrap}" Command="{Binding SubdivideCommand}"
                                   Icon="M2,2 L14,2 L14,14 L2,14 Z M5,2 L5,14 M11,2 L11,14"/>
-                    <RibbonButton Content="Measure" MaxSize="Medium" Command="{Binding MeasureCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Measure}" MaxSize="Medium" Command="{Binding MeasureCommand}"
                                   Icon="M2,6 L14,6 L14,10 L2,10 Z M5,6 L5,8 M8,6 L8,8 M11,6 L11,8"/>
                 </RibbonGroup>
             </RibbonTab>
 
             <!-- A SECOND context, so the strip has to order two of them - the one switched on last stands furthest
                  right and does not shift what someone was already aiming at. -->
-            <RibbonTab Header="Light" ContextualGroupKey="LightTools" KeyTipService.KeyTip="L">
-                <RibbonGroup Header="Emission" Icon="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5">
-                    <RibbonButton Content="Bake" Command="{Binding BakeLightingCommand}"
+            <RibbonTab Header="{Localize RibbonShellStrings.Light}" ContextualGroupKey="LightTools" KeyTipService.KeyTip="L">
+                <RibbonGroup Header="{Localize RibbonShellStrings.Emission}" Icon="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5">
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bake}" Command="{Binding BakeLightingCommand}"
                                   Icon="M3,12 L13,12 M5,12 L5,7 M8,12 L8,4 M11,12 L11,9"/>
-                    <RibbonButton Content="Add light" MaxSize="Medium" Command="{Binding AddLightCommand}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.AddLight}" MaxSize="Medium" Command="{Binding AddLightCommand}"
                                   Icon="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"/>
                 </RibbonGroup>
             </RibbonTab>
@@ -488,17 +494,17 @@
                 Background="{ResourceReference SolidBackgroundFillColorSecondary}"
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1">
             <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Scene view" FontSize="22" HorizontalAlignment="Center"
+                <TextBlock Text="{Localize RibbonShellStrings.SceneView}" FontSize="22" HorizontalAlignment="Center"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <TextBlock Text="{Binding Status}" FontSize="14" Margin="0 12 0 0" HorizontalAlignment="Center"
+                <TextBlock Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" FontSize="14" Margin="0 12 0 0" HorizontalAlignment="Center"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <TextBlock Text="{Binding ShadingMode}" FontSize="13" Margin="0 16 0 0" HorizontalAlignment="Center"
+                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding ShadingMode}}" FontSize="13" Margin="0 16 0 0" HorizontalAlignment="Center"
                            Foreground="{ResourceReference TextFillColorTertiary}"/>
             </StackPanel>
         </Border>
 
         <Border Grid.Row="2" Height="26" Background="{ResourceReference SolidBackgroundFillColorTertiary}">
-            <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="12 0" FontSize="12"
+            <TextBlock Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" VerticalAlignment="Center" Margin="12 0" FontSize="12"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
         </Border>
     </Grid>

@@ -8,9 +8,18 @@
                      Exclude="@(AdditionalFiles);bin\**;obj\**;$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**" />
   </ItemGroup>
 
+  <!-- Language files (Table.language.alang) become string tables; their own generator reads the base language and
+       whether the project is an application, which alone may set a language's formats. -->
+  <ItemGroup Condition="'$(AdamantiumLanguageAutoInclude)' != 'false'">
+    <AdditionalFiles Include="**\*.alang"
+                     Exclude="@(AdditionalFiles);bin\**;obj\**;$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**" />
+  </ItemGroup>
+
   <ItemGroup>
     <CompilerVisibleProperty Include="RootNamespace" />
     <CompilerVisibleProperty Include="ProjectDir" />
+    <CompilerVisibleProperty Include="NeutralLanguage" />
+    <CompilerVisibleProperty Include="OutputType" />
   </ItemGroup>
 
   <!-- AdditionalFiles are not inputs of the compile or of Visual Studio's up-to-date check, so an edited view would
@@ -18,13 +27,13 @@
        every .auml again under each extra item type. -->
   <Target Name="AdamantiumAumlAreCompileInputs" BeforeTargets="CoreCompile">
     <ItemGroup>
-      <CustomAdditionalCompileInputs Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml'" />
+      <CustomAdditionalCompileInputs Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang'" />
     </ItemGroup>
   </Target>
 
   <Target Name="AdamantiumAumlAreUpToDateInputs" BeforeTargets="CollectUpToDateCheckInputDesignTime">
     <ItemGroup>
-      <UpToDateCheckInput Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml'" />
+      <UpToDateCheckInput Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang'" />
     </ItemGroup>
   </Target>
 

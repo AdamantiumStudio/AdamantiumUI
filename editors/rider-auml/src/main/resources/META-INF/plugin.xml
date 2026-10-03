@@ -14,6 +14,9 @@
             types of the project and its packages.</li>
             <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, themes, style sets and
             resource dictionaries.</li>
+            <li><b>Language files</b> (<code>.alang</code>), the application's strings in each language: highlighting,
+            completion of keys and formats, the build's checks as you type, a quick fix that adds the strings a
+            translation lacks, and <b>New | Language File</b> for a table or its translation.</li>
             <li>The <b>project templates</b> for File | New Solution: offered at startup when missing, and installed or
             updated any time with <b>Tools | Install Adamantium UI Templates</b>.</li>
         </ul>
@@ -23,9 +26,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <p>Completion for the x: directives: x:Null, x:Static and x:Type after an opening brace; inside {x:Static} a
-        type and then its static fields and properties; the values of x:Load, x:Shared, x:CreateInDesignTime and
-        x:KeepAlive.</p>
+        <p>Language files (.alang): a file type with its own icon and XML highlighting; completion of elements, the
+        keys a translation lacks and the formats of Language.Format; the build's checks while typing; a quick fix that
+        adds the missing strings under their base text; and New | Language File, which starts a table or a translation
+        listing every base string - a phrase that changes with a number with the forms the new language has, one
+        chosen by a value with the cases the base names.</p>
+        <p>{Localize} in AUML completes the language tables, their strings and the placeholders a string fills.</p>
     ]]></change-notes>
 
     <!-- Declaration order matters: platform + xml, then lsp4ij, then the extensions below. -->
@@ -40,6 +46,12 @@
                   fieldName="INSTANCE"
                   language="XML"
                   extensions="auml"/>
+        <!-- .alang language files (Strings.en.alang): XML too; the language server completes and checks them. -->
+        <fileType name="ALANG"
+                  implementationClass="com.adamantium.auml.AlangFileType"
+                  fieldName="INSTANCE"
+                  language="XML"
+                  extensions="alang"/>
         <!-- Mark the static AUML xmlns URIs as known so XML support doesn't flag "URI is not registered". -->
         <standardResourceProvider implementation="com.adamantium.auml.AumlResourceProvider"/>
         <!-- Dynamic clr-namespace: xmlns URIs can't be pre-registered. Two complementary nets:
@@ -74,6 +86,12 @@
                 description="Creates a new Adamantium UI markup file">
             <add-to-group group-id="NewGroup" anchor="first"/>
         </action>
+        <action id="Adamantium.CreateLanguageFile"
+                class="com.adamantium.auml.CreateLanguageFileAction"
+                text="Language File"
+                description="Creates an Adamantium UI language file: a table's base strings or their translation">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="Adamantium.CreateAumlFile"/>
+        </action>
         <action id="Adamantium.InstallTemplates"
                 class="com.adamantium.auml.InstallAumlTemplatesAction"
                 text="Install Adamantium UI Templates"
@@ -96,6 +114,7 @@
             <description><![CDATA[Adamantium UI markup language server]]></description>
         </server>
         <fileNamePatternMapping patterns="*.auml" serverId="adamantium-auml"/>
+        <fileNamePatternMapping patterns="*.alang" serverId="adamantium-auml"/>
         <!-- Paint the server's 'unknown' token (unresolved element) red; the rest get sensible colors.
              serverId MUST match the <server id> above — the provider is bound per server definition. -->
         <semanticTokensColorsProvider serverId="adamantium-auml"

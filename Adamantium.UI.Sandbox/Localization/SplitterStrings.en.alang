@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="Hint" Text="Drag the divider to resize the two panes — a GridSplitter (a Thumb subtype that now carries its own style under exact-type matching). Below, a UniformGrid tiles its children into equal cells (Columns=4)."/>
+    <Phrase Key="SplitterTitle" Text="GridSplitter — resizable panes"/>
+    <Phrase Key="LeftPane" Text="Left pane"/>
+    <Phrase Key="RightPane" Text="Right pane"/>
+    <Phrase Key="UniformTitle" Text="UniformGrid — equal cells"/>
+</Language>

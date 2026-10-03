@@ -155,4 +155,48 @@ public class CanvasToolRailTests
 
         Assert.That(window.PopupLayer.HasPopups, Is.True);
     }
+
+    // A TOOL'S NAME is a word of the canvas's phrases where they have one, followed as the language changes, and is
+    // said as it is where they do not - which is how an application's own tool keeps the name it was given.
+    [Test]
+    public void ATool_IsNamedInTheApplicationsLanguage_AndAnApplicationsOwnKeepsItsName()
+    {
+        var canvas = new InfiniteCanvas { Phrases = Adamantium.UI.Themes.Localization.CanvasStrings.Current };
+        canvas.Tools.Add(new Nothing { Name = "Select" });
+        canvas.Tools.Add(new Nothing { Name = "My brush" });
+        var rail = new CanvasToolRail { Canvas = canvas };
+        Settle(new Window { Width = 400, Height = 300, Content = rail });
+
+        string Said(int at) => (rail.Children[at] as ToggleButton)?.Content as string;
+        var english = new[] { Said(0), Said(1) };
+        Adamantium.UI.Core.Localization.Languages.Current = "ru";
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+        var russian = new[] { Said(0), Said(1) };
+        Adamantium.UI.Core.Localization.Languages.Current = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(english, Is.EqualTo(new[] { "Select", "My brush" }));
+            Assert.That(russian, Is.EqualTo(new[] { "Выделение", "My brush" }));
+        });
+    }
+
+    // A thing the canvas names as it makes it is named in the application's language, once.
+    [Test]
+    public void ANewThing_IsNamedByThePhrases()
+    {
+        var canvas = new InfiniteCanvas { Phrases = Adamantium.UI.Themes.Localization.CanvasStrings.Current };
+
+        var english = canvas.Say("InputName", ("number", 3));
+        Adamantium.UI.Core.Localization.Languages.Current = "ru";
+        var russian = canvas.Say("InputName", ("number", 3));
+        Adamantium.UI.Core.Localization.Languages.Current = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(english, Is.EqualTo("In 3"));
+            Assert.That(russian, Is.EqualTo("Вход 3"));
+            Assert.That(new InfiniteCanvas().Say("InputName"), Is.EqualTo("InputName"), "no phrases: the key as it is");
+        });
+    }
 }

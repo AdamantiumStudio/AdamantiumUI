@@ -10,6 +10,9 @@
     <_AdamantiumUIEngineSource Condition="'$(UseEngineSource)' != ''">$(UseEngineSource)</_AdamantiumUIEngineSource>
     <_AdamantiumUIEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(_AdamantiumUIEngineDir)'))</_AdamantiumUIEngineSource>
     <AdamantiumDesignerHost>$(_AdamantiumUIDir)artifacts\designer-host\$(Configuration)\net10.0\Adamantium.UI.Designer.Host.dll</AdamantiumDesignerHost>
+    <!-- These projects are not in the consumer's solution: without it a solution build hands them no configuration, they
+         land in artifacts\bin\<tfm> and the consumer copies a stale build from there. -->
+    <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
 
   <ItemGroup>

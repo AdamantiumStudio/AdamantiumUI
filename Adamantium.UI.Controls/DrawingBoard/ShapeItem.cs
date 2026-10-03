@@ -265,9 +265,6 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         }
     }
 
-    /// <summary>Which shape it is - that is the whole of what distinguishes one of these from another in a list.</summary>
-    public string Title => Shape.ToString();
-
     /// <summary>The two ENDS of a line or an arrow, which are the only thing about it worth grabbing. Every other shape
     /// is a box and answers with nothing.</summary>
     public IReadOnlyList<Vector2> Points

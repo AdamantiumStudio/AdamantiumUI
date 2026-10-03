@@ -3,47 +3,47 @@
          declared here. Each is two-way bound to its toggle; the panel's x button closes it (flows back to the switch). -->
     <StackPanel Orientation="Vertical" Margin="24">
 
-        <TextBlock Text="SlidePanel - slides in from a window edge, over all content." Margin="0,0,0,6"/>
-        <TextBlock Text="Cross axis always fills the window; the thickness is content/explicit (FullWindow covers all)."
+        <TextBlock Text="{Localize SlidePanelStrings.Title}" Margin="0,0,0,6"/>
+        <TextBlock Text="{Localize SlidePanelStrings.Hint}"
                    Foreground="#94A3B8" Margin="0,0,0,16"/>
 
         <StackPanel Orientation="Horizontal">
-            <ToggleSwitch Content="Left" IsChecked="{Binding LeftOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
-            <ToggleSwitch Content="Right" IsChecked="{Binding RightOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
-            <ToggleSwitch Content="Top" IsChecked="{Binding TopOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
-            <ToggleSwitch Content="Bottom" IsChecked="{Binding BottomOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
-            <ToggleSwitch Content="Full-window" IsChecked="{Binding FullOpen, Mode=TwoWay}"/>
+            <ToggleSwitch Content="{Localize SlidePanelStrings.Left}" IsChecked="{Binding LeftOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
+            <ToggleSwitch Content="{Localize SlidePanelStrings.Right}" IsChecked="{Binding RightOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
+            <ToggleSwitch Content="{Localize SlidePanelStrings.Top}" IsChecked="{Binding TopOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
+            <ToggleSwitch Content="{Localize SlidePanelStrings.Bottom}" IsChecked="{Binding BottomOpen, Mode=TwoWay}" Margin="0,0,16,0"/>
+            <ToggleSwitch Content="{Localize SlidePanelStrings.FullWindow}" IsChecked="{Binding FullOpen, Mode=TwoWay}"/>
         </StackPanel>
 
         <!-- Left / Right: explicit Width = thickness, full window height automatically. -->
-        <SlidePanel Placement="Left" Width="320" Header="Left panel"
+        <SlidePanel Placement="Left" Width="320" Header="{Localize SlidePanelStrings.LeftPanel}"
                     IsOpen="{Binding LeftOpen, Mode=TwoWay}">
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Docked to the LEFT edge, full window height."/>
-                <TextBlock Text="Toggle the switch or press x to close." Foreground="#94A3B8" Margin="0,8,0,0"/>
+                <TextBlock Text="{Localize SlidePanelStrings.LeftDocked}"/>
+                <TextBlock Text="{Localize SlidePanelStrings.HowToClose}" Foreground="#94A3B8" Margin="0,8,0,0"/>
             </StackPanel>
         </SlidePanel>
 
-        <SlidePanel Placement="Right" Width="300" Header="Right panel"
+        <SlidePanel Placement="Right" Width="300" Header="{Localize SlidePanelStrings.RightPanel}"
                     IsOpen="{Binding RightOpen, Mode=TwoWay}">
-            <TextBlock Text="Right edge, full window height."/>
+            <TextBlock Text="{Localize SlidePanelStrings.RightDocked}"/>
         </SlidePanel>
 
         <!-- Top / Bottom: explicit Height = thickness, full window width automatically. -->
-        <SlidePanel Placement="Top" Height="180" Header="Top panel"
+        <SlidePanel Placement="Top" Height="180" Header="{Localize SlidePanelStrings.TopPanel}"
                     IsOpen="{Binding TopOpen, Mode=TwoWay}">
-            <TextBlock Text="Top edge, full window width."/>
+            <TextBlock Text="{Localize SlidePanelStrings.TopDocked}"/>
         </SlidePanel>
 
-        <SlidePanel Placement="Bottom" Height="180" Header="Bottom panel"
+        <SlidePanel Placement="Bottom" Height="180" Header="{Localize SlidePanelStrings.BottomPanel}"
                     IsOpen="{Binding BottomOpen, Mode=TwoWay}">
-            <TextBlock Text="Bottom edge, full window width."/>
+            <TextBlock Text="{Localize SlidePanelStrings.BottomDocked}"/>
         </SlidePanel>
 
         <!-- FullWindow: covers the whole window, sliding from the left. -->
-        <SlidePanel Placement="Left" FullWindow="True" Header="Full-window panel"
+        <SlidePanel Placement="Left" FullWindow="True" Header="{Localize SlidePanelStrings.FullPanel}"
                     IsOpen="{Binding FullOpen, Mode=TwoWay}">
-            <TextBlock Text="This one covers the WHOLE window (FullWindow=True), sliding in from the left."/>
+            <TextBlock Text="{Localize SlidePanelStrings.FullCovers}"/>
         </SlidePanel>
 
     </StackPanel>

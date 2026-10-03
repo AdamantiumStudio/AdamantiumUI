@@ -14,10 +14,10 @@
 
         <!-- Always-visible toggle in the corner, with the camera's travel speed under it. -->
         <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16">
-            <Button Content="{Binding MenuButtonText}"
+            <Button Content="{Localize SceneStrings.MenuButton, visible={Binding IsMenuVisible}}"
                     Command="{Binding ToggleMenuCommand}"
-                    Width="120" Height="34"/>
-            <TextBlock Text="Camera speed" MarginTop="10" MarginBottom="4"
+                    MinWidth="120" Height="34"/>
+            <TextBlock Text="{Localize SceneStrings.CameraSpeed}" MarginTop="10" MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
             <NumericUpDown Value="{Binding CameraSpeed, Mode=TwoWay}"
                            Width="120"
@@ -26,39 +26,39 @@
                            SmallChange="0.01"
                            LargeChange="0.1"
                            StringFormat="N2"/>
-            <Button Content="Reset camera" Command="{Binding ResetCameraCommand}"
-                    Width="120" Height="30" MarginTop="10"/>
-            <TextBlock Text="Tool"
+            <Button Content="{Localize SceneStrings.ResetCamera}" Command="{Binding ResetCameraCommand}"
+                    MinWidth="120" Height="30" MarginTop="10"/>
+            <TextBlock Text="{Localize SceneStrings.Tool}"
                        MarginTop="10"
                        MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
             <RadioButton Classes="Toggle"
                          GroupName="SceneTool"
-                         Content="Select"
-                         Width="120"
+                         Content="{Localize SceneStrings.Select}"
+                         MinWidth="120"
                          IsChecked="{Binding IsSelecting, Mode=TwoWay}"/>
             <RadioButton Classes="Toggle"
                          GroupName="SceneTool"
-                         Content="Move"
-                         Width="120"
+                         Content="{Localize SceneStrings.Move}"
+                         MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsMoving, Mode=TwoWay}"/>
             <RadioButton Classes="Toggle"
                          GroupName="SceneTool"
-                         Content="Rotate"
-                         Width="120"
+                         Content="{Localize SceneStrings.Rotate}"
+                         MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsRotating, Mode=TwoWay}"/>
             <RadioButton Classes="Toggle"
                          GroupName="SceneTool"
-                         Content="Scale"
-                         Width="120"
+                         Content="{Localize SceneStrings.Scale}"
+                         MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsScaling, Mode=TwoWay}"/>
             <RadioButton Classes="Toggle"
                          GroupName="SceneTool"
-                         Content="Pivot"
-                         Width="120"
+                         Content="{Localize SceneStrings.Pivot}"
+                         MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsMovingPivot, Mode=TwoWay}"/>
         </StackPanel>
@@ -71,36 +71,36 @@
                     VerticalAlignment="Top"
                     MarginTop="240"
                     MarginRight="16">
-            <TextBlock Text="Lights"
+            <TextBlock Text="{Localize SceneStrings.Lights}"
                        MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <Button Content="Add point light"
+            <Button Content="{Localize SceneStrings.AddPoint}"
                     Command="{Binding AddPointLightCommand}"
-                    Width="120"
+                    MinWidth="120"
                     Height="30"/>
-            <Button Content="Add spot light"
+            <Button Content="{Localize SceneStrings.AddSpot}"
                     Command="{Binding AddSpotLightCommand}"
-                    Width="120"
+                    MinWidth="120"
                     Height="30"
                     MarginTop="4"/>
-            <Button Content="Add directional"
+            <Button Content="{Localize SceneStrings.AddDirectional}"
                     Command="{Binding AddDirectionalLightCommand}"
-                    Width="120"
+                    MinWidth="120"
                     Height="30"
                     MarginTop="4"/>
             <StackPanel Orientation="Vertical"
                         MarginTop="10"
                         Visibility="{Binding HasSelectedLight, Converter={conv:BoolToVisibilityConverter}}">
-                <TextBlock Text="{Binding SelectedLightName}"
+                <TextBlock Text="{Localize SceneStrings.LightName, type={Binding SelectedLightType}}"
                            MarginBottom="4"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <TextBlock Text="Color"
+                <TextBlock Text="{Localize SceneStrings.Color}"
                            MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <ColorPickerButton SelectedColor="{Binding Light.Color, Mode=TwoWay, Converter={conv:VectorToColorConverter}}"
                                    Width="120"
                                    Height="30"/>
-                <TextBlock Text="Intensity"
+                <TextBlock Text="{Localize SceneStrings.Intensity}"
                            MarginTop="6"
                            MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
@@ -114,7 +114,7 @@
                                StringFormat="N2"/>
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding HasRange, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="Range"
+                    <TextBlock Text="{Localize SceneStrings.Range}"
                                MarginTop="6"
                                MarginBottom="2"
                                Foreground="{ResourceReference TextFillColorSecondary}"/>
@@ -129,7 +129,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding IsSpotSelected, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="Cone angle"
+                    <TextBlock Text="{Localize SceneStrings.ConeAngle}"
                                MarginTop="6"
                                MarginBottom="2"
                                Foreground="{ResourceReference TextFillColorSecondary}"/>
@@ -141,9 +141,9 @@
                                    LargeChange="10"
                                    StringFormat="N0"/>
                 </StackPanel>
-                <Button Content="Delete light"
+                <Button Content="{Localize SceneStrings.DeleteLight}"
                         Command="{Binding RemoveLightCommand}"
-                        Width="120"
+                        MinWidth="120"
                         Height="30"
                         MarginTop="8"/>
             </StackPanel>
@@ -155,7 +155,7 @@
             <TextBlock Text="{Binding Fps, StringFormat='FPS: {0:F0}'}"
                        HorizontalAlignment="Right"
                        FontSize="18" Foreground="{ResourceReference TextFillColorPrimary}"/>
-            <TextBlock Text="{Binding FrameCostMs, StringFormat='{0:F2} ms/frame'}"
+            <TextBlock Text="{Localize SceneStrings.FrameCost, ms={Binding FrameCostMs}}"
                        HorizontalAlignment="Right" MarginTop="2"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
         </StackPanel>
@@ -163,13 +163,13 @@
         <!-- How to fly it, bottom-left. A world with no landmarks tells a person nothing about what the keyboard does,
              and the keys are the engine's (InputService), not this tab's - so they are stated, not guessed at. -->
         <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16">
-            <TextBlock Text="WASD — move, mouse — look around"
+            <TextBlock Text="{Localize SceneStrings.MoveKeys}"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <TextBlock Text="Q / E — up / down" MarginTop="2"
+            <TextBlock Text="{Localize SceneStrings.UpDownKeys}" MarginTop="2"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <TextBlock Text="Numpad + / − — double or halve the speed" MarginTop="2"
+            <TextBlock Text="{Localize SceneStrings.SpeedKeys}" MarginTop="2"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <TextBlock Text="F1 — free camera, F3 / F4 / F5 — follow the model" MarginTop="2"
+            <TextBlock Text="{Localize SceneStrings.CameraKeys}" MarginTop="2"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
         </StackPanel>
 
@@ -187,14 +187,14 @@
             </Border.Triggers>
             <StackPanel Orientation="Vertical"
                     HorizontalAlignment="Center">
-                <TextBlock Text="MENU" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,16"
+                <TextBlock Text="{Localize SceneStrings.Menu}" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,16"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <Button Content="Continue" Command="{Binding ToggleMenuCommand}" Height="36" Margin="0,0,0,8"/>
-                <Button Content="Load F-15" Command="{Binding LoadF15Command}" Height="36" Margin="0,0,0,8"/>
+                <Button Content="{Localize SceneStrings.Continue}" Command="{Binding ToggleMenuCommand}" Height="36" Margin="0,0,0,8"/>
+                <Button Content="{Localize SceneStrings.LoadF15}" Command="{Binding LoadF15Command}" Height="36" Margin="0,0,0,8"/>
                 <!-- No Swordman: it is a rigged model and character animation is not connected yet, so loading it
                      takes the application down. Bring the button back with the animation. -->
-                <Button Content="Load Monkey" Command="{Binding LoadMonkeyCommand}" Height="36"/>
-                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" Margin="0,16,0,0"
+                <Button Content="{Localize SceneStrings.LoadMonkey}" Command="{Binding LoadMonkeyCommand}" Height="36"/>
+                <TextBlock Text="{Localize SceneStrings.Status, status={Binding Status}, model={Binding Model}, error={Binding LoadError}}" HorizontalAlignment="Center" Margin="0,16,0,0"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
             </StackPanel>
         </Border>

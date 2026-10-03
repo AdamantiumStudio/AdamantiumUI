@@ -1,0 +1,28 @@
+<Language>
+    <Phrase Key="Title" Text="ObservableResource (live) vs ResourceReference (static)"/>
+    <Phrase Key="ThemePalette" Text="Theme palette (SystemFillColorCritical) — press ↑ Dark / ↓ Light to swap the theme:"/>
+    <Phrase Key="Static" Text="ResourceReference — static"/>
+    <Phrase Key="Live" Text="ObservableResource — live"/>
+    <Phrase Key="CycleCritical" Text="Cycle critical color"/>
+    <Phrase Key="CaptionLeft" Text="Caption buttons left"/>
+    <Phrase Key="Formats" Text="Numbers and dates in the application's language:"/>
+
+    <Phrase Key="AccentTitle" Text="Theme accent ({{ThemeResource}}) — live-recolor every accented control:"/>
+    <Phrase Key="Toggle" Text="Toggle"/>
+    <Phrase Key="Checked" Text="Checked"/>
+    <Phrase Key="Selected" Text="Selected"/>
+    <Phrase Key="CycleAccent" Text="Cycle accent"/>
+
+    <Phrase Key="LocalTitle" Text="Inline local resource (ResourceContext.Resources — private to this panel):"/>
+    <Phrase Key="CycleLocal" Text="Cycle local accent"/>
+    <Phrase Key="GlobalTitle" Text="Global resource (ResourceLink Scope=Global — survives a theme swap):"/>
+    <Phrase Key="CycleGlobal" Text="Cycle global accent"/>
+
+    <Phrase Key="ScopeTitle" Text="Theme scope — a subtree with a variant of its own"/>
+    <Phrase Key="ScopeHint" Text="Each pane names its own variant, so toggling the application's light/dark in the diagnostics panel leaves them where they are."/>
+    <Phrase Key="VariantLight" Text="Variant: Light"/>
+    <Phrase Key="VariantDark" Text="Variant: Dark"/>
+    <Phrase Key="VariantSystem" Text="Variant: System"/>
+    <Phrase Key="VariantOwn" Text="Variant: its own"/>
+    <Phrase Key="Dark" Text="Dark"/>
+</Language>

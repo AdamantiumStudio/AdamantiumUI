@@ -11,7 +11,7 @@ public partial class TextViewModel : TabPageViewModel
 {
     public TextViewModel() : base("Text") { }
 
-    [Bindable, Affects(nameof(CharInfo))] private string _message = "The quick brown fox jumps over the lazy dog";
+    [Bindable, Affects(nameof(MessageLength))] private string _message = "The quick brown fox jumps over the lazy dog";
 
     // Multi-line editor content: hard newlines plus a long line to show soft wrapping.
     [Bindable] private string _notes = "Multi-line editor.\nEnter inserts a newline; Up/Down move between lines.\nThis long line has no explicit breaks so it soft-wraps at the box width when TextWrapping is on, and you can select across several lines at once.";
@@ -24,5 +24,5 @@ public partial class TextViewModel : TabPageViewModel
     // Bound by a Run's Foreground - demonstrates that a Run's color is bindable too, not just its text.
     [Bindable] private Brush _accentBrush = new SolidColorBrush("#22D3EE");
 
-    public string CharInfo => $"  ({Message?.Length ?? 0} chars)";
+    public int MessageLength => Message?.Length ?? 0;
 }

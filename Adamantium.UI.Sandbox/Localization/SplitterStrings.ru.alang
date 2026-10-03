@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="Hint" Text="Тяните разделитель, чтобы менять размер двух панелей, — это GridSplitter (подтип Thumb, у которого теперь свой стиль при точном совпадении типа). Ниже UniformGrid раскладывает детей по равным ячейкам (Columns=4)."/>
+    <Phrase Key="SplitterTitle" Text="GridSplitter — панели с изменяемым размером"/>
+    <Phrase Key="LeftPane" Text="Левая панель"/>
+    <Phrase Key="RightPane" Text="Правая панель"/>
+    <Phrase Key="UniformTitle" Text="UniformGrid — равные ячейки"/>
+</Language>

@@ -20,6 +20,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Platforms.Windows;
@@ -277,6 +278,17 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// ADAM_THEME environment variable overrides it.</summary>
     public string StartupTheme { get; set; }
 
+    /// <summary>The language the application opens in, by name ("en", "ru"); unset opens in the base language of its
+    /// language files. The application's own setting: the operating system's language is not read.</summary>
+    public string StartupLanguage { get; set; }
+
+    /// <summary>The language the application shows. Setting it switches every string while the application runs.</summary>
+    public string Language
+    {
+        get => Languages.Current;
+        set => Languages.Current = value;
+    }
+
     public IDependencyContainer Container { get; private set; }
 
     protected IGraphicsDeviceService GraphicsDeviceService { get; private set; }
@@ -385,6 +397,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Before any window, so a crash while creating shaders costs a child process, not the application.
         ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
         LoadThemes();
+        LoadLanguage();
         SubscribeToEvents();
         
         EntityWorld.Initialize();
@@ -408,6 +421,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public void InitializeWithoutRunning()
     {
         LoadThemes();
+        LoadLanguage();
         OnInitialize();
         // First: the container resolves the first registration of a service, so a stand-in made here is the one used.
         RegisterDesignServices(Container);
@@ -419,6 +433,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// wins, so a stand-in registered here is what view-models get in the preview.</summary>
     protected virtual void RegisterDesignServices(IContainerRegistry containerRegistry)
     {
+    }
+
+    private void LoadLanguage()
+    {
+        Languages.Current = string.IsNullOrEmpty(StartupLanguage) ? Languages.Available.FirstOrDefault() : StartupLanguage;
     }
 
     private void LoadThemes()

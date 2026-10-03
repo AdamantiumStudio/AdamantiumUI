@@ -6,6 +6,7 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -38,10 +39,21 @@ public partial class DockingViewModel : TabPageViewModel
     }
 
     /// <summary>What the application last answered when the docking area asked it (see
-    /// <see cref="Behaviors.DockingPolicyBehavior"/>). Shown above the area, because a refusal that is not said out loud
-    /// reads as a gesture that mysteriously did nothing.</summary>
-    [Bindable] private string _lastAnswer =
-        "Nothing asked yet. Try dropping a fourth tab into a panel, or pulling out a panel's only tab.";
+    /// <see cref="Behaviors.DockingPolicyBehavior"/>), about which panes and which zone. Shown above the area, because a
+    /// refusal that is not said out loud reads as a gesture that mysteriously did nothing.</summary>
+    [Bindable] private DockingAnswer _lastAnswer = DockingAnswer.NothingAsked;
+
+    [Bindable] private string _answeredPanes;
+
+    [Bindable] private DockZone _answeredZone;
+
+    /// <summary>Records an answer: the panes first, so the words are said once, with all of it.</summary>
+    public void Answer(DockingAnswer answer, string panes, DockZone zone = DockZone.None)
+    {
+        AnsweredPanes = panes;
+        AnsweredZone = zone;
+        LastAnswer = answer;
+    }
 
     /// <summary>Every pane the region knows how to reach. New ones join it, so a tab created here can be navigated back
     /// to after it is closed - the name is the identity, not the instance.</summary>
@@ -91,12 +103,12 @@ public partial class DockingViewModel : TabPageViewModel
     /// <summary>The docking area's arrangement. The view binds the area to it; these commands drive it.</summary>
     public DockingWorkspace Workspace { get; }
 
-    [Bindable] private string _layoutState = "";
+    [Bindable] private DockingLayoutReport _layoutState = DockingLayoutReport.Pending;
 
     /// <summary>Where this application keeps its window layout - beside its other settings, per user. The CONTROL has
     /// no opinion about this: it hands out text and reads text back, and where that lives is the application's
     /// business (a file here, a settings store or a server elsewhere).</summary>
-    private static string LayoutFile => Path.Combine(
+    public string LayoutFile => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Adamantium", "Sandbox", "docking-layout.json");
 
@@ -106,13 +118,13 @@ public partial class DockingViewModel : TabPageViewModel
     {
         if (!File.Exists(LayoutFile))
         {
-            LayoutState = $"No saved layout yet ({LayoutFile}). Rearrange the panels and press Save.";
+            LayoutState = DockingLayoutReport.NoSavedLayout;
             return;
         }
 
         LayoutState = Workspace.Load(File.ReadAllText(LayoutFile))
-            ? $"Restored the layout saved in {LayoutFile}."
-            : "The saved layout could not be read - starting from the arrangement in the markup.";
+            ? DockingLayoutReport.RestoredFromFile
+            : DockingLayoutReport.Unreadable;
     }
 
     /// <summary>Writes where the panels are right now: the tree, the edge bars, which panel is put away, which tab is
@@ -123,14 +135,14 @@ public partial class DockingViewModel : TabPageViewModel
         var state = Workspace.Save();
         if (state == null)
         {
-            LayoutState = "Nothing to save - the area is not on screen yet.";
+            LayoutState = DockingLayoutReport.NotOnScreen;
             return;
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(LayoutFile));
         File.WriteAllText(LayoutFile, state);
 
-        LayoutState = $"Saved to {LayoutFile}. Rearrange things and press Restore - or restart the app, it survives that.";
+        LayoutState = DockingLayoutReport.SavedToFile;
     }
 
     /// <summary>Puts the saved arrangement back, floating windows and all.</summary>
@@ -139,13 +151,13 @@ public partial class DockingViewModel : TabPageViewModel
     {
         if (!File.Exists(LayoutFile))
         {
-            LayoutState = "Nothing saved yet - press Save first.";
+            LayoutState = DockingLayoutReport.NothingSaved;
             return;
         }
 
         LayoutState = Workspace.Load(File.ReadAllText(LayoutFile))
-            ? "Restored. Documents are NOT part of it: Pane.Restore says they belong to a session, not to the workspace."
-            : "The saved text names nothing this area still has.";
+            ? DockingLayoutReport.Restored
+            : DockingLayoutReport.NamesNothing;
     }
 
     /// <summary>What a real application's "reset window layout" does.</summary>
@@ -154,7 +166,7 @@ public partial class DockingViewModel : TabPageViewModel
     {
         if (File.Exists(LayoutFile)) File.Delete(LayoutFile);
 
-        LayoutState = "Forgotten. Next start gives you the arrangement written in the markup.";
+        LayoutState = DockingLayoutReport.Forgotten;
     }
 
 
@@ -170,26 +182,26 @@ public partial class DockingViewModel : TabPageViewModel
         if (_unsaved.Contains(e.PaneId))
         {
             e.Cancel = true;
-            LastAnswer = $"REFUSED: '{e.PaneId}' has unsaved changes. Untick the box in it and try again.";
+            Answer(DockingAnswer.Refused, e.PaneId);
             return;
         }
 
         if (!_asks.Contains(e.PaneId)) return;
 
         var result = await _dialogs.ShowDialogAsync<ConfirmDialogViewModel>(new NavigationParameters()
-            .Add("title", "Close document")
-            .Add("message", $"Close '{e.PaneId}'?"));
+            .Add("title", DockingStrings.CloseDocument)
+            .Add("message", DockingStrings.CloseQuestion(e.PaneId)));
 
         // Cancel STOPS THE WHOLE operation, not just this pane: after "no" to the first of five, being asked about the
         // other four is badgering, and that is what every editor's save-before-closing dialog means by Cancel.
         if (result.Result == DialogButtonResult.Ok)
         {
-            LastAnswer = $"User said close '{e.PaneId}'.";
+            Answer(DockingAnswer.UserClosed, e.PaneId);
             return;
         }
 
         e.CancelAll = true;
-        LastAnswer = $"User kept '{e.PaneId}' open - and stopped the rest of the operation.";
+        Answer(DockingAnswer.UserKept, e.PaneId);
     }
 
     /// <summary>The "Unsaved changes" box inside a document. A command rather than a bound property because the demo's
@@ -202,9 +214,7 @@ public partial class DockingViewModel : TabPageViewModel
         if (id == null) return;
 
         var unsaved = !_unsaved.Remove(id) && _unsaved.Add(id);
-        LastAnswer = unsaved
-            ? $"'{id}' now has unsaved changes - closing it will be refused outright."
-            : $"'{id}' is saved again - it will close normally.";
+        Answer(unsaved ? DockingAnswer.Unsaved : DockingAnswer.Saved, id);
     }
 
     // --- Asking the USER, which is where the synchronous refusal above runs out ---------------------------------------
@@ -226,9 +236,7 @@ public partial class DockingViewModel : TabPageViewModel
 
         Workspace.PinnedTabsPlacement = separate ? PinnedTabsPlacement.SeparateRow : PinnedTabsPlacement.SameRow;
 
-        LastAnswer = separate
-            ? "Pinned tabs get a row of their own."
-            : "Pinned tabs share the row with the rest.";
+        Answer(separate ? DockingAnswer.OwnRow : DockingAnswer.SharedRow, null);
     }
 
     [Command]
@@ -238,8 +246,6 @@ public partial class DockingViewModel : TabPageViewModel
         if (id == null) return;
 
         var asks = !_asks.Remove(id) && _asks.Add(id);
-        LastAnswer = asks
-            ? $"Closing '{id}' will now ASK first, in a dialog."
-            : $"'{id}' closes without asking.";
+        Answer(asks ? DockingAnswer.Asks : DockingAnswer.DoesNotAsk, id);
     }
 }

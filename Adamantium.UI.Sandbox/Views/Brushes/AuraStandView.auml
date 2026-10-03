@@ -4,7 +4,7 @@
     <!-- The "Aura" stand in the brushes region: aura and shadow bands, drawn from the shape's own distance field and
          batched. Keeps its own figure and box. -->
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Aura / Shadow — live (the band is drawn OUTSIDE the element; the margin is yours to leave)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.AuraTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" MarginBottom="20">
             <!-- A MID-TONE backdrop on purpose: the other stands sit on near-black, but a dark shadow is invisible
                  there and a bright aura blows out. This one has to show both at once. -->
@@ -51,7 +51,7 @@
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16" VerticalAlignment="Center">
                 <!-- Only for the polygon: on a rect or an ellipse these two numbers mean nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="Corners — 3 is a triangle, enough of them a circle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
                         <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -59,7 +59,7 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock Text="Start angle — where corner 0 sits" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -69,7 +69,7 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="Corner radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding HaloRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="60" SmallChange="1"
@@ -81,8 +81,8 @@
                 <!-- Margin is LAYOUT, not a band parameter - it does nothing to the glow itself. It is here only to
                      show the one rule the engine will not keep for you: bounds are never grown to fit a band, so a
                      clipping ancestor cuts whatever the author left no room for. Hence it lives with the clip. -->
-                <CheckBox Content="Clip to the element's box" IsChecked="{Binding HaloClip, Mode=TwoWay}" MarginBottom="4"/>
-                <TextBlock Text="Margin — layout, not a band setting. With the clip on, drop it below the radius and the band is cut: bounds are never grown to fit a glow."
+                <CheckBox Content="{Localize BrushesStrings.ClipToBox}" IsChecked="{Binding HaloClip, Mode=TwoWay}" MarginBottom="4"/>
+                <TextBlock Text="{Localize BrushesStrings.MarginHint}"
                            TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="14">
                     <Slider Value="{Binding HaloMargin, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="70" Width="186"/>
@@ -92,8 +92,8 @@
                                    Value="{Binding HaloMargin, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
 
-                <CheckBox Content="AURA — no direction" IsChecked="{Binding AuraOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
-                <TextBlock Text="Radius — how far it reaches" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <CheckBox Content="{Localize BrushesStrings.AuraOn}" IsChecked="{Binding AuraOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
+                <TextBlock Text="{Localize BrushesStrings.AuraRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="60" SmallChange="1"
@@ -101,7 +101,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Spread — solid rim before the fade" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.AuraSpread}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraSpread, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="30" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="30" SmallChange="1"
@@ -109,7 +109,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraSpread, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Opacity" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
@@ -117,14 +117,14 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <CheckBox Content="Inner (glow inward — needs no margin at all)" IsChecked="{Binding AuraInner, Mode=TwoWay}" MarginBottom="6"/>
-                <TextBlock Text="Color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <CheckBox Content="{Localize BrushesStrings.AuraInner}" IsChecked="{Binding AuraInner, Mode=TwoWay}" MarginBottom="6"/>
+                <TextBlock Text="{Localize BrushesStrings.Color}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding AuraColor, Mode=TwoWay}" MarginBottom="14"/>
 
                 <!-- LIVING: at Turbulence 0 this is the still band above and the living pass is never reached, so a
                      plain glow pays nothing for the noise. -->
-                <TextBlock Text="ALIVE — the reach breathes" FontSize="14" MarginBottom="6"/>
-                <TextBlock Text="Turbulence — how far the reach wanders (0 = still)"
+                <TextBlock Text="{Localize BrushesStrings.Alive}" FontSize="14" MarginBottom="6"/>
+                <TextBlock Text="{Localize BrushesStrings.TurbulenceHint}"
                            TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraTurbulence, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="2" Width="186"/>
@@ -133,7 +133,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraTurbulence, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Flow — how fast it drifts" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Flow}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraFlow, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="3" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="3" SmallChange="0.05"
@@ -141,7 +141,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraFlow, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Detail — how many tongues run around it" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Detail}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding AuraDetail, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0.5" Maximum="12" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0.5" Maximum="12" SmallChange="1"
@@ -149,9 +149,9 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding AuraDetail, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <CheckBox Content="Palette — travel four colors instead of one" IsChecked="{Binding AuraPalette, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox Content="{Localize BrushesStrings.Palette}" IsChecked="{Binding AuraPalette, Mode=TwoWay}" MarginBottom="6"/>
                 <StackPanel Orientation="Vertical" Visibility="{Binding AuraPalette, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="The four it travels through" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.FourColors}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
                         <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding AuraColor1, Mode=TwoWay}" MarginRight="8"/>
                         <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding AuraColor2, Mode=TwoWay}" MarginRight="8"/>
@@ -163,8 +163,8 @@
             <!-- The shadow's own column: the two sets are independent, and stacking them made one tall strip nobody
                  could take in at a glance. -->
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="24" VerticalAlignment="Center">
-                <CheckBox Content="SHADOW — thrown where the light is not" IsChecked="{Binding ShadowOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
-                <TextBlock Text="Offset X / Y" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <CheckBox Content="{Localize BrushesStrings.ShadowOn}" IsChecked="{Binding ShadowOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
+                <TextBlock Text="{Localize BrushesStrings.Offset}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="6">
                     <Slider Value="{Binding ShadowOffsetX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
                     <NumericUpDown Width="88" Minimum="-40" Maximum="40" SmallChange="1"
@@ -179,7 +179,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ShadowOffsetY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Blur radius — how soft the edge is" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.BlurRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ShadowBlur, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="60" SmallChange="1"
@@ -187,7 +187,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ShadowBlur, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Spread — how HIGH it floats (negative peeks out from one edge)"
+                <TextBlock Text="{Localize BrushesStrings.ShadowSpread}"
                            TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ShadowSpread, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-20" Maximum="30" Width="186"/>
@@ -196,7 +196,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ShadowSpread, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Opacity" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ShadowOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
@@ -204,8 +204,8 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ShadowOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <CheckBox Content="Inner (inset — the pressed look)" IsChecked="{Binding ShadowInner, Mode=TwoWay}" MarginBottom="6"/>
-                <TextBlock Text="Color" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <CheckBox Content="{Localize BrushesStrings.ShadowInner}" IsChecked="{Binding ShadowInner, Mode=TwoWay}" MarginBottom="6"/>
+                <TextBlock Text="{Localize BrushesStrings.Color}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding ShadowColor, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>

@@ -1,5 +1,6 @@
 using Adamantium.UI.Sandbox.ViewModels;
 using Adamantium.UI.Controls.DataGrid;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.Validation;
 
@@ -9,5 +10,5 @@ namespace Adamantium.UI.Sandbox.Validation;
 public class FinishedIsNotAnErrorRule : DataGridRowValidationRule
 {
     public override string Validate(object item) =>
-        item is GridNode { Done: true, Status: "error" } ? "marked done and filed as an error" : null;
+        item is GridNode { Done: true, Status: "error" } ? GridPageStrings.DoneButError : null;
 }

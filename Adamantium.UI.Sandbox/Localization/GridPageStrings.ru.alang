@@ -1,0 +1,118 @@
+<Language>
+    <Phrase Key="Intro" Text="10 000 строк, каждая пятая с веткой, и по одному столбцу каждого типа. Дважды щёлкните ячейку, чтобы изменить её; остальным управляет панель справа."/>
+    <Phrase Key="NewAssembly" Text="Новая сборка"/>
+
+    <Phrase Key="Details" Text="Подробности"/>
+    <Phrase Key="Note" Text="Заметка"/>
+    <Phrase Key="Chart" Text="Диаграмма"/>
+
+    <Phrase Key="Code" Text="Код"/>
+    <Phrase Key="Owner" Text="Владелец"/>
+    <Phrase Key="Name" Text="Название"/>
+    <Phrase Key="Done" Text="Готово"/>
+    <Phrase Key="Size" Text="Размер"/>
+    <Phrase Key="Checksum" Text="Контрольная сумма"/>
+    <Phrase Key="Region" Text="Регион"/>
+    <Phrase Key="Batch" Text="Партия"/>
+    <Phrase Key="Revision" Text="Ревизия"/>
+    <Phrase Key="Line" Text="Линия"/>
+    <Phrase Key="Shift" Text="Смена"/>
+    <Phrase Key="Updated" Text="Обновлено"/>
+    <Phrase Key="Status" Text="Статус"/>
+    <Phrase Key="FiledAsError" Text="Запись заведена как ошибка"/>
+    <Phrase Key="DoneButError" Text="отмечена готовой и заведена как ошибка"/>
+    <Phrase Key="NotANumber" Text="{value} — не число"/>
+    <Phrase Key="BelowFloor" Text="{number} ниже нижней границы {min}"/>
+    <Phrase Key="OverCeiling" Text="{number} выше верхней границы {max}"/>
+
+    <Phrase Key="Settings" Text="Настройки таблицы"/>
+    <Phrase Key="Columns" Text="СТОЛБЦЫ"/>
+    <Phrase Key="ChooseColumns" Text="Пользователь выбирает столбцы"/>
+    <Phrase Key="FilterColumns" Text="Пользователь фильтрует столбцы"/>
+    <Phrase Key="NewRecordRow" Text="Строка для новой записи"/>
+    <Phrase Key="SaveLayout" Text="Сохранить вид"/>
+    <Phrase Key="Restore" Text="Восстановить"/>
+    <Phrase Key="Layout" Select="action" None="Пока ничего не сохранено" Saved="Сохранено: {bytes}" Restored="Восстановлено: {columns}"/>
+    <Phrase Key="Bytes" Count="count" One="{count:N0} байт" Few="{count:N0} байта" Many="{count:N0} байт" Other="{count:N0} байта"/>
+    <Phrase Key="ColumnCount" Count="count" One="{count} столбец" Few="{count} столбца" Many="{count} столбцов" Other="{count} столбца"/>
+
+    <Phrase Key="History" Text="ИСТОРИЯ"/>
+    <Phrase Key="Undo" Text="Отменить"/>
+    <Phrase Key="Redo" Text="Повторить"/>
+    <Phrase Key="Step" Select="step" NothingToUndo="Отменять нечего" Undone="Одно действие отменено; {behind}, {ahead}"
+            Redone="Одно действие повторено; {behind}, {ahead}" NothingToRedo="Повторять нечего"/>
+    <Phrase Key="Behind" Select="more" True="позади есть ещё" False="позади пусто"/>
+    <Phrase Key="Ahead" Select="one" True="впереди одно" False="впереди пусто"/>
+
+    <Phrase Key="Export" Text="ЭКСПОРТ"/>
+    <Phrase Key="ExportCsv" Text="Экспорт в CSV"/>
+    <Phrase Key="ExportXlsx" Text="Экспорт в XLSX"/>
+    <Phrase Key="Exported" Select="state" Nothing="Пока ничего не экспортировано" NoDialog="На этой платформе нет диалога файлов"
+            Canceled="Отменено" Written="{path}"/>
+    <Phrase Key="ExportTitle" Text="Экспорт таблицы"/>
+    <Phrase Key="CsvFiles" Text="Значения через запятую"/>
+    <Phrase Key="XlsxFiles" Text="Книга Excel"/>
+    <Phrase Key="PinCode" Text="Закрепить «Код» слева"/>
+    <Phrase Key="PinRegion" Text="Закрепить «Регион» слева"/>
+    <Phrase Key="PinStatus" Text="Закрепить «Статус» справа"/>
+
+    <Phrase Key="Search" Text="ПОИСК"/>
+    <Phrase Key="SearchPanel" Text="Панель поиска"/>
+    <Phrase Key="SearchHint" Text="Введите текст и нажмите Enter; стрелки переходят по совпадениям. Escape или × закрывает полосу."/>
+    <Phrase Key="OwnMatchColors" Text="Свои цвета совпадений"/>
+    <Phrase Key="EveryMatch" Text="Каждое совпадение"/>
+    <Phrase Key="CurrentMatch" Text="То, на котором вы стоите"/>
+    <Phrase Key="AlphaHint" Text="Держите прозрачность высокой: это заливка поверх ячейки, а не плашка."/>
+
+    <Phrase Key="Validation" Text="ПРОВЕРКА"/>
+    <Phrase Key="ValidationHint" Text="Размер принимается в этих пределах; ячейку «Статус» записи, заведённой как ошибка, отмечает сама запись."/>
+    <Phrase Key="RefuseInvalid" Text="Не выпускать из неверной ячейки"/>
+    <Phrase Key="From" Text="от"/>
+    <Phrase Key="To" Text="до"/>
+    <Phrase Key="WarnAbove" Text="предупреждать выше"/>
+    <Phrase Key="OwnErrorColor" Text="Свой цвет ошибки"/>
+    <Phrase Key="RejectedValue" Text="Отвергнутое значение"/>
+
+    <Phrase Key="Grouping" Text="ГРУППИРОВКА"/>
+    <Phrase Key="GroupingPanel" Text="Панель группировки"/>
+
+    <Phrase Key="Tree" Text="ДЕРЕВО"/>
+    <Phrase Key="TreeFromKeys" Text="Дерево по ключам, а не по вложенности"/>
+    <Phrase Key="TreeSource" Select="keys" True="{records}, все на верхнем уровне — дерево строится по Code / ParentCode"
+            False="{records}, у каждой свои дети"/>
+    <Phrase Key="Records" Count="count" One="{count:N0} запись" Few="{count:N0} записи" Many="{count:N0} записей" Other="{count:N0} записи"/>
+
+    <Phrase Key="Sorting" Text="СОРТИРОВКА"/>
+    <Phrase Key="SortingPanel" Text="Панель сортировки"/>
+
+    <Phrase Key="Totals" Text="ИТОГИ"/>
+    <Phrase Key="SizeColumn" Text="Столбец «Размер»"/>
+    <Phrase Key="CountRows" Text="Считать строки в «Коде»"/>
+    <Phrase Key="TotalsHint" Text="Итоги стоят под таблицей и в заголовке каждой группы."/>
+    <Phrase Key="SizeTotal" Select="function" Sum="Σ {{0:N0}}" Average="сред. {{0:N1}}" Min="мин. {{0:N0}}"
+            Max="макс. {{0:N0}}" Count="строк: {{0:N0}}"/>
+    <Phrase Key="RowsTotal" Text="строк: {{0:N0}}"/>
+
+    <Phrase Key="Rows" Text="СТРОКИ"/>
+    <Phrase Key="RowNumbers" Text="Номера строк"/>
+    <Phrase Key="TintEvery" Text="Подкрашивать каждую N-ю строку"/>
+    <Phrase Key="TintHint" Text="2 — через строку; 0 — никакую"/>
+    <Phrase Key="TintColor" Text="Цвет подкраски"/>
+
+    <Phrase Key="Look" Text="ВИД"/>
+    <Phrase Key="GridLines" Text="Линии сетки"/>
+    <Phrase Key="SelectionUnit" Text="Единица выделения"/>
+    <Phrase Key="Editing" Text="ячейка редактируется"/>
+
+    <Phrase Key="Sum" Text="Сумма"/>
+    <Phrase Key="Average" Text="Среднее"/>
+    <Phrase Key="Min" Text="Минимум"/>
+    <Phrase Key="Max" Text="Максимум"/>
+    <Phrase Key="Count" Text="Количество"/>
+    <Phrase Key="None" Text="Нет"/>
+    <Phrase Key="All" Text="Все"/>
+    <Phrase Key="Horizontal" Text="Горизонтальные"/>
+    <Phrase Key="Vertical" Text="Вертикальные"/>
+    <Phrase Key="Cell" Text="Ячейка"/>
+    <Phrase Key="FullRow" Text="Строка целиком"/>
+</Language>

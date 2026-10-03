@@ -1485,13 +1485,84 @@ public class CanvasChromeThemeTests
         Assert.That(Said(canvas), Does.Contain("2 items"), $"{theme}: two things on the plane say: {Said(canvas)}");
     }
 
+    // WHAT EACH THING IS, in the list of the plane: the theme's word for its kind, then what it was called.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("EditorPro")]
+    [TestCase("MacOs")]
+    public void TheStructureSaysWhatEachThingIs(string theme)
+    {
+        var canvas = Built(theme);
+        var inspector = Piece<CanvasInspector>(canvas);
+
+        canvas.Scene = new CanvasScene();
+        inspector.ShowsStructure = true;
+        canvas.Scene.Add(new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 40, 40),
+            Adamantium.UI.Core.Media.Brushes.White, 2));
+        canvas.Scene.Add(new TextItem(new Vector2(60, 0), "Hello", Adamantium.UI.Core.Media.Brushes.White, 12));
+        Settle(canvas);
+
+        var said = new List<string>();
+        foreach (var row in Rows(canvas)) said.AddRange(Shown(row));
+
+        Assert.That(said, Is.SupersetOf(new[] { "Rectangle", "Text", "Hello" }), $"{theme}: {string.Join(" | ", said)}");
+    }
+
+    // WHAT THE CANVAS ASKS before it takes something away, in the theme's words: "Remove it?" for one thing, a count for
+    // more, and the plane's own question with its own answer.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("EditorPro")]
+    [TestCase("MacOs")]
+    public void TheQuestionSaysWhatItTakesAway(string theme)
+    {
+        Use(ThemeNamed(theme));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Shown(Asked(CanvasQuestionKind.DeleteSelection, 1)), Is.EqualTo(new[] { "Remove it?", "Delete", "Cancel" }));
+            Assert.That(Shown(Asked(CanvasQuestionKind.DeleteSelection, 3)), Is.EqualTo(new[] { "Remove 3 objects?", "Delete", "Cancel" }));
+            Assert.That(Shown(Asked(CanvasQuestionKind.Clear, 2)), Is.EqualTo(new[] { "Remove all 2 objects?", "Clear", "Cancel" }));
+        });
+    }
+
+    private static CanvasQuestion Asked(CanvasQuestionKind kind, int count)
+    {
+        var question = new CanvasQuestion { Kind = kind, Count = count };
+        question.ApplyCurrentTheme();
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(question);
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+        question.Measure(new Size(400, 300));
+        question.Arrange(new Rect(0, 0, 400, 300));
+        return question;
+    }
+
+    // Every line of text a person can see, top to bottom: hidden ones, and those under something hidden, are not said.
+    private static List<string> Shown(IUIComponent within)
+    {
+        var said = new List<string>();
+
+        void Walk(IUIComponent at)
+        {
+            if (at.Visibility != Visibility.Visible) return;
+            if (at is Adamantium.UI.Controls.Text.TextBlock { Text: { Length: > 0 } text }) said.Add(text);
+
+            foreach (var child in at.VisualChildren) Walk(child);
+        }
+
+        Walk(within);
+        return said;
+    }
+
     private static string Said(InfiniteCanvas canvas)
     {
         var inspector = Piece<CanvasInspector>(canvas);
 
+        // The theme says it in one of two lines, and shows the one that fits.
         foreach (var block in Rows<Adamantium.UI.Controls.Text.TextBlock>(inspector as IUIComponent))
         {
-            if (block.Text == inspector.Counted) return block.Text;
+            if (block.Name is "ItemCountLabel" or "NothingDrawnLabel" && block.Visibility == Visibility.Visible)
+                return block.Text;
         }
 
         return "nothing at all";

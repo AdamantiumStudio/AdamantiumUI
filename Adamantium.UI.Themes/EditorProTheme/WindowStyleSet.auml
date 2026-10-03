@@ -21,7 +21,7 @@
         <Setter Property="InactiveTitleBarBackground" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
         <Setter Property="TitleBarForeground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="InactiveTitleBarForeground" Value="{ObservableResource TextFillColorDisabled}"/>
-        <Setter Property="LoadingIndicatorText" Value="Switching theme…"/>
+        <Setter Property="LoadingIndicatorText" Value="{Localize WindowStrings.SwitchingTheme}"/>
     </Style>
 
     <Style Selector="Window">

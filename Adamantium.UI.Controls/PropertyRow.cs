@@ -444,7 +444,8 @@ public class PropertyRow : Control
         _actionIcon = icon;
         _actionTip = Definition.ActionTip;
 
-        ToolTipService.SetToolTip(_action, string.IsNullOrEmpty(_actionTip) ? "More" : _actionTip);
+        if (string.IsNullOrEmpty(_actionTip)) _action.ClearValue(ToolTipService.ToolTipProperty);
+        else ToolTipService.SetToolTip(_action, _actionTip);
 
         if (string.IsNullOrEmpty(icon))
         {
@@ -542,7 +543,7 @@ public class PropertyRow : Control
     // An empty editor says nothing on its own, and "nothing" is not what happened - the objects disagree, and for a
     // number it is not even a state the property can be in. So the editor's own prompt says which it is, and it goes
     // the moment they agree. ONLY then: a row whose objects hold one value shows that value like any other row.
-    private void MarkMixed()
+    internal void MarkMixed()
     {
         var prompt = IsMixed ? Owner?.MixedText : null;
 

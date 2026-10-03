@@ -76,7 +76,19 @@ public sealed class LspServer
                 var changes = p["contentChanges"].AsArray();
                 if (changes.Count > 0)                  // full sync: the last change carries the whole text
                     _documents[uri] = changes[^1]["text"].GetValue<string>();
-                PublishDiagnostics(uri);
+                if (IsLanguageFile(uri))
+                {
+                    // A table's files are checked together: an edit of one can settle or raise a problem in another.
+                    foreach (var open in _documents.Keys.Where(IsLanguageFile))
+                    {
+                        PublishDiagnostics(open);
+                    }
+                }
+                else
+                {
+                    PublishDiagnostics(uri);
+                }
+
                 break;
             }
 
@@ -156,14 +168,24 @@ public sealed class LspServer
         if (!_documents.TryGetValue(uri, out var text))
             return new JsonArray();
 
-        var model = ResolveModel(uri);
-        if (model is null) return new JsonArray();
-
         int line = pos["line"].GetValue<int>();
         int character = pos["character"].GetValue<int>();
         int offset = OffsetAt(text, line, character);
+
+        IReadOnlyList<AumlCompletionItem> items;
+        if (IsLanguageFile(uri))
+        {
+            items = LanguageFileCompletion.Complete(LanguageContext(uri, text), text, offset);
+        }
+        else
+        {
+            var model = ResolveModel(uri);
+            if (model is null) return new JsonArray();
+            items = new CompletionEngine(model).Complete(text, offset, UriToLocalPath(uri));
+        }
+
         var result = new JsonArray();
-        foreach (var item in new CompletionEngine(model).Complete(text, offset, UriToLocalPath(uri)))
+        foreach (var item in items)
         {
             var node = new JsonObject { ["label"] = item.Label, ["kind"] = LspKind(item.Kind) };
             if (item.Detail is not null) node["detail"] = item.Detail;
@@ -205,6 +227,28 @@ public sealed class LspServer
         }
     }
 
+    private static bool IsLanguageFile(string uri) =>
+        uri.EndsWith(Adamantium.UI.Generators.Localization.LanguageFileParser.Extension, StringComparison.OrdinalIgnoreCase);
+
+    // A language file is read without a build; the build only adds the tables of referenced assemblies.
+    private LanguageFileContext LanguageContext(string uri, string text) =>
+        LanguageFileContext.Of(UriToLocalPath(uri), text, OpenText, ResolveModel(uri));
+
+    // The editor's text of the file at a path, or null when the file is not open.
+    private string OpenText(string path)
+    {
+        var full = Path.GetFullPath(path);
+        foreach (var (uri, text) in _documents)
+        {
+            if (string.Equals(Path.GetFullPath(UriToLocalPath(uri)), full, StringComparison.OrdinalIgnoreCase))
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Converts an LSP document URI to a local filesystem path. VS Code percent-encodes the drive
     /// colon (file:///c%3A/…); .NET's <c>Uri.LocalPath</c> then yields "/c:/…" with a leading slash,
@@ -225,11 +269,19 @@ public sealed class LspServer
         var pos = @params["position"];
         if (!_documents.TryGetValue(uri, out var text)) return null;
 
-        var model = ResolveModel(uri);
-        if (model is null) return null;
-
         int offset = OffsetAt(text, pos["line"].GetValue<int>(), pos["character"].GetValue<int>());
-        var hover = new HoverEngine(model).Hover(text, offset);
+        string hover;
+        if (IsLanguageFile(uri))
+        {
+            hover = LanguageFileAssist.Hover(LanguageContext(uri, text), text, offset);
+        }
+        else
+        {
+            var model = ResolveModel(uri);
+            if (model is null) return null;
+            hover = new HoverEngine(model).Hover(text, offset);
+        }
+
         if (hover is null) return null;
 
         return new JsonObject
@@ -242,7 +294,7 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var pos = @params["position"];
-        if (!_documents.TryGetValue(uri, out var text)) return null;
+        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out var text)) return null;
 
         var model = ResolveModel(uri);
         if (model is null) return null;
@@ -276,7 +328,8 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var data = new JsonArray();
-        if (_documents.TryGetValue(uri, out var text))
+        // A language file is plain XML to the editor: its names are no types to colour.
+        if (!IsLanguageFile(uri) && _documents.TryGetValue(uri, out var text))
         {
             var model = ResolveModel(uri);
 
@@ -310,16 +363,25 @@ public sealed class LspServer
         var result = new JsonArray();
         if (!_documents.TryGetValue(uri, out var text)) return result;
 
-        var model = ResolveModel(uri);
-        if (model is null) return result;
+        IReadOnlyList<AumlCodeAction> actions;
+        if (IsLanguageFile(uri))
+        {
+            actions = LanguageFileAssist.Actions(LanguageContext(uri, text), text);
+        }
+        else
+        {
+            var model = ResolveModel(uri);
+            if (model is null) return result;
 
-        var start = @params["range"]["start"];
-        int offset = OffsetAt(text, start["line"].GetValue<int>(), start["character"].GetValue<int>());
+            var start = @params["range"]["start"];
+            int offset = OffsetAt(text, start["line"].GetValue<int>(), start["character"].GetValue<int>());
+            actions = CodeActionEngine.CodeActions(text, model, offset);
+        }
 
         // Echoing the triggering diagnostics back ties the fix to the red squiggle (lightbulb on the error).
         var triggers = @params["context"]?["diagnostics"] as JsonArray;
 
-        foreach (var action in CodeActionEngine.CodeActions(text, model, offset))
+        foreach (var action in actions)
         {
             var edits = new JsonArray();
             foreach (var edit in action.Edits)
@@ -381,25 +443,37 @@ public sealed class LspServer
     private void PublishDiagnostics(string uri)
     {
         var diagnostics = new JsonArray();
-        if (_documents.TryGetValue(uri, out var text) && ResolveModel(uri) is { } model)
+        if (_documents.TryGetValue(uri, out var text))
         {
-            foreach (var d in AumlValidator.Validate(text, model))
-                diagnostics.Add(Diagnostic(d.Line, d.Character, d.Line, d.Character + d.Length, d.Message));
+            var found = IsLanguageFile(uri)
+                ? LanguageFileValidator.Validate(UriToLocalPath(uri), text, OpenText, ResolveModel(uri))
+                : ResolveModel(uri) is { } model ? AumlValidator.Validate(text, model) : [];
+            foreach (var d in found)
+                diagnostics.Add(Diagnostic(d));
         }
         Notify("textDocument/publishDiagnostics", new JsonObject { ["uri"] = uri, ["diagnostics"] = diagnostics });
     }
 
-    private static JsonObject Diagnostic(int startLine, int startChar, int endLine, int endChar, string message) => new()
+    private static JsonObject Diagnostic(AumlDiagnostic diagnostic)
     {
-        ["range"] = new JsonObject
+        var node = new JsonObject
         {
-            ["start"] = new JsonObject { ["line"] = startLine, ["character"] = startChar },
-            ["end"] = new JsonObject { ["line"] = endLine, ["character"] = endChar }
-        },
-        ["severity"] = 1,                                // 1 = Error
-        ["source"] = "auml",
-        ["message"] = message
-    };
+            ["range"] = new JsonObject
+            {
+                ["start"] = new JsonObject { ["line"] = diagnostic.Line, ["character"] = diagnostic.Character },
+                ["end"] = new JsonObject { ["line"] = diagnostic.Line, ["character"] = diagnostic.Character + diagnostic.Length }
+            },
+            ["severity"] = diagnostic.IsWarning ? 2 : 1,   // 1 = Error, 2 = Warning
+            ["source"] = "auml",
+            ["message"] = diagnostic.Message
+        };
+        if (diagnostic.Code is not null)
+        {
+            node["code"] = diagnostic.Code;
+        }
+
+        return node;
+    }
 
     private static int OffsetAt(string text, int line, int character)
     {

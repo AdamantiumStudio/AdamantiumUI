@@ -1,0 +1,9 @@
+<Language>
+    <Phrase Key="Title" Text="240 rounded, stroked rects — each under its OWN rotation and shear, all in one instanced draw."/>
+    <Phrase Key="Hint" Text="Rotation and Skew are affine: they cannot be baked into axis-aligned bounds, so before the transform table these tiles left the batch entirely."/>
+    <Phrase Key="Rotation" Text="Rotation (deg)"/>
+    <Phrase Key="SkewX" Text="Skew X (deg)"/>
+    <Phrase Key="SkewY" Text="Skew Y (deg)"/>
+    <Phrase Key="Scale" Text="Scale"/>
+    <Phrase Key="Spread" Text="Spread — per-tile difference (0 = one shared matrix)"/>
+</Language>

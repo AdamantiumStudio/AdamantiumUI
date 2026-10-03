@@ -8,6 +8,7 @@ using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.ViewModels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -22,7 +23,7 @@ namespace Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
 [ViewModel]
 public partial class InfiniteCanvasViewModel : TabPageViewModel
 {
-    public InfiniteCanvasViewModel() : base("Infinite canvas")
+    public InfiniteCanvasViewModel() : base("InfiniteCanvas")
     {
         // The page counts what it holds - the canvas never tells it, because the canvas does not hold it.
         Scene.Changed += OnSceneChanged;
@@ -456,8 +457,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         if (dialogs != null)
         {
             var result = await dialogs.ShowDialogAsync<ConfirmDialogViewModel>(new NavigationParameters()
-                .Add("title", "Clear the canvas")
-                .Add("message", $"Remove all {Scene.Items.Count} objects?"));
+                .Add("title", CanvasPageStrings.ClearTitle)
+                .Add("message", CanvasPageStrings.ClearQuestion(Scene.Items.Count)));
 
             if (result.Result != DialogButtonResult.Ok) return;
         }
@@ -627,8 +628,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
             if (dialogs != null)
             {
                 var result = await dialogs.ShowDialogAsync<ConfirmDialogViewModel>(new NavigationParameters()
-                    .Add("title", "Remove socket")
-                    .Add("message", $"Remove \"{socket.Name}\" from {holder.Title}?"));
+                    .Add("title", CanvasPageStrings.RemoveSocketTitle)
+                    .Add("message", CanvasPageStrings.RemoveSocketQuestion(socket.Name, holder.Title)));
 
                 if (result.Result != DialogButtonResult.Ok) return;
             }
@@ -825,13 +826,12 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     /// nothing.</summary>
     [Bindable] private string _graphStatus = "not saved yet";
 
-    /// <summary>Draws a comment frame round what is selected. The canvas makes it; what it is CALLED is the page's, and
-    /// this one starts with a word a person will replace at once - which is better than an empty strip that looks
-    /// broken.</summary>
+    /// <summary>Draws a comment frame round what is selected. The canvas makes it and names it in its own words with a
+    /// word a person will replace at once - which is better than an empty strip that looks broken.</summary>
     [Command]
     private void FrameSelection(object which)
     {
-        if (which is InfiniteCanvas canvas) canvas.FrameSelection("Comment");
+        if (which is InfiniteCanvas canvas) canvas.FrameSelection();
     }
 
     // LINING UP and SPREADING OUT, one command each and the canvas handed in as the parameter - the same shape as
@@ -874,7 +874,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
         var path = Asked(FileDialog.Save(new SaveFileRequest
         {
-            Title = "Save the graph",
+            Title = CanvasPageStrings.SaveGraph,
             FileName = System.IO.Path.GetFileName(GraphPath),
             DefaultExtension = "json",
             FileTypes = GraphFiles,
@@ -903,7 +903,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
         var path = Asked(FileDialog.Open(new OpenFileRequest
         {
-            Title = "Open a graph",
+            Title = CanvasPageStrings.OpenGraph,
             FileTypes = GraphFiles,
             Key = "sandbox.graph.open",
             Owner = canvas.GetWindow()?.Handle ?? IntPtr.Zero
@@ -931,7 +931,8 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         }
     }
 
-    private static readonly IReadOnlyList<FileType> GraphFiles = [new FileType("Graph", "json")];
+    // Built at each ask, so the dialog names the files in the language of the moment.
+    private static IReadOnlyList<FileType> GraphFiles => [new FileType(CanvasPageStrings.GraphFiles, "json")];
 
     // A dialog that cannot be shown is not a canceled one, and the difference matters: canceling is the user's
     // answer and needs no report, while a platform with no dialog would leave the button doing nothing at all. Then

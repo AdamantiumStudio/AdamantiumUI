@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="ThousandTabs" Text="A thousand tabs"/>
+    <Phrase Key="ThousandHint" Text="A virtualizing strip builds only the headers on screen. It needs a uniform slot to do it - slot n starts at n x TabWidth, so a tab that was never built still has an exact position. Turn it off and the same strip builds every tab: 2517ms of layout against 45ms."/>
+    <Phrase Key="OffHint" Text="Off: every tab is built and sized to its own title - watch the strip go ragged, and the window with it."/>
+    <Phrase Key="Capped" Text="A capped strip"/>
+    <Phrase Key="CappedHint" Text="MaxOpenedTabs is a ceiling on how many tabs may be open at once. Past it the OLDEST-opened tab is closed to make room, the way an editor's strip works - never the tab just opened, never the one being read, and never a pinned one."/>
+    <Phrase Key="MaxOpened" Text="Max opened tabs:"/>
+    <Phrase Key="ZeroTurnsOff" Text="0 turns the cap off"/>
+    <Phrase Key="OpenTab" Text="Open a tab"/>
+</Language>

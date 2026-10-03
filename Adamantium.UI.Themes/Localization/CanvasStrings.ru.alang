@@ -1,0 +1,93 @@
+<Language>
+    <Phrase Key="MovePanel" Text="Перетащите, чтобы передвинуть панель; щелчок сворачивает её"/>
+    <Phrase Key="Map" Text="Карта"/>
+    <Phrase Key="AddNode" Text="Добавить узел"/>
+    <Phrase Key="ResizePanel" Text="Перетащите, чтобы задать ширину панели"/>
+    <Phrase Key="StickToEdge" Text="Прилипать к краю, если бросить панель рядом с ним"/>
+    <Phrase Key="ToolsLayout" Text="Расположить инструменты в строку или в столбец"/>
+    <Phrase Key="DrawingMode" Text="Рисунок — перо, фигуры и текст"/>
+    <Phrase Key="GraphMode" Text="Граф — узлы и связи между ними"/>
+    <Phrase Key="Properties" Text="Свойства выделенного"/>
+    <Phrase Key="Layers" Text="Всё, что есть на плоскости, сверху вниз"/>
+    <Phrase Key="CommentFrame" Text="Обвести выделенное рамкой комментария"/>
+    <Phrase Key="AlignLeft" Text="Выровнять по левому краю"/>
+    <Phrase Key="AlignCenter" Text="Выровнять по центру"/>
+    <Phrase Key="AlignRight" Text="Выровнять по правому краю"/>
+    <Phrase Key="AlignTop" Text="Выровнять по верхнему краю"/>
+    <Phrase Key="DistributeVertically" Text="Равные промежутки по вертикали"/>
+    <Phrase Key="DistributeHorizontally" Text="Равные промежутки по горизонтали"/>
+    <Phrase Key="FitToView" Text="Показать всю работу — то же делает клавиша F"/>
+    <Phrase Key="ExportSvg" Text="Экспортировать рисунок в SVG"/>
+    <Phrase Key="OpenSvg" Text="Открыть рисунок SVG"/>
+    <Phrase Key="ClearCanvas" Text="Очистить холст"/>
+    <Phrase Key="NarrowList" Text="Сузить список"/>
+    <Phrase Key="ClearSearch" Text="Очистить поиск"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="BringToFront" Text="На передний план"/>
+    <Phrase Key="SendToBack" Text="На задний план"/>
+    <Phrase Key="BringForward" Text="Переместить вперёд"/>
+    <Phrase Key="SendBackward" Text="Переместить назад"/>
+    <Phrase Key="Group" Text="Сгруппировать (Ctrl+G)"/>
+    <Phrase Key="Ungroup" Text="Разгруппировать (Ctrl+Shift+G)"/>
+    <Phrase Key="Delete" Text="Удалить"/>
+    <Phrase Key="Undo" Text="Отменить (Ctrl+Z)"/>
+    <Phrase Key="Redo" Text="Повторить (Ctrl+Y)"/>
+    <Phrase Key="ZoomOut" Text="Уменьшить"/>
+    <Phrase Key="ZoomIn" Text="Увеличить"/>
+    <Phrase Key="GoHome" Text="Вернуться к виду, сохранённому кнопкой рядом"/>
+    <Phrase Key="KeepHome" Text="Запомнить этот вид — к нему будет возвращать «Домой»"/>
+    <Phrase Key="ForgetHome" Text="Забыть сохранённый вид — «Домой» вернёт к началу координат в масштабе 1:1"/>
+    <Phrase Key="FoldNode" Text="Свернуть узел до заголовка"/>
+    <Phrase Key="MoveSocket" Text="Перетащите, чтобы передвинуть гнездо"/>
+    <Phrase Key="ExportTitle" Text="Экспорт рисунка"/>
+    <Phrase Key="OpenTitle" Text="Открыть рисунок"/>
+    <Phrase Key="Drawings" Text="Рисунки"/>
+    <Phrase Key="AllFiles" Text="Все файлы"/>
+    <Phrase Key="NothingDrawn" Text="Пока ничего не нарисовано"/>
+    <Phrase Key="Items" Count="count" One="{count} объект" Few="{count} объекта" Many="{count} объектов" Other="{count} объекта"/>
+    <Phrase Key="DeleteTitle" Text="Удаление"/>
+    <Phrase Key="RemoveIt" Text="Удалить этот объект?"/>
+    <Phrase Key="RemoveObjects" Count="count" One="Удалить {count} объект?" Few="Удалить {count} объекта?" Many="Удалить {count} объектов?" Other="Удалить {count} объекта?"/>
+    <Phrase Key="RemoveAll" Count="count" One="Удалить {count} объект с холста?" Few="Удалить все {count} объекта?" Many="Удалить все {count} объектов?" Other="Удалить все {count} объекта?"/>
+    <Phrase Key="DeleteAnswer" Text="Удалить"/>
+    <Phrase Key="ClearAnswer" Text="Очистить"/>
+
+    <Phrase Key="ToolShortcut" Text="{name} ({key})"/>
+    <Phrase Key="Select" Text="Выделение"/>
+    <Phrase Key="SelectDescription" Text="Выделить, передвинуть, изменить размер"/>
+    <Phrase Key="Pen" Text="Перо"/>
+    <Phrase Key="PenDescription" Text="Рисовать от руки или по точкам по сетке"/>
+    <Phrase Key="Text" Text="Текст"/>
+    <Phrase Key="TextDescription" Text="Щёлкните и пишите; Escape заканчивает"/>
+    <Phrase Key="Erase" Text="Ластик"/>
+    <Phrase Key="EraseDescription" Text="Стирает там, где его провели"/>
+    <Phrase Key="EraseStroke" Text="Стереть штрих"/>
+    <Phrase Key="EraseStrokeDescription" Text="Убирает весь штрих, которого коснулся"/>
+    <Phrase Key="Texture" Text="Текстура"/>
+    <Phrase Key="TextureDescription" Text="Положить поверхность, на которой можно рисовать картинку"/>
+    <Phrase Key="Node" Text="Узел"/>
+    <Phrase Key="NodeDescription" Text="Поставить узел на плоскость"/>
+    <Phrase Key="CurveDescription" Text="Щёлкайте, чтобы ставить точки; двойной щелчок заканчивает"/>
+    <Phrase Key="Control" Text="Контрол"/>
+    <Phrase Key="Controls" Text="Контролы"/>
+
+    <Phrase Key="Rectangle" Text="Прямоугольник"/>
+    <Phrase Key="Ellipse" Text="Эллипс"/>
+    <Phrase Key="Line" Text="Линия"/>
+    <Phrase Key="Polygon" Text="Многоугольник"/>
+    <Phrase Key="Arrow" Text="Стрелка"/>
+    <Phrase Key="Bezier" Text="Кривая Безье"/>
+    <Phrase Key="BSpline" Text="B-сплайн"/>
+    <Phrase Key="Nurbs" Text="NURBS"/>
+    <Phrase Key="GroupItem" Text="Группа"/>
+    <Phrase Key="StrokeItem" Text="Штрих"/>
+    <Phrase Key="PathItem" Text="Контур"/>
+    <Phrase Key="TextItem" Text="Текст"/>
+    <Phrase Key="ConnectionItem" Text="Связь"/>
+    <Phrase Key="CanvasFrameItem" Text="Рамка"/>
+    <Phrase Key="CanvasNode" Text="Узел"/>
+
+    <Phrase Key="Comment" Text="Комментарий"/>
+    <Phrase Key="InputName" Text="Вход {number}"/>
+    <Phrase Key="OutputName" Text="Выход {number}"/>
+</Language>

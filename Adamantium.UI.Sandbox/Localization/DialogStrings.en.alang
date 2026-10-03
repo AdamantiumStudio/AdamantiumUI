@@ -1,0 +1,9 @@
+<Language>
+    <Phrase Key="Confirm" Text="Confirm"/>
+    <Phrase Key="AreYouSure" Text="Are you sure?"/>
+    <Phrase Key="Ok" Text="OK"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="About" Text="About"/>
+    <Phrase Key="Version" Text="Version:"/>
+    <Phrase Key="Manufacturer" Text="Manufacturer:"/>
+</Language>

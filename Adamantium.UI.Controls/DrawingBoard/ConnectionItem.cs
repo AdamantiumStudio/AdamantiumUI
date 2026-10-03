@@ -41,7 +41,8 @@ public class ConnectionItem : ICanvasItem
     /// a wire is the same color as the thing flowing down it.</summary>
     public Brush Stroke { get; set; }
 
-    public string Title => $"Wire {FromPin?.Name} - {ToPin?.Name}";
+    /// <summary>The sockets it joins, by the names they were given.</summary>
+    public string Title => $"{FromPin?.Name} - {ToPin?.Name}";
 
     /// <summary>NONE. Both ends are held by what they join, so there is nothing a frame could offer: a box round a wire
     /// would invite a drag that has no meaning and would fight the one that does - moving a node.</summary>

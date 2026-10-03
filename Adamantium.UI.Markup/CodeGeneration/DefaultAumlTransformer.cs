@@ -8,7 +8,14 @@ namespace Adamantium.UI.Markup.CodeGeneration;
 
 public class DefaultAumlTransformer : IAumlTransformer
 {
+    /// <summary>The language tables <c>{Localize}</c> can name besides the compiled ones: this project's, generated in the
+    /// same build from its .alang files, so they are found and checked before they are in the compilation.</summary>
+    public IReadOnlyCollection<LanguageTableShape> LanguageTables { get; set; } = [];
+
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
+
+    // {Localize Table, Key={Binding Kind}}: where a key known only at run time is read from.
+    private const string KeyArgument = "Key";
 
     // Tokens of a shorthand collection: commas or spaces, but only outside a markup extension, whose own arguments are
     // separated the same way ("Auto, {Binding A, Mode=OneWay}, *").
@@ -365,6 +372,9 @@ public class DefaultAumlTransformer : IAumlTransformer
                 case AumlAstDirective directive:
                     return ProcessDirectiveValue(directive);
 
+                case AumlAstMarkupExtensionNode { TypeReference.Name: "Localize" } localize:
+                    return ResolveLocalize(localize);
+
                 // An ordinary markup extension (not a directive)
                 case AumlAstMarkupExtensionNode markupExtension:
                     ProcessMarkupExtension(markupExtension);
@@ -428,6 +438,164 @@ public class DefaultAumlTransformer : IAumlTransformer
                 ? inner.Text.Trim()
                 : trimmed;
         }
+
+        IAumlAstValueNode ResolveLocalize(AumlAstMarkupExtensionNode localize)
+        {
+            var text = localize.Arguments.FirstOrDefault(a => string.IsNullOrEmpty(a.Name))?.Value?.GetTextValue()?.Trim();
+            var colon = text?.IndexOf(':') ?? -1;
+            var prefix = colon > 0 ? text.Substring(0, colon) : string.Empty;
+            var name = colon > 0 ? text.Substring(colon + 1) : text;
+            var dot = name?.LastIndexOf('.') ?? -1;
+
+            // A table alone takes its key from a binding: {Localize CanvasStrings, Key={Binding Sort}}.
+            var keySource = localize.Arguments.FirstOrDefault(a => a.Name == KeyArgument);
+            if (dot < 0 && !string.IsNullOrEmpty(name) && keySource != null)
+            {
+                return ResolveReadKey(localize, prefix, name, keySource);
+            }
+
+            if (dot <= 0 || dot == name.Length - 1)
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{Localize}} names a table and a string, {{Localize Strings.Close}}, or a table and where the key is read from, {{Localize Strings, Key={{Binding Kind}}}}; got '{text}'. {localize.GetLineInfo()}");
+                return localize;
+            }
+
+            var table = name.Substring(0, dot);
+            var key = name.Substring(dot + 1);
+            var tableFullName = FindLanguageTable(prefix, table);
+            if (tableFullName == null)
+            {
+                ReportNoTable(prefix, table, localize);
+                return localize;
+            }
+
+            if (!TryPlaceholdersOf(tableFullName, key, out var placeholders))
+            {
+                diagnostics.ReportError(document.FileName, $"{table} has no string '{key}'. {localize.GetLineInfo()}");
+                return localize;
+            }
+
+            var arguments = localize.Arguments.Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
+            if (placeholders != null && !SamePlaceholders(table, key, placeholders, arguments, localize))
+            {
+                return localize;
+            }
+
+            foreach (var argument in arguments)
+            {
+                argument.Value = ProcessValueNode(argument.Value);
+            }
+
+            return new AumlAstLocalizedStringNode(localize.GetLineInfo(), tableFullName, key, arguments);
+        }
+
+        // The key is known only when the application runs, so neither it nor the arguments can be checked here: a word
+        // the table lacks is said as it is, and a word takes the arguments it uses.
+        IAumlAstValueNode ResolveReadKey(AumlAstMarkupExtensionNode localize, string prefix, string table,
+            IAumlAstMarkupExtensionArgument keySource)
+        {
+            var tableFullName = FindLanguageTable(prefix, table);
+            if (tableFullName == null)
+            {
+                ReportNoTable(prefix, table, localize);
+                return localize;
+            }
+
+            if (keySource.Value is not AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" or "MultiBinding" or "TemplateBinding" })
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{Localize {table}, {KeyArgument}=...}} reads the key from a binding; a key written out is {{Localize {table}.Close}}. {localize.GetLineInfo()}");
+                return localize;
+            }
+
+            var arguments = localize.Arguments.Where(a => !string.IsNullOrEmpty(a.Name) && a.Name != KeyArgument).ToList();
+            foreach (var argument in arguments)
+            {
+                argument.Value = ProcessValueNode(argument.Value);
+            }
+
+            return new AumlAstLocalizedStringNode(localize.GetLineInfo(), tableFullName, null, arguments,
+                ProcessValueNode(keySource.Value));
+        }
+
+        void ReportNoTable(string prefix, string table, AumlAstMarkupExtensionNode localize) =>
+            diagnostics.ReportError(document.FileName,
+                $"No language table '{(prefix.Length > 0 ? prefix + ":" : string.Empty)}{table}': a table is a set of {table}.<language>.alang files, here or in a referenced assembly. {localize.GetLineInfo()}");
+
+        string FindLanguageTable(string prefix, string table)
+        {
+            if (prefix.Length > 0)
+            {
+                var mapping = document.NamespaceMappings.FirstOrDefault(m => m.Prefix == prefix);
+                if (mapping == null)
+                {
+                    return null;
+                }
+
+                if (mapping.IsClrNamespace)
+                {
+                    var fullName = $"{mapping.Namespace}.{table}";
+                    return LanguageTables.Any(t => t.FullName == fullName) || IsLanguageTable(typeResolver.Resolve(fullName)) ? fullName : null;
+                }
+
+                var byUri = typeResolver.GetResolvedAssemblyByXmlDefinition(mapping.Namespace)?.Types
+                    .FirstOrDefault(t => t.Name == table && IsLanguageTable(t));
+                return byUri?.FullName;
+            }
+
+            var own = LanguageTables.Where(t => t.FullName == table || t.FullName.EndsWith("." + table, StringComparison.Ordinal)).ToList();
+            if (own.Count == 1)
+            {
+                return own[0].FullName;
+            }
+
+            var referenced = typeResolver.ResolveByShortName(table);
+            return IsLanguageTable(referenced) ? referenced.FullName : null;
+        }
+
+        // The placeholders the string fills: from the table's shape, or from the compiled table's member; null when the
+        // table is neither, so nothing can be checked. False when the table is known and has no such string.
+        bool TryPlaceholdersOf(string tableFullName, string key, out IReadOnlyList<string> placeholders)
+        {
+            if (LanguageTables.FirstOrDefault(t => t.FullName == tableFullName) is { } shape)
+            {
+                return shape.Strings.TryGetValue(key, out placeholders);
+            }
+
+            placeholders = null;
+            if (typeResolver.Resolve(tableFullName) is not { } compiled)
+            {
+                return true;
+            }
+
+            var member = compiled.GetMemberByName(key);
+            placeholders = member?.ParameterNames;
+            return member != null;
+        }
+
+        // Every placeholder filled, and nothing filled that is not one: a missing one would show as nothing.
+        bool SamePlaceholders(string table, string key, IReadOnlyList<string> placeholders,
+            IReadOnlyList<IAumlAstMarkupExtensionArgument> arguments, AumlAstMarkupExtensionNode localize)
+        {
+            var given = arguments.Select(a => a.Name).ToList();
+            var unknown = given.Where(n => !placeholders.Contains(n)).ToList();
+            var missing = placeholders.Where(p => !given.Contains(p)).ToList();
+            if (unknown.Count == 0 && missing.Count == 0)
+            {
+                return true;
+            }
+
+            var fills = placeholders.Count == 0 ? "it has no placeholders" : $"it fills {string.Join(", ", placeholders)}";
+            var problem = unknown.Count > 0
+                ? $"{table}.{key} has no placeholder {string.Join(", ", unknown.Select(n => $"'{n}'"))}: {fills}"
+                : $"{table}.{key} needs {string.Join(", ", missing)}: {fills}";
+            diagnostics.ReportError(document.FileName, $"{problem}. {localize.GetLineInfo()}");
+            return false;
+        }
+
+        static bool IsLanguageTable(IResolvedType type) =>
+            type != null && type.InheritsFrom("Adamantium.UI.Core.Localization.LocalizedStrings");
 
         // {x:Static prefix:Type.Member}: the type is named the way x:Type names one, the member is the last segment. The
         // member is checked HERE - a name that does not exist is a build error, not a silently empty property.
@@ -793,6 +961,16 @@ public class DefaultAumlTransformer : IAumlTransformer
 
                     break;
             }
+        }
+    }
+
+    /// <summary>Registers the project's own language tables (<see cref="LanguageTables"/>) as the types they are
+    /// generated into, so markup can name one before it is compiled: <c>{x:Static CanvasStrings.Current}</c>.</summary>
+    public void PreRegisterLanguageTables(ITypeResolver typeResolver, string assemblyName)
+    {
+        foreach (var table in LanguageTables)
+        {
+            typeResolver.RegisterGeneratedType(new LanguageTableResolvedType(table, assemblyName));
         }
     }
 

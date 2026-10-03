@@ -4,7 +4,7 @@
          thumb tracks the content after the sub-pixel-coalescing scroll work. -->
     <StackPanel Orientation="Horizontal" Margin="24">
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Horizontal + vertical ScrollBar bound to one value" FontSize="18" Margin="0,0,0,16"/>
+            <TextBlock Text="{Localize ScrollBarStrings.OneValue}" FontSize="18" Margin="0,0,0,16"/>
             <StackPanel Orientation="Horizontal">
                 <ScrollBar Orientation="Vertical"
                            Height="200"
@@ -16,7 +16,7 @@
                                Minimum="0" Maximum="100" ViewportSize="10"
                                Value="{Binding Offset, Mode=TwoWay}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                        <TextBlock Text="Offset:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Localize ScrollBarStrings.Offset}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding Offset}" VerticalAlignment="Center" FontSize="16"/>
                     </StackPanel>
                 </StackPanel>
@@ -24,7 +24,7 @@
         </StackPanel>
 
         <StackPanel Orientation="Vertical" Margin="48,0,0,0">
-            <TextBlock Text="Drag to pan (touch-style, with inertia)" FontSize="18" Margin="0,0,0,12"/>
+            <TextBlock Text="{Localize ScrollBarStrings.DragToPan}" FontSize="18" Margin="0,0,0,12"/>
             <ScrollViewer Width="520" Height="320"
                           PanningMode="Both" IsInertiaEnabled="true"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

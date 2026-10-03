@@ -1,0 +1,31 @@
+<Language>
+    <Phrase Key="Commands" Text="Команды"/>
+    <Phrase Key="Add" Text="Добавить"/>
+    <Phrase Key="HoldToAdd" Text="Держите, чтобы добавлять"/>
+    <Phrase Key="Reset" Text="Сбросить"/>
+    <Phrase Key="Clicks" Text="Нажатий:"/>
+
+    <Phrase Key="Toggles" Text="Переключатели"/>
+    <Phrase Key="EnableActions" Text="Разрешить действия"/>
+    <Phrase Key="Actions" Select="enabled" True="Действия разрешены" False="Действия запрещены"/>
+    <Phrase Key="Notify" Text="Уведомлять"/>
+    <Phrase Key="Notifications" Select="on" True="Уведомления включены" False="Уведомления выключены"/>
+    <Phrase Key="AcceptTerms" Text="Принять условия"/>
+    <Phrase Key="Terms" Select="accepted" True="приняты" False="отклонены" Other="не решено"/>
+
+    <Phrase Key="Plan" Text="Тариф"/>
+    <Phrase Key="Free" Text="Бесплатный"/>
+    <Phrase Key="Pro" Text="Pro"/>
+    <Phrase Key="Selected" Text="Выбран:"/>
+    <Phrase Key="ChosenPlan" Select="pro" True="Pro" False="Бесплатный"/>
+
+    <Phrase Key="Dropdowns" Text="Выпадающие списки"/>
+    <Phrase Key="SelectCity" Text="Выберите город..."/>
+    <Phrase Key="City" Select="city" None="Город не выбран" Other="Город: {city}"/>
+    <Phrase Key="Low" Text="Низкий приоритет"/>
+    <Phrase Key="Normal" Text="Обычный приоритет"/>
+    <Phrase Key="High" Text="Высокий приоритет"/>
+    <Phrase Key="Critical" Text="Критичный — бросить всё"/>
+    <Phrase Key="PriorityIs" Select="priority" Low="Приоритет: низкий" Normal="Приоритет: обычный" High="Приоритет: высокий" Critical="Приоритет: критичный"/>
+    <Phrase Key="Color" Select="color" None="Цвет не выбран" Other="Цвет: {color}"/>
+</Language>

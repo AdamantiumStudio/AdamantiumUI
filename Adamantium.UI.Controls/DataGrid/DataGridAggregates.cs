@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Adamantium.UI.Core.Localization;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
@@ -89,7 +90,7 @@ internal static class DataGridAggregates
             case uint ui: number = ui; return true;
             case ulong ul: number = ul; return true;
             default:
-                return double.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.CurrentCulture, out number)
+                return double.TryParse(value.ToString(), NumberStyles.Any, Languages.Culture, out number)
                        || double.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out number);
         }
     }

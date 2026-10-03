@@ -1,0 +1,8 @@
+<Language>
+    <Phrase Key="Width" Text="Ширина:"/>
+    <Phrase Key="Height" Text="Высота:"/>
+    <Phrase Key="Ellipses" Text="Эллипсы"/>
+    <Phrase Key="BindMs" Text="Привязка, мс:"/>
+    <Phrase Key="Opacity" Text="Непрозрачность:"/>
+    <Phrase Key="PageTiles" Text="Разбить плитки на страницы вместо виртуализации"/>
+</Language>

@@ -1,0 +1,26 @@
+<Language>
+    <Phrase Key="Running" Text="Работают"/>
+    <Phrase Key="OneSwitch" Text="один переключатель управляет всеми индикаторами на странице"/>
+    <Phrase Key="Zoom" Text="Масштаб"/>
+
+    <Phrase Key="Ring" Text="Кольцо"/>
+    <Phrase Key="RingHint" Text="вращающаяся бегущая дуга"/>
+    <Phrase Key="Dots" Text="Точки"/>
+    <Phrase Key="DotsHint" Text="одна волна, три задержки"/>
+    <Phrase Key="Ripple" Text="Рябь"/>
+    <Phrase Key="RippleHint" Text="кольца растут из центра"/>
+    <Phrase Key="Bar" Text="Полоса"/>
+    <Phrase Key="BarHint" Text="неопределённый пробег"/>
+    <Phrase Key="Arc" Text="Дуга"/>
+    <Phrase Key="ArcHint" Text="сама дуга растёт и сжимается"/>
+    <Phrase Key="Ants" Text="Бегущие муравьи"/>
+    <Phrase Key="AntsHint" Text="штрихи бегут по кольцу"/>
+    <Phrase Key="Heartbeat" Text="Сердцебиение"/>
+    <Phrase Key="HeartbeatHint" Text="два удара, затем пауза"/>
+    <Phrase Key="Equalizer" Text="Эквалайзер"/>
+    <Phrase Key="EqualizerHint" Text="полосы с несовпадающими периодами"/>
+    <Phrase Key="Flip" Text="Переворот"/>
+    <Phrase Key="FlipHint" Text="карточки поворачиваются в перспективе (3D)"/>
+    <Phrase Key="Shimmer" Text="Мерцание"/>
+    <Phrase Key="ShimmerHint" Text="градиентная полоса пробегает по карточке"/>
+</Language>

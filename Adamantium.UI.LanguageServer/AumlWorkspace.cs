@@ -109,19 +109,21 @@ public sealed class AumlWorkspace : IDisposable
         }
     }
 
-    // Watch the project's C# source so a save (no build needed) refreshes the type model — edits to
-    // properties/types/classes show up in completion. One watcher per project, kept for the session.
+    // Watch the project's C# source and language files so a save (no build needed) refreshes the type model — edits to
+    // properties/types/classes and string tables show up in completion. One watcher per project, kept for the session.
     private void WatchSources(string project, string projectDir)
     {
         var key = project + "|src";
         if (_watchers.ContainsKey(key)) return;
         try
         {
-            var watcher = new FileSystemWatcher(projectDir, "*.cs")
+            var watcher = new FileSystemWatcher(projectDir)
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
                 IncludeSubdirectories = true,
             };
+            watcher.Filters.Add("*.cs");
+            watcher.Filters.Add("*" + Adamantium.UI.Generators.Localization.LanguageFileParser.Extension);
             FileSystemEventHandler onChange = (_, e) =>
             {
                 if (!IsInObjOrBin(e.FullPath, projectDir)) ScheduleInvalidate(project);

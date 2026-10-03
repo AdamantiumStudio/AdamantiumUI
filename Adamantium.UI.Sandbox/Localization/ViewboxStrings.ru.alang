@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="StretchTitle" Text="Stretch — одна карточка 120×80, вписанная в рамку 220×160"/>
+    <Phrase Key="DirectionTitle" Text="StretchDirection (Uniform) — большая рамка (220×160), карточка 120×80"/>
+    <Phrase Key="ScalesUp" Text="Both (увеличивает)"/>
+    <Phrase Key="StaysSmall" Text="DownOnly (остаётся 120×80)"/>
+    <Phrase Key="ScaleTitle" Text="LayoutTransform — A[100×50], B — это 100×50 в масштабе ×1.5 (след должен быть 150×75, поэтому C начинается с x=250)"/>
+    <Phrase Key="RotationTitle" Text="LayoutTransform, ПОВОРОТ — B — те же 100×50, повёрнутые на 90°, поэтому след 50×100, и C начинается с x=150. Из повёрнутой надписи и сделана свёрнутая панель стыковки."/>
+    <Phrase Key="TextTitle" Text="Тот же поворот на ТЕКСТЕ, стопкой в столбец — ровно свёрнутая полоса инструментов: столбец шириной в ВЫСОТУ текста, а не в длину слов."/>
+    <Phrase Key="Inspector" Text="Инспектор"/>
+    <Phrase Key="Hierarchy" Text="Иерархия"/>
+    <Phrase Key="Properties" Text="Свойства"/>
+</Language>

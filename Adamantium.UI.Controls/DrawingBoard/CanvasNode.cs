@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -27,9 +28,11 @@ public class CanvasNode : ContentControl
     private bool _placed;
     private double _reach;
 
+    /// <summary>What the node is called, in its header. None by default: a node is called what the application's
+    /// kind of node is called.</summary>
     public static readonly AdamantiumProperty TitleProperty = AdamantiumProperty.Register(nameof(Title),
         typeof(Object), typeof(CanvasNode),
-        new PropertyMetadata("Node", PropertyMetadataOptions.AffectsMeasure));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty InputsProperty = AdamantiumProperty.Register(nameof(Inputs),
         typeof(Int32), typeof(CanvasNode),
@@ -70,6 +73,11 @@ public class CanvasNode : ContentControl
     public static readonly AdamantiumProperty PinColorProperty = AdamantiumProperty.Register(nameof(PinColor),
         typeof(Brush), typeof(CanvasNode),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnPinColorChanged));
+
+    /// <summary>The words a socket is called by until it is given a name - "In 1", "Out 2" - from the theme. Without
+    /// them a socket is called by its number.</summary>
+    public static readonly AdamantiumProperty PhrasesProperty = AdamantiumProperty.Register(nameof(Phrases),
+        typeof(LocalizedStrings), typeof(CanvasNode), new PropertyMetadata(null, OnPhrasesChanged));
 
     // REGISTERED, not plain properties: a template binds to them with {TemplateBinding}, and that reads a registered
     // property and nothing else. As plain ones the two lists of sockets simply never arrived, and a node with no
@@ -486,6 +494,12 @@ public class CanvasNode : ContentControl
         set => SetValue(PinColorProperty, value);
     }
 
+    public LocalizedStrings Phrases
+    {
+        get => GetValue<LocalizedStrings>(PhrasesProperty);
+        set => SetValue(PhrasesProperty, value);
+    }
+
     /// <summary>The sockets down the left, in order. Held rather than made on demand, so that a name or a color put on
     /// one stays there.</summary>
     public ObservableCollection<CanvasNodePin> InputPins => _inputs;
@@ -720,13 +734,47 @@ public class CanvasNode : ContentControl
         Repaint(node._outputs, was, node.PinColor);
     }
 
+    // The theme hands the words over AFTER the pins are built, as it does the pin color: the pins still called what
+    // they were called by default are called again, and one given a name of its own keeps it.
+    private static void OnPhrasesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not CanvasNode node) return;
+
+        var was = e.OldValue as LocalizedStrings;
+        node.Rename(node._inputs, true, was);
+        node.Rename(node._outputs, false, was);
+    }
+
+    private void Rename(ObservableCollection<CanvasNodePin> pins, Boolean input, LocalizedStrings was)
+    {
+        foreach (var pin in pins)
+        {
+            for (var number = 1; number <= pins.Count; number++)
+            {
+                if (pin.Name != DefaultName(was, input, number)) continue;
+
+                pin.SetValue(CanvasNodePin.NameProperty, DefaultName(Phrases, input, number), ValuePriority.Style);
+                break;
+            }
+        }
+    }
+
+    // What socket NUMBER is called by default: the phrase for it, else the number alone.
+    private static String DefaultName(LocalizedStrings phrases, Boolean input, Int32 number)
+    {
+        var key = input ? "InputName" : "OutputName";
+        return phrases is ILanguageTable table && table.Keys.Contains(key)
+            ? Languages.Say(phrases, key, ("number", number))
+            : number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     // The lowest number nothing is already called. Counting instead would hand the new socket a name one of the others
     // has: drop "In 2" of three and the next one asked for is the third again.
-    private static String Free(ObservableCollection<CanvasNodePin> pins, String prefix)
+    private String Free(ObservableCollection<CanvasNodePin> pins, Boolean input)
     {
         for (var number = 1; ; number++)
         {
-            var name = prefix + number;
+            var name = DefaultName(Phrases, input, number);
             var taken = false;
 
             foreach (var pin in pins)
@@ -769,7 +817,7 @@ public class CanvasNode : ContentControl
 
             // A default, written at Style priority below the binding: Local would mask it, and a current value would be
             // pushed back to the socket by a two-way binding.
-            pin.SetValue(CanvasNodePin.NameProperty, Free(pins, input ? "In " : "Out "), ValuePriority.Style);
+            pin.SetValue(CanvasNodePin.NameProperty, Free(pins, input), ValuePriority.Style);
 
             Wear(pin, PinColor);
             pins.Add(pin);

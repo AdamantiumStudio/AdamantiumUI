@@ -1,0 +1,263 @@
+<Language>
+    <!-- The tab and its stands. -->
+    <Phrase Key="Title" Text="Кисти — вживую"/>
+    <Phrase Key="Gradients" Text="Градиенты"/>
+    <Phrase Key="MeshGradient" Text="Сеточный градиент"/>
+    <Phrase Key="Pattern" Text="Узор"/>
+    <Phrase Key="Noise" Text="Шум"/>
+    <Phrase Key="Fractal" Text="Фрактал"/>
+    <Phrase Key="Image" Text="Картинка"/>
+    <Phrase Key="NineSlice" Text="Девять срезов"/>
+    <Phrase Key="Drawing" Text="Рисунок"/>
+    <Phrase Key="Visual" Text="Визуал"/>
+    <Phrase Key="Material" Text="Материал"/>
+    <Phrase Key="AuraShadow" Text="Аура / тень"/>
+    <Phrase Key="PaintItOn" Text="Чем рисовать"/>
+
+    <!-- What every stand has. -->
+    <Phrase Key="CornersHint" Text="Углы — 3 это треугольник, а если их много, то круг"/>
+    <Phrase Key="StartAngleHint" Text="Начальный угол — где стоит угол 0"/>
+    <Phrase Key="CornerRadius" Text="Радиус угла"/>
+    <Phrase Key="Width" Text="Ширина"/>
+    <Phrase Key="Height" Text="Высота"/>
+    <Phrase Key="Tint" Text="Оттенок"/>
+    <Phrase Key="Opacity" Text="Непрозрачность"/>
+    <Phrase Key="Color" Text="Цвет"/>
+    <Phrase Key="TileMode" Text="Режим плитки"/>
+    <Phrase Key="Scale" Text="Масштаб"/>
+
+    <!-- Gradient. -->
+    <Phrase Key="GradientTitle" Text="Градиент — вживую (один набор опорных точек, три геометрии)"/>
+    <Phrase Key="Geometry" Text="Геометрия"/>
+    <Phrase Key="DirectionDegrees" Text="Направление — в градусах"/>
+    <Phrase Key="Span" Text="Протяжённость — сократите, чтобы увидеть Reflect и Repeat"/>
+    <Phrase Key="Radius" Text="Радиус"/>
+    <Phrase Key="SweepStart" Text="Начальный угол — откуда начинается развёртка"/>
+    <Phrase Key="OutsideStops" Text="За пределами опорных точек"/>
+    <Phrase Key="InterpolatedIn" Text="Интерполяция в"/>
+    <Phrase Key="Stops" Text="Опорные точки — начало / конец и необязательная середина"/>
+    <Phrase Key="MiddleStop" Text="Средняя точка"/>
+    <Phrase Key="LinearTitle" Text="Линейные градиенты — прямоугольники"/>
+    <Phrase Key="RadialTitle" Text="Радиальные градиенты — прямоугольники"/>
+    <Phrase Key="ConicTitle" Text="Конические градиенты — угловая развёртка"/>
+    <Phrase Key="EllipsesTitle" Text="Градиенты — эллипсы"/>
+    <Phrase Key="ShapesTitle" Text="Градиенты — произвольные фигуры (Polygon / Path)"/>
+    <Phrase Key="SpreadTitle" Text="Способ продолжения — Pad / Reflect / Repeat (опорные точки занимают 0..0.5)"/>
+    <Phrase Key="InterpolationTitle" Text="Интерполяция градиента — sRGB против OKLab"/>
+    <Phrase Key="SrgbMuddy" Text="sRGB — грязные середины"/>
+    <Phrase Key="OklabPerceptual" Text="OKLab — перцептивно"/>
+    <Phrase Key="ArbitraryInterpolation" Text="…и на произвольной геометрии (Polygon) — слева sRGB, справа OKLab"/>
+
+    <!-- Mesh gradient. -->
+    <Phrase Key="MeshTitle" Text="Сеточный градиент — вживую (четыре угла, у каждого свой цвет)"/>
+    <Phrase Key="MeshTop" Text="Углы (слева сверху / справа сверху)"/>
+    <Phrase Key="MeshBottom" Text="Углы (слева снизу / справа снизу)"/>
+
+    <!-- Pattern. -->
+    <Phrase Key="PatternTitle" Text="Узор — вживую (выберите тип; тяните размер ячейки, радиус угла и цвета)"/>
+    <Phrase Key="PatternType" Text="Тип узора"/>
+    <Phrase Key="CellSize" Text="Размер ячейки"/>
+    <Phrase Key="HatchAngle" Text="Угол штриховки"/>
+    <Phrase Key="PatternColors" Text="Цвета (фон / рисунок)"/>
+
+    <!-- Image. -->
+    <Phrase Key="ImageTitle" Text="ImageBrush — вживую (замостить, отразить или вписать одну копию)"/>
+    <Phrase Key="StretchWhileNone" Text="Растяжение (только пока режим плитки — «Нет»)"/>
+    <Phrase Key="TileSize" Text="Размер плитки"/>
+    <Phrase Key="GridRotationTiling" Text="Поворот сетки — вращает МОЩЕНИЕ"/>
+
+    <!-- Drawing. -->
+    <Phrase Key="DrawingTitle" Text="DrawingBrush — вживую (рисунок как заливка: viewbox, viewport, растяжение, мощение)"/>
+    <Phrase Key="StretchOneTile" Text="Растяжение — вписывает содержимое в ОДНУ плитку"/>
+    <Phrase Key="AlignXRoom" Text="Выравнивание X (только пока вписывание оставляет место)"/>
+    <Phrase Key="AlignX" Text="Выравнивание X"/>
+    <Phrase Key="AlignY" Text="Выравнивание Y"/>
+    <Phrase Key="ViewportUnits" Text="Единицы viewport — пиксели или доля фигуры"/>
+    <Phrase Key="ViewportSize" Text="Размер viewport — одна плитка (задаёт размер и ОДИНОЧНОЙ копии, так что «Нет» ставит её в угол)"/>
+    <Phrase Key="ViewportOriginX" Text="Начало viewport по X — сдвигает всю сетку"/>
+    <Phrase Key="ViewportOriginY" Text="Начало viewport по Y"/>
+    <Phrase Key="ViewboxX" Text="Viewbox X — какую часть рисунка показывает плитка"/>
+    <Phrase Key="ViewboxY" Text="Viewbox Y"/>
+    <Phrase Key="ViewboxSize" Text="Размер viewbox — 1 это весь рисунок"/>
+    <Phrase Key="GridRotationContent" Text="Поворот сетки — вращает МОЩЕНИЕ, а не содержимое"/>
+
+    <!-- Visual. -->
+    <Phrase Key="VisualTitle" Text="VisualBrush — вживую (настоящий элемент как заливка)"/>
+    <Phrase Key="SourceDragMe" Text="Источник (потяни меня)"/>
+    <Phrase Key="LiveElement" Text="Я живой элемент"/>
+    <Phrase Key="StretchSource" Text="Растяжение — вписывает источник в ОДНУ плитку"/>
+    <Phrase Key="AlignmentHint" Text="Выравнивание двигает источник только там, где вписывание ОСТАВИЛО МЕСТО, а Uniform оставляет его ровно по ОДНОЙ оси. Источник 240×150 в квадратной плитке: Uniform заполняет ширину, поэтому двигается только Y; UniformToFill обрезает ширину, поэтому только X; Fill места не оставляет вовсе."/>
+    <Phrase Key="TileSizePx" Text="Размер плитки (px) — меньше фигуры, и начинается мощение"/>
+    <Phrase Key="GridRotation" Text="Поворот сетки"/>
+
+    <!-- Fractal. -->
+    <Phrase Key="FractalTitle" Text="Фрактал — вживую (включите автоморфинг, тяните любой параметр)"/>
+    <Phrase Key="Formula" Text="Формула"/>
+    <Phrase Key="AutoMorph" Text="Автоморфинг (в реальном времени)"/>
+    <Phrase Key="MandelbrotMode" Text="Режим Мандельброта (C = пиксель; выкл. = Жюлиа)"/>
+    <Phrase Key="Power" Text="Степень — показатель d мультиброта"/>
+    <Phrase Key="Zoom" Text="Увеличение (лог., ×)"/>
+    <Phrase Key="Iterations" Text="Итерации"/>
+    <Phrase Key="MorphSpeed" Text="Скорость морфинга"/>
+    <Phrase Key="JuliaX" Text="C.x (константа Жюлиа)"/>
+    <Phrase Key="JuliaY" Text="C.y (константа Жюлиа)"/>
+    <Phrase Key="PanX" Text="Сдвиг X — точный, ×(1/увеличение), не теряет точности в глубине (для грубого тяните фрактал)"/>
+    <Phrase Key="PanY" Text="Точный сдвиг Y — ×(1/увеличение)"/>
+    <Phrase Key="FractalColors" Text="Цвета — щёлкните образец, чтобы изменить"/>
+    <Phrase Key="ColorInside" Text="Цвет 1 (внутри / край)"/>
+    <Phrase Key="ColorOutside" Text="Цвет 2 (уходящие наружу)"/>
+    <Phrase Key="DragFractal" Text="Тяните фрактал, чтобы сдвинуть, колесо — увеличение к курсору (встроено в FractalView)."/>
+    <Phrase Key="FractalSamples" Text="Фрактальная кисть — неподвижные образцы"/>
+
+    <!-- Nine-slice. -->
+    <Phrase Key="NineTitle" Text="Девять срезов — вживую (тяните размер: углы держат свой, края уступают)"/>
+    <Phrase Key="Skin" Text="Обложка"/>
+    <Phrase Key="Cut" Text="Срез — где режется ИСТОЧНИК (0.25 = собственная рамка этих обложек в 16 px; сдвиньте, и кусочки возьмут пиксели друг друга)"/>
+    <Phrase Key="Border" Text="Граница (0 = собственные пиксели источника)"/>
+    <Phrase Key="EdgeMode" Text="Режим краёв"/>
+    <Phrase Key="DrawCenter" Text="Рисовать середину"/>
+    <Phrase Key="TileCenter" Text="Мостить и середину (выкл. = растягивать, как CSS border-image)"/>
+    <Phrase Key="NineBrushTitle" Text="NineSliceBrush — одна картинка, любой размер, углы не искажаются"/>
+    <Phrase Key="NineHint" Text="Источник 64×64 с рамкой 16 px (Slice = 0.25). Сравните с обычной ImageBrush ниже: та же картинка, растянутая."/>
+    <Phrase Key="StretchedEdges" Text="растянутые края"/>
+    <Phrase Key="RepeatedEdges" Text="повторённые края"/>
+    <Phrase Key="FrameOnly" Text="только рамка (DrawCenter=False)"/>
+    <Phrase Key="PlainImage" Text="…и та же картинка обычной ImageBrush — растянута вместе с углами"/>
+    <Phrase Key="Tinted" Text="с оттенком"/>
+
+    <!-- Noise. -->
+    <Phrase Key="NoiseTitle" Text="Шум — вживую (тяните, чтобы перепечь; отметьте «Средний цвет» для трёхцветной карты градиента)"/>
+    <Phrase Key="NoiseType" Text="Тип шума"/>
+    <Phrase Key="Animate" Text="Анимировать (течение — лучше всего с Уорли)"/>
+    <Phrase Key="FlowSpeed" Text="Скорость течения"/>
+    <Phrase Key="Octaves" Text="Октавы"/>
+    <Phrase Key="Seed" Text="Зерно"/>
+    <Phrase Key="Lacunarity" Text="Лакунарность"/>
+    <Phrase Key="Gain" Text="Усиление"/>
+    <Phrase Key="FirePalette" Text="Огненная палитра (выкл. = цвета ниже)"/>
+    <Phrase Key="MidColor" Text="Средний цвет (трёхцветная карта градиента)"/>
+    <Phrase Key="NoiseColors" Text="Цвета (низ / середина / верх — середина только при отметке)"/>
+    <Phrase Key="NoiseTypesTitle" Text="Типы шума (все выбираются на живой панели выше)"/>
+    <Phrase Key="WorleyFlow" Text="Уорли (течение)"/>
+    <Phrase Key="CombustibleFire" Text="Горящий (огонь)"/>
+    <Phrase Key="CombustibleCustom" Text="Горящий (свои цвета)"/>
+
+    <!-- Material. -->
+    <Phrase Key="MaterialTitle" Text="Материальная кисть — заливка это то, что за ней"/>
+    <Phrase Key="MaterialKind" Text="Материал — акрил и стекло делят один снимок и различаются обработкой; слюда различается источником"/>
+    <Phrase Key="SittingOver" Text="Лежит поверх"/>
+    <Phrase Key="SourceHint" Text="Источник — собственные обои рабочего стола или один из наших. Они различаются ДЕТАЛЬНОСТЬЮ: плитка скрывает дрожь при перетаскивании, texture.jpg показывает её во всей красе"/>
+    <Phrase Key="DesktopWallpaper" Text="Обои рабочего стола"/>
+    <Phrase Key="AnchorHint" Text="Привязка — к чему пришпилена картинка"/>
+    <Phrase Key="ElementOpacity" Text="Непрозрачность элемента — гаснет всё целиком, оттенок и перо вместе"/>
+    <Phrase Key="StrokeHint" Text="Обводка — перо идёт в ТОМ ЖЕ проходе, что и заливка, так что материал в рамке — это один вызов"/>
+    <Phrase Key="TintStrength" Text="Сила оттенка — стекло берёт цвет из-за себя, так что там держите её низкой"/>
+    <Phrase Key="GrainScale" Text="Масштаб волокон — px на пучок ворса, на царапину шлифовки или на годичное кольцо"/>
+    <Phrase Key="GrainDirection" Text="Направление волокон — куда расчёсан ворс, куда идёт шлифовка или как лежал ствол"/>
+    <Phrase Key="Roughness" Text="Шероховатость — 0 это зеркало; у ткани — как далеко расходится блеск, у дерева — лак"/>
+    <Phrase Key="LightAngle" Text="Угол света — откуда падает свет"/>
+    <Phrase Key="LightElevation" Text="Высота света — 0 скользит по ворсу, 1 его выравнивает"/>
+    <Phrase Key="ClothColor" Text="Цвет ткани"/>
+    <Phrase Key="SheenColor" Text="Цвет блеска — свет на кончиках волокон"/>
+    <Phrase Key="MetalHint" Text="Металл — отправная точка; каждый регулятор ниже остаётся свободным"/>
+    <Phrase Key="MetalColor" Text="Цвет металла — серый это сталь, жёлтый — золото, розовый — медь"/>
+    <Phrase Key="EnvironmentHint" Text="Окружение — что отражается. Процедурное: за интерфейсом нет комнаты"/>
+    <Phrase Key="Timber" Text="Древесина — отправная точка; каждый регулятор выше остаётся свободным"/>
+    <Phrase Key="WoodCutHint" Text="Распил — где пила прошла сквозь кольца. Одно дерево, четыре рисунка"/>
+    <Phrase Key="Varnished" Text="Лакированное — прозрачное покрытие, в котором видна комната и блик вдоль края"/>
+    <Phrase Key="EarlyWood" Text="Ранняя древесина — широкая светлая полоса, выросшая весной"/>
+    <Phrase Key="LateWood" Text="Поздняя древесина — узкая тёмная полоса, замыкающая каждое кольцо"/>
+    <Phrase Key="Blur" Text="Размытие — как широко рассеивается матовость"/>
+    <Phrase Key="Refraction" Text="Преломление — как сильно край гнёт то, что за ним"/>
+    <Phrase Key="Grain" Text="Зернистость — прячет полосы, которые даёт 8-битный снимок"/>
+    <Phrase Key="TintColor" Text="Цвет оттенка"/>
+
+    <!-- Aura / shadow. -->
+    <Phrase Key="AuraTitle" Text="Аура / тень — вживую (полоса рисуется СНАРУЖИ элемента; отступ оставляете вы)"/>
+    <Phrase Key="ClipToBox" Text="Обрезать по рамке элемента"/>
+    <Phrase Key="MarginHint" Text="Отступ — это раскладка, а не настройка полосы. С обрезкой опустите его ниже радиуса, и полоса обрежется: границы никогда не растут под свечение."/>
+    <Phrase Key="AuraOn" Text="АУРА — без направления"/>
+    <Phrase Key="AuraRadius" Text="Радиус — как далеко достаёт"/>
+    <Phrase Key="AuraSpread" Text="Разлив — сплошной ободок до затухания"/>
+    <Phrase Key="AuraInner" Text="Внутрь (свечение внутрь — отступ не нужен вовсе)"/>
+    <Phrase Key="Alive" Text="ЖИВАЯ — охват дышит"/>
+    <Phrase Key="TurbulenceHint" Text="Турбулентность — как далеко блуждает охват (0 = неподвижно)"/>
+    <Phrase Key="Flow" Text="Течение — как быстро дрейфует"/>
+    <Phrase Key="Detail" Text="Детальность — сколько языков бежит вокруг"/>
+    <Phrase Key="Palette" Text="Палитра — четыре цвета вместо одного"/>
+    <Phrase Key="FourColors" Text="Четыре цвета, через которые она проходит"/>
+    <Phrase Key="ShadowOn" Text="ТЕНЬ — падает туда, где нет света"/>
+    <Phrase Key="Offset" Text="Смещение X / Y"/>
+    <Phrase Key="BlurRadius" Text="Радиус размытия — насколько мягкий край"/>
+    <Phrase Key="ShadowSpread" Text="Разлив — как ВЫСОКО парит (отрицательный выглядывает с одного края)"/>
+    <Phrase Key="ShadowInner" Text="Внутрь (вдавленный вид)"/>
+
+    <!-- The members of every enum a stand offers, said by their names. -->
+    <Phrase Key="Linear" Text="Линейный"/>
+    <Phrase Key="Radial" Text="Радиальный"/>
+    <Phrase Key="Conic" Text="Конический"/>
+    <Phrase Key="Pad" Text="Продлить край"/>
+    <Phrase Key="Reflect" Text="Отражать"/>
+    <Phrase Key="Repeat" Text="Повторять"/>
+    <Phrase Key="Srgb" Text="sRGB"/>
+    <Phrase Key="Oklab" Text="OKLab"/>
+    <Phrase Key="None" Text="Нет"/>
+    <Phrase Key="Tile" Text="Плитка"/>
+    <Phrase Key="FlipX" Text="Отражение по X"/>
+    <Phrase Key="FlipY" Text="Отражение по Y"/>
+    <Phrase Key="FlipXY" Text="Отражение по X и Y"/>
+    <Phrase Key="Fill" Text="Заполнить"/>
+    <Phrase Key="Uniform" Text="Пропорционально"/>
+    <Phrase Key="UniformToFill" Text="Пропорционально с заполнением"/>
+    <Phrase Key="RelativeToBoundingBox" Text="Доля фигуры"/>
+    <Phrase Key="Absolute" Text="Пиксели"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="Stretch" Text="Растянуть"/>
+    <Phrase Key="Round" Text="Округлить"/>
+    <Phrase Key="Rectangle" Text="Прямоугольник"/>
+    <Phrase Key="Ellipse" Text="Эллипс"/>
+    <Phrase Key="Polygon" Text="Многоугольник"/>
+    <Phrase Key="Star" Text="Звезда"/>
+    <Phrase Key="Acrylic" Text="Акрил"/>
+    <Phrase Key="Mica" Text="Слюда"/>
+    <Phrase Key="LiquidGlass" Text="Жидкое стекло"/>
+    <Phrase Key="Velvet" Text="Бархат"/>
+    <Phrase Key="Metal" Text="Металл"/>
+    <Phrase Key="Wood" Text="Дерево"/>
+    <Phrase Key="Desktop" Text="Рабочий стол"/>
+    <Phrase Key="Window" Text="Окно"/>
+    <Phrase Key="Element" Text="Элемент"/>
+    <Phrase Key="Flat" Text="Тангенциальный"/>
+    <Phrase Key="Quarter" Text="Радиальный"/>
+    <Phrase Key="End" Text="Торцевой"/>
+    <Phrase Key="Burl" Text="Кап"/>
+    <Phrase Key="LivingNoise" Text="Живой шум"/>
+    <Phrase Key="Checkerboard" Text="Шахматка"/>
+    <Phrase Key="Gradient" Text="Градиент"/>
+    <Phrase Key="Picture" Text="Картинка"/>
+    <Phrase Key="Stripes" Text="Полосы"/>
+    <Phrase Key="Dots" Text="Точки"/>
+    <Phrase Key="Grid" Text="Сетка"/>
+    <Phrase Key="Hexagon" Text="Шестиугольники"/>
+    <Phrase Key="Hatch" Text="Штриховка"/>
+    <Phrase Key="Weave" Text="Плетение"/>
+    <Phrase Key="Simplex" Text="Симплекс"/>
+    <Phrase Key="Perlin" Text="Перлин"/>
+    <Phrase Key="Value" Text="Шум значений"/>
+    <Phrase Key="Worley" Text="Уорли"/>
+    <Phrase Key="Ridged" Text="Гребни"/>
+    <Phrase Key="Turbulence" Text="Турбулентность"/>
+    <Phrase Key="VoronoiBorders" Text="Границы Вороного"/>
+    <Phrase Key="CombustibleVoronoi" Text="Горящий Вороной"/>
+    <Phrase Key="Circuit" Text="Схема"/>
+    <Phrase Key="Quadratic" Text="Квадратичная"/>
+    <Phrase Key="BurningShip" Text="Горящий корабль"/>
+    <Phrase Key="Tricorn" Text="Трикорн"/>
+    <Phrase Key="Celtic" Text="Кельтская"/>
+    <Phrase Key="Multibrot" Text="Мультиброт"/>
+    <Phrase Key="Newton" Text="Ньютон"/>
+</Language>

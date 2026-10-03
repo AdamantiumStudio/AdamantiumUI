@@ -1,0 +1,35 @@
+<Language>
+    <Phrase Key="SharedTitle" Text="x:Shared=&quot;False&quot; — значение строится для каждой цели, а не делится"/>
+    <Phrase Key="SharedHint" Text="Сеттер записывает ОДИН И ТОТ ЖЕ объект в каждый элемент, к которому применяется. Щёлкните правой кнопкой по обеим кнопкам каждой пары."/>
+    <Phrase Key="SharedDefault" Text="Общее (по умолчанию)"/>
+    <Phrase Key="OneMenu" Text="Одно меню на обе строки"/>
+    <Phrase Key="OwnMenu" Text="Собственное меню этой строки"/>
+    <Phrase Key="RightClickMe" Text="щёлкни правой кнопкой"/>
+    <Phrase Key="AndMe" Text="…и меня"/>
+    <Phrase Key="MenusOnDemand" Text="Ни одного меню нет, пока его не попросят: карточка и собственный шаблон меню строятся при первом щелчке правой кнопкой."/>
+
+    <Phrase Key="StaticTitle" Text="x:Static — значение, прочитанное прямо из C#"/>
+    <Phrase Key="StaticHint" Text="Размер и подпись ниже не записаны в разметке и не повторены ресурсами — они прочитаны из DemoMetrics."/>
+    <Phrase Key="StaticCaption" Text="прочитано из C# через {{x:Static}}"/>
+
+    <Phrase Key="NullTitle" Text="x:Null — явное ничто"/>
+    <Phrase Key="NullHint" Text="Тема даёт каждой Border контур (BorderBrush). Ни одна рамка его не задаёт: левая сохраняет то, что дала тема, правая говорит явное ничто и теряет его."/>
+    <Phrase Key="ThemeOutline" Text="контур от темы"/>
+    <Phrase Key="OutlineOff" Text="BorderBrush выключен"/>
+
+    <Phrase Key="DataTypeTitle" Text="x:DataType — тип, под который написан шаблон"/>
+    <Phrase Key="DataTypeHint" Text="Объявляется, а не выводится. Из него ничего не генерируется: инструменты разрешают по нему привязки внутри шаблона, и имя, которое не разрешилось, валит сборку."/>
+    <Phrase Key="BoundThroughTemplate" Text="привязано через шаблон, который называет свой тип"/>
+
+    <Phrase Key="LoadTitle" Text="x:Load — элемента ещё нет"/>
+    <Phrase Key="LoadHint" Text="Не скрыт — ОТСУТСТВУЕТ. Пока условие ложно, панель ниже вообще не создаётся, и счётчик это показывает. Включите и выключите снова: её откладывают, а не перестраивают, поэтому счётчик не превысит 1."/>
+    <Phrase Key="BuildPanel" Text="Построить панель — x:Load={{Binding HeavyShown}}"/>
+    <Phrase Key="TimesBuilt" Text="построено раз: {count}"/>
+    <Phrase Key="BuiltOnDemand" Text="построено по требованию"/>
+    <Phrase Key="BuiltOnDemandHint" Text="Всё здесь — эта панель, обе подписи, строки ниже — существует только после того, как отмечен флажок выше."/>
+
+    <Phrase Key="AskedTitle" Text="x:Load=&quot;False&quot; — ждёт, пока попросят"/>
+    <Phrase Key="AskedHint" Text="Условия нет, поэтому сам по себе элемент никогда не построится. Поведение кнопки читает имя элемента, и это чтение его строит. Билет в один конец: условия, чтобы убрать его обратно, нет."/>
+    <Phrase Key="AskForIt" Text="Попросить"/>
+    <Phrase Key="AskedByName" Text="попрошен по имени, построен на месте"/>
+</Language>

@@ -3,10 +3,10 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
     <StackPanel Orientation="Vertical" Margin="24">
 
-        <TextBlock Text="Color Picker"
+        <TextBlock Text="{Localize ColorPageStrings.Title}"
                    FontSize="20"
                    MarginBottom="4"/>
-        <TextBlock Text="An inline HSV picker: drag the square (saturation / value), the hue bar and the alpha bar, or type a hex / R-G-B-A value. The picked color is fed into the THEME accent, so the controls on the right recolor live."
+        <TextBlock Text="{Localize ColorPageStrings.Intro}"
                    FontSize="13"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    MaxWidth="680"
@@ -20,7 +20,7 @@
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="Color wheel (conic hue × radial saturation)"
+                <TextBlock Text="{Localize ColorPageStrings.Wheel}"
                            FontSize="14"
                            MarginBottom="14"/>
                 <!-- Two-way to the SAME PickedColor as the inline picker. The wheel picks hue+saturation; its OWN Value slider
@@ -28,7 +28,7 @@
                      and drive the theme accent. The wheel dims toward the value. -->
                 <ColorWheel SelectedColor="{Binding PickedColor, Mode=TwoWay}"
                             Value="{Binding WheelValue, Mode=TwoWay}"/>
-                <TextBlock Text="Value (brightness — 0 = black)" FontSize="12" MarginTop="12" MarginBottom="2"
+                <TextBlock Text="{Localize ColorPageStrings.Value}" FontSize="12" MarginTop="12" MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <Slider Width="256" Minimum="0" Maximum="1" Value="{Binding WheelValue, Mode=TwoWay}"/>
             </StackPanel>
@@ -36,7 +36,7 @@
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="Compact swatch → flyout (ColorPickerButton)"
+                <TextBlock Text="{Localize ColorPageStrings.Swatch}"
                            FontSize="14"
                            MarginBottom="14"/>
                 <!-- Same PickedColor as the inline picker + wheel: the swatch shows it; clicking opens a floating,
@@ -49,13 +49,13 @@
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="Live theme accent"
+                <TextBlock Text="{Localize ColorPageStrings.LiveAccent}"
                            FontSize="14"
                            MarginBottom="14"/>
-                <CheckBox Content="Checkbox"
+                <CheckBox Content="{Localize ColorPageStrings.Checkbox}"
                           IsChecked="True"
                           MarginBottom="12"/>
-                <RadioButton Content="Radio button"
+                <RadioButton Content="{Localize ColorPageStrings.RadioButton}"
                              IsChecked="True"
                              MarginBottom="12"/>
                 <ToggleSwitch IsChecked="True"

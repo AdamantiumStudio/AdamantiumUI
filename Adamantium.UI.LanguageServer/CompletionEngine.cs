@@ -21,6 +21,7 @@ public sealed record AumlCompletionItem(string Label, AumlCompletionItemKind Kin
 public sealed class CompletionEngine
 {
     private const string FallbackXmlns = "http://adamantium/ui";
+    private const string LocalizeExtension = "Localize";
 
     private readonly AumlTypeModel _model;
 
@@ -85,6 +86,11 @@ public sealed class CompletionEngine
         // The extension may be written with a prefix (e.g. {x:Type ...}); match on its local name.
         var ext = ctx.MarkupExtension ?? "";
         var extLocal = ext.Contains(':') ? ext[(ext.IndexOf(':') + 1)..] : ext;
+        if (extLocal == LocalizeExtension)
+        {
+            return CompleteLocalize(text, offset, namespaces);
+        }
+
         var extType = _model.ResolveMarkupExtensionType(extLocal);
 
         var (segment, hasComma) = CurrentExtensionSegment(text, offset);
@@ -212,6 +218,103 @@ public sealed class CompletionEngine
         return names
             .Select(n => new AumlCompletionItem(n.Key, AumlCompletionItemKind.Value, n.Value, ReplaceBack: memberPartial.Length))
             .ToList();
+    }
+
+    // {Localize Table.Key, name=value}: the tables, then the table's strings, then the placeholders the string fills.
+    private IReadOnlyList<AumlCompletionItem> CompleteLocalize(string text, int offset, IReadOnlyDictionary<string, string> namespaces)
+    {
+        var end = Math.Min(offset, text.Length);
+        var opening = "{" + LocalizeExtension;
+        var start = text.LastIndexOf(opening, Math.Max(0, end - 1), StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return [];
+        }
+
+        // Split at the commas of the extension itself; a caret inside a nested {Binding} is not ours to complete.
+        var arguments = new List<string> { "" };
+        var depth = 0;
+        foreach (var c in text[(start + opening.Length)..end])
+        {
+            depth += c switch { '{' => 1, '}' => -1, _ => 0 };
+            if (c == ',' && depth == 0)
+            {
+                arguments.Add("");
+            }
+            else
+            {
+                arguments[^1] += c;
+            }
+        }
+
+        if (depth != 0)
+        {
+            return [];
+        }
+
+        var first = arguments[0].Trim();
+        if (arguments.Count == 1)
+        {
+            return CompleteTableOrString(first, namespaces);
+        }
+
+        var current = arguments[^1].TrimStart();
+        if (current.Contains('='))
+        {
+            return [];
+        }
+
+        var given = arguments.Skip(1).SkipLast(1).Select(a => a.Split('=')[0].Trim()).ToHashSet(StringComparer.Ordinal);
+        var dot = first.LastIndexOf('.');
+        var (prefix, table) = SplitName(dot < 0 ? first : first[..dot]);
+        var target = TablesNamed(prefix, table, namespaces).SelectMany(t => t.Strings).FirstOrDefault(s => dot >= 0 && s.Key == first[(dot + 1)..]);
+        return target == null
+            ? []
+            : target.Parameters
+                .Where(p => !given.Contains(p) && Matches(p, current))
+                .Select(p => new AumlCompletionItem(p, AumlCompletionItemKind.Property, "placeholder", InsertText: p + "=", ReplaceBack: current.Length))
+                .ToList();
+    }
+
+    private IReadOnlyList<AumlCompletionItem> CompleteTableOrString(string partial, IReadOnlyDictionary<string, string> namespaces)
+    {
+        var (prefix, name) = SplitName(partial);
+        var dot = name.LastIndexOf('.');
+        if (dot < 0)
+        {
+            return TablesNamed(prefix, null, namespaces)
+                .Where(t => MatchesStart(t.Name, name))
+                .Select(t => t.Name)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Element, "language table", ReplaceBack: name.Length))
+                .ToList();
+        }
+
+        var keyPartial = name[(dot + 1)..];
+        return TablesNamed(prefix, name[..dot], namespaces)
+            .SelectMany(t => t.Strings)
+            .Where(s => Matches(s.Key, keyPartial))
+            .OrderBy(s => s.Key, StringComparer.Ordinal)
+            .Select(s => new AumlCompletionItem(s.Key, AumlCompletionItemKind.Value,
+                s.Parameters.Count > 0 ? $"({string.Join(", ", s.Parameters)}) {s.Text}".TrimEnd() : s.Text,
+                ReplaceBack: keyPartial.Length))
+            .ToList();
+    }
+
+    // The tables a "[prefix:]Table" can name: by the prefix's namespace when one is written, any table otherwise - the
+    // way the build finds them. A null name takes every table.
+    private IEnumerable<LanguageTableInfo> TablesNamed(string prefix, string name, IReadOnlyDictionary<string, string> namespaces)
+    {
+        var tables = _model.LanguageTables.Where(t => name == null || t.Name == name);
+        if (prefix.Length == 0)
+        {
+            return tables;
+        }
+
+        var xmlns = ResolveXmlns(prefix, namespaces);
+        var inScope = _model.GetElements(xmlns).Select(t => t.FullName).ToHashSet(StringComparer.Ordinal);
+        return tables.Where(t => inScope.Contains(t.FullName));
     }
 
     // The current comma-separated argument segment of a "{Name ...}" body up to the caret (top-level commas only;

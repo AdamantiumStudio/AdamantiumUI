@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -25,7 +26,7 @@ public partial class AboutDialogViewModel : AdamantiumViewModel, IDialogAware
         Version = plus >= 0 ? version[..plus] : version;
     }
 
-    public string Title => "About";
+    public string Title => DialogStrings.About;
     public string Product { get; }
     public string Version { get; }
     public string Manufacturer { get; }

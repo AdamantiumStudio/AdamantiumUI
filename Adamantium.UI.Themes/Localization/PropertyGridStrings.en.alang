@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="SearchProperties" Text="Search properties"/>
+    <Phrase Key="ClearSearch" Text="Clear the search (Esc)"/>
+    <Phrase Key="More" Text="More"/>
+    <Phrase Key="ResetToDefault" Text="Reset to the default"/>
+    <Phrase Key="MultipleValues" Text="multiple values"/>
+    <Phrase Key="PickPicture" Text="Pick a picture"/>
+    <Phrase Key="Pictures" Text="Pictures"/>
+    <Phrase Key="AllFiles" Text="All files"/>
+</Language>

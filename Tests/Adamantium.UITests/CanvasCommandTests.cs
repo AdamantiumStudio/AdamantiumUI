@@ -216,17 +216,24 @@ public class CanvasCommandTests
 
         canvas.Scene.Add(Box(0, 0));
         canvas.ConfirmsDelete = true;
+        canvas.ClearTitle = "Clear the canvas";
 
         canvas.ClearCommand.Execute();
 
         var asked = Overlays(window);
+        var question = asked.Count > 0 ? asked[0].Content as CanvasQuestion : null;
+        var title = asked.Count > 0 ? asked[0].Title : null;
+        canvas.ClearTitle = "Empty the plane";
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
 
         Assert.Multiple(() =>
         {
             Assert.That(canvas.IsAsking, Is.True, "nothing was asked");
             Assert.That(asked, Has.Count.EqualTo(1), "the question was not put in an overlay dialog");
-            Assert.That(asked.Count > 0 ? asked[0].Title : null, Is.EqualTo("Clear the canvas"),
-                "the dialog does not say what it is about");
+            Assert.That(title, Is.EqualTo("Clear the canvas"), "the dialog does not say what it is about");
+            Assert.That(asked.Count > 0 ? asked[0].Title : null, Is.EqualTo("Empty the plane"), "the title follows the canvas's words");
+            Assert.That(question?.Kind, Is.EqualTo(CanvasQuestionKind.Clear));
+            Assert.That(question?.Count, Is.EqualTo(1), "the question says how much it takes away");
         });
     }
 

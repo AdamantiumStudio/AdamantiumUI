@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.CodeGeneration.Reflection;
@@ -14,6 +16,8 @@ namespace Adamantium.UI.Core.Markup;
 /// </summary>
 public static class AumlLoader
 {
+    private static readonly ConditionalWeakTable<Assembly, LanguageTableShape[]> TablesByAssembly = new();
+
     /// <param name="typeMapper">Optional substitution applied to every resolved type before instantiation
     /// (e.g. map a root <c>IWindow</c> to a headless virtual window). Returns the type to instantiate.</param>
     public static AumlLoadResult Load(string aumlText, IEnumerable<Assembly> assemblies = null, Func<Type, Type> typeMapper = null)
@@ -32,7 +36,7 @@ public static class AumlLoader
         var resolver = new ReflectionTypeResolver(asmList);
         var diagnostics = new ListDiagnosticSink(result.Diagnostics);
 
-        try { new DefaultAumlTransformer().Transform(doc, resolver, diagnostics); }
+        try { Transformer(asmList).Transform(doc, resolver, diagnostics); }
         catch (Exception e) { result.Diagnostics.Add($"Resolve error: {e.Message}"); }
 
         var instantiator = new AumlInstantiator(resolver, asmList, typeMapper, result.Diagnostics);
@@ -75,7 +79,7 @@ public static class AumlLoader
         var resolver = new ReflectionTypeResolver(asmList);
         var diagnostics = new ListDiagnosticSink(result.Diagnostics);
 
-        try { new DefaultAumlTransformer().Transform(doc, resolver, diagnostics); }
+        try { Transformer(asmList).Transform(doc, resolver, diagnostics); }
         catch (Exception e) { result.Diagnostics.Add($"Resolve error: {e.Message}"); }
 
         var instantiator = new AumlInstantiator(resolver, asmList, typeMapper, result.Diagnostics);
@@ -86,4 +90,32 @@ public static class AumlLoader
         result.SourceMap = instantiator.SourceMap;   // spans for any newly-instantiated subtrees
         return result;
     }
+
+    private static DefaultAumlTransformer Transformer(IEnumerable<Assembly> assemblies) => new()
+    {
+        LanguageTables = assemblies.Where(a => !a.IsDynamic).SelectMany(LanguageTablesOf).ToList(),
+    };
+
+    private static LanguageTableShape[] LanguageTablesOf(Assembly assembly) => TablesByAssembly.GetValue(assembly, static a =>
+    {
+        if (a != typeof(LocalizedStrings).Assembly && a.GetReferencedAssemblies().All(r => r.Name != typeof(LocalizedStrings).Assembly.GetName().Name))
+        {
+            return [];
+        }
+
+        try
+        {
+            return a.GetTypes()
+                .Where(t => t.IsSubclassOf(typeof(LocalizedStrings)))
+                .Select(t => Localize.TableOf(t) is ILanguageTable table
+                    ? new LanguageTableShape(t.FullName, table.Keys.ToDictionary(k => k, table.PlaceholdersOf))
+                    : null)
+                .Where(s => s != null)
+                .ToArray();
+        }
+        catch (ReflectionTypeLoadException)
+        {
+            return [];
+        }
+    });
 }

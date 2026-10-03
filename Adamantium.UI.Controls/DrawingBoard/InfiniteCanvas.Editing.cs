@@ -4,6 +4,7 @@ using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -296,26 +297,25 @@ public partial class InfiniteCanvas
         set => SetValue(ConfirmsDeleteProperty, value);
     }
 
-    /// <summary>What the question says, or null for the canvas's own words. <c>{0}</c> is how many things are
-    /// going.</summary>
-    public static readonly AdamantiumProperty DeleteQuestionProperty = AdamantiumProperty.Register(
-        nameof(DeleteQuestion), typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+    /// <summary>The title of the window that asks about deleting the selection. The theme says it, and the question
+    /// itself in the look of <see cref="CanvasQuestion"/>.</summary>
+    public static readonly AdamantiumProperty DeleteTitleProperty = AdamantiumProperty.Register(
+        nameof(DeleteTitle), typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
 
-    public String DeleteQuestion
+    public String DeleteTitle
     {
-        get => GetValue<String>(DeleteQuestionProperty);
-        set => SetValue(DeleteQuestionProperty, value);
+        get => GetValue<String>(DeleteTitleProperty);
+        set => SetValue(DeleteTitleProperty, value);
     }
 
-    /// <summary>...and what the question about emptying the whole plane says. <c>{0}</c> is how many things are on
-    /// it.</summary>
-    public static readonly AdamantiumProperty ClearQuestionProperty = AdamantiumProperty.Register(
-        nameof(ClearQuestion), typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
+    /// <summary>...and of the one that asks about emptying the whole plane.</summary>
+    public static readonly AdamantiumProperty ClearTitleProperty = AdamantiumProperty.Register(
+        nameof(ClearTitle), typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(null));
 
-    public String ClearQuestion
+    public String ClearTitle
     {
-        get => GetValue<String>(ClearQuestionProperty);
-        set => SetValue(ClearQuestionProperty, value);
+        get => GetValue<String>(ClearTitleProperty);
+        set => SetValue(ClearTitleProperty, value);
     }
 
     // The question while it stands. One at a time: a second Delete while it is up is the same question.
@@ -334,12 +334,7 @@ public partial class InfiniteCanvas
 
         if (ConfirmsDelete)
         {
-            Ask("Delete",
-                String.Format(System.Globalization.CultureInfo.CurrentCulture,
-                    DeleteQuestion ?? (asked.Items.Count > 1 ? "Remove {0} objects?" : "Remove it?"),
-                    asked.Items.Count),
-                "Delete", DeleteSelection);
-
+            Ask(CanvasQuestionKind.DeleteSelection, asked.Items.Count, DeleteTitleProperty, DeleteSelection);
             return false;
         }
 
@@ -361,11 +356,7 @@ public partial class InfiniteCanvas
 
         if (ConfirmsDelete)
         {
-            Ask("Clear the canvas",
-                String.Format(System.Globalization.CultureInfo.CurrentCulture,
-                    ClearQuestion ?? "Remove all {0} objects?", many),
-                "Clear", Clear);
-
+            Ask(CanvasQuestionKind.Clear, many, ClearTitleProperty, Clear);
             return false;
         }
 
@@ -393,48 +384,26 @@ public partial class InfiniteCanvas
     }
 
     // THE QUESTION, IN THE ENGINE'S OWN OVERLAY WINDOW - modal, over the very thing it is about, and the same dialog
-    // everything else in the application asks with.
-    private void Ask(String title, String question, String does, Action done)
+    // everything else in the application asks with. The words are the theme's: the question's look, and the title the
+    // window follows from this canvas, so a language switch reaches both.
+    private void Ask(CanvasQuestionKind kind, int count, AdamantiumProperty title, Action done)
     {
         if (_asking != null || WindowAround() is not { } host) return;
 
         _answer = done;
 
-        var words = new TextBlock
-        {
-            Text = question,
-            TextWrapping = TextWrapping.WrapByWords,
-            MarginBottom = 20
-        };
-
-        var yes = new Button { Content = does, MinWidth = 96, MarginRight = 8 };
-        var no = new Button { Content = "Cancel", MinWidth = 96 };
-
-        yes.Click += (_, _) => Answered(true);
-        no.Click += (_, _) => Answered(false);
-
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-
-        row.Children.Add(yes);
-        row.Children.Add(no);
-
-        var body = new StackPanel { Orientation = Orientation.Vertical, Width = 360, Margin = new Thickness(16) };
-        body.Children.Add(words);
-        body.Children.Add(row);
+        var question = new CanvasQuestion { Kind = kind, Count = count };
+        question.Answered += Answered;
 
         _asking = new OverlayWindow
         {
-            Title = title,
             IsModal = true,
             AllowMove = true,
             // A question is answered by ANSWERING it: a click on the dim behind would be a third answer nobody gave.
             CloseOnOverlay = false,
-            Content = body
+            Content = question
         };
+        _asking.SetBinding(OverlayWindow.TitleProperty, new Binding(title.Name) { Source = this });
 
         // Closed by the cross or by Escape is a NO: the destructive thing is what needs saying out loud.
         _asking.Closed += (_, _) => Answered(false);
@@ -637,8 +606,8 @@ public partial class InfiniteCanvas
         set => SetValue(FrameMarginProperty, value);
     }
 
-    /// <summary>Draws a titled frame round what is selected and selects IT - the comment every graph editor has. Null
-    /// when nothing is selected. The frame holds nothing: what is inside it goes on being moved, wired and deleted
+    /// <summary>Draws a titled frame round what is selected and selects IT - the comment every graph editor has; with no
+    /// title given, the theme's word for a comment. Null when nothing is selected. The frame holds nothing: what is inside it goes on being moved, wired and deleted
     /// without ever consulting it - see <see cref="CanvasFrameItem"/>.</summary>
     public CanvasFrameItem FrameSelection(string title = null)
     {
@@ -651,7 +620,7 @@ public partial class InfiniteCanvas
         // written into the theme's own brush that change would repaint every accent in the application.
         var frame = new CanvasFrameItem(
             new Rect(bounds.X - room, bounds.Y - room - strip, bounds.Width + room * 2, bounds.Height + room * 2 + strip),
-            title ?? "Comment",
+            title ?? Say("Comment"),
             SelectionBrush?.Copy()) { TitleHeight = strip };
 
         BeginEdit("Frame");

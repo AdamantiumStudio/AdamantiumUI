@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="CollapseRibbon" Text="Collapse the ribbon"/>
+    <Phrase Key="Back" Text="Back"/>
+    <Phrase Key="MoreCommands" Text="More commands"/>
+    <Phrase Key="AddToQuickAccess" Text="Add to quick access"/>
+    <Phrase Key="RemoveFromQuickAccess" Text="Remove from quick access"/>
+</Language>

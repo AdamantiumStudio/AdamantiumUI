@@ -10,6 +10,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// so the whole menu comes from the view-model.</summary>
 public class MenuNode : ISeparatorItem
 {
+    /// <summary>The row's label: the key of its phrase, or a name said as it is.</summary>
     public string Title { get; init; }
     public string Gesture { get; init; }
     public bool IsSeparator { get; init; }

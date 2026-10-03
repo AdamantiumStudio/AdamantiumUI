@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="CollapseRibbon" Text="Свернуть ленту"/>
+    <Phrase Key="Back" Text="Назад"/>
+    <Phrase Key="MoreCommands" Text="Другие команды"/>
+    <Phrase Key="AddToQuickAccess" Text="Добавить на панель быстрого доступа"/>
+    <Phrase Key="RemoveFromQuickAccess" Text="Убрать с панели быстрого доступа"/>
+</Language>

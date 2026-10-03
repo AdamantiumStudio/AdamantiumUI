@@ -6,34 +6,34 @@
         <StackPanel Orientation="Horizontal">
 
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Single select" Margin="0,0,0,6"/>
+                <TextBlock Text="{Localize ListsStrings.SingleSelect}" Margin="0,0,0,6"/>
                 <ListBox Width="200" Height="240"
                          ItemsSource="{Binding Items}"
                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Content="Add" Command="{Binding AddCommand}" Width="80" Height="32" Margin="0,0,8,0"/>
-                    <Button Content="Remove" Command="{Binding RemoveSelectedCommand}" Width="90" Height="32"/>
+                    <Button Content="{Localize ListsStrings.Add}" Command="{Binding AddCommand}" MinWidth="80" Height="32" Margin="0,0,8,0"/>
+                    <Button Content="{Localize ListsStrings.Remove}" Command="{Binding RemoveSelectedCommand}" MinWidth="90" Height="32"/>
                 </StackPanel>
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="24,0,0,0">
-                <TextBlock Text="Multiple select" Margin="0,0,0,6"/>
+                <TextBlock Text="{Localize ListsStrings.MultipleSelect}" Margin="0,0,0,6"/>
                 <ListBox Width="200" Height="240" SelectionMode="Multiple" ItemsSource="{Binding Items}"/>
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="24,0,0,0">
-                <TextBlock Text="Selected (single):"/>
+                <TextBlock Text="{Localize ListsStrings.SelectedSingle}"/>
                 <TextBlock Text="{Binding SelectedItem}" FontSize="18" Margin="0,6,0,0"/>
             </StackPanel>
         </StackPanel>
 
         <!-- 20 000 rows through one CollectionView (filter, sort, page) shared by the list and the pager. -->
-        <TextBlock Text="Large list — 20 000 rows, filtered live and paged" FontSize="18" Margin="0,24,0,8"/>
+        <TextBlock Text="{Localize ListsStrings.LargeTitle}" FontSize="18" Margin="0,24,0,8"/>
 
         <!-- Only the search stays out here: it belongs to the LIST. How big a page is belongs to the pager, and it now
              has its own picker - two of them would be two answers to the same question. -->
         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Text="Search" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock Text="{Localize ListsStrings.Search}" VerticalAlignment="Center" MarginRight="8"/>
             <TextBox Width="220" Height="32" Text="{Binding Search, Mode=TwoWay}"/>
         </StackPanel>
 
@@ -47,26 +47,26 @@
         <!-- DisplayMode is one value carrying five independent bits; a check box is the control for a bit. Tick them and
              watch BOTH pagers - the wide one obeys directly, and the narrow one below obeys and then drops whatever no
              longer fits, which is how you can see the two mechanisms are not the same thing. -->
-        <TextBlock Text="Parts to show" Margin="0,16,0,4"/>
+        <TextBlock Text="{Localize ListsStrings.PartsToShow}" Margin="0,16,0,4"/>
         <StackPanel Orientation="Horizontal">
-            <CheckBox Content="First/Last" IsChecked="{Binding ShowFirstLast, Mode=TwoWay}" MarginRight="16"/>
-            <CheckBox Content="Previous/Next" IsChecked="{Binding ShowPreviousNext, Mode=TwoWay}" MarginRight="16"/>
-            <CheckBox Content="Numbers" IsChecked="{Binding ShowNumeric, Mode=TwoWay}" MarginRight="16"/>
-            <CheckBox Content="Rows per page" IsChecked="{Binding ShowPageSizeSelector, Mode=TwoWay}" MarginRight="16"/>
-            <CheckBox Content="Page input" IsChecked="{Binding ShowPageInput, Mode=TwoWay}"/>
+            <CheckBox Content="{Localize ListsStrings.FirstLast}" IsChecked="{Binding ShowFirstLast, Mode=TwoWay}" MarginRight="16"/>
+            <CheckBox Content="{Localize ListsStrings.PreviousNext}" IsChecked="{Binding ShowPreviousNext, Mode=TwoWay}" MarginRight="16"/>
+            <CheckBox Content="{Localize ListsStrings.Numbers}" IsChecked="{Binding ShowNumeric, Mode=TwoWay}" MarginRight="16"/>
+            <CheckBox Content="{Localize ListsStrings.RowsPerPage}" IsChecked="{Binding ShowPageSizeSelector, Mode=TwoWay}" MarginRight="16"/>
+            <CheckBox Content="{Localize ListsStrings.PageInput}" IsChecked="{Binding ShowPageInput, Mode=TwoWay}"/>
         </StackPanel>
 
         <!-- The progression EDITED IN PLACE, which is a different question from replacing it: the picker is watching the
              same collection, so a step added has to appear without anything being re-assigned - and a step taken away
              while it is the one in use has to move the page size to one that still exists, live. -->
         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-            <TextBlock Text="Page sizes on offer" VerticalAlignment="Center" MarginRight="8"/>
-            <Button Content="Add a step" Command="{Binding AddStepCommand}" Height="32" MarginRight="8"/>
-            <Button Content="Drop the one in use" Command="{Binding DropCurrentStepCommand}" Height="32" MarginRight="16"/>
+            <TextBlock Text="{Localize ListsStrings.PageSizes}" VerticalAlignment="Center" MarginRight="8"/>
+            <Button Content="{Localize ListsStrings.AddStep}" Command="{Binding AddStepCommand}" Height="32" MarginRight="8"/>
+            <Button Content="{Localize ListsStrings.DropInUse}" Command="{Binding DropCurrentStepCommand}" Height="32" MarginRight="16"/>
 
             <!-- The progression itself, bound to the SAME collection the pager's picker is bound to. If this list moves
                  and the picker does not, the fault is in the picker; if neither moves, the button never fired. -->
-            <TextBlock Text="now:" VerticalAlignment="Center" MarginRight="6"/>
+            <TextBlock Text="{Localize ListsStrings.Now}" VerticalAlignment="Center" MarginRight="6"/>
             <!-- ONE TEXT BLOCK, not a list. An items host places its rows on a uniform pitch - one measured extent for
                  all of them - which is right for rows of equal size and wrong for numbers of two, three and four
                  digits: the narrow ones got a gap and the wide ones ran into each other, and no Spacing can mend that
@@ -76,19 +76,20 @@
 
         <!-- ── A SERVER THAT HANDS OUT ONE PAGE AT A TIME ────────────────────────────────────────────────────────────
              Shows an unknown total found at the last page, loading, superseded requests, and failures keeping the page. -->
-        <TextBlock Text="A server that hands out one page at a time — 237 rows it will not count for you"
+        <TextBlock Text="{Localize ListsStrings.ServerTitle}"
                    FontSize="18" Margin="0,28,0,8"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Text="Answers in" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock Text="{Localize ListsStrings.AnswersIn}" VerticalAlignment="Center" MarginRight="8"/>
             <NumericUpDown Width="90" VerticalAlignment="Center" InputMode="Integers"
                            Minimum="0" Maximum="5000" SmallChange="100"
                            Value="{Binding ServerDelay, Mode=TwoWay}"/>
-            <TextBlock Text="ms" VerticalAlignment="Center" MarginLeft="6" MarginRight="16"/>
-            <Button Content="Fail the next page" Command="{Binding FailNextServerRequestCommand}"
+            <TextBlock Text="{Localize ListsStrings.Ms}" VerticalAlignment="Center" MarginLeft="6" MarginRight="16"/>
+            <Button Content="{Localize ListsStrings.FailNext}" Command="{Binding FailNextServerRequestCommand}"
                     Height="32" MarginRight="8"/>
-            <Button Content="Ask again" Command="{Binding ReloadServerPageCommand}" Height="32" MarginRight="16"/>
-            <TextBlock Text="{Binding ServerStatus}" VerticalAlignment="Center"/>
+            <Button Content="{Localize ListsStrings.AskAgain}" Command="{Binding ReloadServerPageCommand}" Height="32" MarginRight="16"/>
+            <TextBlock Text="{Localize ListsStrings.Server, state={Binding ServerState}, page={Binding ServerPage}, error={Binding ServerError}, known={Localize ListsStrings.Known, count={Binding ServerTotal}}}"
+                       VerticalAlignment="Center"/>
         </StackPanel>
 
         <ListBox Width="720" Height="220" ItemsSource="{Binding Server}" HorizontalAlignment="Left"/>
@@ -100,7 +101,7 @@
              both - and this one has to fit the same row into far less room: it gives up the size picker first, then the
              jumps to the ends, then the numbers, and never the step arrows or the page it is on. Watch it against the
              wide one above: the two are always on the same page. -->
-        <TextBlock Text="The same view, 420 wide — the row sheds what does not fit" Margin="0,16,0,4"/>
+        <TextBlock Text="{Localize ListsStrings.NarrowTitle}" Margin="0,16,0,4"/>
         <DataPager Width="420" HorizontalAlignment="Left"
                    Source="{Binding Large}" DisplayMode="{Binding PagerMode}"
                    PageSizes="{Binding PageSteps}"/>

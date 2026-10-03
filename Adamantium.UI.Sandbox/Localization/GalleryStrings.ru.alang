@@ -1,0 +1,55 @@
+<Language>
+    <Phrase Key="TabPlacement" Text="Полоса вкладок:"/>
+    <Phrase Key="ContentSlide" Text="Смена содержимого:"/>
+    <Phrase Key="Indicator" Text="Индикатор:"/>
+    <Phrase Key="Loading" Text="Загрузка..."/>
+
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="None" Text="Без анимации"/>
+    <Phrase Key="SlideLeft" Text="Сдвиг влево"/>
+    <Phrase Key="SlideRight" Text="Сдвиг вправо"/>
+    <Phrase Key="SlideUp" Text="Сдвиг вверх"/>
+    <Phrase Key="SlideDown" Text="Сдвиг вниз"/>
+    <Phrase Key="Inner" Text="Внутри"/>
+    <Phrase Key="Outer" Text="Снаружи"/>
+
+    <Phrase Key="Navigation" Text="Навигация"/>
+    <Phrase Key="VisualToImage" Text="Визуал → картинка"/>
+    <Phrase Key="DragDrop" Text="Перетаскивание"/>
+    <Phrase Key="Buttons" Text="Кнопки"/>
+    <Phrase Key="DataGrid" Text="Таблица"/>
+    <Phrase Key="PropertyGrid" Text="Сетка свойств"/>
+    <Phrase Key="Tabs" Text="Вкладки"/>
+    <Phrase Key="Menus" Text="Меню"/>
+    <Phrase Key="Trees" Text="Деревья"/>
+    <Phrase Key="Splitter" Text="Разделитель"/>
+    <Phrase Key="ColorPicker" Text="Выбор цвета"/>
+    <Phrase Key="Ranges" Text="Диапазоны"/>
+    <Phrase Key="Keyboard" Text="Клавиатура"/>
+    <Phrase Key="Resources" Text="Ресурсы"/>
+    <Phrase Key="Markup" Text="Разметка"/>
+    <Phrase Key="ScrollBar" Text="Полоса прокрутки"/>
+    <Phrase Key="Lists" Text="Списки"/>
+    <Phrase Key="Shapes" Text="Фигуры"/>
+    <Phrase Key="Loaders" Text="Индикаторы загрузки"/>
+    <Phrase Key="Animations" Text="Анимации"/>
+    <Phrase Key="Text" Text="Текст"/>
+    <Phrase Key="SlidePanel" Text="Выдвижная панель"/>
+    <Phrase Key="Image" Text="Изображения"/>
+    <Phrase Key="VectorIcons" Text="Векторные иконки"/>
+    <Phrase Key="Layout" Text="Раскладка"/>
+    <Phrase Key="Clipping" Text="Обрезка"/>
+    <Phrase Key="Opacity" Text="Прозрачность"/>
+    <Phrase Key="Viewbox" Text="Viewbox"/>
+    <Phrase Key="ZoomBox" Text="ZoomBox"/>
+    <Phrase Key="InfiniteCanvas" Text="Бесконечный холст"/>
+    <Phrase Key="Tiles3D" Text="Плитки 3D"/>
+    <Phrase Key="Instancing" Text="Инстансинг"/>
+    <Phrase Key="Transforms" Text="Трансформации"/>
+    <Phrase Key="Scene" Text="Сцена"/>
+    <Phrase Key="Docking" Text="Докинг"/>
+    <Phrase Key="Brushes" Text="Кисти"/>
+</Language>

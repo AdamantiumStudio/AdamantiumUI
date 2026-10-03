@@ -8,12 +8,21 @@
          The row's layout is a three-column Grid whose FIRST column the control sets (PART_Layout): binding a column
          width to an ancestor's property is not something a template can say. -->
 
+    <!-- A picture line's own "..." - see Fluent's set. -->
+    <Style Selector="ImageSourceProperty">
+        <Setter Property="ActionTip" Value="{Localize PropertyGridStrings.PickPicture}"/>
+        <Setter Property="DialogTitle" Value="{Localize PropertyGridStrings.PickPicture}"/>
+        <Setter Property="PicturesName" Value="{Localize PropertyGridStrings.Pictures}"/>
+        <Setter Property="AllFilesName" Value="{Localize PropertyGridStrings.AllFiles}"/>
+    </Style>
+
     <Style Selector="PropertyGrid">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <!-- Denser than the other two, like everything in this theme - see Fluent's set. -->
         <Setter Property="EditorHeight" Value="19"/>
+        <Setter Property="MixedText" Value="{Localize PropertyGridStrings.MultipleValues}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PropertyGrid">
@@ -26,7 +35,7 @@
                             <Grid Grid.Row="0" Margin="4 4 4 3">
                                 <TextBox x:Name="PART_Search"
                                          Height="22" Padding="5 0 22 0"
-                                         Placeholder="Search properties"
+                                         Placeholder="{Localize PropertyGridStrings.SearchProperties}"
                                          Visibility="Collapsed"/>
                                 <!-- The theme's DRAWN cross, not a character - see Fluent's set. -->
                                 <Button x:Name="PART_ClearSearch"
@@ -34,7 +43,7 @@
                                         Width="16" Height="16" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 4 0"
                                         HorizontalAlignment="Right" VerticalAlignment="Center"
-                                        ToolTipService.ToolTip="Clear the search (Esc)">
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.ClearSearch}">
                                     <Image Source="{ResourceReference CloseIcon}" Width="7" Height="7"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
@@ -132,13 +141,13 @@
                                         Width="19" Height="19" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 2 0"
                                         FontSize="{ResourceReference FontSizeCaption}"
-                                        ToolTipService.ToolTip="More"/>
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.More}"/>
 
                                 <Button x:Name="PART_Reset"
                                         IsEnabled="False"
                                         Width="19" Height="19" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 4 0"
-                                        ToolTipService.ToolTip="Reset to the default">
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.ResetToDefault}">
                                     <Image Source="{ResourceReference RevertIcon}" Width="9" Height="9"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>

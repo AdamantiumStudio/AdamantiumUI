@@ -3,8 +3,14 @@
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the brushes tab's region under the key "Image"; the DataContext is the tab's own view-model.
          This stand keeps its OWN width and height: they are what it demonstrates - how a tiling survives a resize. -->
+    <!-- A member of an enum said in the tab's words, for every drop-down of one. -->
+    <ResourceContext.Resources>
+        <DataTemplate x:Key="BrushWord">
+            <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
+        </DataTemplate>
+    </ResourceContext.Resources>
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="ImageBrush — live (tile it, mirror it, or fit one copy)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.ImageTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Border Width="360" Height="240" Margin="10" Background="#101418">
                 <!-- The BOX is the sliders, not whatever the figure happens to measure: a figure that keeps its
@@ -43,7 +49,7 @@
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16" VerticalAlignment="Center">
                 <!-- Only for the polygon: on a rect or an ellipse these two numbers mean nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="Corners — 3 is a triangle, enough of them a circle" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
                         <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -51,7 +57,7 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock Text="Start angle — where corner 0 sits" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
                         <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
@@ -60,11 +66,13 @@
                                        Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Tile mode" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding TileModes}" SelectedItem="{Binding ImageTileMode, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <TextBlock Text="Stretch (only while Tile mode is None)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding Stretches}" SelectedItem="{Binding ImageStretch, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <TextBlock Text="Tile size" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.TileMode}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding TileModes}" SelectedItem="{Binding ImageTileMode, Mode=TwoWay}" Width="280" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
+                <TextBlock Text="{Localize BrushesStrings.StretchWhileNone}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding Stretches}" SelectedItem="{Binding ImageStretch, Mode=TwoWay}" Width="280" MarginBottom="10"
+                          ItemTemplate="{ResourceReference BrushWord}"/>
+                <TextBlock Text="{Localize BrushesStrings.TileSize}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ImageTile, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="8" Maximum="160" Width="186"/>
                     <NumericUpDown Width="88" Minimum="8" Maximum="160" SmallChange="1"
@@ -72,7 +80,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ImageTile, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Width" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Width}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ImageWidth, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="340" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="340" SmallChange="1"
@@ -80,7 +88,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ImageWidth, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Height" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Height}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ImageHeight, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="220" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="220" SmallChange="1"
@@ -88,7 +96,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ImageHeight, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Corner radius" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ImageRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="100" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"
@@ -96,7 +104,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ImageRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Grid rotation — turns the TILING" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.GridRotationTiling}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding ImageRotation, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1"
@@ -104,7 +112,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding ImageRotation, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Tint" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Tint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding ImageTint, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>

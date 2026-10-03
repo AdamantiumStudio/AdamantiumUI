@@ -1,0 +1,79 @@
+<Language>
+    <Phrase Key="Gallery" Text="Shape gallery — every shape's stroke is driven by the pen panel below:"/>
+    <Phrase Key="CubicBezier" Text="Cubic Bézier"/>
+    <Phrase Key="QuadraticBezier" Text="Quadratic Bézier"/>
+    <Phrase Key="Nurbs" Text="NURBS"/>
+    <Phrase Key="BSpline" Text="B-spline"/>
+
+    <Phrase Key="PenParameters" Text="Stroke / Pen parameters:"/>
+    <Phrase Key="Thickness" Text="Thickness"/>
+    <Phrase Key="DashOn" Text="Dash on"/>
+    <Phrase Key="DashGap" Text="Dash gap"/>
+    <Phrase Key="DashOffset" Text="Dash offset"/>
+    <Phrase Key="TrimStart" Text="Trim start"/>
+    <Phrase Key="TrimEnd" Text="Trim end"/>
+    <Phrase Key="Corner" Text="Corner"/>
+    <Phrase Key="Samples" Text="Samples"/>
+    <Phrase Key="DashStart" Text="Dash start"/>
+    <Phrase Key="DashEnd" Text="Dash end"/>
+    <Phrase Key="StartCap" Text="Start cap"/>
+    <Phrase Key="EndCap" Text="End cap"/>
+    <Phrase Key="Join" Text="Join"/>
+    <Phrase Key="DashFit" Text="Dash fit"/>
+    <Phrase Key="Color" Text="Color"/>
+
+    <Phrase Key="NurbsParameters" Text="NURBS parameters (a B-spline has none of these):"/>
+    <Phrase Key="Weight" Text="Weight"/>
+    <Phrase Key="Degree" Text="Degree"/>
+    <Phrase Key="Uniform" Text="Uniform"/>
+
+    <Phrase Key="Borders" Text="Borders — non-uniform thickness &amp; translucent brushes:"/>
+
+    <Phrase Key="Polygon" Text="Regular polygon — from a triangle to a circle by one number:"/>
+    <Phrase Key="Corners" Text="Corners"/>
+    <Phrase Key="StartAngle" Text="Start angle"/>
+    <Phrase Key="Ring" Text="Ring"/>
+    <Phrase Key="Stroke" Text="Stroke"/>
+    <Phrase Key="StrokeAlpha" Text="Stroke alpha"/>
+    <Phrase Key="Width" Text="Width"/>
+    <Phrase Key="Height" Text="Height"/>
+
+    <Phrase Key="Sectors" Text="Sectors — the same ellipse cut by a straight boundary:"/>
+    <Phrase Key="Start" Text="Start"/>
+    <Phrase Key="Sweep" Text="Sweep"/>
+    <Phrase Key="Sector" Text="Sector — closed through the center (off: edge-to-edge, closed by the chord)"/>
+    <Phrase Key="Fill" Text="Fill — off leaves the outline alone, the way a ring gauge is drawn"/>
+
+    <Phrase Key="Border" Text="Border — a thickness per side, a radius per corner, all drawn by one SDF instance:"/>
+    <Phrase Key="FlatSwatch" Text="Flat swatch:"/>
+    <Phrase Key="Alpha" Text="Alpha"/>
+    <Phrase Key="Sides" Text="Sides"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="TopLeft" Text="Top left"/>
+    <Phrase Key="TopRight" Text="Top right"/>
+    <Phrase Key="BottomRight" Text="Bottom right"/>
+    <Phrase Key="BottomLeft" Text="Bottom left"/>
+
+    <Phrase Key="Overlap" Text="Translucent overlap — a crossing must not be darker than the swatch:"/>
+    <Phrase Key="ReferenceTone" Text="reference tone"/>
+    <Phrase Key="SelfCrossingStroke" Text="self-crossing stroke"/>
+    <Phrase Key="SelfIntersectingOutline" Text="self-intersecting outline"/>
+    <Phrase Key="FillAndStroke" Text="fill + stroke, same alpha"/>
+    <Phrase Key="TwoStrokes" Text="two strokes — MUST be darker"/>
+    <Phrase Key="DashedSelfCrossing" Text="dashed, self-crossing"/>
+
+    <Phrase Key="HoverDash" Text="Hover the line to animate its dash:"/>
+
+    <Phrase Key="Flat" Text="Flat"/>
+    <Phrase Key="Square" Text="Square"/>
+    <Phrase Key="ConvexTriangle" Text="Convex triangle"/>
+    <Phrase Key="ConcaveTriangle" Text="Concave triangle"/>
+    <Phrase Key="ConvexRound" Text="Convex round"/>
+    <Phrase Key="ConcaveRound" Text="Concave round"/>
+    <Phrase Key="Bevel" Text="Bevel"/>
+    <Phrase Key="Miter" Text="Miter"/>
+    <Phrase Key="Round" Text="Round"/>
+</Language>

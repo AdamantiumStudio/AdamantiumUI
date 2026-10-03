@@ -15,10 +15,14 @@ public interface ICanvasItem
     /// this is what makes the cost of a frame depend on what is visible rather than on what exists.</summary>
     Rect Bounds { get; }
 
-    /// <summary>What to call it in a list of what is on the plane. The type's name by default, so a third-party item
-    /// shows something sensible without being asked to; anything that can say more - which shape it is, what the text
-    /// says - should.</summary>
-    string Title => GetType().Name;
+    /// <summary>What it is called by the person who made it, for a list of what is on the plane: what a text says, the
+    /// title a frame or a node was given. Empty by default - WHAT it is, the theme says by <see cref="Sort"/>, in the
+    /// application's language.</summary>
+    string Title => string.Empty;
+
+    /// <summary>How many parts it is made of - a group's members, a stroke's points - which is what tells one from
+    /// another in a list at a glance. Null for a thing not made of parts.</summary>
+    int? Parts => null;
 
     /// <summary>Which grips of the manipulation frame this item offers. Everything by default, which is what a box
     /// wants; something reshaped another way - by its own points, or by whatever it is attached to - says so.</summary>
@@ -29,7 +33,7 @@ public interface ICanvasItem
     int Order { get; set; }
 
     /// <summary>The narrowest name of this item ("Rectangle", "Bezier"), else the class name; the inspector matches its
-    /// sections against it.</summary>
+    /// sections against it, and a theme names the kind of thing by it.</summary>
     string Sort => GetType().Name;
 
     /// <summary>Whether it has a place of its own; false for a wire, which follows its sockets and is skipped by alignment.</summary>

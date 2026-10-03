@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -55,7 +56,7 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     [Command]
     private void ShowOverlayWindow() =>
         _ = _overService.ShowOverlayAsync<OverlayDemoViewModel>(
-            new NavigationParameters().Add("title", $"Overlay window {++_overlayCounter}"));
+            new NavigationParameters().Add("title", NavigationStrings.OverlayWindowNumbered(++_overlayCounter)));
 
     // A modal dialog on the overlay (dims + blocks the content behind), draggable by its title bar. Awaited: the button
     // stays disabled while the modal is up, which is the intended modal behavior.
@@ -63,8 +64,8 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     private Task ShowOverlayModal() =>
         _dialogService.ShowDialogAsync<ConfirmDialogViewModel>(
             new NavigationParameters()
-                .Add("title", "Modal overlay")
-                .Add("message", "This modal dims and blocks the window behind it. Drag me by the title bar."),
+                .Add("title", NavigationStrings.ModalOverlay)
+                .Add("message", NavigationStrings.ModalOverlayMessage),
             DialogHostKind.Overlay);
 
     [Command] private Task GoHome() => Region.NavigateToAsync<HomePageViewModel>();

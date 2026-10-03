@@ -10,5 +10,6 @@ public static class DemoMetrics
 
     public const double RowWidth = 460;
 
-    public static readonly string Caption = "read from C# by {x:Static}";
+    /// <summary>Said in the language the page is opened in: {x:Static} reads a value once.</summary>
+    public static string Caption => Localization.MarkupStrings.StaticCaption;
 }

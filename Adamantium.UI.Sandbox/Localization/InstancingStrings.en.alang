@@ -1,0 +1,4 @@
+<Language>
+    <Phrase Key="Title" Text="600 star polygons — identical tessellated mesh, per-item color (non-SDF fill)."/>
+    <Phrase Key="Hint" Text="Identical star meshes batch automatically into ONE instanced draw (geometry-identity instancing)."/>
+</Language>

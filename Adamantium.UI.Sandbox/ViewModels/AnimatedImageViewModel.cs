@@ -44,8 +44,6 @@ public partial class AnimatedImageViewModel : AdamantiumViewModel
     /// <summary>The four radii as the control wants them - one value, rebuilt whenever a corner moves.</summary>
     [Bindable] private CornerRadius _cornerRadius = new(0);
 
-    public string PlayPauseText => IsPlaying ? "Pause" : "Play";
-
     // The range slider's ceiling: a source with N frames is indexed 0..N-1.
     public uint LastFrame => FrameCount > 0 ? FrameCount - 1 : 0;
 
@@ -56,8 +54,6 @@ public partial class AnimatedImageViewModel : AdamantiumViewModel
     partial void OnTopRightChanged(double value) => RebuildCorners();
     partial void OnBottomRightChanged(double value) => RebuildCorners();
     partial void OnBottomLeftChanged(double value) => RebuildCorners();
-
-    partial void OnIsPlayingChanged(bool value) => RaisePropertyChanged(nameof(PlayPauseText));
 
     // A freshly loaded source can have fewer frames than the range asks for; keep the end inside it so the sliders and
     // the animation agree from the first frame.

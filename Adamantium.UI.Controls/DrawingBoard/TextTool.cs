@@ -33,7 +33,7 @@ public class TextTool : ICanvasTool
 
     public Key Shortcut { get; set; } = Key.T;
 
-    public string Description { get; set; } = "click and type, Escape finishes";
+    public string Description { get; set; } = "TextDescription";
 
     /// <summary>The I-beam every text cursor is, so a click that is about to start typing looks like one.</summary>
     public Cursor Cursor { get; set; } = Cursors.IBeam;

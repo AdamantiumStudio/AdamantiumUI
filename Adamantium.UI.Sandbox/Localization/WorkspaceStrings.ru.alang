@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Workspace" Text="Рабочая область"/>
+    <Phrase Key="DrivenByNavigation" Text="TabControl, которым управляет только менеджер навигации"/>
+    <Phrase Key="OpenDoc" Text="Открыть документ"/>
+    <Phrase Key="OpenChart" Text="Открыть график"/>
+    <Phrase Key="CloseTab" Text="Закрыть вкладку"/>
+    <Phrase Key="Doc" Text="Документ {number}"/>
+    <Phrase Key="Chart" Text="График {number}"/>
+    <Phrase Key="DocSurface" Text="Поверхность документа: открывается и закрывается через регион рабочей области."/>
+    <Phrase Key="ChartSurface" Text="Поверхность графика: открывается и закрывается через регион рабочей области."/>
+</Language>

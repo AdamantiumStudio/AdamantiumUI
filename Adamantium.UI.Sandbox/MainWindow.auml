@@ -8,7 +8,7 @@
 		xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
         x:ViewModel="{x:Type vm:MainViewModel}"
         x:CreateInDesignTime="False"
-        Title="Adamantium Window"
+        Title="{Localize MainStrings.WindowTitle}"
         Width="1280"
         Height="720"
         AnalyticAntialiasing="{Binding AnalyticAa, Mode=TwoWay}"
@@ -28,13 +28,13 @@
         <views:GalleryView/>
 
         <!-- Shows which title-bar command last ran, so the caption commands visibly do distinct things. -->
-        <TextBlock Text="{Binding LastCommand}" FontSize="12"
+        <TextBlock Text="{Localize MainStrings.LastDialog, result={Binding LastResult}}" FontSize="12"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,10,0,0"/>
 
         <!-- Diagnostics toggle - always visible, top-right. Opens the diagnostics SlidePanel on demand so the live stats
              don't cover the window content. Two-way, so the panel's x button flips it back off. -->
-        <ToggleSwitch Content="Diagnostics"
+        <ToggleSwitch Content="{Localize MainStrings.Diagnostics}"
                       HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,16,0"
                       IsChecked="{Binding DiagnosticsOpen, Mode=TwoWay}"/>
 
@@ -54,17 +54,37 @@
 
         <!-- The SlidePanel diagnostics view, opened by the LEFT caption "Diagnostics" command (DiagnosticsPanelOpen) -
              independent of the right-side toggle, which drives the plate above. -->
-        <SlidePanel Placement="Right" Width="264" Header="Diagnostics"
+        <SlidePanel Placement="Right" Width="264" Header="{Localize MainStrings.Diagnostics}"
                     IsOpen="{Binding DiagnosticsPanelOpen, Mode=TwoWay}">
             <StackPanel Orientation="Vertical">
+                <!-- The application's language and theme, HERE because this panel opens from the caption of every page:
+                     every string of the framework and every number a binding writes follow the language at once. The
+                     theme list is every REGISTERED theme; picking one and Switch re-templates the whole application,
+                     while Dark / Light only rewrites the palette's colors in place. -->
+                <TextBlock Text="{Localize MainStrings.Language}" Margin="0,0,0,4"/>
+                <DropDown ItemsSource="{Binding AvailableLanguages}"
+                          SelectedItem="{Binding Language, Mode=TwoWay}"
+                          Margin="0,0,0,12"/>
+                <TextBlock Text="{Localize MainStrings.Theme}" Margin="0,0,0,4"/>
+                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                    <DropDown ItemsSource="{Binding AvailableThemes}"
+                              SelectedItem="{Binding SelectedThemeName, Mode=TwoWay}"/>
+                    <Button Grid.Column="1" Content="{Localize MainStrings.SwitchTheme}"
+                            Command="{Binding SwitchThemeCommand}" Margin="8,0,0,0"/>
+                </Grid>
+                <Button Content="{Localize MainStrings.ToggleVariant}" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                    <Button.Behaviors>
+                        <behaviors:ToggleThemeBehavior/>
+                    </Button.Behaviors>
+                </Button>
                 <!-- Analytic AA on/off, live: the render service re-reads Window.AnalyticAntialiasing every frame, so this
                      flips the coverage fringe and feathered strokes WITHOUT rebuilding the render cache - an A/B of an
                      edge artifact, which is why it belongs with the diagnostics rather than in the window chrome. -->
-                <ToggleSwitch Content="Analytic AA"
+                <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
                               IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
                 <!-- Present mode; changing it rebuilds the swapchain, so the picture blinks once. -->
-                <TextBlock Text="Presentation" Margin="0,0,0,4"/>
+                <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"/>
                 <DropDown ItemsSource="{Binding PresentPolicies}"
                           SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"
                           Margin="0,0,0,12"/>

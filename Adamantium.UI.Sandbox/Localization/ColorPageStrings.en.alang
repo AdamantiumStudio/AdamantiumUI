@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="Title" Text="Color Picker"/>
+    <Phrase Key="Intro" Text="An inline HSV picker: drag the square (saturation / value), the hue bar and the alpha bar, or type a hex / R-G-B-A value. The picked color is fed into the THEME accent, so the controls on the right recolor live."/>
+    <Phrase Key="Wheel" Text="Color wheel (conic hue × radial saturation)"/>
+    <Phrase Key="Value" Text="Value (brightness — 0 = black)"/>
+    <Phrase Key="Swatch" Text="Compact swatch → flyout (ColorPickerButton)"/>
+    <Phrase Key="LiveAccent" Text="Live theme accent"/>
+    <Phrase Key="Checkbox" Text="Checkbox"/>
+    <Phrase Key="RadioButton" Text="Radio button"/>
+</Language>

@@ -9,6 +9,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.DataGrid;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -47,7 +48,7 @@ public class GridNode : System.ComponentModel.INotifyDataErrorInfo
 
     public IEnumerable GetErrors(string propertyName) =>
         propertyName == nameof(Status) && HasErrors
-            ? new[] { "The record is filed as an error" }
+            ? new[] { GridPageStrings.FiledAsError }
             : Array.Empty<string>();
 
     public bool Done { get; set; }
@@ -118,7 +119,7 @@ public partial class DataGridViewModel : TabPageViewModel
         node.Updated = $"2026-{seed % 12 + 1:D2}-{seed % 27 + 1:D2}";
     }
 
-    public DataGridViewModel() : base("Data grid")
+    public DataGridViewModel() : base("DataGrid")
     {
         var random = new Random(7);
         var roots = new List<GridNode>();
@@ -190,9 +191,7 @@ public partial class DataGridViewModel : TabPageViewModel
     /// The rows come out identical either way; what changes is the shape of the source. Said as a COUNT because that
     /// is what proves it: hand the table 12 448 flat records and it shows 10 000 rows with branches, so the relation
     /// really did build the tree. Were KeyPath quietly ignored, all 12 448 would be sitting in the table.</summary>
-    public string TreeSourceStatus => TreeFromKeys
-        ? $"{FlatNodes.Count:N0} records, all at the top level - the tree is worked out from Code / ParentCode"
-        : $"{Nodes.Count:N0} records, each holding its own children";
+    public int RecordCount => TreeFromKeys ? FlatNodes.Count : Nodes.Count;
 
     partial void OnTreeFromKeysChanged(bool value)
     {
@@ -200,7 +199,7 @@ public partial class DataGridViewModel : TabPageViewModel
         RaisePropertyChanged(nameof(TreeChildrenPath));
         RaisePropertyChanged(nameof(TreeKeyPath));
         RaisePropertyChanged(nameof(TreeParentKeyPath));
-        RaisePropertyChanged(nameof(TreeSourceStatus));
+        RaisePropertyChanged(nameof(RecordCount));
     }
 
     [Bindable] private int _alternationCount = 2;
@@ -275,7 +274,10 @@ public partial class DataGridViewModel : TabPageViewModel
     private static string LayoutFile =>
         System.IO.Path.Combine(System.IO.Path.GetTempPath(), "adamantium-datagrid-layout.json");
 
-    [Bindable] private string _layoutStatus = "Nothing saved yet";
+    /// <summary>What the layout buttons did last, and how much: the bytes saved or the columns restored.</summary>
+    [Bindable] private LayoutAction _layoutAction;
+
+    [Bindable] private int _layoutAmount;
 
     [Command]
     private void SaveLayout(object target)
@@ -284,7 +286,8 @@ public partial class DataGridViewModel : TabPageViewModel
 
         var json = System.Text.Json.JsonSerializer.Serialize(grid.CaptureColumnState());
         System.IO.File.WriteAllText(LayoutFile, json);
-        LayoutStatus = $"Saved {json.Length} bytes";
+        LayoutAmount = json.Length;
+        LayoutAction = LayoutAction.Saved;
     }
 
     [Command]
@@ -292,29 +295,31 @@ public partial class DataGridViewModel : TabPageViewModel
     {
         if (target is not TreeDataGrid grid || !System.IO.File.Exists(LayoutFile))
         {
-            LayoutStatus = "Nothing saved yet";
+            LayoutAction = LayoutAction.None;
             return;
         }
 
         var state = System.Text.Json.JsonSerializer.Deserialize<DataGridColumnsState>(
             System.IO.File.ReadAllText(LayoutFile));
         grid.RestoreColumnState(state);
-        LayoutStatus = $"Restored {state?.Columns.Count ?? 0} columns";
+        LayoutAmount = state?.Columns.Count ?? 0;
+        LayoutAction = LayoutAction.Restored;
     }
 
-    /// <summary>What the history buttons report. Shown as a COUNT of what is reachable in each direction, because
-    /// "undo did something" is not visible on a table of ten thousand rows unless you were looking at the right one.
-    /// </summary>
-    [Bindable] private string _historyStatus = "Nothing to take back";
+    /// <summary>What the history buttons did last, and what is reachable in each direction after it, because "undo did
+    /// something" is not visible on a table of ten thousand rows unless you were looking at the right one.</summary>
+    [Bindable] private HistoryStep _historyStep;
+
+    [Bindable] private bool _moreBehind;
+
+    [Bindable] private bool _oneAhead;
 
     [Command]
     private void UndoEdit(object target)
     {
         if (target is not TreeDataGrid grid) return;
 
-        HistoryStatus = grid.Undo()
-            ? $"Took one back; {(grid.CanUndo ? "more behind" : "nothing behind")}, {(grid.CanRedo ? "one ahead" : "none ahead")}"
-            : "Nothing to take back";
+        Step(grid, grid.Undo() ? HistoryStep.Undone : HistoryStep.NothingToUndo);
     }
 
     [Command]
@@ -322,21 +327,28 @@ public partial class DataGridViewModel : TabPageViewModel
     {
         if (target is not TreeDataGrid grid) return;
 
-        HistoryStatus = grid.Redo()
-            ? $"Did one again; {(grid.CanUndo ? "more behind" : "nothing behind")}, {(grid.CanRedo ? "one ahead" : "none ahead")}"
-            : "Nothing to do again";
+        Step(grid, grid.Redo() ? HistoryStep.Redone : HistoryStep.NothingToRedo);
     }
 
-    /// <summary>What the export buttons report - the path, because a demo whose export cannot be OPENED has shown
-    /// nothing.</summary>
-    [Bindable] private string _exportStatus = "Nothing exported yet";
+    private void Step(TreeDataGrid grid, HistoryStep step)
+    {
+        MoreBehind = grid.CanUndo;
+        OneAhead = grid.CanRedo;
+        HistoryStep = step;
+    }
+
+    /// <summary>How the last export went, and the path it wrote - because a demo whose export cannot be OPENED has
+    /// shown nothing.</summary>
+    [Bindable] private ExportState _exportState;
+
+    [Bindable] private string _exportPath;
 
     [Command]
     private void ExportCsv(object target)
     {
         if (target is not TreeDataGrid grid) return;
 
-        var path = Where("table.csv", "csv", new FileType("Comma-separated values", "csv"));
+        var path = Where("table.csv", "csv", new FileType(GridPageStrings.CsvFiles, "csv"));
         if (path == null) return;
 
         // A BOM, and only because this is a file Excel opens: without one it reads a UTF-8 file as the machine's ANSI
@@ -345,7 +357,7 @@ public partial class DataGridViewModel : TabPageViewModel
         using (var writer = new System.IO.StreamWriter(path, false, new System.Text.UTF8Encoding(true)))
             grid.ExportCsv(writer);
 
-        ExportStatus = path;
+        Written(path);
     }
 
     [Command]
@@ -353,26 +365,32 @@ public partial class DataGridViewModel : TabPageViewModel
     {
         if (target is not TreeDataGrid grid) return;
 
-        var path = Where("table.xlsx", "xlsx", new FileType("Excel workbook", "xlsx"));
+        var path = Where("table.xlsx", "xlsx", new FileType(GridPageStrings.XlsxFiles, "xlsx"));
         if (path == null) return;
 
         using (var stream = System.IO.File.Create(path))
             grid.ExportXlsx(stream);
 
-        ExportStatus = path;
+        Written(path);
+    }
+
+    private void Written(string path)
+    {
+        ExportPath = path;
+        ExportState = ExportState.Written;
     }
 
     private string Where(string name, string extension, FileType type)
     {
         if (!FileDialog.IsAvailable)
         {
-            ExportStatus = "No file dialog on this platform";
+            ExportState = ExportState.NoDialog;
             return null;
         }
 
         var path = FileDialog.Save(new SaveFileRequest
         {
-            Title = "Export the table",
+            Title = GridPageStrings.ExportTitle,
             FileName = name,
             DefaultExtension = extension,
             FileTypes = new[] { type },
@@ -382,7 +400,7 @@ public partial class DataGridViewModel : TabPageViewModel
             Key = "sandbox.table.export"
         });
 
-        if (path == null) ExportStatus = "Canceled";
+        if (path == null) ExportState = ExportState.Canceled;
         return path;
     }
 
@@ -441,31 +459,15 @@ public partial class DataGridViewModel : TabPageViewModel
         BlockOnInvalid ? DataGridValidationMode.Block : DataGridValidationMode.Mark;
 
     /// <summary>What the Size column adds up to. Every aggregate is here to be tried: a sum is what a quantity wants,
-    /// an average what a rate does.</summary>
-    [Bindable, Affects(nameof(SizeAggregateFormat))] private DataGridAggregate _sizeAggregate = DataGridAggregate.Sum;
-
-    /// <summary>How that total is written. It FOLLOWS the function, because the sign in front of a number says what
+    /// an average what a rate does. The view writes the total by it, because the sign in front of a number says what
     /// the number is: a fixed "Σ" went on claiming a sum over an average and over a count.</summary>
-    public string SizeAggregateFormat => SizeAggregate switch
-    {
-        DataGridAggregate.Sum => "Σ {0:N0}",
-        DataGridAggregate.Average => "avg {0:N1}",
-        DataGridAggregate.Min => "min {0:N0}",
-        DataGridAggregate.Max => "max {0:N0}",
-        DataGridAggregate.Count => "{0:N0} rows",
-        _ => null
-    };
+    [Bindable] private DataGridAggregate _sizeAggregate = DataGridAggregate.Sum;
 
     [Bindable, Affects(nameof(CodeAggregate))] private bool _countRows = true;
 
     /// <summary>Counting a text column is the one aggregate that means the same thing whatever is in it - how many
     /// rows there are - which is why it is the one offered on Code.</summary>
     public DataGridAggregate CodeAggregate => CountRows ? DataGridAggregate.Count : DataGridAggregate.None;
-
-    /// <summary>A total has to SAY what it is. A bare "10000" under a column of codes reads as nothing at all - the
-    /// format is where that is said, and it is bound rather than written in the markup because a literal starting with
-    /// a brace is read as a markup extension.</summary>
-    public string CodeAggregateFormat => "{0:N0} rows";
 
     public IReadOnlyList<DataGridAggregate> AggregateChoices { get; } =
     [

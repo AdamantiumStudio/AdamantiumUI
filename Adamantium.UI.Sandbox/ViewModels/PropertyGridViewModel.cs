@@ -42,7 +42,7 @@ public partial class InspectedEntity
 [ViewModel]
 public partial class PropertyGridViewModel : TabPageViewModel
 {
-    public PropertyGridViewModel() : base("Property grid")
+    public PropertyGridViewModel() : base("PropertyGrid")
     {
     }
 
@@ -63,22 +63,25 @@ public partial class PropertyGridViewModel : TabPageViewModel
     /// <summary>The application's list of materials - not the property's, and not a provider's either.</summary>
     public IReadOnlyList<string> Materials { get; } = ["Steel", "Copper", "Glass", "Rubber", "Bone"];
 
-    /// <summary>What the "..." button on a line reports. The command is the APPLICATION'S - the inspector only offers
-    /// the button and hands over what the line is pointed at; what "more" means for a tag is the page's business.
-    /// </summary>
-    [Bindable] private string _actionStatus = "The ... button has not been pressed";
+    /// <summary>Whether the "..." button on a line has been pressed. The command is the APPLICATION'S - the inspector
+    /// only offers the button and hands over what the line is pointed at; what "more" means for a tag is the page's
+    /// business.</summary>
+    [Bindable] private bool _actionPressed;
+
+    /// <summary>The names of what the pressed line was pointed at, or null for nothing.</summary>
+    [Bindable] private string _actionTarget;
 
     [Command]
     private void MoreForTag(object target)
     {
-        var name = target switch
+        ActionTarget = target switch
         {
             InspectedEntity one => one.Name,
             IEnumerable many => string.Join(", ", many.OfType<InspectedEntity>().Select(e => e.Name)),
-            _ => "nothing"
+            _ => null
         };
 
-        ActionStatus = $"... pressed on the Tag line of: {name}";
+        ActionPressed = true;
     }
 
     /// <summary>What each inspector is pointed at. DIFFERENT objects by default - the left one at Player, the right one
@@ -96,26 +99,9 @@ public partial class PropertyGridViewModel : TabPageViewModel
     /// more to the rows.</summary>
     [Bindable] private bool _searchable = true;
 
-    public string LeftCaption => _both
-        ? "Written by hand - now over BOTH objects"
-        : "Written by hand - over Player, sections and properties declared in markup";
-
-    public string RightCaption => _both
-        ? "Generated - now over BOTH objects"
-        : "Generated - over Enemy, PropertyDefinitionBuilder read the type, no markup at all";
-
-    /// <summary>What the toggle beside it has just done. Spelled out because an inspector over several objects behaves
-    /// differently from one over a single object, and a row standing empty is a statement, not a gap.</summary>
-    public string Difference => _both
-        ? "Both are over Player AND Enemy. Rows the two agree on show that value; only rows they really differ on say 'multiple values' - fill one, both take it."
-        : "Two DIFFERENT objects, side by side - compare them. Tick the box to point both inspectors at both at once.";
-
     partial void OnBothChanged(bool value)
     {
         RaisePropertyChanged(nameof(LeftSelection));
         RaisePropertyChanged(nameof(RightSelection));
-        RaisePropertyChanged(nameof(LeftCaption));
-        RaisePropertyChanged(nameof(RightCaption));
-        RaisePropertyChanged(nameof(Difference));
     }
 }

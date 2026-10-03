@@ -1,0 +1,42 @@
+<Language>
+    <Phrase Key="ChooseColumns" Text="Choose columns"/>
+    <Phrase Key="Filter" Text="Filter"/>
+    <Phrase Key="SelectAll" Text="Select All"/>
+    <Phrase Key="ShowRowsWhere" Text="Show rows with value that"/>
+    <Phrase Key="MatchCase" Text="Match case"/>
+    <Phrase Key="ApplyFilter" Text="Filter"/>
+    <Phrase Key="ClearFilter" Text="Clear Filter"/>
+    <Phrase Key="PreviousMatch" Text="Previous match"/>
+    <Phrase Key="NextMatch" Text="Next match"/>
+    <Phrase Key="Find" Text="Find"/>
+    <Phrase Key="CloseSearch" Text="Close the search"/>
+    <Phrase Key="GroupByHint" Text="Drag a column header here to group by it"/>
+    <Phrase Key="ExpandAll" Text="Expand all"/>
+    <Phrase Key="CollapseAll" Text="Collapse all"/>
+    <Phrase Key="ChangeNesting" Text="Drag to change the nesting"/>
+    <Phrase Key="RemoveFromGrouping" Text="Remove from the grouping"/>
+    <Phrase Key="SortByHint" Text="Drag a column header here to sort by it; drag another to break its ties"/>
+    <Phrase Key="ClearSorting" Text="Clear sorting"/>
+    <Phrase Key="SortKeyHint" Text="Press to turn it around, drag to change which key decides"/>
+    <Phrase Key="RemoveFromSorting" Text="Remove from the sorting"/>
+    <Phrase Key="AddRecord" Text="Add a record"/>
+    <Phrase Key="Searching" Text="searching…"/>
+    <Phrase Key="NoMatches" Text="no matches"/>
+    <Phrase Key="MatchOf" Text="{current} of {total}"/>
+    <Phrase Key="MatchOfSoFar" Text="{current} of {total}…"/>
+    <Phrase Key="IsEqualTo" Text="Is equal to"/>
+    <Phrase Key="IsNotEqualTo" Text="Is not equal to"/>
+    <Phrase Key="Contains" Text="Contains"/>
+    <Phrase Key="DoesNotContain" Text="Does not contain"/>
+    <Phrase Key="StartsWith" Text="Starts with"/>
+    <Phrase Key="EndsWith" Text="Ends with"/>
+    <Phrase Key="IsGreaterThan" Text="Is greater than"/>
+    <Phrase Key="IsLessThan" Text="Is less than"/>
+    <Phrase Key="IsEmpty" Text="Is empty"/>
+    <Phrase Key="IsNotEmpty" Text="Is not empty"/>
+    <Phrase Key="And" Text="And"/>
+    <Phrase Key="Or" Text="Or"/>
+    <Phrase Key="GroupNamed" Text="{name}: {value}  ({count})"/>
+    <Phrase Key="Group" Text="{value}  ({count})"/>
+    <Phrase Key="Blank" Text="(blank)"/>
+</Language>

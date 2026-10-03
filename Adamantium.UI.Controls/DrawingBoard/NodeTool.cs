@@ -15,7 +15,7 @@ public class NodeTool : ICanvasTool
 
     public string Icon { get; set; } = "ToolNodeIcon";
 
-    public string Description { get; set; } = "put a node on the plane";
+    public string Description { get; set; } = "NodeDescription";
 
     public string Group { get; set; } = string.Empty;
 

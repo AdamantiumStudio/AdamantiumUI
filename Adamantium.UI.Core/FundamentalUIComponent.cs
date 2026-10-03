@@ -467,7 +467,23 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     public IFundamentalUIComponent LogicalParent => parent;
     
-    public IAdamantiumComponent TemplatedParent { get; internal set; }
+    private IAdamantiumComponent _templatedParent;
+
+    public IAdamantiumComponent TemplatedParent
+    {
+        get => _templatedParent;
+        internal set
+        {
+            if (ReferenceEquals(_templatedParent, value)) return;
+
+            _templatedParent = value;
+            TemplatedParentChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>The template this element is part of was stamped onto its control, or taken off it. A part's bindings
+    /// are made before the stamping, so one that reads the control waits for this.</summary>
+    internal event EventHandler TemplatedParentChanged;
 
     public void RemoveBinding(string property)
     {

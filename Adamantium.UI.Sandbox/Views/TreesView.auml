@@ -6,20 +6,26 @@
          IsExpanded back to the node). No nodes are authored in markup. -->
     <StackPanel Orientation="Vertical" Margin="24" MaxWidth="900">
 
-        <TextBlock Text="TreeView — a real file system"
+        <TextBlock Text="{Localize TreesStrings.Title}"
                    FontSize="20" MarginBottom="4"/>
-        <TextBlock Text="Pointed at a drive and built lazily: each folder reads its contents only when you expand it (a folder like System32 has thousands of siblings — a stress test for the coming virtualization). Double-click a folder to expand/collapse; pick the drive and selection mode below."
+        <TextBlock Text="{Localize TreesStrings.Hint}"
                    FontSize="13" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="14"/>
 
         <StackPanel Orientation="Horizontal" MarginBottom="12">
-            <TextBlock Text="Drive:" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock Text="{Localize TreesStrings.Drive}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding Drives}"
                       SelectedItem="{Binding SelectedDrive, Mode=TwoWay}" Width="110" MarginRight="24"/>
-            <TextBlock Text="Selection mode:" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock Text="{Localize TreesStrings.SelectionMode}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding SelectionModes}"
-                      SelectedItem="{Binding SelectedMode, Mode=TwoWay}" Width="150"/>
-            <Button Content="Refresh" Command="{Binding RefreshCommand}" MarginLeft="24"/>
-            <Button Content="Expand selected (from VM)" Command="{Binding ExpandSelectedCommand}" MarginLeft="12"/>
+                      SelectedItem="{Binding SelectedMode, Mode=TwoWay}" MinWidth="150">
+                <DropDown.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Localize TreesStrings, Key={Binding}}"/>
+                    </DataTemplate>
+                </DropDown.ItemTemplate>
+            </DropDown>
+            <Button Content="{Localize TreesStrings.Refresh}" Command="{Binding RefreshCommand}" MarginLeft="24"/>
+            <Button Content="{Localize TreesStrings.ExpandSelected}" Command="{Binding ExpandSelectedCommand}" MarginLeft="12"/>
         </StackPanel>
 
         <Border Background="{ResourceReference CardBackgroundFillColorDefault}"

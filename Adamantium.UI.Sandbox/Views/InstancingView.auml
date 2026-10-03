@@ -8,8 +8,8 @@
          ONE instanced draw (shared mesh + per-instance world/color), which is the whole point being validated here. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="600 star polygons — identical tessellated mesh, per-item color (non-SDF fill)."/>
-            <TextBlock Text="Identical star meshes batch automatically into ONE instanced draw (geometry-identity instancing)."
+            <TextBlock Text="{Localize InstancingStrings.Title}"/>
+            <TextBlock Text="{Localize InstancingStrings.Hint}"
                        Foreground="#94A3B8" Margin="0,4,0,0"/>
         </StackPanel>
 

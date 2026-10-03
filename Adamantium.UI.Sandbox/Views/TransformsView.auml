@@ -5,29 +5,29 @@
          put while dragging Spread. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="240 rounded, stroked rects — each under its OWN rotation and shear, all in one instanced draw."/>
-            <TextBlock Text="Rotation and Skew are affine: they cannot be baked into axis-aligned bounds, so before the transform table these tiles left the batch entirely."
+            <TextBlock Text="{Localize TransformsStrings.Title}"/>
+            <TextBlock Text="{Localize TransformsStrings.Hint}"
                        Foreground="#94A3B8" Margin="0,4,0,0"/>
 
             <WrapPanel Orientation="Horizontal" Margin="0,14,0,0">
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="Rotation (deg)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize TransformsStrings.Rotation}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <Slider Value="{Binding Transforms.Rotation, Mode=TwoWay}" Minimum="0" Maximum="360" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="Skew X (deg)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize TransformsStrings.SkewX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <Slider Value="{Binding Transforms.SkewX, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="Skew Y (deg)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize TransformsStrings.SkewY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <Slider Value="{Binding Transforms.SkewY, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="Scale" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize TransformsStrings.Scale}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <Slider Value="{Binding Transforms.Scale, Mode=TwoWay}" Minimum="0.3" Maximum="1.6" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="Spread — per-tile difference (0 = one shared matrix)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock Text="{Localize TransformsStrings.Spread}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <Slider Value="{Binding Transforms.Spread, Mode=TwoWay}" Minimum="0" Maximum="6" Width="200"/>
                 </StackPanel>
             </WrapPanel>

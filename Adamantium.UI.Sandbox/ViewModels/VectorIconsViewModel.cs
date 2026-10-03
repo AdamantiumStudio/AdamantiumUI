@@ -10,7 +10,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class VectorIconsViewModel : TabPageViewModel
 {
-    public VectorIconsViewModel() : base("Vector icons") { }
+    public VectorIconsViewModel() : base("VectorIcons") { }
 
     [Bindable] private double _showcaseSize = 220;
 

@@ -70,9 +70,10 @@ public class PropertyGrid : Control
     /// <summary>What an editor says while the selected objects hold more than one value between them, shown as the
     /// prompt of an empty editor. Only then: a row they all agree on shows that value like any other row.
     /// <para>One phrase rather than the values themselves - a hundred objects selected is the ordinary case, and
-    /// listing what each holds would fill the row with a line nobody can read.</para></summary>
+    /// listing what each holds would fill the row with a line nobody can read. The theme says it in the application's
+    /// language.</para></summary>
     public static readonly AdamantiumProperty MixedTextProperty = AdamantiumProperty.Register(nameof(MixedText),
-        typeof(String), typeof(PropertyGrid), new PropertyMetadata("multiple values"));
+        typeof(String), typeof(PropertyGrid), new PropertyMetadata(null, OnMixedTextChanged));
 
     /// <summary>When lines show their reset button; Always by default (dimmed when nothing to reset), so lines do not
     /// change shape.</summary>
@@ -820,6 +821,7 @@ public class PropertyGrid : Control
         foreach (var definition in _watched)
         {
             definition.LayoutChanged -= OnDefinitionLayoutChanged;
+            definition.WordsChanged -= OnDefinitionWordsChanged;
             if (definition is ImageSourceProperty picture) picture.Picked -= OnPicturePicked;
         }
 
@@ -834,6 +836,7 @@ public class PropertyGrid : Control
     private void Watch(PropertyDefinition definition)
     {
         definition.LayoutChanged += OnDefinitionLayoutChanged;
+        definition.WordsChanged += OnDefinitionWordsChanged;
         if (definition is ImageSourceProperty picture) picture.Picked += OnPicturePicked;
         _watched.Add(definition);
 
@@ -841,6 +844,8 @@ public class PropertyGrid : Control
     }
 
     private void OnDefinitionLayoutChanged(object sender, EventArgs e) => Rebuild();
+
+    private void OnDefinitionWordsChanged(object sender, EventArgs e) => Refresh(definition: (PropertyDefinition)sender);
 
     // A file chosen through the line's own button is written exactly as a typed path is: the same before/after report,
     // so an edit made by pointing at a file can be taken back like any other.
@@ -891,6 +896,14 @@ public class PropertyGrid : Control
         if (d is not PropertyGrid grid) return;
 
         foreach (var row in grid._rows) row.ResetButton = grid.ResetButton;
+    }
+
+    // The phrase changes with the language, and a row already saying it has to say the new one.
+    private static void OnMixedTextChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not PropertyGrid grid) return;
+
+        foreach (var row in grid._rows) row.MarkMixed();
     }
 
     private static void OnNameColumnWidthChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)

@@ -1,0 +1,15 @@
+<Language>
+    <Phrase Key="Intro" Text="A plane with no edges: the wheel zooms toward the cursor, the middle button or space pans, and Home - or a double click of the middle button - returns to the origin. What the plain left button does belongs to the TOOL - select, pen, or a shape. What is selected gets a frame with grips, in screen pixels; dragging those moves and resizes the whole selection at once. Delete removes it, Escape lets go."/>
+    <Phrase Key="OtherScreen" Text="Somebody else's screen"/>
+    <Phrase Key="OtherScreenHint" Text="An ordinary page of controls. Turn Whiteboard on and the canvas above becomes glass: this stays live underneath while the pen draws over it."/>
+    <Phrase Key="AButton" Text="A button"/>
+    <Phrase Key="ACheckbox" Text="A checkbox"/>
+
+    <Phrase Key="ClearTitle" Text="Clear the canvas"/>
+    <Phrase Key="ClearQuestion" Count="count" One="Remove the {count} object?" Other="Remove all {count} objects?"/>
+    <Phrase Key="RemoveSocketTitle" Text="Remove socket"/>
+    <Phrase Key="RemoveSocketQuestion" Text="Remove &quot;{socket}&quot; from {node}?"/>
+    <Phrase Key="SaveGraph" Text="Save the graph"/>
+    <Phrase Key="OpenGraph" Text="Open a graph"/>
+    <Phrase Key="GraphFiles" Text="Graph"/>
+</Language>

@@ -1,6 +1,6 @@
 <View xmlns="http://adamantium/ui">
     <StackPanel Margin="16">
-        <TextBlock Text="Home" FontSize="20" Margin="0,0,0,8"/>
-        <TextBlock Text="{Binding Message}" TextWrapping="WrapByWords"/>
+        <TextBlock Text="{Localize NavigationStrings.Home}" FontSize="20" Margin="0,0,0,8"/>
+        <TextBlock Text="{Localize NavigationStrings.HomeMessage}" TextWrapping="WrapByWords"/>
     </StackPanel>
 </View>

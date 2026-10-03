@@ -2,6 +2,6 @@
     <Border CornerRadius="6" Padding="10" Margin="0,0,0,8" BorderThickness="1"
             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
             Background="{ResourceReference CardBackgroundFillColorDefault}">
-        <TextBlock Text="{Binding Title}" FontSize="14" Foreground="{ResourceReference TextFillColorPrimary}"/>
+        <TextBlock Text="{Localize NavigationStrings.Card, number={Binding Number}}" FontSize="14" Foreground="{ResourceReference TextFillColorPrimary}"/>
     </Border>
 </View>

@@ -1,0 +1,43 @@
+<Language>
+    <Phrase Key="Playground" Text="Stretch playground"/>
+    <Phrase Key="StretchLabel" Text="Stretch:"/>
+    <Phrase Key="DirectionLabel" Text="Direction:"/>
+    <Phrase Key="HorizontalLabel" Text="H alignment:"/>
+    <Phrase Key="VerticalLabel" Text="V alignment:"/>
+    <Phrase Key="BoxWidth" Text="Box width:"/>
+    <Phrase Key="BoxHeight" Text="Box height:"/>
+    <Phrase Key="ElementSize" Text="Element size:"/>
+
+    <Phrase Key="Formats" Text="Formats and animation"/>
+    <Phrase Key="OpacityLabel" Text="Opacity:"/>
+    <Phrase Key="MipLevel" Text="PNG (mip level 2)"/>
+
+    <Phrase Key="AnimationControl" Text="Animation control"/>
+    <Phrase Key="AnimationHint" Text="Each source plays on its own terms: the frame range it loops over, the delay between frames, whether it runs at all, and the four corner radii. The frame count is reported BY the image once its file has decoded, which is what bounds the range sliders."/>
+    <Phrase Key="PlayPause" Select="playing" True="Pause" False="Play"/>
+    <Phrase Key="FrameCount" Text="frames:"/>
+    <Phrase Key="Delay" Text="Delay (ms):"/>
+    <Phrase Key="Frames" Text="Frames:"/>
+    <Phrase Key="TopLeft" Text="Top left:"/>
+    <Phrase Key="BottomLeft" Text="Bottom left:"/>
+    <Phrase Key="TopRight" Text="Top right:"/>
+    <Phrase Key="BottomRight" Text="Bottom right:"/>
+
+    <Phrase Key="None" Text="None"/>
+    <Phrase Key="Fill" Text="Fill"/>
+    <Phrase Key="Uniform" Text="Uniform"/>
+    <Phrase Key="UniformToFill" Text="Uniform to fill"/>
+    <Phrase Key="Both" Text="Both"/>
+    <Phrase Key="DownOnly" Text="Down only"/>
+    <Phrase Key="UpOnly" Text="Up only"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="Stretch" Text="Stretch"/>
+    <Phrase Key="Forward" Text="Forward"/>
+    <Phrase Key="Backward" Text="Backward"/>
+    <Phrase Key="ForwardLooped" Text="Forward, looped"/>
+    <Phrase Key="BackwardLooped" Text="Backward, looped"/>
+</Language>

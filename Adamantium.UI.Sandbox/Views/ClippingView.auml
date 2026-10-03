@@ -6,12 +6,12 @@
          any corner. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="24">
-            <TextBlock Text="Rounded clipping — drag the pieces into the corners" FontSize="18" Margin="0,0,0,6"/>
-            <TextBlock Text="The container clips by its own corners. Drag any piece so it crosses a corner: its edge must follow the rounding, not the square scissor. Turn the clip off and everything spills out whole."
+            <TextBlock Text="{Localize ClippingStrings.Title}" FontSize="18" Margin="0,0,0,6"/>
+            <TextBlock Text="{Localize ClippingStrings.Hint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="10"/>
 
             <StackPanel Orientation="Horizontal" MarginBottom="12">
-                <TextBlock Text="Corner radius" VerticalAlignment="Center" Width="110"
+                <TextBlock Text="{Localize ClippingStrings.CornerRadius}" VerticalAlignment="Center" MinWidth="110"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <Slider Minimum="0" Maximum="120" Value="{Binding ClipRadius, Mode=TwoWay}" Width="240"/>
                 <TextBlock Text="{Binding ClipRadius}" MarginLeft="8" Width="48" VerticalAlignment="Center"/>
@@ -49,7 +49,7 @@
 
                     <!-- TEXT: its own pass entirely (a glyph atlas), and the one most likely to be forgotten. -->
                     <ctl:DragPiece Canvas.Left="280" Canvas.Top="200" Width="230" Height="60">
-                        <TextBlock Text="Text in the corner" FontSize="26" Foreground="#FFFFFFFF"
+                        <TextBlock Text="{Localize ClippingStrings.TextInCorner}" FontSize="26" Foreground="#FFFFFFFF"
                                    VerticalAlignment="Center"/>
                     </ctl:DragPiece>
 
@@ -147,8 +147,8 @@
             <!-- The SECOND question, and the reason ClipCornerRadius exists rather than the renderer quietly reading
                  CornerRadius: cut by something OTHER than how the container is drawn. The border below keeps radius 10
                  and stays visible, so the gap between the frame and the cut is the whole point. -->
-            <TextBlock Text="An explicit clip radius — cut differently from how the container looks" FontSize="18" Margin="0,0,0,6"/>
-            <TextBlock Text="The border keeps radius 10. Drag this slider and the CUT follows ClipCornerRadius instead — frame and cut come apart."
+            <TextBlock Text="{Localize ClippingStrings.ExplicitTitle}" FontSize="18" Margin="0,0,0,6"/>
+            <TextBlock Text="{Localize ClippingStrings.ExplicitHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="10"/>
 
             <StackPanel Orientation="Horizontal" MarginBottom="12">

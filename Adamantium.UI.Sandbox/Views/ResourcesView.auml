@@ -8,63 +8,53 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Orientation="Vertical" Margin="24">
 
-        <TextBlock Text="ObservableResource (live) vs ResourceReference (static)" FontSize="18" Margin="0,0,0,4"/>
+        <TextBlock Text="{Localize ResourcesStrings.Title}" FontSize="18" Margin="0,0,0,4"/>
 
         <!-- THEME resource: swap the whole theme (Up = Dark, Down = Light). The live swatch re-resolves to the new
              palette; the static one keeps the color it resolved once. The rest of the UI re-colors too. -->
-        <TextBlock Text="Theme palette (SystemFillColorCritical) — press ↑ Dark / ↓ Light to swap the theme:" Margin="0,10,0,6"/>
+        <TextBlock Text="{Localize ResourcesStrings.ThemePalette}" Margin="0,10,0,6"/>
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical" Margin="0,0,32,0">
-                <TextBlock Text="ResourceReference — static" Margin="0,0,0,6"/>
+                <TextBlock Text="{Localize ResourcesStrings.Static}" Margin="0,0,0,6"/>
                 <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ResourceReference SystemFillColorCritical}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="ObservableResource — live" Margin="0,0,0,6"/>
+                <TextBlock Text="{Localize ResourcesStrings.Live}" Margin="0,0,0,6"/>
                 <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ObservableResource SystemFillColorCritical}"/>
             </StackPanel>
             <!-- Cycles the palette ENTRY itself (runtime resource override) - the live swatch follows, the static one
                  keeps its resolved-once brush - so the difference shows without swapping the whole theme. -->
-            <Button Content="Cycle critical color" Width="180" Height="36" Margin="32,0,0,0" VerticalAlignment="Bottom">
+            <Button Content="{Localize ResourcesStrings.CycleCritical}" MinWidth="180" Height="36" Margin="32,0,0,0" VerticalAlignment="Bottom">
                 <Button.Behaviors>
                     <behaviors:CycleScopedResourceBehavior Key="SystemFillColorCritical" Scope="Theme"/>
                 </Button.Behaviors>
             </Button>
         </StackPanel>
 
+        <!-- Which SIDE the window buttons sit on. A platform theme states this once with a setter; here it is a
+             checkbox so the difference can be seen on a live window. Left also REVERSES the order - closing stays
+             outermost either way - which is the part that is easy to get wrong and impossible to miss on screen. -->
+        <CheckBox Content="{Localize ResourcesStrings.CaptionLeft}" IsChecked="{Binding CaptionButtonsOnLeft, Mode=TwoWay}"
+                  Margin="0,12,0,0"/>
+
+        <!-- Numbers and dates as bindings write them in the application's LANGUAGE, chosen in the diagnostics panel
+             with the theme: they follow it at once, with no template rebuilt. -->
         <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-            <Button Content="Toggle theme (Dark / Light)" Width="220" Height="36">
-                <Button.Behaviors>
-                    <behaviors:ToggleThemeBehavior/>
-                </Button.Behaviors>
-            </Button>
-
-            <!-- The other half of the pair: a variant switch rewrites colors in place, a theme SWAP re-templates the
-                 whole application with different style sets and different metrics. Side by side, what each costs is
-                 visible instead of argued about. The list is every REGISTERED theme, so a theme added later shows up
-                 here without this markup changing. -->
-            <DropDown ItemsSource="{Binding AvailableThemes}"
-                      SelectedItem="{Binding SelectedThemeName, Mode=TwoWay}"
-                      Width="200" Height="36" Margin="16,0,0,0"/>
-
-            <Button Content="Switch" Command="{Binding SwitchThemeCommand}"
-                    Width="110" Height="36" Margin="8,0,0,0"/>
-
-            <!-- Which SIDE the window buttons sit on. A platform theme states this once with a setter; here it is a
-                 checkbox so the difference can be seen on a live window. Left also REVERSES the order - closing stays
-                 outermost either way - which is the part that is easy to get wrong and impossible to miss on screen. -->
-            <CheckBox Content="Caption buttons left" IsChecked="{Binding CaptionButtonsOnLeft, Mode=TwoWay}"
-                      VerticalAlignment="Center" Margin="20,0,0,0"/>
+            <TextBlock Text="{Localize ResourcesStrings.Formats}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding SampleNumber, StringFormat='{0:N2}'}" VerticalAlignment="Center" Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding SampleDate, StringFormat='{0:D}'}" VerticalAlignment="Center" Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding SampleDate, StringFormat='{0:t}'}" VerticalAlignment="Center" Margin="20,0,0,0"/>
         </StackPanel>
 
         <!-- ACCENT: the theme's accent brushes are observable theme properties consumed via {ThemeResource}. Cycling them
              at runtime re-colors the live swatch and every accented control (checked toggle / checkbox / radio) at once. -->
-        <TextBlock Text="Theme accent ({ThemeResource}) — live-recolor every accented control:" Margin="0,28,0,6"/>
+        <TextBlock Text="{Localize ResourcesStrings.AccentTitle}" Margin="0,28,0,6"/>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Rectangle Width="60" Height="60" CornerRadius="6" Margin="0,0,16,0" Fill="{ThemeResource AccentFillColorDefault}"/>
-            <ToggleButton Content="Toggle" IsChecked="true" Margin="0,0,16,0"/>
-            <CheckBox Content="Checked" IsChecked="true" Margin="0,0,16,0"/>
-            <RadioButton Content="Selected" IsChecked="true" Margin="0,0,16,0"/>
-            <Button Content="Cycle accent" Width="140" Height="36">
+            <ToggleButton Content="{Localize ResourcesStrings.Toggle}" IsChecked="true" Margin="0,0,16,0"/>
+            <CheckBox Content="{Localize ResourcesStrings.Checked}" IsChecked="true" Margin="0,0,16,0"/>
+            <RadioButton Content="{Localize ResourcesStrings.Selected}" IsChecked="true" Margin="0,0,16,0"/>
+            <Button Content="{Localize ResourcesStrings.CycleAccent}" MinWidth="140" Height="36">
                 <Button.Behaviors>
                     <behaviors:CycleAccentBehavior/>
                 </Button.Behaviors>
@@ -79,19 +69,19 @@
                 <SolidColorBrush x:Key="PanelAccent" Color="#22D3EE"/>
             </ResourceContext.Resources>
 
-            <TextBlock Text="Inline local resource (ResourceContext.Resources — private to this panel):" Margin="0,0,0,6"/>
+            <TextBlock Text="{Localize ResourcesStrings.LocalTitle}" Margin="0,0,0,6"/>
             <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Vertical" Margin="0,0,32,0">
-                    <TextBlock Text="ResourceReference — static" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Localize ResourcesStrings.Static}" Margin="0,0,0,6"/>
                     <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ResourceReference PanelAccent}"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="ObservableResource — live" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Localize ResourcesStrings.Live}" Margin="0,0,0,6"/>
                     <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ObservableResource PanelAccent}"/>
                 </StackPanel>
             </StackPanel>
 
-            <Button Content="Cycle local accent" Width="180" Height="36" Margin="0,12,0,0">
+            <Button Content="{Localize ResourcesStrings.CycleLocal}" MinWidth="180" Height="36" Margin="0,12,0,0">
                 <Button.Behaviors>
                     <behaviors:CycleResourceBehavior Key="PanelAccent"/>
                 </Button.Behaviors>
@@ -104,17 +94,17 @@
              Theme-scope override above, the new value SURVIVES a theme swap. -->
         <StackPanel Orientation="Vertical" Margin="0,28,0,0"
                     ResourceContext.Source="{ResourceLink Source={x:Type local:GlobalResources}, Scope=Global}">
-            <TextBlock Text="Global resource (ResourceLink Scope=Global — survives a theme swap):" Margin="0,0,0,6"/>
+            <TextBlock Text="{Localize ResourcesStrings.GlobalTitle}" Margin="0,0,0,6"/>
             <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Vertical" Margin="0,0,32,0">
-                    <TextBlock Text="ResourceReference — static" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Localize ResourcesStrings.Static}" Margin="0,0,0,6"/>
                     <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ResourceReference GlobalAccent}"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="ObservableResource — live" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Localize ResourcesStrings.Live}" Margin="0,0,0,6"/>
                     <Rectangle Width="140" Height="60" CornerRadius="6" Fill="{ObservableResource GlobalAccent}"/>
                 </StackPanel>
-                <Button Content="Cycle global accent" Width="180" Height="36" Margin="32,0,0,0" VerticalAlignment="Bottom">
+                <Button Content="{Localize ResourcesStrings.CycleGlobal}" MinWidth="180" Height="36" Margin="32,0,0,0" VerticalAlignment="Bottom">
                     <Button.Behaviors>
                         <behaviors:CycleScopedResourceBehavior Key="GlobalAccent" Scope="Global"/>
                     </Button.Behaviors>
@@ -124,8 +114,8 @@
 
         <!-- ═══ Theme SCOPE stand ═══════════════════════════════════════════════════════════════════════════════
              Four panes on different variants: two pinned, one following the OS, one following its own checkbox. -->
-        <TextBlock Text="Theme scope — a subtree with a variant of its own" FontSize="18" Margin="0,28,0,4"/>
-        <TextBlock Text="Each pane names its own variant, so toggling the application's light/dark above leaves them where they are."
+        <TextBlock Text="{Localize ResourcesStrings.ScopeTitle}" FontSize="18" Margin="0,28,0,4"/>
+        <TextBlock Text="{Localize ResourcesStrings.ScopeHint}"
                    Margin="0,0,0,10"/>
 
         <StackPanel Orientation="Horizontal" ThemeContext.Theme="{Binding LocalTheme}">
@@ -134,7 +124,7 @@
                     ThemeContext.Variant="Light"
                     Background="{ObservableResource SolidBackgroundFillColorBase}">
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Variant: Light" Foreground="{ObservableResource TextFillColorPrimary}"/>
+                    <TextBlock Text="{Localize ResourcesStrings.VariantLight}" Foreground="{ObservableResource TextFillColorPrimary}"/>
                     <Rectangle Height="10" CornerRadius="5" Margin="0,10,0,0"
                                Fill="{ThemeResource AccentFillColorDefault}"/>
                 </StackPanel>
@@ -144,7 +134,7 @@
                     ThemeContext.Variant="Dark"
                     Background="{ObservableResource SolidBackgroundFillColorBase}">
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Variant: Dark" Foreground="{ObservableResource TextFillColorPrimary}"/>
+                    <TextBlock Text="{Localize ResourcesStrings.VariantDark}" Foreground="{ObservableResource TextFillColorPrimary}"/>
                     <Rectangle Height="10" CornerRadius="5" Margin="0,10,0,0"
                                Fill="{ThemeResource AccentFillColorDefault}"/>
                 </StackPanel>
@@ -154,7 +144,7 @@
                     ThemeContext.Variant="System"
                     Background="{ObservableResource SolidBackgroundFillColorBase}">
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Variant: System" Foreground="{ObservableResource TextFillColorPrimary}"/>
+                    <TextBlock Text="{Localize ResourcesStrings.VariantSystem}" Foreground="{ObservableResource TextFillColorPrimary}"/>
                     <Rectangle Height="10" CornerRadius="5" Margin="0,10,0,0"
                                Fill="{ThemeResource AccentFillColorDefault}"/>
                 </StackPanel>
@@ -166,8 +156,8 @@
                     ThemeContext.Variant="{Binding StandVariant}"
                     Background="{ObservableResource SolidBackgroundFillColorBase}">
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Variant: its own" Foreground="{ObservableResource TextFillColorPrimary}"/>
-                    <CheckBox Content="Dark" IsChecked="{Binding StandIsDark, Mode=TwoWay}" Margin="0,6,0,0"
+                    <TextBlock Text="{Localize ResourcesStrings.VariantOwn}" Foreground="{ObservableResource TextFillColorPrimary}"/>
+                    <CheckBox Content="{Localize ResourcesStrings.Dark}" IsChecked="{Binding StandIsDark, Mode=TwoWay}" Margin="0,6,0,0"
                              />
                     <Rectangle Height="10" CornerRadius="5" Margin="0,8,0,0"
                                Fill="{ThemeResource AccentFillColorDefault}"/>

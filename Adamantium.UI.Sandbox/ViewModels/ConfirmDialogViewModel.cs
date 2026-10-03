@@ -1,6 +1,7 @@
 using System;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -9,8 +10,8 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class ConfirmDialogViewModel : AdamantiumViewModel, IDialogAware
 {
-    [Bindable] private string title = "Confirm";
-    [Bindable] private string message = "Are you sure?";
+    [Bindable] private string title = DialogStrings.Confirm;
+    [Bindable] private string message = DialogStrings.AreYouSure;
 
     public void OnDialogOpened(NavigationParameters parameters)
     {

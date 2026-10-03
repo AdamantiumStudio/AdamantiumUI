@@ -4,7 +4,7 @@
     <!-- Navigated into the brushes tab's region under the key "NineSlice"; the DataContext is the tab's own view-model.
          This stand does NOT use the shared figure: the whole subject is the frame's own size, so it drives its own box. -->
     <StackPanel Orientation="Vertical">
-        <TextBlock Text="Nine-slice — live (drag the size: the corners keep theirs, the edges give)" FontSize="18" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.NineTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
             <Border Width="360" Height="240" Margin="10" Background="#101418">
                 <Border Width="{Binding SliceWidth}"
@@ -14,9 +14,9 @@
                         Background="{Binding LiveNineSlice}"/>
             </Border>
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16" VerticalAlignment="Center">
-                <TextBlock Text="Skin" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Skin}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <DropDown ItemsSource="{Binding Skins}" SelectedItem="{Binding Skin, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <TextBlock Text="Width" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Width}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding SliceWidth, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="340" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="340" SmallChange="1"
@@ -24,7 +24,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding SliceWidth, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Height" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Height}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding SliceHeight, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="220" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="220" SmallChange="1"
@@ -32,7 +32,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding SliceHeight, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Cut — where the SOURCE is cut (0.25 = these skins&apos; own 16px frame; move it and the pieces take each other&apos;s pixels)"
+                <TextBlock Text="{Localize BrushesStrings.Cut}"
                            TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding SliceCut, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0.05" Maximum="0.45" Width="186"/>
@@ -41,7 +41,7 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding SliceCut, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Border (0 = the source's own pixels)" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.Border}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
                     <Slider Value="{Binding SliceBorder, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="48" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="48" SmallChange="1"
@@ -49,19 +49,25 @@
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding SliceBorder, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
-                <TextBlock Text="Edge mode" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding EdgeModes}" SelectedItem="{Binding SliceEdgeMode, Mode=TwoWay}" Width="280" MarginBottom="10"/>
-                <CheckBox Content="Draw the center" IsChecked="{Binding SliceDrawCenter, Mode=TwoWay}" MarginBottom="6"/>
-                <CheckBox Content="Tile the center too (off = stretched, as CSS border-image does)" IsChecked="{Binding SliceTileCenter, Mode=TwoWay}" MarginBottom="10"/>
-                <TextBlock Text="Tint" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock Text="{Localize BrushesStrings.EdgeMode}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown ItemsSource="{Binding EdgeModes}" SelectedItem="{Binding SliceEdgeMode, Mode=TwoWay}" Width="280" MarginBottom="10">
+                    <DropDown.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </DropDown.ItemTemplate>
+                </DropDown>
+                <CheckBox Content="{Localize BrushesStrings.DrawCenter}" IsChecked="{Binding SliceDrawCenter, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox Content="{Localize BrushesStrings.TileCenter}" IsChecked="{Binding SliceTileCenter, Mode=TwoWay}" MarginBottom="10"/>
+                <TextBlock Text="{Localize BrushesStrings.Tint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding SliceTint, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>
 
         <!-- The fixed cases the live panel above is compared against: one 64x64 picture dressing four sizes, then the
              SAME picture as a plain ImageBrush - the corners smear, which is the whole argument for nine-slice. -->
-        <TextBlock Text="NineSliceBrush — one picture, any size, corners never distort" FontSize="18" Margin="0,20,0,10"/>
-        <TextBlock Text="The source is 64×64 with a 16px frame (Slice = 0.25). Compare with the plain ImageBrush below: the same picture stretched."
+        <TextBlock Text="{Localize BrushesStrings.NineBrushTitle}" FontSize="18" Margin="0,20,0,10"/>
+        <TextBlock Text="{Localize BrushesStrings.NineHint}"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    MarginBottom="8"/>
         <WrapPanel Orientation="Horizontal">
@@ -74,7 +80,7 @@
                 <Border.Background>
                     <NineSliceBrush Source="Textures/nine-slice-frame.png" Slice="0.25"/>
                 </Border.Background>
-                <TextBlock Text="stretched edges" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="{Localize BrushesStrings.StretchedEdges}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <Border Width="240" Height="90" Margin="10">
                 <Border.Background>
@@ -82,7 +88,7 @@
                                     Slice="0.25"
                                     EdgeMode="Repeat"/>
                 </Border.Background>
-                <TextBlock Text="repeated edges" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="{Localize BrushesStrings.RepeatedEdges}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <Border Width="240" Height="140" Margin="10">
                 <Border.Background>
@@ -91,11 +97,11 @@
                                     EdgeMode="Repeat"
                                     DrawCenter="False"/>
                 </Border.Background>
-                <TextBlock Text="frame only (DrawCenter=False)" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="{Localize BrushesStrings.FrameOnly}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
         </WrapPanel>
 
-        <TextBlock Text="…and the same picture as a plain ImageBrush — stretched, corners and all"
+        <TextBlock Text="{Localize BrushesStrings.PlainImage}"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    MarginTop="12"
                    MarginBottom="6"/>
@@ -114,7 +120,7 @@
                 <Border.Background>
                     <ImageBrush Source="Textures/nine-slice-frame.png" Tint="#66FF88"/>
                 </Border.Background>
-                <TextBlock Text="tinted" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="{Localize BrushesStrings.Tinted}" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
         </WrapPanel>
     </StackPanel>

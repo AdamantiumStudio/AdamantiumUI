@@ -6,6 +6,12 @@
     <!-- DataContext is the ImageViewModel: the stretch playground on top, the format gallery (with its own Opacity
          slider) below. Disabling the horizontal scrollbar gives the WrapPanel the viewport WIDTH, so images wrap into
          rows and the ScrollViewer scrolls only vertically. -->
+    <!-- A member of an enum said in the page's words, for every drop-down of one. -->
+    <ResourceContext.Resources>
+        <DataTemplate x:Key="ImageWord">
+            <TextBlock Text="{Localize ImageStrings, Key={Binding}}"/>
+        </DataTemplate>
+    </ResourceContext.Resources>
     <ScrollViewer Margin="24"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
@@ -15,7 +21,7 @@
                  leftover goes. The rule (Stretch) decides the FIT - and whether the leftover is a MARGIN (the fit is
                  smaller) or a CROP (the fit is larger); the alignment decides whether the element TAKES the box or
                  shrinks to the picture it drew, which is what the element-size readout shows. -->
-            <TextBlock Text="Stretch playground" FontSize="18" Margin="0,0,0,12"/>
+            <TextBlock Text="{Localize ImageStrings.Playground}" FontSize="18" Margin="0,0,0,12"/>
             <StackPanel Orientation="Horizontal">
                 <!-- Fixed cell around the box, so resizing the box doesn't shove the controls around. -->
                 <Grid Width="440" Height="320">
@@ -34,23 +40,27 @@
 
                 <StackPanel Orientation="Vertical" Margin="24,0,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Stretch:" VerticalAlignment="Center" Width="120"/>
-                        <DropDown EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"/>
+                        <TextBlock Text="{Localize ImageStrings.StretchLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"
+                                  ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Direction:" VerticalAlignment="Center" Width="120"/>
-                        <DropDown EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"/>
+                        <TextBlock Text="{Localize ImageStrings.DirectionLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"
+                                  ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="H alignment:" VerticalAlignment="Center" Width="120"/>
-                        <DropDown EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"/>
+                        <TextBlock Text="{Localize ImageStrings.HorizontalLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"
+                                  ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="V alignment:" VerticalAlignment="Center" Width="120"/>
-                        <DropDown EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"/>
+                        <TextBlock Text="{Localize ImageStrings.VerticalLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"
+                                  ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Box width:" VerticalAlignment="Center" Width="120"/>
+                        <TextBlock Text="{Localize ImageStrings.BoxWidth}" VerticalAlignment="Center" MinWidth="120"/>
                         <Slider Width="170" Minimum="60" Maximum="420"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -58,7 +68,7 @@
                                    HorizontalTextAlignment="Right"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <TextBlock Text="Box height:" VerticalAlignment="Center" Width="120"/>
+                        <TextBlock Text="{Localize ImageStrings.BoxHeight}" VerticalAlignment="Center" MinWidth="120"/>
                         <Slider Width="170" Minimum="60" Maximum="300"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxHeight, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -67,7 +77,7 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Element size:" VerticalAlignment="Center" Width="120"/>
+                        <TextBlock Text="{Localize ImageStrings.ElementSize}" VerticalAlignment="Center" MinWidth="120"/>
                         <TextBlock Text="{Binding ActualWidth, ElementName=Showcase}" VerticalAlignment="Center"/>
                         <TextBlock Text=" x " VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding ActualHeight, ElementName=Showcase}" VerticalAlignment="Center"/>
@@ -76,11 +86,11 @@
             </StackPanel>
 
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="Formats and animation" FontSize="18" Margin="0,20,0,12"/>
+            <TextBlock Text="{Localize ImageStrings.Formats}" FontSize="18" Margin="0,20,0,12"/>
 
             <!-- Opacity belongs to THIS group - it fades the format gallery below, not the playground above. -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Text="Opacity:" VerticalAlignment="Center" Width="120"/>
+                <TextBlock Text="{Localize ImageStrings.OpacityLabel}" VerticalAlignment="Center" MinWidth="120"/>
                 <Slider Width="240"
                         Minimum="0.1"
                         Maximum="1"
@@ -98,14 +108,14 @@
                     <Image Width="188" Height="150" Source="Textures/ColoredImage.jpg" CornerRadius="14" Opacity="{Binding Opacity}"/>
                 </StackPanel>
                 <StackPanel Margin="8">
-                    <TextBlock Text="PNG (mip level 2)"/>
+                    <TextBlock Text="{Localize ImageStrings.MipLevel}"/>
                     <Image Width="188" Height="150" Source="Textures/elephant.png" MipLevel="2" Opacity="{Binding Opacity}"/>
                 </StackPanel>
             </WrapPanel>
 
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="Animation control" FontSize="18" Margin="0,20,0,4"/>
-            <TextBlock Text="Each source plays on its own terms: the frame range it loops over, the delay between frames, whether it runs at all, and the four corner radii. The frame count is reported BY the image once its file has decoded, which is what bounds the range sliders."
+            <TextBlock Text="{Localize ImageStrings.AnimationControl}" FontSize="18" Margin="0,20,0,4"/>
+            <TextBlock Text="{Localize ImageStrings.AnimationHint}"
                        TextWrapping="WrapByWords" Margin="0,0,0,16"/>
 
             <!-- One row per animation: the picture on the left, its own controls on the right. -->
@@ -130,19 +140,20 @@
 
                                 <StackPanel Orientation="Vertical" Margin="20,0,0,0">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <Button Content="{Binding PlayPauseText}" Width="90" Height="30"
+                                        <Button Content="{Localize ImageStrings.PlayPause, playing={Binding IsPlaying}}" MinWidth="90" Height="30"
                                                 Command="{Binding TogglePlaybackCommand}"/>
-                                        <TextBlock Text="frames:" VerticalAlignment="Center" Margin="16,0,6,0"/>
+                                        <TextBlock Text="{Localize ImageStrings.FrameCount}" VerticalAlignment="Center" Margin="16,0,6,0"/>
                                         <TextBlock Text="{Binding FrameCount}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="Direction:" VerticalAlignment="Center" Width="96"/>
+                                        <TextBlock Text="{Localize ImageStrings.DirectionLabel}" VerticalAlignment="Center" MinWidth="96"/>
                                         <DropDown EnumType="{x:Type c:ReplayDirection}"
-                                                  SelectedItem="{Binding Direction, Mode=TwoWay}" Width="180"/>
+                                                  SelectedItem="{Binding Direction, Mode=TwoWay}" Width="180"
+                                                  ItemTemplate="{ResourceReference ImageWord}"/>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="Delay (ms):" VerticalAlignment="Center" Width="96"/>
+                                        <TextBlock Text="{Localize ImageStrings.Delay}" VerticalAlignment="Center" MinWidth="96"/>
                                         <Slider Width="150" Minimum="1" Maximum="200"
                                                 TickFrequency="1" IsSnapToTickEnabled="true"
                                                 Value="{Binding Delay, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -152,7 +163,7 @@
                                     <!-- One control for the span: two sliders would let the end be set below the start,
                                          a RangeSlider cannot express that at all. -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <TextBlock Text="Frames:" VerticalAlignment="Center" Width="96"/>
+                                        <TextBlock Text="{Localize ImageStrings.Frames}" VerticalAlignment="Center" MinWidth="96"/>
                                         <RangeSlider Width="150" Minimum="0" Maximum="{Binding LastFrame}"
                                                      TickFrequency="1" IsSnapToTickEnabled="true"
                                                      LowerValue="{Binding StartFrame, Mode=TwoWay}"
@@ -167,13 +178,13 @@
                                     <StackPanel Orientation="Horizontal">
                                         <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                <TextBlock Text="Top left:" VerticalAlignment="Center" Width="80"/>
+                                                <TextBlock Text="{Localize ImageStrings.TopLeft}" VerticalAlignment="Center" MinWidth="80"/>
                                                 <Slider Width="110" Minimum="0" Maximum="60"
                                                         TickFrequency="1" IsSnapToTickEnabled="true"
                                                         Value="{Binding TopLeft, Mode=TwoWay}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Bottom left:" VerticalAlignment="Center" Width="80"/>
+                                                <TextBlock Text="{Localize ImageStrings.BottomLeft}" VerticalAlignment="Center" MinWidth="80"/>
                                                 <Slider Width="110" Minimum="0" Maximum="60"
                                                         TickFrequency="1" IsSnapToTickEnabled="true"
                                                         Value="{Binding BottomLeft, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -181,13 +192,13 @@
                                         </StackPanel>
                                         <StackPanel Orientation="Vertical">
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                <TextBlock Text="Top right:" VerticalAlignment="Center" Width="86"/>
+                                                <TextBlock Text="{Localize ImageStrings.TopRight}" VerticalAlignment="Center" MinWidth="86"/>
                                                 <Slider Width="110" Minimum="0" Maximum="60"
                                                         TickFrequency="1" IsSnapToTickEnabled="true"
                                                         Value="{Binding TopRight, Mode=TwoWay}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Bottom right:" VerticalAlignment="Center" Width="86"/>
+                                                <TextBlock Text="{Localize ImageStrings.BottomRight}" VerticalAlignment="Center" MinWidth="86"/>
                                                 <Slider Width="110" Minimum="0" Maximum="60"
                                                         TickFrequency="1" IsSnapToTickEnabled="true"
                                                         Value="{Binding BottomRight, Mode=TwoWay}" VerticalAlignment="Center"/>

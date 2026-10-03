@@ -14,38 +14,44 @@
                  down one page: fourteen stands, each with its own copy of the same figure picker, so comparing two of
                  them meant scrolling past everything in between and re-picking the figure when you got there. Now the
                  figure is chosen ONCE, here, and every family paints on it in turn. -->
-            <TextBlock Text="Brushes — live" FontSize="20" MarginBottom="10"/>
+            <TextBlock Text="{Localize BrushesStrings.Title}" FontSize="20" MarginBottom="10"/>
 
             <!-- Radio buttons styled as toggles, one per family, all bound to one property via EnumToBoolConverter. -->
             <WrapPanel Orientation="Horizontal" MarginBottom="10">
-                <RadioButton Classes="Toggle" Content="Gradients" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Gradients}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Gradients, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Mesh gradient" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.MeshGradient}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Mesh, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Pattern" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Pattern}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Pattern, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Noise" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Noise}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Noise, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Fractal" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Fractal}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Fractal, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Image" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Image}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Image, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Nine-slice" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.NineSlice}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=NineSlice, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Drawing" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Drawing}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Drawing, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Visual" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Visual}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Visual, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Material" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.Material}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Material, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="Aura / Shadow" MarginRight="6" MarginBottom="6"
+                <RadioButton Classes="Toggle" Content="{Localize BrushesStrings.AuraShadow}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding LiveStand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Aura, Mode=TwoWay}"/>
             </WrapPanel>
 
             <StackPanel Orientation="Horizontal" MarginBottom="4">
                 <StackPanel Orientation="Vertical" Width="300">
-                    <TextBlock Text="Paint it on" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <DropDown ItemsSource="{Binding PreviewShapes}" SelectedItem="{Binding PreviewShape, Mode=TwoWay}" Width="280"/>
+                    <TextBlock Text="{Localize BrushesStrings.PaintItOn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <DropDown ItemsSource="{Binding PreviewShapes}" SelectedItem="{Binding PreviewShape, Mode=TwoWay}" Width="280">
+                        <DropDown.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
+                            </DataTemplate>
+                        </DropDown.ItemTemplate>
+                    </DropDown>
                 </StackPanel>
             </StackPanel>
 

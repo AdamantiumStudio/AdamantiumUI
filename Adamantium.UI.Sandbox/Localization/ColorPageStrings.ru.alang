@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="Title" Text="Выбор цвета"/>
+    <Phrase Key="Intro" Text="Встроенный HSV-выбор: тяните квадрат (насыщенность / яркость), полосу оттенка и полосу альфы или введите hex / R-G-B-A. Выбранный цвет идёт в акцент ТЕМЫ, поэтому контролы справа перекрашиваются на лету."/>
+    <Phrase Key="Wheel" Text="Цветовой круг (конический оттенок × радиальная насыщенность)"/>
+    <Phrase Key="Value" Text="Яркость (0 — чёрный)"/>
+    <Phrase Key="Swatch" Text="Компактный образец → всплывающее окно (ColorPickerButton)"/>
+    <Phrase Key="LiveAccent" Text="Живой акцент темы"/>
+    <Phrase Key="Checkbox" Text="Флажок"/>
+    <Phrase Key="RadioButton" Text="Переключатель"/>
+</Language>

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using Adamantium.Core.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
@@ -12,7 +11,9 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Themes.Localization;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -24,6 +25,9 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class PropertyGridTests
 {
+    [TearDown]
+    public void BackToBaseLanguage() => Languages.Current = null;
+
     private sealed class Target : INotifyPropertyChanged
     {
         private string _name = "entity";
@@ -307,7 +311,7 @@ public class PropertyGridTests
     [Test]
     public void AnItemsLineRepeatsItsChildrenPerElement()
     {
-        var node = new CanvasNode { Inputs = 3, Outputs = 0 };
+        var node = new CanvasNode { Inputs = 3, Outputs = 0, Phrases = CanvasStrings.Current };
         var item = new ElementItem(node, new Rect(0, 0, 190, 110));
         var name = new StringProperty { Header = "Name", Binding = new Binding("Name") };
         var sockets = new ItemsProperty
@@ -397,7 +401,7 @@ public class PropertyGridTests
     [Test]
     public void WritingThroughAnItemsLineReachesThatItem()
     {
-        var node = new CanvasNode { Inputs = 2, Outputs = 0 };
+        var node = new CanvasNode { Inputs = 2, Outputs = 0, Phrases = CanvasStrings.Current };
         var item = new ElementItem(node, new Rect(0, 0, 190, 110));
         var name = new StringProperty { Header = "Name", Binding = new Binding("Name") };
         var sockets = new ItemsProperty
@@ -450,7 +454,7 @@ public class PropertyGridTests
     [Test]
     public void AnItemsLineCarriesWhatItsButtonDoes()
     {
-        var node = new CanvasNode { Inputs = 1, Outputs = 0 };
+        var node = new CanvasNode { Inputs = 1, Outputs = 0, Phrases = CanvasStrings.Current };
         var item = new ElementItem(node, new Rect(0, 0, 190, 110));
         var sockets = new ItemsProperty
         {
@@ -748,14 +752,14 @@ public class PropertyGridTests
     public void WritingConvertsToTheMembersType()
     {
         var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        Languages.Current = "ru";
 
         Assert.Multiple(() =>
         {
             Assert.That(scale.TryConvert("2.5", typeof(double), out var invariant), Is.True, "as a file writes it");
             Assert.That(invariant, Is.EqualTo(2.5));
 
-            var typed = 2.5.ToString(System.Globalization.CultureInfo.CurrentCulture);
-            Assert.That(scale.TryConvert(typed, typeof(double), out var local), Is.True, "as this machine's keyboard types it");
+            Assert.That(scale.TryConvert("2,5", typeof(double), out var local), Is.True, "as the application's language types it");
             Assert.That(local, Is.EqualTo(2.5));
 
             Assert.That(scale.TryConvert("not a number", typeof(double), out _), Is.False,
@@ -1135,6 +1139,7 @@ public class PropertyGridTests
         section.Properties.Add(definition);
 
         var grid = Built(section);
+        grid.MixedText = "multiple values";
         grid.SelectedObjects = targets;
 
         // Again, because the selection arrives AFTER the first pass and a row finds its editor once a pass has run.
@@ -1421,8 +1426,8 @@ public class PropertyGridTests
     }
 
     // The conversion has to know the type even when there is no common value to read it off - otherwise what was typed
-    // reaches a double-valued property as a string. Typed the way the user's culture writes it, which is what the grid
-    // reads first: "7,5" means 7.5 in Russian and 75 in English.
+    // reaches a double-valued property as a string. Typed the way the application's language writes it, which is what the
+    // grid reads first: "7,5" means 7.5 in Russian and 75 in English.
     [Test]
     public void ANumberTypedIntoADisagreeingRowIsStillConverted()
     {
@@ -1434,7 +1439,8 @@ public class PropertyGridTests
         var row = RowOf(grid, scale);
         Assert.That(row.IsMixed, Is.True);
 
-        Assert.That(grid.Write(row, 7.5.ToString(CultureInfo.CurrentCulture)), Is.True);
+        Languages.Current = "ru";
+        Assert.That(grid.Write(row, "7,5"), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(first.Scale, Is.EqualTo(7.5));

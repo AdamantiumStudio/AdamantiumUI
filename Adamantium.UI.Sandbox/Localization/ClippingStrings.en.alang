@@ -1,0 +1,8 @@
+<Language>
+    <Phrase Key="Title" Text="Rounded clipping — drag the pieces into the corners"/>
+    <Phrase Key="Hint" Text="The container clips by its own corners. Drag any piece so it crosses a corner: its edge must follow the rounding, not the square scissor. Turn the clip off and everything spills out whole."/>
+    <Phrase Key="CornerRadius" Text="Corner radius"/>
+    <Phrase Key="TextInCorner" Text="Text in the corner"/>
+    <Phrase Key="ExplicitTitle" Text="An explicit clip radius — cut differently from how the container looks"/>
+    <Phrase Key="ExplicitHint" Text="The border keeps radius 10. Drag this slider and the CUT follows ClipCornerRadius instead — frame and cut come apart."/>
+</Language>

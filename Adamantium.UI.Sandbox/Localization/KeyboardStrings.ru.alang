@@ -1,0 +1,44 @@
+<Language>
+    <Phrase Key="Title" Text="Tab переходит между блоками, стрелки — внутри блока"/>
+    <Phrase Key="Intro" Text="Рамка фокуса появляется только при движении с клавиатуры. Щёлкните где угодно — и она исчезнет: щелчок уже сказал, где вы."/>
+
+    <Phrase Key="ExplicitOrder" Text="1. Явный порядок обхода"/>
+    <Phrase Key="ExplicitOrderHint" Text="Расположены A B C D, но пронумерованы 3 1 4 2 — Tab идёт по номерам, а не по раскладке."/>
+    <Phrase Key="ThirdA" Text="A (3-я)"/>
+    <Phrase Key="FirstB" Text="B (1-я)"/>
+    <Phrase Key="FourthC" Text="C (4-я)"/>
+    <Phrase Key="SecondD" Text="D (2-я)"/>
+    <Phrase Key="Skipped" Text="Пропускается"/>
+
+    <Phrase Key="GridTitle" Text="2. Сетка отвечает по строкам и столбцам"/>
+    <Phrase Key="GridHint" Text="Войдите стрелкой и пройдите по ячейкам. На краю стрелка выводит из сетки — форма не замкнутое поле."/>
+
+    <Phrase Key="WrapTitle" Text="3. Перенесённые плитки держат стрелки у себя"/>
+    <Phrase Key="WrapHint" Text="Вправо в конце строки продолжает с начала следующей. На краю поля стрелка ничего не делает — выходят по Tab."/>
+
+    <Phrase Key="ListTitle" Text="4. В список входят один раз"/>
+    <Phrase Key="ListHint" Text="Tab попадает на строку, а следующий Tab покидает весь список — а не двадцать четыре строки спустя. Стрелки двигают выделение и прокручивают к нему."/>
+    <Phrase Key="TabLandsHere" Text="Tab из списка попадает сюда:"/>
+    <Phrase Key="AfterList" Text="После списка"/>
+    <Phrase Key="AndThenHere" Text="…а потом сюда"/>
+
+    <Phrase Key="ClaimTitle" Text="5. Контролы, которые забирают стрелки"/>
+    <Phrase Key="ClaimHint" Text="Ползунок и число забирают стрелки, чтобы менять значение, поэтому фокус остаётся на них. Навигации достаются только клавиши, которые никто не забрал."/>
+    <Phrase Key="NumberHint" Text="Посмотрите на число: фокус на самом деле на текстовом поле внутри рамки, но рамка фокуса охватывает весь контрол. Часть шаблона в фокусе отмечает контрол, которому принадлежит, — никто не считает этот редактор отдельным контролом."/>
+    <Phrase Key="TextTakesThem" Text="текст тоже их забирает"/>
+
+    <Phrase Key="ShapelessTitle" Text="6. Панель без формы обходит детей в порядке добавления"/>
+    <Phrase Key="ShapelessHint" Text="Здесь ничто не стоит в строке или столбце — кнопки расставлены вручную и прижаты к краям. Вниз и вправо идут в порядке добавления в панель, вверх и влево — против него."/>
+    <Phrase Key="First" Text="первая"/>
+    <Phrase Key="Second" Text="вторая"/>
+    <Phrase Key="Third" Text="третья"/>
+    <Phrase Key="Top" Text="сверху"/>
+    <Phrase Key="Bottom" Text="снизу"/>
+    <Phrase Key="Left" Text="слева"/>
+    <Phrase Key="FillsTheRest" Text="занимает остальное"/>
+
+    <Phrase Key="OverlayTitle" Text="7. Всплывающий слой возвращает фокус"/>
+    <Phrase Key="OverlayHint" Text="Перейдите по Tab к списку ниже, откройте его по Enter, затем закройте по Escape — рамка вернётся к самому выпадающему списку, а не к началу страницы. Выберите по Enter — и она тоже вернётся."/>
+    <Phrase Key="OpenWithEnter" Text="Откройте меня по Enter"/>
+    <Phrase Key="TabLandsAfter" Text="Tab попадает сюда после него"/>
+</Language>

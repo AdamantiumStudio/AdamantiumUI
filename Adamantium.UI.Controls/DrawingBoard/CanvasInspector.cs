@@ -37,16 +37,16 @@ public class CanvasInspector : Control, ICanvasPart
     public static readonly AdamantiumProperty StructureProperty = AdamantiumProperty.Register(nameof(Structure),
         typeof(IEnumerable), typeof(CanvasInspector), new PropertyMetadata(null));
 
-    /// <summary>How much is on the plane, in words - shown over the list, where what is on the plane is being looked
-    /// at anyway. Said here rather than left to the application: a panel that lists everything and cannot say how much
-    /// of it there is makes the count something to go and find elsewhere.</summary>
-    public static readonly AdamantiumProperty CountedProperty = AdamantiumProperty.Register(nameof(Counted),
-        typeof(String), typeof(CanvasInspector), new PropertyMetadata("Nothing drawn yet"));
+    /// <summary>How much is on the plane - the theme says it over the list, where what is on the plane is being looked
+    /// at anyway. Counted here rather than left to the application: a panel that lists everything and cannot say how
+    /// much of it there is makes the count something to go and find elsewhere.</summary>
+    public static readonly AdamantiumProperty ItemCountProperty = AdamantiumProperty.Register(nameof(ItemCount),
+        typeof(int), typeof(CanvasInspector), new PropertyMetadata(0));
 
-    public String Counted
+    public int ItemCount
     {
-        get => GetValue<String>(CountedProperty);
-        private set => SetCurrentValue(CountedProperty, value);
+        get => GetValue<int>(ItemCountProperty);
+        private set => SetCurrentValue(ItemCountProperty, value);
     }
 
     /// <summary>The row picked in that list. Picking one selects it on the plane, because there is one selection and
@@ -279,7 +279,7 @@ public class CanvasInspector : Control, ICanvasPart
             {
                 var out_ = String.Equals(which as string, "Out", StringComparison.OrdinalIgnoreCase);
                 var sockets = out_ ? node.Outputs : node.Inputs;
-                var made = node.NewSocket($"{(out_ ? "Out" : "In")} {sockets.Count + 1}");
+                var made = node.NewSocket(canvas.Say(out_ ? "OutputName" : "InputName", ("number", sockets.Count + 1)));
 
                 if (made != null) sockets.Add(made);
             }
@@ -493,7 +493,7 @@ public class CanvasInspector : Control, ICanvasPart
         if (Canvas is not { } canvas)
         {
             Structure = null;
-            Counted = "Nothing drawn yet";
+            ItemCount = 0;
             return;
         }
 
@@ -503,12 +503,7 @@ public class CanvasInspector : Control, ICanvasPart
         listed.Reverse();
 
         Structure = listed;
-        Counted = listed.Count switch
-        {
-            0 => "Nothing drawn yet",
-            1 => "1 item",
-            var many => $"{many} items"
-        };
+        ItemCount = listed.Count;
     }
 
     private static void OnListedChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)

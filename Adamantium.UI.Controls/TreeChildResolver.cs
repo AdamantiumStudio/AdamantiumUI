@@ -83,7 +83,7 @@ internal static class TreeChildResolver
                 var wanted = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
                 var converted = value == null || wanted.IsInstanceOfType(value)
                     ? value
-                    : Convert.ChangeType(value, wanted, System.Globalization.CultureInfo.CurrentCulture);
+                    : Convert.ChangeType(value, wanted, Core.Localization.Languages.Culture);
                 prop.SetValue(target, converted);
                 return true;
             }

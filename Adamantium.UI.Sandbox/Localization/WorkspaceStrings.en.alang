@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Workspace" Text="Workspace"/>
+    <Phrase Key="DrivenByNavigation" Text="A TabControl driven purely by the navigation manager"/>
+    <Phrase Key="OpenDoc" Text="Open Doc"/>
+    <Phrase Key="OpenChart" Text="Open Chart"/>
+    <Phrase Key="CloseTab" Text="Close tab"/>
+    <Phrase Key="Doc" Text="Doc {number}"/>
+    <Phrase Key="Chart" Text="Chart {number}"/>
+    <Phrase Key="DocSurface" Text="A document surface, opened and closed through the workspace region."/>
+    <Phrase Key="ChartSurface" Text="A chart surface, opened and closed through the workspace region."/>
+</Language>

@@ -4,6 +4,9 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Behaviors;
+using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
@@ -36,12 +39,17 @@ public class TabTearOffBehavior : Behavior<TabControl>
 
         var window = new Window
         {
-            Title = (e.Item as ViewModels.TabPageViewModel)?.Header ?? "Tab",
             ClientWidth = 640,
             ClientHeight = 480,
             // A desktop point offset by a desktop distance - both physical, and the types say so. See PixelPoint.
             Position = e.ScreenPosition - new PixelPoint(60, 20)
         };
+
+        // Named as its tab is, and followed through a change of language.
+        window.SetBinding(WindowBase.TitleProperty, new Localize(GalleryStrings.Current, null)
+        {
+            KeySource = new Binding(nameof(ViewModels.TabPageViewModel.Header)) { Source = e.Item }
+        });
 
         // Windows are shown on the UI thread, so hop there without blocking the frame. Show before setting content (the
         // item plus the strip's selector) so it joins a live, themed window.

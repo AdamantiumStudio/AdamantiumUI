@@ -22,6 +22,7 @@ public class MultiBinding : BindingBase
          Converter = Converter,
          ConverterParameter = ConverterParameter,
          StringFormat = StringFormat,
+         Culture = Culture,
          FallbackValue = FallbackValue,
          TargetNullValue = TargetNullValue,
          IsAsync = IsAsync,
@@ -31,4 +32,7 @@ public class MultiBinding : BindingBase
          clone.Bindings.Add((BindingBase)binding.Clone());
       return clone;
    }
+
+   public override BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty) =>
+      new MultiBindingExpression(target, targetProperty, this);
 }

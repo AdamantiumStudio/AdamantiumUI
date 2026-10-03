@@ -130,7 +130,7 @@
                             <StackPanel Orientation="Vertical"
                                     Width="180"
                                     MarginLeft="18">
-                                <TextBlock Text="Preview"
+                                <TextBlock Text="{Localize ColorPickerStrings.Preview}"
                                         Foreground="{ObservableResource TextFillColorSecondary}"
                                         MarginBottom="4"/>
                                 <!-- A checkerboard backdrop so a color's alpha reads truthfully. It is INSET 2px inside

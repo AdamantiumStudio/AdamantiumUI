@@ -1,0 +1,176 @@
+<Language>
+    <Phrase Key="Title" Text="Лента — оболочка редактора Adamantium"/>
+    <Phrase Key="SceneView" Text="Вид сцены"/>
+
+    <Phrase Key="File" Text="Файл"/>
+    <Phrase Key="New" Text="Создать"/>
+    <Phrase Key="NewScene" Text="Новая сцена"/>
+    <Phrase Key="EmptyScene" Text="Пустая сцена"/>
+    <Phrase Key="FromTemplate" Text="Из шаблона"/>
+    <Phrase Key="Open" Text="Открыть"/>
+    <Phrase Key="RecentScenes" Text="Недавние сцены"/>
+    <Phrase Key="Save" Text="Сохранить"/>
+    <Phrase Key="SaveTip" Text="Сохранить сцену"/>
+    <Phrase Key="Undo" Text="Отменить"/>
+    <Phrase Key="Redo" Text="Повторить"/>
+    <Phrase Key="Import" Text="Импорт"/>
+    <Phrase Key="ImportHint" Text="Добавить сетку в открытую сцену."/>
+    <Phrase Key="Export" Text="Экспорт"/>
+    <Phrase Key="ExportHint" Text="Сохранить сцену в другом формате."/>
+    <Phrase Key="AdamantiumPackage" Text="Пакет Adamantium"/>
+    <Phrase Key="Print" Text="Печать"/>
+    <Phrase Key="PrintHint" Text="Лист с видом сцены, как он есть."/>
+    <Phrase Key="Printer" Text="Принтер"/>
+    <Phrase Key="Customize" Text="Настроить"/>
+    <Phrase Key="QuickAccess" Text="Быстрый доступ"/>
+    <Phrase Key="QuickAccessHint" Text="Выберите команды, которые стоит держать на расстоянии одного щелчка."/>
+    <Phrase Key="Exit" Text="Выход"/>
+
+    <Phrase Key="Home" Text="Главная"/>
+    <Phrase Key="Clipboard" Text="Буфер обмена"/>
+    <Phrase Key="Paste" Text="Вставить"/>
+    <Phrase Key="PasteTip" Text="Вставить содержимое буфера обмена"/>
+    <Phrase Key="KeepFormatting" Text="Сохранить форматирование"/>
+    <Phrase Key="ValuesOnly" Text="Только значения"/>
+    <Phrase Key="PasteSpecial" Text="Специальная вставка..."/>
+    <Phrase Key="Cut" Text="Вырезать"/>
+    <Phrase Key="Copy" Text="Копировать"/>
+    <Phrase Key="Duplicate" Text="Дублировать"/>
+    <Phrase Key="Scene" Text="Сцена"/>
+    <Phrase Key="Entity" Text="Сущность"/>
+    <Phrase Key="EntityTip" Text="Добавить пустую сущность"/>
+    <Phrase Key="EmptyEntity" Text="Пустая сущность"/>
+    <Phrase Key="Delete" Text="Удалить"/>
+    <Phrase Key="SelectAll" Text="Выделить всё"/>
+    <Phrase Key="SelectNone" Text="Снять выделение"/>
+    <Phrase Key="View" Text="Вид"/>
+    <Phrase Key="Wireframe" Text="Каркас"/>
+    <Phrase Key="Grid" Text="Сетка"/>
+    <Phrase Key="Gizmos" Text="Гизмо"/>
+    <Phrase Key="HasSelection" Text="Есть выделение"/>
+    <Phrase Key="GridSize" Text="Шаг сетки"/>
+    <Phrase Key="Backstage" Text="Backstage"/>
+    <Phrase Key="MoveQuickAccess" Text="Сдвинуть панель"/>
+    <Phrase Key="MoveQuickAccessTip" Text="Перенести панель быстрого доступа между заголовком и лентой"/>
+    <Phrase Key="Materials" Text="Материалы"/>
+    <Phrase Key="Arrange" Text="Упорядочить"/>
+    <Phrase Key="AlignLeft" Text="По левому краю"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Distribute" Text="Распределить"/>
+    <Phrase Key="Group" Text="Сгруппировать"/>
+    <Phrase Key="Order" Text="Порядок"/>
+    <Phrase Key="Forward" Text="Вперёд"/>
+    <Phrase Key="Backward" Text="Назад"/>
+    <Phrase Key="Lighting" Text="Освещение"/>
+    <Phrase Key="Light" Text="Свет"/>
+    <Phrase Key="Bake" Text="Запечь"/>
+    <Phrase Key="Physics" Text="Физика"/>
+    <Phrase Key="Collider" Text="Коллайдер"/>
+    <Phrase Key="Simulate" Text="Симуляция"/>
+    <Phrase Key="Context" Text="Контекст"/>
+    <Phrase Key="Mesh" Text="Меш"/>
+    <Phrase Key="MeshTip" Text="Будто выделен меш — появятся его вкладки"/>
+    <Phrase Key="LightTip" Text="…и второй контекст, чтобы увидеть две плашки сразу"/>
+    <Phrase Key="Ledge" Text="Плашка"/>
+    <Phrase Key="LedgeTip" Text="Плашка над вкладками контекста: без неё их связывает только цвет, и полоса не тратит места на её высоту"/>
+    <Phrase Key="Tools" Text="Инструменты"/>
+    <Phrase Key="Measure" Text="Измерить"/>
+    <Phrase Key="Annotate" Text="Пометка"/>
+
+    <Phrase Key="Modeling" Text="Моделирование"/>
+    <Phrase Key="Primitives" Text="Примитивы"/>
+    <Phrase Key="Add" Text="Добавить"/>
+    <Phrase Key="AddTip" Text="Добавить примитив"/>
+    <Phrase Key="Cube" Text="Куб"/>
+    <Phrase Key="Sphere" Text="Сфера"/>
+    <Phrase Key="Plane" Text="Плоскость"/>
+    <Phrase Key="Extrude" Text="Выдавить"/>
+    <Phrase Key="Bevel" Text="Фаска"/>
+    <Phrase Key="Subdivide" Text="Подразделить"/>
+    <Phrase Key="Snapping" Text="Привязка"/>
+    <Phrase Key="Snap" Text="Привязка"/>
+    <Phrase Key="SnapSettings" Text="Настройки привязки..."/>
+    <Phrase Key="ClearSnaps" Text="Сбросить все привязки"/>
+    <Phrase Key="SnapToVertices" Text="Привязка к вершинам"/>
+    <Phrase Key="SnapToEdges" Text="Привязка к рёбрам"/>
+    <Phrase Key="SnapToFaces" Text="Привязка к граням"/>
+
+    <Phrase Key="Library" Text="Библиотека"/>
+    <Phrase Key="NewMaterialTip" Text="Создать материал"/>
+    <Phrase Key="Swatch" Text="Образец"/>
+    <Phrase Key="SwatchTip" Text="Команда, у которой значок — цвет, нарисованный её собственным шаблоном"/>
+    <Phrase Key="Channels" Text="Каналы"/>
+    <Phrase Key="Albedo" Text="Альбедо"/>
+    <Phrase Key="Normal" Text="Нормали"/>
+    <Phrase Key="Roughness" Text="Шероховатость"/>
+    <Phrase Key="Preview" Text="Просмотр"/>
+    <Phrase Key="Shading" Text="Затенение"/>
+    <Phrase Key="Lit" Text="С освещением"/>
+    <Phrase Key="Unlit" Text="Без освещения"/>
+    <Phrase Key="Normals" Text="Нормали"/>
+    <Phrase Key="UvChecker" Text="UV-шахматка"/>
+
+    <Phrase Key="Display" Text="Отображение"/>
+    <Phrase Key="Selection" Text="Выделение"/>
+    <Phrase Key="All" Text="Всё"/>
+    <Phrase Key="None" Text="Ничего"/>
+
+    <Phrase Key="MeshTools" Text="ИНСТРУМЕНТЫ МЕША"/>
+    <Phrase Key="LightTools" Text="ИНСТРУМЕНТЫ СВЕТА"/>
+    <Phrase Key="Geometry" Text="Геометрия"/>
+    <Phrase Key="Edit" Text="Правка"/>
+    <Phrase Key="Uv" Text="UV"/>
+    <Phrase Key="Unwrap" Text="Развёртка"/>
+    <Phrase Key="Emission" Text="Излучение"/>
+    <Phrase Key="AddLight" Text="Добавить свет"/>
+
+    <Phrase Key="Status" Select="action"
+            Ready="Готово."
+            Pasted="Вставлено из буфера обмена."
+            PastedKeepingFormatting="Вставлено с сохранением форматирования."
+            PastedValuesOnly="Вставлены только значения."
+            PasteSpecial="Специальная вставка..."
+            SnapSettings="Настройки привязки..."
+            SnapsCleared="Привязки сброшены."
+            Cut="Выделенное вырезано."
+            Copied="Выделенное скопировано."
+            Deleted="Выделенное удалено."
+            Duplicated="Выделенное продублировано."
+            SelectedAll="Выделено всё."
+            SelectionCleared="Выделение снято."
+            AddedEntity="Добавлена пустая сущность."
+            AddedCube="Добавлен куб."
+            AddedSphere="Добавлена сфера."
+            AddedPlane="Добавлена плоскость."
+            Extruded="Выбранные грани выдавлены."
+            Bevelled="На выбранных рёбрах сняты фаски."
+            Subdivided="Меш подразделён."
+            NewMaterial="Создан новый материал."
+            EditingAlbedo="Правка канала альбедо."
+            EditingNormal="Правка канала нормалей."
+            EditingRoughness="Правка канала шероховатости."
+            AlignedLeft="Выровнено по левому краю."
+            Centered="Выровнено по центру."
+            Distributed="Распределено равномерно."
+            Grouped="Выделенное сгруппировано."
+            BroughtForward="Перемещено вперёд."
+            SentBackward="Перемещено назад."
+            AddedLight="Добавлен источник света."
+            Baking="Запекается освещение."
+            AddedCollider="Добавлен коллайдер."
+            Simulating="Идёт симуляция."
+            Measuring="Идёт измерение."
+            Annotating="Добавляется пометка."
+            AddedToQuickAccess="Добавлено на панель быстрого доступа."
+            RemovedFromQuickAccess="Убрано с панели быстрого доступа."
+            QuickAccessBelow="Панель быстрого доступа перенесена под ленту."
+            QuickAccessInCaption="Панель быстрого доступа возвращена в заголовок."
+            Imported="Импортирован файл {format}."
+            Exported="Сцена экспортирована в {format}."
+            NewScene="Новая сцена."
+            OpenedScene="Сцена открыта."
+            ExitRequested="Запрошен выход."
+            Saved="Сцена сохранена."
+            Undone="Отменено."
+            Redone="Повторено."/>
+</Language>

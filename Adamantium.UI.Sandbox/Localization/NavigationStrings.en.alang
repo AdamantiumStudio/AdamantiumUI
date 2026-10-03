@@ -1,0 +1,32 @@
+<Language>
+    <Phrase Key="ViewModelNavigation" Text="View-model navigation"/>
+    <Phrase Key="Home" Text="Home"/>
+    <Phrase Key="DetailsWithId" Text="Details (id=42)"/>
+    <Phrase Key="Settings" Text="Settings"/>
+    <Phrase Key="Back" Text="Back"/>
+    <Phrase Key="Forward" Text="Forward"/>
+    <Phrase Key="AllowDuplicateWindows" Text="Allow duplicate windows"/>
+    <Phrase Key="DialogsAsWindows" Text="Show dialogs as separate windows"/>
+    <Phrase Key="ShowOverlayWindow" Text="Show overlay window"/>
+    <Phrase Key="ShowModalOverlay" Text="Show modal overlay"/>
+    <Phrase Key="ItemsControlRegion" Text="ItemsControl region"/>
+    <Phrase Key="AddCard" Text="Add card"/>
+    <Phrase Key="Clear" Text="Clear"/>
+
+    <Phrase Key="HomeMessage" Text="Home - the region's starting page. Navigate by view-model type with the buttons above."/>
+    <Phrase Key="ArrivedVia" Select="mode" None="Not navigated to yet" New="Arrived as a new page" Back="Arrived by going back" Forward="Arrived by going forward" Refresh="Arrived by a refresh"/>
+    <Phrase Key="Details" Text="Details"/>
+    <Phrase Key="ItemId" Text="Item id:"/>
+    <Phrase Key="UnsavedChanges" Text="Unsaved changes (blocks leaving this page)"/>
+    <Phrase Key="Card" Text="Card {number}"/>
+
+    <Phrase Key="OverlayWindow" Text="Overlay window"/>
+    <Phrase Key="OverlayWindowNumbered" Text="Overlay window {number}"/>
+    <Phrase Key="OverlayHint" Text="Drag the title bar (X/Y update live), or move it from the view model."/>
+    <Phrase Key="RenameTitle" Text="Rename title"/>
+    <Phrase Key="Renamed" Text="Renamed {number}"/>
+    <Phrase Key="MoveFromViewModel" Text="Move (VM)"/>
+    <Phrase Key="CloseFromViewModel" Text="Close from VM"/>
+    <Phrase Key="ModalOverlay" Text="Modal overlay"/>
+    <Phrase Key="ModalOverlayMessage" Text="This modal dims and blocks the window behind it. Drag me by the title bar."/>
+</Language>

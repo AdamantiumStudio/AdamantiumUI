@@ -26,7 +26,7 @@ public class PenTool : ICanvasTool
 
     public Key Shortcut { get; set; } = Key.P;
 
-    public string Description { get; set; } = "draw freehand, or point to point under a grid";
+    public string Description { get; set; } = "PenDescription";
 
     /// <summary>A crosshair: what a pen leaves starts exactly under the point, and an arrow's tip is not where a person
     /// reads it as being.</summary>

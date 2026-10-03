@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using System.Linq;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
+using Adamantium.UI.Generators.Localization;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
 
@@ -19,7 +20,8 @@ namespace Adamantium.UI.Generators
             {
                 options.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
                 options.GlobalOptions.TryGetValue("build_property.projectdir", out var projectDir);
-                return (RootNamespace: rootNamespace, ProjectDir: projectDir);
+                options.GlobalOptions.TryGetValue("build_property.NeutralLanguage", out var neutralLanguage);
+                return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage);
             });
 
             // Parsing is its own PER-FILE step, so Roslyn caches each document: it used to sit inside the output below,
@@ -34,11 +36,19 @@ namespace Adamantium.UI.Generators
                 .WithTrackingName(ParseStepName)
                 .Collect();
 
-            var sourceProvider = parsedFiles.Combine(context.CompilationProvider).Combine(buildProperties);
+            // The project's own tables are not compiled yet when a view is: their strings come from the language files.
+            var languageFiles = context.AdditionalTextsProvider
+                .Where(file => file.Path.EndsWith(LanguageFileParser.Extension, System.StringComparison.OrdinalIgnoreCase))
+                .Select((file, cancellationToken) => (file.Path, Content: file.GetText(cancellationToken)?.ToString() ?? string.Empty))
+                .Combine(buildProperties)
+                .Select((pair, _) => LanguageFileParser.Parse(pair.Left.Path, pair.Left.Content, pair.Right.ProjectDir))
+                .Collect();
+
+            var sourceProvider = parsedFiles.Combine(context.CompilationProvider).Combine(buildProperties).Combine(languageFiles);
 
             context.RegisterSourceOutput(sourceProvider, (spc, source) =>
             {
-                var ((parsed, compilation), properties) = source;
+                var (((parsed, compilation), properties), languages) = source;
 
                 var resourceDictionaries = new List<ResourceDictionaryInfo>();
 
@@ -49,7 +59,10 @@ namespace Adamantium.UI.Generators
                 }
 
                 var typeResolver = new RoslynTypeResolver(compilation);
-                var transformer = new DefaultAumlTransformer();
+                var transformer = new DefaultAumlTransformer
+                {
+                    LanguageTables = LanguageFileParser.Shapes(languages, properties.RootNamespace, properties.NeutralLanguage),
+                };
                 var codeGenerator = new AumlSourceGenerator();
 
                 var metadata = new List<AumlDocument>();
@@ -86,7 +99,8 @@ namespace Adamantium.UI.Generators
 
                 // Pre-register every control document (Window/View/Page) as a generated type BEFORE any body
                 // is transformed, so cross-document references (e.g. <local:ControlsView/>) resolve regardless of file
-                // processing order, including a view embedded inside another view.
+                // processing order, including a view embedded inside another view. The language tables likewise.
+                transformer.PreRegisterLanguageTables(typeResolver, properties.RootNamespace);
                 foreach (var aumlDoc in metadata)
                 {
                     try

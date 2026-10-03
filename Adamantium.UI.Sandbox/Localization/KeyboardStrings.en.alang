@@ -1,0 +1,44 @@
+<Language>
+    <Phrase Key="Title" Text="Tab moves between blocks, the arrows move inside one"/>
+    <Phrase Key="Intro" Text="The ring appears for keyboard moves only. Click anywhere and it goes away - the click already said where you are."/>
+
+    <Phrase Key="ExplicitOrder" Text="1. Explicit tab order"/>
+    <Phrase Key="ExplicitOrderHint" Text="Laid out A B C D, but numbered 3 1 4 2 - Tab follows the numbers, not the layout."/>
+    <Phrase Key="ThirdA" Text="A (3rd)"/>
+    <Phrase Key="FirstB" Text="B (1st)"/>
+    <Phrase Key="FourthC" Text="C (4th)"/>
+    <Phrase Key="SecondD" Text="D (2nd)"/>
+    <Phrase Key="Skipped" Text="Skipped"/>
+
+    <Phrase Key="GridTitle" Text="2. A grid answers by row and column"/>
+    <Phrase Key="GridHint" Text="Arrow into it and walk the cells. At the edge the arrow leaves the grid - a form is not a closed field."/>
+
+    <Phrase Key="WrapTitle" Text="3. Wrapped tiles keep their arrows"/>
+    <Phrase Key="WrapHint" Text="Right at the end of a line carries on at the start of the next. At the edge of the field the arrow does nothing - Tab is how you leave."/>
+
+    <Phrase Key="ListTitle" Text="4. A list is entered once"/>
+    <Phrase Key="ListHint" Text="Tab lands on a row and the next Tab leaves the whole list - not twenty-four rows later. Arrows move the selection and scroll it into view."/>
+    <Phrase Key="TabLandsHere" Text="Tab from the list lands here:"/>
+    <Phrase Key="AfterList" Text="After the list"/>
+    <Phrase Key="AndThenHere" Text="...and then here"/>
+
+    <Phrase Key="ClaimTitle" Text="5. Controls that claim the arrows"/>
+    <Phrase Key="ClaimHint" Text="A slider and a number take the arrows to change their value, so the focus stays on them. Navigation only ever gets the keys nobody claimed."/>
+    <Phrase Key="NumberHint" Text="Watch the number: the focus is really on the text box inside its frame, yet the ring wraps the whole control. A focused part of a template marks the control it is part of - nobody thinks of that editor as a control of its own."/>
+    <Phrase Key="TextTakesThem" Text="text takes them too"/>
+
+    <Phrase Key="ShapelessTitle" Text="6. A panel with no shape walks the order it was given"/>
+    <Phrase Key="ShapelessHint" Text="Nothing here sits in a row or a column - these buttons are placed by hand, and docked to edges. Down and Right run with the order they were added to the panel, Up and Left against it."/>
+    <Phrase Key="First" Text="first"/>
+    <Phrase Key="Second" Text="second"/>
+    <Phrase Key="Third" Text="third"/>
+    <Phrase Key="Top" Text="top"/>
+    <Phrase Key="Bottom" Text="bottom"/>
+    <Phrase Key="Left" Text="left"/>
+    <Phrase Key="FillsTheRest" Text="fills the rest"/>
+
+    <Phrase Key="OverlayTitle" Text="7. An overlay gives the focus back"/>
+    <Phrase Key="OverlayHint" Text="Tab to the list below, open it with Enter, then close it with Escape - the ring comes back to the drop-down itself, not to the top of the page. Pick with Enter and it comes back too."/>
+    <Phrase Key="OpenWithEnter" Text="Open me with Enter"/>
+    <Phrase Key="TabLandsAfter" Text="Tab lands here after it"/>
+</Language>

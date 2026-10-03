@@ -1,0 +1,10 @@
+<Language>
+    <Phrase Key="SearchProperties" Text="Поиск свойств"/>
+    <Phrase Key="ClearSearch" Text="Очистить поиск (Esc)"/>
+    <Phrase Key="More" Text="Ещё"/>
+    <Phrase Key="ResetToDefault" Text="Вернуть значение по умолчанию"/>
+    <Phrase Key="MultipleValues" Text="разные значения"/>
+    <Phrase Key="PickPicture" Text="Выбрать изображение"/>
+    <Phrase Key="Pictures" Text="Изображения"/>
+    <Phrase Key="AllFiles" Text="Все файлы"/>
+</Language>

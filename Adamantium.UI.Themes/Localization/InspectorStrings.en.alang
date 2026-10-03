@@ -1,0 +1,116 @@
+<Language>
+    <Phrase Key="Layer" Text="Layer"/>
+    <Phrase Key="Index" Text="Index"/>
+    <Phrase Key="StrokeItem" Text="Stroke"/>
+    <Phrase Key="Color" Text="Color"/>
+    <Phrase Key="Thickness" Text="Thickness"/>
+    <Phrase Key="Position" Text="Position"/>
+    <Phrase Key="Size" Text="Size"/>
+    <Phrase Key="Width" Text="Width"/>
+    <Phrase Key="Height" Text="Height"/>
+    <Phrase Key="Shape" Text="Shape"/>
+    <Phrase Key="Fill" Text="Fill"/>
+    <Phrase Key="Stroke" Text="Stroke"/>
+    <Phrase Key="Transform" Text="Transform"/>
+    <Phrase Key="Angle" Text="Angle"/>
+    <Phrase Key="SkewX" Text="Skew X"/>
+    <Phrase Key="SkewY" Text="Skew Y"/>
+    <Phrase Key="Corner" Text="Corner"/>
+    <Phrase Key="TopLeft" Text="Top left"/>
+    <Phrase Key="TopRight" Text="Top right"/>
+    <Phrase Key="BottomRight" Text="Bottom right"/>
+    <Phrase Key="BottomLeft" Text="Bottom left"/>
+    <Phrase Key="Polygon" Text="Polygon"/>
+    <Phrase Key="Sides" Text="Sides"/>
+    <Phrase Key="Head" Text="Head"/>
+    <Phrase Key="Start" Text="Start"/>
+    <Phrase Key="End" Text="End"/>
+    <Phrase Key="Length" Text="Length"/>
+    <Phrase Key="Text" Text="Text"/>
+    <Phrase Key="Frame" Text="Frame"/>
+    <Phrase Key="Title" Text="Title"/>
+    <Phrase Key="Outline" Text="Outline"/>
+    <Phrase Key="Wash" Text="Wash"/>
+    <Phrase Key="TitleBar" Text="Title bar"/>
+    <Phrase Key="Path" Text="Path"/>
+    <Phrase Key="Curve" Text="Curve"/>
+    <Phrase Key="CurveKind" Text="Kind"/>
+    <Phrase Key="Points" Text="Points"/>
+    <Phrase Key="Bezier" Text="Bezier"/>
+    <Phrase Key="Order" Text="Order"/>
+    <Phrase Key="Nurbs" Text="Nurbs"/>
+    <Phrase Key="Degree" Text="Degree"/>
+    <Phrase Key="Even" Text="Even"/>
+    <Phrase Key="Group" Text="Group"/>
+    <Phrase Key="Holds" Text="Holds"/>
+    <Phrase Key="Control" Text="Control"/>
+    <Phrase Key="Label" Text="Label"/>
+    <Phrase Key="Look" Text="Look"/>
+    <Phrase Key="Background" Text="Background"/>
+    <Phrase Key="Foreground" Text="Foreground"/>
+    <Phrase Key="Border" Text="Border"/>
+    <Phrase Key="Opacity" Text="Opacity"/>
+    <Phrase Key="Picture" Text="Picture"/>
+    <Phrase Key="Source" Text="Source"/>
+    <Phrase Key="PictureFill" Text="Fill"/>
+    <Phrase Key="Repeat" Text="Repeat"/>
+    <Phrase Key="Tile" Text="Tile"/>
+    <Phrase Key="ShowPicture" Text="Show picture"/>
+    <Phrase Key="Ground" Text="Ground"/>
+    <Phrase Key="Tint" Text="Tint"/>
+    <Phrase Key="Pixels" Text="Pixels"/>
+    <Phrase Key="Node" Text="Node"/>
+    <Phrase Key="Kind" Text="Kind"/>
+    <Phrase Key="Accent" Text="Accent"/>
+    <Phrase Key="Folded" Text="Folded"/>
+    <Phrase Key="In" Text="In"/>
+    <Phrase Key="Out" Text="Out"/>
+    <Phrase Key="Name" Text="Name"/>
+    <Phrase Key="Takes" Text="Takes"/>
+    <Phrase Key="Pen" Text="Pen"/>
+    <Phrase Key="Eraser" Text="Eraser"/>
+    <Phrase Key="Diameter" Text="Diameter"/>
+    <Phrase Key="Canvas" Text="Canvas"/>
+    <Phrase Key="Grid" Text="Grid"/>
+    <Phrase Key="Snap" Text="Snap"/>
+    <Phrase Key="Readout" Text="Readout"/>
+    <Phrase Key="Zoom" Text="Zoom"/>
+    <Phrase Key="Now" Text="Now"/>
+    <Phrase Key="Least" Text="Least"/>
+    <Phrase Key="Most" Text="Most"/>
+    <Phrase Key="Origin" Text="Origin"/>
+    <Phrase Key="Home" Text="Home"/>
+    <Phrase Key="Remember" Text="Remember"/>
+    <Phrase Key="Panels" Text="Panels"/>
+    <Phrase Key="Camera" Text="Camera"/>
+    <Phrase Key="Tool" Text="Tool"/>
+    <Phrase Key="Confirm" Text="Confirm"/>
+
+    <Phrase Key="AngleShapeHint" Text="Degrees clockwise, about the middle of the shape"/>
+    <Phrase Key="AngleControlHint" Text="Degrees clockwise, about the middle of the control"/>
+    <Phrase Key="HeadLengthHint" Text="How long the head is, measured in line thicknesses"/>
+    <Phrase Key="HeadWidthHint" Text="How wide the head is across its base, in line thicknesses"/>
+    <Phrase Key="WashHint" Text="Behind the nodes, so keep it faint - it must not change how they read"/>
+    <Phrase Key="TitleBarHint" Text="How tall the strip is - and that strip is what the frame is dragged by"/>
+    <Phrase Key="BezierOrderHint" Text="A Bezier through N+1 points is of degree N - add or remove a point to change it"/>
+    <Phrase Key="NurbsDegreeHint" Text="Zero lets the degree follow the number of points"/>
+    <Phrase Key="EvenHint" Text="Whether the knots are evenly spaced"/>
+    <Phrase Key="SourceHint" Text="The picture this shows"/>
+    <Phrase Key="PictureFillHint" Text="How the picture is fitted to the element"/>
+    <Phrase Key="RepeatHint" Text="Whether the picture repeats, and whether every other copy is mirrored"/>
+    <Phrase Key="ShowPictureHint" Text="Draw the picture, or leave only the ground behind it"/>
+    <Phrase Key="GroundHint" Text="When the background color is painted: only while there is no picture, under it as well, or never"/>
+    <Phrase Key="TintHint" Text="A color multiplied into the picture; white leaves it alone"/>
+    <Phrase Key="NodeKindHint" Text="What sort of node this is - what the application looks up to know what it does"/>
+    <Phrase Key="FoldedHint" Text="Fold the node down to its title strip; its sockets move to the edges"/>
+    <Phrase Key="SocketKindHint" Text="What flows through it - two sockets are joined when they agree, and one saying nothing takes anything"/>
+    <Phrase Key="TakesHint" Text="How many wires may sit here - zero means as many as come; a full socket loses its oldest"/>
+    <Phrase Key="PanelsHint" Text="Where the panels stand, how wide they were pulled, and which were folded away."/>
+    <Phrase Key="CameraHint" Text="Where the camera was looking."/>
+    <Phrase Key="ConfirmHint" Text="Ask before removing what is selected. Clearing the whole canvas always asks."/>
+
+    <Phrase Key="ActualSize" Text="Size it to the picture's own pixels"/>
+    <Phrase Key="RemoveSocket" Text="Remove this socket"/>
+    <Phrase Key="AddInput" Text="Add an input"/>
+    <Phrase Key="AddOutput" Text="Add an output"/>
+</Language>

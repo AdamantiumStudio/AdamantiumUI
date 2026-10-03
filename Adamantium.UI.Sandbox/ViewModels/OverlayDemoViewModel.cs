@@ -5,6 +5,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Drawings;
 using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -18,8 +19,7 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
     private static int _cascade;   // successive windows step down-right from the view model instead of stacking
     private int _renames;
 
-    [Bindable] private string title = "Overlay window";
-    [Bindable] private string message = "Drag the title bar (X/Y update live), or move it from the view model.";
+    [Bindable] private string title = NavigationStrings.OverlayWindow;
     [Bindable] private double left;
     [Bindable] private double top;
 
@@ -63,7 +63,7 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
     public event Action<object> RequestClose;
 
     // Changes the title at runtime; the hosting OverlayWindow's bar reflects it live (Title is INPC).
-    [Command] private void Rename() => Title = $"Renamed {++_renames}";
+    [Command] private void Rename() => Title = NavigationStrings.Renamed(++_renames);
 
     // Moves the window FROM the view model - the two-way Left/Top binding drives the window.
     [Command] private void MoveFromVm() { Left += 40; Top += 30; }

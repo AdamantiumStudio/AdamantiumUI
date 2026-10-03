@@ -5,6 +5,14 @@
     <!-- The inspector: name and value halves with a per-row grip sharing the grid's width. The control sets each row's
          first PART_Layout column. -->
 
+    <!-- A picture line's own "...": what it says, and what the dialog it opens asks. -->
+    <Style Selector="ImageSourceProperty">
+        <Setter Property="ActionTip" Value="{Localize PropertyGridStrings.PickPicture}"/>
+        <Setter Property="DialogTitle" Value="{Localize PropertyGridStrings.PickPicture}"/>
+        <Setter Property="PicturesName" Value="{Localize PropertyGridStrings.Pictures}"/>
+        <Setter Property="AllFilesName" Value="{Localize PropertyGridStrings.AllFiles}"/>
+    </Style>
+
     <Style Selector="PropertyGrid">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -12,6 +20,7 @@
         <!-- Shorter than a standalone field (ControlHeight): an inspector shows two dozen of these at once, and a form
              row is not a button. One number for every editor in it. -->
         <Setter Property="EditorHeight" Value="24"/>
+        <Setter Property="MixedText" Value="{Localize PropertyGridStrings.MultipleValues}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PropertyGrid">
@@ -25,7 +34,7 @@
                             <Grid Grid.Row="0" Margin="6 6 6 4">
                                 <TextBox x:Name="PART_Search"
                                          Height="26" Padding="6 0 24 0"
-                                         Placeholder="Search properties"
+                                         Placeholder="{Localize PropertyGridStrings.SearchProperties}"
                                          Visibility="Collapsed"/>
                                 <!-- The theme's DRAWN cross, not a character: the shipped face has no glyph for one,
                                      and a button with a missing glyph is a button with nothing on it. -->
@@ -34,7 +43,7 @@
                                         Width="18" Height="18" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 5 0"
                                         HorizontalAlignment="Right" VerticalAlignment="Center"
-                                        ToolTipService.ToolTip="Clear the search (Esc)">
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.ClearSearch}">
                                     <Image Source="{ResourceReference CloseIcon}" Width="8" Height="8"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
@@ -139,13 +148,13 @@
                                         Width="24" Height="24" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 2 0"
                                         FontSize="{ResourceReference FontSizeCaption}"
-                                        ToolTipService.ToolTip="More"/>
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.More}"/>
 
                                 <Button x:Name="PART_Reset"
                                         IsEnabled="False"
                                         Width="24" Height="24" MinWidth="0" MinHeight="0"
                                         Padding="0" Margin="0 0 6 0"
-                                        ToolTipService.ToolTip="Reset to the default">
+                                        ToolTipService.ToolTip="{Localize PropertyGridStrings.ResetToDefault}">
                                     <Image Source="{ResourceReference RevertIcon}" Width="10" Height="10"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>

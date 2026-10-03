@@ -1,0 +1,6 @@
+<Language>
+    <Phrase Key="Title" Text="ZoomBox — wheel: zoom to cursor · drag: pan · scrollbars auto"/>
+    <Phrase Key="Hint" Text="The sliders are two-way bound to ScaleX / ScaleY by ElementName (element-to-element binding). Wheel-zoom moves both."/>
+    <Phrase Key="ScaleX" Text="Scale X"/>
+    <Phrase Key="ScaleY" Text="Scale Y"/>
+</Language>

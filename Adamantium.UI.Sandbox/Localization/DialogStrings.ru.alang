@@ -1,0 +1,9 @@
+<Language>
+    <Phrase Key="Confirm" Text="Подтверждение"/>
+    <Phrase Key="AreYouSure" Text="Вы уверены?"/>
+    <Phrase Key="Ok" Text="ОК"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="About" Text="О программе"/>
+    <Phrase Key="Version" Text="Версия:"/>
+    <Phrase Key="Manufacturer" Text="Производитель:"/>
+</Language>

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using Adamantium.UI.Core.Diagnostics;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -91,6 +92,16 @@ public class BindingExpression : BindingExpressionBase
          }
       }
 
+      // ...then what the object has through an interface: a member an interface implements by default belongs to the
+      // object as much as one its class declares, and reading it through the interface reaches whichever answers.
+      foreach (var contract in type.GetInterfaces())
+      {
+         if (contract.GetProperty(name) is { } property && property.GetIndexParameters().Length == 0)
+         {
+            return property;
+         }
+      }
+
       return null;
    }
 
@@ -106,7 +117,8 @@ public class BindingExpression : BindingExpressionBase
          var prop = FindProperty(key.Item1, key.Item2);
          if (prop is not { CanRead: true }) return (prop, null);
          var o = Expression.Parameter(typeof(object), "o");
-         var body = Expression.Convert(Expression.Property(Expression.Convert(o, key.Item1), prop), typeof(object));
+         var owner = prop.DeclaringType is { IsInterface: true } contract ? contract : key.Item1;
+         var body = Expression.Convert(Expression.Property(Expression.Convert(o, owner), prop), typeof(object));
          return (prop, Expression.Lambda<Func<object, object>>(body, o).Compile());
       });
 
@@ -128,8 +140,9 @@ public class BindingExpression : BindingExpressionBase
 
       if (FindProperty(owner, member) is { } prop)
       {
+         var from = prop.DeclaringType is { IsInterface: true } contract ? Expression.Convert(o, contract) : self;
          var read = prop.CanRead
-            ? Expression.Lambda<Func<object, object>>(Expression.Convert(Expression.Property(self, prop), typeof(object)), o).Compile()
+            ? Expression.Lambda<Func<object, object>>(Expression.Convert(Expression.Property(from, prop), typeof(object)), o).Compile()
             : null;
 
          return new Hop(prop.PropertyType, prop.CanWrite, read, prop.SetValue);
@@ -154,6 +167,10 @@ public class BindingExpression : BindingExpressionBase
 
    private bool IsProducer => TargetProperty == null;
 
+   private bool FollowsCulture =>
+      !string.IsNullOrEmpty(BindingBase.StringFormat) || Binding.Converter != null || BindingBase.Culture != null ||
+      TargetProperty.PropertyType == typeof(string);
+
    public BindingExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty, BindingBase bindingBase)
    {
       Target = target;
@@ -175,14 +192,11 @@ public class BindingExpression : BindingExpressionBase
    {
    }
 
-   // Factory + dispatch: a MultiBinding becomes a MultiBindingExpression, anything else a plain BindingExpression.
-   // This is the single place that turns a BindingBase into a live, connected expression.
+   // The single place that turns a BindingBase into a live, connected expression; each kind of binding makes its own.
    public static BindingExpressionBase CreateBindingExpression(IAdamantiumComponent target,
       AdamantiumProperty targetProperty, BindingBase bindingBase)
    {
-      BindingExpressionBase expression = bindingBase is MultiBinding
-         ? new MultiBindingExpression(target, targetProperty, bindingBase)
-         : new BindingExpression(target, targetProperty, bindingBase);
+      var expression = bindingBase.CreateExpression(target, targetProperty);
       expression.EstablishConnection();
       return expression;
    }
@@ -193,6 +207,11 @@ public class BindingExpression : BindingExpressionBase
 
    public override void EstablishConnection()
    {
+      if (!IsProducer && FollowsCulture)
+      {
+         Languages.Follow(this);
+      }
+
       // Re-resolve against the (possibly new) DataContext BEFORE touching subscriptions.
       var previousObserved = _observed;
       UnwatchPassed();
@@ -246,6 +265,7 @@ public class BindingExpression : BindingExpressionBase
 
    public override void CloseConnection()
    {
+      Languages.Unfollow(this);
       UnwatchPassed();
       _passed?.Clear();
       StopAwaitingAttach();
@@ -673,7 +693,7 @@ public class BindingExpression : BindingExpressionBase
       if (targetType != typeof(string) || string.IsNullOrEmpty(BindingBase.StringFormat)) return value;
       if (value == null || ReferenceEquals(value, AdamantiumProperty.UnsetValue)) return value;
 
-      return string.Format(CultureInfo.CurrentCulture, BindingBase.StringFormat, value);
+      return string.Format(FormatCulture, BindingBase.StringFormat, value);
    }
 
    private object ReadValue(Type targetType)
@@ -706,20 +726,21 @@ public class BindingExpression : BindingExpressionBase
    // Converted-value cache weakly keyed by source object: one instance per item across rebinds, re-converted when the
    // raw input changes. Value-type sources convert directly.
    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object,
-      Dictionary<(IValueConverter, Type, string), (object Raw, object Converted)>> _convertCache = new();
+      Dictionary<(IValueConverter, Type, string, CultureInfo), (object Raw, object Converted)>> _convertCache = new();
 
    private object ConvertCached(object raw, Type targetType)
    {
+      var culture = FormatCulture;
       var source = ResolvedSource;
       if (source == null || source.GetType().IsValueType)
-         return Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, CultureInfo.CurrentCulture);
+         return Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, culture);
 
       var cache = _convertCache.GetOrCreateValue(source);
-      var key = (Binding.Converter, targetType, SourcePropertyName);
+      var key = (Binding.Converter, targetType, SourcePropertyName, culture);
       if (cache.TryGetValue(key, out var entry) && Equals(entry.Raw, raw))
          return entry.Converted;
 
-      var converted = Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, CultureInfo.CurrentCulture);
+      var converted = Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, culture);
       cache[key] = (raw, converted);
       return converted;
    }
@@ -737,7 +758,7 @@ public class BindingExpression : BindingExpressionBase
       if (value == null && !CanHoldNothing(TargetProperty.PropertyType)) return;
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
-      if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced)) return;
+      if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced, FormatCulture)) return;
       Target.SetValue(TargetProperty, coerced, Priority);
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
@@ -817,8 +838,7 @@ public class BindingExpression : BindingExpressionBase
       var targetValue = Target.GetValue(TargetProperty);
       var value = targetValue;
       if (Binding.Converter != null)
-         value = Binding.Converter.ConvertBack(value, sourceType, Binding.ConverterParameter,
-            CultureInfo.CurrentCulture);
+         value = Binding.Converter.ConvertBack(value, sourceType, Binding.ConverterParameter, FormatCulture);
 
       // "No value" cannot be written into a source that has no way to hold it: a NumericUpDown that was cleared has a
       // null Value, and a view-model exposing a plain double would take it as a reflection error mid-keystroke. Leave
@@ -829,7 +849,7 @@ public class BindingExpression : BindingExpressionBase
       }
 
       // Guard the ECHO (see _writingSource): our synchronous source write must not schedule a source->target push back.
-      var written = Coerce(value, sourceType);
+      var written = TryCoerce(value, sourceType, out var fitted, FormatCulture) ? fitted : value;
 
       _sourceSpoke = false;
       _writingSource = true;

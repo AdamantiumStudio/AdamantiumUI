@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Title" Text="Opacity — every family must fade by the same amount"/>
+    <Phrase Key="Intro" Text="The top strip is inside a container the slider fades; the bottom one is the same strip at full opacity. Compare each swatch with the one below it: they must part in step. A swatch that lags behind reads its alpha differently from its neighbors."/>
+    <Phrase Key="ContainerOpacity" Text="Container opacity"/>
+    <Phrase Key="ElementOpacity" Text="Element opacity"/>
+    <Phrase Key="ElementHint" Text="(every swatch in the faded strip, so the PRODUCT is what you compare)"/>
+
+    <Phrase Key="Rect" Text="rect"/>
+    <Phrase Key="Ellipse" Text="ellipse"/>
+    <Phrase Key="Polygon" Text="polygon"/>
+    <Phrase Key="Mesh" Text="mesh"/>
+    <Phrase Key="Text" Text="text"/>
+    <Phrase Key="Gradient" Text="gradient"/>
+    <Phrase Key="Pattern" Text="pattern"/>
+    <Phrase Key="Texture" Text="texture"/>
+    <Phrase Key="Fractal" Text="fractal"/>
+    <Phrase Key="Material" Text="material"/>
+    <Phrase Key="Aura" Text="aura"/>
+    <Phrase Key="Shadow" Text="shadow"/>
+    <Phrase Key="Stroke" Text="stroke"/>
+
+    <Phrase Key="SubtreeTitle" Text="Opacity (whole subtree) vs SelfOpacity (this element only)"/>
+    <Phrase Key="Baseline" Text="baseline"/>
+</Language>

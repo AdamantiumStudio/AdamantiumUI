@@ -30,7 +30,7 @@ public class CurveTool : ICanvasTool
 
     public Key Shortcut { get; set; } = Key.B;
 
-    public string Description { get; set; } = "click to place points, double click to finish";
+    public string Description { get; set; } = "CurveDescription";
 
     public Cursor Cursor { get; set; } = Cursors.Crosshair;
 

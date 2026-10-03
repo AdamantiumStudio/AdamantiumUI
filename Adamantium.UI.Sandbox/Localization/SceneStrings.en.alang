@@ -1,0 +1,37 @@
+<Language>
+    <Phrase Key="MenuButton" Select="visible" True="Hide menu" False="Show menu"/>
+    <Phrase Key="CameraSpeed" Text="Camera speed"/>
+    <Phrase Key="ResetCamera" Text="Reset camera"/>
+    <Phrase Key="Tool" Text="Tool"/>
+    <Phrase Key="Select" Text="Select"/>
+    <Phrase Key="Move" Text="Move"/>
+    <Phrase Key="Rotate" Text="Rotate"/>
+    <Phrase Key="Scale" Text="Scale"/>
+    <Phrase Key="Pivot" Text="Pivot"/>
+
+    <Phrase Key="Lights" Text="Lights"/>
+    <Phrase Key="AddPoint" Text="Add point light"/>
+    <Phrase Key="AddSpot" Text="Add spot light"/>
+    <Phrase Key="AddDirectional" Text="Add directional"/>
+    <Phrase Key="LightName" Select="type" Ambient="Ambient light" Directional="Directional light" Point="Point light"
+            Spot="Spot light"/>
+    <Phrase Key="Color" Text="Color"/>
+    <Phrase Key="Intensity" Text="Intensity"/>
+    <Phrase Key="Range" Text="Range"/>
+    <Phrase Key="ConeAngle" Text="Cone angle"/>
+    <Phrase Key="DeleteLight" Text="Delete light"/>
+
+    <Phrase Key="FrameCost" Text="{ms:F2} ms/frame"/>
+
+    <Phrase Key="MoveKeys" Text="WASD — move, mouse — look around"/>
+    <Phrase Key="UpDownKeys" Text="Q / E — up / down"/>
+    <Phrase Key="SpeedKeys" Text="Numpad + / − — double or halve the speed"/>
+    <Phrase Key="CameraKeys" Text="F1 — free camera, F3 / F4 / F5 — follow the model"/>
+
+    <Phrase Key="Menu" Text="MENU"/>
+    <Phrase Key="Continue" Text="Continue"/>
+    <Phrase Key="LoadF15" Text="Load F-15"/>
+    <Phrase Key="LoadMonkey" Text="Load Monkey"/>
+    <Phrase Key="Status" Select="status" Ready="Universe ready" NotReady="Universe not ready yet" Loading="Loading {model}…"
+            Loaded="{model}" Failed="{model}: failed to load — {error}"/>
+</Language>

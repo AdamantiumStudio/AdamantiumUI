@@ -1,0 +1,8 @@
+<Language>
+    <Phrase Key="Width" Text="Width:"/>
+    <Phrase Key="Height" Text="Height:"/>
+    <Phrase Key="Ellipses" Text="Ellipses"/>
+    <Phrase Key="BindMs" Text="Bind ms:"/>
+    <Phrase Key="Opacity" Text="Opacity:"/>
+    <Phrase Key="PageTiles" Text="Page the tiles instead of virtualizing them"/>
+</Language>

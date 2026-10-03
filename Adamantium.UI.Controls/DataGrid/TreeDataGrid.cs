@@ -691,10 +691,10 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>What the blank row says while it is empty. A row that looks like a gap at the end of the table is a row
-    /// nobody presses.</summary>
+    /// nobody presses. The theme says it in the application's language.</summary>
     public static readonly AdamantiumProperty NewRowHintProperty = AdamantiumProperty.Register(
         nameof(NewRowHint), typeof(string), typeof(TreeDataGrid),
-        new PropertyMetadata("Add a record", PropertyMetadataOptions.AffectsRender, OnNewRowHintChanged));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnNewRowHintChanged));
 
     public string NewRowHint
     {

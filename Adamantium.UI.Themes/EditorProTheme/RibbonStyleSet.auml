@@ -96,7 +96,7 @@
                                 <ToggleButton x:Name="PART_MinimizeButton" Grid.Column="2"
                                         Classes="RibbonMinimizeButton"
                                         IsChecked="{TemplateBinding IsMinimized}"
-                                        ToolTip="Collapse the ribbon"/>
+                                        ToolTip="{Localize RibbonStrings.CollapseRibbon}"/>
                             </Grid>
 
                             <!-- Hosts the selected tab itself; minimizing moves this presenter into the flyout, keeping
@@ -934,7 +934,7 @@
                                                 Background="{ResourceReference SolidBackgroundFillColorTertiary}">
                                             <Button x:Name="PART_BackButton" Grid.Row="0"
                                                     Classes="RibbonBackstageBack"
-                                                    ToolTip="Back"/>
+                                                    ToolTip="{Localize RibbonStrings.Back}"/>
 
                                             <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Row="1"/>
 
@@ -1221,12 +1221,12 @@
     <Style Selector="RibbonQuickAccessMenuItem" BasedOn="MenuItem"/>
 
     <Style Selector="RibbonQuickAccessMenuItem">
-        <Setter Property="Header" Value="Add to quick access"/>
+        <Setter Property="Header" Value="{Localize RibbonStrings.AddToQuickAccess}"/>
     </Style>
 
     <Style Selector="RibbonQuickAccessMenuItem">
         <PropertyTrigger Property="IsInQuickAccess" Value="true">
-            <Setter Property="Header" Value="Remove from quick access"/>
+            <Setter Property="Header" Value="{Localize RibbonStrings.RemoveFromQuickAccess}"/>
         </PropertyTrigger>
     </Style>
 
@@ -1526,7 +1526,7 @@
                         <Button x:Name="PART_OverflowButton" Grid.Column="1"
                                 Classes="QuickAccessButton"
                                 Visibility="Collapsed"
-                                ToolTip="More commands">
+                                ToolTip="{Localize RibbonStrings.MoreCommands}">
                             <!-- The same chevron a drop-down command draws. -->
                             <Path Data="M0,0 L4,4 L8,0"
                                     Stroke="{Ancestor RibbonQuickAccess, Foreground}"

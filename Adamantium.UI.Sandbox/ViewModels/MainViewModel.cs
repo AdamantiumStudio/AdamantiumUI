@@ -5,6 +5,8 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Sandbox.Localization;
 using Adamantium.Win32;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -32,8 +34,8 @@ public partial class MainViewModel
     private async Task ShowConfirm()
     {
         var result = await _dialogs.ShowDialogAsync<ConfirmDialogViewModel>(
-            new NavigationParameters().Add("message", "Apply changes to the current scene?"), DialogHost);
-        LastCommand = $"Dialog: {result.Result}";
+            new NavigationParameters().Add("message", MainStrings.ApplyChanges), DialogHost);
+        LastResult = result.Result;
     }
 
     // The real Help/About: product/version/manufacturer read from the assembly metadata.
@@ -85,8 +87,69 @@ public partial class MainViewModel
     [Bindable] private Adamantium.Graphics.Core.Presentation.PresentPolicy _presentPolicy =
         Adamantium.Graphics.Core.Presentation.PresentPolicy.Inherit;
 
-    // Last dialog result - shown in the window content (written by ShowConfirm).
-    [Bindable] private string _lastCommand = "(none)";
+    /// <summary>Every theme the application has registered, by name - what the theme chooser lists.
+    /// <para>Read from the manager each time rather than captured: themes are registered while the application comes
+    /// up, and a list captured in the constructor would be the empty one.</para></summary>
+    public IReadOnlyList<string> AvailableThemes
+    {
+        get
+        {
+            var themes = UIAppContext.Current?.ThemeManager?.Themes;
+            if (themes == null) return [];
+
+            var names = new List<string>(themes.Count);
+            foreach (var theme in themes) names.Add(theme.Name);
+            return names;
+        }
+    }
+
+    /// <summary>Which theme the chooser shows. Defaults to the one the application is ON, resolved on FIRST READ rather
+    /// than in the constructor: a view-model is built while the application is still coming up, when the theme manager
+    /// has no themes yet, so a value taken there would be null for good and the chooser would open on nothing.</summary>
+    public string SelectedThemeName
+    {
+        get => _selectedThemeName ??= UIAppContext.Current?.ThemeManager?.CurrentTheme?.Name;
+        set
+        {
+            if (_selectedThemeName == value) return;
+            _selectedThemeName = value;
+            RaisePropertyChanged(nameof(SelectedThemeName));
+        }
+    }
+
+    private string _selectedThemeName;
+
+    /// <summary>Move the whole application onto the chosen theme. A SWAP, not a variant switch: different style sets and
+    /// different metrics, so every template is rebuilt - unlike the Dark / Light button beside it, whose cost is a color
+    /// write per palette key.</summary>
+    [Command]
+    private void SwitchTheme()
+    {
+        var manager = UIAppContext.Current?.ThemeManager;
+        if (manager == null || string.IsNullOrEmpty(SelectedThemeName)) return;
+
+        var theme = manager[SelectedThemeName];
+        if (theme != null && !ReferenceEquals(theme, manager.CurrentTheme)) manager.SetTheme(theme);
+    }
+
+    /// <summary>The languages the application's strings are written in - what the language chooser lists.</summary>
+    public IReadOnlyList<string> AvailableLanguages => Languages.Available;
+
+    /// <summary>The application's language. Every string of the framework, and every number and date a binding writes,
+    /// follow it while the application runs.</summary>
+    public string Language
+    {
+        get => Languages.Current;
+        set
+        {
+            if (string.IsNullOrEmpty(value) || value == Languages.Current) return;
+            Languages.Current = value;
+            RaisePropertyChanged(nameof(Language));
+        }
+    }
+
+    // Last dialog result - shown in the window content (written by ShowConfirm); none before the first.
+    [Bindable] private DialogButtonResult? _lastResult;
 
     // Window resize mode (bound two-way to Window.ResizeMode) + a toggle between full edge resize and grip-only resize
     // (the borderless ResizeGripper in the bottom-right corner).
@@ -104,17 +167,17 @@ public partial class MainViewModel
     private List<WindowCommand> _rightWindowCommands;
     public IEnumerable RightWindowCommands => _rightWindowCommands ??= new()
     {
-        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M1,5 L13,5",     Label = "Workspace", ToolTip = "Open workspace window", Command = OpenWorkspaceCommand },
-        new WindowCommand { IconData = "M1,1 L13,1 L13,13 L1,13 Z M1,4 L13,4 M4,4 L4,1 M3,7 L6,7 M3,10 L6,10 M8,6 L12,6 L12,11 L8,11 Z", Label = "Ribbon", ToolTip = "Open the ribbon window", Command = OpenRibbonCommand },
-        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M4,6 L10,6 M4,9 L8,9", Label = "Dialog", ToolTip = "Show a confirm dialog", Command = ShowConfirmCommand },
-        new WindowCommand { IconData = "M7,0 L14,7 L7,14 L0,7 Z",                  Label = "Help", ToolTip = "About Adamantium Sandbox", Command = ShowAboutCommand },
+        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M1,5 L13,5",     Label = MainStrings.Workspace, ToolTip = MainStrings.OpenWorkspace, Command = OpenWorkspaceCommand },
+        new WindowCommand { IconData = "M1,1 L13,1 L13,13 L1,13 Z M1,4 L13,4 M4,4 L4,1 M3,7 L6,7 M3,10 L6,10 M8,6 L12,6 L12,11 L8,11 Z", Label = MainStrings.Ribbon, ToolTip = MainStrings.OpenRibbon, Command = OpenRibbonCommand },
+        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M4,6 L10,6 M4,9 L8,9", Label = MainStrings.Dialog, ToolTip = MainStrings.ShowConfirm, Command = ShowConfirmCommand },
+        new WindowCommand { IconData = "M7,0 L14,7 L7,14 L0,7 Z",                  Label = MainStrings.Help, ToolTip = MainStrings.AboutSandbox, Command = ShowAboutCommand },
     };
 
     private List<WindowCommand> _leftWindowCommands;
     public IEnumerable LeftWindowCommands => _leftWindowCommands ??= new()
     {
-        new WindowCommand { IconData = "M1,13 L1,7 M6,13 L6,2 M11,13 L11,9",       Label = "Diagnostics", ToolTip = "Toggle diagnostics panel", Command = ToggleDiagnosticsPanelCommand },
+        new WindowCommand { IconData = "M1,13 L1,7 M6,13 L6,2 M11,13 L11,9",       Label = MainStrings.Diagnostics, ToolTip = MainStrings.ToggleDiagnostics, Command = ToggleDiagnosticsPanelCommand },
         // Grip-only resize toggle - a diagonal resize double-arrow.
-        new WindowCommand { IconData = "M2,2 L12,12 M12,12 L12,8 M12,12 L8,12 M2,2 L2,6 M2,2 L6,2", Label = "Resize mode", ToolTip = "Toggle grip-only resize", Command = ToggleGripResizeCommand },
+        new WindowCommand { IconData = "M2,2 L12,12 M12,12 L12,8 M12,12 L8,12 M2,2 L2,6 M2,2 L6,2", Label = MainStrings.ResizeMode, ToolTip = MainStrings.ToggleGripResize, Command = ToggleGripResizeCommand },
     };
 }

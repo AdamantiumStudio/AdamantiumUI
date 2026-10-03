@@ -206,7 +206,7 @@ public class DataGridColumnHeader : ContentControl
         // Shown only from the SECOND key: a table sorted by one column has nothing to number, and a lone "1" beside an
         // arrow is a question rather than an answer.
         SortLevel = owner is { SortDescriptions.Count: > 1 } ? sortLevel : 0;
-        SortLevelText = SortLevel > 0 ? SortLevel.ToString(System.Globalization.CultureInfo.CurrentCulture) : string.Empty;
+        SortLevelText = SortLevel > 0 ? SortLevel.ToString(Core.Localization.Languages.Culture) : string.Empty;
         // BOTH have to agree, and the table can only take the funnel away: a column that refused one does not get it
         // back because the table allows them in general.
         CanFilter = (column?.CanUserFilter ?? false) && (owner?.CanUserFilterColumns ?? true);

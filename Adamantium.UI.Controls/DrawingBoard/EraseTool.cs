@@ -25,10 +25,10 @@ public class EraseTool : ICanvasTool
         Mode = mode;
 
         var whole = mode == CanvasEraseMode.Stroke;
-        Name = whole ? "Erase stroke" : "Erase";
+        Name = whole ? "EraseStroke" : "Erase";
         Icon = whole ? "ToolEraseStrokeIcon" : "ToolEraseIcon";
         Shortcut = whole ? Key.D : Key.E;
-        Description = whole ? "takes the whole stroke it touches" : "rubs a hole where it is dragged";
+        Description = whole ? "EraseStrokeDescription" : "EraseDescription";
     }
 
     /// <summary>How a rail shows this tool. Taken from the MODE by default - one class serves both erasers - and

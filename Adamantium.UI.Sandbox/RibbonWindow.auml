@@ -2,7 +2,7 @@
         xmlns="http://adamantium/ui"
         xmlns:x="http://adamantium/ui/xaml/extensions"
         x:CreateInDesignTime="False"
-        Title="Ribbon"
+        Title="{Localize MainStrings.Ribbon}"
         PresentPolicy="{Binding PresentPolicy, Mode=TwoWay}"
         TitleBarHeight="38"
         Width="1180"
@@ -62,7 +62,7 @@
             IsHitTestVisible="False"
             Background="#CC202020">
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Presentation" Margin="0,0,0,4"
+            <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
             <DropDown ItemsSource="{Binding PresentPolicies}"
                       SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"

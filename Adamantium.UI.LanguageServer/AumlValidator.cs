@@ -6,8 +6,9 @@ using Adamantium.UI.Markup.Parsers;
 
 namespace Adamantium.UI.LanguageServer;
 
-/// <summary>A diagnostic span (0-based line/character) and message for an AUML problem.</summary>
-public sealed record AumlDiagnostic(int Line, int Character, int Length, string Message);
+/// <summary>A diagnostic span (0-based line/character) and message for an AUML problem; <paramref name="Code"/> is the
+/// build's id when the build reports it too.</summary>
+public sealed record AumlDiagnostic(int Line, int Character, int Length, string Message, bool IsWarning = false, string Code = null);
 
 /// <summary>Validates element, attribute and enum names in a well-formed AUML document against the project's types,
 /// including property-element values. Flags only what definitely does not exist.</summary>

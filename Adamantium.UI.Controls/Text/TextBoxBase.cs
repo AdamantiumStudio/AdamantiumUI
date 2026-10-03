@@ -319,10 +319,9 @@ public abstract class TextBoxBase : Control
         // field's tails overflow _lineHeight and the control's clip cuts them. Reserve the TRUE bottom of the last line's
         // ink - its baseline (Baseline*scale) plus the descent below it - never less than the line advance.
         _glyphLineHeight = Math.Max(_lineHeight, (iFont.Baseline + Math.Abs(iFont.Descender)) * lgScale);
-        // The two SHARED reference lines CalculateGlyphPosition anchors every glyph to - the baseline (Baseline*scale
-        // below the line top, NOT the ascent: this font's Baseline is ~the full line box) and the ascender line above
-        // it. Each is rounded to a whole pixel there so same-height glyphs share exact rows, and anything drawn ON the
-        // text has to sit on those same rounded rows or it can never line up with it.
+        // The caret band: the baseline (Baseline*scale below the line top, NOT the ascent: this font's Baseline is ~the
+        // full line box), rounded to a whole pixel as CalculateGlyphPosition rounds it, up to the rounded ascender line -
+        // the same for every string, so the caret keeps its height whatever is typed.
         _baselineInLine = iFont.Baseline * lgScale;
         _ascenderRise = iFont.Ascender * lgScale;
 

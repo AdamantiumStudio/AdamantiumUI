@@ -20,7 +20,7 @@
              accent-painted bar), inactive = neutral primary text. Both overridable on the window. -->
         <Setter Property="TitleBarForeground" Value="{ThemeResource AccentForegroundColor}"/>
         <Setter Property="InactiveTitleBarForeground" Value="{ObservableResource TextFillColorPrimary}"/>
-        <Setter Property="LoadingIndicatorText" Value="Switching theme…"/>
+        <Setter Property="LoadingIndicatorText" Value="{Localize WindowStrings.SwitchingTheme}"/>
     </Style>
 
     <Style Selector="Window">

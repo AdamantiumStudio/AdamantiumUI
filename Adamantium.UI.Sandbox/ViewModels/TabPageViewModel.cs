@@ -7,6 +7,6 @@ public abstract class TabPageViewModel
 {
     protected TabPageViewModel(string header) => Header = header;
 
-    /// <summary>Label shown in the tab strip.</summary>
+    /// <summary>Which page this is, for the tab strip: the key of its title among the gallery's phrases.</summary>
     public string Header { get; }
 }

@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Title" Text="Context menu — built from the view-model"/>
+    <Phrase Key="Hint" Text="Right-click the surface. The nested submenus (▸) and separators all come from MenusViewModel via a HierarchicalDataTemplate — nothing is hardcoded in the view."/>
+    <Phrase Key="RightClickMe" Text="Right-click me  —  nested submenus (▸) + separators, all from the VM"/>
+    <Phrase Key="LastAction" Text="Last action:"/>
+    <Phrase Key="Report" Select="pick" Nothing="— nothing yet (right-click a surface and pick an item)" Item="Picked: {item}"
+            ItemFrom="Picked: {from} · {item}"/>
+
+    <Phrase Key="Cut" Text="Cut"/>
+    <Phrase Key="Copy" Text="Copy"/>
+    <Phrase Key="Paste" Text="Paste"/>
+    <Phrase Key="Zoom" Text="Zoom"/>
+    <Phrase Key="ResetZoom" Text="Reset to 100%"/>
+    <Phrase Key="FitToWindow" Text="Fit to window"/>
+    <Phrase Key="Presets" Text="Presets"/>
+    <Phrase Key="Arrange" Text="Arrange"/>
+    <Phrase Key="BringToFront" Text="Bring to front"/>
+    <Phrase Key="SendToBack" Text="Send to back"/>
+    <Phrase Key="RecentFiles" Text="Recent files"/>
+    <Phrase Key="Open" Text="Open"/>
+    <Phrase Key="Reveal" Text="Reveal in Explorer"/>
+    <Phrase Key="RemoveFromList" Text="Remove from list"/>
+    <Phrase Key="Properties" Text="Properties…"/>
+</Language>

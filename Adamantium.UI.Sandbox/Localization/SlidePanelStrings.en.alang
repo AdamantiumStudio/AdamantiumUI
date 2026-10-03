@@ -1,0 +1,21 @@
+<Language>
+    <Phrase Key="Title" Text="SlidePanel - slides in from a window edge, over all content."/>
+    <Phrase Key="Hint" Text="Cross axis always fills the window; the thickness is content/explicit (FullWindow covers all)."/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="FullWindow" Text="Full-window"/>
+
+    <Phrase Key="LeftPanel" Text="Left panel"/>
+    <Phrase Key="LeftDocked" Text="Docked to the LEFT edge, full window height."/>
+    <Phrase Key="HowToClose" Text="Toggle the switch or press x to close."/>
+    <Phrase Key="RightPanel" Text="Right panel"/>
+    <Phrase Key="RightDocked" Text="Right edge, full window height."/>
+    <Phrase Key="TopPanel" Text="Top panel"/>
+    <Phrase Key="TopDocked" Text="Top edge, full window width."/>
+    <Phrase Key="BottomPanel" Text="Bottom panel"/>
+    <Phrase Key="BottomDocked" Text="Bottom edge, full window width."/>
+    <Phrase Key="FullPanel" Text="Full-window panel"/>
+    <Phrase Key="FullCovers" Text="This one covers the WHOLE window (FullWindow=True), sliding in from the left."/>
+</Language>

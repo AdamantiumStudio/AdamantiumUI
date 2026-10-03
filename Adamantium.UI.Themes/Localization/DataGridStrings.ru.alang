@@ -1,0 +1,42 @@
+<Language>
+    <Phrase Key="ChooseColumns" Text="Выбрать столбцы"/>
+    <Phrase Key="Filter" Text="Фильтр"/>
+    <Phrase Key="SelectAll" Text="Выбрать все"/>
+    <Phrase Key="ShowRowsWhere" Text="Показать строки, значение которых"/>
+    <Phrase Key="MatchCase" Text="С учётом регистра"/>
+    <Phrase Key="ApplyFilter" Text="Применить"/>
+    <Phrase Key="ClearFilter" Text="Сбросить фильтр"/>
+    <Phrase Key="PreviousMatch" Text="Предыдущее совпадение"/>
+    <Phrase Key="NextMatch" Text="Следующее совпадение"/>
+    <Phrase Key="Find" Text="Найти"/>
+    <Phrase Key="CloseSearch" Text="Закрыть поиск"/>
+    <Phrase Key="GroupByHint" Text="Перетащите сюда заголовок столбца, чтобы сгруппировать по нему"/>
+    <Phrase Key="ExpandAll" Text="Развернуть все"/>
+    <Phrase Key="CollapseAll" Text="Свернуть все"/>
+    <Phrase Key="ChangeNesting" Text="Перетащите, чтобы изменить вложенность"/>
+    <Phrase Key="RemoveFromGrouping" Text="Убрать из группировки"/>
+    <Phrase Key="SortByHint" Text="Перетащите сюда заголовок столбца, чтобы сортировать по нему; следующий различит равные"/>
+    <Phrase Key="ClearSorting" Text="Сбросить сортировку"/>
+    <Phrase Key="SortKeyHint" Text="Нажмите, чтобы обратить порядок; перетащите, чтобы изменить старшинство ключа"/>
+    <Phrase Key="RemoveFromSorting" Text="Убрать из сортировки"/>
+    <Phrase Key="AddRecord" Text="Добавить запись"/>
+    <Phrase Key="Searching" Text="поиск…"/>
+    <Phrase Key="NoMatches" Text="нет совпадений"/>
+    <Phrase Key="MatchOf" Text="{current} из {total}"/>
+    <Phrase Key="MatchOfSoFar" Text="{current} из {total}…"/>
+    <Phrase Key="IsEqualTo" Text="Равно"/>
+    <Phrase Key="IsNotEqualTo" Text="Не равно"/>
+    <Phrase Key="Contains" Text="Содержит"/>
+    <Phrase Key="DoesNotContain" Text="Не содержит"/>
+    <Phrase Key="StartsWith" Text="Начинается с"/>
+    <Phrase Key="EndsWith" Text="Заканчивается на"/>
+    <Phrase Key="IsGreaterThan" Text="Больше"/>
+    <Phrase Key="IsLessThan" Text="Меньше"/>
+    <Phrase Key="IsEmpty" Text="Пусто"/>
+    <Phrase Key="IsNotEmpty" Text="Не пусто"/>
+    <Phrase Key="And" Text="И"/>
+    <Phrase Key="Or" Text="Или"/>
+    <Phrase Key="GroupNamed" Text="{name}: {value}  ({count})"/>
+    <Phrase Key="Group" Text="{value}  ({count})"/>
+    <Phrase Key="Blank" Text="(пусто)"/>
+</Language>

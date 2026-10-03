@@ -1,0 +1,14 @@
+<Language>
+    <Phrase Key="FontSize" Text="Font size:"/>
+    <Phrase Key="Trimmed" Text="Trimmed to one line:"/>
+    <Phrase Key="FloatingWatermark" Text="Floating watermark"/>
+    <Phrase Key="Editable" Text="Editable (two-way to the same Message):"/>
+    <Phrase Key="Message" Text="Message"/>
+    <Phrase Key="FloatingTitle" Text="Floating placeholder (empty - focus or type):"/>
+    <Phrase Key="YourName" Text="Your name"/>
+    <Phrase Key="ReadOnly" Text="Read-only:"/>
+    <Phrase Key="MultiLine" Text="Multi-line (AcceptsReturn, no wrap → H + V scroll):"/>
+    <Phrase Key="BindableRuns" Text="Bindable runs:"/>
+    <Phrase Key="YouTyped" Text="You typed: "/>
+    <Phrase Key="Chars" Count="count" One="  ({count} char)" Other="  ({count} chars)"/>
+</Language>

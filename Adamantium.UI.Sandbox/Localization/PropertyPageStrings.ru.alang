@@ -1,0 +1,30 @@
+<Language>
+    <Phrase Key="Intro" Text="Два инспектора над двумя РАЗНЫМИ объектами — левый расписан в разметке, правый сгенерирован по типу. Каждая изменяемая строка живая: печатайте, выбирайте, отмечайте или тяните число вбок. Потяните ручку любой строки — и все остальные последуют."/>
+    <Phrase Key="LeftCaption" Select="both" True="Написан вручную — теперь над ОБОИМИ объектами"
+            False="Написан вручную — над Player, разделы и свойства объявлены в разметке"/>
+    <Phrase Key="RightCaption" Select="both" True="Сгенерирован — теперь над ОБОИМИ объектами"
+            False="Сгенерирован — над Enemy, PropertyDefinitionBuilder прочитал тип, никакой разметки"/>
+    <Phrase Key="Difference" Select="both"
+            True="Оба смотрят на Player И Enemy. Строки, в которых они согласны, показывают значение; только строки, где они правда различаются, говорят «разные значения» — заполните одну, и оба её примут."
+            False="Два РАЗНЫХ объекта бок о бок — сравните их. Отметьте флажок, чтобы направить оба инспектора на оба объекта сразу."/>
+
+    <Phrase Key="General" Text="Общие"/>
+    <Phrase Key="Name" Text="Имя"/>
+    <Phrase Key="Enabled" Text="Включён"/>
+    <Phrase Key="Tag" Text="Метка"/>
+    <Phrase Key="Guid" Text="Guid"/>
+    <Phrase Key="Transform" Text="Трансформация"/>
+    <Phrase Key="Position" Text="Положение"/>
+    <Phrase Key="Physics" Text="Физика"/>
+    <Phrase Key="Mass" Text="Масса"/>
+    <Phrase Key="Visibility" Text="Видимость"/>
+    <Phrase Key="Material" Text="Материал"/>
+    <Phrase Key="Tint" Text="Оттенок"/>
+    <Phrase Key="Fill" Text="Заливка"/>
+
+    <Phrase Key="PointAtBoth" Text="Направить оба на оба объекта"/>
+    <Phrase Key="SearchOnRight" Text="Поиск справа"/>
+    <Phrase Key="Action" Select="pressed" True="… нажата в строке «Метка» у: {target}" False="Кнопка … ещё не нажималась"/>
+    <Phrase Key="Target" Select="name" None="ничего" Other="{name}"/>
+    <Phrase Key="SameBrush" Text="та же кисть в другом месте страницы"/>
+</Language>

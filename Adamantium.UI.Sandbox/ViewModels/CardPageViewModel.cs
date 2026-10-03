@@ -4,7 +4,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// ItemsControlRegionAdapter, in contrast to the single-view ContentControl region beside it.</summary>
 public class CardPageViewModel
 {
-    public CardPageViewModel(int number) => Title = $"Card {number}";
+    public CardPageViewModel(int number) => Number = number;
 
-    public string Title { get; }
+    public int Number { get; }
 }

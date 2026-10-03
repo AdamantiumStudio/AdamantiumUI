@@ -1,0 +1,93 @@
+<Language>
+    <Phrase Key="MovePanel" Text="Drag to move the panel, click to fold it away"/>
+    <Phrase Key="Map" Text="Map"/>
+    <Phrase Key="AddNode" Text="Add a node"/>
+    <Phrase Key="ResizePanel" Text="Drag to set how wide the panel is"/>
+    <Phrase Key="StickToEdge" Text="Stick to an edge when dropped near one"/>
+    <Phrase Key="ToolsLayout" Text="Lay the tools out in a row or in a column"/>
+    <Phrase Key="DrawingMode" Text="Drawing - ink, shapes and text"/>
+    <Phrase Key="GraphMode" Text="Graph - nodes and the wires between them"/>
+    <Phrase Key="Properties" Text="Properties of what is selected"/>
+    <Phrase Key="Layers" Text="Everything on the plane, topmost first"/>
+    <Phrase Key="CommentFrame" Text="Draw a comment frame round what is selected"/>
+    <Phrase Key="AlignLeft" Text="Line the left edges up"/>
+    <Phrase Key="AlignCenter" Text="Line the middles up"/>
+    <Phrase Key="AlignRight" Text="Line the right edges up"/>
+    <Phrase Key="AlignTop" Text="Line the top edges up"/>
+    <Phrase Key="DistributeVertically" Text="Equal gaps down a column"/>
+    <Phrase Key="DistributeHorizontally" Text="Equal gaps across a row"/>
+    <Phrase Key="FitToView" Text="Bring the work into view - the F key does this too"/>
+    <Phrase Key="ExportSvg" Text="Export the drawing as SVG"/>
+    <Phrase Key="OpenSvg" Text="Open an SVG drawing"/>
+    <Phrase Key="ClearCanvas" Text="Clear the canvas"/>
+    <Phrase Key="NarrowList" Text="Narrow the list"/>
+    <Phrase Key="ClearSearch" Text="Clear the search"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="BringToFront" Text="Bring to the front of paint order"/>
+    <Phrase Key="SendToBack" Text="Send to the back"/>
+    <Phrase Key="BringForward" Text="Bring over the thing in front of it"/>
+    <Phrase Key="SendBackward" Text="Send under the thing behind it"/>
+    <Phrase Key="Group" Text="Make one thing of it (Ctrl+G)"/>
+    <Phrase Key="Ungroup" Text="Break it open again (Ctrl+Shift+G)"/>
+    <Phrase Key="Delete" Text="Take it away"/>
+    <Phrase Key="Undo" Text="Undo (Ctrl+Z)"/>
+    <Phrase Key="Redo" Text="Redo (Ctrl+Y)"/>
+    <Phrase Key="ZoomOut" Text="Zoom out"/>
+    <Phrase Key="ZoomIn" Text="Zoom in"/>
+    <Phrase Key="GoHome" Text="Back to the view kept beside this button"/>
+    <Phrase Key="KeepHome" Text="Keep this view as the one Home goes back to"/>
+    <Phrase Key="ForgetHome" Text="Give up the kept view - Home goes back to the origin at one to one"/>
+    <Phrase Key="FoldNode" Text="Fold the node down to its title"/>
+    <Phrase Key="MoveSocket" Text="Drag to move this socket"/>
+    <Phrase Key="ExportTitle" Text="Export the drawing"/>
+    <Phrase Key="OpenTitle" Text="Open a drawing"/>
+    <Phrase Key="Drawings" Text="Drawings"/>
+    <Phrase Key="AllFiles" Text="All files"/>
+    <Phrase Key="NothingDrawn" Text="Nothing drawn yet"/>
+    <Phrase Key="Items" Count="count" One="{count} item" Other="{count} items"/>
+    <Phrase Key="DeleteTitle" Text="Delete"/>
+    <Phrase Key="RemoveIt" Text="Remove it?"/>
+    <Phrase Key="RemoveObjects" Count="count" One="Remove {count} object?" Other="Remove {count} objects?"/>
+    <Phrase Key="RemoveAll" Count="count" One="Remove the one object on the canvas?" Other="Remove all {count} objects?"/>
+    <Phrase Key="DeleteAnswer" Text="Delete"/>
+    <Phrase Key="ClearAnswer" Text="Clear"/>
+
+    <Phrase Key="ToolShortcut" Text="{name} ({key})"/>
+    <Phrase Key="Select" Text="Select"/>
+    <Phrase Key="SelectDescription" Text="Select, move and resize"/>
+    <Phrase Key="Pen" Text="Pen"/>
+    <Phrase Key="PenDescription" Text="Draw freehand, or point to point under a grid"/>
+    <Phrase Key="Text" Text="Text"/>
+    <Phrase Key="TextDescription" Text="Click and type; Escape finishes"/>
+    <Phrase Key="Erase" Text="Erase"/>
+    <Phrase Key="EraseDescription" Text="Rubs a hole where it is dragged"/>
+    <Phrase Key="EraseStroke" Text="Erase stroke"/>
+    <Phrase Key="EraseStrokeDescription" Text="Takes the whole stroke it touches"/>
+    <Phrase Key="Texture" Text="Texture"/>
+    <Phrase Key="TextureDescription" Text="Place a surface to paint a picture on"/>
+    <Phrase Key="Node" Text="Node"/>
+    <Phrase Key="NodeDescription" Text="Put a node on the plane"/>
+    <Phrase Key="CurveDescription" Text="Click to place points, double click to finish"/>
+    <Phrase Key="Control" Text="Control"/>
+    <Phrase Key="Controls" Text="Controls"/>
+
+    <Phrase Key="Rectangle" Text="Rectangle"/>
+    <Phrase Key="Ellipse" Text="Ellipse"/>
+    <Phrase Key="Line" Text="Line"/>
+    <Phrase Key="Polygon" Text="Polygon"/>
+    <Phrase Key="Arrow" Text="Arrow"/>
+    <Phrase Key="Bezier" Text="Bézier curve"/>
+    <Phrase Key="BSpline" Text="B-spline"/>
+    <Phrase Key="Nurbs" Text="NURBS"/>
+    <Phrase Key="GroupItem" Text="Group"/>
+    <Phrase Key="StrokeItem" Text="Stroke"/>
+    <Phrase Key="PathItem" Text="Path"/>
+    <Phrase Key="TextItem" Text="Text"/>
+    <Phrase Key="ConnectionItem" Text="Wire"/>
+    <Phrase Key="CanvasFrameItem" Text="Frame"/>
+    <Phrase Key="CanvasNode" Text="Node"/>
+
+    <Phrase Key="Comment" Text="Comment"/>
+    <Phrase Key="InputName" Text="In {number}"/>
+    <Phrase Key="OutputName" Text="Out {number}"/>
+</Language>

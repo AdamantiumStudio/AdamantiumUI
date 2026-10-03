@@ -254,6 +254,21 @@ public class CodeGenerationContext
                     continue;
                 }
 
+                if (value is AumlAstLocalizedStringNode localized)
+                {
+                    var localizedVar = EmitLocalizedBinding(localized, diagnostics, isResource);
+                    if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                    {
+                        TextGenerator.WriteLine($"{symbolName} = {localizedVar};");
+                    }
+                    else
+                    {
+                        TextGenerator.WriteLine(EmitSetBinding(isRoot ? "this" : CurrentParent, propRef, localizedVar));
+                    }
+
+                    continue;
+                }
+
                 var valueTypeName = value.TypeReference.GetFullTypeName();
                 var valueResolvedType = Metadata.TypeResolver.Resolve(valueTypeName);
 
@@ -427,21 +442,7 @@ public class CodeGenerationContext
                         }
                         case "TemplateBinding":
                         {
-                            var tbVar = GenerateNextElementName("tb");
-                            TextGenerator.WriteLine($"var {tbVar} = new {Qualified(extension.TypeReference.GetFullTypeName())}();");
-
-                            foreach (var argument in extension.Arguments)
-                            {
-                                if (string.IsNullOrEmpty(argument.Name))
-                                {
-                                    TextGenerator.WriteLine($"{tbVar}.Path = \"{argument.Value.GetTextValue()}\";");
-                                }
-                                else
-                                {
-                                    TextGenerator.WriteLine(
-                                        $"{tbVar}.{argument.Name} = {Qualified(argument.Value.TypeReference.GetFullTypeName())}.{argument.Value.GetTextValue()};");
-                                }
-                            }
+                            var tbVar = EmitTemplateBinding(extension);
 
                             if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
@@ -1234,6 +1235,7 @@ public class CodeGenerationContext
     private const string BindingModeFqn = "global::Adamantium.UI.Core.Data.BindingMode";
     private const string ValueConverterFqn = "global::Adamantium.UI.Core.Data.IValueConverter";
     private const string MultiValueConverterFqn = "global::Adamantium.UI.Core.Data.IMultiValueConverter";
+    private const string LocalizeFqn = "global::Adamantium.UI.Core.Localization.Localize";
     private const string ResourceResolverFqn = "global::Adamantium.UI.Core.Resources.ResourceResolver";
 
     // The x:Key directive of an inline object node (an inline resource entry), or null if it has none.
@@ -1275,6 +1277,66 @@ public class CodeGenerationContext
         AumlAstObjectNode obj => EmitBindingFromObject(obj, diagnostics, isResource),
         _ => "null",
     };
+
+    // {Localize Table.Key, name=value}: the key is checked by the compiler through nameof, the placeholders by the
+    // transformer; an argument is a binding to follow, a property of the templated control, another phrase, or a
+    // plain value.
+    private string EmitLocalizedBinding(AumlAstLocalizedStringNode localized, IDiagnosticSink diagnostics, bool isResource)
+    {
+        var table = Qualified(localized.TableFullName);
+        var name = GenerateNextElementName("localized");
+        var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
+        TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+        if (localized.KeySource != null)
+        {
+            TextGenerator.WriteLine($"{name}.KeySource = {Followed(localized.KeySource)};");
+        }
+
+        foreach (var argument in localized.Arguments)
+        {
+            TextGenerator.WriteLine($"{name}.Arguments[{Quote(argument.Name)}] = {Followed(argument.Value)};");
+        }
+
+        return name;
+
+        string Followed(IAumlAstValueNode value) => value switch
+        {
+            _ when IsBindingNode(value) => EmitBinding(value, diagnostics, isResource),
+            AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } templateBinding =>
+                CurrentTemplate == null && !isResource
+                    ? ReportOutsideTemplate(diagnostics)
+                    : EmitTemplateBinding(templateBinding),
+            AumlAstLocalizedStringNode phrase => EmitLocalizedBinding(phrase, diagnostics, isResource),
+            _ => Quote(value.GetTextValue() ?? string.Empty),
+        };
+    }
+
+    private string ReportOutsideTemplate(IDiagnosticSink diagnostics)
+    {
+        diagnostics.ReportError(Metadata.ClassName, "TemplateBinding can only be used inside ControlTemplate.");
+        return "null";
+    }
+
+    private string EmitTemplateBinding(AumlAstMarkupExtensionNode extension)
+    {
+        var name = GenerateNextElementName("tb");
+        TextGenerator.WriteLine($"var {name} = new {Qualified(extension.TypeReference.GetFullTypeName())}();");
+
+        foreach (var argument in extension.Arguments)
+        {
+            if (string.IsNullOrEmpty(argument.Name))
+            {
+                TextGenerator.WriteLine($"{name}.Path = \"{argument.Value.GetTextValue()}\";");
+            }
+            else
+            {
+                TextGenerator.WriteLine(
+                    $"{name}.{argument.Name} = {Qualified(argument.Value.TypeReference.GetFullTypeName())}.{argument.Value.GetTextValue()};");
+            }
+        }
+
+        return name;
+    }
 
     private string EmitBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)
     {
@@ -1421,6 +1483,7 @@ public class CodeGenerationContext
         public ResolvedMemberKind MemberKind => ResolvedMemberKind.Property;
         public bool IsStatic => false;
         public bool IsPublic => true;
+        public IReadOnlyList<string> ParameterNames => [];
         public IResolvedType MemberType => new StubResolvedType();
         public IResolvedType DeclaringType => new StubResolvedType();
     }

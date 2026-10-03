@@ -1,0 +1,6 @@
+<Language>
+    <Phrase Key="Rows" Text="Строк"/>
+    <Phrase Key="Page" Text="Страница"/>
+    <Phrase Key="OfCount" Text="из {count}"/>
+    <Phrase Key="OfUnknown" Text="из ?"/>
+</Language>
