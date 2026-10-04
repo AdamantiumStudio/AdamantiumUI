@@ -668,9 +668,16 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         SetValue(property, container.EffectiveValue, ValuePriority.Trigger);
     }
 
+    /// <summary>Records one style's contribution by property name. A name this element has no property for is passed
+    /// over: a style matched by class reaches elements of any type.</summary>
     public void SetStyleValue(string propertyName, object value, Style style)
     {
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
+        if (property == null)
+        {
+            return;
+        }
+
         SetStyleValue(property, value, style);
     }
 
@@ -706,16 +713,16 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             ? entry.EffectiveValue
             : fallback;
 
+    /// <summary>Takes one style's contribution away. A name this element has no property for had none to take.</summary>
     public void RemoveStyleValue(string propertyName, Style style)
     {
-        var previousValue = RemoveStyleEntry(propertyName, style);
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
         if (property == null)
         {
-            SetValue(propertyName, previousValue, ValuePriority.Style);
             return;
         }
 
+        var previousValue = RemoveStyleEntry(propertyName, style);
         WriteStyleValue(property, previousValue, StyleSlotFor(property, propertyName, style));
     }
 
@@ -789,7 +796,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     }
 
     /// <summary>
-    /// Sets a <see cref="AdamantiumProperty"/> value.
+    /// Sets a <see cref="AdamantiumProperty"/> value. A name this type has no property for sets nothing, and is reported
+    /// through <see cref="Diagnostics.PropertyTrace"/>.
     /// </summary>
     /// <param name="property">Name of the AdamantiumProperty reference</param>
     /// <param name="value">The value.</param>
@@ -800,7 +808,10 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
         var adamantiumProperty = AdamantiumPropertyMap.ResolveProperty(GetType(), property);
         if (adamantiumProperty == null)
+        {
+            Diagnostics.PropertyTrace.Log($"{GetType().Name} has no property {property} to set; the value was dropped.");
             return;
+        }
 
         // Honor the caller's priority - this dropped it (always Local), which is why a ControlTemplate literal
         // set via this overload at Template priority could not be overridden by a Trigger (Local outranks Trigger).

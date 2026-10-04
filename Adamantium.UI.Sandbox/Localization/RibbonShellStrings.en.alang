@@ -148,10 +148,6 @@
     <Phrase Key="SpaceModule" Text="Space"/>
     <Phrase Key="SpaceModuleInfo" Text="Stars, planets, orbits"/>
     <Phrase Key="ModuleCatalog" Text="Module catalog..."/>
-    <Phrase Key="ModuleSets" Text="Sets by document type"/>
-    <Phrase Key="CoreOnly" Text="Core only"/>
-    <Phrase Key="SurfaceMap" Text="Surface map"/>
-    <Phrase Key="StarSystem" Text="Star system"/>
     <Phrase Key="SurfaceHeader" Text="SURFACE"/>
     <Phrase Key="SpaceHeader" Text="SPACE"/>
     <Phrase Key="Terrain" Text="Terrain"/>

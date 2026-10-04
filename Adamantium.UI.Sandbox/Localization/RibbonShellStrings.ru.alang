@@ -148,10 +148,6 @@
     <Phrase Key="SpaceModule" Text="Космос"/>
     <Phrase Key="SpaceModuleInfo" Text="Звёзды, планеты, орбиты"/>
     <Phrase Key="ModuleCatalog" Text="Каталог модулей..."/>
-    <Phrase Key="ModuleSets" Text="Наборы по типу документа"/>
-    <Phrase Key="CoreOnly" Text="Только ядро"/>
-    <Phrase Key="SurfaceMap" Text="Карта поверхности"/>
-    <Phrase Key="StarSystem" Text="Звёздная система"/>
     <Phrase Key="SurfaceHeader" Text="ПОВЕРХНОСТЬ"/>
     <Phrase Key="SpaceHeader" Text="КОСМОС"/>
     <Phrase Key="Terrain" Text="Рельеф"/>

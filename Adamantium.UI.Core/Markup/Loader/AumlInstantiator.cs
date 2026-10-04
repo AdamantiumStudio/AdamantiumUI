@@ -306,9 +306,11 @@ internal sealed class AumlInstantiator
                 continue;
             }
 
-            // {ResourceReference Key} on an element: deferred like the generator does, so a resource local to the
-            // element's subtree resolves once the element is in the tree.
+            // {ResourceReference Key} on an element's property: deferred like the generator does, so a resource local to
+            // the element's subtree resolves once the element is in the tree. A plain CLR property has no slot to defer
+            // into and is resolved now, below, as on any markup object.
             if (!keepsMarkers && instance is IAdamantiumComponent referencing &&
+                AdamantiumPropertyMap.ResolveProperty(instance.GetType(), pref.Name) != null &&
                 value is AumlAstMarkupExtensionNode { TypeReference.Name: "ResourceReference" } rrNode)
             {
                 var key = (rrNode.Arguments.FirstOrDefault()?.Value as AumlAstTextNode)?.Text?.Trim();

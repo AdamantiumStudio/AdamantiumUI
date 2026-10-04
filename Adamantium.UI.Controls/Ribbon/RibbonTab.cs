@@ -132,12 +132,10 @@ public class RibbonTab : ItemsControl, IHeaderedItemsControl
         }
     }
 
-    // A HierarchicalDataTemplate needs a headered container (the base binds its Header + ItemsSource); a flat
-    // ItemTemplate keeps the base ContentPresenter. Same seam as MenuItem.
+    // Every group made from data is a RibbonGroup, whatever the template: the template draws its header, a
+    // HierarchicalDataTemplate also says where its commands come from. Same seam as MenuItem.
     protected internal override IUIComponent GetContainerForItem(object item)
     {
-        if (ItemTemplate is not HierarchicalDataTemplate) return base.GetContainerForItem(item);
-
         var group = new RibbonGroup();
         if (ItemContainerStyle != null) group.Styles.Add(ItemContainerStyle);
         return group;

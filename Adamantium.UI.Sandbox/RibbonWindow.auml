@@ -56,10 +56,14 @@
                     <ContextMenu ItemsSource="{Binding DropDownItems}">
                         <ContextMenu.ItemTemplate>
                             <DataTemplate>
-                                <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
-                                          Command="{Binding Command}"/>
+                                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
                             </DataTemplate>
                         </ContextMenu.ItemTemplate>
+                        <ContextMenu.ItemContainerStyle>
+                            <Style Selector="MenuItem">
+                                <Setter Property="Command" Value="{Binding Command}"/>
+                            </Style>
+                        </ContextMenu.ItemContainerStyle>
                     </ContextMenu>
                 </RibbonDropDownButton.DropDownMenu>
             </RibbonDropDownButton>
@@ -90,10 +94,14 @@
                     <ContextMenu ItemsSource="{Binding DropDownItems}">
                         <ContextMenu.ItemTemplate>
                             <DataTemplate>
-                                <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
-                                          Command="{Binding Command}"/>
+                                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
                             </DataTemplate>
                         </ContextMenu.ItemTemplate>
+                        <ContextMenu.ItemContainerStyle>
+                            <Style Selector="MenuItem">
+                                <Setter Property="Command" Value="{Binding Command}"/>
+                            </Style>
+                        </ContextMenu.ItemContainerStyle>
                     </ContextMenu>
                 </RibbonSplitButton.DropDownMenu>
             </RibbonSplitButton>

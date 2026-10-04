@@ -267,10 +267,8 @@ public class TreeView : ItemsControl
         tree.TryApplyDesiredOffset();
     }
 
-    // A data-driven tree generates TreeViewItem containers (as flat, indented rows); a flat ItemTemplate keeps the base
-    // ContentPresenter.
-    protected internal override IUIComponent GetContainerForItem(object item)
-        => ItemTemplate is HierarchicalDataTemplate ? TreeViewItem.CreateContainer(ItemContainerStyle) : base.GetContainerForItem(item);
+    // Every row is a TreeViewItem (flat and indented), whatever the template: the template draws the node.
+    protected internal override IUIComponent GetContainerForItem(object item) => TreeViewItem.CreateContainer(ItemContainerStyle);
 
     // Bind a (new or recycled) container to a flat row: draw the node via the template header, indent by depth, mirror
     // the row's expand/selection state. The node is the DataContext so the header's {Binding}s and the ItemContainerStyle's
@@ -279,7 +277,7 @@ public class TreeView : ItemsControl
     {
         if (container is TreeViewItem node && item is TreeRow row)
         {
-            node.BindRow(row, ItemTemplate);
+            node.BindRow(row, ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(row.Node, node));
 
             // The focus rides the ROW, exactly as the selection does. A container is not a place in the tree: the panel
             // recycles containers onto other rows as the view scrolls, so a focus left pinned to one drifts onto

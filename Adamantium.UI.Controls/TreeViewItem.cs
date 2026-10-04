@@ -74,7 +74,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     /// <summary>The node's label.</summary>
     public object Header { get => GetValue<object>(HeaderProperty); set => SetValue(HeaderProperty, value); }
 
-    /// <summary>Template that renders <see cref="Header"/> (set to the HierarchicalDataTemplate for a data-driven tree).</summary>
+    /// <summary>Template that renders <see cref="Header"/> (the tree's item template, for a node made from data).</summary>
     public DataTemplate HeaderTemplate { get => GetValue<DataTemplate>(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
 
     /// <summary>The expander arrow's template - restyle the glyph here without rewriting the node template.</summary>
@@ -104,10 +104,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
 
     public event RoutedEventHandler Selected { add => AddHandler(SelectedEvent, value); remove => RemoveHandler(SelectedEvent, value); }
 
-    // Container seam (mirrors MenuItem): a data-driven tree generates TreeViewItem containers via the HierarchicalDataTemplate;
-    // a flat ItemTemplate keeps the base ContentPresenter.
-    protected internal override IUIComponent GetContainerForItem(object item)
-        => ItemTemplate is HierarchicalDataTemplate ? CreateContainer(ItemContainerStyle) : base.GetContainerForItem(item);
+    // Container seam (mirrors MenuItem): every child node is a TreeViewItem, whatever the template - the template draws it.
+    protected internal override IUIComponent GetContainerForItem(object item) => CreateContainer(ItemContainerStyle);
 
     /// <summary>Creates a TreeViewItem container carrying the owner's ItemContainerStyle (into Styles, applied AFTER the theme).</summary>
     internal static TreeViewItem CreateContainer(Style itemContainerStyle)

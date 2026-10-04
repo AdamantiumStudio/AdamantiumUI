@@ -73,7 +73,7 @@ jobs:
       # The runners have no GPU: the [Category("Gpu")] tests and Adamantium.UI.GraphicsTests, which renders only, are left
       # out; every other test runs without one.
       #
-      # The two suites run at once, each in a process of its own; the tests inside a suite stay sequential.
+      # The suites run at once, each in a process of its own; the tests inside a suite stay sequential.
       - name: Test
         if: steps.changes.outputs.code == 'true'
         shell: bash
@@ -82,11 +82,15 @@ jobs:
           xaml=$!
           dotnet test Tests/Adamantium.UITests/Adamantium.UITests.csproj -c Release --no-build --filter "TestCategory!=Gpu" > "$RUNNER_TEMP/ui.log" 2>&1 &
           ui=$!
+          dotnet test Tests/Adamantium.UI.Sandbox.Tests/Adamantium.UI.Sandbox.Tests.csproj -c Release --no-build > "$RUNNER_TEMP/sandbox.log" 2>&1 &
+          sandbox=$!
           status=0
           wait $xaml || status=1
           cat "$RUNNER_TEMP/xaml.log"
           wait $ui || status=1
           cat "$RUNNER_TEMP/ui.log"
+          wait $sandbox || status=1
+          cat "$RUNNER_TEMP/sandbox.log"
           exit $status
 
       - name: Pack

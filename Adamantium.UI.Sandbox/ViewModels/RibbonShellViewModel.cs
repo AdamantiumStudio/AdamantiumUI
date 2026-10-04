@@ -539,17 +539,7 @@ public partial class RibbonShellViewModel : IWindowAware
         _menuTail ??=
         [
             new ModulesMenuRow { IsSeparator = true },
-            new ModulesMenuRow { Title = nameof(RibbonShellStrings.ModuleCatalog), Command = OpenModuleCatalogCommand },
-            new ModulesMenuRow
-            {
-                Title = nameof(RibbonShellStrings.ModuleSets),
-                Children =
-                [
-                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.CoreOnly), Command = UseCoreOnlyCommand },
-                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.SurfaceMap), Command = UseSurfaceMapCommand },
-                    new ModulesMenuRow { Title = nameof(RibbonShellStrings.StarSystem), Command = UseStarSystemCommand }
-                ]
-            }
+            new ModulesMenuRow { Title = nameof(RibbonShellStrings.ModuleCatalog), Command = OpenModuleCatalogCommand }
         ];
 
         var inDocument = Modules.Where(module => module.IsInDocument).ToList();
@@ -661,21 +651,6 @@ public partial class RibbonShellViewModel : IWindowAware
 
         SelectedModule = fresh[0];
         LastAction = RibbonAction.ModuleInstalled;
-    }
-
-    [Command] private void UseCoreOnly() => UseModules(false, false);
-
-    [Command] private void UseSurfaceMap() => UseModules(true, false);
-
-    [Command] private void UseStarSystem() => UseModules(false, true);
-
-    private void UseModules(bool surface, bool space)
-    {
-        Surface.State = surface ? EditorModuleState.InDocument : EditorModuleState.Installed;
-        Surface.IsShown = true;
-        Space.State = space ? EditorModuleState.InDocument : EditorModuleState.Installed;
-        Space.IsShown = true;
-        LastAction = RibbonAction.ModulesChanged;
     }
 
     // Home carries a real editor's worth of groups, so the band's LAST resort - scrolling, once every group has been

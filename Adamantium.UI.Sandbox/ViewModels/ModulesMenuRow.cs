@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Sandbox.Modules;
@@ -17,8 +16,6 @@ public class ModulesMenuRow : ISeparatorItem
     public ICommand Command { get; init; }
 
     public bool IsSeparator { get; init; }
-
-    public IReadOnlyList<ModulesMenuRow> Children { get; init; } = [];
 
     public bool IsModule => Module != null;
 

@@ -516,12 +516,12 @@
                         </StackPanel>
                     </RibbonDropDownButton.Content>
                     <RibbonDropDownButton.DropDownMenu>
-                        <!-- The modules of THIS document, however many, then the catalog and the sets - rows as data.
-                             A module's check shows or hides its tabs - it keeps working either way; the button at the
-                             row's end takes it out of the document. -->
+                        <!-- The modules of THIS document, however many, then the catalog - rows as data. A module's
+                             check shows or hides its tabs - it keeps working either way; the button at the row's end
+                             takes it out of the document. -->
                         <ContextMenu ItemsSource="{Binding ModulesMenu}">
                             <ContextMenu.ItemTemplate>
-                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <DataTemplate>
                                     <Grid>
                                         <ContentPresenter Content="{Binding Module}"
                                                           ContentTemplate="{ResourceReference ModuleRow}"
@@ -529,7 +529,7 @@
                                         <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Title}}"
                                                    Visibility="{Binding IsCommand, Converter={conv:BoolToVisibilityConverter}}"/>
                                     </Grid>
-                                </HierarchicalDataTemplate>
+                                </DataTemplate>
                             </ContextMenu.ItemTemplate>
                             <ContextMenu.ItemContainerStyle>
                                 <Style Selector="MenuItem">
@@ -812,10 +812,14 @@
                             <ContextMenu ItemsSource="{Binding DropDownItems}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
-                                                  Command="{Binding Command}"/>
+                                        <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style Selector="MenuItem">
+                                        <Setter Property="Command" Value="{Binding Command}"/>
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
                             </ContextMenu>
                         </RibbonSplitButton.DropDownMenu>
                     </RibbonSplitButton>
@@ -1003,10 +1007,14 @@
                             <ContextMenu ItemsSource="{Binding DropDownItems}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
-                                                  Command="{Binding Command}"/>
+                                        <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style Selector="MenuItem">
+                                        <Setter Property="Command" Value="{Binding Command}"/>
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
                             </ContextMenu>
                         </RibbonDropDownButton.DropDownMenu>
                     </RibbonDropDownButton>
@@ -1041,10 +1049,14 @@
                             <ContextMenu ItemsSource="{Binding MenuRows}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
-                                        <MenuItem Header="{Localize RibbonShellStrings, Key={Binding Header}}"
-                                                  Command="{Binding Command}"/>
+                                        <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
                                     </DataTemplate>
                                 </ContextMenu.ItemTemplate>
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style Selector="MenuItem">
+                                        <Setter Property="Command" Value="{Binding Command}"/>
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
                             </ContextMenu>
                         </DataTemplate>
                     </Ribbon.CommandContextMenuTemplate>

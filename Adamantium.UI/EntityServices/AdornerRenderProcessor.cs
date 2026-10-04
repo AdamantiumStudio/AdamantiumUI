@@ -13,7 +13,7 @@ namespace Adamantium.UI.EntityServices;
 /// <summary>
 /// Draws the window's <see cref="IWindow.Adorners"/> on top of the content in the same frame, after the content renderer.
 /// </summary>
-public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
+public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRecordingStage
 {
     private RenderCache _cache;
     private RenderUnitFactory _factory;
@@ -51,23 +51,19 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
     /// scope behind per stage per window - and every app-wide event walks them all.</summary>
     protected override void OnDetached() => RenderDirtyRouter.Forget(_scope);
 
-    public override void Update(AppTime appTime) { }   // building moved to PreRender (after the fence wait) - see below
+    public override void Update(AppTime appTime) { }
 
-    // Built in beforeRenderPass, after the fence wait, so reallocating GPU buffers cannot race an in-flight submit.
     private readonly OverlayRebuildGate _gate = new();
 
-    // This stage's own marks - see RenderDirtyRouter.
     private readonly RenderDirtyScope _scope = RenderDirtyRouter.NewScope();
 
-    public override void PreRender()
+    /// <summary>Lays out and records the window's adorners on the loop thread, after the window's layout pass - only when
+    /// they could look different from the last record.</summary>
+    public void Record()
     {
         if (_cache == null) return;
 
         var window = AssociatedService.Window;
-        var projection = window.GetProjectionMatrix();
-
-        // Flatten each adorner's SUBTREE, not just the adorner: a raw Adorner draws itself (no children) but a templatable
-        // adorner hosts a styled control tree, and BuildFromComponents renders a flat list - so its content must be in it.
         _flat.Clear();
         foreach (var adorner in window.Adorners)
         {
@@ -85,14 +81,15 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>
             Flatten(adorner, _flat);
         }
 
-        // The same gate the popup stage uses: rebuild only when this stage could look different from last frame. Without
-        // it the adorners were walked and re-recorded on EVERY frame - measured at 2732 walks in 25 idle seconds, to draw
-        // nothing at all.
-        if (_gate.HasChanged(_flat, _scope))
-        {
-            _cache.BuildFromComponents(_flat, projection);
-            _cache.ProcessCommands(projection, AssociatedService.RenderScale);
-        }
+        if (_gate.HasChanged(_flat, _scope)) _cache.RecordComponents(_flat, window.GetProjectionMatrix());
+    }
+
+    /// <summary>Applies what <see cref="Record"/> recorded, after the fence wait, and runs the per-frame GPU work.</summary>
+    public override void PreRender()
+    {
+        if (_cache == null) return;
+
+        if (_cache.ApplyComponents()) _cache.ProcessCommands(_cache.AppliedProjection, AssociatedService.RenderScale);
 
         _cache.PreRender();
     }

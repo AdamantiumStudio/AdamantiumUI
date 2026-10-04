@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.XamlTests", "Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.GraphicsTests", "Tests\Adamantium.UI.GraphicsTests\Adamantium.UI.GraphicsTests.csproj", "{01112D5D-EAA9-417F-A7D9-859F38360EE3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Sandbox.Tests", "Tests\Adamantium.UI.Sandbox.Tests\Adamantium.UI.Sandbox.Tests.csproj", "{56B5C675-ACF9-43CF-BEA0-A33CACF80C81}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +79,10 @@ Global
 		{01112D5D-EAA9-417F-A7D9-859F38360EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01112D5D-EAA9-417F-A7D9-859F38360EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01112D5D-EAA9-417F-A7D9-859F38360EE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56B5C675-ACF9-43CF-BEA0-A33CACF80C81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56B5C675-ACF9-43CF-BEA0-A33CACF80C81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56B5C675-ACF9-43CF-BEA0-A33CACF80C81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56B5C675-ACF9-43CF-BEA0-A33CACF80C81}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -85,6 +91,7 @@ Global
 		{62B409DF-B985-41AD-8767-D45381FDA5A8} = {8E2F4A6B-1C3D-4E5F-8A9B-0C1D2E3F4A5B}
 		{56BE44A5-3B44-48F2-9320-6A79787FC8F3} = {8E2F4A6B-1C3D-4E5F-8A9B-0C1D2E3F4A5B}
 		{01112D5D-EAA9-417F-A7D9-859F38360EE3} = {8E2F4A6B-1C3D-4E5F-8A9B-0C1D2E3F4A5B}
+		{56B5C675-ACF9-43CF-BEA0-A33CACF80C81} = {8E2F4A6B-1C3D-4E5F-8A9B-0C1D2E3F4A5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EF54986A-DE62-42C1-BBBF-7F33556FA893}

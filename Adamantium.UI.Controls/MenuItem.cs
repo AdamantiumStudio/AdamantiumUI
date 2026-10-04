@@ -100,7 +100,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     /// <summary>The row's label.</summary>
     public object Header { get => GetValue<object>(HeaderProperty); set => SetValue(HeaderProperty, value); }
 
-    /// <summary>Template that renders <see cref="Header"/> (set to the HierarchicalDataTemplate for a data-driven menu).</summary>
+    /// <summary>Template that renders <see cref="Header"/> (the menu's item template, for a row made from data).</summary>
     public DataTemplate HeaderTemplate { get => GetValue<DataTemplate>(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
 
     /// <summary>Optional icon/glyph shown at the left of the row.</summary>
@@ -169,13 +169,11 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
                 child.IsSubmenuOpen = false;
     }
 
-    // --- Container seam: a MenuItem hosts its submenu items in nested MenuItem containers (data-driven via ItemsSource +
-    // a HierarchicalDataTemplate). Mirrors ListBox -> ListBoxItem. A node flagged ISeparatorItem becomes a Separator; only a
-    // HierarchicalDataTemplate needs the headered MenuItem container; a flat ItemTemplate keeps the base ContentPresenter. --
+    // --- Container seam: a MenuItem hosts its submenu items in nested MenuItem containers, whatever the template - the
+    // template draws the header. Mirrors ListBox -> ListBoxItem. A node flagged ISeparatorItem becomes a Separator. --
     protected internal override IUIComponent GetContainerForItem(object item)
     {
         if (item is ISeparatorItem { IsSeparator: true }) return new Separator();
-        if (ItemTemplate is not HierarchicalDataTemplate) return base.GetContainerForItem(item);
         return CreateContainer(ItemContainerStyle);
     }
 

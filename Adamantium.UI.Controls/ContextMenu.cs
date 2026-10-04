@@ -6,7 +6,6 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
-using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -118,13 +117,10 @@ public class ContextMenu : ItemsControl
         IsOpen = true;
     }
 
-    // A data-driven menu (ItemsSource + a HierarchicalDataTemplate) generates MenuItem containers so each node gets a
-    // header + its own submenu; a node flagged ISeparatorItem becomes a Separator (drawn from its own style); a flat
-    // ItemTemplate keeps the base ContentPresenter (e.g. the command-bar overflow menu).
+    // Every data row is a MenuItem, whatever the template: the template draws its header. A node flagged ISeparatorItem
+    // becomes a Separator.
     protected internal override IUIComponent GetContainerForItem(object item)
-        => item is ISeparatorItem { IsSeparator: true } ? new Separator()
-         : ItemTemplate is HierarchicalDataTemplate ? MenuItem.CreateContainer(ItemContainerStyle)
-         : base.GetContainerForItem(item);
+        => item is ISeparatorItem { IsSeparator: true } ? new Separator() : MenuItem.CreateContainer(ItemContainerStyle);
 
     public override void OnApplyTemplate()
     {

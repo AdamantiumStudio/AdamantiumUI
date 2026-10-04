@@ -79,8 +79,31 @@ All packages share one version.
   the themes' `TextBoxStrings.Clear` unless a box says what clearing it means - "Clear the search (Esc)".
 - `CollectionView.Refresh()`: filters and orders the source again - for a filter that reads something outside the items,
   such as the text of a search box.
+- `UniformGrid` virtualizes as an items panel: a grid that grows downwards realizes only the rows in view and scrolls
+  by them. An axis whose count is set shares the space between its cells; along the other one every cell is as big as
+  the biggest item realized so far. A grid given only `Rows` grows sideways and realizes every item, as does one with
+  `IsVirtualizing` off. Used as a plain panel it lays out its children as before.
+- `RibbonQuickAccessEventArgs.DropDownItemContainerStyle`: what a drop-down command's rows do, handed over with how they
+  are drawn. The themes' quick-access menus use both.
+- `PropertyTrace`: values dropped for want of a property - set by a name the element has no property for, or a live
+  resource connected to one. Each distinct report goes once to the application log and, under a debugger, to the IDE's
+  output; `PropertyTrace.Sink` receives them all.
 
 ### Changed
+
+- `AdamantiumComponent.SetValue(string, ...)` reports a name the type has no property for through `PropertyTrace`
+  instead of ignoring it without a word. `ThemeResource.Apply` and `ObservableResource.Apply` report such a name too,
+  connect nothing and return null.
+- The markup compiler refuses `{ThemeResource}` and `{ObservableResource}` on a plain CLR property: nothing there can
+  follow a resource. `{ResourceReference}` sets it once.
+
+- `ContextMenu` and `MenuItem` make every row built from data a `MenuItem`, whatever the `ItemTemplate`: the template
+  draws the row's header, `ItemContainerStyle` says what the row does. A plain `DataTemplate` used to leave the rows bare
+  content - no hover, no check, no command - and only a `HierarchicalDataTemplate` made menu rows. A template that built
+  a `MenuItem` itself now puts one inside a row: move what it set (`Command`, `Icon`) into `ItemContainerStyle`, as the
+  themes' title-bar and quick-access overflow menus now do. `TreeView` and `TreeViewItem` likewise make a `TreeViewItem`
+  for every node and `RibbonTab` a `RibbonGroup` for every group; a tree with a plain template or none used to draw its
+  internal row object in place of the node.
 
 - `IResolvedMember` has `IsStatic`, `IsPublic` and `ParameterNames`.
 - `BindingBase.CreateExpression`: each kind of binding makes its own live expression, so a new kind needs no change to
@@ -111,6 +134,14 @@ All packages share one version.
 
 ### Fixed
 
+- A style written inside a template styled nothing. The generator set a part's properties by name at template priority,
+  and a property with no `AdamantiumProperty` behind it - a style's `Selector` - was dropped without a word. Such a
+  property is now assigned, as the designer's loader already did.
+- `{ResourceReference}` on a component's plain CLR property, or on an attached property, was dropped without a word: the
+  first is now resolved and assigned at once, the second is named with its owner (`Grid.Row`).
+- A style setter whose value is built per element (`x:Shared="False"`) or is a `{ResourceReference}` threw on an element
+  that does not have the property - a style matched by class reaches elements of every type. It passes over such an
+  element, as a plain value always did.
 - A submenu whose rows were written in markup closed as the pointer moved into it: only rows made from data held their
   submenu open.
 - A popup put away by a press outside it or by Escape cut the application's binding on `IsOpen`: the view model could not
@@ -165,6 +196,12 @@ All packages share one version.
   error wash after the error was fixed - and a trigger's `{Binding}` is a live binding rather than the binding object
   written as the value.
 - `RemoveBinding` did nothing, and threw when given a property; it removes the element's binding.
+- `RibbonApplicationMenu` wrote `IsOpen` at Local priority when it opened or closed itself, above a two-way binding:
+  after that the view model could no longer open or put away the backstage. It writes current values.
+- Popups and adorners were recorded on the render thread, from the live tree, while the loop went on changing it: a
+  list rebuilt in an open popup flashed for a frame with its items piled up, not yet laid out. They are recorded on the
+  loop thread right after layout, as the window's content is, and the render thread only applies what was recorded
+  (`RenderCache.RecordComponents`, `ApplyComponents`). Adorners are laid out on the loop thread too.
 
 ## [0.1.0-alpha] - 2026-10-02
 

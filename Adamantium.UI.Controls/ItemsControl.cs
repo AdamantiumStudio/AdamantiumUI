@@ -307,6 +307,14 @@ public class ItemsControl : Control, IContainer
             return;
         }
 
+        if (container is IHeaderedItemsControl row && container is ItemsControl rowItems)
+        {
+            rowItems.DataContext = item;
+            row.Header = item;
+            row.HeaderTemplate = ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(item, (AdamantiumComponent)container);
+            return;
+        }
+
         if (container is ContentPresenter presenter)
         {
             presenter.DataContext = item;

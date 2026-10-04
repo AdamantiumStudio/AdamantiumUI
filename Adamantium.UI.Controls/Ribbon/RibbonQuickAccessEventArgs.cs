@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -38,6 +39,7 @@ public class RibbonQuickAccessEventArgs : RoutedEventArgs
         {
             DropDownItems = menu.ItemsSource;
             DropDownItemTemplate = menu.ItemTemplate;
+            DropDownItemContainerStyle = menu.ItemContainerStyle;
         }
     }
 
@@ -77,6 +79,9 @@ public class RibbonQuickAccessEventArgs : RoutedEventArgs
     public IEnumerable DropDownItems { get; }
 
     public DataTemplate DropDownItemTemplate { get; }
+
+    /// <summary>What the menu's rows do and how they stand - a command, a check - beside how they are drawn.</summary>
+    public Style DropDownItemContainerStyle { get; }
 
     public object ActionParameter { get; }
 }

@@ -16,7 +16,7 @@ namespace Adamantium.UI.EntityServices;
 /// (<see cref="IWindow.LayoutPopups"/>, on the loop thread) - it measures nothing itself. Runs like the adorner stage
 /// (PreRender dispatches stroke compute in beforeRenderPass; Draw rasterizes in the render pass).
 /// </summary>
-public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
+public class PopupRenderProcessor : EntityProcessor<WindowRenderService>, IRecordingStage
 {
     private RenderCache _cache;
     private RenderUnitFactory _factory;
@@ -54,33 +54,28 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>
     /// scope behind per stage per window - and every app-wide event walks them all.</summary>
     protected override void OnDetached() => RenderDirtyRouter.Forget(_scope);
 
-    public override void Update(AppTime appTime) { }   // building moved to PreRender (after the fence wait) - see below
+    public override void Update(AppTime appTime) { }
 
-    // Built in beforeRenderPass, after the fence wait, so reallocating GPU buffers and text targets cannot race an
-    // in-flight submit.
-    public override void PreRender()
+    /// <summary>Records the open popups on the loop thread, right after the window's layout pass laid them out - only when
+    /// they could look different from the last record.</summary>
+    public void Record()
     {
         if (_cache == null) return;
 
         var window = AssociatedService.Window;
-        var projection = window.GetProjectionMatrix();
         var flat = Flatten(window.PopupRoots, window);
-
-        // These are OURS to redraw, so their dirty marks are ours too. Sharing one set with the content meant a hovered
-        // menu item told the content stage it had work, and the content stage then had to recognize the marks as coming
-        // from a tree it does not draw and step over them - one symptom of a set with no owner (see RenderDirtyRouter).
         foreach (var root in window.PopupRoots) ClaimScope(root);
 
-        // Rebuild (component walk + rasterization) only when the open set / geometry / a popup's position changed - or
-        // when letters landed since the last build (see OverlayRebuildGate).
-        if (_gate.HasChanged(flat, _scope))
-        {
-            _cache.BuildFromComponents(flat, projection);
-            _cache.ProcessCommands(projection, AssociatedService.RenderScale);
-        }
+        if (_gate.HasChanged(flat, _scope)) _cache.RecordComponents(flat, window.GetProjectionMatrix());
+    }
 
-        // But PreRender (GPU-stroke compute) runs EVERY frame, like the content stage: a re-record promotes a stroke's
-        // vertex buffer to a per-frame ring, and each slot must be refilled before Draw reads it, else it smears a frame.
+    /// <summary>Applies what <see cref="Record"/> recorded, after the fence wait, and runs the per-frame GPU work.</summary>
+    public override void PreRender()
+    {
+        if (_cache == null) return;
+
+        if (_cache.ApplyComponents()) _cache.ProcessCommands(_cache.AppliedProjection, AssociatedService.RenderScale);
+
         _cache.PreRender();
     }
 
