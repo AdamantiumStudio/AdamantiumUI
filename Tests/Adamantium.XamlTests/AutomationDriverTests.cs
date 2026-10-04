@@ -8,6 +8,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.FluentTheme;
 using NUnit.Framework;
@@ -108,6 +109,50 @@ public class AutomationDriverTests
         await session.Find(By.Id("Search")).TypeAsync("road");
 
         Assert.That(box.Text, Is.EqualTo("road"));
+    }
+
+    [Test]
+    public async Task Keys_ArePressedAsTheSystemWould_ModifiersAroundTheKey_ALetterWithItsCharacter()
+    {
+        var box = new TextBox { Name = "Note", Width = 200 };
+        var pressed = new System.Collections.Generic.List<string>();
+        box.AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler((_, e) => pressed.Add($"{e.Key} {e.Modifiers}")),
+            handledEventsToo: true);
+        await using var session = await Driving(box);
+
+        await session.Find(By.Id("Note")).PressKeysAsync("Shift+R o Ctrl+A");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Text, Is.EqualTo("Ro"), "a letter brings its character, upper with Shift; Ctrl+A none");
+            Assert.That(pressed, Is.EqualTo(new[]
+            {
+                "Shift None", "R LeftShift", "O None", "Ctrl None", "A LeftControl"
+            }));
+        });
+    }
+
+    [Test]
+    public async Task Keys_WithoutAFocusableTarget_EnterItsWindow()
+    {
+        var box = new TextBox { Name = "Only", Width = 200 };
+        await using var session = await Driving(box);
+
+        await session.Find(By.Type(AutomationControlType.Window)).PressKeysAsync("h i");
+
+        Assert.That(box.Text, Is.EqualTo("hi"), "the window was entered at its first stop, as activating it does");
+    }
+
+    [Test]
+    public void AKeyThatDoesNotExist_IsRefusedByName()
+    {
+        var failure = Assert.ThrowsAsync<AutomationException>(async () =>
+        {
+            await using var session = await Driving(new TextBox { Name = "Box" });
+            await session.Find(By.Id("Box")).PressKeysAsync("Ctrl+Banana");
+        });
+
+        Assert.That(failure.Message, Does.Contain("'Banana' is not a key"));
     }
 
     [Test]

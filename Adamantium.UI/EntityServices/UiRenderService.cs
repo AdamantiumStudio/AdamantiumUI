@@ -46,7 +46,7 @@ public abstract class UiRenderService : EntityService
 
             action(control);
 
-            foreach (var visual in control.GetVisualDescendants())
+            foreach (var visual in control.VisualChildren)
             {
                 stack.Push(visual as MeasurableUIComponent);
             }
@@ -63,7 +63,7 @@ public abstract class UiRenderService : EntityService
 
             action(control);
 
-            foreach (var visual in control.GetVisualDescendants())
+            foreach (var visual in control.VisualChildren)
             {
                 queue.Enqueue(visual);
             }

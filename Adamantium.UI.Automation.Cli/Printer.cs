@@ -44,7 +44,7 @@ internal static class Printer
             line.Append(FormattableString.Invariant($" in {minimum}..{maximum}"));
         }
 
-        if (element.VerticalScroll is { } down && element.HorizontalScroll is { } across)
+        if (element.VerticalScroll is { } down && element.HorizontalScroll is { } across && (down >= 0 || across >= 0))
         {
             line.Append(FormattableString.Invariant($" scrolled {Percent(across)} across, {Percent(down)} down"));
         }

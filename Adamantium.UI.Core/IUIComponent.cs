@@ -108,7 +108,8 @@ public interface IUIComponent : IFundamentalUIComponent
     /// so a frame-scoped consumer can compose world transforms top-down without re-walking to the root per node.</summary>
     Matrix4x4F LocalTransform { get; }
 
-    IReadOnlyCollection<IUIComponent> GetVisualDescendants();
+    /// <summary>Every element below this one at any depth, depth first; <see cref="VisualChildren"/> for the children alone.</summary>
+    IEnumerable<IUIComponent> GetVisualDescendants();
         
     IReadOnlyCollection<IUIComponent> VisualChildren { get; }
 

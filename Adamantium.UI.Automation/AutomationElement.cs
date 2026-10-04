@@ -94,6 +94,10 @@ public sealed class AutomationElement
     /// <summary>A left click in its middle, by input simulated inside the application; refused if something covers it.</summary>
     public Task ClickAsync() => RunAsync(AutomationCommand.Click);
 
+    /// <summary>Presses <paramref name="keys"/> - chords apart by spaces, <c>Alt</c>, <c>Ctrl+S</c>, <c>Alt H</c> - in
+    /// its window, focusing it first if it takes the keyboard; by input simulated inside the application.</summary>
+    public Task PressKeysAsync(string keys) => RunAsync(AutomationCommand.Key, keys);
+
     /// <summary>Focuses it and types <paramref name="text"/>, by input simulated inside the application.</summary>
     public Task TypeAsync(string text) => RunAsync(AutomationCommand.Type, text);
 

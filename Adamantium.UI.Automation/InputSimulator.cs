@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -50,6 +51,82 @@ internal static class InputSimulator
             KeyboardDevice.CurrentDevice.ProcessEvent(
                 new RawTextInputEventArgs(character.ToString(), InputModifiers.None, Now()));
         }
+    }
+
+    public static void Press(string chord, IInputComponent window)
+    {
+        var keys = chord.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (keys.Length == 0)
+        {
+            throw new AutomationException("No key named.");
+        }
+
+        var held = InputModifiers.None;
+        foreach (var name in keys[..^1])
+        {
+            var modifier = KeyOf(name);
+            var flag = ModifierOf(modifier) ?? throw new AutomationException($"'{name}' in '{chord}' is not Ctrl, Alt or Shift.");
+            SendKey(modifier, RawKeyboardEventType.KeyDown, held, window);
+            held |= flag;
+        }
+
+        var key = KeyOf(keys[^1]);
+        SendKey(key, RawKeyboardEventType.KeyDown, held, window);
+        if (CharacterOf(key, held) is { } character)
+        {
+            KeyboardDevice.CurrentDevice.ProcessEvent(new RawTextInputEventArgs(character.ToString(), held, Now()), window);
+        }
+
+        SendKey(key, RawKeyboardEventType.KeyUp, held, window);
+        foreach (var name in keys[..^1].Reverse())
+        {
+            var modifier = KeyOf(name);
+            held &= ~ModifierOf(modifier).Value;
+            SendKey(modifier, RawKeyboardEventType.KeyUp, held, window);
+        }
+    }
+
+    private static Key KeyOf(string name) => name.ToLowerInvariant() switch
+    {
+        "ctrl" or "control" => Key.Ctrl,
+        "alt" => Key.Alt,
+        "shift" => Key.Shift,
+        "esc" => Key.Escape,
+        _ when name.Length == 1 && char.IsDigit(name[0]) => (Key)((int)Key.D0 + name[0] - '0'),
+        _ => Enum.TryParse<Key>(name, true, out var key)
+            ? key
+            : throw new AutomationException($"'{name}' is not a key: a letter, a digit, Enter, Tab, Escape, F1, Ctrl, Alt...")
+    };
+
+    private static InputModifiers? ModifierOf(Key key) => key switch
+    {
+        Key.Ctrl or Key.LeftCtrl => InputModifiers.LeftControl,
+        Key.Alt or Key.LeftAlt => InputModifiers.LeftAlt,
+        Key.Shift or Key.LeftShift => InputModifiers.LeftShift,
+        _ => null
+    };
+
+    private static char? CharacterOf(Key key, InputModifiers held)
+    {
+        if ((held & (InputModifiers.LeftControl | InputModifiers.LeftAlt)) != 0)
+        {
+            return null;
+        }
+
+        var shifted = (held & InputModifiers.LeftShift) != 0;
+        return key switch
+        {
+            >= Key.A and <= Key.Z => (char)((shifted ? 'A' : 'a') + ((int)key - (int)Key.A)),
+            >= Key.D0 and <= Key.D9 when !shifted => (char)('0' + ((int)key - (int)Key.D0)),
+            Key.Space => ' ',
+            _ => null
+        };
+    }
+
+    private static void SendKey(Key key, RawKeyboardEventType type, InputModifiers modifiers, IInputComponent window)
+    {
+        var press = new KeyPressInfo { PreviousState = type == RawKeyboardEventType.KeyDown ? KeyState.Up : KeyState.Down };
+        KeyboardDevice.CurrentDevice.ProcessEvent(new RawKeyboardEventArgs(key, type, press, modifiers, Now()), window);
     }
 
     private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers)

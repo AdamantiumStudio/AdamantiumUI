@@ -182,6 +182,12 @@ public sealed class AutomationExecutor
             return true;
         }
 
+        if (request.Command == AutomationCommand.Key)
+        {
+            PressKeys(request);
+            return true;
+        }
+
         var peer = Resolve(request.Target);
         if (!peer.IsEnabled)
         {
@@ -244,6 +250,53 @@ public sealed class AutomationExecutor
         }
 
         return true;
+    }
+
+    private void PressKeys(AutomationRequest request)
+    {
+        var chords = (request.Value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (chords.Length == 0)
+        {
+            throw new AutomationException("No keys to press.");
+        }
+
+        var window = string.IsNullOrEmpty(request.Target) ? KeyboardWindow() : Focus(Resolve(request.Target));
+        foreach (var chord in chords)
+        {
+            InputSimulator.Press(chord, window);
+        }
+    }
+
+    private IInputComponent KeyboardWindow() =>
+        (FocusManager.Focused as IUIComponent)?.RootVisual as IInputComponent
+        ?? _host.Windows.OfType<IInputComponent>().FirstOrDefault()
+        ?? throw new AutomationException("No window is open.");
+
+    private static IInputComponent Focus(AutomationPeer peer)
+    {
+        var element = OwnerOf(peer);
+        if (element.RootVisual is not IInputComponent window)
+        {
+            throw new AutomationException($"{Label(peer)} is not in a window.");
+        }
+
+        if (!ReferenceEquals(element, window) && peer.IsKeyboardFocusable)
+        {
+            peer.SetFocus();
+            return window;
+        }
+
+        if (FocusManager.Focused is IUIComponent focused && !ReferenceEquals(focused.RootVisual, window))
+        {
+            FocusManager.LeaveWindow(focused.RootVisual);
+        }
+
+        if (FocusManager.Focused == null && !FocusManager.TryRestoreFocus(window))
+        {
+            KeyboardNavigation.MoveInto(window, NavigationMethod.Unspecified);
+        }
+
+        return window;
     }
 
     private static void SetValue(AutomationPeer peer, string value)

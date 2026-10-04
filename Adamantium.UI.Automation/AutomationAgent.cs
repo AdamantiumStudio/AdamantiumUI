@@ -38,7 +38,13 @@ public sealed class AutomationAgent : IDisposable
                 await using var pipe = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, 1,
                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 await pipe.WaitForConnectionAsync(_stop.Token);
-                await ServeClientAsync(pipe);
+                try
+                {
+                    await ServeClientAsync(pipe);
+                }
+                catch (IOException)
+                {
+                }
             }
         }
         catch (OperationCanceledException)
@@ -54,25 +60,19 @@ public sealed class AutomationAgent : IDisposable
     {
         using var reader = new StreamReader(pipe, new UTF8Encoding(false), leaveOpen: true);
         await using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
-        try
+        while (await reader.ReadLineAsync(_stop.Token) is { } line)
         {
-            while (await reader.ReadLineAsync(_stop.Token) is { } line)
+            AutomationReply reply;
+            try
             {
-                AutomationReply reply;
-                try
-                {
-                    reply = await _executor.ExecuteAsync(AutomationProtocol.ReadRequest(line));
-                }
-                catch (JsonException e)
-                {
-                    reply = AutomationReply.Failed($"Not a request: {e.Message}");
-                }
-
-                await writer.WriteLineAsync(AutomationProtocol.Write(reply));
+                reply = await _executor.ExecuteAsync(AutomationProtocol.ReadRequest(line));
             }
-        }
-        catch (IOException)
-        {
+            catch (JsonException e)
+            {
+                reply = AutomationReply.Failed($"Not a request: {e.Message}");
+            }
+
+            await writer.WriteLineAsync(AutomationProtocol.Write(reply));
         }
     }
 }

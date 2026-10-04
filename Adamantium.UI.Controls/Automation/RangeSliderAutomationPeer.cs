@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
 using Adamantium.UI.Controls.Primitives;
-using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
@@ -21,7 +21,7 @@ public class RangeSliderAutomationPeer : UIComponentAutomationPeer
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {
         var owner = (RangeSlider)Owner;
-        var track = TrackUnder(owner);
+        var track = owner.GetVisualDescendants().OfType<RangeTrack>().FirstOrDefault();
         if (track?.LowerThumb == null || track.UpperThumb == null)
         {
             return [];
@@ -38,18 +38,5 @@ public class RangeSliderAutomationPeer : UIComponentAutomationPeer
         }
 
         return [_lower, _upper];
-    }
-
-    private static RangeTrack TrackUnder(IUIComponent element)
-    {
-        foreach (var child in element.VisualChildren)
-        {
-            if ((child as RangeTrack ?? TrackUnder(child)) is { } track)
-            {
-                return track;
-            }
-        }
-
-        return null;
     }
 }

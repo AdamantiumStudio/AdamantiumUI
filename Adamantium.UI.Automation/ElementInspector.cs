@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -85,6 +87,23 @@ internal static class ElementInspector
             foreach (var popup in window.PopupRoots)
             {
                 text.Append("  popup: ").AppendLine(Describe(popup));
+            }
+
+            foreach (var adorner in (window as WindowBase)?.Adorners.OfType<Adorner>() ?? [])
+            {
+                text.Append("  adorner: ").Append(adorner.GetType().Name);
+                if (adorner is KeyTipAdorner keyTip)
+                {
+                    text.Append(" \"").Append(keyTip.Keys).Append('"');
+                }
+
+                text.Append(" on ").Append(Describe(adorner.AdornedElement) ?? "nothing");
+                if ((adorner.AdornedElement as UIComponent)?.GetAutomationPeer()?.Name is { Length: > 0 } name)
+                {
+                    text.Append(" \"").Append(name).Append('"');
+                }
+
+                text.AppendLine();
             }
         }
 

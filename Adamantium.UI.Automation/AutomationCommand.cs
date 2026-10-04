@@ -56,6 +56,11 @@ public enum AutomationCommand
     /// <summary>Types <see cref="AutomationRequest.Value"/> into the target, or into the element with keyboard focus.</summary>
     Type,
 
+    /// <summary>Presses the keys of <see cref="AutomationRequest.Value"/>, chords apart by spaces - <c>Alt</c>,
+    /// <c>Ctrl+S</c>, <c>Alt H</c> - in the target's window, the target focused if it takes the keyboard; without a
+    /// target, in the window the focus is in.</summary>
+    Key,
+
     /// <summary>Waits until the target selector matches something.</summary>
     WaitFor,
 

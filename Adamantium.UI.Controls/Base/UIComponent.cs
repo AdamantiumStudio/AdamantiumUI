@@ -816,9 +816,16 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         get => RenderParent != null ? LocalTransform * RenderParent.WorldTransform : LocalTransform;
     }
 
-    public IReadOnlyCollection<IUIComponent> GetVisualDescendants()
+    public IEnumerable<IUIComponent> GetVisualDescendants()
     {
-        return VisualChildren;
+        foreach (var child in VisualChildren)
+        {
+            yield return child;
+            foreach (var below in child.GetVisualDescendants())
+            {
+                yield return below;
+            }
+        }
     }
 
     private IReadOnlyCollection<IUIComponent> _visualChildrenView;

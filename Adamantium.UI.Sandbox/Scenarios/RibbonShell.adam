@@ -8,3 +8,8 @@ invoke id=Cut
 expect id=StatusLine name="Cut the selection."
 click type=Button,name=Copy
 expect id=StatusLine name="Copied the selection."
+# Key tips: Alt, then F, opens the File menu; Escape puts it away.
+key Alt F --into id=RibbonWindow
+wait id=RibbonWindow/id=PART_BackButton
+key Escape --into id=RibbonWindow
+absent id=RibbonWindow/id=PART_BackButton

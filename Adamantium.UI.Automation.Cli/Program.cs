@@ -45,6 +45,8 @@ public static class Program
           window <selector> minimize | maximize | restore | close
           set <selector> <value>                              write a value: text, or a number
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
+          key <keys>... [--into <selector>]                   press keys: Alt, Ctrl+S, Shift+Tab, F, Enter... in the
+                                                              focused window, or in <selector>'s (focusing it if it can)
           wait <selector> [--timeout 5s]                      wait until something matches
           wait-idle                                           wait until the application has settled
           state                                               keyboard focus, windows, open popups
@@ -107,6 +109,13 @@ public static class Program
                     Command = AutomationCommand.Type,
                     Target = arguments.Option("into"),
                     Value = arguments.At(0),
+                    AllowErrors = allowErrors
+                }),
+                "key" => await SendAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.Key,
+                    Target = arguments.Option("into"),
+                    Value = string.Join(' ', arguments.From(0)),
                     AllowErrors = allowErrors
                 }),
                 "wait" => await SendAsync(pipe, new AutomationRequest

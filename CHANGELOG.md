@@ -186,6 +186,10 @@ All packages share one version.
   `ScrollViewer`, and a list through its own, scroll to percents; an `Expander` opens and folds; a window is minimized,
   maximized, restored and closed. The driver sets a number with `SetValueAsync`, scrolls with `ScrollToAsync`, and
   `adam-auto` gains `scroll --vertical/--horizontal` and `window minimize|maximize|restore|close`.
+- Automation presses keys as the system would - modifiers around the key, a letter with its character - in an element's
+  window, focusing it if it takes the keyboard, or entering the window as activating it does:
+  `AutomationElement.PressKeysAsync("Alt H")`, `adam-auto key Alt --into id=MainWindow`. `adam-auto state` lists each
+  window's adorners, a key tip with its keys.
 - `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
   `AutomationProperties.LabeledBy="{Binding ElementName=VolumeLabel}"`, following the label's text and language.
 
@@ -257,6 +261,9 @@ All packages share one version.
 
 ### Fixed
 
+- `IUIComponent.GetVisualDescendants` returned the children alone; it is every element below, at any depth, and returns
+  `IEnumerable<IUIComponent>`. The ribbon looked for its quick-access bars among the window's children with it, so a bar
+  in the caption got no key tips.
 - A window that does not take activation when shown (`ActivateOnShow` false) took it when restored, and handed it to
   another window when minimized.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's

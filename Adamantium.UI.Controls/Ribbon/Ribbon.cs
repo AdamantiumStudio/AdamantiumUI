@@ -979,7 +979,7 @@ public class Ribbon : Selector
     /// <summary>What the FIRST level is gathered from - named places, not "the window": the tab strip, the application
     /// menu, the strip content, and every quick-access bar the window shows. Walking a common ancestor would badge the open tab's commands
     /// too, and those are the level below.</summary>
-    private IReadOnlyList<IUIComponent> TopLevelRoots()
+    internal IReadOnlyList<IUIComponent> TopLevelRoots()
     {
         var roots = new List<IUIComponent>();
         if (_strip != null) roots.Add(_strip);
