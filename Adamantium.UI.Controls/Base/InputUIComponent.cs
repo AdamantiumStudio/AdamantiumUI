@@ -11,6 +11,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     #region Routed events
     
     private bool _isLoaded;
+    private bool _unloadSent;
 
     public static readonly RoutedEvent LoadedEvent = EventManager.RegisterRoutedEvent( nameof(Loaded),
         RoutingStrategy.Direct, typeof(RoutedEventHandler), typeof(UIComponent));
@@ -1045,9 +1046,31 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
          base.OnAttachedToVisualTree(e);
+         _unloadSent = false;
 
          // A one-way latch: rewriting it per attach cost a property-system trip per node.
          if (!IsInitialized) IsInitialized = true;
+    }
+
+    internal void RaiseUnloaded()
+    {
+        if (_unloadSent)
+        {
+            return;
+        }
+
+        _unloadSent = true;
+        RaiseEvent(new RoutedEventArgs(UnloadedEvent, this));
+    }
+
+    protected override void OnDiscarded()
+    {
+        if (_isLoaded)
+        {
+            RaiseUnloaded();
+        }
+
+        base.OnDiscarded();
     }
 
     public IWindow GetWindow()
