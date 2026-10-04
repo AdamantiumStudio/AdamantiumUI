@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 
@@ -18,7 +21,10 @@ public static class DockingLayoutSerializer
     /// <param name="restoreKeyOf">What the application needs in order to make a pane again (<see cref="Pane.RestoreKey"/>).
     /// Written beside the id, so a pane that was opened by code - and therefore does not exist at start-up - can be
     /// recreated instead of silently dropped.</param>
-    public static string Save(DockingLayout layout, Func<string, bool> keepPane = null, Func<string, string> restoreKeyOf = null)
+    /// <param name="stateOf">A pane's own state - what it scrolled to, which of its tabs was open - or null.</param>
+    /// <param name="layoutVersion">The application's version of its panes, so a later one can tell an old file.</param>
+    public static string Save(DockingLayout layout, Func<string, bool> keepPane = null, Func<string, string> restoreKeyOf = null,
+        Func<string, string> stateOf = null, int layoutVersion = 0)
     {
         if (layout == null) return null;
 
@@ -27,6 +33,7 @@ public static class DockingLayoutSerializer
         {
             writer.WriteStartObject();
             writer.WriteNumber("version", Version);
+            if (layoutVersion != 0) writer.WriteNumber("layoutVersion", layoutVersion);
 
             // id -> what makes it again, for the ones that need making. Written once for the whole layout rather than
             // beside every mention: a pane appears in exactly one group, but the table reads far better than a key
@@ -36,6 +43,14 @@ public static class DockingLayoutSerializer
             {
                 writer.WriteStartObject("restore");
                 foreach (var pair in keys) writer.WriteString(pair.Key, pair.Value);
+                writer.WriteEndObject();
+            }
+
+            var states = CollectRestoreKeys(layout, keepPane, stateOf);
+            if (states.Count > 0)
+            {
+                writer.WriteStartObject("states");
+                foreach (var pair in states) writer.WriteString(pair.Key, pair.Value);
                 writer.WriteEndObject();
             }
 
@@ -55,7 +70,12 @@ public static class DockingLayoutSerializer
 
     /// <summary>What a saved layout expects the application to be able to make: pane id -> restore key. Read BEFORE the
     /// layout is applied, so the panes can be brought into being and the arrangement then simply finds them.</summary>
-    public static IReadOnlyDictionary<string, string> ReadRestoreKeys(string text)
+    public static IReadOnlyDictionary<string, string> ReadRestoreKeys(string text) => ReadTable(text, "restore");
+
+    /// <summary>What each pane said of its own state when the layout was saved: pane id -> state.</summary>
+    public static IReadOnlyDictionary<string, string> ReadStates(string text) => ReadTable(text, "states");
+
+    private static Dictionary<string, string> ReadTable(string text, string name)
     {
         var keys = new Dictionary<string, string>();
         if (string.IsNullOrWhiteSpace(text)) return keys;
@@ -63,13 +83,12 @@ public static class DockingLayoutSerializer
         try
         {
             using var document = JsonDocument.Parse(text);
-            if (!document.RootElement.TryGetProperty("restore", out var restore)
-                || restore.ValueKind != JsonValueKind.Object)
+            if (!document.RootElement.TryGetProperty(name, out var table) || table.ValueKind != JsonValueKind.Object)
             {
                 return keys;
             }
 
-            foreach (var pair in restore.EnumerateObject())
+            foreach (var pair in table.EnumerateObject())
             {
                 var key = pair.Value.GetString();
                 if (!string.IsNullOrEmpty(key)) keys[pair.Name] = key;
@@ -81,6 +100,84 @@ public static class DockingLayoutSerializer
         }
 
         return keys;
+    }
+
+    /// <summary>The application's version of its panes a layout was saved with; 0 when it gave none.</summary>
+    public static int ReadLayoutVersion(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            return document.RootElement.TryGetProperty("layoutVersion", out var version) && version.TryGetInt32(out var value)
+                ? value
+                : 0;
+        }
+        catch (JsonException)
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>The same layout with its pane ids renamed - a pane the application has since given another id keeps its
+    /// place. <paramref name="rename"/> returns the new id; one that names no pane any more is dropped on load.</summary>
+    public static string RenamePanes(string text, Func<string, string> rename)
+    {
+        if (string.IsNullOrWhiteSpace(text) || rename == null) return text;
+
+        JsonNode root;
+        try
+        {
+            root = JsonNode.Parse(text);
+        }
+        catch (JsonException)
+        {
+            return text;
+        }
+
+        if (root is not JsonObject layout) return text;
+
+        foreach (var table in new[] { "restore", "states" })
+        {
+            if (layout[table] is not JsonObject entries) continue;
+
+            var renamed = new JsonObject();
+            foreach (var pair in entries.ToList()) renamed[rename(pair.Key) ?? pair.Key] = pair.Value?.DeepClone();
+            layout[table] = renamed;
+        }
+
+        RenameIn(layout["roots"]);
+        return layout.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+
+        // Every "panes" list wherever it stands - the tree, the edge bars.
+        void RenameIn(JsonNode node)
+        {
+            switch (node)
+            {
+                case JsonArray array:
+                    foreach (var item in array) RenameIn(item);
+                    break;
+
+                case JsonObject element:
+                    foreach (var pair in element.ToList())
+                    {
+                        if (pair.Key == "panes" && pair.Value is JsonArray ids)
+                        {
+                            for (var i = 0; i < ids.Count; i++)
+                            {
+                                var id = ids[i]?.GetValue<string>();
+                                if (id != null) ids[i] = rename(id) ?? id;
+                            }
+                        }
+                        else
+                        {
+                            RenameIn(pair.Value);
+                        }
+                    }
+                    break;
+            }
+        }
     }
 
     private static Dictionary<string, string> CollectRestoreKeys(DockingLayout layout, Func<string, bool> keep, Func<string, string> keyOf)
@@ -197,12 +294,12 @@ public static class DockingLayoutSerializer
     {
         switch (node)
         {
-            case PaneGroupNode group when HasKeptPane(group, keep):
+            case PaneGroupNode group when Written(group, well, keep):
                 writer.WritePropertyName(name);
                 WriteGroup(writer, well, group, keep);
                 return true;
 
-            case PaneSplitNode split when HasKeptPane(split, keep):
+            case PaneSplitNode split when Written(split, well, keep):
                 writer.WritePropertyName(name);
                 WriteSplit(writer, well, split, keep);
                 return true;
@@ -212,8 +309,32 @@ public static class DockingLayoutSerializer
         }
     }
 
+    // The document area is written even with nothing kept in it - documents never are. It is a PLACE: lost, the tools
+    // closed up over the hole, and one of them came back as the documents.
+    private static bool Written(PaneNode node, PaneNode well, Func<string, bool> keep) =>
+        HasKeptPane(node, keep) || Contains(node, well);
+
+    private static bool Contains(PaneNode node, PaneNode wanted)
+    {
+        if (wanted == null) return false;
+        if (ReferenceEquals(node, wanted)) return true;
+        return node is PaneSplitNode split && split.Children.Any(child => Contains(child, wanted));
+    }
+
     private static void WriteSplit(Utf8JsonWriter writer, PaneNode well, PaneSplitNode split, Func<string, bool> keep)
     {
+        // A divided document area with nothing kept in it comes back as the one empty group it would close up to.
+        if (ReferenceEquals(split, well) && !HasKeptPane(split, keep))
+        {
+            writer.WriteStartObject();
+            writer.WriteStartArray("panes");
+            writer.WriteEndArray();
+            writer.WriteString("length", split.Length.ToString());
+            writer.WriteBoolean("well", true);
+            writer.WriteEndObject();
+            return;
+        }
+
         writer.WriteStartObject();
         writer.WriteString("split", split.Orientation.ToString());
         writer.WriteString("length", split.Length.ToString());
@@ -228,10 +349,10 @@ public static class DockingLayoutSerializer
         {
             switch (child)
             {
-                case PaneGroupNode group when HasKeptPane(group, keep):
+                case PaneGroupNode group when Written(group, well, keep):
                     WriteGroup(writer, well, group, keep);
                     break;
-                case PaneSplitNode nested when HasKeptPane(nested, keep):
+                case PaneSplitNode nested when Written(nested, well, keep):
                     WriteSplit(writer, well, nested, keep);
                     break;
             }
@@ -321,15 +442,26 @@ public static class DockingLayoutSerializer
                 }
             }
 
-            // A split that lost every child to a dropped document is not a split any more.
-            if (split.Children.Count == 0) return null;
+            var isTheWell = element.TryGetProperty("well", out var isWell) && isWell.GetBoolean();
 
-            if (element.TryGetProperty("well", out var isWell) && isWell.GetBoolean()) well = split;
+            // A split that lost every child to a dropped document is not a split any more - but the document area stays,
+            // as the empty group it closes up to.
+            if (split.Children.Count == 0)
+            {
+                if (!isTheWell) return null;
+
+                var empty = new PaneGroupNode { Length = split.Length, ActiveIndex = -1 };
+                well = empty;
+                return empty;
+            }
+
+            if (isTheWell) well = split;
             return split;
         }
 
+        // An empty group is dropped, unless it is the document area: that is a place, not a group of panes.
         var group = ReadGroup(element, known, ref well);
-        return group.IsEmpty ? null : group;
+        return group.IsEmpty && !ReferenceEquals(group, well) ? null : group;
     }
 
     private static PaneGroupNode ReadGroup(JsonElement element, Func<string, bool> known, ref PaneNode well)

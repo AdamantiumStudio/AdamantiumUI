@@ -41,7 +41,7 @@
                         <!-- A GRID, not a stack: the middle track is starred, so a tab given MORE room than its content
                              needs - a lone document filling its strip - hands the extra to the header and keeps the
                              close button against the right edge. -->
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Center">
                             <!-- Collapsed by default and revealed by HasIcon: an empty presenter measures to nothing,
                                  but its MARGIN is reserved regardless, and that gap pushes a centered label off-center. -->
                             <ContentPresenter x:Name="PART_Icon" Grid.Column="0"
@@ -60,15 +60,22 @@
                                     Content="{TemplateBinding Header}"
                                     ContentTemplate="{TemplateBinding HeaderTemplate}"
                                     ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"/>
+                            <!-- Unsaved work: shown by a docking pane's IsDirty trigger, collapsed otherwise. -->
+                            <Ellipse x:Name="DirtyMark" Grid.Column="2"
+                                    Width="6" Height="6"
+                                    Margin="6 0 0 0"
+                                    VerticalAlignment="Center"
+                                    Fill="{TemplateBinding Foreground}"
+                                    Visibility="Collapsed"/>
                             <!-- Pin BEFORE close: pinning keeps the tab and closing loses it, and the more destructive
                                  of the two belongs at the very edge. Its look is PinButtonTemplate. -->
-                            <ToggleButton x:Name="PART_PinButton" Grid.Column="2"
+                            <ToggleButton x:Name="PART_PinButton" Grid.Column="3"
                                     Template="{TemplateBinding PinButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed"/>
-                            <Button x:Name="PART_CloseButton" Grid.Column="3"
+                            <Button x:Name="PART_CloseButton" Grid.Column="4"
                                     Template="{TemplateBinding CloseButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"

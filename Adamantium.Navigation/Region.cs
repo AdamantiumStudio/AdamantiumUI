@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Core;
@@ -11,10 +13,14 @@ namespace Adamantium.Navigation;
 /// the DI container. UI-free - an adapter (UI layer) observes CurrentViewModel/ActiveViewModels and drives a control.</summary>
 public sealed class Region : PropertyChangedBase, IRegion
 {
+    private static readonly AsyncLocal<ImmutableStack<(Region Region, Task Settled)>> Within = new();
+
     private readonly IDependencyResolver _resolver;
     private readonly List<object> _activeViewModels = [];
     private object _currentViewModel;
     private string _currentViewKey;
+    private CancellationTokenSource _pending;
+    private Task _settled = Task.CompletedTask;
 
     public Region(string name, IDependencyResolver resolver, INavigationService navigationService)
     {
@@ -65,20 +71,18 @@ public sealed class Region : PropertyChangedBase, IRegion
     public Task<NavigationResult> NavigateToViewAsync(Type viewModelType, string viewKey, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
         => NavigateCoreAsync(viewModelType, viewKey, null, parameters, cancellationToken);
 
-    private async Task<NavigationResult> NavigateCoreAsync(Type viewModelType, string viewKey, object instance, NavigationParameters parameters, CancellationToken cancellationToken)
-    {
-        var context = new NavigationContext(this, NavigationService, viewModelType, _currentViewModel, parameters, NavigationMode.New, cancellationToken);
-        try
+    private Task<NavigationResult> NavigateCoreAsync(Type viewModelType, string viewKey, object instance, NavigationParameters parameters, CancellationToken cancellationToken)
+        => RunAsync(cancellationToken, async token =>
         {
-            if (!await ConfirmLeaveAsync(context, cancellationToken)) return NavigationResult.Vetoed();
-            if (cancellationToken.IsCancellationRequested) return NavigationResult.Vetoed();
+            var context = new NavigationContext(this, NavigationService, viewModelType, _currentViewModel, parameters, NavigationMode.New, token);
+            if (!await ConfirmLeaveAsync(context))
+            {
+                return NavigationResult.Vetoed();
+            }
 
             // A given instance is the target, full stop - the container is not asked at all.
             var target = instance ?? FindReusable(viewModelType, context) ?? _resolver.Resolve(viewModelType);
-            context.TargetViewModel = target;
-
-            (_currentViewModel as INavigationAware)?.OnNavigatedFrom(context);
-            (target as INavigationAware)?.OnNavigatedTo(context);
+            await EnterAsync(context, target);
 
             Journal.RecordNavigation(new NavigationJournalEntry(viewModelType, target, context.Parameters, viewKey));
             // The key BEFORE the model: when a view-model is read through several views the model does not change, so
@@ -86,42 +90,95 @@ public sealed class Region : PropertyChangedBase, IRegion
             CurrentViewKey = viewKey;
             SetActive(target);
             return Settle(context);
-        }
-        catch (Exception ex)
-        {
-            return NavigationResult.Failed(ex);
-        }
-    }
+        });
 
     public Task<NavigationResult> GoBackAsync(CancellationToken cancellationToken = default) => GoAsync(NavigationMode.Back, cancellationToken);
     public Task<NavigationResult> GoForwardAsync(CancellationToken cancellationToken = default) => GoAsync(NavigationMode.Forward, cancellationToken);
 
-    private async Task<NavigationResult> GoAsync(NavigationMode mode, CancellationToken cancellationToken)
-    {
-        var peek = mode == NavigationMode.Back
-            ? (Journal.CanGoBack ? Journal.BackStack[^1] : null)
-            : (Journal.CanGoForward ? Journal.ForwardStack[^1] : null);
-        if (peek == null) return NavigationResult.Vetoed();
-
-        var context = new NavigationContext(this, NavigationService, peek.ViewModelType, _currentViewModel, peek.Parameters, mode, cancellationToken);
-        try
+    private Task<NavigationResult> GoAsync(NavigationMode mode, CancellationToken cancellationToken)
+        => RunAsync(cancellationToken, async token =>
         {
-            if (!await ConfirmLeaveAsync(context, cancellationToken)) return NavigationResult.Vetoed();
+            var entry = mode == NavigationMode.Back
+                ? (Journal.CanGoBack ? Journal.BackStack[^1] : null)
+                : (Journal.CanGoForward ? Journal.ForwardStack[^1] : null);
+            if (entry == null)
+            {
+                return NavigationResult.Vetoed();
+            }
 
-            var entry = mode == NavigationMode.Back ? Journal.Back() : Journal.Forward();
+            var context = new NavigationContext(this, NavigationService, entry.ViewModelType, _currentViewModel, entry.Parameters, mode, token);
+            if (!await ConfirmLeaveAsync(context))
+            {
+                return NavigationResult.Vetoed();
+            }
+
             var target = entry.ViewModel ?? _resolver.Resolve(entry.ViewModelType);
-            context.TargetViewModel = target;
+            await EnterAsync(context, target);
 
-            (_currentViewModel as INavigationAware)?.OnNavigatedFrom(context);
-            (target as INavigationAware)?.OnNavigatedTo(context);
-
+            if (mode == NavigationMode.Back)
+            {
+                Journal.Back();
+            }
+            else
+            {
+                Journal.Forward();
+            }
             CurrentViewKey = entry.ViewKey;
             SetActive(target);
             return Settle(context);
+        });
+
+    private async Task<NavigationResult> RunAsync(CancellationToken cancellationToken, Func<CancellationToken, Task<NavigationResult>> navigate)
+    {
+        var within = Within.Value ?? ImmutableStack<(Region Region, Task Settled)>.Empty;
+        var fromOwnHook = within.Any(w => ReferenceEquals(w.Region, this) && !w.Settled.IsCompleted);
+
+        _pending?.Cancel();
+        using var pending = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _pending = pending;
+        var previous = _settled;
+        var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _settled = settled.Task;
+        Within.Value = within.Push((this, settled.Task));
+        try
+        {
+            if (!fromOwnHook)
+            {
+                await previous;
+            }
+            pending.Token.ThrowIfCancellationRequested();
+            return await navigate(pending.Token);
+        }
+        catch (OperationCanceledException) when (pending.IsCancellationRequested)
+        {
+            return NavigationResult.Vetoed();
         }
         catch (Exception ex)
         {
             return NavigationResult.Failed(ex);
+        }
+        finally
+        {
+            if (ReferenceEquals(_pending, pending))
+            {
+                _pending = null;
+            }
+            settled.SetResult();
+        }
+    }
+
+    private static async Task EnterAsync(NavigationContext context, object target)
+    {
+        context.TargetViewModel = target;
+        if (target is INavigationAware entering)
+        {
+            await entering.OnNavigatedToAsync(context, context.CancellationToken);
+        }
+        context.CancellationToken.ThrowIfCancellationRequested();
+
+        if (!ReferenceEquals(context.SourceViewModel, target) && context.SourceViewModel is INavigationAware leaving)
+        {
+            await leaving.OnNavigatedFromAsync(context, context.CancellationToken);
         }
     }
 
@@ -190,10 +247,13 @@ public sealed class Region : PropertyChangedBase, IRegion
         return result;
     }
 
-    private static async Task<bool> ConfirmLeaveAsync(NavigationContext context, CancellationToken cancellationToken)
+    private static async Task<bool> ConfirmLeaveAsync(NavigationContext context)
     {
-        if (context.SourceViewModel is IConfirmNavigation guard)
-            return await guard.CanNavigateAwayAsync(context, cancellationToken);
+        if (context.SourceViewModel is IConfirmNavigation guard && !await guard.CanNavigateAwayAsync(context, context.CancellationToken))
+        {
+            return false;
+        }
+        context.CancellationToken.ThrowIfCancellationRequested();
         return true;
     }
 

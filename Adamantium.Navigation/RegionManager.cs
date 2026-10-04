@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 
 namespace Adamantium.Navigation;
@@ -57,4 +60,14 @@ public sealed class RegionManager : IRegionManager
     {
         if (region != null) _regions[region.Name] = region;
     }
+
+    public Task<NavigationResult> NavigateToAsync<TViewModel>(string regionName, NavigationParameters parameters = null,
+        CancellationToken cancellationToken = default)
+        => GetOrCreateRegion(regionName).NavigateToAsync<TViewModel>(parameters, cancellationToken);
+
+    public Task<NavigationResult> NavigateToAsync(string regionName, Type viewModelType, NavigationParameters parameters = null,
+        CancellationToken cancellationToken = default)
+        => GetOrCreateRegion(regionName).NavigateToAsync(viewModelType, parameters, cancellationToken);
+
+    public IDockingRegion Docking(string regionName) => DockingRegion.Of(GetOrCreateRegion(regionName));
 }

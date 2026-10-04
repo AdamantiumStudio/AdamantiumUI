@@ -1,0 +1,8 @@
+<Language>
+    <Phrase Key="UnsavedTitle" Text="Unsaved changes"/>
+    <Phrase Key="SaveOne" Text="Save the changes to '{name}'?"/>
+    <Phrase Key="SaveMany" Count="count" One="Save the changes to {count} document?" Other="Save the changes to {count} documents?"/>
+    <Phrase Key="Save" Text="Save"/>
+    <Phrase Key="DontSave" Text="Don't save"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+</Language>

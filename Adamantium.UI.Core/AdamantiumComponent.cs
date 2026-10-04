@@ -367,6 +367,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         {
             if (inheritanceParent == value) return;
 
+            var type = GetType();
+            var inheriting = AdamantiumPropertyMap.GetInheriting(type);
+
+            // What the subtree below inherits through this element, read BEFORE the move: an element there may watch a
+            // value (a tab's label bound to its presenter's FontSize) even when nothing here does.
+            var before = inheritanceChildren is { Count: > 0 } ? new object[inheriting.Length] : null;
+            if (before != null)
+            {
+                for (var i = 0; i < inheriting.Length; i++) before[i] = GetValue(inheriting[i]);
+            }
+
             var oldParent = inheritanceParent;
             oldParent?.RemoveInheritanceChild(this);
 
@@ -381,9 +392,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             // A new parent brings different inherited values: raising the change here is what makes inheritance
             // order-independent. Only the INHERITING properties, resolved once per type - a virtualized grid paid the
             // full seventy-property scan per realized tile.
-            var type = GetType();
-            foreach (var property in AdamantiumPropertyMap.GetInheriting(type))
+            for (var i = 0; i < inheriting.Length; i++)
             {
+                var property = inheriting[i];
                 if (HasExplicitValue(property))
                     continue;
 
@@ -391,12 +402,25 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
                 // A plain inherited VALUE needs nothing here: the epoch bumped above, and the first read of it resolves
                 // from the new parent. Only a callback (DataContext -> refresh this element's bindings) or an observer
-                // has to be told, and only that is written.
+                // has to be told, and only that is written - but the subtree is told either way, or a watcher below
+                // keeps the value of the moment this element was out of the tree.
                 if (metadata.PropertyChangedCallback == null && PropertyChanged == null)
-                    continue;
+                {
+                    if (before != null && GetValue(property) is var now && !Equals(before[i], now))
+                    {
+                        NotifyInheritanceChildren(new AdamantiumPropertyChangedEventArgs(property, before[i], now),
+                            InheritedPushValue(property, now));
+                    }
 
-                var oldValue = oldParent?.GetValue(property) ?? metadata.DefaultValue;
-                var newValue = inheritanceParent?.GetValue(property) ?? metadata.DefaultValue;
+                    continue;
+                }
+
+                var oldValue = before != null ? before[i] : oldParent?.GetValue(property) ?? metadata.DefaultValue;
+
+                // What the read path inherits (see ResolveInherited): an ancestor's EXPLICIT value, or nothing - never an
+                // ancestor's mere default, which written into this slot stands above this element's own theme value. A
+                // docking tab moved into a new strip took the strip's transparent foreground.
+                var newValue = InheritedFromAncestors(property);
                 if (!Equals(oldValue, newValue))
                 {
                     SetValue(property, newValue, ValuePriority.Inherited);
@@ -519,13 +543,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             return;
         }
 
-        var raw = AdamantiumProperty.UnsetValue;
-        for (var ancestor = inheritanceParent; ancestor != null; ancestor = ancestor.inheritanceParent)
-        {
-            if (!ancestor.HasExplicitValue(property)) continue;
-            raw = ancestor.GetValue(property);
-            break;
-        }
+        var raw = InheritedFromAncestors(property);
 
         // This fill raises nothing (the property already read as this value), so the Changed hook never took the
         // brush's owner link: 724 of 1028 elements painting with a palette brush were not owners, and a recolor had
@@ -546,6 +564,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // Not while this element is OUT of the tree: leaving gave every link up, and taking one here would leave the
         // value holding an element that the next leave can no longer release. Same rule as the Changed hook.
         if (!_renderAttachmentsReleased) (after as IRenderAttachable)?.AttachTo(this);
+    }
+
+    // The nearest ancestor's EXPLICIT value, or UnsetValue when no ancestor states one.
+    private object InheritedFromAncestors(AdamantiumProperty property)
+    {
+        for (var ancestor = inheritanceParent; ancestor != null; ancestor = ancestor.inheritanceParent)
+        {
+            if (ancestor.HasExplicitValue(property)) return ancestor.GetValue(property);
+        }
+
+        return AdamantiumProperty.UnsetValue;
     }
 
     // "Explicit" = a value set from a real source (Animation..Style); the seeded Default and the computed Effective/

@@ -1,5 +1,7 @@
 using System;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Sandbox.Localization;
@@ -32,9 +34,9 @@ public partial class AboutDialogViewModel : AdamantiumViewModel, IDialogAware
     public string Manufacturer { get; }
     public string Copyright { get; }
 
-    public void OnDialogOpened(NavigationParameters parameters) { }
+    public Task OnDialogOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-    public bool CanCloseDialog() => true;
+    public Task<bool> CanCloseDialogAsync() => Task.FromResult(true);
 
     public event Action<IDialogResult> RequestClose;
 

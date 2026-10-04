@@ -4,6 +4,7 @@ using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using System.Linq;
 using Adamantium.Mathematics;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using NUnit.Framework;

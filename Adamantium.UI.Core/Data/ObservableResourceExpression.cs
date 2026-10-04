@@ -67,10 +67,21 @@ public class ObservableResourceExpression : BindingExpressionBase
         if (element is IUIComponent visual) visual.AttachedToVisualTreeEvent -= OnVisualAttached;
         else if (element != null) element.AttachedToLogicalTree -= OnLogicalAttached;
         if (Target is IInputComponent input) input.Unloaded -= OnTargetUnloaded;
+        if (Target is IUIComponent returning) returning.AttachedToVisualTreeEvent -= OnReturned;
     }
 
     private void OnResourcesChanged(object sender, EventArgs e) => UpdateTarget();
     private void OnVisualAttached(object sender, VisualTreeAttachmentEventArgs e) => UpdateTarget();
     private void OnLogicalAttached(object sender, LogicalTreeAttachmentEventArgs e) => UpdateTarget();
-    private void OnTargetUnloaded(object sender, RoutedEventArgs e) => CloseConnection();
+
+    // Unloaded lets go of the resource manager, which outlives the target. But a target moved elsewhere is unloaded by the
+    // tree it left too, so it connects again once it is in a tree again - or a docking tab moved between panels kept
+    // whatever its brush resolved to while it was between them.
+    private void OnTargetUnloaded(object sender, RoutedEventArgs e)
+    {
+        CloseConnection();
+        if (Target is IUIComponent visual) visual.AttachedToVisualTreeEvent += OnReturned;
+    }
+
+    private void OnReturned(object sender, VisualTreeAttachmentEventArgs e) => EstablishConnection();
 }

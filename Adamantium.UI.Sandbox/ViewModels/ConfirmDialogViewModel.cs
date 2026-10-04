@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Sandbox.Localization;
@@ -13,14 +15,23 @@ public partial class ConfirmDialogViewModel : AdamantiumViewModel, IDialogAware
     [Bindable] private string title = DialogStrings.Confirm;
     [Bindable] private string message = DialogStrings.AreYouSure;
 
-    public void OnDialogOpened(NavigationParameters parameters)
+    public Task OnDialogOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default)
     {
-        if (parameters == null) return;
-        if (parameters.TryGetValue<string>("title", out var t)) Title = t;
-        if (parameters.TryGetValue<string>("message", out var m)) Message = m;
+        if (parameters != null)
+        {
+            if (parameters.TryGetValue<string>("title", out var t))
+            {
+                Title = t;
+            }
+            if (parameters.TryGetValue<string>("message", out var m))
+            {
+                Message = m;
+            }
+        }
+        return Task.CompletedTask;
     }
 
-    public bool CanCloseDialog() => true;
+    public Task<bool> CanCloseDialogAsync() => Task.FromResult(true);
 
     public event Action<IDialogResult> RequestClose;
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Adamantium.UI.Controls.Docking;
@@ -44,6 +45,50 @@ public class DockingWorkspace
         return true;
     }
 
+    /// <summary>Back to the arrangement written in markup - "reset window layout". See <see cref="DockingArea.ResetLayout"/>.
+    /// </summary>
+    public bool Reset()
+    {
+        if (_area == null || !_area.ResetLayout()) return false;
+
+        Restored?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>Named arrangements - "Animation", "Debugging" - as text, for the application to keep where it keeps its
+    /// settings and to fill again on start.</summary>
+    public IDictionary<string, string> Layouts { get; } = new Dictionary<string, string>();
+
+    /// <summary>Keeps the arrangement on screen under a name. False when there is no area yet.</summary>
+    public bool SaveAs(string name)
+    {
+        if (string.IsNullOrEmpty(name) || Save() is not { } state) return false;
+
+        Layouts[name] = state;
+        return true;
+    }
+
+    /// <summary>Puts the arrangement kept under that name on screen.</summary>
+    public bool Apply(string name) =>
+        !string.IsNullOrEmpty(name) && Layouts.TryGetValue(name, out var state) && Load(state);
+
+    /// <summary>The application's version of its panes - <see cref="DockingArea.LayoutVersion"/>. Raise it when a pane is
+    /// renamed or removed, and answer <see cref="PaneMigrating"/> for layouts saved before.</summary>
+    public int Version
+    {
+        get => _version;
+        set
+        {
+            _version = value;
+            if (_area != null) _area.LayoutVersion = value;
+        }
+    }
+
+    private int _version;
+
+    /// <summary>A pane id of a layout saved under an older <see cref="Version"/>: give it the id the pane has now.</summary>
+    public event EventHandler<PaneMigratingEventArgs> PaneMigrating;
+
     /// <summary>Where pinned tabs live in every panel of the area - a row of their own or the one row. Null before an
     /// area has attached, and a write then is simply dropped: there is nothing yet to arrange.</summary>
     public PinnedTabsPlacement? PinnedTabsPlacement
@@ -69,12 +114,15 @@ public class DockingWorkspace
             carried = _area.SaveLayout();
             _area.PaneClosing -= OnPaneClosing;
             _area.PaneClosed -= OnPaneClosed;
+            _area.PaneMigrating -= OnPaneMigrating;
             _area.ReleaseFloatingWindows();
         }
 
         _area = area;
         area.PaneClosing += OnPaneClosing;
         area.PaneClosed += OnPaneClosed;
+        area.PaneMigrating += OnPaneMigrating;
+        area.LayoutVersion = _version;
 
         // AFTER the wiring, so a pane the saved tree names and this area has not got is asked for through the events
         // the new area is now subscribed to (DockingArea.LoadLayout raises PaneRestoreRequested for exactly those).
@@ -87,6 +135,7 @@ public class DockingWorkspace
     {
         area.PaneClosing -= OnPaneClosing;
         area.PaneClosed -= OnPaneClosed;
+        area.PaneMigrating -= OnPaneMigrating;
         if (ReferenceEquals(_area, area)) _area = null;
     }
 
@@ -95,4 +144,6 @@ public class DockingWorkspace
         PaneClosing?.Invoke(this, e) ?? Task.CompletedTask;
 
     private void OnPaneClosed(object sender, PaneClosedEventArgs e) => PaneClosed?.Invoke(this, e);
+
+    private void OnPaneMigrating(object sender, PaneMigratingEventArgs e) => PaneMigrating?.Invoke(this, e);
 }

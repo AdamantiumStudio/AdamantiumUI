@@ -17,6 +17,10 @@ public interface IWindowWorkerService
     /// untouched, and the window is not activated.</summary>
     public void SetSize(double clientWidth, double clientHeight);
 
+    /// <summary>The window's outer rectangle as it is when neither maximized nor minimized, in physical screen pixels:
+    /// what a maximized window goes back to, and so what is remembered for it. Empty when unknown.</summary>
+    public Rect RestoreBounds { get; }
+
     /// <summary>Re-apply the window's overlay traits - topmost, click-through, transparency - to the live OS window.
     /// Called whenever one of them changes, so setting <c>Topmost</c> on an open window actually raises it instead of
     /// changing a number nobody reads again.</summary>

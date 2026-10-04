@@ -32,6 +32,9 @@ public static class PlatformSettings
    /// Used to check that a remembered window position still exists - see <see cref="IsOnScreen"/>.</summary>
    public static Rect VirtualScreen => Platform?.VirtualScreen ?? default;
 
+   /// <summary>The monitors connected now, in PHYSICAL pixels; empty when the platform does not say.</summary>
+   public static IReadOnlyList<ScreenInfo> Screens => Platform?.Screens ?? [];
+
    /// <summary>Whether a saved window rectangle is still reachable: its top-left and a grabbable caption strip are on a
    /// monitor. True when the platform cannot tell.</summary>
    public static bool IsOnScreen(Rect bounds)

@@ -1,9 +1,9 @@
 using System;
 
-namespace Adamantium.UI.Controls.Docking;
+namespace Adamantium.Navigation;
 
-/// <summary>Where a pane sits or a drop would put it (one bit, <see cref="Pane.Zone"/>), or combined, where it may be
-/// (<see cref="Pane.Allowed"/>). A combination read as a place counts as its first bit.</summary>
+/// <summary>Where a pane sits or a drop would put it (one bit, a pane's <c>Zone</c>), or combined, where it may be (its
+/// <c>Allowed</c>). A combination read as a place counts as its first bit.</summary>
 [Flags]
 public enum DockZone
 {

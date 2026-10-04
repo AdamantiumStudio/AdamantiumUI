@@ -90,6 +90,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     }
 
+    // NSWindow.frame while not zoomed goes here, flipped the same way SetPosition flips it.
+    public Rect RestoreBounds => default;
+
     // NSWindow.setFrameOrigin: goes here, remembering that Cocoa's origin is the BOTTOM-left of the main screen.
     public void SetPosition(double left, double top)
     {

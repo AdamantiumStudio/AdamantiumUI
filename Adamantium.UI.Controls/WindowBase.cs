@@ -16,6 +16,7 @@ namespace Adamantium.UI.Controls;
 public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IAdornerHost, IPopupHost
 {
     private IWindowRenderer _renderer;
+    private protected bool _opensMaximized;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
     public IWindowRenderer DefaultRenderer { get; set; }
@@ -456,6 +457,18 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public static readonly AdamantiumProperty IconProperty = AdamantiumProperty.Register(nameof(Icon),
         typeof(object), typeof(WindowBase), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty TitleAlignmentProperty = AdamantiumProperty.Register(nameof(TitleAlignment),
+        typeof(HorizontalAlignment), typeof(WindowBase), new PropertyMetadata(HorizontalAlignment.Left));
+
+    public static readonly AdamantiumProperty StartupLocationProperty = AdamantiumProperty.Register(nameof(StartupLocation),
+        typeof(WindowStartupLocation), typeof(WindowBase), new PropertyMetadata(WindowStartupLocation.CenterOwner));
+
+    public static readonly AdamantiumProperty RemembersPlacementProperty = AdamantiumProperty.Register(nameof(RemembersPlacement),
+        typeof(bool), typeof(WindowBase), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty PlacementKeyProperty = AdamantiumProperty.Register(nameof(PlacementKey),
+        typeof(string), typeof(WindowBase), new PropertyMetadata(null));
+
     // Caption background for the ACTIVE (focused) and INACTIVE window - the default template paints the TitleBar with
     // InactiveTitleBarBackground and swaps to TitleBarBackground while IsActive. Theme sets the defaults (accent / neutral);
     // a user can override either on the window (e.g. a brand color when focused, a custom dim when not).
@@ -665,6 +678,37 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         set => SetValue(IconProperty, value);
     }
 
+    /// <summary>Where the title stands in the custom title bar; <c>Center</c> is the middle of the window, whatever
+    /// sits on either side.</summary>
+    public HorizontalAlignment TitleAlignment
+    {
+        get => GetValue<HorizontalAlignment>(TitleAlignmentProperty);
+        set => SetValue(TitleAlignmentProperty, value);
+    }
+
+    /// <summary>Where the window appears when it has no remembered place (see <see cref="RemembersPlacement"/>).</summary>
+    public WindowStartupLocation StartupLocation
+    {
+        get => GetValue<WindowStartupLocation>(StartupLocationProperty);
+        set => SetValue(StartupLocationProperty, value);
+    }
+
+    /// <summary>Whether the window comes back where it was closed: on its screen, in its place, at its size, maximized if
+    /// it was. On by default; when that screen is no longer connected, <see cref="StartupLocation"/> places it.</summary>
+    public bool RemembersPlacement
+    {
+        get => GetValue<bool>(RemembersPlacementProperty);
+        set => SetValue(RemembersPlacementProperty, value);
+    }
+
+    /// <summary>What the window's place is remembered under; the window's type when null. Windows of one type that each
+    /// keep a place of their own take a key each.</summary>
+    public string PlacementKey
+    {
+        get => GetValue<string>(PlacementKeyProperty);
+        set => SetValue(PlacementKeyProperty, value);
+    }
+
     /// <summary>Begins an OS-driven move of the window (custom-chrome caption drag). Wired from a title bar's press.</summary>
     public void DragMove() => WindowWorkerService?.BeginMoveDrag();
 
@@ -734,6 +778,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         WindowWorkerService = CreateWindowWorker(context);
         if (WindowWorkerService != null)
         {
+            PlaceOnScreen(context);
             WindowWorkerService.SetWindow(this);
         }
         else
@@ -751,6 +796,80 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             IsThemeChanging = themes.IsThemeChanging;   // a window opened mid-swap already shows the busy state
         }
     }
+
+    private void PlaceOnScreen(IUIContext context)
+    {
+        var screens = PlatformSettings.Screens;
+        if (!ActivateOnShow || Design.IsDesignMode || screens.Count == 0)
+        {
+            return;
+        }
+
+        var remembered = RemembersPlacement ? context.Resolve<IWindowPlacementStore>().Load(PlacementName()) : null;
+        var home = remembered == null ? null : screens.FirstOrDefault(s => s.Id == remembered.ScreenId);
+        if (home != null)
+        {
+            ClientWidth = remembered.ClientWidth;
+            ClientHeight = remembered.ClientHeight;
+            Position = WindowPlacer.Restore(remembered, screens, SizeOn(home)) ?? Position;
+            _opensMaximized = remembered.IsMaximized;
+            return;
+        }
+
+        if (StartupLocation == WindowStartupLocation.CenterOwner
+            && context.UIApplication?.ActiveWindow is WindowBase owner && !ReferenceEquals(owner, this))
+        {
+            var corner = owner.LivePosition;
+            var ownerBounds = new Rect(corner.X, corner.Y, owner.Width, owner.Height);
+            Position = WindowPlacer.Center(ownerBounds, SizeOn(WindowPlacer.ScreenOf(ownerBounds, screens)));
+        }
+        else if (StartupLocation != WindowStartupLocation.Manual)
+        {
+            var screen = WindowPlacer.ScreenAt(Mouse.ScreenCoordinates, screens);
+            Position = WindowPlacer.Center(screen.WorkArea, SizeOn(screen));
+        }
+    }
+
+    private Size SizeOn(ScreenInfo screen) =>
+        new(ExtentOn(screen, ClientWidth, Width, 800), ExtentOn(screen, ClientHeight, Height, 600));
+
+    private static double ExtentOn(ScreenInfo screen, double client, double outer, double fallback)
+    {
+        if (!double.IsNaN(client) && client > 0)
+        {
+            return client * screen.Scale;
+        }
+
+        // Logical as written in markup, like the client size: the platform scales it the same way when it creates the window.
+        return (!double.IsNaN(outer) && outer > 0 ? outer : fallback) * screen.Scale;
+    }
+
+    private void RememberPlacement()
+    {
+        var bounds = WindowWorkerService?.RestoreBounds ?? default;
+        var screens = PlatformSettings.Screens;
+        if (!RemembersPlacement || !ActivateOnShow || Design.IsDesignMode || bounds.Width <= 0 || screens.Count == 0)
+        {
+            return;
+        }
+
+        var screen = WindowPlacer.ScreenOf(bounds, screens);
+        var frame = FrameSize();
+        UIContext.Resolve<IWindowPlacementStore>().Save(PlacementName(), new WindowPlacement
+        {
+            ScreenId = screen.Id,
+            Left = bounds.X - screen.WorkArea.X,
+            Top = bounds.Y - screen.WorkArea.Y,
+            ClientWidth = (bounds.Width - frame.Width) / DpiScale.X,
+            ClientHeight = (bounds.Height - frame.Height) / DpiScale.Y,
+            IsMaximized = State == WindowState.Maximized
+        });
+    }
+
+    private Size FrameSize() =>
+        UseCustomChrome ? default : new Size(Math.Max(0, Width - ClientWidth * DpiScale.X), Math.Max(0, Height - ClientHeight * DpiScale.Y));
+
+    private string PlacementName() => PlacementKey ?? GetType().FullName;
 
     /// <summary>The platform side of this window - an OS window and its message loop. A window drawn inside something
     /// else has none and returns null; everything that talks to the worker then does nothing.</summary>
@@ -891,6 +1010,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         Closing?.Invoke(this, closingArgs);
         if (!closingArgs.Cancel)
         {
+            RememberPlacement();
             // The theme manager outlives every window, so a closed one that stayed subscribed would be kept alive by it.
             var themes = UIAppContext.Current?.ThemeManager;
             if (themes != null)

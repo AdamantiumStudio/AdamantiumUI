@@ -26,4 +26,9 @@ public interface INavigationService
     Task<NavigationResult> OpenWindowAsync(Type contentViewModelType, NavigationParameters parameters = null, string windowShell = null, bool singleInstance = false, CancellationToken cancellationToken = default);
     Task<NavigationResult> OpenWindowAsync<TContentViewModel>(NavigationParameters parameters = null, string windowShell = null, bool singleInstance = false, CancellationToken cancellationToken = default);
     Task CloseWindowAsync(object contentViewModel);
+
+    /// <summary>Tells the view model a window shows that it was navigated to (<see cref="INavigationAware.OnNavigatedToAsync"/>,
+    /// with no region). <see cref="OpenWindowAsync(Type, NavigationParameters, string, bool, CancellationToken)"/> does it
+    /// before the window shows; the application does it for its main window.</summary>
+    Task ArriveInWindowAsync(object viewModel, NavigationParameters parameters = null, CancellationToken cancellationToken = default);
 }

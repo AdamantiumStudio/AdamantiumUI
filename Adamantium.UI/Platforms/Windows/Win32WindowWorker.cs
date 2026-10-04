@@ -133,6 +133,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         var requestedTop = window.Top;
         var requestedClientWidth = window.ClientWidth;
         var requestedClientHeight = window.ClientHeight;
+        var requestedWidth = window.Width;
+        var requestedHeight = window.Height;
         this.window.Closed += OnWindowClosed;
         var classStyle = WindowClassStyle.OwnDC | WindowClassStyle.DoubleClicks; //| WindowClassStyle.VerticalRedraw | WindowClassStyle.HorizontalRedraw;
         // No WS_EX_ACCEPTFILES: the partial WM_DROPFILES path is replaced by a full OLE drop target (registered below),
@@ -188,9 +190,13 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         this.window.DpiScale = ReadDpiScale(source.Handle);   // initial per-monitor DPI (PMv2)
 
-        // Creation took the logical geometry as physical; re-apply it now that the monitor's scale is known.
+        // Creation took the logical geometry as physical; re-apply it now that the monitor's scale is known - the client
+        // size when one was asked for, the outer one otherwise.
         SetPosition(requestedLeft, requestedTop);
-        SetSize(requestedClientWidth, requestedClientHeight);
+        if (!double.IsNaN(requestedClientWidth) && !double.IsNaN(requestedClientHeight))
+            SetSize(requestedClientWidth, requestedClientHeight);
+        else
+            SetOuterSize(requestedWidth, requestedHeight);
 
         Win32Interop.GetClientRect(window.Handle, out var client);
         // ClientWidth/Height are LOGICAL (DIP) = physical px / DPI scale (per-axis). The renderer sizes the swapchain
@@ -285,6 +291,26 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         };
     }
 
+    public Rect RestoreBounds
+    {
+        get
+        {
+            var placement = new WINDOWPLACEMENT { Length = Marshal.SizeOf<WINDOWPLACEMENT>() };
+            if (window == null || !Win32Interop.GetWindowPlacement(window.Handle, ref placement))
+            {
+                return default;
+            }
+
+            var info = new MONITORINFOEX { Size = Marshal.SizeOf<MONITORINFOEX>() };
+            var monitor = Win32Interop.MonitorFromWindow(window.Handle, Win32Interop.MonitorDefaultToNearest);
+            var shift = Win32Interop.GetMonitorInfo(monitor, ref info)
+                ? new NativePoint { X = info.WorkArea.Left - info.Monitor.Left, Y = info.WorkArea.Top - info.Monitor.Top }
+                : new NativePoint();
+            var normal = placement.NormalPosition;
+            return new Rect(normal.Left + shift.X, normal.Top + shift.Y, normal.Right - normal.Left, normal.Bottom - normal.Top);
+        }
+    }
+
     public void SetPosition(double left, double top)
     {
         if (window == null) return;
@@ -324,6 +350,21 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         var frameHeight = outer.Height - client.Height;
 
         Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, 0, 0, width + frameWidth, height + frameHeight,
+            SetWindowPosFlags.Nomove | SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate);
+    }
+
+    // The outer size written in markup is logical, like every size written there: on a 150% monitor Width="1280" is 1920
+    // pixels, not 1280.
+    private void SetOuterSize(double width, double height)
+    {
+        var scale = window.DpiScale;
+        var w = (int)Math.Round(InitialExtent(width, double.NaN, 800) * scale.X);
+        var h = (int)Math.Round(InitialExtent(height, double.NaN, 600) * scale.Y);
+
+        Win32Interop.GetWindowRect(window.Handle, out var outer);
+        if (outer.Width == w && outer.Height == h) return;
+
+        Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, 0, 0, w, h,
             SetWindowPosFlags.Nomove | SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate);
     }
 

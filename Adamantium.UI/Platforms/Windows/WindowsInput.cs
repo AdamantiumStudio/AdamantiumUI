@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -65,4 +68,29 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
         Win32Interop.GetSystemMetrics(SystemMetrics.Yvirtualscreen),
         Win32Interop.GetSystemMetrics(SystemMetrics.CxVirtualscreen),
         Win32Interop.GetSystemMetrics(SystemMetrics.CyVirtualscreen));
+
+    // Read live for the same reason; the device name is what stays with a monitor between runs.
+    public IReadOnlyList<ScreenInfo> Screens
+    {
+        get
+        {
+            var screens = new List<ScreenInfo>();
+            Win32Interop.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr deviceContext, ref RECT bounds, IntPtr data) =>
+            {
+                var info = new MONITORINFOEX { Size = Marshal.SizeOf<MONITORINFOEX>() };
+                if (Win32Interop.GetMonitorInfo(monitor, ref info))
+                {
+                    var scale = Win32Interop.GetDpiForMonitor(monitor, Win32Interop.MdtEffectiveDpi, out var dpi, out _) == 0 && dpi > 0
+                        ? dpi / 96.0
+                        : 1.0;
+                    screens.Add(new ScreenInfo(info.DeviceName, ToRect(info.Monitor), ToRect(info.WorkArea), scale,
+                        (info.Flags & MONITORINFOEX.PrimaryFlag) != 0));
+                }
+                return true;
+            }, IntPtr.Zero);
+            return screens;
+        }
+    }
+
+    private static Rect ToRect(RECT r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
 }

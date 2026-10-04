@@ -31,4 +31,7 @@ public interface INativePlatformSettings
     /// <summary>All monitors as one rectangle in physical pixels, for checking that a saved window position is still
     /// reachable; empty when unknown.</summary>
     Rect VirtualScreen { get; }
+
+    /// <summary>The monitors connected now; empty when unknown.</summary>
+    IReadOnlyList<ScreenInfo> Screens { get; }
 }

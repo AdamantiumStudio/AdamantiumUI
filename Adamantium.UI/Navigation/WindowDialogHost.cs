@@ -9,7 +9,7 @@ namespace Adamantium.UI.Navigation;
 
 /// <summary>Window dialog host: shows the dialog in its OWN window (a shell from the window registry) instead of an
 /// in-window overlay. Loads the resolved view into the shell and closes it when the view model raises RequestClose;
-/// the title-bar close also completes the dialog (as Cancel). Lifecycle/result via <see cref="DialogSession"/>.
+/// the title-bar close also completes the dialog (as Cancel), without asking it. Lifecycle/result via <see cref="DialogSession"/>.
 /// NOT yet modal - input to the owner window is not blocked; that wiring is a follow-up.</summary>
 public sealed class WindowDialogHost : IDialogHost
 {
@@ -28,13 +28,32 @@ public sealed class WindowDialogHost : IDialogHost
 
     public async Task<IDialogResult> ShowAsync(object dialogViewModel, NavigationParameters parameters, CancellationToken cancellationToken = default)
     {
-        DialogSession session = null;
+        WindowBase shell = null;
+        var closed = false;
+        var session = await DialogSession.BeginAsync(dialogViewModel, parameters, () =>
+        {
+            if (shell == null || closed)
+            {
+                return;
+            }
+            closed = true;
+            shell.Close();
+        }, cancellationToken);
+        if (session.Completion.IsCompleted)
+        {
+            return await session.Completion;
+        }
 
         // Window + render-service creation must run on the UI thread (as in WindowNavigationBackend).
         await _application.ExecuteOnUIThreadAsync(() =>
         {
             var aware = dialogViewModel as IWindowAware;
-            if (_shells.Create(aware?.WindowShellKey) is not WindowBase shell) return;   // need a WindowBase to host content
+            if (_shells.Create(aware?.WindowShellKey) is not WindowBase created)
+            {
+                return;
+            }
+            shell = created;
+            shell.RemembersPlacement = false;
 
             shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : "Dialog";
             shell.ClientWidth = aware is { Width: > 0 } ? aware.Width : 440;
@@ -45,20 +64,15 @@ public sealed class WindowDialogHost : IDialogHost
             shell.Show();
             shell.Content = _viewLocator.ResolveView(dialogViewModel);
 
-            var closed = false;
-            session = DialogSession.Begin(dialogViewModel, parameters, () =>
+            shell.Closed += (_, _) =>
             {
-                if (closed) return;   // idempotent: RequestClose -> close once
                 closed = true;
-                shell.Close();
-            });
-            // The user closing the window (title-bar X) must also complete the dialog, else the await below hangs. Set the
-            // guard first so the resulting RequestClose does not try to close the (already closing) window again.
-            shell.Closed += (_, _) => { closed = true; session.RequestClose(DialogResult.Cancel()); };
+                session.Close(DialogResult.Cancel());
+            };
 
             shell.Show();
         });
 
-        return session == null ? new DialogResult(DialogButtonResult.None) : await session.Completion;
+        return shell == null ? new DialogResult(DialogButtonResult.None) : await session.Completion;
     }
 }

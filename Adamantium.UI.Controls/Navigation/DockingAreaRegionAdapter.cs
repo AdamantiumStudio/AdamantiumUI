@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Controls.Navigation;
 
@@ -26,6 +27,9 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
 
         var panesByViewModel = new Dictionary<object, string>();
         var syncing = false;
+
+        // What a view model asks the region about its panes is answered from this area while it shows the region.
+        var dockingHost = new DockingAreaHost(area, panesByViewModel);
 
         void Sync()
         {
@@ -54,14 +58,31 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
 
             // New in the region -> a pane in the document well.
             var opened = false;
+            List<object> replaced = null;
             foreach (var viewModel in region.ActiveViewModels)
             {
                 if (panesByViewModel.ContainsKey(viewModel)) continue;
 
-                var placement = viewModel as IDockablePane;
-                panesByViewModel[viewModel] = area.AddPane(PaneFor(viewModel), placement?.PaneZone ?? DockZone.Center);
+                var pane = PaneFor(viewModel);
+
+                // The id of a closed tool, taken by a new view model: the one kept for it is let go.
+                if (area.HiddenPanes.Contains(pane.Id))
+                {
+                    foreach (var pair in panesByViewModel)
+                    {
+                        if (pair.Value == pane.Id) (replaced ??= []).Add(pair.Key);
+                    }
+
+                    foreach (var kept in replaced ?? []) panesByViewModel.Remove(kept);
+                }
+
+                // Paired BEFORE it opens: opening reports the layout, and the report has to know whose pane it is.
+                panesByViewModel[viewModel] = pane.Id;
+                area.AddPane(pane, (viewModel as IDockablePane)?.PaneZone ?? DockZone.Center);
                 opened = true;
             }
+
+            foreach (var kept in replaced ?? []) region.Remove(kept);
 
             // Only a sync that opened nothing activates the current view: after an open, CurrentViewModel is still the
             // previous view and activating it would switch tabs in an untouched panel.
@@ -89,6 +110,18 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             syncing = false;
         }
 
+        // A navigation to the view model the region already has as current changes nothing the handler above hears, yet
+        // it still means "show me this" - a closed tool included.
+        void OnNavigated(object s, RegionNavigationEventArgs e)
+        {
+            if (syncing || !e.Result.Success || e.Result.ViewModel is not { } viewModel) return;
+            if (!panesByViewModel.TryGetValue(viewModel, out var id)) return;
+
+            syncing = true;
+            area.Activate(id);
+            syncing = false;
+        }
+
         // A saved layout names panes this region opened, and at start-up none of them exist yet. The key written with
         // them is the view model's TYPE, so the region can make the very same thing again, put it back in itself, and
         // hand the area the pane - which the layout then finds by id like any other.
@@ -109,11 +142,14 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             e.Pane = pane;
         }
 
-        // Closing a pane is the user saying that view is done with, so the region must forget it too. Otherwise the
+        // Closing a document is the user saying that view is done with, so the region must forget it too. Otherwise the
         // region still holds the view model, the next navigation to it REUSES that instance, sees it already "open"
-        // and opens nothing at all - a name that can never be reached again once it has been closed.
+        // and opens nothing at all - a name that can never be reached again once it has been closed. A closed TOOL is
+        // put away and keeps its view model: navigating to it brings the same one back.
         void OnPaneClosed(object s, PaneClosedEventArgs e)
         {
+            if (e.CanRestore) return;
+
             foreach (var pair in panesByViewModel)
             {
                 if (pair.Value != e.PaneId) continue;
@@ -122,6 +158,9 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
                 syncing = true;                 // the pane is already out of the layout; Sync must not take it out twice
                 region.Remove(pair.Key);
                 syncing = false;
+
+                // A closed document is done with for good, unlike a tool that is only put away.
+                (pair.Key as IDisposable)?.Dispose();
                 break;
             }
         }
@@ -142,6 +181,7 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
 
         region.ActiveViewsChanged += OnActiveViewsChanged;
         region.PropertyChanged += OnRegionPropertyChanged;
+        region.Navigated += OnNavigated;
         area.PaneRestoring += OnPaneRestoring;
         area.PaneClosed += OnPaneClosed;
         area.ActivePaneChanged += OnActivePaneChanged;
@@ -164,15 +204,19 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
 
             region.ActiveViewsChanged -= OnActiveViewsChanged;
             region.PropertyChanged -= OnRegionPropertyChanged;
+            region.Navigated -= OnNavigated;
             area.PaneRestoring -= OnPaneRestoring;
             area.PaneClosed -= OnPaneClosed;
             area.ActivePaneChanged -= OnActivePaneChanged;
+            DockingRegion.Of(region).Detach(dockingHost);
+            dockingHost.Release();
             DiscardedVisuals.Discarded -= Release;
         }
 
         DiscardedVisuals.Discarded += Release;
 
         Sync();
+        DockingRegion.Of(region).Attach(dockingHost);
     }
 
     /// <summary>The view model behind the pane the user is looking at, or null when it is a pane the region never
@@ -212,11 +256,12 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
     {
         var placement = viewModel as IDockablePane;
 
-        return new Pane
+        var pane = new Pane
         {
             Id = placement?.PaneId ?? viewModel.GetType().Name,
-            Header = placement?.PaneTitle ?? (object)viewModel,
             Allowed = placement?.PaneAllowed ?? DockZone.All,
+            Kind = placement?.PaneKind ?? PaneKind.Document,
+            MinSize = placement?.PaneMinSize ?? 0,
 
             // What it takes to make this one again if a saved layout is loaded when it does not exist: its TYPE. The
             // instance restores the rest of itself from its own id.
@@ -224,5 +269,23 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Content = viewModel,
             ContentTemplateSelector = new ViewLocatorTemplateSelector(_viewLocator)
         };
+
+        if (placement == null)
+        {
+            pane.Header = viewModel;
+            return pane;
+        }
+
+        // Bound, not copied: the tab follows the title, and the place goes both ways - a view model with a setter moves
+        // its pane, and a drag tells it where the pane went.
+        pane.SetBinding(TabItem.HeaderProperty, new Binding(nameof(IDockablePane.PaneTitle))
+        {
+            Source = viewModel,
+            Mode = BindingMode.OneWay,
+            TargetNullValue = viewModel
+        });
+        pane.SetBinding(Pane.ZoneProperty,
+            new Binding(nameof(IDockablePane.PaneZone)) { Source = viewModel, Mode = BindingMode.TwoWay });
+        return pane;
     }
 }

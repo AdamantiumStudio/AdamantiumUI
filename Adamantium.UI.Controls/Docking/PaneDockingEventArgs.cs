@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Adamantium.Navigation;
 
 namespace Adamantium.UI.Controls.Docking;
 

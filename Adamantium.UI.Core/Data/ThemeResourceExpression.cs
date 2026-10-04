@@ -65,9 +65,18 @@ public class ThemeResourceExpression : BindingExpressionBase
             _theme = null;
         }
         if (Target is IInputComponent input) input.Unloaded -= OnTargetUnloaded;
+        if (Target is IUIComponent returning) returning.AttachedToVisualTreeEvent -= OnReturned;
     }
 
-    private void OnTargetUnloaded(object sender, RoutedEventArgs e) => CloseConnection();
+    // Unloaded lets go of the theme, which outlives the target; a target moved elsewhere connects again once it is in a
+    // tree again - see ObservableResourceExpression.
+    private void OnTargetUnloaded(object sender, RoutedEventArgs e)
+    {
+        CloseConnection();
+        if (Target is IUIComponent visual) visual.AttachedToVisualTreeEvent += OnReturned;
+    }
+
+    private void OnReturned(object sender, Core.RoutedEvents.VisualTreeAttachmentEventArgs e) => EstablishConnection();
 
     // ---- Routing ---------------------------------------------------------------------------------------------------
     // One subscription per theme; each consumer is woken only for the property it reads.

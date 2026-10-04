@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
@@ -55,9 +57,13 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
     // Open at Left/Top (below) rather than centered, to show explicit positioning.
     public OverlayStartupLocation StartupLocation => OverlayStartupLocation.Manual;
 
-    public void OnOverlayOpened(NavigationParameters parameters)
+    public Task OnOverlayOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default)
     {
-        if (parameters != null && parameters.TryGetValue<string>("title", out var t)) Title = t;
+        if (parameters != null && parameters.TryGetValue<string>("title", out var t))
+        {
+            Title = t;
+        }
+        return Task.CompletedTask;
     }
 
     public event Action<object> RequestClose;

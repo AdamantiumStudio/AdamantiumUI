@@ -42,7 +42,7 @@
                             Padding="{TemplateBinding Padding}">
                         <!-- A starred header track, so a stretched tab (StretchSingleTab) keeps its close button at the
                              right edge. -->
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Center">
                             <!-- What marks the tab, drawn from DATA by IconTemplate. Collapsed by default and revealed by
                                  the HasIcon trigger below: an empty presenter measures to nothing, but its MARGIN is
                                  reserved regardless, and that gap is what pushed a turned label off-center. -->
@@ -62,10 +62,17 @@
                                     Content="{TemplateBinding Header}"
                                     ContentTemplate="{TemplateBinding HeaderTemplate}"
                                     ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"/>
+                            <!-- Unsaved work: shown by a docking pane's IsDirty trigger, collapsed otherwise. -->
+                            <Ellipse x:Name="DirtyMark" Grid.Column="2"
+                                    Width="6" Height="6"
+                                    Margin="6 0 0 0"
+                                    VerticalAlignment="Center"
+                                    Fill="{TemplateBinding Foreground}"
+                                    Visibility="Collapsed"/>
                             <!-- The pin button, BEFORE the close one: pinning is about keeping the tab, closing about
                                  losing it, and the more destructive of the two belongs at the very edge. Its LOOK is
                                  PinButtonTemplate, so a host restyles it without touching this template. -->
-                            <ToggleButton x:Name="PART_PinButton" Grid.Column="2"
+                            <ToggleButton x:Name="PART_PinButton" Grid.Column="3"
                                     Template="{TemplateBinding PinButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"
@@ -73,7 +80,7 @@
                                     Visibility="Collapsed"/>
                             <!-- The close button; its LOOK is CloseButtonTemplate (a themed 'x' from TabControlStyleSet).
                                  Collapsed unless the owner turns close buttons on (see the ShowCloseButton trigger). -->
-                            <Button x:Name="PART_CloseButton" Grid.Column="3"
+                            <Button x:Name="PART_CloseButton" Grid.Column="4"
                                     Template="{TemplateBinding CloseButtonTemplate}"
                                     Margin="8 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"

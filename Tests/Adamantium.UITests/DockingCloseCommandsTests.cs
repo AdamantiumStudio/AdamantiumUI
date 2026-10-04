@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Adamantium.Mathematics;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using NUnit.Framework;

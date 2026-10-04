@@ -18,7 +18,9 @@
         RightWindowCommands="{Binding RightWindowCommands}"
         Background="{ObservableResource SolidBackgroundFillColorBase}">
     <Window.Icon>
-        <Border Width="16" Height="16" CornerRadius="4" Background="{ThemeResource AccentFillColorDefault}"/>
+        <Image Source="window-icon.png"
+               Width="16"
+               Height="16"/>
     </Window.Icon>
     <!-- The custom TitleBar (draggable caption, min/max/close) comes from the default Window ControlTemplate now, so this
          is just the window CONTENT - hosted below the caption by the template's ContentPresenter. -->

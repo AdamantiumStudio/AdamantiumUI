@@ -16,6 +16,8 @@ public enum DockingAnswer
     PanelTornOff,
     TabTornOff,
     Docked,
+    Moving,
+    NotOpen,
 }
 
 /// <summary>What became of the docking page's saved layout last.</summary>
@@ -31,4 +33,5 @@ public enum DockingLayoutReport
     Restored,
     NamesNothing,
     Forgotten,
+    Reset,
 }

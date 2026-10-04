@@ -95,6 +95,60 @@ All packages share one version.
 - `PropertyTrace`: values dropped for want of a property - set by a name the element has no property for, or a live
   resource connected to one. Each distinct report goes once to the application log and, under a debugger, to the IDE's
   output; `PropertyTrace.Sink` receives them all.
+- A window shows its application's icon - the project's `ApplicationIcon` - on the taskbar and in Alt+Tab; it showed
+  the system's blank one. The sandbox has an icon of its own, in the title bar too.
+- `Window.TitleAlignment`: `Center` puts the title in the middle of the whole window, however wide the commands and
+  buttons on either side are (`TitleBar.TitleCentering`), in Fluent and Editor Pro as macOS already did.
+- `Window.StartupLocation`, as in WPF: `CenterOwner` by default - over the window that was active when it opened, else
+  `CenterScreen`, the middle of the screen the pointer is on - or `Manual`, at `Left` and `Top`. Windows used to open in
+  the top-left corner of the primary screen.
+- A window comes back where it was closed: on the same screen, wherever that screen has been moved, at its place and size,
+  maximized if it was (`RemembersPlacement`, on by default; `PlacementKey` for several windows of one type). A screen no
+  longer connected leaves it to `StartupLocation`. The places are kept by `IWindowPlacementStore` - by default
+  `FileWindowPlacementStore`, a file in the user's local application data - and dialogs in windows are not remembered.
+- `PlatformSettings.Screens` (`ScreenInfo`: id, bounds, work area, scale) and `IWindowWorkerService.RestoreBounds`.
+- `IRegionManager.NavigateToAsync<TViewModel>(regionName, ...)`: a named region navigated in one call. A region no
+  control has declared yet is created, and the control that declares it later shows what it navigated to.
+- The language server underlines a type in `{x:Type}` and a type or member in `{x:Static}` that the build would not find,
+  with the build's own message, and paints such a type as unknown.
+- A `Pane` written straight into a `DockingArea`, without a `PaneGroup`, is placed by its `Zone` - one panel for the panes
+  of each zone. `DockingLayout.ZoneOf` says where a group stands.
+- A pane a docking region opens follows its view model: the tab follows `IDockablePane.PaneTitle`, and `PaneZone` goes
+  both ways - a view model with a setter moves its pane by setting it, and a drag sets it. `IDockablePane.PaneKind` and
+  `PaneMinSize` (a document and 0 unless said) make it a tool or give it a floor; everything a region opened was a
+  document before, and the title was read once.
+- `IDockingRegion`, from `IRegionManager.Docking(name)`: what a docking region holds and where, for the panes it opened
+  and those written in markup alike (with their content's view model) - `ViewModels`, `ViewModelsIn(zone)`,
+  `Documents`, `Tools`, `Floating`, `Hidden`, `RecentDocuments`, `ActivePane`, `ActiveDocument`, `Contains`, `Find` and
+  `All<T>`, `PlacementOf`; the panels as descriptions, not controls - `Groups`, `DocumentGroups`, `ToolGroups`,
+  `GroupOf` (`DockedGroup`: its panes, kind, zone, state, front tab); `Activate`, `CloseAsync`, `CloseAllAsync`,
+  `ShowToolAsync<T>` (opens the tool once, then brings it to the front), `OpenBesideAsync<T>`; and `PaneOpened`,
+  `PaneClosed`, `PlacementChanged`, `ActivePaneChanged`, each once per change. The same object before a docking
+  control shows the region and after it is replaced; the control answers through `IDockingHost`.
+- `DockingArea.ActivePaneId`, `LayoutChanged`, `ClosePanesAsync` and `DockBeside`; `DockingLayout.Groups`,
+  `DocumentGroups` and `ToolGroups`, the put-away panels included.
+- A file whose root is `<Pane Header="Inspector" Kind="Tool" Zone="Right">` is a class of its own, as a `<View>` file
+  is, with its own `x:ViewModel` or none: `<local:InspectorPane/>` puts it in a `DockingArea`.
+- `Pane.IsDirty`: the tab of a pane with unsaved work wears a mark in Fluent, Editor Pro and macOS. Closing such panes -
+  by a tab, a "close all" or the main window - asks ONE question for all of them, `UnsavedQuestion` (save, don't save,
+  cancel) in an overlay window, worded by the theme (`PaneStrings`, `DockingArea.UnsavedTitle`).
+  `DockingArea.AsksBeforeClosingUnsaved` (on by default) turns it off, `UnsavedClosing` answers in the user's place,
+  `PanesSaving` saves. With nobody to save, or no window to ask in, nothing closes.
+- `IDocument` (`IsDirty`, `SaveAsync`): a docking region marks the tab of such a view model and saves it when the answer
+  is to save. `IDockingRegion.Unsaved`, `SaveAllAsync` and `OpenDocumentAsync<T>(key)` - the key is the pane's id,
+  passed in as `DockingRegion.KeyParameter`, so a document is never open twice. A document a region opened is disposed
+  when it is closed, if it is `IDisposable`.
+- `DockingArea.ResetLayout` and `DockingWorkspace.Reset`: back to the arrangement written in markup, closed tools
+  brought back, open panes kept, closed documents left closed. `DockingWorkspace.SaveAs(name)`, `Apply(name)` and
+  `Layouts`: named arrangements, which the application keeps where it keeps its settings.
+- `DockingArea.LayoutVersion` (`DockingWorkspace.Version`) is written into a saved layout; one saved under an older
+  version goes through `PaneMigrating` on load, which gives a renamed pane its new id. `DockingLayoutSerializer`
+  `RenamePanes`, `ReadLayoutVersion` and `ReadStates`.
+- A pane's own state travels with a layout: `DockingArea.PaneStateSaving` and `PaneStateRestoring`, and for a view model
+  `IRestorablePane.SaveState` and `RestoreState`.
+- `IDockingAware`: a view model in a docking region hears its own pane - `OnActivated` and `OnDeactivated`, `OnShown`
+  and `OnHidden` (on screen means the front tab of a panel not folded away: what a scene view stops drawing for),
+  `OnPlacementChanged` - in the order of the change, the pane left behind first. `PanePlacement.IsShown`.
 
 ### Changed
 
@@ -117,6 +171,13 @@ All packages share one version.
   themes' title-bar and quick-access overflow menus now do. `TreeView` and `TreeViewItem` likewise make a `TreeViewItem`
   for every node and `RibbonTab` a `RibbonGroup` for every group; a tree with a plain template or none used to draw its
   internal row object in place of the node.
+- `DockZone`, `PaneKind`, `IDockablePane` and `IRestorablePane` moved to `Adamantium.Navigation`, so a view model that
+  places its pane needs nothing from the controls.
+- A tool a docking region opened stays in the region when it is closed: navigating to it or `Activate` brings the same
+  view model back, and `DockingArea.Activate` brings a closed tool back. The region used to forget it.
+- `DockingArea.Panes` includes the panes of the panels put away along the edges.
+- Loading a layout keeps open what is open: a document, which a layout never saves, among the documents, a pane the
+  layout does not name by its `Zone`. They used to stay open out of sight.
 
 - `IResolvedMember` has `IsStatic`, `IsPublic` and `ParameterNames`.
 - `BindingBase.CreateExpression`: each kind of binding makes its own live expression, so a new kind needs no change to
@@ -144,6 +205,16 @@ All packages share one version.
   (`TextBox.ShowsClearButton`), saying their own words through `ClearButtonToolTip`. Removed what drew a cross of their
   own: `PropertyGrid.HasSearchText` and the template part `PART_ClearSearch`, `CanvasNodePalette.HasSearch` and
   `ClearSearchCommand` and the part `PART_Clear`. Escape still drops the inspector's search.
+- The navigation lifecycle is asynchronous: `INavigationAware.OnNavigatedToAsync` and `OnNavigatedFromAsync`,
+  `IDialogAware.OnDialogOpenedAsync` and `CanCloseDialogAsync`, `IOverlayAware.OnOverlayOpenedAsync` replace the
+  synchronous methods. A region shows a view model once its `OnNavigatedToAsync` has completed, and stays as it was if
+  that throws; the view model it leaves hears `OnNavigatedFromAsync` only then, and not when the same instance is
+  reused. A newer navigation of a region cancels one still in progress (`NavigationContext.CancellationToken`), which
+  then changes nothing; one started from that region's own lifecycle method - a redirect, directly or through another
+  region's - takes its place at once instead of waiting for it. A navigation of another region cancels nothing. The
+  view model of a window hears `OnNavigatedToAsync` too, before the window shows - the main window's and one opened by
+  `OpenWindowAsync` (`INavigationService.ArriveInWindowAsync`); it heard nothing before. A dialog or an overlay is
+  shown once its open method has completed.
 
 ### Fixed
 
@@ -226,6 +297,42 @@ All packages share one version.
   list rebuilt in an open popup flashed for a frame with its items piled up, not yet laid out. They are recorded on the
   loop thread right after layout, as the window's content is, and the render thread only applies what was recorded
   (`RenderCache.RecordComponents`, `ApplyComponents`). Adorners are laid out on the loop thread too.
+- `ShowDialogAsync` of a dialog in its own window never completed when the user closed the window while the dialog
+  refused to close; the closed window now completes it as `Cancel`.
+- The language server looked a type written without a prefix up only in the registered xmlns, where the build falls back
+  to its short name: after `{x:Static RegionNames.}` it offered nothing, and `<Thickness>`, `<CornerRadius>` or a
+  project type as an element were reported unknown. It finds them the build's way now, offers the project's own types
+  bare, and knows the classes the project generates from its markup (style sets, resource dictionaries).
+- `clr-namespace:System;assembly=System.Runtime` was "CLR namespace not found" in the editor and painted every
+  `<sys:Double>` red.
+- `Pane.Zone` was neither read nor written by the area. It now says where the pane is after a drag, a fold or a restore,
+  and writing it - from code or a two-way binding - moves the pane there the way opening it there does. A zone the pane
+  is not `Allowed`, or a move the application refuses in `PaneDocking` or `PaneTearingOff`, snaps it back. A closed
+  tool comes back to the zone written while it was away.
+- A `PaneGroup` declared before the documents' group became the documents.
+- A saved docking layout lost the document area whenever no document was open in it - documents are never saved, so
+  that was every save - and so did a reset after the last document was closed: the tools closed up over the hole and
+  one of them came back as the documents. The area is kept, empty if need be.
+- A panel in a side column split top and bottom counted as standing at the top or bottom: a pane opened at the bottom
+  joined the column's lower half instead of a band along the bottom.
+- Navigating a docking region to the view model it already had as current did not bring its pane to the front.
+- Content one control let go of and another took up before it was released came back dead, its bindings closed: after a
+  docking layout was reset, a document's body lost the words of its labels and its commands.
+- A window's `Width` and `Height` written in markup were taken as physical pixels: on a 150% monitor a
+  `Width="1280"` window opened two thirds as large, and was remembered so. They are logical now, like every size in
+  markup.
+- An element moved under another parent did not tell the elements below it that what they inherit through it had
+  changed, unless something watched the value at the element itself: a binding below kept the value of the moment the
+  element was out of the tree. A watched element moved under a new parent no longer takes that parent's mere default
+  over its own theme value - only what an ancestor states is inherited, as when it is read.
+- A tab that is its own container, taken out of a virtualizing tab strip and put into another, was parked by the strip
+  it left - hidden, its bindings closed - and shown so by the next: after a docking layout was reset, the labels of the
+  tool tabs changed size by a pixel, and back on the next reset.
+- `{ObservableResource}` and `{ThemeResource}` on an element moved from one tree to another stopped following their
+  resource for good: the tree it left unloaded it, and nothing connected them again. Unloaded, they still let go of the
+  resource manager and the theme; they connect again once the element is in a tree again.
+- A pane opened under the id of a closed tool left that tool kept as well: bringing it back put the id in the layout
+  twice. Likewise a closed tool that a loaded layout has open.
 
 ## [0.1.0-alpha] - 2026-10-02
 

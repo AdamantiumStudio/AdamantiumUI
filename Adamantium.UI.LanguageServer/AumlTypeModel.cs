@@ -18,6 +18,7 @@ public sealed class AumlTypeModel
 {
     private readonly ITypeResolver _resolver;
     private readonly Dictionary<string, IReadOnlyList<IResolvedType>> _clrNamespaceCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IResolvedType> _byShortName = new(StringComparer.Ordinal);
     // The project's own AUML views (<View>/<Window> roots), pre-registered from the .auml files so they're recognized
     // and complete like framework controls even though the source generator hasn't emitted their classes.
     private readonly List<IResolvedType> _localViews = new();
@@ -109,7 +110,8 @@ public sealed class AumlTypeModel
     /// <summary>
     /// Registers the project's own AUML views (<c>&lt;View&gt;</c>/<c>&lt;Window&gt;</c>/... roots) as types, so an
     /// embedded view (<c>&lt;ControlsView/&gt;</c>) is recognized and its inherited properties complete - mirroring the
-    /// source generator's pre-registration. Parsed straight from the .auml files, so it works with no build.
+    /// source generator's pre-registration - and every other class the build generates (style sets, resource
+    /// dictionaries, themes), so <c>{x:Type}</c> finds them. Parsed straight from the .auml files, so it works with no build.
     /// </summary>
     public void RegisterViews(IEnumerable<string> aumlFiles, string rootNamespace, string projectDir)
     {
@@ -130,7 +132,13 @@ public sealed class AumlTypeModel
             try
             {
                 if (transformer.PreRegisterDocument(document, _resolver) is { } view)
+                {
                     _localViews.Add(view);
+                }
+                else
+                {
+                    transformer.PreRegisterDocument(document, _resolver, anyClass: true);
+                }
             }
             catch { /* a malformed view is simply not offered; its own diagnostics surface the real error */ }
         }
@@ -157,9 +165,30 @@ public sealed class AumlTypeModel
         IReadOnlyList<IResolvedType> types = assembly is null
             ? []
             : assembly.Types.Where(t => t.Namespace == clrNamespace && IsMarkupType(t)).ToList();
+        if (types.Count == 0 && !string.IsNullOrEmpty(assemblyName))
+        {
+            types = MergedNamespaceTypes(clrNamespace);
+        }
 
         _clrNamespaceCache[uri] = types;
         return types;
+    }
+
+    private IReadOnlyList<IResolvedType> MergedNamespaceTypes(string clrNamespace)
+    {
+        INamespaceSymbol symbol = Compilation.GlobalNamespace;
+        foreach (var part in clrNamespace.Split('.'))
+        {
+            symbol = symbol?.GetNamespaceMembers().FirstOrDefault(n => n.Name == part);
+        }
+
+        return symbol == null
+            ? []
+            : symbol.GetTypeMembers()
+                .Where(t => t.DeclaredAccessibility == Accessibility.Public)
+                .Select(t => (IResolvedType)new RoslynResolvedType(t))
+                .Where(IsMarkupType)
+                .ToList();
     }
 
     /// <summary>Parses <c>clr-namespace:Some.Ns[;assembly=Asm]</c>; false when the URI isn't a clr-namespace.</summary>
@@ -185,8 +214,23 @@ public sealed class AumlTypeModel
         return true;
     }
 
+    /// <summary>The type <paramref name="name"/> names under <paramref name="xmlns"/>: one of the namespace's, else - under
+    /// an [XmlnsDefinition] namespace - the one the build falls back to by short name (<c>&lt;Thickness&gt;</c>).</summary>
     public IResolvedType GetElement(string xmlns, string name) =>
-        GetElements(xmlns).FirstOrDefault(t => t.Name == name);
+        InNamespace(xmlns, name)
+        ?? (TryParseClrNamespace(xmlns, out _, out _) || !IsKnownNamespace(xmlns) ? null : ByShortName(name));
+
+    private IResolvedType InNamespace(string xmlns, string name) => GetElements(xmlns).FirstOrDefault(t => t.Name == name);
+
+    private IResolvedType ByShortName(string name)
+    {
+        if (!_byShortName.TryGetValue(name, out var type))
+        {
+            type = _resolver.ResolveByShortName(name) ?? OwnAssembly()?.GetTypeByShortName(name);
+            _byShortName[name] = type;
+        }
+        return type;
+    }
 
     /// <summary>
     /// Every registered xmlns whose assembly contains an element type with this simple name —
@@ -316,9 +360,41 @@ public sealed class AumlTypeModel
     public IResolvedType FindElement(string name)
     {
         foreach (var xmlns in _resolver.XmlnsDefinitions)
-            if (GetElement(xmlns, name) is { } type) return type;
+            if (InNamespace(xmlns, name) is { } type) return type;
         return null;
     }
+
+    /// <summary>A type written without a prefix, found the way the build finds it: in a registered xmlns, else by its
+    /// short name in the project or any assembly it references.</summary>
+    public IResolvedType ResolveShortName(string name) =>
+        string.IsNullOrEmpty(name) ? null : FindElement(name) ?? ByShortName(name);
+
+    /// <summary>A type as markup writes it, <c>prefix:Name</c> or <c>Name</c>, found the way the build finds it;
+    /// <paramref name="type"/> is null when it does not exist. False when it cannot be judged: an undeclared prefix or
+    /// an unknown namespace, each of which has an error of its own.</summary>
+    public bool TryResolveWritten(string typeText, IReadOnlyDictionary<string, string> namespaces, out IResolvedType type)
+    {
+        type = null;
+        var colon = typeText.IndexOf(':');
+        if (colon < 0)
+        {
+            type = ResolveShortName(typeText);
+            return true;
+        }
+
+        if (!namespaces.TryGetValue(typeText[..colon], out var xmlns) || !IsKnownNamespace(xmlns))
+        {
+            return false;
+        }
+
+        type = GetElement(xmlns, typeText[(colon + 1)..]);
+        return true;
+    }
+
+    /// <summary>The project's own types: the build finds them by name, with no prefix.</summary>
+    public IReadOnlyList<IResolvedType> ProjectTypes => OwnAssembly()?.Types ?? [];
+
+    private IResolvedAssembly OwnAssembly() => _resolver.ResolveAssembly(Compilation.AssemblyName);
 
     /// <summary>
     /// Attached properties an owner type declares (XAML <c>Owner.Property</c> syntax): a static

@@ -33,6 +33,7 @@ public static class AumlValidator
         {
             Walk(root, model, diagnostics);
             ValidateClrNamespaces(text, model, diagnostics);
+            ValidateTypeReferences(text, model, diagnostics);
         }
 
         // Surface raw AUML parse errors only when the walk found nothing better (avoids double-flagging
@@ -78,6 +79,87 @@ public static class AumlValidator
             var (line, character) = LineColAt(text, uri.Index);
             diagnostics.Add(new AumlDiagnostic(line, character, uri.Length, $"CLR namespace not found: '{uri.Value}'"));
         }
+    }
+
+    private const string BuildCode = "AUM001";
+    private static readonly Regex Comment = new(@"<!--.*?-->", RegexOptions.Singleline | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Flags the type of a <c>{x:Type}</c> and the type and member of a <c>{x:Static}</c> that the build would not
+    /// find, with the build's own message - found the same way: by the prefix's namespace, else by the short name.
+    /// </summary>
+    private static void ValidateTypeReferences(string text, AumlTypeModel model, List<AumlDiagnostic> diagnostics)
+    {
+        var namespaces = AumlNamespaces.Scan(text);
+        var x = namespaces.FirstOrDefault(n => n.Value == AumlXDirectives.Xmlns).Key;
+        if (string.IsNullOrEmpty(x))
+        {
+            return;
+        }
+
+        var reference = new Regex($@"\{{\s*{Regex.Escape(x)}:(?<directive>Type|Static)\s+(?<body>[^\s,=}}]+)\s*[,}}]");
+        var uncommented = Comment.Replace(text, m => Regex.Replace(m.Value, @"[^\r\n]", " "));
+        foreach (Match match in reference.Matches(uncommented))
+        {
+            var body = match.Groups["body"];
+            var problem = match.Groups["directive"].Value == "Type"
+                ? TypeProblem(body.Value, namespaces, model)
+                : StaticProblem(body.Value, namespaces, model);
+            if (problem != null)
+            {
+                var (line, character) = LineColAt(text, body.Index);
+                diagnostics.Add(new AumlDiagnostic(line, character, body.Length, problem, Code: BuildCode));
+            }
+        }
+    }
+
+    private static string TypeProblem(string typeText, IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
+    {
+        if (!model.TryResolveWritten(typeText, namespaces, out var type) || type != null)
+        {
+            return null;
+        }
+
+        var colon = typeText.IndexOf(':');
+        var name = typeText[(colon + 1)..];
+        return namespaces.TryGetValue(colon < 0 ? string.Empty : typeText[..colon], out var xmlns)
+            ? $"Type {name} could not be found in namespace {ClrNamespaceOf(xmlns)}"
+            : $"Type {name} could not be found in any linked assembly";
+    }
+
+    private static string StaticProblem(string body, IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
+    {
+        var lastDot = body.LastIndexOf('.');
+        if (lastDot <= 0 || lastDot == body.Length - 1)
+        {
+            return $"x:Static expects 'Type.Member', got '{body}'";
+        }
+
+        var typeText = body[..lastDot];
+        var memberName = body[(lastDot + 1)..];
+        if (!model.TryResolveWritten(typeText, namespaces, out var type))
+        {
+            return null;
+        }
+
+        if (type == null)
+        {
+            return $"x:Static type '{typeText}' could not be resolved";
+        }
+
+        return type.GetMemberByName(memberName) != null ? null : $"x:Static: '{type.FullName}' has no member '{memberName}'";
+    }
+
+    private static string ClrNamespaceOf(string xmlns)
+    {
+        const string scheme = "clr-namespace:";
+        if (!xmlns.StartsWith(scheme, StringComparison.Ordinal))
+        {
+            return xmlns;
+        }
+
+        var end = xmlns.IndexOf(';');
+        return end < 0 ? xmlns[scheme.Length..] : xmlns[scheme.Length..end];
     }
 
     private static (int Line, int Character) LineColAt(string text, int offset)

@@ -52,12 +52,30 @@ public sealed class NavigationService : INavigationService
                 if (existing != null) return NavigationResult.Ok(existing);
             }
             var contentViewModel = _resolver.Resolve(contentViewModelType);
+            await ArriveInWindowAsync(contentViewModel, parameters, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             await _windowBackend.OpenWindowAsync(contentViewModel, parameters, windowShell, cancellationToken);
             return NavigationResult.Ok(contentViewModel);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return NavigationResult.Vetoed();
         }
         catch (Exception ex)
         {
             return NavigationResult.Failed(ex);
+        }
+    }
+
+    public async Task ArriveInWindowAsync(object viewModel, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (viewModel is INavigationAware aware)
+        {
+            var context = new NavigationContext(null, this, viewModel.GetType(), null, parameters, NavigationMode.New, cancellationToken)
+            {
+                TargetViewModel = viewModel
+            };
+            await aware.OnNavigatedToAsync(context, cancellationToken);
         }
     }
 

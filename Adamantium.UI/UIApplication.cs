@@ -501,6 +501,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (!containerRegistry.IsRegistered<INativeDragDrop>() && OperatingSystem.IsWindows())
             containerRegistry.RegisterSingleton<INativeDragDrop, WindowsDragDrop>();
 
+        // Where windows' places are kept between runs; an application registers its own store to keep them elsewhere.
+        if (!containerRegistry.IsRegistered<IWindowPlacementStore>())
+            containerRegistry.RegisterInstance<IWindowPlacementStore>(new FileWindowPlacementStore());
+
         RegisterNavigationServices(containerRegistry);
     }
 
@@ -637,8 +641,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             
             MainWindow = window;
             MainWindow.AttachContextAndInitialize(UIContext);
-            MainWindow.Show();
+            ShowMainWindow(window);
         }
+    }
+
+    private async void ShowMainWindow(IWindow window)
+    {
+        await Navigation.ArriveInWindowAsync(window.DataContext);
+        window.Show();
     }
 
     private void ApplicationLoopThread()

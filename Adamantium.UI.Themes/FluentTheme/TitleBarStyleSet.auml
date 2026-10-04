@@ -57,14 +57,21 @@
                         <!-- The draggable zone (icon + title), transparent but hit-testable and clipped; command columns sit
                              outside it, and TitleBar starts the drag from managed input so overlays keep their clicks. -->
                         <Grid x:Name="PART_DragArea" Grid.Column="3" Background="Transparent" ClipToBounds="True">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                                    HorizontalAlignment="{TemplateBinding TitleAlignment}" Margin="12,0,0,0">
-                                <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
-                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock x:Name="PART_Title" Text="{TemplateBinding Title}"
-                                        Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"
-                                        VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <!-- Centered, the row stands in the middle of the whole bar: TitleCentering adds the
+                                 difference between the sides to the narrower one. -->
+                            <Border Margin="{TemplateBinding TitleCentering}">
+                                <StackPanel x:Name="PART_TitleRow"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="{TemplateBinding TitleAlignment}"
+                                        Margin="12,0,0,0">
+                                    <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
+                                            VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="PART_Title" Text="{TemplateBinding Title}"
+                                            Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"
+                                            VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
                         </Grid>
 
                         <!-- RIGHT zone (interactive): right commands + "..." overflow menu + the window buttons. -->

@@ -1,4 +1,4 @@
-namespace Adamantium.UI.Controls.Docking;
+namespace Adamantium.Navigation;
 
 /// <summary>
 /// What a pane IS, which is what decides how its group is dressed. The two look different in every editor, and for a

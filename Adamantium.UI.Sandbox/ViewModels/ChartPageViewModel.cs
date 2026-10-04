@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Sandbox.Localization;
@@ -14,7 +16,12 @@ public partial class ChartPageViewModel : INavigationAware
     /// <summary>What kind of page this is, by the key of its title among the workspace's phrases.</summary>
     public string Kind => nameof(WorkspaceStrings.Chart);
 
-    public void OnNavigatedTo(NavigationContext context) => Number = context.Parameters.GetValue<int>("n");
-    public void OnNavigatedFrom(NavigationContext context) { }
+    public Task OnNavigatedToAsync(NavigationContext context, CancellationToken cancellationToken = default)
+    {
+        Number = context.Parameters.GetValue<int>("n");
+        return Task.CompletedTask;
+    }
+
+    public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public bool IsNavigationTarget(NavigationContext context) => false;
 }

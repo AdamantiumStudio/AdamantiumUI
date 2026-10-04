@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;

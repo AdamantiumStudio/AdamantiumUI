@@ -380,6 +380,19 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
                 continue;   // back in the realized window - keep
             }
 
+            // An item that is its own container and has left the control is not coming back to be re-bound: let it go,
+            // or leave it to the panel that took it up. Parked, it was shown by the next panel with its bindings closed.
+            if (!generator.IsGenerated(child) && !Owner.Items.Contains(child))
+            {
+                if (ReferenceEquals(child.VisualParent, this))
+                {
+                    RemoveVisualChild(child);
+                    RemoveLogicalChild(child);
+                }
+
+                continue;
+            }
+
             ParkContainer(child);
             generator.ReclaimDetached(child);
         }

@@ -323,6 +323,9 @@ public class ItemContainerGenerator
         return container;
     }
 
+    /// <summary>Whether this generator made the container, as against an item that is its own container.</summary>
+    internal bool IsGenerated(IUIComponent container) => _generated.Contains(container);
+
     /// <summary>Pools a generated container that is attached but no longer mapped to any index (a scroll/recycle edge
     /// case left it visible). Returning it to the pool makes it reusable instead of leaking - the panel hides it and the
     /// next <see cref="SetWindow"/> draws it as a donor again.</summary>
