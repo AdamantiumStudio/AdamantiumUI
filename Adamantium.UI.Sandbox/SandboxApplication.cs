@@ -8,6 +8,13 @@ namespace Adamantium.UI.Sandbox;
 // loaded - costing ~3/4 of the frame time. Validation is a dev tool; flip it on in Program.cs when chasing a GPU bug.
 public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
 {
+    public SandboxApplication()
+    {
+        // The ribbon shell's commands are styled by class across the window; a set added to every theme reaches them,
+        // whichever theme is current.
+        ThemeManager.AddStyleSet<Views.RibbonShellStyleSet>();
+    }
+
     protected override void RegisterServices(IContainerRegistry containerRegistry)
     {
         base.RegisterServices(containerRegistry);

@@ -256,26 +256,9 @@
                 IsDrawerOpen="{Binding IsModuleCatalogOpen, Mode=TwoWay}"
                 TabSetsSource="{Binding DocumentModules}">
 
-            <!-- A command of the band drawn from the shell's catalog: given one of its commands as DataContext, it says
-                 the command's words, shows its icon and runs it - or shows its state. The quick-access bar and the
-                 customize page draw from the same command, so nothing is stated twice and nothing is kept in step. -->
-            <Ribbon.Styles>
-                <Style Selector="RibbonButton.Shell">
-                    <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
-                    <Setter Property="Icon" Value="{Binding IconData}"/>
-                    <Setter Property="Command" Value="{Binding Command}"/>
-                </Style>
-                <Style Selector="RibbonDropDownButton.Shell">
-                    <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
-                    <Setter Property="Icon" Value="{Binding IconData}"/>
-                    <Setter Property="Command" Value="{Binding Command}"/>
-                </Style>
-                <Style Selector="RibbonToggleButton.ShellToggle">
-                    <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
-                    <Setter Property="Icon" Value="{Binding IconData}"/>
-                    <Setter Property="IsChecked" Value="{Binding IsChecked, Mode=TwoWay}"/>
-                </Style>
-            </Ribbon.Styles>
+            <!-- The band's commands are drawn from the shell's catalog (classes Shell / ShellToggle, styled in
+                 RibbonShellStyleSet): the quick-access bar and the customize page draw from the same commands, so
+                 nothing is stated twice and nothing is kept in step. -->
 
             <!-- Each module of the document brings its tabs: its own piece of view, or the common one. -->
             <Ribbon.TabSetTemplateSelector>

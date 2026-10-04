@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- A command of the ribbon shell drawn from the shell's catalog: given one of its commands as DataContext, it says
+         the command's words, shows its icon and runs it - or shows its state. A style set of the application, added to
+         every theme: a style written in an element's own Styles reaches only that element, not what stands inside it. -->
+    <Style Selector="RibbonButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <Style Selector="RibbonDropDownButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <!-- A style matches its own type, not the types derived from it: the split button needs its own. -->
+    <Style Selector="RibbonSplitButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <Style Selector="RibbonToggleButton.ShellToggle">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="IsChecked" Value="{Binding IsChecked, Mode=TwoWay}"/>
+    </Style>
+
+</StyleSet>
