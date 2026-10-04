@@ -1,4 +1,5 @@
-﻿using Adamantium.Graphics.Core;
+﻿using System.Collections.Concurrent;
+using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.RoutedEvents;
@@ -13,6 +14,7 @@ public sealed class BitmapImage : BitmapSource
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
    private readonly Queue<BitmapFrame> _framesCache = new();
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();
+   private readonly ConcurrentDictionary<uint, BitmapFrame> _mipLevels = new();
 
    public BitmapImage()
    {
@@ -290,12 +292,22 @@ public sealed class BitmapImage : BitmapSource
 
    public bool HasMipLevels => MipLevelsCount > 0;
 
+   /// <summary>The picture at mip <paramref name="level"/>, made on first ask and kept by this image, so every image
+   /// showing that level shares one texture. Null while the bitmap has not loaded or has no such level.</summary>
    public BitmapFrame GetMipLevel(uint level)
    {
+      if (_mipLevels.TryGetValue(level, out var kept))
+      {
+         return kept;
+      }
+
       var mipData = _rawBitmap?.GetMipLevelData(level);
-      if (mipData == null) return null;
-      
-      return new BitmapFrame(
+      if (mipData == null)
+      {
+         return null;
+      }
+
+      var frame = new BitmapFrame(
          mipData.Description.Width,
          mipData.Description.Height,
          DpiXScale,
@@ -303,6 +315,7 @@ public sealed class BitmapImage : BitmapSource
          SurfaceLayout,
          mipData.RawPixels,
          level);
+      return _mipLevels.GetOrAdd(level, frame);
    }
 
    private void Load(Uri uri)
@@ -366,6 +379,12 @@ public sealed class BitmapImage : BitmapSource
          bitmapFrame.Value?.Dispose();
       }
       _indexToFrame.Clear();
+      foreach (var mipLevel in _mipLevels.Values)
+      {
+         mipLevel.Dispose();
+      }
+
+      _mipLevels.Clear();
       _frameArrayTexture?.Dispose();
       _frameArrayTexture = null;
       _rawBitmap?.ReleaseDecodedFrames();

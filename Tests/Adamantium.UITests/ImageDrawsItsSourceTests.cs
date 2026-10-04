@@ -64,4 +64,16 @@ public class ImageDrawsItsSourceTests
                 "a second image of the same picture drew a second copy");
         });
     }
+
+    [Test]
+    public void TwoImagesOfOneMipLevelDrawTheSameFrame()
+    {
+        var picture = new BitmapImage(BitmapLoader.Load(Texture("balls.dds")));
+        Assume.That(picture.MipLevelsCount, Is.GreaterThan(1), "precondition: the file has mip levels");
+
+        var first = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 });
+        var second = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 });
+
+        Assert.That(second, Is.SameAs(first), "each image of the same mip level built its own frame and texture");
+    }
 }

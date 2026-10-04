@@ -228,7 +228,8 @@ All packages share one version.
   handler that unsubscribed there leaked. It comes once: a template part torn down and then released hears it a single
   time, and an element that never loaded hears nothing.
 - An `Image` of a still picture draws the picture itself instead of a copy of its first frame, so every image showing one
-  file shares one texture rather than uploading its own.
+  file shares one texture rather than uploading its own. `BitmapImage.GetMipLevel` keeps the frame it makes, so images
+  of one mip level share it too.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.
