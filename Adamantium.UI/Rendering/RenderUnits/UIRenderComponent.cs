@@ -309,6 +309,9 @@ public class ImageRenderComponent : UIRenderComponent
     /// animation writes this number and nothing else - no upload, no rebuild.</summary>
     public int? FrameLayer { get; set; }
 
+    /// <summary>The palette of a frame array whose layers hold palette indices; null when they hold the colors.</summary>
+    public ITexture FramePalette { get; set; }
+
     public SamplerState Sampler { get; set; }
 
     /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
@@ -355,6 +358,13 @@ public class ImageRenderComponent : UIRenderComponent
             {
                 UIBasicEffect.BasicSolidColorPass.Apply();
             }
+        }
+        else if (FrameLayer is { } paletted && FramePalette != null)
+        {
+            UIBasicEffect.PaletteIndices.SetResource(Texture);
+            UIBasicEffect.Palette.SetResource(FramePalette);
+            UIBasicEffect.TextureLayer.SetValue((float)paletted);
+            UIBasicEffect.BasicPalettedArrayPass.Apply();
         }
         else if (FrameLayer is { } layer)
         {

@@ -152,6 +152,9 @@ All packages share one version.
 
 ### Changed
 
+- An animation whose frames use no more than 256 colors in all - most GIFs - keeps them on the GPU as one byte per pixel
+  and a shared palette (`BitmapImage.FramePalette`), a quarter of the memory with the same pixels: the sandbox's
+  200-frame 960x540 GIF takes 117 MB instead of 469. Animations with more colors keep their full-color frames.
 - `AdamantiumComponent.SetValue(string, ...)` reports a name the type has no property for through `PropertyTrace`
   instead of ignoring it without a word. `ThemeResource.Apply` and `ObservableResource.Apply` report such a name too,
   connect nothing and return null.
