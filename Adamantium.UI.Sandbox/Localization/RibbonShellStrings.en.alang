@@ -144,9 +144,9 @@
 
     <Phrase Key="Modules" Text="Modules"/>
     <Phrase Key="SurfaceModule" Text="Surface"/>
-    <Phrase Key="SurfaceModuleInfo" Text="Terrain, zones, roads"/>
+    <Phrase Key="SurfaceModuleInfo" Text="Terrain, zones, roads, ground"/>
     <Phrase Key="SpaceModule" Text="Space"/>
-    <Phrase Key="SpaceModuleInfo" Text="Stars, planets, orbits"/>
+    <Phrase Key="SpaceModuleInfo" Text="Stars, planets, orbits, atmospheres"/>
     <Phrase Key="ModuleCatalog" Text="Module catalog..."/>
     <Phrase Key="SurfaceHeader" Text="SURFACE"/>
     <Phrase Key="SpaceHeader" Text="SPACE"/>
@@ -160,6 +160,111 @@
     <Phrase Key="Star" Text="Star"/>
     <Phrase Key="Planet" Text="Planet"/>
     <Phrase Key="Moon" Text="Moon"/>
+
+    <Phrase Key="NewTerrain" Text="New terrain"/>
+    <Phrase Key="ImportHeightmap" Text="Import heightmap"/>
+    <Phrase Key="Flatten" Text="Flatten"/>
+    <Phrase Key="Stamp" Text="Stamp"/>
+    <Phrase Key="Ground" Text="Ground"/>
+    <Phrase Key="PaintGround" Text="Ground brush"/>
+    <Phrase Key="AutoFill" Text="Auto fill"/>
+    <Phrase Key="Water" Text="Water"/>
+    <Phrase Key="River" Text="River"/>
+    <Phrase Key="WaterLevel" Text="Water level"/>
+    <Phrase Key="Lake" Text="Lake"/>
+    <Phrase Key="Erosion" Text="Erosion"/>
+    <Phrase Key="Vegetation" Text="Vegetation"/>
+    <Phrase Key="PlantBrush" Text="Plant brush"/>
+
+    <Phrase Key="Zones" Text="Zones"/>
+    <Phrase Key="ZoneBrush" Text="Zone brush"/>
+    <Phrase Key="Polygon" Text="Polygon"/>
+    <Phrase Key="LockZone" Text="Lock"/>
+    <Phrase Key="Regenerate" Text="Regenerate"/>
+    <Phrase Key="Settlements" Text="Settlements"/>
+    <Phrase Key="Settlement" Text="Settlement"/>
+    <Phrase Key="SettlementList" Text="List"/>
+    <Phrase Key="Pinning" Text="Pinning"/>
+    <Phrase Key="Pin" Text="Pin"/>
+    <Phrase Key="Unpin" Text="Unpin"/>
+    <Phrase Key="Plots" Text="Plots"/>
+    <Phrase Key="SlicePlots" Text="Slice into plots"/>
+    <Phrase Key="EditBorders" Text="Edit borders"/>
+    <Phrase Key="Catalog" Text="Catalog"/>
+    <Phrase Key="BuildingCatalog" Text="Building catalog"/>
+
+    <Phrase Key="Roads" Text="Roads"/>
+    <Phrase Key="Road" Text="Road"/>
+    <Phrase Key="NewRoad" Text="New road"/>
+    <Phrase Key="AddPoint" Text="Add point"/>
+    <Phrase Key="RemovePoint" Text="Remove point"/>
+    <Phrase Key="Junction" Text="Junction"/>
+    <Phrase Key="Structures" Text="Structures"/>
+    <Phrase Key="Bridge" Text="Bridge"/>
+    <Phrase Key="Tunnel" Text="Tunnel"/>
+    <Phrase Key="Ford" Text="Ford"/>
+    <Phrase Key="Culvert" Text="Culvert"/>
+    <Phrase Key="Network" Text="Network"/>
+    <Phrase Key="ConnectSettlements" Text="Connect settlements"/>
+    <Phrase Key="Cataclysm" Text="Cataclysm"/>
+    <Phrase Key="BreakSection" Text="Break a section"/>
+    <Phrase Key="Restore" Text="Restore"/>
+    <Phrase Key="MakeTask" Text="Make it a task"/>
+
+    <Phrase Key="Stars" Text="Stars"/>
+    <Phrase Key="BinaryStar" Text="Binary star"/>
+    <Phrase Key="Cluster" Text="Cluster"/>
+    <Phrase Key="DwarfPlanet" Text="Dwarf planet"/>
+    <Phrase Key="AsteroidBelt" Text="Asteroid belt"/>
+    <Phrase Key="Orbits" Text="Orbits"/>
+    <Phrase Key="SetOrbit" Text="Set orbit"/>
+    <Phrase Key="Resonance" Text="Resonance"/>
+    <Phrase Key="Lagrange" Text="Lagrange points"/>
+    <Phrase Key="Generator" Text="Generator"/>
+    <Phrase Key="GenerateSystem" Text="Generate a system"/>
+
+    <Phrase Key="Basics" Text="Basics"/>
+    <Phrase Key="NewPlanet" Text="New planet"/>
+    <Phrase Key="ReliefNoise" Text="Relief noise"/>
+    <Phrase Key="Craters" Text="Craters"/>
+    <Phrase Key="Ridges" Text="Ridges"/>
+    <Phrase Key="Tectonics" Text="Tectonics"/>
+    <Phrase Key="WaterAndIce" Text="Water and ice"/>
+    <Phrase Key="OceanLevel" Text="Ocean level"/>
+    <Phrase Key="PolarCaps" Text="Polar caps"/>
+    <Phrase Key="Glaciers" Text="Glaciers"/>
+    <Phrase Key="Biomes" Text="Biomes"/>
+    <Phrase Key="Rings" Text="Rings"/>
+    <Phrase Key="Cataclysms" Text="Cataclysms"/>
+    <Phrase Key="Volcano" Text="Volcano"/>
+    <Phrase Key="MeteorShower" Text="Meteor shower"/>
+    <Phrase Key="Impact" Text="Asteroid impact"/>
+
+    <Phrase Key="Atmosphere" Text="Atmosphere"/>
+    <Phrase Key="Composition" Text="Composition"/>
+    <Phrase Key="Scattering" Text="Scattering"/>
+    <Phrase Key="Rayleigh" Text="Rayleigh"/>
+    <Phrase Key="Mie" Text="Mie"/>
+    <Phrase Key="Dawn" Text="Dawn preview"/>
+    <Phrase Key="Clouds" Text="Clouds"/>
+    <Phrase Key="CloudLayers" Text="Cloud layers"/>
+    <Phrase Key="Storms" Text="Storms"/>
+    <Phrase Key="CloudShadows" Text="Cloud shadows"/>
+    <Phrase Key="Phenomena" Text="Phenomena"/>
+    <Phrase Key="Auroras" Text="Auroras"/>
+    <Phrase Key="NightGlow" Text="Airglow"/>
+    <Phrase Key="DustStorms" Text="Dust storms"/>
+    <Phrase Key="Climate" Text="Climate"/>
+    <Phrase Key="Winds" Text="Winds"/>
+    <Phrase Key="Precipitation" Text="Precipitation"/>
+    <Phrase Key="Seasons" Text="Seasons"/>
+
+    <Phrase Key="Rooms" Text="Rooms"/>
+    <Phrase Key="RoomLight" Text="Room lighting"/>
+    <Phrase Key="Skeleton" Text="Skeleton"/>
+    <Phrase Key="Animation" Text="Animation"/>
+    <Phrase Key="Units" Text="Units"/>
+    <Phrase Key="Resources" Text="Resources"/>
 
     <Phrase Key="InteriorsModule" Text="Interiors"/>
     <Phrase Key="InteriorsModuleInfo" Text="Rooms, doors, lights inside"/>
@@ -175,9 +280,18 @@
     <Phrase Key="WaterModuleInfo" Text="Rivers, lakes, currents"/>
     <Phrase Key="DestructionModule" Text="Destruction"/>
     <Phrase Key="DestructionModuleInfo" Text="Cataclysms, cracks, debris"/>
-    <Phrase Key="SurfaceAdds" Text="Tab: Terrain"/>
-    <Phrase Key="SpaceAdds" Text="Tab: System"/>
-    <Phrase Key="InteriorsAdds" Text="Tabs: Rooms, Lighting"/>
+    <Phrase Key="SurfaceDescription" Text="The ground underfoot: terrain and its sculpting, zones, roads and what stands on them, the ground under the wheels."/>
+    <Phrase Key="SpaceDescription" Text="Star systems: stars and the bodies on their orbits, planets with relief and biomes, atmospheres and clouds."/>
+    <Phrase Key="InteriorsDescription" Text="Inside the buildings: rooms and the openings between them, doors, light in the rooms."/>
+    <Phrase Key="CharactersDescription" Text="Living things: skeleton and rig, animation clips and the transitions between them."/>
+    <Phrase Key="StrategyDescription" Text="The game from above: units and their orders, resources and how they are gathered."/>
+    <Phrase Key="SoundDescription" Text="The sound of the world: sources in the scene, echo by zone, music by event."/>
+    <Phrase Key="VegetationDescription" Text="Forests and grass: plant sets, growth by biome, density by height and slope."/>
+    <Phrase Key="WaterDescription" Text="Water on the terrain: rivers along their beds, lakes in the hollows, currents."/>
+    <Phrase Key="DestructionDescription" Text="Cataclysms: cracks and collapses, debris, what was destroyed as a task to restore."/>
+    <Phrase Key="SurfaceAdds" Text="Tabs: Terrain, Zones, Roads"/>
+    <Phrase Key="SpaceAdds" Text="Tabs: System, Planet, Atmosphere"/>
+    <Phrase Key="InteriorsAdds" Text="Tabs: Rooms, Room lighting"/>
     <Phrase Key="CharactersAdds" Text="Tabs: Skeleton, Animation"/>
     <Phrase Key="StrategyAdds" Text="Tabs: Units, Resources"/>
     <Phrase Key="SoundAdds" Text="Groups in Environment and Play"/>
@@ -196,10 +310,11 @@
     <Phrase Key="ModuleFiles" Text="Module assemblies"/>
     <Phrase Key="CloseCatalog" Text="Close the catalog"/>
     <Phrase Key="CatalogFilter" Select="filter"
-            All="All"
-            InDocument="In this document"
-            Installed="Installed"
-            Updates="Updates"/>
+            All="All · {count}"
+            InDocument="In this document · {count}"
+            Installed="Installed · {count}"
+            Updates="Updates · {count}"/>
+    <Phrase Key="Sections" Text="Sections"/>
     <Phrase Key="Section" Select="section"
             All="All"
             World="World and terrain"
@@ -212,10 +327,16 @@
             InDocument="In this document"
             Installed="Installed"
             Detached="Detached · data in the file"
-            UpdateAvailable="Update available"
+            UpdateAvailable="Update to {version}"
             Available="Available"/>
+    <Phrase Key="VersionLine" Select="builtIn"
+            True="{version} · built into the editor"
+            False="{version}"/>
+    <Phrase Key="OwnTabs" Text="Its own tabs"/>
+    <Phrase Key="DependsOn" Text="Depends on"/>
+    <Phrase Key="CoreOnly" Text="the core only"/>
     <Phrase Key="ShowTabs" Text="Show its tabs"/>
-    <Phrase Key="ShowTabsHint" Text="A hidden module still works - only its tabs are put away."/>
+    <Phrase Key="ShowTabsHint" Text="it keeps working while hidden"/>
     <Phrase Key="InThisDocument" Text="In this document"/>
     <Phrase Key="DetachFromDocument" Text="Detach from the document..."/>
     <Phrase Key="DetachTitle" Text="Detach from this document?"/>
@@ -233,6 +354,10 @@
     <Phrase Key="InstallModule" Text="Install"/>
     <Phrase Key="UpdateModule" Text="Update"/>
     <Phrase Key="UninstallModule" Text="Remove from the editor"/>
+    <Phrase Key="AskUninstall" Text="Remove from the editor..."/>
+    <Phrase Key="UninstallTitle" Text="Remove it from the editor?"/>
+    <Phrase Key="UninstallText" Text="It leaves the editor and this document. Its data stays in the file: install and attach it again and everything is back."/>
+    <Phrase Key="Remove" Text="Remove"/>
 
     <Phrase Key="Status" Select="action"
             Ready="Ready."

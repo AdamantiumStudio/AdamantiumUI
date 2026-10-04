@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Adamantium.MVVM;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Localization;
@@ -23,7 +25,12 @@ public partial class EditorModule
     /// <summary>The warning before its data is deleted from the document is up.</summary>
     [Bindable] private bool _isDeleteAsked;
 
+    /// <summary>The warning before it leaves the editor while in the document is up.</summary>
+    [Bindable] private bool _isUninstallAsked;
+
     private ImageSource _icon;
+
+    private IReadOnlyList<ModuleTab> _ownTabs;
 
     /// <summary>The table its words are keys of: the shell's for a module the shell ships, the module's own for one
     /// loaded from a file. A word the table lacks is said as it is.</summary>
@@ -33,8 +40,20 @@ public partial class EditorModule
 
     public string Info { get; init; }
 
+    /// <summary>What it is for, in a few sentences: the catalog's account of it.</summary>
+    public string Description { get; init; }
+
     /// <summary>What it brings into the ribbon.</summary>
     public string Adds { get; init; }
+
+    /// <summary>The tabs of its own it brings into the ribbon, as keys of their names.</summary>
+    public IReadOnlyList<string> Tabs { get; init; } = [];
+
+    /// <summary><see cref="Tabs"/>, each with the module it belongs to - what a view needs to say and color it.</summary>
+    public IReadOnlyList<ModuleTab> OwnTabs => _ownTabs ??= [.. Tabs.Select(name => new ModuleTab { Module = this, Name = name })];
+
+    /// <summary>What it needs to work, besides the editor's core.</summary>
+    public string Requires { get; init; }
 
     /// <summary>What this document holds of it; null for a module the document never had.</summary>
     public string Content { get; init; }
@@ -43,6 +62,13 @@ public partial class EditorModule
     public string Dependents { get; init; }
 
     public string Version { get; init; }
+
+    /// <summary>The version an update brings, while <see cref="State"/> is
+    /// <see cref="EditorModuleState.UpdateAvailable"/>.</summary>
+    public string UpdateVersion { get; init; }
+
+    /// <summary>Ships with the editor rather than from the catalog or a file.</summary>
+    public bool IsBuiltIn { get; init; }
 
     /// <summary>Its color, as text the binding parses into a brush.</summary>
     public string Accent { get; init; }
@@ -67,19 +93,27 @@ public partial class EditorModule
     /// <summary>What its tabs hang on: in the document and not hidden.</summary>
     public bool HasTabs => IsInDocument && IsShown;
 
+    /// <summary>It brings tabs of its own.</summary>
+    public bool HasOwnTabs => Tabs.Count > 0;
+
+    /// <summary>The document holds what it made: it is in the document, or detached with its data kept.</summary>
+    public bool HasDocumentData => Content != null && State is EditorModuleState.InDocument or EditorModuleState.Detached;
+
     partial void OnStateChanged(EditorModuleState value)
     {
         RaisePropertyChanged(nameof(IsInDocument));
         RaisePropertyChanged(nameof(HasTabs));
+        RaisePropertyChanged(nameof(HasDocumentData));
     }
 
     partial void OnIsShownChanged(bool value) => RaisePropertyChanged(nameof(HasTabs));
 
-    /// <summary>Takes both warnings down - the place that asked has closed.</summary>
+    /// <summary>Takes every warning down - the place that asked has closed.</summary>
     public void ForgetQuestions()
     {
         IsDetachAsked = false;
         IsDeleteAsked = false;
+        IsUninstallAsked = false;
     }
 
     [Command] private void AskDetach() => IsDetachAsked = true;
@@ -112,7 +146,15 @@ public partial class EditorModule
 
     [Command] private void Update() => State = EditorModuleState.Installed;
 
-    [Command] private void Uninstall() => State = EditorModuleState.Available;
+    [Command] private void AskUninstall() => IsUninstallAsked = true;
+
+    [Command] private void KeepInstalled() => IsUninstallAsked = false;
+
+    [Command] private void Uninstall()
+    {
+        IsUninstallAsked = false;
+        State = EditorModuleState.Available;
+    }
 
     [Command] private void Use(object action) => Report?.Invoke(action as string);
 }

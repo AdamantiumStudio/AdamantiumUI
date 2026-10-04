@@ -3,6 +3,8 @@
     <Phrase Key="Roads" Text="Дороги"/>
     <Phrase Key="RoadsInfo" Text="Дороги, мосты и переезды"/>
     <Phrase Key="RoadsAdds" Text="Вкладка: Дороги"/>
+    <Phrase Key="RoadsDescription" Text="Дороги поверх рельефа — с мостами и переездами там, где они встречают воду и рельсы."/>
+    <Phrase Key="CoreOnly" Text="только от ядра"/>
     <Phrase Key="Build" Text="Строительство"/>
     <Phrase Key="LayRoad" Text="Проложить дорогу"/>
     <Phrase Key="Bridge" Text="Мост"/>

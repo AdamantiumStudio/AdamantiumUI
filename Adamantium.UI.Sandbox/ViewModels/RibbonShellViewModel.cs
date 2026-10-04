@@ -203,9 +203,9 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>The module catalog is out - the drawer the ribbon opens in place of its band.</summary>
     [Bindable] private bool _isModuleCatalogOpen;
 
-    [Bindable] private ModuleCatalogFilter _catalogFilter = ModuleCatalogFilter.All;
+    [Bindable] private CatalogFilterChoice _catalogFilter;
 
-    [Bindable] private ModuleSection _catalogSection = ModuleSection.All;
+    [Bindable] private CatalogSectionChoice _catalogSection;
 
     [Bindable] private string _catalogSearch = string.Empty;
 
@@ -239,6 +239,9 @@ public partial class RibbonShellViewModel : IWindowAware
             IsLiveFiltering = true,
             LiveFilteringProperties = { nameof(EditorModule.State) }
         };
+        CatalogFilter = CatalogFilters[0];
+        CatalogSection = CatalogSections[0];
+        CountModules();
         SelectedModule = Surface;
         ShowModulesMenu();
 
@@ -372,10 +375,14 @@ public partial class RibbonShellViewModel : IWindowAware
         Phrases = RibbonShellStrings.Current,
         Name = nameof(RibbonShellStrings.SurfaceModule),
         Info = nameof(RibbonShellStrings.SurfaceModuleInfo),
+        Description = nameof(RibbonShellStrings.SurfaceDescription),
         Adds = nameof(RibbonShellStrings.SurfaceAdds),
+        Tabs = [nameof(RibbonShellStrings.Terrain), nameof(RibbonShellStrings.Zones), nameof(RibbonShellStrings.Roads)],
+        Requires = nameof(RibbonShellStrings.CoreOnly),
         Content = nameof(RibbonShellStrings.SurfaceContent),
         Dependents = nameof(RibbonShellStrings.SurfaceDependents),
         Version = "1.2",
+        IsBuiltIn = true,
         Accent = "#2E8B62",
         Section = ModuleSection.World,
         State = EditorModuleState.InDocument
@@ -386,10 +393,14 @@ public partial class RibbonShellViewModel : IWindowAware
         Phrases = RibbonShellStrings.Current,
         Name = nameof(RibbonShellStrings.SpaceModule),
         Info = nameof(RibbonShellStrings.SpaceModuleInfo),
+        Description = nameof(RibbonShellStrings.SpaceDescription),
         Adds = nameof(RibbonShellStrings.SpaceAdds),
+        Tabs = [nameof(RibbonShellStrings.System), nameof(RibbonShellStrings.Planet), nameof(RibbonShellStrings.Atmosphere)],
+        Requires = nameof(RibbonShellStrings.CoreOnly),
         Content = nameof(RibbonShellStrings.SpaceContent),
         Dependents = nameof(RibbonShellStrings.SpaceDependents),
         Version = "1.0",
+        IsBuiltIn = true,
         Accent = "#6A58C9",
         Section = ModuleSection.Space,
         State = EditorModuleState.InDocument,
@@ -406,7 +417,10 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.InteriorsModule),
             Info = nameof(RibbonShellStrings.InteriorsModuleInfo),
+            Description = nameof(RibbonShellStrings.InteriorsDescription),
             Adds = nameof(RibbonShellStrings.InteriorsAdds),
+            Tabs = [nameof(RibbonShellStrings.Rooms), nameof(RibbonShellStrings.RoomLight)],
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "0.9",
             Accent = "#C98A3E",
             Section = ModuleSection.Buildings,
@@ -417,7 +431,10 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.CharactersModule),
             Info = nameof(RibbonShellStrings.CharactersModuleInfo),
+            Description = nameof(RibbonShellStrings.CharactersDescription),
             Adds = nameof(RibbonShellStrings.CharactersAdds),
+            Tabs = [nameof(RibbonShellStrings.Skeleton), nameof(RibbonShellStrings.Animation)],
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Content = nameof(RibbonShellStrings.CharactersContent),
             Version = "0.8",
             Accent = "#C2557A",
@@ -429,7 +446,10 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.StrategyModule),
             Info = nameof(RibbonShellStrings.StrategyModuleInfo),
+            Description = nameof(RibbonShellStrings.StrategyDescription),
             Adds = nameof(RibbonShellStrings.StrategyAdds),
+            Tabs = [nameof(RibbonShellStrings.Units), nameof(RibbonShellStrings.Resources)],
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "0.5",
             Accent = "#3F8FBF",
             Section = ModuleSection.Gameplay,
@@ -440,8 +460,11 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.SoundModule),
             Info = nameof(RibbonShellStrings.SoundModuleInfo),
+            Description = nameof(RibbonShellStrings.SoundDescription),
             Adds = nameof(RibbonShellStrings.SoundAdds),
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "1.0",
+            UpdateVersion = "1.1",
             Accent = "#B39A2E",
             Section = ModuleSection.Sound,
             State = EditorModuleState.UpdateAvailable
@@ -451,7 +474,9 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.VegetationModule),
             Info = nameof(RibbonShellStrings.VegetationModuleInfo),
+            Description = nameof(RibbonShellStrings.VegetationDescription),
             Adds = nameof(RibbonShellStrings.VegetationAdds),
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "0.7",
             Accent = "#5E9E3A",
             Section = ModuleSection.World,
@@ -462,7 +487,10 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.WaterModule),
             Info = nameof(RibbonShellStrings.WaterModuleInfo),
+            Description = nameof(RibbonShellStrings.WaterDescription),
             Adds = nameof(RibbonShellStrings.WaterAdds),
+            Tabs = [nameof(RibbonShellStrings.Water)],
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "0.6",
             Accent = "#3A7FC9",
             Section = ModuleSection.World,
@@ -473,7 +501,9 @@ public partial class RibbonShellViewModel : IWindowAware
             Phrases = RibbonShellStrings.Current,
             Name = nameof(RibbonShellStrings.DestructionModule),
             Info = nameof(RibbonShellStrings.DestructionModuleInfo),
+            Description = nameof(RibbonShellStrings.DestructionDescription),
             Adds = nameof(RibbonShellStrings.DestructionAdds),
+            Requires = nameof(RibbonShellStrings.CoreOnly),
             Version = "0.4",
             Accent = "#C0643F",
             Section = ModuleSection.World,
@@ -485,16 +515,18 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <see cref="Modules"/>, so a module that changes state or arrives from a file finds its place by itself.</summary>
     public CollectionView CatalogModules { get; }
 
-    public IReadOnlyList<ModuleCatalogFilter> CatalogFilters { get; } = Enum.GetValues<ModuleCatalogFilter>();
+    public IReadOnlyList<CatalogFilterChoice> CatalogFilters { get; } =
+        [.. Enum.GetValues<ModuleCatalogFilter>().Select(filter => new CatalogFilterChoice { Filter = filter })];
 
-    public IReadOnlyList<ModuleSection> CatalogSections { get; } = Enum.GetValues<ModuleSection>();
+    public IReadOnlyList<CatalogSectionChoice> CatalogSections { get; } =
+        [.. Enum.GetValues<ModuleSection>().Select(section => new CatalogSectionChoice { Section = section })];
 
     /// <summary>How many modules are in the document - the count beside "Modules" in the strip.</summary>
     public int ModuleCount => Modules.Count(module => module.IsInDocument);
 
-    partial void OnCatalogFilterChanged(ModuleCatalogFilter value) => CatalogModules.Refresh();
+    partial void OnCatalogFilterChanged(CatalogFilterChoice value) => CatalogModules.Refresh();
 
-    partial void OnCatalogSectionChanged(ModuleSection value) => CatalogModules.Refresh();
+    partial void OnCatalogSectionChanged(CatalogSectionChoice value) => CatalogModules.Refresh();
 
     partial void OnCatalogSearchChanged(string value) => CatalogModules.Refresh();
 
@@ -532,6 +564,20 @@ public partial class RibbonShellViewModel : IWindowAware
         RaisePropertyChanged(nameof(ModuleCount));
         LastAction = RibbonAction.ModulesChanged;
         ShowModulesMenu();
+        CountModules();
+    }
+
+    private void CountModules()
+    {
+        foreach (var choice in CatalogFilters)
+        {
+            choice.Count = Modules.Count(module => Passes(module, choice.Filter));
+        }
+
+        foreach (var choice in CatalogSections)
+        {
+            choice.Count = Modules.Count(module => IsIn(module, choice.Section));
+        }
     }
 
     private void ShowModulesMenu()
@@ -576,27 +622,26 @@ public partial class RibbonShellViewModel : IWindowAware
         }
     }
 
+    private static bool Passes(EditorModule module, ModuleCatalogFilter filter) => filter switch
+    {
+        ModuleCatalogFilter.InDocument => module.IsInDocument,
+        ModuleCatalogFilter.Installed => module.State != EditorModuleState.Available,
+        ModuleCatalogFilter.Updates => module.State == EditorModuleState.UpdateAvailable,
+        _ => true
+    };
+
+    private static bool IsIn(EditorModule module, ModuleSection section) =>
+        section == ModuleSection.All || module.Section == section;
+
     private bool Fits(EditorModule module)
     {
+        if (!Passes(module, CatalogFilter?.Filter ?? ModuleCatalogFilter.All)
+            || !IsIn(module, CatalogSection?.Section ?? ModuleSection.All))
+        {
+            return false;
+        }
+
         var search = CatalogSearch?.Trim() ?? string.Empty;
-
-        var listed = CatalogFilter switch
-        {
-            ModuleCatalogFilter.InDocument => module.IsInDocument,
-            ModuleCatalogFilter.Installed => module.State != EditorModuleState.Available,
-            ModuleCatalogFilter.Updates => module.State == EditorModuleState.UpdateAvailable,
-            _ => true
-        };
-        if (!listed)
-        {
-            return false;
-        }
-
-        if (CatalogSection != ModuleSection.All && module.Section != CatalogSection)
-        {
-            return false;
-        }
-
         return search.Length == 0
                || Languages.Say(module.Phrases, module.Name).Contains(search, StringComparison.CurrentCultureIgnoreCase)
                || Languages.Say(module.Phrases, module.Info).Contains(search, StringComparison.CurrentCultureIgnoreCase);
@@ -649,6 +694,7 @@ public partial class RibbonShellViewModel : IWindowAware
             Modules.Add(module);
         }
 
+        CountModules();
         SelectedModule = fresh[0];
         LastAction = RibbonAction.ModuleInstalled;
     }

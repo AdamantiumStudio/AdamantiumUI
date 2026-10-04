@@ -94,8 +94,14 @@ All packages share one version.
 - `AdamantiumComponent.SetValue(string, ...)` reports a name the type has no property for through `PropertyTrace`
   instead of ignoring it without a word. `ThemeResource.Apply` and `ObservableResource.Apply` report such a name too,
   connect nothing and return null.
+- Fluent's flyout acrylic (`FlyoutSurfaceFill`: menus, drop-downs, flyouts) is thinner - tint 0.6, blur 7 - and its
+  tooltip one (`TooltipSurfaceFill`) with it - 0.54, blur 5. The blur is counted over a copy downscaled four times, so
+  the old 28 reached about a hundred pixels and averaged everything behind into one flat gray: the material read as a
+  plain fill. What is behind now shows through as soft light, about as far as Windows' own acrylic blurs.
 - The markup compiler refuses `{ThemeResource}` and `{ObservableResource}` on a plain CLR property: nothing there can
-  follow a resource. `{ResourceReference}` sets it once.
+  follow a resource. `{ResourceReference}` sets it once. A setter's value is not such a property: a style written in a
+  view (an `ItemContainerStyle`, say) keeps the live resource for the style to apply, as a style set always did - it
+  used to be connected to the setter itself, which is to nothing.
 
 - `ContextMenu` and `MenuItem` make every row built from data a `MenuItem`, whatever the `ItemTemplate`: the template
   draws the row's header, `ItemContainerStyle` says what the row does. A plain `DataTemplate` used to leave the rows bare
@@ -134,6 +140,17 @@ All packages share one version.
 
 ### Fixed
 
+- A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
+  overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
+  three themes. A row's color is a style by type, which inheritance outranks by design.
+- A border around a material fill was never drawn - so the acrylic card of every Fluent menu, drop-down and flyout had
+  no edge and melted into what was behind it. The material batch takes the framed rectangle whole and baked only its
+  pen; a uniform border now rides in the same record as a ring inside the outline. A border with different widths per
+  side is still not drawn on a material.
+- A drag ghost built from a `DragTemplate`, and the count badge of a multi-item drag, showed nothing under the cursor.
+  `VisualRenderer.RequestSnapshot` of an element in no tree recorded a picture with nothing in it - the render cache
+  leaves out whatever is not in a tree; such an element is now hosted off-screen at its arranged size, as
+  `RequestRender` does.
 - A style written inside a template styled nothing. The generator set a part's properties by name at template priority,
   and a property with no `AdamantiumProperty` behind it - a style's `Selector` - was dropped without a word. Such a
   property is now assigned, as the designer's loader already did.

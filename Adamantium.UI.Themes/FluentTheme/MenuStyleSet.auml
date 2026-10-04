@@ -210,9 +210,13 @@
                                  taken from the built content in code (Popup.ContentBuilt). -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
+                                    <!-- The card is a surface of its own, so its words take the card's color: inherited
+                                         from what the menu belongs to, the caption's overflow menu wore the caption's
+                                         white on a white card. -->
                                     <Border x:Name="PART_MenuRoot"
                                             Background="{ResourceReference FlyoutSurfaceFill}"
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            Foreground="{ObservableResource TextFillColorPrimary}"
                                             BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="160">
                                         <!-- Menu taller than the window: capped to the window (MaxHeight set in code) and scrolled by
                                              the ▲/▼ hover-arrows the MenuScrollViewer grows - no scrollbar. A short menu is content-sized. -->

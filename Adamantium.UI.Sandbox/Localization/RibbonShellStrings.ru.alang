@@ -144,9 +144,9 @@
 
     <Phrase Key="Modules" Text="Модули"/>
     <Phrase Key="SurfaceModule" Text="Поверхность"/>
-    <Phrase Key="SurfaceModuleInfo" Text="Рельеф, зоны, дороги"/>
+    <Phrase Key="SurfaceModuleInfo" Text="Рельеф, зоны, дороги, грунт"/>
     <Phrase Key="SpaceModule" Text="Космос"/>
-    <Phrase Key="SpaceModuleInfo" Text="Звёзды, планеты, орбиты"/>
+    <Phrase Key="SpaceModuleInfo" Text="Звёзды, планеты, орбиты, атмосферы"/>
     <Phrase Key="ModuleCatalog" Text="Каталог модулей..."/>
     <Phrase Key="SurfaceHeader" Text="ПОВЕРХНОСТЬ"/>
     <Phrase Key="SpaceHeader" Text="КОСМОС"/>
@@ -160,6 +160,111 @@
     <Phrase Key="Star" Text="Звезда"/>
     <Phrase Key="Planet" Text="Планета"/>
     <Phrase Key="Moon" Text="Луна"/>
+
+    <Phrase Key="NewTerrain" Text="Новый рельеф"/>
+    <Phrase Key="ImportHeightmap" Text="Импорт карты высот"/>
+    <Phrase Key="Flatten" Text="Выровнять"/>
+    <Phrase Key="Stamp" Text="Штамп"/>
+    <Phrase Key="Ground" Text="Грунт"/>
+    <Phrase Key="PaintGround" Text="Кисть грунта"/>
+    <Phrase Key="AutoFill" Text="Автозаливка"/>
+    <Phrase Key="Water" Text="Вода"/>
+    <Phrase Key="River" Text="Река"/>
+    <Phrase Key="WaterLevel" Text="Уровень воды"/>
+    <Phrase Key="Lake" Text="Озеро"/>
+    <Phrase Key="Erosion" Text="Эрозия"/>
+    <Phrase Key="Vegetation" Text="Растительность"/>
+    <Phrase Key="PlantBrush" Text="Кисть растительности"/>
+
+    <Phrase Key="Zones" Text="Зоны"/>
+    <Phrase Key="ZoneBrush" Text="Кисть зоны"/>
+    <Phrase Key="Polygon" Text="Многоугольник"/>
+    <Phrase Key="LockZone" Text="Заблокировать"/>
+    <Phrase Key="Regenerate" Text="Перегенерировать"/>
+    <Phrase Key="Settlements" Text="Поселения"/>
+    <Phrase Key="Settlement" Text="Поселение"/>
+    <Phrase Key="SettlementList" Text="Список"/>
+    <Phrase Key="Pinning" Text="Закрепление"/>
+    <Phrase Key="Pin" Text="Закрепить"/>
+    <Phrase Key="Unpin" Text="Отцепить"/>
+    <Phrase Key="Plots" Text="Участки"/>
+    <Phrase Key="SlicePlots" Text="Нарезать участки"/>
+    <Phrase Key="EditBorders" Text="Править границы"/>
+    <Phrase Key="Catalog" Text="Каталог"/>
+    <Phrase Key="BuildingCatalog" Text="Каталог зданий"/>
+
+    <Phrase Key="Roads" Text="Дороги"/>
+    <Phrase Key="Road" Text="Дорога"/>
+    <Phrase Key="NewRoad" Text="Новая дорога"/>
+    <Phrase Key="AddPoint" Text="Добавить точку"/>
+    <Phrase Key="RemovePoint" Text="Удалить точку"/>
+    <Phrase Key="Junction" Text="Перекрёсток"/>
+    <Phrase Key="Structures" Text="Сооружения"/>
+    <Phrase Key="Bridge" Text="Мост"/>
+    <Phrase Key="Tunnel" Text="Тоннель"/>
+    <Phrase Key="Ford" Text="Брод"/>
+    <Phrase Key="Culvert" Text="Водопропуск"/>
+    <Phrase Key="Network" Text="Сеть"/>
+    <Phrase Key="ConnectSettlements" Text="Связать поселения"/>
+    <Phrase Key="Cataclysm" Text="Катаклизм"/>
+    <Phrase Key="BreakSection" Text="Сломать участок"/>
+    <Phrase Key="Restore" Text="Восстановить"/>
+    <Phrase Key="MakeTask" Text="Сделать заданием"/>
+
+    <Phrase Key="Stars" Text="Звёзды"/>
+    <Phrase Key="BinaryStar" Text="Двойная звезда"/>
+    <Phrase Key="Cluster" Text="Скопление"/>
+    <Phrase Key="DwarfPlanet" Text="Карликовая планета"/>
+    <Phrase Key="AsteroidBelt" Text="Пояс астероидов"/>
+    <Phrase Key="Orbits" Text="Орбиты"/>
+    <Phrase Key="SetOrbit" Text="Задать орбиту"/>
+    <Phrase Key="Resonance" Text="Резонанс"/>
+    <Phrase Key="Lagrange" Text="Точки Лагранжа"/>
+    <Phrase Key="Generator" Text="Генератор"/>
+    <Phrase Key="GenerateSystem" Text="Сгенерировать систему"/>
+
+    <Phrase Key="Basics" Text="Основа"/>
+    <Phrase Key="NewPlanet" Text="Новая планета"/>
+    <Phrase Key="ReliefNoise" Text="Шум рельефа"/>
+    <Phrase Key="Craters" Text="Кратеры"/>
+    <Phrase Key="Ridges" Text="Хребты"/>
+    <Phrase Key="Tectonics" Text="Тектоника"/>
+    <Phrase Key="WaterAndIce" Text="Вода и лёд"/>
+    <Phrase Key="OceanLevel" Text="Уровень океана"/>
+    <Phrase Key="PolarCaps" Text="Полярные шапки"/>
+    <Phrase Key="Glaciers" Text="Ледники"/>
+    <Phrase Key="Biomes" Text="Биомы"/>
+    <Phrase Key="Rings" Text="Кольца"/>
+    <Phrase Key="Cataclysms" Text="Катаклизмы"/>
+    <Phrase Key="Volcano" Text="Вулкан"/>
+    <Phrase Key="MeteorShower" Text="Метеоритный дождь"/>
+    <Phrase Key="Impact" Text="Удар астероида"/>
+
+    <Phrase Key="Atmosphere" Text="Атмосфера"/>
+    <Phrase Key="Composition" Text="Состав"/>
+    <Phrase Key="Scattering" Text="Рассеяние"/>
+    <Phrase Key="Rayleigh" Text="Рэлей"/>
+    <Phrase Key="Mie" Text="Ми"/>
+    <Phrase Key="Dawn" Text="Предпросмотр рассвета"/>
+    <Phrase Key="Clouds" Text="Облака"/>
+    <Phrase Key="CloudLayers" Text="Слои облаков"/>
+    <Phrase Key="Storms" Text="Штормы"/>
+    <Phrase Key="CloudShadows" Text="Тени облаков"/>
+    <Phrase Key="Phenomena" Text="Явления"/>
+    <Phrase Key="Auroras" Text="Полярные сияния"/>
+    <Phrase Key="NightGlow" Text="Свечение ночи"/>
+    <Phrase Key="DustStorms" Text="Пыльные бури"/>
+    <Phrase Key="Climate" Text="Климат"/>
+    <Phrase Key="Winds" Text="Ветры"/>
+    <Phrase Key="Precipitation" Text="Осадки"/>
+    <Phrase Key="Seasons" Text="Сезоны"/>
+
+    <Phrase Key="Rooms" Text="Помещения"/>
+    <Phrase Key="RoomLight" Text="Свет в комнатах"/>
+    <Phrase Key="Skeleton" Text="Скелет"/>
+    <Phrase Key="Animation" Text="Анимация"/>
+    <Phrase Key="Units" Text="Юниты"/>
+    <Phrase Key="Resources" Text="Ресурсы"/>
 
     <Phrase Key="InteriorsModule" Text="Интерьеры"/>
     <Phrase Key="InteriorsModuleInfo" Text="Помещения, двери, свет в комнатах"/>
@@ -175,9 +280,18 @@
     <Phrase Key="WaterModuleInfo" Text="Реки, озёра, течения"/>
     <Phrase Key="DestructionModule" Text="Разрушения"/>
     <Phrase Key="DestructionModuleInfo" Text="Катаклизмы, трещины, обломки"/>
-    <Phrase Key="SurfaceAdds" Text="Вкладка: Рельеф"/>
-    <Phrase Key="SpaceAdds" Text="Вкладка: Система"/>
-    <Phrase Key="InteriorsAdds" Text="Вкладки: Помещения, Освещение"/>
+    <Phrase Key="SurfaceDescription" Text="Земля под ногами: рельеф и его лепка, зоны, дороги и сооружения на них, грунт под колёсами."/>
+    <Phrase Key="SpaceDescription" Text="Звёздные системы: звёзды и тела на орбитах, планеты с рельефом и биомами, атмосферы и облака."/>
+    <Phrase Key="InteriorsDescription" Text="Внутри зданий: помещения и проёмы между ними, двери, свет в комнатах."/>
+    <Phrase Key="CharactersDescription" Text="Живые существа: скелет и риг, анимации и переходы между ними."/>
+    <Phrase Key="StrategyDescription" Text="Игра сверху: юниты и их приказы, ресурсы и их добыча."/>
+    <Phrase Key="SoundDescription" Text="Звуки мира: источники в сцене, эхо по зонам, музыка по событиям."/>
+    <Phrase Key="VegetationDescription" Text="Леса и трава: наборы растений, рост по биомам, плотность по высоте и уклону."/>
+    <Phrase Key="WaterDescription" Text="Вода на рельефе: реки по руслам, озёра в котловинах, течения."/>
+    <Phrase Key="DestructionDescription" Text="Катаклизмы: трещины и обрушения, обломки, разрушенное как задание на восстановление."/>
+    <Phrase Key="SurfaceAdds" Text="Вкладки: Рельеф, Зоны, Дороги"/>
+    <Phrase Key="SpaceAdds" Text="Вкладки: Система, Планета, Атмосфера"/>
+    <Phrase Key="InteriorsAdds" Text="Вкладки: Помещения, Свет в комнатах"/>
     <Phrase Key="CharactersAdds" Text="Вкладки: Скелет, Анимация"/>
     <Phrase Key="StrategyAdds" Text="Вкладки: Юниты, Ресурсы"/>
     <Phrase Key="SoundAdds" Text="Группы в «Окружении» и «Запуске»"/>
@@ -196,10 +310,11 @@
     <Phrase Key="ModuleFiles" Text="Сборки модулей"/>
     <Phrase Key="CloseCatalog" Text="Закрыть каталог"/>
     <Phrase Key="CatalogFilter" Select="filter"
-            All="Все"
-            InDocument="В документе"
-            Installed="Установлены"
-            Updates="Обновления"/>
+            All="Все · {count}"
+            InDocument="В документе · {count}"
+            Installed="Установлены · {count}"
+            Updates="Обновления · {count}"/>
+    <Phrase Key="Sections" Text="Разделы"/>
     <Phrase Key="Section" Select="section"
             All="Все"
             World="Мир и рельеф"
@@ -212,10 +327,16 @@
             InDocument="В документе"
             Installed="Установлен"
             Detached="Отключён · данные в файле"
-            UpdateAvailable="Есть обновление"
+            UpdateAvailable="Обновление до {version}"
             Available="Доступен"/>
+    <Phrase Key="VersionLine" Select="builtIn"
+            True="{version} · встроен в редактор"
+            False="{version}"/>
+    <Phrase Key="OwnTabs" Text="Свои вкладки"/>
+    <Phrase Key="DependsOn" Text="Зависит от"/>
+    <Phrase Key="CoreOnly" Text="только от ядра"/>
     <Phrase Key="ShowTabs" Text="Показывать вкладки"/>
-    <Phrase Key="ShowTabsHint" Text="Спрятанный модуль работает — прячутся только его вкладки."/>
+    <Phrase Key="ShowTabsHint" Text="модуль работает и спрятанным"/>
     <Phrase Key="InThisDocument" Text="В документе"/>
     <Phrase Key="DetachFromDocument" Text="Отключить от документа..."/>
     <Phrase Key="DetachTitle" Text="Отключить от этого документа?"/>
@@ -233,6 +354,10 @@
     <Phrase Key="InstallModule" Text="Установить"/>
     <Phrase Key="UpdateModule" Text="Обновить"/>
     <Phrase Key="UninstallModule" Text="Удалить из редактора"/>
+    <Phrase Key="AskUninstall" Text="Удалить из редактора..."/>
+    <Phrase Key="UninstallTitle" Text="Удалить из редактора?"/>
+    <Phrase Key="UninstallText" Text="Модуль уйдёт из редактора и из этого документа. Его данные останутся в файле: установите и подключите его снова — всё вернётся."/>
+    <Phrase Key="Remove" Text="Удалить"/>
 
     <Phrase Key="Status" Select="action"
             Ready="Готово."

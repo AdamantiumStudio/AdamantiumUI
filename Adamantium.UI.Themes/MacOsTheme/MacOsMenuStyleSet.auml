@@ -207,9 +207,12 @@
                                  parts are taken from the built content in code (Popup.ContentBuilt). -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
+                                    <!-- The card is a surface of its own, so its words take the card's color, not the
+                                         color of what the menu belongs to. -->
                                     <Border x:Name="PART_MenuRoot"
                                             Background="{ResourceReference FlyoutSurfaceFill}"
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            Foreground="{ObservableResource TextFillColorPrimary}"
                                             BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="160">
                                         <MenuScrollViewer x:Name="PART_MenuScroll">
                                             <ItemsPresenter x:Name="PART_ItemsPresenter"/>

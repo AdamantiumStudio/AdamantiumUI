@@ -17,7 +17,10 @@ public class RoadsModule : EditorModule
         Phrases = RoadsStrings.Current;
         Name = nameof(RoadsStrings.Roads);
         Info = nameof(RoadsStrings.RoadsInfo);
+        Description = nameof(RoadsStrings.RoadsDescription);
         Adds = nameof(RoadsStrings.RoadsAdds);
+        Tabs = [nameof(RoadsStrings.Roads)];
+        Requires = nameof(RoadsStrings.CoreOnly);
         Version = "1.0";
         Accent = "#B8732E";
         Section = ModuleSection.World;

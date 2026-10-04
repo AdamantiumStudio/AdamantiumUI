@@ -222,9 +222,12 @@
                                  most of them never show it. -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
+                                    <!-- The card is a surface of its own, so its words take the card's color, not the
+                                         color of what the menu belongs to. -->
                                     <Border x:Name="PART_MenuRoot"
                                             Background="{ResourceReference SolidBackgroundFillColorTertiary}"
                                             BorderBrush="{ResourceReference ControlStrokeColorSecondary}"
+                                            Foreground="{ObservableResource TextFillColorPrimary}"
                                             BorderThickness="{ResourceReference StrokeThin}"
                                             CornerRadius="0"
                                             Padding="{ResourceReference MenuCardPadding}"

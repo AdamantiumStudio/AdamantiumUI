@@ -403,9 +403,10 @@ public class CodeGenerationContext
                         case "ThemeResource":
                         {
                             // {ThemeResource Key} -> a live binding to the active theme's property. As a Setter value
-                            // it's stored as the marker (Setter.Apply -> SetBinding); as a normal property it's bound now.
+                            // it's stored as the marker (Setter.Apply -> SetBinding), in any file - a style written in a
+                            // view too; as a normal property it's bound now.
                             var key = extension.Arguments[0].Value.GetTextValue();
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 TextGenerator.WriteLine(
                                     $"{symbolName} = new {Metadata.DefaultTypeContainer.ThemeResource.QualifiedName}(\"{key}\");");
@@ -429,9 +430,10 @@ public class CodeGenerationContext
                         {
                             // {ObservableResource Key} -> a LIVE, tree-scoped keyed-resource reference (re-resolves on a
                             // theme swap / dictionary load-unload). As a Setter/trigger value it's stored as the marker
-                            // (Setter.Apply / the trigger activator call Apply); as a normal property it's connected now.
+                            // (Setter.Apply / the trigger activator call Apply), in any file; as a normal property it's
+                            // connected now.
                             var key = extension.Arguments[0].Value.GetTextValue();
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 TextGenerator.WriteLine(
                                     $"{symbolName} = new {Metadata.DefaultTypeContainer.ObservableResource.QualifiedName}(\"{key}\");");
