@@ -83,6 +83,13 @@ All packages share one version.
   by them. An axis whose count is set shares the space between its cells; along the other one every cell is as big as
   the biggest item realized so far. A grid given only `Rows` grows sideways and realizes every item, as does one with
   `IsVirtualizing` off. Used as a plain panel it lays out its children as before.
+- `Popup.StaysBesideTarget`: the popup is measured against the room on its side of the target instead of the whole
+  window, so keeping it inside the window never pushes it over what it belongs to; what does not fit is the content's
+  to scroll. The ribbon's drawer uses it in all three themes - a catalog taller than the room under the strip used to
+  be lifted onto the tabs.
+- `UniformGrid.MinColumnWidth`: with neither `Columns` nor `Rows` set, as many columns as fit at least that wide, the
+  width shared out between them and never fewer than one - cards in a pane that changes width keep room for what they
+  show instead of keeping a count.
 - `RibbonQuickAccessEventArgs.DropDownItemContainerStyle`: what a drop-down command's rows do, handed over with how they
   are drawn. The themes' quick-access menus use both.
 - `PropertyTrace`: values dropped for want of a property - set by a name the element has no property for, or a live

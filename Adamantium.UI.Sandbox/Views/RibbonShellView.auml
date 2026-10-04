@@ -520,6 +520,257 @@
             </RibbonTabSet>
         </DataTemplate>
 
+        <DataTemplate x:Key="InteriorsModuleRibbon">
+            <RibbonTabSet Header="{Localize RibbonShellStrings.InteriorsHeader}"
+                          Accent="{Binding Accent}"
+                          IsActive="{Binding IsShown}">
+                <RibbonTab Header="{Localize RibbonShellStrings.Rooms}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Rooms}"
+                                 Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,9 M8,11 L8,14 M2,8 L6,8">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.NewRoom}"
+                                      Icon="M2,2 L14,2 L14,14 L2,14 Z M8,5 L8,11 M5,8 L11,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.SplitRoom}"
+                                      MaxSize="Medium"
+                                      Icon="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.MergeRooms}"
+                                      MaxSize="Medium"
+                                      Icon="M2,2 L14,2 L14,14 L2,14 Z M6,8 L10,8 M8,6 L10,8 L8,10"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Openings}"
+                                 Icon="M4,14 L4,2 L12,2 L12,14 M10,8 L10,8.5">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Door}"
+                                      Icon="M4,14 L4,2 L12,2 L12,14 M10,8 L10,8.5"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.WindowOpening}"
+                                      MaxSize="Medium"
+                                      Icon="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Arch}"
+                                      MaxSize="Medium"
+                                      Icon="M3,14 L3,8 A5,5 0 0 1 13,8 L13,14"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Furnishing}"
+                                 Icon="M2,9 L14,9 L14,12 L2,12 Z M3,12 L3,14 M13,12 L13,14 M3,9 L3,5 L13,5 L13,9">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.FurnitureCatalog}"
+                                      Icon="M2,9 L14,9 L14,12 L2,12 Z M3,12 L3,14 M13,12 L13,14 M3,9 L3,5 L13,5 L13,9"/>
+                    </RibbonGroup>
+                </RibbonTab>
+
+                <RibbonTab Header="{Localize RibbonShellStrings.RoomLight}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Lamps}"
+                                 Icon="M8,1 L8,4 M4,9 A4,5 0 0 1 12,9 Z M7,11 L9,11">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.CeilingLamp}"
+                                      Icon="M8,1 L8,4 M4,9 A4,5 0 0 1 12,9 Z M7,11 L9,11"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.WallLamp}"
+                                      MaxSize="Medium"
+                                      Icon="M2,2 L2,14 M2,8 L6,8 M6,5 L12,5 L10,11 L8,11 Z"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.FloorLamp}"
+                                      MaxSize="Medium"
+                                      Icon="M5,2 L11,2 L12,6 L4,6 Z M8,6 L8,14 M5,14 L11,14"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Daylight}"
+                                 Icon="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8 M14,1 L15,0">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.LightFromWindows}"
+                                      MaxSize="Medium"
+                                      Icon="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Bake}"
+                                      MaxSize="Medium"
+                                      Icon="M2,12 L14,12 M4,12 L4,7 A4,4 0 0 1 12,7 L12,12 M6,4 L6,2 M10,4 L10,2"/>
+                    </RibbonGroup>
+                </RibbonTab>
+            </RibbonTabSet>
+        </DataTemplate>
+
+        <DataTemplate x:Key="CharactersModuleRibbon">
+            <RibbonTabSet Header="{Localize RibbonShellStrings.CharactersHeader}"
+                          Accent="{Binding Accent}"
+                          IsActive="{Binding IsShown}">
+                <RibbonTab Header="{Localize RibbonShellStrings.Skeleton}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Bones}"
+                                 Icon="M4,4 A2,2 0 1 0 4,4.1 M12,12 A2,2 0 1 0 12,12.1 M5,5 L11,11">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.AddBone}"
+                                      Icon="M3,3 A2,2 0 1 0 3,3.1 M11,11 A2,2 0 1 0 11,11.1 M4,4 L10,10 M13,1 L13,5 M11,3 L15,3"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.MirrorBones}"
+                                      MaxSize="Medium"
+                                      Icon="M8,1 L8,15 M6,4 L2,8 L6,12 M10,4 L14,8 L10,12"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Rig}"
+                                 Icon="M8,2 A2,2 0 1 0 8,2.1 M8,4 L8,10 M8,6 L4,8 M8,6 L12,8 M8,10 L5,14 M8,10 L11,14">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.AutoRig}"
+                                      Icon="M8,2 A2,2 0 1 0 8,2.1 M8,4 L8,10 M8,6 L4,8 M8,6 L12,8 M8,10 L5,14 M8,10 L11,14"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.IkChain}"
+                                      MaxSize="Medium"
+                                      Icon="M2,14 L6,6 L14,4 M2,14 A1,1 0 1 0 2,14.1 M6,6 A1,1 0 1 0 6,6.1"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Constraints}"
+                                      MaxSize="Medium"
+                                      Icon="M4,7 L12,7 L12,14 L4,14 Z M6,7 L6,4 A2,2 0 0 1 10,4 L10,7"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Skinning}"
+                                 Icon="M3,13 L10,6 L12,8 L5,15 Z M10,6 L12,2 L14,4 L12,8">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.PaintWeights}"
+                                      Icon="M3,13 L10,6 L12,8 L5,15 Z M10,6 L12,2 L14,4 L12,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.NormalizeWeights}"
+                                      MaxSize="Medium"
+                                      Icon="M2,12 L14,12 M4,12 L4,6 M8,12 L8,6 M12,12 L12,6"/>
+                    </RibbonGroup>
+                </RibbonTab>
+
+                <RibbonTab Header="{Localize RibbonShellStrings.Animation}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Clips}"
+                                 Icon="M2,4 L14,4 L14,12 L2,12 Z M5,4 L5,12 M11,4 L11,12">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.NewClip}"
+                                      Icon="M2,4 L14,4 L14,12 L2,12 Z M8,6 L8,10 M6,8 L10,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.ImportClip}"
+                                      MaxSize="Medium"
+                                      Icon="M2,10 L2,14 L14,14 L14,10 M8,2 L8,10 M5,7 L8,10 L11,7"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Keys}"
+                                 Icon="M8,3 L13,8 L8,13 L3,8 Z">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.SetKey}"
+                                      Icon="M8,3 L13,8 L8,13 L3,8 Z"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.AutoKey}"
+                                      MaxSize="Medium"
+                                      Icon="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M8,8 L8,8.5"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Transitions}"
+                                 Icon="M1,8 A2,2 0 1 0 5,8 A2,2 0 1 0 1,8 M11,8 A2,2 0 1 0 15,8 A2,2 0 1 0 11,8 M5,8 L11,8">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.StateGraph}"
+                                      Icon="M1,8 A2,2 0 1 0 5,8 A2,2 0 1 0 1,8 M11,8 A2,2 0 1 0 15,8 A2,2 0 1 0 11,8 M5,8 L11,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.BlendTree}"
+                                      MaxSize="Medium"
+                                      Icon="M8,2 L8,6 M8,6 L3,10 M8,6 L13,10 M3,10 L3,14 M13,10 L13,14"/>
+                    </RibbonGroup>
+                </RibbonTab>
+            </RibbonTabSet>
+        </DataTemplate>
+
+        <DataTemplate x:Key="StrategyModuleRibbon">
+            <RibbonTabSet Header="{Localize RibbonShellStrings.StrategyHeader}"
+                          Accent="{Binding Accent}"
+                          IsActive="{Binding IsShown}">
+                <RibbonTab Header="{Localize RibbonShellStrings.Units}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Units}"
+                                 Icon="M8,2 A2,2 0 1 0 8,6 A2,2 0 1 0 8,2 M4,14 L4,10 A4,3 0 0 1 12,10 L12,14">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.PlaceUnit}"
+                                      Icon="M8,2 A2,2 0 1 0 8,6 A2,2 0 1 0 8,2 M4,14 L4,10 A4,3 0 0 1 12,10 L12,14"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.UnitTypes}"
+                                      MaxSize="Medium"
+                                      Icon="M2,4 L14,4 M2,8 L14,8 M2,12 L14,12"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Orders}"
+                                 Icon="M2,8 L12,8 M9,5 L12,8 L9,11">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.MoveOrder}"
+                                      MaxSize="Medium"
+                                      Icon="M2,8 L12,8 M9,5 L12,8 L9,11"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.AttackOrder}"
+                                      MaxSize="Medium"
+                                      Icon="M3,13 L13,3 M10,3 L13,3 L13,6 M3,10 L6,13"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.PatrolOrder}"
+                                      MaxSize="Medium"
+                                      Icon="M3,8 A5,5 0 1 1 8,13 M8,13 L6,11 M8,13 L6,15"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Factions}"
+                                 Icon="M3,15 L3,2 M3,2 L13,2 L11,5 L13,8 L3,8">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.NewFaction}"
+                                      Icon="M3,15 L3,2 M3,2 L13,2 L11,5 L13,8 L3,8"/>
+                    </RibbonGroup>
+                </RibbonTab>
+
+                <RibbonTab Header="{Localize RibbonShellStrings.Resources}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Deposits}"
+                                 Icon="M8,2 L14,7 L11,14 L5,14 L2,7 Z">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.PlaceDeposit}"
+                                      Icon="M8,2 L14,7 L11,14 L5,14 L2,7 Z"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Economy}"
+                                 Icon="M2,14 L2,9 M6,14 L6,5 M10,14 L10,7 M14,14 L14,2">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Gathering}"
+                                      MaxSize="Medium"
+                                      Icon="M3,13 L10,6 M10,6 L13,3 M8,4 L12,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Storage}"
+                                      MaxSize="Medium"
+                                      Icon="M2,6 L8,2 L14,6 L14,14 L2,14 Z M6,14 L6,9 L10,9 L10,14"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Balance}"
+                                      MaxSize="Medium"
+                                      Icon="M2,14 L2,9 M6,14 L6,5 M10,14 L10,7 M14,14 L14,2"/>
+                    </RibbonGroup>
+                </RibbonTab>
+            </RibbonTabSet>
+        </DataTemplate>
+
+        <DataTemplate x:Key="WaterModuleRibbon">
+            <RibbonTabSet Header="{Localize RibbonShellStrings.WaterHeader}"
+                          Accent="{Binding Accent}"
+                          IsActive="{Binding IsShown}">
+                <RibbonTab Header="{Localize RibbonShellStrings.Water}">
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Rivers}"
+                                 Icon="M3,1 L5,5 L4,9 L7,12 L8,15 M7,1 L9,5 L8,9 L11,12 L12,15">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.River}"
+                                      Icon="M3,1 L5,5 L4,9 L7,12 L8,15 M7,1 L9,5 L8,9 L11,12 L12,15"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Waterfall}"
+                                      MaxSize="Medium"
+                                      Icon="M2,3 L14,3 M5,3 L5,13 M8,3 L8,13 M11,3 L11,13 M2,14 L14,14"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Rapids}"
+                                      MaxSize="Medium"
+                                      Icon="M1,6 L4,4 L7,6 L10,4 L13,6 L15,5 M1,11 L4,9 L7,11 L10,9 L13,11 L15,10"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Lakes}"
+                                 Icon="M2,8 A6,4 0 1 0 14,8 A6,4 0 1 0 2,8">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.Lake}"
+                                      MaxSize="Medium"
+                                      Icon="M2,8 A6,4 0 1 0 14,8 A6,4 0 1 0 2,8"/>
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.WaterLevel}"
+                                      MaxSize="Medium"
+                                      Icon="M1,9 L15,9 M3,12 L13,12 M5,15 L11,15 M8,2 L8,6 M6,4 L8,6 L10,4"/>
+                    </RibbonGroup>
+                    <RibbonGroup Header="{Localize RibbonShellStrings.Flow}"
+                                 Icon="M1,6 L10,6 A2,2 0 1 0 8,4 M1,10 L12,10 A2,2 0 1 1 10,12">
+                        <RibbonButton Classes="ModuleTool"
+                                      Content="{Localize RibbonShellStrings.FlowMap}"
+                                      Icon="M1,6 L10,6 A2,2 0 1 0 8,4 M1,10 L12,10 A2,2 0 1 1 10,12"/>
+                    </RibbonGroup>
+                </RibbonTab>
+            </RibbonTabSet>
+        </DataTemplate>
+
         <DataTemplate x:Key="ModuleRibbon">
             <RibbonTabSet Header="{Localize Table={Binding Phrases}, Key={Binding Name}}"
                           Accent="{Binding Accent}"
@@ -891,8 +1142,8 @@
             <!-- The module catalog opens out of the ribbon in place of the band: every module the editor knows of,
                  where each stands with this document, and what can be done with it. -->
             <Ribbon.Drawer>
+                <!-- As tall as what it shows, up to the room under the strip; the lists and the details scroll the rest. -->
                 <Grid RowDefinitions="Auto,*"
-                      Height="600"
                       Margin="20 16 20 20">
                     <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
                         <TextBlock Text="{Localize RibbonShellStrings.ModuleCatalogTitle}"
@@ -1019,7 +1270,7 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="2"
+                                    <UniformGrid MinColumnWidth="400"
                                                  RowSpacing="10"
                                                  ColumnSpacing="10"/>
                                 </ItemsPanelTemplate>
@@ -1035,21 +1286,26 @@
                                                           ContentTemplate="{ResourceReference ModuleTile}"/>
                                         <StackPanel Grid.Column="1"
                                                     Orientation="Vertical">
-                                            <Grid ColumnDefinitions="Auto,Auto,*">
-                                                <TextBlock Text="{Localize Table={Binding Phrases}, Key={Binding Name}}"
-                                                           FontSize="14"
-                                                           VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding Version}"
-                                                           FontSize="12"
-                                                           Margin="8 0 0 0"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="{ResourceReference TextFillColorTertiary}"/>
-                                                <ContentPresenter Grid.Column="2"
+                                            <!-- The pill takes its room first and never gives it up; short of space the
+                                                 name gives way, then the version. -->
+                                            <DockPanel LastChildFill="False">
+                                                <ContentPresenter DockPanel.Dock="Right"
                                                                   Margin="8 0 0 0"
                                                                   Content="{Binding}"
                                                                   ContentTemplate="{ResourceReference ModuleStateTag}"/>
-                                            </Grid>
+                                                <TextBlock DockPanel.Dock="Left"
+                                                           Text="{Localize Table={Binding Phrases}, Key={Binding Name}}"
+                                                           FontSize="14"
+                                                           TextTrimming="CharEllipses"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock DockPanel.Dock="Left"
+                                                           Text="{Binding Version}"
+                                                           FontSize="12"
+                                                           Margin="8 0 0 0"
+                                                           TextTrimming="CharEllipses"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{ResourceReference TextFillColorTertiary}"/>
+                                            </DockPanel>
                                             <TextBlock Text="{Localize Table={Binding Phrases}, Key={Binding Info}}"
                                                        FontSize="12"
                                                        Margin="0 4 0 0"
@@ -1148,73 +1404,82 @@
                                                Visibility="{Binding HasDocumentData, Converter={conv:BoolToVisibilityConverter}}"/>
                                 </Grid>
 
-                                <!-- The questions, each with its own way out. -->
-                                <StackPanel Grid.Row="4"
-                                            Orientation="Vertical"
-                                            VerticalAlignment="Bottom"
-                                            Margin="0 14 0 14">
-                                    <Border Padding="12"
-                                            CornerRadius="6"
-                                            BorderThickness="1"
-                                            BorderBrush="{ResourceReference SystemFillColorCaution}"
-                                            Visibility="{Binding IsDetachAsked, Converter={conv:BoolToVisibilityConverter}}">
-                                        <ContentPresenter Content="{Binding}"
-                                                          ContentTemplate="{ResourceReference DetachQuestion}"/>
-                                    </Border>
-                                    <Border Padding="12"
-                                            CornerRadius="6"
-                                            BorderThickness="1"
-                                            BorderBrush="{ResourceReference SystemFillColorCritical}"
-                                            Visibility="{Binding IsUninstallAsked, Converter={conv:BoolToVisibilityConverter}}">
-                                        <StackPanel Orientation="Vertical">
-                                            <TextBlock Text="{Localize RibbonShellStrings.UninstallTitle}"
-                                                       FontSize="15"/>
-                                            <TextBlock Text="{Localize RibbonShellStrings.UninstallText}"
-                                                       TextWrapping="WrapByWords"
-                                                       Margin="0 8 0 0"
-                                                       Foreground="{ResourceReference TextFillColorSecondary}"/>
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Right"
-                                                        Margin="0 12 0 0">
-                                                <Button Content="{Localize RibbonShellStrings.Cancel}"
-                                                        Command="{Binding KeepInstalledCommand}"
-                                                        Margin="0 0 8 0"/>
-                                                <Button Classes="Accent"
-                                                        Content="{Localize RibbonShellStrings.Remove}"
-                                                        Command="{Binding UninstallCommand}"/>
+                                <!-- The questions, each with its own way out, in the free space above the rule - scrolled
+                                     there when the drawer is too short to show one whole. -->
+                                <ScrollViewer Grid.Row="4"
+                                              VerticalAlignment="Bottom"
+                                              Margin="0 14 0 14"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Orientation="Vertical">
+                                        <Border Padding="12"
+                                                CornerRadius="6"
+                                                BorderThickness="1"
+                                                BorderBrush="{ResourceReference SystemFillColorCaution}"
+                                                Visibility="{Binding IsDetachAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                            <ContentPresenter Content="{Binding}"
+                                                              ContentTemplate="{ResourceReference DetachQuestion}"/>
+                                        </Border>
+                                        <Border Padding="12"
+                                                CornerRadius="6"
+                                                BorderThickness="1"
+                                                BorderBrush="{ResourceReference SystemFillColorCritical}"
+                                                Visibility="{Binding IsUninstallAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Vertical">
+                                                <TextBlock Text="{Localize RibbonShellStrings.UninstallTitle}"
+                                                           FontSize="15"/>
+                                                <TextBlock Text="{Localize RibbonShellStrings.UninstallText}"
+                                                           TextWrapping="WrapByWords"
+                                                           Margin="0 8 0 0"
+                                                           Foreground="{ResourceReference TextFillColorSecondary}"/>
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Right"
+                                                            Margin="0 12 0 0">
+                                                    <Button Content="{Localize RibbonShellStrings.Cancel}"
+                                                            Command="{Binding KeepInstalledCommand}"
+                                                            Margin="0 0 8 0"/>
+                                                    <Button Classes="Accent"
+                                                            Content="{Localize RibbonShellStrings.Remove}"
+                                                            Command="{Binding UninstallCommand}"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Padding="12"
-                                            CornerRadius="6"
-                                            BorderThickness="1"
-                                            BorderBrush="{ResourceReference SystemFillColorCritical}"
-                                            Visibility="{Binding IsDeleteAsked, Converter={conv:BoolToVisibilityConverter}}">
-                                        <StackPanel Orientation="Vertical">
-                                            <TextBlock Text="{Localize RibbonShellStrings.DeleteDataTitle}"
-                                                       FontSize="15"/>
-                                            <TextBlock Text="{Localize RibbonShellStrings.DeleteDataText}"
-                                                       TextWrapping="WrapByWords"
-                                                       Margin="0 8 0 0"
-                                                       Foreground="{ResourceReference TextFillColorSecondary}"/>
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Right"
-                                                        Margin="0 12 0 0">
-                                                <Button Content="{Localize RibbonShellStrings.Cancel}"
-                                                        Command="{Binding KeepDataCommand}"
-                                                        Margin="0 0 8 0"/>
-                                                <Button Classes="Accent"
-                                                        Content="{Localize RibbonShellStrings.Delete}"
-                                                        Command="{Binding DeleteDataCommand}"/>
+                                        </Border>
+                                        <Border Padding="12"
+                                                CornerRadius="6"
+                                                BorderThickness="1"
+                                                BorderBrush="{ResourceReference SystemFillColorCritical}"
+                                                Visibility="{Binding IsDeleteAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Vertical">
+                                                <TextBlock Text="{Localize RibbonShellStrings.DeleteDataTitle}"
+                                                           FontSize="15"/>
+                                                <TextBlock Text="{Localize RibbonShellStrings.DeleteDataText}"
+                                                           TextWrapping="WrapByWords"
+                                                           Margin="0 8 0 0"
+                                                           Foreground="{ResourceReference TextFillColorSecondary}"/>
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Right"
+                                                            Margin="0 12 0 0">
+                                                    <Button Content="{Localize RibbonShellStrings.Cancel}"
+                                                            Command="{Binding KeepDataCommand}"
+                                                            Margin="0 0 8 0"/>
+                                                    <Button Classes="Accent"
+                                                            Content="{Localize RibbonShellStrings.Delete}"
+                                                            Command="{Binding DeleteDataCommand}"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
 
                                 <Border Grid.Row="5"
                                         Padding="0 14 0 0"
                                         BorderThickness="0 1 0 0"
                                         BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                                    <Border.Triggers>
+                                        <DataTrigger Binding="{Binding IsAsking}" Value="true">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Border.Triggers>
                                     <Grid>
                                         <!-- In the document: show or hide its tabs; take it out, or out of the editor. -->
                                         <StackPanel Orientation="Vertical"

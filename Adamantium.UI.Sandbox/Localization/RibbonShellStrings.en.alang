@@ -266,6 +266,68 @@
     <Phrase Key="Units" Text="Units"/>
     <Phrase Key="Resources" Text="Resources"/>
 
+    <Phrase Key="InteriorsHeader" Text="INTERIORS"/>
+    <Phrase Key="NewRoom" Text="New room"/>
+    <Phrase Key="SplitRoom" Text="Split"/>
+    <Phrase Key="MergeRooms" Text="Merge"/>
+    <Phrase Key="Openings" Text="Openings"/>
+    <Phrase Key="Door" Text="Door"/>
+    <Phrase Key="WindowOpening" Text="Window"/>
+    <Phrase Key="Arch" Text="Arch"/>
+    <Phrase Key="Furnishing" Text="Furnishing"/>
+    <Phrase Key="FurnitureCatalog" Text="Furniture catalog"/>
+    <Phrase Key="Lamps" Text="Lamps"/>
+    <Phrase Key="CeilingLamp" Text="Ceiling lamp"/>
+    <Phrase Key="WallLamp" Text="Wall lamp"/>
+    <Phrase Key="FloorLamp" Text="Floor lamp"/>
+    <Phrase Key="Daylight" Text="Daylight"/>
+    <Phrase Key="LightFromWindows" Text="Light from windows"/>
+
+    <Phrase Key="CharactersHeader" Text="CHARACTERS"/>
+    <Phrase Key="Bones" Text="Bones"/>
+    <Phrase Key="AddBone" Text="Add bone"/>
+    <Phrase Key="MirrorBones" Text="Mirror"/>
+    <Phrase Key="Rig" Text="Rig"/>
+    <Phrase Key="AutoRig" Text="Auto rig"/>
+    <Phrase Key="IkChain" Text="IK chain"/>
+    <Phrase Key="Constraints" Text="Constraints"/>
+    <Phrase Key="Skinning" Text="Skinning"/>
+    <Phrase Key="PaintWeights" Text="Paint weights"/>
+    <Phrase Key="NormalizeWeights" Text="Normalize"/>
+    <Phrase Key="Clips" Text="Clips"/>
+    <Phrase Key="NewClip" Text="New clip"/>
+    <Phrase Key="ImportClip" Text="Import clip"/>
+    <Phrase Key="Keys" Text="Keys"/>
+    <Phrase Key="SetKey" Text="Set key"/>
+    <Phrase Key="AutoKey" Text="Auto key"/>
+    <Phrase Key="Transitions" Text="Transitions"/>
+    <Phrase Key="StateGraph" Text="State graph"/>
+    <Phrase Key="BlendTree" Text="Blend tree"/>
+
+    <Phrase Key="StrategyHeader" Text="STRATEGY"/>
+    <Phrase Key="PlaceUnit" Text="Place unit"/>
+    <Phrase Key="UnitTypes" Text="Unit types"/>
+    <Phrase Key="Orders" Text="Orders"/>
+    <Phrase Key="MoveOrder" Text="Move"/>
+    <Phrase Key="AttackOrder" Text="Attack"/>
+    <Phrase Key="PatrolOrder" Text="Patrol"/>
+    <Phrase Key="Factions" Text="Factions"/>
+    <Phrase Key="NewFaction" Text="New faction"/>
+    <Phrase Key="Deposits" Text="Deposits"/>
+    <Phrase Key="PlaceDeposit" Text="Place deposit"/>
+    <Phrase Key="Economy" Text="Economy"/>
+    <Phrase Key="Gathering" Text="Gathering"/>
+    <Phrase Key="Storage" Text="Storage"/>
+    <Phrase Key="Balance" Text="Balance"/>
+
+    <Phrase Key="WaterHeader" Text="WATER"/>
+    <Phrase Key="Rivers" Text="Rivers"/>
+    <Phrase Key="Waterfall" Text="Waterfall"/>
+    <Phrase Key="Lakes" Text="Lakes"/>
+    <Phrase Key="Flow" Text="Flow"/>
+    <Phrase Key="FlowMap" Text="Flow map"/>
+    <Phrase Key="Rapids" Text="Rapids"/>
+
     <Phrase Key="InteriorsModule" Text="Interiors"/>
     <Phrase Key="InteriorsModuleInfo" Text="Rooms, doors, lights inside"/>
     <Phrase Key="CharactersModule" Text="Characters"/>
@@ -294,10 +356,10 @@
     <Phrase Key="InteriorsAdds" Text="Tabs: Rooms, Room lighting"/>
     <Phrase Key="CharactersAdds" Text="Tabs: Skeleton, Animation"/>
     <Phrase Key="StrategyAdds" Text="Tabs: Units, Resources"/>
-    <Phrase Key="SoundAdds" Text="Groups in Environment and Play"/>
-    <Phrase Key="VegetationAdds" Text="Groups in Generate and Environment"/>
+    <Phrase Key="SoundAdds" Text="Tab: Sound"/>
+    <Phrase Key="VegetationAdds" Text="Tab: Vegetation"/>
     <Phrase Key="WaterAdds" Text="Tab: Water"/>
-    <Phrase Key="DestructionAdds" Text="Groups in Generate and Play"/>
+    <Phrase Key="DestructionAdds" Text="Tab: Destruction"/>
     <Phrase Key="SurfaceContent" Text="4 terrain tiles · 12 zones · 7 roads"/>
     <Phrase Key="SpaceContent" Text="1 star · 6 planets · 9 moons"/>
     <Phrase Key="CharactersContent" Text="3 skeletons · 14 animation clips"/>

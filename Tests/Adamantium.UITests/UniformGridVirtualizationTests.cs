@@ -30,7 +30,8 @@ public class UniformGridVirtualizationTests
         return result;
     });
 
-    private static ItemsControl GridOfRows(int columns = 2, int rows = 0, bool virtualizing = true)
+    private static ItemsControl GridOfRows(int columns = 2, int rows = 0, bool virtualizing = true,
+        double minColumnWidth = 0)
     {
         var ic = new ItemsControl
         {
@@ -41,6 +42,7 @@ public class UniformGridVirtualizationTests
                 {
                     Columns = columns,
                     Rows = rows,
+                    MinColumnWidth = minColumnWidth,
                     RowSpacing = RowGap,
                     ColumnSpacing = ColumnGap,
                     IsVirtualizing = virtualizing
@@ -209,6 +211,46 @@ public class UniformGridVirtualizationTests
             Assert.That(ic.ItemContainerGenerator.RealizedIndices.Count, Is.EqualTo(Count));
             Assert.That(PanelOf(ic).EffectiveRows, Is.EqualTo(4));
             Assert.That(PanelOf(ic).EffectiveColumns, Is.EqualTo(50));
+        });
+    }
+
+    // A list of cards in a pane that changes width: as many columns as are at least that wide, the width shared between
+    // them - one column in a narrow pane rather than two cards too narrow for their contents.
+    [TestCase(150, 2)]
+    [TestCase(120, 3)]
+    [TestCase(300, 1)]
+    [TestCase(500, 1)]
+    public void AMinimumColumnWidth_FitsAsManyColumnsAsAreThatWide(double minColumnWidth, int expected)
+    {
+        var ic = GridOfRows(columns: 0, minColumnWidth: minColumnWidth);
+        var panel = PanelOf(ic);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.EffectiveColumns, Is.EqualTo(expected));
+            Assert.That(panel.CellSize.Width,
+                Is.EqualTo((ViewWidth - (expected - 1) * ColumnGap) / expected).Within(0.01), "the width is shared out");
+            Assert.That(panel.EffectiveRows, Is.EqualTo((Count + expected - 1) / expected));
+        });
+    }
+
+    [Test]
+    public void AMinimumColumnWidth_FollowsTheSpace()
+    {
+        var grid = new UniformGrid { MinColumnWidth = 100 };
+        for (var i = 0; i < 6; i++) grid.Children.Add(new Border());
+
+        grid.Measure(new Size(300, 100));
+        grid.Arrange(new Rect(0, 0, 300, 100));
+        var wide = grid.EffectiveColumns;
+
+        grid.Measure(new Size(150, 100));
+        grid.Arrange(new Rect(0, 0, 150, 100));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wide, Is.EqualTo(3));
+            Assert.That(grid.EffectiveColumns, Is.EqualTo(1));
         });
     }
 

@@ -266,6 +266,68 @@
     <Phrase Key="Units" Text="Юниты"/>
     <Phrase Key="Resources" Text="Ресурсы"/>
 
+    <Phrase Key="InteriorsHeader" Text="ИНТЕРЬЕРЫ"/>
+    <Phrase Key="NewRoom" Text="Новое помещение"/>
+    <Phrase Key="SplitRoom" Text="Разделить"/>
+    <Phrase Key="MergeRooms" Text="Объединить"/>
+    <Phrase Key="Openings" Text="Проёмы"/>
+    <Phrase Key="Door" Text="Дверь"/>
+    <Phrase Key="WindowOpening" Text="Окно"/>
+    <Phrase Key="Arch" Text="Арка"/>
+    <Phrase Key="Furnishing" Text="Обстановка"/>
+    <Phrase Key="FurnitureCatalog" Text="Каталог мебели"/>
+    <Phrase Key="Lamps" Text="Светильники"/>
+    <Phrase Key="CeilingLamp" Text="Потолочный"/>
+    <Phrase Key="WallLamp" Text="Настенный"/>
+    <Phrase Key="FloorLamp" Text="Торшер"/>
+    <Phrase Key="Daylight" Text="Дневной свет"/>
+    <Phrase Key="LightFromWindows" Text="Свет из окон"/>
+
+    <Phrase Key="CharactersHeader" Text="ПЕРСОНАЖИ"/>
+    <Phrase Key="Bones" Text="Кости"/>
+    <Phrase Key="AddBone" Text="Добавить кость"/>
+    <Phrase Key="MirrorBones" Text="Отразить"/>
+    <Phrase Key="Rig" Text="Риг"/>
+    <Phrase Key="AutoRig" Text="Авториг"/>
+    <Phrase Key="IkChain" Text="IK-цепочка"/>
+    <Phrase Key="Constraints" Text="Ограничения"/>
+    <Phrase Key="Skinning" Text="Скиннинг"/>
+    <Phrase Key="PaintWeights" Text="Рисовать веса"/>
+    <Phrase Key="NormalizeWeights" Text="Нормализовать"/>
+    <Phrase Key="Clips" Text="Клипы"/>
+    <Phrase Key="NewClip" Text="Новый клип"/>
+    <Phrase Key="ImportClip" Text="Импорт клипа"/>
+    <Phrase Key="Keys" Text="Ключи"/>
+    <Phrase Key="SetKey" Text="Поставить ключ"/>
+    <Phrase Key="AutoKey" Text="Автоключ"/>
+    <Phrase Key="Transitions" Text="Переходы"/>
+    <Phrase Key="StateGraph" Text="Граф состояний"/>
+    <Phrase Key="BlendTree" Text="Дерево смешивания"/>
+
+    <Phrase Key="StrategyHeader" Text="СТРАТЕГИЯ"/>
+    <Phrase Key="PlaceUnit" Text="Поставить юнит"/>
+    <Phrase Key="UnitTypes" Text="Типы юнитов"/>
+    <Phrase Key="Orders" Text="Приказы"/>
+    <Phrase Key="MoveOrder" Text="Двигаться"/>
+    <Phrase Key="AttackOrder" Text="Атаковать"/>
+    <Phrase Key="PatrolOrder" Text="Патруль"/>
+    <Phrase Key="Factions" Text="Фракции"/>
+    <Phrase Key="NewFaction" Text="Новая фракция"/>
+    <Phrase Key="Deposits" Text="Месторождения"/>
+    <Phrase Key="PlaceDeposit" Text="Месторождение"/>
+    <Phrase Key="Economy" Text="Экономика"/>
+    <Phrase Key="Gathering" Text="Добыча"/>
+    <Phrase Key="Storage" Text="Склады"/>
+    <Phrase Key="Balance" Text="Баланс"/>
+
+    <Phrase Key="WaterHeader" Text="ВОДА"/>
+    <Phrase Key="Rivers" Text="Реки"/>
+    <Phrase Key="Waterfall" Text="Водопад"/>
+    <Phrase Key="Lakes" Text="Озёра"/>
+    <Phrase Key="Flow" Text="Течение"/>
+    <Phrase Key="FlowMap" Text="Карта течений"/>
+    <Phrase Key="Rapids" Text="Пороги"/>
+
     <Phrase Key="InteriorsModule" Text="Интерьеры"/>
     <Phrase Key="InteriorsModuleInfo" Text="Помещения, двери, свет в комнатах"/>
     <Phrase Key="CharactersModule" Text="Персонажи"/>
@@ -294,10 +356,10 @@
     <Phrase Key="InteriorsAdds" Text="Вкладки: Помещения, Свет в комнатах"/>
     <Phrase Key="CharactersAdds" Text="Вкладки: Скелет, Анимация"/>
     <Phrase Key="StrategyAdds" Text="Вкладки: Юниты, Ресурсы"/>
-    <Phrase Key="SoundAdds" Text="Группы в «Окружении» и «Запуске»"/>
-    <Phrase Key="VegetationAdds" Text="Группы в «Генерации» и «Окружении»"/>
+    <Phrase Key="SoundAdds" Text="Вкладка: Звук"/>
+    <Phrase Key="VegetationAdds" Text="Вкладка: Растительность"/>
     <Phrase Key="WaterAdds" Text="Вкладка: Вода"/>
-    <Phrase Key="DestructionAdds" Text="Группы в «Генерации» и «Запуске»"/>
+    <Phrase Key="DestructionAdds" Text="Вкладка: Разрушения"/>
     <Phrase Key="SurfaceContent" Text="4 участка рельефа · 12 зон · 7 дорог"/>
     <Phrase Key="SpaceContent" Text="1 звезда · 6 планет · 9 лун"/>
     <Phrase Key="CharactersContent" Text="3 скелета · 14 анимаций"/>

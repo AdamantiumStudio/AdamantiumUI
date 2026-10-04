@@ -23,6 +23,9 @@ public class UniformGrid : VirtualizingPanel
    public static readonly AdamantiumProperty ColumnSpacingProperty = AdamantiumProperty.Register(nameof(ColumnSpacing), typeof(Double), typeof(UniformGrid),
       new PropertyMetadata(0d, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
 
+   public static readonly AdamantiumProperty MinColumnWidthProperty = AdamantiumProperty.Register(nameof(MinColumnWidth), typeof(Double), typeof(UniformGrid),
+      new PropertyMetadata(0d, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
+
    private const int BufferRows = 2;
    private const int MaxCellPasses = 4;
    private const double DefaultViewportHeight = 1080.0;
@@ -69,6 +72,15 @@ public class UniformGrid : VirtualizingPanel
       set => SetValue(ColumnSpacingProperty, value);
    }
 
+   /// <summary>With neither <see cref="Columns"/> nor <see cref="Rows"/> set: as many columns as fit at least this wide,
+   /// the width shared out between them, and never fewer than one - cards in a pane that changes width keep room for
+   /// what they show instead of keeping a count. Zero leaves the grid as square as its count allows.</summary>
+   public Double MinColumnWidth
+   {
+      get => GetValue<Double>(MinColumnWidthProperty);
+      set => SetValue(MinColumnWidthProperty, value);
+   }
+
    /// <summary>The columns this grid is actually laid out in - the authored <see cref="Columns"/>, or the count worked
    /// out from the children when it is left at zero. The authored value alone is not the grid, so this is what a caller
    /// that has to reason about cell positions must ask. Zero until the first arrange.</summary>
@@ -95,7 +107,7 @@ public class UniformGrid : VirtualizingPanel
 
    protected override Size MeasurePlain(Size availableSize)
    {
-      GetDimensions(Children.Count, out var rows, out var columns);
+      GetDimensions(Children.Count, availableSize.Width, out var rows, out var columns);
       if (rows == 0 || columns == 0) return new Size();
 
       // The spacing eats into the space available for cells, so each cell is (available - total gaps) / count.
@@ -116,7 +128,7 @@ public class UniformGrid : VirtualizingPanel
 
    protected override Size ArrangePlain(Size finalSize)
    {
-      GetDimensions(Children.Count, out var rows, out var columns);
+      GetDimensions(Children.Count, finalSize.Width, out var rows, out var columns);
       if (rows == 0 || columns == 0) return finalSize;
 
       var cellWidth = (finalSize.Width - (columns - 1) * ColumnSpacing) / columns;
@@ -147,7 +159,7 @@ public class UniformGrid : VirtualizingPanel
          return new Size();
       }
 
-      GetDimensions(count, out _rows, out _columns);
+      GetDimensions(count, availableSize.Width, out _rows, out _columns);
       _sharesWidth = !double.IsInfinity(availableSize.Width) && (Columns > 0 || Rows <= 0);
       _sharesHeight = !double.IsInfinity(availableSize.Height) && Rows > 0;
       var sharedWidth = Math.Max(0, (availableSize.Width - (_columns - 1) * ColumnSpacing) / _columns);
@@ -286,7 +298,7 @@ public class UniformGrid : VirtualizingPanel
       {
          index = from is MeasurableUIComponent child ? Children.IndexOf(child) : -1;
          count = Children.Count;
-         GetDimensions(count, out rows, out columns);
+         GetDimensions(count, RenderSize.Width, out rows, out columns);
       }
 
       if (index < 0 || rows == 0 || columns == 0) return null;
@@ -341,8 +353,8 @@ public class UniformGrid : VirtualizingPanel
    }
 
    // Rows/Columns are filled in from the child count: set Columns and the rows follow (and vice versa); set neither and
-   // the grid is as square as the count allows.
-   private void GetDimensions(int count, out int rows, out int columns)
+   // the grid is as square as the count allows - or, with a MinColumnWidth, as wide as the space allows.
+   private void GetDimensions(int count, double width, out int rows, out int columns)
    {
       rows = Rows;
       columns = Columns;
@@ -350,7 +362,9 @@ public class UniformGrid : VirtualizingPanel
       if (columns > 0 && rows > 0) return;
       if (columns > 0) { rows = (count + columns - 1) / columns; return; }
       if (rows > 0) { columns = (count + rows - 1) / rows; return; }
-      columns = (int)System.Math.Ceiling(System.Math.Sqrt(count));
+      columns = MinColumnWidth > 0 && !double.IsInfinity(width)
+         ? Math.Max(1, (int)Math.Floor((width + ColumnSpacing) / (MinColumnWidth + ColumnSpacing)))
+         : (int)System.Math.Ceiling(System.Math.Sqrt(count));
       rows = (count + columns - 1) / columns;
    }
 }

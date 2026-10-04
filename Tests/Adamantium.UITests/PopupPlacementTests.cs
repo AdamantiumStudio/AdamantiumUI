@@ -79,4 +79,69 @@ public class PopupPlacementTests
         Assert.That(card.Bounds.X, Is.EqualTo(220));
         Assert.That(card.Bounds.Y, Is.EqualTo(120));
     }
+
+    // A card that takes what it is given: a scroller over 900 of content, under the same target, in a window of the given
+    // height.
+    private static (ScrollViewer card, Window window) OpenedTall(Popup popup, double windowHeight)
+    {
+        var target = new Border
+        {
+            Width = 100, Height = 20, Margin = new Thickness(200, 150, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top
+        };
+        var card = new ScrollViewer { Width = 60, Content = new Border { Height = 900 } };
+        popup.PlacementTarget = target;
+        popup.Placement = PlacementMode.Bottom;
+        popup.Child = card;
+
+        var host = new Grid();
+        host.Children.Add(target);
+        host.Children.Add(popup);
+
+        var window = new Window { Width = 800, Height = windowHeight, Content = host };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        popup.IsOpen = true;
+        window.PopupLayer.UpdateLayout(new Size(800, windowHeight));
+        return (card, window);
+    }
+
+    // The window-fit lifts a card that is too tall for the room below its target - over the target itself.
+    [Test]
+    public void ATallCard_IsLiftedOverItsTarget_ToStayInTheWindow()
+    {
+        var (card, _) = OpenedTall(new Popup(), 600);
+
+        Assert.That(card.Bounds.Y, Is.LessThan(170));
+    }
+
+    // A drawer opening out of a strip must leave the strip in sight: it takes the room below and scrolls what is left.
+    [Test]
+    public void ACardThatStaysBesideItsTarget_TakesTheRoomOnItsSide()
+    {
+        var (card, _) = OpenedTall(new Popup { StaysBesideTarget = true }, 600);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(card.Bounds.Y, Is.EqualTo(170));
+            Assert.That(card.Bounds.Height, Is.EqualTo(430));
+        });
+    }
+
+    [Test]
+    public void TheRoomFollowsTheWindow()
+    {
+        var (card, window) = OpenedTall(new Popup { StaysBesideTarget = true }, 600);
+
+        window.PopupLayer.UpdateLayout(new Size(800, 400));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(card.Bounds.Y, Is.EqualTo(170));
+            Assert.That(card.Bounds.Height, Is.EqualTo(230));
+        });
+    }
 }

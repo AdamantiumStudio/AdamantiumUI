@@ -45,6 +45,9 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty FlipToFitProperty = AdamantiumProperty.Register(nameof(FlipToFit),
         typeof(bool), typeof(Popup), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty StaysBesideTargetProperty = AdamantiumProperty.Register(nameof(StaysBesideTarget),
+        typeof(bool), typeof(Popup), new PropertyMetadata(false));
+
     public static readonly AdamantiumProperty DockEdgeProperty = AdamantiumProperty.Register(nameof(DockEdge),
         typeof(Dock?), typeof(Popup), new PropertyMetadata(null));
 
@@ -140,6 +143,16 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         get => GetValue<bool>(FlipToFitProperty);
         set => SetValue(FlipToFitProperty, value);
+    }
+
+    /// <summary>Kept wholly on its side of the target: the child is measured against the room there - below the target
+    /// for <see cref="PlacementMode.Bottom"/>, above it for Top, beside it for Left and Right - instead of the whole
+    /// window, so keeping it inside the window never pushes it over what it belongs to. What does not fit is the
+    /// content's to scroll or shrink. For a drawer opening out of a strip, which must leave the strip in sight.</summary>
+    public bool StaysBesideTarget
+    {
+        get => GetValue<bool>(StaysBesideTargetProperty);
+        set => SetValue(StaysBesideTargetProperty, value);
     }
 
     /// <summary>When set, the child is docked to that EDGE OF THE WINDOW (not positioned against a target): pinned to the

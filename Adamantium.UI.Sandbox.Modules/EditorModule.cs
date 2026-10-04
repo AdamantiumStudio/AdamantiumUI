@@ -108,6 +108,15 @@ public partial class EditorModule
 
     partial void OnIsShownChanged(bool value) => RaisePropertyChanged(nameof(HasTabs));
 
+    /// <summary>One of its warnings is up - it carries its own way out, so the usual actions step aside.</summary>
+    public bool IsAsking => IsDetachAsked || IsDeleteAsked || IsUninstallAsked;
+
+    partial void OnIsDetachAskedChanged(bool value) => RaisePropertyChanged(nameof(IsAsking));
+
+    partial void OnIsDeleteAskedChanged(bool value) => RaisePropertyChanged(nameof(IsAsking));
+
+    partial void OnIsUninstallAskedChanged(bool value) => RaisePropertyChanged(nameof(IsAsking));
+
     /// <summary>Takes every warning down - the place that asked has closed.</summary>
     public void ForgetQuestions()
     {
