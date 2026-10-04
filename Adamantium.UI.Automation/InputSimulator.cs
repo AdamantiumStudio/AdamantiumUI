@@ -9,7 +9,18 @@ namespace Adamantium.UI.Automation;
 
 internal static class InputSimulator
 {
-    public static void Click(UIComponent element, string label)
+    public static void Click(UIComponent element, string label, MouseButtons button)
+    {
+        var (window, point) = Hover(element, label);
+        var (down, up, held) = button == MouseButtons.Right
+            ? (RawMouseEventType.RightButtonDown, RawMouseEventType.RightButtonUp, InputModifiers.RightMouseButton)
+            : (RawMouseEventType.LeftButtonDown, RawMouseEventType.LeftButtonUp, InputModifiers.LeftMouseButton);
+
+        Send(down, window, point, held);
+        Send(up, window, point, InputModifiers.None);
+    }
+
+    public static (IWindow Window, Vector2 Point) Hover(UIComponent element, string label)
     {
         if (element.RootVisual is not IWindow window)
         {
@@ -26,11 +37,10 @@ internal static class InputSimulator
         if (!IsWithin(over, element))
         {
             throw new AutomationException(
-                $"{label} is covered at ({point.X:0}, {point.Y:0}) by {over?.GetType().Name ?? "nothing"}; the click was not made.");
+                $"{label} is covered at ({point.X:0}, {point.Y:0}) by {over?.GetType().Name ?? "nothing"}; the pointer did not reach it.");
         }
 
-        Send(RawMouseEventType.LeftButtonDown, window, point, InputModifiers.LeftMouseButton);
-        Send(RawMouseEventType.LeftButtonUp, window, point, InputModifiers.None);
+        return (window, point);
     }
 
     public static void Type(string text)

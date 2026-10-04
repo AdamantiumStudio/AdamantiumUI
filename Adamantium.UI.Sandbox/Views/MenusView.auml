@@ -16,7 +16,8 @@
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                 BorderThickness="1" CornerRadius="10" Height="180">
             <Border.ContextMenu>
-                <ContextMenu ItemsSource="{Binding MenuItems}">
+                <ContextMenu ItemsSource="{Binding MenuItems}"
+                             AutomationProperties.AutomationId="SurfaceMenu">
                     <ContextMenu.ItemTemplate>
                         <!-- A title is a phrase key, or a name (a file, a percentage) that is no key and is said as it is. -->
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
@@ -32,6 +33,7 @@
                 </ContextMenu>
             </Border.ContextMenu>
             <TextBlock Text="{Localize MenusStrings.RightClickMe}"
+                       AutomationProperties.AutomationId="MenuSurface"
                        FontSize="16" Foreground="{ResourceReference TextFillColorPrimary}"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
@@ -39,6 +41,7 @@
         <StackPanel Orientation="Horizontal" MarginTop="16">
             <TextBlock Text="{Localize MenusStrings.LastAction}" Foreground="{ResourceReference TextFillColorSecondary}" MarginRight="8"/>
             <TextBlock Text="{Localize MenusStrings.Report, pick={Binding Pick}, item={Localize MenusStrings, Key={Binding PickedItem}}, from={Localize MenusStrings, Key={Binding PickedFrom}}}"
+                       AutomationProperties.AutomationId="MenuReport"
                        Foreground="{ResourceReference TextFillColorPrimary}"/>
         </StackPanel>
 

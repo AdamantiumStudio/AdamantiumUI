@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Specialized;
-using System.Linq;
 using Adamantium.Core.Commands;
-using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -347,7 +346,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
 
     /// <summary>Opens the submenu of a parent row, or runs a leaf and announces the click so the flyout closes. Shared
     /// by the pointer and the keyboard - one row, one meaning of "chosen".</summary>
-    private bool Invoke()
+    internal bool Invoke()
     {
         if (HasItems)
         {
@@ -383,4 +382,6 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
             if (!ReferenceEquals(sibling, this) && sibling is MenuItem { IsSubmenuOpen: true } item)
                 item.IsSubmenuOpen = false;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new MenuItemAutomationPeer(this);
 }

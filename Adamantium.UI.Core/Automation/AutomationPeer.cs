@@ -55,6 +55,8 @@ public abstract class AutomationPeer
         PatternId.Value => this as IValueProvider,
         PatternId.Selection => this as ISelectionProvider,
         PatternId.SelectionItem => this as ISelectionItemProvider,
+        PatternId.ExpandCollapse => this as IExpandCollapseProvider,
+        PatternId.ScrollItem => this as IScrollItemProvider,
         _ => null
     };
 }

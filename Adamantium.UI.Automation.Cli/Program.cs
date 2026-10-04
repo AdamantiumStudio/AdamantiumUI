@@ -20,7 +20,7 @@ public static class Program
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(300);
 
     private static readonly string[] ElementKeys =
-        ["name", "id", "type", "class", "value", "toggle", "selected", "enabled", "offscreen", "focus"];
+        ["name", "id", "type", "class", "value", "toggle", "selected", "expanded", "enabled", "offscreen", "focus"];
 
     private const string Usage = """
         adam-auto - drives an application that runs the automation agent; by default the sandbox, as an instance of its own.
@@ -31,8 +31,11 @@ public static class Program
           tree [<selector>] [--depth <n>] [--out <file>]      the automation tree
           visual <selector> [--depth <n>] [--out <file>]      the visual tree under it, with layout
           find <selector>                                     every match, with where it stands
+          unnamed [<selector>]                                what can be acted on but has no name
           get <selector> [<property>...]                      the first match: properties with their source, bindings, layout
-          invoke | toggle | select | click <selector>         act on the first match
+          invoke | toggle | select | expand | collapse <selector>   act on the first match by what it can do
+          click | rclick | hover <selector>                   or by input made inside the application
+          scroll <selector>                                   bring a list's item into view, making its element
           set <selector> <value>                              write a value
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
           wait <selector> [--timeout 5s]                      wait until something matches
@@ -42,6 +45,7 @@ public static class Program
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
                                                               selected, enabled, offscreen, focus, or a property name
+          absent <selector>                                   fail if anything matches
           run <scenario>                                      the commands of a file, one a line, up to the first failure
 
           --pipe <name>     the agent's pipe (default adam-auto)
@@ -71,11 +75,17 @@ public static class Program
                 "visual" => await TextAsync(pipe, AutomationCommand.Visual, arguments),
                 "state" => await TextAsync(pipe, AutomationCommand.State, arguments),
                 "find" => await SendAsync(pipe, Target(AutomationCommand.Find, arguments)),
+                "unnamed" => await SendAsync(pipe, Target(AutomationCommand.Unnamed, arguments)),
                 "get" => await InspectAsync(pipe, arguments),
                 "invoke" => await SendAsync(pipe, Target(AutomationCommand.Invoke, arguments, allowErrors)),
                 "toggle" => await SendAsync(pipe, Target(AutomationCommand.Toggle, arguments, allowErrors)),
                 "select" => await SendAsync(pipe, Target(AutomationCommand.Select, arguments, allowErrors)),
                 "click" => await SendAsync(pipe, Target(AutomationCommand.Click, arguments, allowErrors)),
+                "rclick" => await SendAsync(pipe, Target(AutomationCommand.RightClick, arguments, allowErrors)),
+                "hover" => await SendAsync(pipe, Target(AutomationCommand.Hover, arguments, allowErrors)),
+                "expand" => await SendAsync(pipe, Target(AutomationCommand.Expand, arguments, allowErrors)),
+                "collapse" => await SendAsync(pipe, Target(AutomationCommand.Collapse, arguments, allowErrors)),
+                "scroll" => await SendAsync(pipe, Target(AutomationCommand.ScrollIntoView, arguments, allowErrors)),
                 "set" => await SendAsync(pipe, new AutomationRequest
                 {
                     Command = AutomationCommand.SetValue,
@@ -100,6 +110,7 @@ public static class Program
                 "mark" => await MarkAsync(pipe),
                 "errors" => await ErrorsAsync(pipe, arguments),
                 "expect" => await ExpectAsync(pipe, arguments),
+                "absent" => await AbsentAsync(pipe, arguments),
                 "shot" => await ShotAsync(pipe, arguments),
                 "run" => await ScenarioAsync(arguments, pipe),
                 _ => Fail(Usage, 2)
@@ -282,6 +293,24 @@ public static class Program
         return 0;
     }
 
+    private static async Task<int> AbsentAsync(string pipe, Arguments arguments)
+    {
+        var reply = await ReplyAsync(pipe, Target(AutomationCommand.Find, arguments));
+        if (!reply.Ok)
+        {
+            return Fail(reply.Error, 1);
+        }
+
+        if (reply.Elements.Count > 0)
+        {
+            return Fail($"'{arguments.At(0)}' should match nothing, and matches:{Environment.NewLine}" +
+                        string.Join(Environment.NewLine, reply.Elements.Select(element => $"  {element.Path}")), 1);
+        }
+
+        Console.WriteLine($"Nothing matches '{arguments.At(0)}', as expected.");
+        return 0;
+    }
+
     private static async Task<int> ScenarioAsync(Arguments arguments, string pipe)
     {
         var file = arguments.At(0);
@@ -324,14 +353,20 @@ public static class Program
             return Fail(reply.Error, 1);
         }
 
+        var listing = request.Command is AutomationCommand.Find or AutomationCommand.Unnamed;
         if (reply.Elements == null || reply.Elements.Count == 0)
         {
-            Console.WriteLine(request.Command == AutomationCommand.Find ? "Nothing matches." : "Done.");
+            Console.WriteLine(request.Command switch
+            {
+                AutomationCommand.Find => "Nothing matches.",
+                AutomationCommand.Unnamed => "Everything that can be acted on has a name.",
+                _ => "Done."
+            });
         }
 
         foreach (var element in reply.Elements ?? [])
         {
-            Console.WriteLine(request.Command == AutomationCommand.Find
+            Console.WriteLine(listing
                 ? $"{Printer.Line(element)}{Environment.NewLine}  {element.Path}"
                 : Printer.Line(element));
         }
@@ -386,6 +421,7 @@ public static class Program
             "value" => element.Value,
             "toggle" => element.ToggleState,
             "selected" => element.IsSelected?.ToString(),
+            "expanded" => element.ExpandCollapseState,
             "enabled" => element.IsEnabled.ToString(),
             "offscreen" => element.IsOffscreen.ToString(),
             "focus" => element.HasKeyboardFocus.ToString(),

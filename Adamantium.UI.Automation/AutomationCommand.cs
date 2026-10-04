@@ -27,6 +27,20 @@ public enum AutomationCommand
     /// <summary>A left click in the middle of the target, by input simulated inside the application.</summary>
     Click,
 
+    /// <summary>A right click in the middle of the target, by input simulated inside the application.</summary>
+    RightClick,
+
+    /// <summary>The pointer moved over the middle of the target, by input simulated inside the application.</summary>
+    Hover,
+
+    /// <summary>Opens what the target holds: a drop-down's list, a submenu, a branch.</summary>
+    Expand,
+
+    Collapse,
+
+    /// <summary>Scrolls the target's list until the target is in view, making its element if it had none.</summary>
+    ScrollIntoView,
+
     /// <summary>Types <see cref="AutomationRequest.Value"/> into the target, or into the element with keyboard focus.</summary>
     Type,
 
@@ -53,6 +67,10 @@ public enum AutomationCommand
 
     /// <summary>The element with keyboard focus, the active window and the open popups.</summary>
     State,
+
+    /// <summary>The elements under the target, or in every window, that can be acted on and have no name - what a person
+    /// using a screen reader, or a test reading names, cannot tell apart.</summary>
+    Unnamed,
 
     /// <summary>A picture of the target, or of the first window, drawn by the application's own renderer and written to
     /// <see cref="AutomationRequest.Value"/> as PNG - to look at, never to compare.</summary>

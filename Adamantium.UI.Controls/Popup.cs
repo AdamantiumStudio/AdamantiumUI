@@ -257,6 +257,9 @@ public class Popup : MeasurableUIComponent, IContainer
         OverlayRootPopup.Remove(overlayRoot);
     }
 
+    internal static Popup PopupOf(IUIComponent overlayRoot) =>
+        OverlayRootPopup.TryGetValue(overlayRoot, out var popup) ? popup : null;
+
     /// <summary>The window whose overlay hosts <paramref name="element"/>, or null outside an open popup.</summary>
     public static IPopupHost HostOf(IUIComponent element)
     {

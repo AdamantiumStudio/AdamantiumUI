@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Generators;
@@ -63,6 +64,28 @@ public class ItemsControl : Control, IContainer
     /// <summary>The panel laying out the item containers, or null before the template is applied. Virtual for controls
     /// that split items across several panels.</summary>
     public virtual Panel ItemsHostPanel => _presenter?.Panel;
+
+    /// <summary>Scrolls until <paramref name="item"/> is in view; a virtualizing panel makes its container on the way, as
+    /// WPF's <c>ScrollIntoView</c> does.</summary>
+    public void ScrollIntoView(object item)
+    {
+        var index = Items.IndexOf(item);
+        var panel = ItemsHostPanel;
+        var viewer = panel?.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+        if (index < 0 || viewer == null)
+        {
+            return;
+        }
+
+        if (panel is VirtualizingPanel virtualizing && virtualizing.TryGetItemRect(index, out var rect))
+        {
+            viewer.BringIntoView(rect);
+        }
+        else if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent container)
+        {
+            container.BringIntoView();
+        }
+    }
 
     public IEnumerable ItemsSource
     {

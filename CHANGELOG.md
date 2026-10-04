@@ -168,6 +168,16 @@ All packages share one version.
   property for and errors in the log; an action that leaves new entries fails, unless `AllowErrors` says otherwise.
 - `AdamantiumComponent.GetValueSource`: the priority the value of a property comes from. `BindingExpressionBase.Failure`:
   why a binding does not work.
+- Automation peers for lists, drop-downs, menus, trees and tab strips: an items control's children are its items in
+  order - the item's element where it has one, an `ItemAutomationPeer` (a `TreeRowAutomationPeer` in a tree) where a
+  virtualizing panel has not made it or a closed list has not built it, which can be selected and brought into view. A
+  drop-down's list and a submenu belong to the control that opens them; a context menu and other popups to their
+  window. New patterns `IExpandCollapseProvider` and `IScrollItemProvider`; a `NumericUpDown` is a spinner with a value.
+  The driver expands, collapses, scrolls an item into view, hovers and right-clicks, and lists what can be acted on but
+  has no name.
+- `ItemsControl.ScrollIntoView`: scrolls until an item is in view, a virtualizing panel making its container on the way.
+- The themes name what their templates add for automation: the tab strip's overflow button (`TabStrings.MoreTabs`) and
+  the pager's buttons, page size and page number (`DataPagerStrings`).
 
 ### Changed
 
@@ -357,6 +367,9 @@ All packages share one version.
   looked for.
 - `ItemContainerStyle` of a `TabControl`, a `DropDown`, a `Ribbon` and a `RibbonApplicationMenu` did nothing: the
   containers were themed after it and lost it. It is applied after the theme, as `ListBox` always did.
+- A `TreeView` wrote its rows' `IsExpanded` and `IsSelected` at Local priority, above the item container style's
+  bindings: once a row had been shown, clicked or toggled, the view model could no longer open or select it. The tree
+  writes current values.
 
 ## [0.1.0-alpha] - 2026-10-02
 

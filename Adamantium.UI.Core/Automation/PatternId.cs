@@ -16,5 +16,11 @@ public enum PatternId
     Selection,
 
     /// <summary><see cref="ISelectionItemProvider"/>: one item that can be selected.</summary>
-    SelectionItem
+    SelectionItem,
+
+    /// <summary><see cref="IExpandCollapseProvider"/>: opens and closes what it holds - a drop-down, a submenu, a branch.</summary>
+    ExpandCollapse,
+
+    /// <summary><see cref="IScrollItemProvider"/>: brought into view inside what scrolls it.</summary>
+    ScrollItem
 }

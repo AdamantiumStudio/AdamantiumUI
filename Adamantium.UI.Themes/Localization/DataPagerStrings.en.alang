@@ -3,4 +3,8 @@
     <Phrase Key="Page" Text="Page"/>
     <Phrase Key="OfCount" Text="of {count}"/>
     <Phrase Key="OfUnknown" Text="of ?"/>
+    <Phrase Key="FirstPage" Text="First page"/>
+    <Phrase Key="PreviousPage" Text="Previous page"/>
+    <Phrase Key="NextPage" Text="Next page"/>
+    <Phrase Key="LastPage" Text="Last page"/>
 </Language>

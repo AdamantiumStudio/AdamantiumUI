@@ -36,4 +36,7 @@ public sealed class ElementInfo
 
     /// <summary>Whether it is selected, when it can be.</summary>
     public bool? IsSelected { get; set; }
+
+    /// <summary>Whether what it holds is open - Expanded, Collapsed or LeafNode - when it can open.</summary>
+    public string ExpandCollapseState { get; set; }
 }

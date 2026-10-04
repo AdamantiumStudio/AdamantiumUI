@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
@@ -308,7 +310,7 @@ public class TreeView : ItemsControl
     {
         if (container.Row is { HasChildren: true } row)
         {
-            container.IsExpanded = !row.IsExpanded;
+            container.SetCurrentValue(TreeViewItem.IsExpandedProperty, !row.IsExpanded);
         }
     }
 
@@ -326,7 +328,7 @@ public class TreeView : ItemsControl
 
     // The same splice, addressed by ROW rather than by container - what the keyboard has in hand, since it walks the flat
     // list and the row it wants to open may have no realized container at all.
-    private void SetRowExpanded(TreeRow row, bool expanded)
+    internal void SetRowExpanded(TreeRow row, bool expanded)
     {
         if (_flattener == null || row.IsExpanded == expanded)
         {
@@ -397,7 +399,7 @@ public class TreeView : ItemsControl
     {
         if (ItemContainerGenerator.ContainerFromIndex(index) is TreeViewItem container)
         {
-            container.IsExpanded = expanded;
+            container.SetCurrentValue(TreeViewItem.IsExpandedProperty, expanded);
             return;
         }
 
@@ -664,7 +666,9 @@ public class TreeView : ItemsControl
             if (child is not TreeViewItem tvi || tvi.Row is not { } row) continue;
 
             // _selectedRows is the truth: a recycled container's two-way IsSelected binding can mark a row outside it.
-            tvi.IsSelected = row.IsSelected;
+            tvi.SetCurrentValue(TreeViewItem.IsSelectedProperty, row.IsSelected);
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TreeViewAutomationPeer(this);
 }

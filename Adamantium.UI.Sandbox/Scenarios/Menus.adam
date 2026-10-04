@@ -1,0 +1,14 @@
+# The Menus page: a context menu built from the view model - a row pressed, a submenu opened by hovering its row and
+# kept open while the pointer moves into it, a row of the submenu clicked - and the line below says what was picked.
+select id=GalleryTabs/id=Menus
+wait id=MenusView/id=MenuSurface --timeout 20s
+rclick id=MenuSurface
+invoke id=SurfaceMenu/name=Copy
+expect id=MenuReport name="Picked: Copy"
+rclick id=MenuSurface
+hover id=SurfaceMenu/name=Zoom
+expect id=SurfaceMenu/name=Zoom expanded=Expanded
+hover id=SurfaceMenu/name=Zoom/name="Fit to window"
+expect id=SurfaceMenu/name=Zoom expanded=Expanded
+click id=SurfaceMenu/name=Zoom/name="Fit to window"
+expect id=MenuReport name="Picked: Zoom · Fit to window"

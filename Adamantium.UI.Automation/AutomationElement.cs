@@ -64,6 +64,20 @@ public sealed class AutomationElement
 
     public Task SetValueAsync(string value) => RunAsync(AutomationCommand.SetValue, value);
 
+    /// <summary>Opens what it holds: a drop-down's list, a submenu, a branch.</summary>
+    public Task ExpandAsync() => RunAsync(AutomationCommand.Expand);
+
+    public Task CollapseAsync() => RunAsync(AutomationCommand.Collapse);
+
+    /// <summary>Scrolls its list until it is in view, making its element if it had none.</summary>
+    public Task ScrollIntoViewAsync() => RunAsync(AutomationCommand.ScrollIntoView);
+
+    /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
+    public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
+
+    /// <summary>A right click in its middle, by input simulated inside the application.</summary>
+    public Task RightClickAsync() => RunAsync(AutomationCommand.RightClick);
+
     /// <summary>A left click in its middle, by input simulated inside the application; refused if something covers it.</summary>
     public Task ClickAsync() => RunAsync(AutomationCommand.Click);
 

@@ -14,9 +14,13 @@
         <StackPanel Orientation="Horizontal" MarginBottom="12">
             <TextBlock Text="{Localize TreesStrings.Drive}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding Drives}"
+                      AutomationProperties.AutomationId="Drive"
+                      AutomationProperties.Name="{Localize TreesStrings.Drive}"
                       SelectedItem="{Binding SelectedDrive, Mode=TwoWay}" Width="110" MarginRight="24"/>
             <TextBlock Text="{Localize TreesStrings.SelectionMode}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding SelectionModes}"
+                      AutomationProperties.AutomationId="SelectionMode"
+                      AutomationProperties.Name="{Localize TreesStrings.SelectionMode}"
                       SelectedItem="{Binding SelectedMode, Mode=TwoWay}" MinWidth="150">
                 <DropDown.ItemTemplate>
                     <DataTemplate>
@@ -32,6 +36,8 @@
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                 BorderThickness="1" CornerRadius="10" Padding="8" Height="420">
             <TreeView ItemsSource="{Binding Nodes}" SelectionMode="{Binding SelectedMode}"
+                      AutomationProperties.AutomationId="Files"
+                      AutomationProperties.Name="{Localize TreesStrings.Title}"
                       SelectedItem="{Binding SelectedNode, Mode=OneWayToSource}"
                       VerticalOffset="{Binding ScrollOffset, Mode=TwoWay}">
                 <TreeView.ItemContainerStyle>

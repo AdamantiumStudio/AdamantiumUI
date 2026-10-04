@@ -1,0 +1,21 @@
+# The Buttons page: a command counts its clicks, a switch and a toggle say where they stand, the plan follows the
+# radio buttons and every drop-down says what was picked.
+select id=GalleryTabs/id=Buttons
+wait id=ButtonsView/id=ClickCount --timeout 20s
+click id=ButtonsView/name=Add
+expect id=ClickCount name=1
+invoke id=ButtonsView/name=Add
+expect id=ClickCount name=2
+toggle id=ButtonsView/name=Notify
+expect id=NotifyState name="Notifications OFF"
+click id=ButtonsView/name=Pro
+expect id=ChosenPlan name=Pro
+expand id=Priority
+select id=Priority/name="High priority"
+expect id=PriorityChoice name="Priority: high"
+expect id=Priority expanded=Collapsed
+expand id=City
+click id=City/type=ListItem
+expect id=City expanded=Collapsed
+click id=ButtonsView/name=Reset
+expect id=ClickCount name=0

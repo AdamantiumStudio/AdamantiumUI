@@ -1,0 +1,17 @@
+# The Lists page: a single-select list picked by what it can do and by a click, the large list filtered live by the
+# search box and turned a page by its pager.
+select id=GalleryTabs/id=Lists
+wait id=ListsView/id=SingleList --timeout 20s
+select id=SingleList/name=Mars
+expect id=SelectedPlanet name=Mars
+click id=SingleList/name=Venus
+expect id=SelectedPlanet name=Venus
+expect id=SingleList/name=Venus selected=True
+set id=Search 00042
+expect id=LargeList/type=ListItem name="Item 00042"
+set id=Search ""
+expect id=LargeList/type=ListItem name="Item 00001"
+invoke id=ListsView/name="Next page"
+expect id=LargeList/type=ListItem name="Item 00031"
+invoke id=ListsView/name="First page"
+expect id=LargeList/type=ListItem name="Item 00001"

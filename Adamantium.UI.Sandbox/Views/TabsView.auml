@@ -15,6 +15,8 @@
 
         <!-- The long titles are the point: a uniform slot cannot grow to fit one, so the header trims with an ellipsis. -->
         <TabControl Grid.Row="1"
+                    AutomationProperties.AutomationId="ManyTabs"
+                    AutomationProperties.Name="{Localize TabsStrings.ThousandTabs}"
                     ItemsSource="{Binding ManyTabs}"
                     IsVirtualizing="{Binding IsVirtualizing}"
                     TabWidth="220"
@@ -40,6 +42,8 @@
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <TextBlock Text="{Localize TabsStrings.MaxOpened}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <NumericUpDown Width="90" InputMode="Integers"
+                               AutomationProperties.AutomationId="MaxOpened"
+                               AutomationProperties.Name="{Localize TabsStrings.MaxOpened}"
                                Minimum="0" Maximum="12" SmallChange="1"
                                Value="{Binding MaxOpenedTabs, Mode=TwoWay}"/>
                 <TextBlock Text="{Localize TabsStrings.ZeroTurnsOff}" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -48,6 +52,8 @@
         </StackPanel>
 
         <TabControl Grid.Row="3"
+                    AutomationProperties.AutomationId="CappedTabs"
+                    AutomationProperties.Name="{Localize TabsStrings.Capped}"
                     ItemsSource="{Binding FewTabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     MaxOpenedTabs="{Binding MaxOpenedTabs}"

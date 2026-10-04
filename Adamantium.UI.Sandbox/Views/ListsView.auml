@@ -8,6 +8,8 @@
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="{Localize ListsStrings.SingleSelect}" Margin="0,0,0,6"/>
                 <ListBox Width="200" Height="240"
+                         AutomationProperties.AutomationId="SingleList"
+                         AutomationProperties.Name="{Localize ListsStrings.SingleSelect}"
                          ItemsSource="{Binding Items}"
                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -18,12 +20,14 @@
 
             <StackPanel Orientation="Vertical" Margin="24,0,0,0">
                 <TextBlock Text="{Localize ListsStrings.MultipleSelect}" Margin="0,0,0,6"/>
-                <ListBox Width="200" Height="240" SelectionMode="Multiple" ItemsSource="{Binding Items}"/>
+                <ListBox Width="200" Height="240" SelectionMode="Multiple" ItemsSource="{Binding Items}"
+                         AutomationProperties.AutomationId="MultipleList"
+                         AutomationProperties.Name="{Localize ListsStrings.MultipleSelect}"/>
             </StackPanel>
 
             <StackPanel Orientation="Vertical" Margin="24,0,0,0">
                 <TextBlock Text="{Localize ListsStrings.SelectedSingle}"/>
-                <TextBlock Text="{Binding SelectedItem}" FontSize="18" Margin="0,6,0,0"/>
+                <TextBlock AutomationProperties.AutomationId="SelectedPlanet" Text="{Binding SelectedItem}" FontSize="18" Margin="0,6,0,0"/>
             </StackPanel>
         </StackPanel>
 
@@ -34,10 +38,14 @@
              has its own picker - two of them would be two answers to the same question. -->
         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Text="{Localize ListsStrings.Search}" VerticalAlignment="Center" MarginRight="8"/>
-            <TextBox Width="220" Height="32" Text="{Binding Search, Mode=TwoWay}"/>
+            <TextBox Width="220" Height="32" Text="{Binding Search, Mode=TwoWay}"
+                     AutomationProperties.AutomationId="Search"
+                     AutomationProperties.Name="{Localize ListsStrings.Search}"/>
         </StackPanel>
 
-        <ListBox Width="720" Height="300" ItemsSource="{Binding Large}" HorizontalAlignment="Left"/>
+        <ListBox Width="720" Height="300" ItemsSource="{Binding Large}" HorizontalAlignment="Left"
+                 AutomationProperties.AutomationId="LargeList"
+                 AutomationProperties.Name="{Localize ListsStrings.LargeTitle}"/>
 
         <!-- The same width as the list it belongs to, so the row of buttons centers over the rows it is turning. -->
         <DataPager Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
@@ -82,6 +90,8 @@
         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Text="{Localize ListsStrings.AnswersIn}" VerticalAlignment="Center" MarginRight="8"/>
             <NumericUpDown Width="90" VerticalAlignment="Center" InputMode="Integers"
+                           AutomationProperties.AutomationId="ServerDelay"
+                           AutomationProperties.Name="{Localize ListsStrings.AnswersIn}"
                            Minimum="0" Maximum="5000" SmallChange="100"
                            Value="{Binding ServerDelay, Mode=TwoWay}"/>
             <TextBlock Text="{Localize ListsStrings.Ms}" VerticalAlignment="Center" MarginLeft="6" MarginRight="16"/>
@@ -92,7 +102,9 @@
                        VerticalAlignment="Center"/>
         </StackPanel>
 
-        <ListBox Width="720" Height="220" ItemsSource="{Binding Server}" HorizontalAlignment="Left"/>
+        <ListBox Width="720" Height="220" ItemsSource="{Binding Server}" HorizontalAlignment="Left"
+                 AutomationProperties.AutomationId="ServerList"
+                 AutomationProperties.Name="{Localize ListsStrings.ServerTitle}"/>
 
         <DataPager Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
                    Source="{Binding Server}"/>

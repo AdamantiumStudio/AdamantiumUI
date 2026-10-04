@@ -34,6 +34,11 @@ internal static class Printer
             line.Append(" selected");
         }
 
+        if (element.ExpandCollapseState is { } state && state != "LeafNode")
+        {
+            line.Append(' ').Append(state);
+        }
+
         if (element.IsOffscreen)
         {
             line.Append(" (offscreen)");

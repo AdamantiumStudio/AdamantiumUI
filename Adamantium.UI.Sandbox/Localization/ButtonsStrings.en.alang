@@ -21,6 +21,9 @@
 
     <Phrase Key="Dropdowns" Text="Dropdowns"/>
     <Phrase Key="SelectCity" Text="Select a city..."/>
+    <Phrase Key="CityName" Text="City"/>
+    <Phrase Key="PriorityName" Text="Priority"/>
+    <Phrase Key="ColorName" Text="Color"/>
     <Phrase Key="City" Select="city" None="No city chosen" Other="City: {city}"/>
     <Phrase Key="Low" Text="Low priority"/>
     <Phrase Key="Normal" Text="Normal priority"/>

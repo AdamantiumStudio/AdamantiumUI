@@ -116,12 +116,33 @@ public class UIComponentAutomationPeer : AutomationPeer
         return children;
     }
 
-    /// <summary>The text of the first text block under <paramref name="element"/>, depth first: the label a templated
-    /// control shows.</summary>
+    /// <summary>The peer of the items control this element is an item container of, found up the logical tree - which
+    /// reaches the control from a popup too, where the visual tree stops at the popup's card.</summary>
+    protected ItemsControlAutomationPeer ItemsOwnerPeer()
+    {
+        foreach (var ancestor in Owner.GetLogicalAncestors())
+        {
+            var itemsControl = ancestor as ItemsControl ?? ancestor.TemplatedParent as ItemsControl;
+            if (itemsControl?.GetAutomationPeer() is ItemsControlAutomationPeer peer)
+            {
+                return peer;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The text of the first shown text block under <paramref name="element"/>, depth first: the label a
+    /// templated control shows.</summary>
     protected static string TextOf(IUIComponent element)
     {
         foreach (var child in element.VisualChildren)
         {
+            if (child.Visibility != Visibility.Visible)
+            {
+                continue;
+            }
+
             if (child is TextBlock { Text: { Length: > 0 } text })
             {
                 return text;
@@ -136,7 +157,8 @@ public class UIComponentAutomationPeer : AutomationPeer
         return null;
     }
 
-    private static void Collect(IUIComponent element, List<AutomationPeer> into)
+    /// <summary>Adds the peers of the nearest elements below <paramref name="element"/> that have one.</summary>
+    protected static void Collect(IUIComponent element, List<AutomationPeer> into)
     {
         foreach (var child in element.VisualChildren)
         {

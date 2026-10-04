@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Automation;
@@ -64,6 +65,7 @@ public sealed class AutomationExecutor
                 case AutomationCommand.Inspect:
                 case AutomationCommand.Visual:
                 case AutomationCommand.State:
+                case AutomationCommand.Unnamed:
                     return await _host.RunOnLoopAsync(() => Read(request), timeout);
                 default:
                     return await ActAsync(request, timeout);
@@ -150,13 +152,25 @@ public sealed class AutomationExecutor
             Text = ElementInspector.Visual(OwnerOf(Resolve(request.Target)), request.Depth)
         },
         AutomationCommand.State => new AutomationReply { Ok = true, Text = ElementInspector.State(_host.Windows) },
+        AutomationCommand.Unnamed => new AutomationReply
+        {
+            Ok = true,
+            Elements = [.. (string.IsNullOrWhiteSpace(request.Target) ? Roots() : FindAll(request.Target).Take(1))
+                .SelectMany(SelfAndDescendants)
+                .Distinct()
+                .Where(peer => peer.Name.Length == 0 && ActsOn(peer))
+                .Select(Info)]
+        },
         _ => new AutomationReply { Ok = true, Elements = [Info(Resolve(request.Target))] }
     };
 
     private AutomationReply Inspect(AutomationRequest request)
     {
         var peer = Resolve(request.Target);
-        return new AutomationReply { Ok = true, Details = ElementInspector.Inspect(OwnerOf(peer), Info(peer), request.Properties) };
+        var details = peer is UIComponentAutomationPeer { Owner: var element }
+            ? ElementInspector.Inspect(element, Info(peer), request.Properties)
+            : new ElementDetails { Element = Info(peer), Properties = [], Bindings = [] };
+        return new AutomationReply { Ok = true, Details = details };
     }
 
     private bool Act(AutomationRequest request)
@@ -188,7 +202,22 @@ public sealed class AutomationExecutor
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).Select();
                 break;
             case AutomationCommand.Click:
-                InputSimulator.Click(OwnerOf(peer), Label(peer));
+                InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Left);
+                break;
+            case AutomationCommand.RightClick:
+                InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Right);
+                break;
+            case AutomationCommand.Hover:
+                InputSimulator.Hover(OwnerOf(peer), Label(peer));
+                break;
+            case AutomationCommand.Expand:
+                Pattern<IExpandCollapseProvider>(peer, PatternId.ExpandCollapse).Expand();
+                break;
+            case AutomationCommand.Collapse:
+                Pattern<IExpandCollapseProvider>(peer, PatternId.ExpandCollapse).Collapse();
+                break;
+            case AutomationCommand.ScrollIntoView:
+                Pattern<IScrollItemProvider>(peer, PatternId.ScrollItem).ScrollIntoView();
                 break;
             case AutomationCommand.Type:
                 peer.SetFocus();
@@ -316,11 +345,16 @@ public sealed class AutomationExecutor
         }
     }
 
+    private static bool ActsOn(AutomationPeer peer) =>
+        Enum.GetValues<PatternId>().Any(pattern => pattern != PatternId.ScrollItem && peer.GetPattern(pattern) != null);
+
     private static T Pattern<T>(AutomationPeer peer, PatternId pattern) where T : class =>
         peer.GetPattern(pattern) as T ?? throw new AutomationException($"{Label(peer)} cannot {pattern}.");
 
     private static UIComponent OwnerOf(AutomationPeer peer) =>
-        (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException($"{Label(peer)} stands for no element of the tree.");
+        (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException(peer is IScrollItemProvider
+            ? $"{Label(peer)} has no element yet; scroll it into view first."
+            : $"{Label(peer)} stands for no element of the tree.");
 
     private static ElementInfo Info(AutomationPeer peer)
     {
@@ -353,6 +387,11 @@ public sealed class AutomationExecutor
         if (peer.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider item)
         {
             info.IsSelected = item.IsSelected;
+        }
+
+        if (peer.GetPattern(PatternId.ExpandCollapse) is IExpandCollapseProvider expandable)
+        {
+            info.ExpandCollapseState = expandable.ExpandCollapseState.ToString();
         }
 
         return info;

@@ -254,7 +254,7 @@
                                 </Border>
                                 <!-- Not focusable; centered, not stretched, so it never sets the row taller than the
                                      segments. -->
-                                <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"
+                                <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
                                               MinWidth="24" MinHeight="20" Padding="4 0" Visibility="Collapsed">
@@ -400,7 +400,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <ToggleButton x:Name="PART_TabOverflow" Grid.Column="1" VerticalAlignment="Center"
+                                <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Column="1" VerticalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
                                               MinWidth="24" MinHeight="20" Padding="4 0" Visibility="Collapsed">
@@ -498,7 +498,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" HorizontalAlignment="Center"
+                                <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
                                               MinWidth="20" MinHeight="22" Padding="0 4" Visibility="Collapsed">
@@ -622,7 +622,7 @@
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>
-                                <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" HorizontalAlignment="Center"
+                                <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
                                               MinWidth="20" MinHeight="22" Padding="0 4" Visibility="Collapsed">

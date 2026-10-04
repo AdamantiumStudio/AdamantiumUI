@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Extensions;
 
@@ -16,9 +17,12 @@ public sealed class HeadlessHost : IAutomationHost
 
     private readonly List<IWindow> _windows;
 
+    /// <summary>Hosts <paramref name="windows"/> with a pointer of its own: a capture an earlier test left on the shared
+    /// mouse device is let go.</summary>
     public HeadlessHost(IEnumerable<IWindow> windows)
     {
         _windows = [.. windows];
+        MouseDevice.CurrentDevice.Capture(null);
     }
 
     public IReadOnlyList<IWindow> Windows => _windows;

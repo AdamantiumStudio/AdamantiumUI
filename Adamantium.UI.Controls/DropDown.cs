@@ -6,6 +6,8 @@ using System.Reflection;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -388,4 +390,6 @@ public class DropDown : Selector
             row.IsHighlighted = false;   // containers are recycled: a stale highlight would follow one into another row
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DropDownAutomationPeer(this);
 }

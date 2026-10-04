@@ -21,6 +21,9 @@
 
     <Phrase Key="Dropdowns" Text="Выпадающие списки"/>
     <Phrase Key="SelectCity" Text="Выберите город..."/>
+    <Phrase Key="CityName" Text="Город"/>
+    <Phrase Key="PriorityName" Text="Приоритет"/>
+    <Phrase Key="ColorName" Text="Цвет"/>
     <Phrase Key="City" Select="city" None="Город не выбран" Other="Город: {city}"/>
     <Phrase Key="Low" Text="Низкий приоритет"/>
     <Phrase Key="Normal" Text="Обычный приоритет"/>
