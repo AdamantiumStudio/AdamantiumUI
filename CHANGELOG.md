@@ -7,6 +7,22 @@ All packages share one version.
 
 ### Added
 
+- `Ribbon.StripContent`: the application's own commands in the strip right after "File" - a drop-down of the modules a
+  document is made of, say. Its commands take key tips with the strip's.
+- `MenuItem.IsCheckable`, `IsChecked` and `StaysOpenOnClick`: a row that is a switch, with a check mark in the icon
+  gutter, and a menu that stays open while several are flipped.
+- `Popup.PlacementAlignment`: a popup beside or under its target lines up with it edge to edge (`Start`, `End`) rather
+  than centered. The themes' submenus open level with their row.
+- `Ribbon.Drawer` and `IsDrawerOpen`: a sheet of the application's own that opens out of the strip in place of the band,
+  the ribbon's width - a catalog, a page of settings. A press outside it or Escape puts it away.
+- `Ribbon.TabSetsSource` with `TabSetTemplate` / `TabSetTemplateSelector`, and `RibbonTabSet`: what a document is
+  made of - its modules - brings its own tabs. Each item is built into a `RibbonTabSet`, a piece of the module's view
+  bound against the module: its tabs under a ledge of its own (`Header`, `Accent`, `IsActive`), after the ribbon's own
+  tabs, gone when the item leaves the source.
+- The themes' menu rows stretch their header across the row, so a header can hold an action at the row's end.
+- `RibbonQuickAccessEventArgs.Item`: a command drawn for an item of the application's own data - its DataContext an
+  `IQuickAccessItem` - hands that item over, and the ribbon finds it in the bar by that item alone. A band built from
+  the application's commands puts them in the bar as they are, with nothing rebuilt from a description.
 - `AdamantiumDesignerHost` names the designer host the build points the IDE's live preview to, in place of the one the
   package carries.
 - `Adamantium.UI.Source.targets` in the repository root: a project in another repository builds on a checkout of this one
@@ -36,6 +52,9 @@ All packages share one version.
 - `{Localize CanvasStrings, Key={Binding Sort}}`: the key read from a binding - the word for a kind of thing. A key the
   table lacks is said as it is. `{x:Static Strings.Current}` hands a control the table itself, and
   `Languages.Say(table, key, ...)` says a phrase from code, for a thing named once as it is made.
+- `{Localize Table={Binding Phrases}, Key={Binding Name}}`: the table read from a binding too (`Localize.TableSource`) -
+  the words of a thing that brings its own table, as a plugin does. Until the table comes, and for a word it lacks, the
+  key is said as it is.
 - `Languages.Current` (and `UIApplication.Language`, `StartupLanguage`) switches the language while the application runs;
   every `{Localize}` and every binding that writes numbers or dates follows it.
 - `<Language.Format>` in an application's language file sets how that language writes dates, times and numbers;
@@ -43,7 +62,7 @@ All packages share one version.
 - A library's tables are translated or overridden by an application's file of the same table name.
 - The themes' strings are language tables of `Adamantium.UI.Themes` in English and Russian: `RibbonStrings`,
   `PropertyGridStrings`, `DataPagerStrings`, `ColorPickerStrings`, `DataGridStrings`, `CanvasStrings`,
-  `InspectorStrings`, `WindowStrings`. Their keys are public: an application's `CanvasStrings.de.alang` translates the
+  `InspectorStrings`, `WindowStrings`, `TextBoxStrings`. Their keys are public: an application's `CanvasStrings.de.alang` translates the
   canvas.
 - The language server completes and checks `.alang` files with the build's own generator, offers a quick fix that adds
   the strings a translation lacks, and completes `{Localize}` - tables, strings and placeholders.
@@ -54,8 +73,50 @@ All packages share one version.
   and `DataGridGroupHeader`.
 - `CanvasQuestion`: what the canvas asks before it deletes or clears, a control the theme gives its words and answers.
 - `CanvasInspector.ItemCount` and `ICanvasItem.Parts`: numbers the theme says in words.
+- `TextBox.ShowsClearButton`: a button at the end of the box that empties it in one press, shown while there is text
+  and the box is not read-only. `TextBox.HasText` says whether there is; `TextBox.Clear()` empties the box as one edit,
+  which undo brings back. The themes draw the button. `TextBox.ClearButtonToolTip` is what it says when pointed at:
+  the themes' `TextBoxStrings.Clear` unless a box says what clearing it means - "Clear the search (Esc)".
+- `CollectionView.Refresh()`: filters and orders the source again - for a filter that reads something outside the items,
+  such as the text of a search box.
+- `UniformGrid` virtualizes as an items panel: a grid that grows downwards realizes only the rows in view and scrolls
+  by them. An axis whose count is set shares the space between its cells; along the other one every cell is as big as
+  the biggest item realized so far. A grid given only `Rows` grows sideways and realizes every item, as does one with
+  `IsVirtualizing` off. Used as a plain panel it lays out its children as before.
+- `Popup.StaysBesideTarget`: the popup is measured against the room on its side of the target instead of the whole
+  window, so keeping it inside the window never pushes it over what it belongs to; what does not fit is the content's
+  to scroll. The ribbon's drawer uses it in all three themes - a catalog taller than the room under the strip used to
+  be lifted onto the tabs.
+- `UniformGrid.MinColumnWidth`: with neither `Columns` nor `Rows` set, as many columns as fit at least that wide, the
+  width shared out between them and never fewer than one - cards in a pane that changes width keep room for what they
+  show instead of keeping a count.
+- `RibbonQuickAccessEventArgs.DropDownItemContainerStyle`: what a drop-down command's rows do, handed over with how they
+  are drawn. The themes' quick-access menus use both.
+- `PropertyTrace`: values dropped for want of a property - set by a name the element has no property for, or a live
+  resource connected to one. Each distinct report goes once to the application log and, under a debugger, to the IDE's
+  output; `PropertyTrace.Sink` receives them all.
 
 ### Changed
+
+- `AdamantiumComponent.SetValue(string, ...)` reports a name the type has no property for through `PropertyTrace`
+  instead of ignoring it without a word. `ThemeResource.Apply` and `ObservableResource.Apply` report such a name too,
+  connect nothing and return null.
+- Fluent's flyout acrylic (`FlyoutSurfaceFill`: menus, drop-downs, flyouts) is thinner - tint 0.6, blur 7 - and its
+  tooltip one (`TooltipSurfaceFill`) with it - 0.54, blur 5. The blur is counted over a copy downscaled four times, so
+  the old 28 reached about a hundred pixels and averaged everything behind into one flat gray: the material read as a
+  plain fill. What is behind now shows through as soft light, about as far as Windows' own acrylic blurs.
+- The markup compiler refuses `{ThemeResource}` and `{ObservableResource}` on a plain CLR property: nothing there can
+  follow a resource. `{ResourceReference}` sets it once. A setter's value is not such a property: a style written in a
+  view (an `ItemContainerStyle`, say) keeps the live resource for the style to apply, as a style set always did - it
+  used to be connected to the setter itself, which is to nothing.
+
+- `ContextMenu` and `MenuItem` make every row built from data a `MenuItem`, whatever the `ItemTemplate`: the template
+  draws the row's header, `ItemContainerStyle` says what the row does. A plain `DataTemplate` used to leave the rows bare
+  content - no hover, no check, no command - and only a `HierarchicalDataTemplate` made menu rows. A template that built
+  a `MenuItem` itself now puts one inside a row: move what it set (`Command`, `Icon`) into `ItemContainerStyle`, as the
+  themes' title-bar and quick-access overflow menus now do. `TreeView` and `TreeViewItem` likewise make a `TreeViewItem`
+  for every node and `RibbonTab` a `RibbonGroup` for every group; a tree with a plain template or none used to draw its
+  internal row object in place of the node.
 
 - `IResolvedMember` has `IsStatic`, `IsPublic` and `ParameterNames`.
 - `BindingBase.CreateExpression`: each kind of binding makes its own live expression, so a new kind needs no change to
@@ -76,9 +137,64 @@ All packages share one version.
   what the person called the thing, empty by default: the theme names what it is by `Sort`. A `CanvasNode` has no title
   by default; its sockets are called by the phrases' "In 1", else by their number.
 - A binding finds a property an object has through an interface, a default interface member included.
+- Removed `Ribbon.QuickAccessCandidates` and `Ribbon.ToggleQuickAccess`: a list of the ribbon's live commands, and a
+  command taking one. A page that listed them took them out of the band. A customization page lists the application's
+  commands as data, and the ribbon knows each by its `RibbonQuickAccessEventArgs.Item`.
+- The search fields of `PropertyGrid` and of the canvas's node palette clear by the field's own button
+  (`TextBox.ShowsClearButton`), saying their own words through `ClearButtonToolTip`. Removed what drew a cross of their
+  own: `PropertyGrid.HasSearchText` and the template part `PART_ClearSearch`, `CanvasNodePalette.HasSearch` and
+  `ClearSearchCommand` and the part `PART_Clear`. Escape still drops the inspector's search.
 
 ### Fixed
 
+- A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
+  overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
+  three themes. A row's color is a style by type, which inheritance outranks by design.
+- A border around a material fill was never drawn - so the acrylic card of every Fluent menu, drop-down and flyout had
+  no edge and melted into what was behind it. The material batch takes the framed rectangle whole and baked only its
+  pen; a uniform border now rides in the same record as a ring inside the outline. A border with different widths per
+  side is still not drawn on a material.
+- A drag ghost built from a `DragTemplate`, and the count badge of a multi-item drag, showed nothing under the cursor.
+  `VisualRenderer.RequestSnapshot` of an element in no tree recorded a picture with nothing in it - the render cache
+  leaves out whatever is not in a tree; such an element is now hosted off-screen at its arranged size, as
+  `RequestRender` does.
+- A style written inside a template styled nothing. The generator set a part's properties by name at template priority,
+  and a property with no `AdamantiumProperty` behind it - a style's `Selector` - was dropped without a word. Such a
+  property is now assigned, as the designer's loader already did.
+- `{ResourceReference}` on a component's plain CLR property, or on an attached property, was dropped without a word: the
+  first is now resolved and assigned at once, the second is named with its owner (`Grid.Row`).
+- A style setter whose value is built per element (`x:Shared="False"`) or is a `{ResourceReference}` threw on an element
+  that does not have the property - a style matched by class reaches elements of every type. It passes over such an
+  element, as a plain value always did.
+- A submenu whose rows were written in markup closed as the pointer moved into it: only rows made from data held their
+  submenu open.
+- A popup put away by a press outside it or by Escape cut the application's binding on `IsOpen`: the view model could not
+  open it again.
+- Releasing the mouse on a button inside a menu row chose the row as well.
+- A press inside a popup did not put away another popup that a press elsewhere closes: two flyouts opened from one menu
+  stayed open together. A press counts as inside only in the popup's own card or a popup opened from it.
+- `SetCurrentValue` on a property a `{TemplateBinding}` feeds wrote above it and masked it for good: a popup whose
+  `IsOpen` follows its control, put away by a press outside, could not be opened by the control again. It writes into
+  the template binding's own slot.
+- What was added to an open popup - the rows a list or a menu makes in its first layout, a template applied late -
+  looked for the window among its visual ancestors, found none (a popup's card has no visual parent) and stayed outside
+  the tree: a template taken from the view by key never reached it, and the list showed its items' type names, on some
+  opens and not others. An element joins the tree its parent is in.
+- Popups were measured in the popup stage, on the render thread. They are laid out in the window's layout pass, on the
+  loop thread, like everything else; the stage only draws them.
+- A radio group named in a control's template was shared by every copy of the control: two canvas inspectors switched
+  each other's faces. A name written in a template now groups the radios of that one control.
+- `DataContext="{Binding X}"` read `X` from the element's own new DataContext on the next refresh and broke: a panel
+  bound to the picked item stayed on the first one. It reads the parent's context and follows it.
+- An `ItemsControl` given an element that stands elsewhere - written into another list, or already in the tree - took it
+  and left its place empty: a page listing a ribbon's buttons emptied the ribbon's groups for good. Such an element is
+  left where it stands, its slot stays empty and the mistake is logged. A list in a control's template still shows the
+  items written into that control.
+- A ribbon tab's header in the strip kept the label the tab had when the strip was built: after a language switch the
+  tabs went on in the old language.
+- An items list whose `ItemsPanel` changed to a virtualizing panel (a `StackPanel` or a `WrapPanel`) showed nothing: the
+  new panel found every item realized already, in the panel it replaced, and the replaced panel took back whatever was
+  shown elsewhere. The replaced panel lets go of its items and stops hosting.
 - Completion of `x:` directives in the language server: after `{` and `{x:` it offers `x:Null`, `x:Static` and `x:Type`;
   inside `{x:Static}` a type and then its public static fields and properties, base types included; the values of
   `x:Load`, `x:Shared`, `x:CreateInDesignTime` and `x:KeepAlive`. All of these offered nothing before.
@@ -90,6 +206,26 @@ All packages share one version.
 - A number written out in markup, `count=5`, took the `Other` form of a counted phrase whatever it was.
 - A `{Localize}` argument that was itself a `{Localize}` was built as its text; the designer read it right.
 - A file dialog given a file type without a name showed an empty line for it; it shows the type's patterns.
+- A `ListBox` wrote its selection above the application's binding: after the first pick the view model could no longer
+  change what the list had selected. It writes current values, as the other selectors do.
+- A `ListBox` kept its selection by position when its items changed: an item removed or inserted above the selected one
+  moved the highlight to a neighbor, and a selected item that left the list stayed `SelectedItem`. The selection follows
+  its items; one that leaves is no longer selected, and a bound view model hears so.
+- A `ListBox` whose `SelectedItem` was bound before its items arrived came up with nothing selected.
+- A binding a style's setter states - `{Binding}`, `{Localize}`, `{Ancestor}`, `{Self}` - took the element's own binding
+  slot: it replaced a binding the element stated itself, outranked a value its template set, and stayed when the style
+  went. It is now that style's value: under what the element and its template say, following the DataContext, gone with
+  the style. A control's current value on such a property goes into the style's slot, so a two-way setter keeps
+  following its source. A trigger's `{Ancestor}` and `{Self}` go when the trigger lets go - a data grid row kept its
+  error wash after the error was fixed - and a trigger's `{Binding}` is a live binding rather than the binding object
+  written as the value.
+- `RemoveBinding` did nothing, and threw when given a property; it removes the element's binding.
+- `RibbonApplicationMenu` wrote `IsOpen` at Local priority when it opened or closed itself, above a two-way binding:
+  after that the view model could no longer open or put away the backstage. It writes current values.
+- Popups and adorners were recorded on the render thread, from the live tree, while the loop went on changing it: a
+  list rebuilt in an open popup flashed for a frame with its items piled up, not yet laid out. They are recorded on the
+  loop thread right after layout, as the window's content is, and the render thread only applies what was recorded
+  (`RenderCache.RecordComponents`, `ApplyComponents`). Adorners are laid out on the loop thread too.
 
 ## [0.1.0-alpha] - 2026-10-02
 

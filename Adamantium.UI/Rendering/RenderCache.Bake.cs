@@ -158,6 +158,103 @@ public partial class RenderCache
         _packet = null;
     }
 
+    /// <summary>The record half of an overlay build, device-free, on the thread that lays the components out: renders the
+    /// flat list into a packet and freezes their layout with it, so <see cref="ApplyComponents"/> never reads a live
+    /// component. <see cref="BuildFromComponents"/> does both halves at once.</summary>
+    public void RecordComponents(IReadOnlyList<IUIComponent> components, Matrix4x4F projectionMatrix)
+    {
+        _packet = RentPacket();
+        _packet.Reset(RenderBuildKind.Full);
+        _packet.ProjectionMatrix = projectionMatrix;
+        _packet.IsTransformDirty = true;
+        _packet.ClearMemos = true;
+        _packet.SnapReset = true;
+        _snap.Clear();
+
+        if (components != null)
+        {
+            long order = 0;
+            foreach (var component in components)
+            {
+                if (component.Visibility != Visibility.Visible) continue;
+
+                var wasGeometryValid = component.IsGeometryValid;
+                _drawingContextInternal.Clear();
+                component.Render(_drawingContext);
+                var commands = CopyCommands(_drawingContextInternal.GetDrawCommands());
+                _packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, order, component.RenderClones));
+                order += OrderGap;
+            }
+        }
+
+        foreach (var draw in _packet.Draws)
+        {
+            for (var c = draw.Component; c != null && !_snap.ContainsKey(c); c = c.RenderParent)
+            {
+                Snap(c);
+            }
+        }
+
+        _published.Enqueue(_packet);
+        _packet = null;
+    }
+
+    /// <summary>The apply half of an overlay build, on the thread that owns the device: realizes the recorded packets in
+    /// order and frees the units of whatever the last one no longer lists. False when nothing was recorded since the
+    /// last call.</summary>
+    public bool ApplyComponents()
+    {
+        AdoptReadyGlyphs();
+
+        var applied = false;
+        while (_published.TryDequeue(out var packet))
+        {
+            ApplyComponentsPacket(packet);
+            packet.Reset(RenderBuildKind.Clean);
+            _spare.Add(packet);
+            applied = true;
+        }
+
+        return applied;
+    }
+
+    private void ApplyComponentsPacket(RenderPacket packet)
+    {
+        LastBuildKind = RenderBuildKind.Full;
+        _projectionMatrix = packet.ProjectionMatrix;
+        _commands.Clear();
+        ClearOrder();
+        _worldCache.Clear();
+        _clipCache.Clear();
+        _clipOwnerCache.Clear();
+        _clipSlotCache.Clear();
+        _clipShapeCache.Clear();
+        _relWorldCache.Clear();
+        _nodeCache.Clear();
+
+        _applySnap.Clear();
+        foreach (var entry in packet.SnapDelta) _applySnap[entry.Key] = entry.Value;
+
+        var present = new HashSet<Guid>();
+        foreach (var draw in packet.Draws)
+        {
+            present.Add(draw.Component.RenderId);
+            ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid, draw.Order,
+                draw.Clones);
+        }
+
+        List<Guid> stale = null;
+        foreach (var id in _groupById.Keys)
+        {
+            if (!present.Contains(id)) (stale ??= new List<Guid>()).Add(id);
+        }
+
+        if (stale != null)
+        {
+            foreach (var id in stale) RemoveAndDeferDispose(id);
+        }
+    }
+
     /// <summary>Releases the batch rings and transform table for a closing window; <see cref="DisposeUnits"/> keeps them
     /// across designer re-renders.</summary>
     public void DisposeDeviceResources()

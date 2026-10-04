@@ -6,9 +6,12 @@ namespace Adamantium.UI.Extensions;
 
 public static class WindowExtension
 {
+    /// <summary>One layout pass of the window: its content, then its popups against where their targets now stand - on
+    /// the loop thread, like everything that measures. The popup stage only draws what this laid out.</summary>
     public static void Update(this IWindow window, IThemeManager themeManager, AppTime appTime)
     {
         LayoutManager.GetOrCreate(window).ExecuteLayoutPass();
+        window.LayoutPopups();
     }
 
     /// <summary>Drives one layout pass over a subtree root (no IWindow/theme required). Used by layout tests that drive

@@ -235,7 +235,11 @@ public class ItemContainerGenerator
             if (_byIndex.ContainsKey(i)) continue;   // stayed in the window - keep its container + binding
             var item = _owner.Items[i];
             IUIComponent container;
-            if (_owner.IsItemItsOwnContainer(item))
+            if (!_owner.TryTake(item))
+            {
+                container = new ContentPresenter();
+            }
+            else if (_owner.IsItemItsOwnContainer(item))
             {
                 container = (IUIComponent)item;
                 _owner.PrepareContainer(container, item);
@@ -297,6 +301,12 @@ public class ItemContainerGenerator
 
     private IUIComponent ProduceContainer(object item)
     {
+        // An element that stands elsewhere keeps its place; its slot here gets an empty stand-in, never recycled.
+        if (!_owner.TryTake(item))
+        {
+            return new ContentPresenter();
+        }
+
         // The item already is its own container (e.g. a Button authored directly): host it as-is and never recycle it.
         // It is still PREPARED - a control hooking its containers (a selection to reflect, an event to subscribe) has
         // nowhere else to do it, and skipping the call left everything an author wrote in markup silently inert.

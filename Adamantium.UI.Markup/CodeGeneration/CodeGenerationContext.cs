@@ -341,7 +341,8 @@ public class CodeGenerationContext
                         TextGenerator.WriteLine(
                             $"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({attachedTarget}, {templateName});");
                     }
-                    else if (CurrentTemplate != null && typeInfo != null && typeInfo.ImplementsInterface("IAdamantiumComponent"))
+                    else if (CurrentTemplate != null && typeInfo != null && typeInfo.ImplementsInterface("IAdamantiumComponent")
+                             && HasAdamantiumProperty(typeInfo, propRef.Name))
                     {
                         var target = isRoot ? "this" : CurrentParent;
                         TextGenerator.WriteLine($"{target}.SetValue(\"{propRef.Name}\", {templateName}, global::Adamantium.UI.Core.ValuePriority.Template);");
@@ -374,10 +375,11 @@ public class CodeGenerationContext
                                 TextGenerator.WriteLine(
                                     $"{symbolName} = new {Metadata.DefaultTypeContainer.ResourceReference.QualifiedName}(\"{key}\");");
                             }
-                            else if (typeInfo != null && !typeInfo.ImplementsInterface("IAdamantiumComponent"))
+                            else if (typeInfo != null && !propRef.IsAttachedProperty
+                                     && (!typeInfo.ImplementsInterface("IAdamantiumComponent") || !HasAdamantiumProperty(typeInfo, propRef.Name)))
                             {
-                                // A plain markup object (a template selector, a converter): no property store to defer
-                                // into and no place in the tree, so resolve the key now and assign the CLR property.
+                                // A plain markup object (a template selector, a converter), or a plain CLR property of a
+                                // component: no property store to defer into, so resolve the key now and assign it.
                                 var target = isRoot ? "this" : CurrentParent;
                                 TextGenerator.WriteLine(
                                     $"{target}.{propRef.Name} = ({resolvedType.QualifiedName})" +
@@ -386,13 +388,14 @@ public class CodeGenerationContext
                             else
                             {
                                 // A direct property: deferred via ResourceResolver.SetDeferred, at Template priority inside
-                                // a ControlTemplate (so triggers can override) and Local otherwise, like a literal.
+                                // a ControlTemplate (so triggers can override) and Local otherwise, like a literal. An
+                                // attached one is named with its owner, the only way the element can find it.
                                 var target = isRoot ? "this" : CurrentParent;
                                 var deferredPriority = CurrentTemplate != null
                                     ? "global::Adamantium.UI.Core.ValuePriority.Template"
                                     : "global::Adamantium.UI.Core.ValuePriority.Local";
                                 TextGenerator.WriteLine(
-                                    $"{Metadata.DefaultTypeContainer.ResourceResolver.QualifiedName}.SetDeferred({target}, \"{propRef.Name}\", \"{key}\", {deferredPriority});");
+                                    $"{Metadata.DefaultTypeContainer.ResourceResolver.QualifiedName}.SetDeferred({target}, \"{PropertyPath(propRef)}\", \"{key}\", {deferredPriority});");
                             }
 
                             break;
@@ -400,12 +403,17 @@ public class CodeGenerationContext
                         case "ThemeResource":
                         {
                             // {ThemeResource Key} -> a live binding to the active theme's property. As a Setter value
-                            // it's stored as the marker (Setter.Apply -> SetBinding); as a normal property it's bound now.
+                            // it's stored as the marker (Setter.Apply -> SetBinding), in any file - a style written in a
+                            // view too; as a normal property it's bound now.
                             var key = extension.Arguments[0].Value.GetTextValue();
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 TextGenerator.WriteLine(
                                     $"{symbolName} = new {Metadata.DefaultTypeContainer.ThemeResource.QualifiedName}(\"{key}\");");
+                            }
+                            else if (IsPlainProperty(typeInfo, propRef))
+                            {
+                                ReportLiveResourceOnPlainProperty(diagnostics, "ThemeResource", key, typeInfo, propRef);
                             }
                             else
                             {
@@ -413,7 +421,7 @@ public class CodeGenerationContext
                                 TextGenerator.WriteLine(
                                     $"var {trVar} = new {Metadata.DefaultTypeContainer.ThemeResource.QualifiedName}(\"{key}\");");
                                 var trTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{trVar}.Apply({trTarget}, \"{propRef.Name}\");");
+                                TextGenerator.WriteLine($"{trVar}.Apply({trTarget}, \"{PropertyPath(propRef)}\");");
                             }
 
                             break;
@@ -422,12 +430,17 @@ public class CodeGenerationContext
                         {
                             // {ObservableResource Key} -> a LIVE, tree-scoped keyed-resource reference (re-resolves on a
                             // theme swap / dictionary load-unload). As a Setter/trigger value it's stored as the marker
-                            // (Setter.Apply / the trigger activator call Apply); as a normal property it's connected now.
+                            // (Setter.Apply / the trigger activator call Apply), in any file; as a normal property it's
+                            // connected now.
                             var key = extension.Arguments[0].Value.GetTextValue();
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 TextGenerator.WriteLine(
                                     $"{symbolName} = new {Metadata.DefaultTypeContainer.ObservableResource.QualifiedName}(\"{key}\");");
+                            }
+                            else if (IsPlainProperty(typeInfo, propRef))
+                            {
+                                ReportLiveResourceOnPlainProperty(diagnostics, "ObservableResource", key, typeInfo, propRef);
                             }
                             else
                             {
@@ -435,7 +448,7 @@ public class CodeGenerationContext
                                 TextGenerator.WriteLine(
                                     $"var {orVar} = new {Metadata.DefaultTypeContainer.ObservableResource.QualifiedName}(\"{key}\");");
                                 var orTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{orVar}.Apply({orTarget}, \"{propRef.Name}\");");
+                                TextGenerator.WriteLine($"{orVar}.Apply({orTarget}, \"{PropertyPath(propRef)}\");");
                             }
 
                             break;
@@ -688,7 +701,8 @@ public class CodeGenerationContext
                 {
                     // Template parts get their literals at Template priority so triggers can override them; plain CLR
                     // objects in triggers keep ordinary assignments.
-                    if (CurrentTemplate != null && typeInfo.ImplementsInterface("IAdamantiumComponent"))
+                    if (CurrentTemplate != null && typeInfo.ImplementsInterface("IAdamantiumComponent")
+                        && HasAdamantiumProperty(typeInfo, propRef.Name))
                     {
                         var target = isRoot ? "this" : CurrentParent;
                         var expr = BuildValueExpression(prop.GetTextValue(), resolvedType);
@@ -733,7 +747,8 @@ public class CodeGenerationContext
                         // Same rule as the text-node branch above: a PART's property set inside a ControlTemplate lands at
                         // TEMPLATE priority, not the CLR setter's LOCAL - so a theme trigger/style can override it. Nested
                         // object values (e.g. <X.Template><ControlTemplate/>) used to skip this and go to Local.
-                        if (CurrentTemplate != null && !propRef.IsAttachedProperty && typeInfo.ImplementsInterface("IAdamantiumComponent"))
+                        if (CurrentTemplate != null && !propRef.IsAttachedProperty && typeInfo.ImplementsInterface("IAdamantiumComponent")
+                            && HasAdamantiumProperty(typeInfo, propRef.Name))
                         {
                             var target = isRoot ? "this" : CurrentParent;
                             TextGenerator.WriteLine($"{target}.SetValue(\"{propRef.Name}\", {nestedName}, global::Adamantium.UI.Core.ValuePriority.Template);");
@@ -1265,6 +1280,31 @@ public class CodeGenerationContext
                        or "Adamantium.UI.Core.Data.MultiBinding"
                        or "Adamantium.UI.Core.Data.BindingBase";
 
+    private static string PropertyPath(AumlAstPropertyReference propRef) =>
+        propRef.IsAttachedProperty ? $"{propRef.OwnerType.Name}.{propRef.Name}" : propRef.Name;
+
+    private static bool IsPlainProperty(IResolvedType type, AumlAstPropertyReference propRef) =>
+        type != null && !propRef.IsAttachedProperty && !HasAdamantiumProperty(type, propRef.Name);
+
+    private void ReportLiveResourceOnPlainProperty(IDiagnosticSink diagnostics, string extension, string key,
+        IResolvedType type, AumlAstPropertyReference propRef) =>
+        diagnostics.ReportError(Metadata.ClassName,
+            $"{{{extension} {key}}} cannot follow {type.Name}.{propRef.Name}: it is a plain property with nothing to " +
+            $"keep live. {{ResourceReference {key}}} sets it once.");
+
+    private static bool HasAdamantiumProperty(IResolvedType type, string property)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            if (current.GetMemberByName(property + "Property") is { IsStatic: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Emits the code that constructs a Binding/MultiBinding and returns the variable holding it. Recurses for nested
     // multi-bindings, so multibinding-inside-multibinding generates correctly.
     private string EmitBinding(IAumlAstNode node, IDiagnosticSink diagnostics, bool isResource) => node switch
@@ -1283,10 +1323,19 @@ public class CodeGenerationContext
     // plain value.
     private string EmitLocalizedBinding(AumlAstLocalizedStringNode localized, IDiagnosticSink diagnostics, bool isResource)
     {
-        var table = Qualified(localized.TableFullName);
         var name = GenerateNextElementName("localized");
-        var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
-        TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+        if (localized.TableSource != null)
+        {
+            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}(null, null);");
+            TextGenerator.WriteLine($"{name}.TableSource = {Followed(localized.TableSource)};");
+        }
+        else
+        {
+            var table = Qualified(localized.TableFullName);
+            var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
+            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+        }
+
         if (localized.KeySource != null)
         {
             TextGenerator.WriteLine($"{name}.KeySource = {Followed(localized.KeySource)};");

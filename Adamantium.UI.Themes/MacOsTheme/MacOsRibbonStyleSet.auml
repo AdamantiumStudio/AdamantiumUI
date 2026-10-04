@@ -81,18 +81,40 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             ClipToBounds="True">
                         <Grid RowDefinitions="Auto,Auto,Auto">
-                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
                                 <!-- "File" stands at the HEAD of the strip. Named because key-tip mode gathers its
                                      first level from named places, not from a common ancestor. -->
                                 <ContentPresenter x:Name="PART_ApplicationMenuHost" Grid.Column="0"
                                         Content="{TemplateBinding ApplicationMenu}"/>
 
-                                <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Column="1"/>
+                                <!-- The application's own commands next to "File", on the tabs' baseline. -->
+                                <ContentPresenter x:Name="PART_StripContentHost" Grid.Column="1"
+                                        Content="{TemplateBinding StripContent}"
+                                        VerticalAlignment="Bottom"
+                                        Margin="2 0 6 2"/>
 
-                                <ToggleButton x:Name="PART_MinimizeButton" Grid.Column="2"
+                                <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Column="2"/>
+
+                                <ToggleButton x:Name="PART_MinimizeButton" Grid.Column="3"
                                         Classes="RibbonMinimizeButton"
                                         IsChecked="{TemplateBinding IsMinimized}"
                                         ToolTip="{Localize RibbonStrings.CollapseRibbon}"/>
+
+                                <!-- The drawer opens out of the strip in place of the band, the ribbon's width, over
+                                     whatever lies under it - and never over the strip: it takes the room below it. -->
+                                <Popup x:Name="PART_Drawer"
+                                       Placement="Bottom"
+                                       PlacementAlignment="Start"
+                                       StaysBesideTarget="True"
+                                       KeepOpen="False"
+                                       IsOpen="{TemplateBinding IsDrawerOpen}">
+                                    <Border Width="{TemplateBinding ActualWidth}"
+                                            Background="{ResourceReference FlyoutSurfaceFill}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="0 1 0 1">
+                                        <ContentPresenter Content="{TemplateBinding Drawer}"/>
+                                    </Border>
+                                </Popup>
                             </Grid>
 
                             <!-- Holds the SELECTED TAB ITSELF, which presents its own groups. Minimizing MOVES that
@@ -1290,7 +1312,8 @@
                         </RibbonDropDownButton.ContextMenu>
                         <RibbonDropDownButton.DropDownMenu>
                             <ContextMenu ItemsSource="{Binding DropDownItems}"
-                                    ItemTemplate="{Binding DropDownItemTemplate}"/>
+                                    ItemTemplate="{Binding DropDownItemTemplate}"
+                                    ItemContainerStyle="{Binding DropDownItemContainerStyle}"/>
                         </RibbonDropDownButton.DropDownMenu>
                     </RibbonDropDownButton>
                 </DataTemplate>
@@ -1330,7 +1353,8 @@
                         </RibbonSplitButton.ContextMenu>
                         <RibbonSplitButton.DropDownMenu>
                             <ContextMenu ItemsSource="{Binding DropDownItems}"
-                                    ItemTemplate="{Binding DropDownItemTemplate}"/>
+                                    ItemTemplate="{Binding DropDownItemTemplate}"
+                                    ItemContainerStyle="{Binding DropDownItemContainerStyle}"/>
                         </RibbonSplitButton.DropDownMenu>
                     </RibbonSplitButton>
                 </DataTemplate>
@@ -1490,21 +1514,27 @@
                                 ItemsSource="{TemplateBinding OverflowItems}">
                             <ContextMenu.ItemTemplate>
                                 <DataTemplate>
-                                    <MenuItem Header="{Binding OverflowLabel}"
-                                            Command="{Binding Command}"
-                                            CommandParameter="{Binding CommandParameter}">
-                                        <MenuItem.Icon>
+                                    <TextBlock Text="{Binding OverflowLabel}"/>
+                                </DataTemplate>
+                            </ContextMenu.ItemTemplate>
+                            <ContextMenu.ItemContainerStyle>
+                                <Style Selector="MenuItem">
+                                    <Setter Property="Command" Value="{Binding Command}"/>
+                                    <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                                    <Setter Property="Icon">
+                                        <Setter.Value>
                                             <!-- The ROW's foreground: a popup is a detached subtree, so {Ancestor}
                                                  cannot reach the bar from here. -->
-                                            <Path Data="{Binding Icon}"
+                                            <Path x:Shared="False"
+                                                    Data="{Binding Icon}"
                                                     Stroke="{Ancestor MenuItem, Foreground}"
                                                     StrokeThickness="1"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                </DataTemplate>
-                            </ContextMenu.ItemTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ContextMenu.ItemContainerStyle>
                         </ContextMenu>
                     </Grid>
                 </ControlTemplate>

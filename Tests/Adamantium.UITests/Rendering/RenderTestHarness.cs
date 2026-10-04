@@ -88,6 +88,7 @@ internal sealed class FakeRenderUnit : IRenderUnit
     public IUIComponent Component => _command.Component;
     public RenderData RenderData => _command.RenderData;
     public Type PayloadType => _command.Payload.GetType();
+    public object Payload => _command.Payload;
 
     public float EffectiveOpacity { get; private set; } = 1f;
     public void SetEffectiveOpacity(float opacity) => EffectiveOpacity = opacity;
@@ -103,7 +104,13 @@ internal sealed class FakeRenderUnit : IRenderUnit
     public int DisposeCount { get; private set; }
     public int DeferDisposeCount { get; private set; }
 
-    public void Update(Matrix4x4F transform, Matrix4x4F projection, double renderScale) => UpdateCount++;
+    public Matrix4x4F LastTransform { get; private set; }
+
+    public void Update(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
+    {
+        UpdateCount++;
+        LastTransform = transform;
+    }
     public bool NeedsPreRender => false;
 
     public void PreRender() => PreRenderCount++;

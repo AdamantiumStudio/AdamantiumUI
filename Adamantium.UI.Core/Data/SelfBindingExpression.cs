@@ -8,7 +8,6 @@ namespace Adamantium.UI.Core.Data;
 public class SelfBindingExpression : BindingExpressionBase
 {
     private readonly Self _def;
-    internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
     private BindingExpression _path;
     private bool _connected;
 
@@ -30,7 +29,7 @@ public class SelfBindingExpression : BindingExpressionBase
             return;
         }
 
-        _path ??= new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
+        _path ??= WritingHere(new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
         {
             Source = Target,
             Mode = _def.Mode,
@@ -38,7 +37,7 @@ public class SelfBindingExpression : BindingExpressionBase
             ConverterParameter = _def.ConverterParameter,
             FallbackValue = _def.FallbackValue,
             TargetNullValue = _def.TargetNullValue
-        }) { Priority = Priority };
+        }));
         _path.EstablishConnection();
         _connected = true;
         Status = _path.Status;

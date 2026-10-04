@@ -306,6 +306,104 @@ public class LocalizeMarkupTests
         });
     }
 
+    // The words of a thing that brings its own table - a module loaded from a file: the table is read from a binding too.
+    [Test]
+    public void ATableReadFromABinding()
+    {
+        var project = Project("""<TextBlock Text="{Localize Table={Binding Phrases}, Key={Binding Name}}"/>""");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors, Is.Empty, AumlCodegenHarness.Errors(project.Errors));
+            Assert.That(project.Source, Does.Contain("new global::Adamantium.UI.Core.Localization.Localize(null, null)"));
+            Assert.That(project.Source, Does.Contain(".TableSource = binding"));
+            Assert.That(project.Source, Does.Contain(".KeySource = binding"));
+        });
+    }
+
+    [TestCase("{Localize Strings, Table={Binding Phrases}, Key={Binding Name}}", "not both", TestName = "A table named and read")]
+    [TestCase("{Localize Table={Binding Phrases}, Key=Close}", "reads both the table and the key from a binding",
+        TestName = "A read table with a key written out")]
+    [TestCase("{Localize Table=Strings, Key={Binding Name}}", "reads both the table and the key from a binding",
+        TestName = "A table written where a binding belongs")]
+    public void AReadTableWrittenWrong_FailsTheBuild(string localize, string message)
+    {
+        var project = Project($"""<TextBlock Text="{localize}"/>""");
+
+        Assert.That(project.Errors.Select(e => e.GetMessage()), Has.Some.Contains(message));
+    }
+
+    [Test]
+    public void ATableReadFromABinding_SaysTheKeyUntilItComes_ThenFollowsItAndTheLanguage()
+    {
+        Languages.Current = "ru";
+        var module = new Speaker { Name = "Close" };
+        var text = new TextBlock();
+        var localize = new Localize
+        {
+            TableSource = new Binding(nameof(Speaker.Phrases)) { Source = module },
+            KeySource = new Binding(nameof(Speaker.Name)) { Source = module }
+        };
+        text.SetBinding(TextBlock.TextProperty, localize);
+
+        var none = text.Text;
+        module.Phrases = DesignerTable();
+        BindingUpdateQueue.Flush();
+        var russian = text.Text;
+        Languages.Current = "en";
+        BindingUpdateQueue.Flush();
+        var english = text.Text;
+        module.Phrases = null;
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(none, Is.EqualTo("Close"), "no table yet: the key as it is");
+            Assert.That(russian, Is.EqualTo("Закрыть"));
+            Assert.That(english, Is.EqualTo("Close"));
+            Assert.That(text.Text, Is.EqualTo("Close"), "the table gone: the key again");
+        });
+    }
+
+    [Test]
+    public void TheDesigner_ReadsTheTableFromABinding()
+    {
+        var table = DesignerTable();
+        var load = AumlLoader.Load("""
+            <TextBlock xmlns="http://adamantium/ui" Text="{Localize Table={Binding Phrases}, Key={Binding Name}}"/>
+            """);
+        Assert.That(load.Root, Is.InstanceOf<TextBlock>(), string.Join(" | ", load.Diagnostics));
+        var text = (TextBlock)load.Root;
+        text.DataContext = new Speaker { Name = "Close", Phrases = table };
+        Languages.Current = "ru";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(load.Diagnostics, Is.Empty);
+            Assert.That(text.Text, Is.EqualTo("Закрыть"));
+        });
+    }
+
+    private sealed class Speaker : INotifyPropertyChanged
+    {
+        private LocalizedStrings _phrases;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public string Name { get; init; }
+
+        public LocalizedStrings Phrases
+        {
+            get => _phrases;
+            set
+            {
+                _phrases = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Phrases)));
+            }
+        }
+    }
+
     // A phrase inside a phrase: "Page 2 files of 3" where the inner one takes the form of its own number.
     [Test]
     public void APhraseAsAnArgument_IsAPhraseNotItsText()

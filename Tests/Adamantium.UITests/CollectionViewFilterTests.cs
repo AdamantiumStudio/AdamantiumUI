@@ -58,6 +58,22 @@ public class CollectionViewFilterTests
         Assert.That(log.Select(e => e.Action), Is.EqualTo(new[] { NotifyCollectionChangedAction.Reset }));
     }
 
+    /// <summary>A filter that reads something outside the item - the text of a search box - is the same predicate after
+    /// that changed, so nothing tells the view to look again. Refresh is the telling.</summary>
+    [Test]
+    public void Refresh_RunsTheSameFilterAgain()
+    {
+        var above = 2;
+        var view = new CollectionView(new[] { 1, 2, 3, 4 }) { Filter = o => (int)o > above };
+        var log = Recorded(view);
+
+        above = 3;
+        view.Refresh();
+
+        Assert.That(Items(view), Is.EqualTo(new object[] { 4 }));
+        Assert.That(log.Select(e => e.Action), Is.EqualTo(new[] { NotifyCollectionChangedAction.Reset }));
+    }
+
     /// <summary>An item added to the source that PASSES arrives as an Add at its place in the VIEW - which is not its
     /// place in the source once anything ahead of it is filtered out.</summary>
     [Test]

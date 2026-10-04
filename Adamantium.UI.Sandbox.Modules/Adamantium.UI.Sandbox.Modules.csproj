@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- What a module of the sandbox's editor shell is, shared by the shell and every module: the shell loads a module's
+         assembly beside it, and the module's EditorModule must be the very type the shell knows. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Platforms>AnyCPU</Platforms>
+        <Configurations>Debug;Release</Configurations>
+        <LangVersion>latest</LangVersion>
+        <OutputType>Library</OutputType>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+    </ItemGroup>
+
+</Project>

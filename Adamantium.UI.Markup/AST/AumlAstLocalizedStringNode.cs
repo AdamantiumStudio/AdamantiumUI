@@ -8,18 +8,20 @@ namespace Adamantium.UI.Markup.AST;
 public class AumlAstLocalizedStringNode : AumlAstNode, IAumlAstValueNode
 {
     public AumlAstLocalizedStringNode(IAumlLineInfo info, string tableFullName, string key,
-        IReadOnlyList<IAumlAstMarkupExtensionArgument> arguments, IAumlAstValueNode keySource = null)
+        IReadOnlyList<IAumlAstMarkupExtensionArgument> arguments, IAumlAstValueNode keySource = null,
+        IAumlAstValueNode tableSource = null)
         : base(info)
     {
         TableFullName = tableFullName;
         Key = key;
         Arguments = arguments;
         KeySource = keySource;
+        TableSource = tableSource;
     }
 
     public IAumlAstTypeReference TypeReference { get; set; }
 
-    /// <summary>The table's full CLR name.</summary>
+    /// <summary>The table's full CLR name. Null when the table is read from <see cref="TableSource"/>.</summary>
     public string TableFullName { get; }
 
     /// <summary>The string's key: a property of the table, or a method when the string has placeholders. Null when the
@@ -30,9 +32,13 @@ public class AumlAstLocalizedStringNode : AumlAstNode, IAumlAstValueNode
     /// written out.</summary>
     public IAumlAstValueNode KeySource { get; }
 
+    /// <summary>The binding the table is read from, <c>{Localize Table={Binding Phrases}, Key={Binding Name}}</c>; null
+    /// for a table named.</summary>
+    public IAumlAstValueNode TableSource { get; }
+
     /// <summary>The named arguments that fill the placeholders, in the order they were written.</summary>
     public IReadOnlyList<IAumlAstMarkupExtensionArgument> Arguments { get; }
 
     public override IAumlAstNode Clone(AumlAstObjectNode parent) =>
-        new AumlAstLocalizedStringNode(this, TableFullName, Key, Arguments, KeySource);
+        new AumlAstLocalizedStringNode(this, TableFullName, Key, Arguments, KeySource, TableSource);
 }

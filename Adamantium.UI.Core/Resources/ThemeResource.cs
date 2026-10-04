@@ -27,11 +27,21 @@ public class ThemeResource : MarkupExtension
     public string Key { get; set; }
 
     /// <summary>Connects a live <see cref="ThemeResourceExpression"/> from the theme's <see cref="Key"/> property to
-    /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and the runtime loader.</summary>
+    /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and the runtime loader.
+    /// A name the target has no property for connects nothing, and is reported through
+    /// <see cref="Diagnostics.PropertyTrace"/>.</summary>
     public ThemeResourceExpression Apply(IFundamentalUIComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Template, object token = null)
     {
-        var expression = new ThemeResourceExpression(target, target.GetProperty(propertyName), Key, priority, token);
+        var property = target.GetProperty(propertyName);
+        if (property == null)
+        {
+            Diagnostics.PropertyTrace.Log(
+                $"{target.GetType().Name} has no property {propertyName} for {{ThemeResource {Key}}}; nothing was connected.");
+            return null;
+        }
+
+        var expression = new ThemeResourceExpression(target, property, Key, priority, token);
         expression.EstablishConnection();
 
         var map = _applied.GetValue(target, static _ => new Dictionary<(string, object), ThemeResourceExpression>());

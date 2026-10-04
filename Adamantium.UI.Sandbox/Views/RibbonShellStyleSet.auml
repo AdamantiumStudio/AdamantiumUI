@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- A command of the ribbon shell drawn from the shell's catalog: given one of its commands as DataContext, it says
+         the command's words, shows its icon and runs it - or shows its state. A style set of the application, added to
+         every theme: a style written in an element's own Styles reaches only that element, not what stands inside it. -->
+    <Style Selector="RibbonButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <Style Selector="RibbonDropDownButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <!-- A style matches its own type, not the types derived from it: the split button needs its own. -->
+    <Style Selector="RibbonSplitButton.Shell">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="Command" Value="{Binding Command}"/>
+    </Style>
+
+    <Style Selector="RibbonToggleButton.ShellToggle">
+        <Setter Property="Content" Value="{Localize RibbonShellStrings, Key={Binding Name}}"/>
+        <Setter Property="Icon" Value="{Binding IconData}"/>
+        <Setter Property="IsChecked" Value="{Binding IsChecked, Mode=TwoWay}"/>
+    </Style>
+
+    <!-- A command of a module's own tab, given the module as DataContext: it runs the module's Use command, which tells
+         the shell what was done. The module's commands are not the shell's, so the quick-access bar is not offered
+         them. -->
+    <Style Selector="RibbonButton.ModuleTool">
+        <Setter Property="Ribbon.CanAddToQuickAccess" Value="False"/>
+        <Setter Property="Command" Value="{Binding UseCommand}"/>
+        <Setter Property="CommandParameter" Value="ModuleToolUsed"/>
+    </Style>
+
+    <!-- Where a module stands, given the module as DataContext: a pill in the color of its state - the words and the rim
+         in that color, the fill a wash of it. -->
+    <Style Selector="ContentControl.StatePill">
+        <Setter Property="Foreground" Value="{ResourceReference TextFillColorSecondary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid Height="20">
+                        <Border CornerRadius="10"
+                                Opacity="0.15"
+                                Background="{TemplateBinding Foreground}"/>
+                        <Border CornerRadius="10"
+                                Opacity="0.5"
+                                BorderThickness="1"
+                                BorderBrush="{TemplateBinding Foreground}"/>
+                        <ContentPresenter Margin="8 0"
+                                          VerticalAlignment="Center"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          Content="{TemplateBinding Content}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <DataTrigger Binding="{Binding State}" Value="InDocument">
+            <Setter Property="Foreground" Value="{ResourceReference SystemFillColorSuccess}"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="Detached">
+            <Setter Property="Foreground" Value="{ResourceReference SystemFillColorCaution}"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="UpdateAvailable">
+            <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding State}" Value="Available">
+            <Setter Property="Foreground" Value="{ResourceReference TextFillColorTertiary}"/>
+        </DataTrigger>
+    </Style>
+
+    <!-- A list without a frame of its own: its rows are its chrome - the catalog's cards, its filter's segments. -->
+    <Style Selector="ListBox.Bare">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <ScrollViewer x:Name="PART_ScrollHost"
+                                  CanContentScroll="True"
+                                  HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                                  VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
+                        <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- An action that takes something away, in the color of its consequence: outlined in caution for what can be
+         undone, plain words in critical for what goes for good. -->
+    <Style Selector="Button.Caution">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference SystemFillColorCaution}"/>
+        <Setter Property="Foreground" Value="{ResourceReference SystemFillColorCaution}"/>
+    </Style>
+
+    <Style Selector="Button.Critical">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ResourceReference SystemFillColorCritical}"/>
+    </Style>
+
+</StyleSet>

@@ -24,12 +24,20 @@ public class Setter : ISetter, IEquatable<Setter>
 
     public int StyleBand { get; set; }
 
+    /// <summary>Gives <paramref name="component"/> this setter's value as <paramref name="style"/>'s contribution. A
+    /// component without the property is passed over: a style matched by class reaches elements of any type.</summary>
     public void Apply(IFundamentalUIComponent component, Style style, ITheme theme)
     {
+        var property = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
+        if (property == null)
+        {
+            return;
+        }
+
         switch (Value)
         {
             case BindingBase binding:
-                component.SetBinding(Property, (BindingBase)binding.Clone());
+                Connect(((BindingBase)binding.Clone()).CreateExpression(component, property), style);
                 break;
             case ResourceReference resourceReference:
                 ApplyResourceReference(component, style, theme, resourceReference);
@@ -39,40 +47,40 @@ public class Setter : ISetter, IEquatable<Setter>
             // few frames both are attached - share one slot, and whichever leaves last tears down the connection the
             // other established.
             case ThemeResource themeResource:
-                themeResource.Apply(component, Property, SlotFor(component, style), style);
+                themeResource.Apply(component, Property, SlotFor(property, style), style);
                 break;
             case ObservableResource observableResource:
-                observableResource.Apply(component, Property, SlotFor(component, style), style);
+                observableResource.Apply(component, Property, SlotFor(property, style), style);
                 break;
             case Ancestor ancestor:
-                ancestor.Apply(component, Property);
+                Connect(ancestor.CreateExpression(component, property), style);
                 break;
             case Self self:
-                self.Apply(component, Property);
+                Connect(self.CreateExpression(component, property), style);
                 break;
 
             // x:Shared="False": build this element its OWN value. Everything else in this switch hands out one object to
             // every target, which is right for a brush and wrong for anything that belongs to the element it sits on.
             case PerTargetValue perTarget:
-                component.SetStyleValue(Property, perTarget.Create(), style);
+                component.SetStyleValue(property, perTarget.Create(), style);
                 break;
             default:
-                var prop = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
-                if (prop == null)
-                    return;
-                
-                var value = TypeCastFactory.CastFromString(Value, prop.PropertyType);
-                component.SetStyleValue(prop, value, style);
+                component.SetStyleValue(property, TypeCastFactory.CastFromString(Value, property.PropertyType), style);
                 break;
         }
     }
 
-    private ValuePriority SlotFor(IFundamentalUIComponent component, Style style)
+    private static void Connect(BindingExpressionBase expression, Style style)
+    {
+        expression.OwnerStyle = style;
+        BindingEngine.RegisterOwned(expression, style);
+    }
+
+    private static ValuePriority SlotFor(AdamantiumProperty property, Style style)
     {
         if (style is not { IsTypeDefault: true }) return ValuePriority.Style;
 
-        var property = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
-        return property is { CanInherit: true } ? ValuePriority.TypeDefault : ValuePriority.Style;
+        return property.CanInherit ? ValuePriority.TypeDefault : ValuePriority.Style;
     }
 
     // Resolves tree-scoped; a Local miss before the element has ancestors is deferred to attach. Theme/Global resolve
@@ -108,22 +116,28 @@ public class Setter : ISetter, IEquatable<Setter>
         }
     }
 
+    /// <summary>Takes back what <see cref="Apply"/> gave. A component without the property was given nothing.</summary>
     public void Remove(IFundamentalUIComponent component, Style style, ITheme theme)
     {
+        var property = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
+        if (property == null)
+        {
+            return;
+        }
+
         switch (Value)
         {
-            case BindingBase binding:
-                component.RemoveBinding(Property);
-                break;
-            case ThemeResource:
-                ThemeResource.Remove(component, Property, SlotFor(component, style), style);
-                break;
-            case ObservableResource:
-                ObservableResource.Remove(component, Property, SlotFor(component, style), style);
-                break;
+            case BindingBase:
             case Ancestor:
             case Self:
-                component.RemoveBinding(Property);   // .Apply registered the expression in BindingEngine, keyed by property
+                BindingEngine.ClearOwned(component, property, style);
+                component.RemoveStyleValue(Property, style);
+                break;
+            case ThemeResource:
+                ThemeResource.Remove(component, Property, SlotFor(property, style), style);
+                break;
+            case ObservableResource:
+                ObservableResource.Remove(component, Property, SlotFor(property, style), style);
                 break;
             default:
                 component.RemoveStyleValue(Property, style);

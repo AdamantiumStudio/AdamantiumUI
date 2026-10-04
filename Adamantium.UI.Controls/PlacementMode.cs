@@ -6,16 +6,16 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public enum PlacementMode
 {
-    /// <summary>Below the target, left edges aligned.</summary>
+    /// <summary>Below the target, lined up by <see cref="Popup.PlacementAlignment"/>.</summary>
     Bottom,
 
-    /// <summary>Above the target, left edges aligned.</summary>
+    /// <summary>Above the target, lined up by <see cref="Popup.PlacementAlignment"/>.</summary>
     Top,
 
-    /// <summary>To the left of the target, top edges aligned.</summary>
+    /// <summary>To the left of the target, lined up by <see cref="Popup.PlacementAlignment"/>.</summary>
     Left,
 
-    /// <summary>To the right of the target, top edges aligned.</summary>
+    /// <summary>To the right of the target, lined up by <see cref="Popup.PlacementAlignment"/>.</summary>
     Right,
 
     /// <summary>Centered over the target.</summary>

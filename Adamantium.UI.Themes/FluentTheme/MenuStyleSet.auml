@@ -32,14 +32,19 @@
                             <!-- Fixed icon gutter (column 0): always reserved so every row's label aligns whether or not it
                                  has an icon, and a checkmark/glyph has a consistent home - like a real menu. -->
                             <Grid ColumnDefinitions="28,*,Auto,Auto">
-                                <ContentPresenter Grid.Column="0" Content="{TemplateBinding Icon}"
+                                <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Path x:Name="CheckGlyph" Grid.Column="0"
+                                        Data="M0,5 L4,9 L12,1"
+                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Visibility="Collapsed"/>
                                 <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
                                         Content="{TemplateBinding Header}"
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
-                                        HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorSecondary}"
                                         FontSize="{ResourceReference FontSizeCaption}" VerticalAlignment="Center" Margin="24 0 0 0"/>
@@ -53,8 +58,11 @@
                             </Grid>
                         </Border>
                         <!-- No PlacementTarget: the popup falls back to its VisualParent (this template's root Grid, which
-                             overlaps the row), so Placement=Right opens the submenu just past the row's right edge. -->
-                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" FlipToFit="True"
+                             overlaps the row), so Placement=Right opens the submenu just past the row's right edge. Its top
+                             lines up with the row's, raised by the card's border and padding so the first row sits level
+                             with this one. -->
+                        <Popup x:Name="PART_SubmenuPopup" Placement="Right" PlacementAlignment="Start" FlipToFit="True"
+                                VerticalOffset="-5"
                                 IsOpen="{TemplateBinding IsSubmenuOpen}">
                             <!-- The submenu's card + items host are built LAZILY on first open (ChildTemplate), not eagerly in
                                  every MenuItem's template - so a leaf that never opens a submenu never pays to build+theme it. -->
@@ -84,6 +92,12 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
+        </PropertyTrigger>
+        <!-- A checked row shows the check mark in the icon gutter, in place of its icon. -->
+        <PropertyTrigger Property="IsChecked" Value="true">
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <!-- Parent rows show the submenu chevron (leaf rows keep it hidden and show the gesture hint instead). -->
         <PropertyTrigger Property="HasItems" Value="true">
@@ -196,9 +210,13 @@
                                  taken from the built content in code (Popup.ContentBuilt). -->
                             <Popup.ChildTemplate>
                                 <ControlTemplate TargetType="Popup">
+                                    <!-- The card is a surface of its own, so its words take the card's color: inherited
+                                         from what the menu belongs to, the caption's overflow menu wore the caption's
+                                         white on a white card. -->
                                     <Border x:Name="PART_MenuRoot"
                                             Background="{ResourceReference FlyoutSurfaceFill}"
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            Foreground="{ObservableResource TextFillColorPrimary}"
                                             BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="160">
                                         <!-- Menu taller than the window: capped to the window (MaxHeight set in code) and scrolled by
                                              the ▲/▼ hover-arrows the MenuScrollViewer grows - no scrollbar. A short menu is content-sized. -->

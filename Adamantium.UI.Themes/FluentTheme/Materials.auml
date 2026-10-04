@@ -5,13 +5,14 @@
          Acrylic only for transient surfaces, since it captures every frame; solid palette keys remain as fallback.
          Tints come from the palette via {ObservableResource}, so variant switches reach these brushes. -->
 
-    <!-- The flyout surface (menus, drop-downs, ribbon flyout, color picker popup): tint 0.78 keeps text legible over
-         anything; blur is the outer Gaussian tap reach over a 4x-downscaled copy. -->
+    <!-- The flyout surface (menus, drop-downs, ribbon flyout, color picker popup): what is behind shows through as soft
+         light and text stays legible over it. The blur is the outer Gaussian tap reach over a 4x-downscaled copy, so 7
+         reaches about 28 pixels - as far as Windows' own acrylic; at 28 everything behind averaged into one flat gray. -->
     <MaterialBrush x:Key="FlyoutSurfaceFill"
                    Material="Acrylic"
                    TintColor="{ObservableResource AcrylicFillColorDefault}"
-                   TintOpacity="0.78"
-                   BlurAmount="28"
+                   TintOpacity="0.6"
+                   BlurAmount="7"
                    NoiseAmount="0.03"/>
 
     <!-- The same material, thinner, for surfaces that sit CLOSE to what they cover and want to be felt through:
@@ -19,8 +20,8 @@
     <MaterialBrush x:Key="TooltipSurfaceFill"
                    Material="Acrylic"
                    TintColor="{ObservableResource AcrylicFillColorDefault}"
-                   TintOpacity="0.70"
-                   BlurAmount="20"
+                   TintOpacity="0.54"
+                   BlurAmount="5"
                    NoiseAmount="0.03"/>
 
 </ResourceDictionary>

@@ -76,8 +76,7 @@ public class BindingExpression : BindingExpressionBase
    private List<(object Owner, string Segment)> _passed;
    private bool _reconnectPending;
    private IUIComponent _awaitingAttach;
-
-   internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
+   private IFundamentalUIComponent _contextOwner;
 
    internal static PropertyInfo FindProperty(Type type, string name)
    {
@@ -269,8 +268,42 @@ public class BindingExpression : BindingExpressionBase
       UnwatchPassed();
       _passed?.Clear();
       StopAwaitingAttach();
+      WatchContextOwner(null);
       ReleaseSource();
    }
+
+   private object ContextRoot()
+   {
+      var element = DataContextSource;
+      if (element == null || !ReferenceEquals(element, Target) || TargetProperty != FundamentalUIComponent.DataContextProperty)
+      {
+         return element?.DataContext;
+      }
+
+      WatchContextOwner(NearestElement(element.InheritanceParent));
+      return _contextOwner?.DataContext;
+   }
+
+   private void WatchContextOwner(IFundamentalUIComponent owner)
+   {
+      if (ReferenceEquals(owner, _contextOwner))
+      {
+         return;
+      }
+
+      if (_contextOwner != null)
+      {
+         _contextOwner.DataContextChanged -= OnContextOwnerChanged;
+      }
+
+      _contextOwner = owner;
+      if (_contextOwner != null)
+      {
+         _contextOwner.DataContextChanged += OnContextOwnerChanged;
+      }
+   }
+
+   private void OnContextOwnerChanged(object sender, AdamantiumPropertyChangedEventArgs e) => EstablishConnection();
 
    internal override void Retry()
    {
@@ -398,7 +431,7 @@ public class BindingExpression : BindingExpressionBase
       Status = BindingStatus.Active;
 
       var named = Binding.Source == null && !string.IsNullOrEmpty(Binding.ElementName);
-      var root = Binding.Source ?? (named ? ResolveElementName() : DataContextSource?.DataContext);
+      var root = Binding.Source ?? (named ? ResolveElementName() : ContextRoot());
       var path = Binding.Path?.Path;
       if (root == null)
       {
@@ -759,7 +792,7 @@ public class BindingExpression : BindingExpressionBase
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
       if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced, FormatCulture)) return;
-      Target.SetValue(TargetProperty, coerced, Priority);
+      WriteTarget(coerced);
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
 
@@ -878,7 +911,7 @@ public class BindingExpression : BindingExpressionBase
          }
          else
          {
-            Target.SetValue(TargetProperty, targetValue, Priority);
+            WriteTarget(targetValue);
          }
       }
       finally

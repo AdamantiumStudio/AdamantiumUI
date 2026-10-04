@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="Ledge" Text="ROADS"/>
+    <Phrase Key="Roads" Text="Roads"/>
+    <Phrase Key="RoadsInfo" Text="Roads, bridges and crossings"/>
+    <Phrase Key="RoadsAdds" Text="Tab: Roads"/>
+    <Phrase Key="RoadsDescription" Text="Roads laid over the terrain, with the bridges and crossings where they meet water and rail."/>
+    <Phrase Key="CoreOnly" Text="the core only"/>
+    <Phrase Key="Build" Text="Build"/>
+    <Phrase Key="LayRoad" Text="Lay a road"/>
+    <Phrase Key="Bridge" Text="Bridge"/>
+    <Phrase Key="Crossing" Text="Crossing"/>
+</Language>

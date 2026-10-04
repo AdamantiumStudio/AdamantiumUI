@@ -13,6 +13,8 @@ public static class BindingEngine
     // Weak element keys -> the element's live bindings by target property. Weak so the registry never pins an element.
     private static readonly ConditionalWeakTable<IAdamantiumComponent, Dictionary<AdamantiumProperty, BindingExpressionBase>> _bindings = new();
 
+    private static readonly ConditionalWeakTable<IAdamantiumComponent, Dictionary<(AdamantiumProperty Property, object Owner), BindingExpressionBase>> _owned = new();
+
     public static BindingExpressionBase SetBinding(IAdamantiumComponent target, AdamantiumProperty targetProperty,
         BindingBase bindingBase)
     {
@@ -53,25 +55,54 @@ public static class BindingEngine
         expression.EstablishConnection();
     }
 
-    /// <summary>The live binding on a target property, or null.</summary>
+    internal static void RegisterOwned(BindingExpressionBase expression, object owner)
+    {
+        var map = _owned.GetValue(expression.Target, static _ => new Dictionary<(AdamantiumProperty, object), BindingExpressionBase>());
+        var key = (expression.TargetProperty, owner);
+        if (map.TryGetValue(key, out var existing) && !ReferenceEquals(existing, expression)) existing.CloseConnection();
+        map[key] = expression;
+        expression.EstablishConnection();
+    }
+
+    internal static void ClearOwned(IAdamantiumComponent target, AdamantiumProperty property, object owner)
+    {
+        if (_owned.TryGetValue(target, out var map) && map.Remove((property, owner), out var e)) e.CloseConnection();
+    }
+
+    internal static bool IsFedByStyle(IAdamantiumComponent target, AdamantiumProperty property)
+    {
+        if (!_owned.TryGetValue(target, out var map)) return false;
+
+        foreach (var pair in map)
+        {
+            if (pair.Key.Property == property && pair.Value.OwnerStyle != null) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>The element's own live binding on a target property, or null.</summary>
     public static BindingExpressionBase GetBindingExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty)
         => _bindings.TryGetValue(target, out var map) && map.TryGetValue(targetProperty, out var e) ? e : null;
 
-    /// <summary>Every live binding on an element.</summary>
+    /// <summary>Every live binding on an element, its styles' and triggers' included.</summary>
     public static IReadOnlyCollection<BindingExpressionBase> GetBindings(IAdamantiumComponent target)
-        => _bindings.TryGetValue(target, out var map) ? map.Values.ToArray() : [];
+        => [.. Own(target), .. Owned(target)];
 
     /// <summary>Has this element anything to re-resolve at all? Asked by the inheritance walk before it pays the full
     /// write for a `DataContext` change: three quarters of the elements a container rebind reaches have no binding on
     /// them, and telling them costs slots, priorities and a notification for nothing.</summary>
     public static bool HasBindings(IAdamantiumComponent target)
-        => _bindings.TryGetValue(target, out var map) && map.Count > 0;
+        => (_bindings.TryGetValue(target, out var map) && map.Count > 0)
+           || (_owned.TryGetValue(target, out var owned) && owned.Count > 0);
 
     /// <summary>Re-resolves and re-applies every binding on an element - e.g. after its DataContext changed.</summary>
     public static void RefreshBindings(IAdamantiumComponent target)
     {
         if (_bindings.TryGetValue(target, out var map))
             foreach (var e in map.Values) e.EstablishConnection();
+        if (_owned.TryGetValue(target, out var owned))
+            foreach (var e in owned.Values) e.EstablishConnection();
     }
 
     public static void ClearBinding(IAdamantiumComponent target, AdamantiumProperty targetProperty)
@@ -81,9 +112,10 @@ public static class BindingEngine
 
     public static void ClearBindings(IAdamantiumComponent target)
     {
-        if (!_bindings.TryGetValue(target, out var map)) return;
-        foreach (var e in map.Values) e.CloseConnection();
-        map.Clear();
+        foreach (var e in GetBindings(target)) e.CloseConnection();
+
+        if (_bindings.TryGetValue(target, out var map)) map.Clear();
+        if (_owned.TryGetValue(target, out var owned)) owned.Clear();
     }
 
     /// <summary>Closes every binding's source subscription but keeps it registered, for parked containers. The caller must
@@ -92,5 +124,13 @@ public static class BindingEngine
     {
         if (_bindings.TryGetValue(target, out var map))
             foreach (var e in map.Values) e.CloseConnection();
+        if (_owned.TryGetValue(target, out var owned))
+            foreach (var e in owned.Values) e.CloseConnection();
     }
+
+    private static IEnumerable<BindingExpressionBase> Own(IAdamantiumComponent target)
+        => _bindings.TryGetValue(target, out var map) ? map.Values : [];
+
+    private static IEnumerable<BindingExpressionBase> Owned(IAdamantiumComponent target)
+        => _owned.TryGetValue(target, out var map) ? map.Values : [];
 }

@@ -131,7 +131,9 @@ public sealed class VisualRenderer : IVisualRenderer
 
     /// <summary>UI-thread API: request a snapshot of a LIVE on-screen element. It is recorded on the loop thread and drawn on
     /// the render thread (never racing or hanging the window's render); <paramref name="onReady"/> is invoked back on the UI
-    /// thread with the resulting bitmap (or null if the element has no visible size). Wakes the loop to pick it up.</summary>
+    /// thread with the resulting bitmap (or null if the element has no visible size). Wakes the loop to pick it up. An
+    /// element in no tree - a drag ghost's template - is hosted off-screen at its arranged size, as
+    /// <see cref="RequestRender"/> does.</summary>
     public void RequestSnapshot(IUIComponent visual, Action<ImageSource> onReady)
     {
         if (visual == null || onReady == null) return;
@@ -266,6 +268,14 @@ public sealed class VisualRenderer : IVisualRenderer
                     if (c.X >= 0 && c.Y >= 0 && c.X <= win.ClientWidth && c.Y <= win.ClientHeight) { scale = r.RenderScale; break; }
                     scale = r.RenderScale;   // fallback to whatever window we have if none contains the cursor
                 }
+        }
+
+        // In no tree at all, the flat build below would draw nothing - it leaves out whatever has left the tree - so it is
+        // hosted off-screen at the size it was arranged to, as a detached render is.
+        if (!element.IsAttachedToVisualTree)
+        {
+            var hosted = BuildDetachedCache(element, size, scale);
+            return (hosted.Cache, hosted.Width, hosted.Height, scale);
         }
 
         // Flatten the subtree (parent BEFORE children = paint order: parent underneath, children on top).

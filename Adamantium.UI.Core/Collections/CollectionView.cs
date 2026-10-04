@@ -189,6 +189,10 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <summary>Filters and orders the source again - for a filter or an ordering that reads something outside the items,
+    /// such as the text of a search box. Raises a Reset.</summary>
+    public void Refresh() => Rebuild();
+
     private bool Passes(object item) => _filter == null || _filter(item);
 
     private void Rebuild()

@@ -223,18 +223,16 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 ApplyTemplateBinding(setter, element, prop, templateBinding);
                 break;
 
-            // {Ancestor}/{Self} as a part-targeting trigger value: wire a live binding at Trigger priority, torn down on
-            // exit. NOTE: unlike the per-token stack above, two triggers writing the SAME part property via a relative
-            // binding don't stack (removal clears the whole binding slot) - fine for the normal single-trigger case.
-            // Both walk the TREE to find their source, so both need a target that is in one.
+            case BindingBase binding:
+                Connect(setter, component, prop, ((BindingBase)binding.Clone()).CreateExpression(component, prop));
+                break;
+
             case Ancestor ancestor when element != null:
-                ancestor.Apply(element, setter.Property, ValuePriority.Trigger);
-                _applied[setter] = (component, () => element.RemoveBinding(setter.Property));
+                Connect(setter, component, prop, ancestor.CreateExpression(element, prop));
                 break;
 
             case Self self when element != null:
-                self.Apply(element, setter.Property, ValuePriority.Trigger);
-                _applied[setter] = (component, () => element.RemoveBinding(setter.Property));
+                Connect(setter, component, prop, self.CreateExpression(element, prop));
                 break;
 
             case PerTargetValue perTarget:
@@ -247,6 +245,18 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));
                 break;
         }
+    }
+
+    private void Connect(ISetter setter, IAdamantiumComponent component, AdamantiumProperty property,
+        BindingExpressionBase expression)
+    {
+        expression.TriggerToken = setter;
+        BindingEngine.RegisterOwned(expression, setter);
+        _applied[setter] = (component, () =>
+        {
+            BindingEngine.ClearOwned(component, property, setter);
+            component.ClearTriggerValue(property, setter);
+        });
     }
 
     // {TemplateBinding Path} inside a trigger reads Path from the templated control (the host) and pushes it onto the

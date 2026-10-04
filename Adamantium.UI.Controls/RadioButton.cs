@@ -21,8 +21,9 @@ public class RadioButton : ToggleButton
     public static readonly AdamantiumProperty GroupNameProperty = AdamantiumProperty.Register(nameof(GroupName),
         typeof(string), typeof(RadioButton), new PropertyMetadata(string.Empty, OnGroupNameChanged));
 
-    /// <summary>Buttons sharing this (non-empty) name are mutually exclusive across the app. Empty - exclusive among
-    /// the empty-group radios under the same visual parent.</summary>
+    /// <summary>Buttons sharing this (non-empty) name are mutually exclusive across the app - or, for a name written in
+    /// a control's template, across that one control. Empty - exclusive among the empty-group radios under the same
+    /// visual parent.</summary>
     public string GroupName
     {
         get => GetValue<string>(GroupNameProperty);
@@ -83,7 +84,9 @@ public class RadioButton : ToggleButton
             lock (NamedGroups) { NamedGroups.TryGetValue(GroupName, out list); }
             if (list == null) yield break;
             foreach (var weak in list.ToArray())   // snapshot: clearing a sibling mutates IsChecked, not this list
-                if (weak.TryGetTarget(out var radio) && !ReferenceEquals(radio, this)) yield return radio;
+                if (weak.TryGetTarget(out var radio) && !ReferenceEquals(radio, this)
+                    && ReferenceEquals(radio.TemplatedParent, TemplatedParent))
+                    yield return radio;
             yield break;
         }
 

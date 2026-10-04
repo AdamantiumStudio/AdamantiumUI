@@ -310,11 +310,12 @@ public class RibbonApplicationMenu : Selector
         }
     }
 
-    private void OnButtonClick(object sender, RoutedEventArgs e) => IsOpen = _button?.IsChecked == true;
+    private void OnButtonClick(object sender, RoutedEventArgs e) =>
+        SetCurrentValue(IsOpenProperty, _button?.IsChecked == true);
 
-    private void OnBackClick(object sender, RoutedEventArgs e) => IsOpen = false;
+    private void OnBackClick(object sender, RoutedEventArgs e) => SetCurrentValue(IsOpenProperty, false);
 
-    private void OnPopupClosed(object sender, EventArgs e) => IsOpen = false;
+    private void OnPopupClosed(object sender, EventArgs e) => SetCurrentValue(IsOpenProperty, false);
 
     // Moves focus into the opened backstage on the first popup-layer pass that has built its rows.
     private void MoveKeyboardInside()
@@ -352,7 +353,7 @@ public class RibbonApplicationMenu : Selector
         base.OnKeyDown(e);
         if (e.Handled || !IsOpen || e.Key != Core.Input.Key.Escape) return;
 
-        IsOpen = false;
+        SetCurrentValue(IsOpenProperty, false);
         e.Handled = true;
     }
 
@@ -377,7 +378,7 @@ public class RibbonApplicationMenu : Selector
             return;
         }
 
-        IsOpen = false;
+        SetCurrentValue(IsOpenProperty, false);
     }
 
     protected internal override bool IsItemItsOwnContainer(object item) => item is RibbonApplicationMenuItem;

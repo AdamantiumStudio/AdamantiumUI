@@ -17,6 +17,9 @@ public class DefaultAumlTransformer : IAumlTransformer
     // {Localize Table, Key={Binding Kind}}: where a key known only at run time is read from.
     private const string KeyArgument = "Key";
 
+    // {Localize Table={Binding Phrases}, Key={Binding Name}}: where a table known only at run time is read from.
+    private const string TableArgument = "Table";
+
     // Tokens of a shorthand collection: commas or spaces, but only outside a markup extension, whose own arguments are
     // separated the same way ("Auto, {Binding A, Mode=OneWay}, *").
     private static IEnumerable<string> SplitShorthand(string text)
@@ -447,8 +450,15 @@ public class DefaultAumlTransformer : IAumlTransformer
             var name = colon > 0 ? text.Substring(colon + 1) : text;
             var dot = name?.LastIndexOf('.') ?? -1;
 
-            // A table alone takes its key from a binding: {Localize CanvasStrings, Key={Binding Sort}}.
+            // A table read from a binding takes its key from one too: {Localize Table={Binding Phrases}, Key={Binding Name}}.
             var keySource = localize.Arguments.FirstOrDefault(a => a.Name == KeyArgument);
+            var tableSource = localize.Arguments.FirstOrDefault(a => a.Name == TableArgument);
+            if (tableSource != null)
+            {
+                return ResolveReadTable(localize, text, tableSource, keySource);
+            }
+
+            // A table alone takes its key from a binding: {Localize CanvasStrings, Key={Binding Sort}}.
             if (dot < 0 && !string.IsNullOrEmpty(name) && keySource != null)
             {
                 return ResolveReadKey(localize, prefix, name, keySource);
@@ -502,7 +512,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return localize;
             }
 
-            if (keySource.Value is not AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" or "MultiBinding" or "TemplateBinding" })
+            if (!IsFollowed(keySource.Value))
             {
                 diagnostics.ReportError(document.FileName,
                     $"{{Localize {table}, {KeyArgument}=...}} reads the key from a binding; a key written out is {{Localize {table}.Close}}. {localize.GetLineInfo()}");
@@ -518,6 +528,40 @@ public class DefaultAumlTransformer : IAumlTransformer
             return new AumlAstLocalizedStringNode(localize.GetLineInfo(), tableFullName, null, arguments,
                 ProcessValueNode(keySource.Value));
         }
+
+        // Neither the table nor the key is known before the application runs - a thing that brings its own words, as
+        // a module loaded from a file does - so nothing past their bindings can be checked here.
+        IAumlAstValueNode ResolveReadTable(AumlAstMarkupExtensionNode localize, string named,
+            IAumlAstMarkupExtensionArgument tableSource, IAumlAstMarkupExtensionArgument keySource)
+        {
+            if (!string.IsNullOrEmpty(named))
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{Localize}} names its table, {{Localize {named}, ...}}, or reads it from a binding, {{Localize {TableArgument}={{Binding Phrases}}, ...}}; not both. {localize.GetLineInfo()}");
+                return localize;
+            }
+
+            if (!IsFollowed(tableSource.Value) || keySource == null || !IsFollowed(keySource.Value))
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{Localize {TableArgument}=..., {KeyArgument}=...}} reads both the table and the key from a binding: {{Localize {TableArgument}={{Binding Phrases}}, {KeyArgument}={{Binding Name}}}}. {localize.GetLineInfo()}");
+                return localize;
+            }
+
+            var arguments = localize.Arguments
+                .Where(a => !string.IsNullOrEmpty(a.Name) && a.Name != KeyArgument && a.Name != TableArgument)
+                .ToList();
+            foreach (var argument in arguments)
+            {
+                argument.Value = ProcessValueNode(argument.Value);
+            }
+
+            return new AumlAstLocalizedStringNode(localize.GetLineInfo(), null, null, arguments,
+                ProcessValueNode(keySource.Value), ProcessValueNode(tableSource.Value));
+        }
+
+        static bool IsFollowed(IAumlAstValueNode value) =>
+            value is AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" or "MultiBinding" or "TemplateBinding" };
 
         void ReportNoTable(string prefix, string table, AumlAstMarkupExtensionNode localize) =>
             diagnostics.ReportError(document.FileName,

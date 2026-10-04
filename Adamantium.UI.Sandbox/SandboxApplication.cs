@@ -1,5 +1,6 @@
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls.Navigation;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Sandbox;
 
@@ -8,6 +9,12 @@ namespace Adamantium.UI.Sandbox;
 // loaded - costing ~3/4 of the frame time. Validation is a dev tool; flip it on in Program.cs when chasing a GPU bug.
 public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
 {
+    public SandboxApplication()
+    {
+        ThemeManager.AddStyleSet<Views.RibbonShellStyleSet>();
+        ResourceManager.AddSource(this, typeof(Views.ModuleIcons), ResourceScope.Global);
+    }
+
     protected override void RegisterServices(IContainerRegistry containerRegistry)
     {
         base.RegisterServices(containerRegistry);

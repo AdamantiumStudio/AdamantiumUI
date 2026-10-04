@@ -668,9 +668,16 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         SetValue(property, container.EffectiveValue, ValuePriority.Trigger);
     }
 
+    /// <summary>Records one style's contribution by property name. A name this element has no property for is passed
+    /// over: a style matched by class reaches elements of any type.</summary>
     public void SetStyleValue(string propertyName, object value, Style style)
     {
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
+        if (property == null)
+        {
+            return;
+        }
+
         SetStyleValue(property, value, style);
     }
 
@@ -706,16 +713,16 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             ? entry.EffectiveValue
             : fallback;
 
+    /// <summary>Takes one style's contribution away. A name this element has no property for had none to take.</summary>
     public void RemoveStyleValue(string propertyName, Style style)
     {
-        var previousValue = RemoveStyleEntry(propertyName, style);
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
         if (property == null)
         {
-            SetValue(propertyName, previousValue, ValuePriority.Style);
             return;
         }
 
+        var previousValue = RemoveStyleEntry(propertyName, style);
         WriteStyleValue(property, previousValue, StyleSlotFor(property, propertyName, style));
     }
 
@@ -764,16 +771,33 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     /// <summary>Sets a value WITHOUT changing its source (WPF's <c>SetCurrentValue</c>) - for user input into a
     /// possibly two-way bound property. A plain SetValue lands at Local, which outranks Binding and would MASK it
-    /// permanently. This writes into the slot the value comes from, capped at Binding.</summary>
+    /// permanently. This writes into the slot the value comes from, capped at Binding - except a slot a
+    /// <c>{TemplateBinding}</c> feeds, which keeps it: raised to Binding, the value would mask the template binding and
+    /// the templated parent could never set the property again.</summary>
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
         var basePriority = GetBaseValuePriority(property);
-        var priority = basePriority <= ValuePriority.Binding ? basePriority : ValuePriority.Binding;
+        var priority = basePriority <= ValuePriority.Binding
+                       || IsFedByTemplateBinding(property, basePriority)
+                       || IsFedByStyleBinding(property, basePriority)
+            ? basePriority
+            : ValuePriority.Binding;
         SetValue(property, value, priority);
     }
 
+    private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)
+    {
+        return basePriority == ValuePriority.Template && Data.TemplateBindingExpression.Feeds(this, property);
+    }
+
+    private bool IsFedByStyleBinding(AdamantiumProperty property, ValuePriority basePriority)
+    {
+        return basePriority is ValuePriority.Style or ValuePriority.TypeDefault && Data.BindingEngine.IsFedByStyle(this, property);
+    }
+
     /// <summary>
-    /// Sets a <see cref="AdamantiumProperty"/> value.
+    /// Sets a <see cref="AdamantiumProperty"/> value. A name this type has no property for sets nothing, and is reported
+    /// through <see cref="Diagnostics.PropertyTrace"/>.
     /// </summary>
     /// <param name="property">Name of the AdamantiumProperty reference</param>
     /// <param name="value">The value.</param>
@@ -784,7 +808,10 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
         var adamantiumProperty = AdamantiumPropertyMap.ResolveProperty(GetType(), property);
         if (adamantiumProperty == null)
+        {
+            Diagnostics.PropertyTrace.Log($"{GetType().Name} has no property {property} to set; the value was dropped.");
             return;
+        }
 
         // Honor the caller's priority - this dropped it (always Local), which is why a ControlTemplate literal
         // set via this overload at Template priority could not be overridden by a Trigger (Local outranks Trigger).

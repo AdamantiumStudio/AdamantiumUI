@@ -454,19 +454,12 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasNodePalette">
                     <StackPanel Orientation="Vertical">
-                        <Grid MarginBottom="5">
-                            <TextBox Text="{TemplateBinding Search, Mode=TwoWay}"
-                                     Padding="5 0 22 0"
-                                     ToolTip="{Localize CanvasStrings.NarrowList}"/>
-                            <Button x:Name="PART_Clear" Width="16" Height="16" MinWidth="0" MinHeight="0"
-                                    Padding="0" MarginRight="4" Visibility="Collapsed"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center"
-                                    Command="{Ancestor CanvasNodePalette, ClearSearchCommand}"
-                                    ToolTip="{Localize CanvasStrings.ClearSearch}">
-                                <Image Source="{ResourceReference CloseIcon}" Width="7" Height="7"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Button>
-                        </Grid>
+                        <TextBox MarginBottom="5"
+                                 Text="{TemplateBinding Search, Mode=TwoWay}"
+                                 Padding="5 0 4 0"
+                                 ShowsClearButton="True"
+                                 ClearButtonToolTip="{Localize CanvasStrings.ClearSearch}"
+                                 ToolTip="{Localize CanvasStrings.NarrowList}"/>
 
                         <TreeView MaxHeight="200" MinWidth="0" ItemsSource="{TemplateBinding Groups}"
                                   SelectedItem="{Ancestor CanvasNodePalette, PickedKind, Mode=TwoWay}">
@@ -487,12 +480,6 @@
                                     Command="{Ancestor CanvasNodePalette, CloseCommand}"/>
                         </StackPanel>
                     </StackPanel>
-
-                    <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="HasSearch" Value="true">
-                            <Setter TargetName="PART_Clear" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

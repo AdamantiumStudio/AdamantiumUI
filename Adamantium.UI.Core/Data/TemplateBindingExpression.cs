@@ -4,6 +4,8 @@ namespace Adamantium.UI.Core.Data;
 
 public class TemplateBindingExpression : BindingExpressionBase
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IAdamantiumComponent, List<AdamantiumProperty>> Fed = new();
+
     public IFundamentalUIComponent Source { get; set; }
    
     public AdamantiumProperty SourceProperty { get; set; }
@@ -84,6 +86,12 @@ public class TemplateBindingExpression : BindingExpressionBase
         {
             Target.PropertyChanged += OnTargetPropertyChanged;
         }
+
+        var fed = Fed.GetValue(Target, static _ => []);
+        lock (fed)
+        {
+            fed.Add(TargetProperty);
+        }
     }
 
     private void Destroy()
@@ -96,6 +104,29 @@ public class TemplateBindingExpression : BindingExpressionBase
         if (Mode == BindingMode.TwoWay && Target != null)
         {
             Target.PropertyChanged -= OnTargetPropertyChanged;
+        }
+
+        if (Target != null && Fed.TryGetValue(Target, out var fed))
+        {
+            lock (fed)
+            {
+                fed.Remove(TargetProperty);
+            }
+        }
+    }
+
+    /// <summary>Whether a live <c>{TemplateBinding}</c> feeds <paramref name="property"/> of <paramref name="target"/> - the
+    /// template slot it writes is then where the value comes from.</summary>
+    public static bool Feeds(IAdamantiumComponent target, AdamantiumProperty property)
+    {
+        if (!Fed.TryGetValue(target, out var fed))
+        {
+            return false;
+        }
+
+        lock (fed)
+        {
+            return fed.Contains(property);
         }
     }
    

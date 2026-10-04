@@ -485,15 +485,9 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// are made before the stamping, so one that reads the control waits for this.</summary>
     internal event EventHandler TemplatedParentChanged;
 
-    public void RemoveBinding(string property)
-    {
-        var adamantiumProperty = GetProperty(property);
-    }
+    public void RemoveBinding(string property) => RemoveBinding(GetProperty(property));
 
-    public void RemoveBinding(AdamantiumProperty property)
-    {
-        throw new NotImplementedException();
-    }
+    public void RemoveBinding(AdamantiumProperty property) => BindingEngine.ClearBinding(this, property);
 
     public event AdamantiumPropertyChangedEventHandler DataContextChanged;
     

@@ -11,11 +11,6 @@ namespace Adamantium.UI.Core.Data;
 public class AncestorBindingExpression : BindingExpressionBase
 {
     private readonly Ancestor _def;
-
-    /// <summary>Priority the resolved value is written at. Binding for a normal property; a Setter passes Style/Trigger so
-    /// the ancestor value slots into the right band of the value stack.</summary>
-    internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
-
     private IFundamentalUIComponent _source;
     private BindingExpression _path;
     private bool _hooked;
@@ -126,7 +121,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         if (TargetProperty == null) return;
         var value = RelativeBindingPipeline.Produce(RelativeBindingPipeline.Unset, _def.Converter, _def.ConverterParameter,
             TargetProperty.PropertyType, _def.FallbackValue, _def.TargetNullValue);
-        if (!ReferenceEquals(value, RelativeBindingPipeline.Unset)) Target.SetValue(TargetProperty, value, Priority);
+        if (!ReferenceEquals(value, RelativeBindingPipeline.Unset)) WriteTarget(value);
     }
 
     // Asked of the nearest ELEMENT: a Transform (or any other non-tree target) has no place in the tree of its own and
@@ -159,14 +154,14 @@ public class AncestorBindingExpression : BindingExpressionBase
             return;
         }
 
-        _path ??= new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
+        _path ??= WritingHere(new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
         {
             Mode = _def.Mode,
             Converter = _def.Converter,
             ConverterParameter = _def.ConverterParameter,
             FallbackValue = _def.FallbackValue,
             TargetNullValue = _def.TargetNullValue
-        }) { Priority = Priority };
+        }));
         _path.Binding.Source = _source;
         _path.EstablishConnection();
         Status = _path.Status;

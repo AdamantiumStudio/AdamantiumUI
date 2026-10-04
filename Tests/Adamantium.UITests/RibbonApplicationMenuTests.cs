@@ -4,6 +4,7 @@ using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Templates;
 using NUnit.Framework;
 
@@ -148,6 +149,46 @@ public class RibbonApplicationMenuTests
         menu.IsOpen = true;
 
         Assert.That(menu.SelectedPage, Is.EqualTo("the recent files"));
+    }
+
+    // The view model that opens the backstage can also put it away: the menu closing itself - a command row run - must
+    // not cut the binding, or the view model never moves it again.
+    [Test]
+    public void ABoundIsOpen_KeepsFollowingTheViewModel_AfterTheMenuClosedItself()
+    {
+        var state = new OpenState { IsOpen = true };
+        var row = Row("Save");
+        var menu = WithRows(row);
+        menu.DataContext = state;
+        menu.SetBinding("IsOpen", new Binding("IsOpen") { Mode = BindingMode.TwoWay });
+
+        Click(row);
+        Assert.That(state.IsOpen, Is.False, "the view model hears the menu close");
+
+        state.IsOpen = true;
+        BindingUpdateQueue.Flush();
+        Assert.That(menu.IsOpen, Is.True, "and opens it again");
+
+        state.IsOpen = false;
+        BindingUpdateQueue.Flush();
+        Assert.That(menu.IsOpen, Is.False, "and puts it away");
+    }
+
+    private sealed class OpenState : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _isOpen;
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+        public bool IsOpen
+        {
+            get => _isOpen;
+            set
+            {
+                _isOpen = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsOpen)));
+            }
+        }
     }
 
     // An authored row is its own container: the rail must not wrap it in a second one.

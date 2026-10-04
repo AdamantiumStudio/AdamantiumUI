@@ -41,16 +41,6 @@ public class RibbonQuickAccessTransferTests
         Command = new Spy()
     };
 
-    private static RibbonTab TabWith(string header, params RibbonButton[] commands)
-    {
-        var group = new RibbonGroup { Header = "Group" };
-        foreach (var command in commands) group.Items.Add(command);
-
-        var tab = new RibbonTab { Header = header };
-        tab.Items.Add(group);
-        return tab;
-    }
-
     // The command is bound ONCE, above, and every command under it finds the same one - a ribbon holds hundreds, and
     // wiring each would be the kind of repetition nobody keeps up. That is what INHERITS buys.
     [Test]
@@ -194,31 +184,39 @@ public class RibbonQuickAccessTransferTests
         Assert.That(Ribbon.IsShownInQuickAccess(button), Is.True);
     }
 
-    // The one place commands are moved from has to offer the WHOLE band, not the tab that happens to be open: only the
-    // open tab is ever realized, so the list is walked over the items rather than over what exists on screen.
+    // A command drawn for an item of the application's data IS that item: the request hands the item over, so nothing
+    // has to be rebuilt from a description, and the ribbon finds it in the bar by the item alone.
     [Test]
-    public void TheCandidateList_ReachesCommandsInTabsThatWereNeverOpened()
+    public void ACommandDrawnForAnItem_HandsOverTheItemAndIsFoundByIt()
     {
-        var onHome = Command("Save");
-        var onView = Command("Wireframe");
-        var ribbon = new Ribbon();
-        ribbon.Items.Add(TabWith("Home", onHome));
-        ribbon.Items.Add(TabWith("View", onView));
+        RibbonQuickAccessEventArgs seen = null;
+        var item = new BarItem();
+        var button = Command();
+        button.DataContext = item;
+        Ribbon.SetAddToQuickAccessCommand(button, new Spy(a => seen = a as RibbonQuickAccessEventArgs));
+        Ribbon.SetQuickAccessItems(button, new object[] { item });
 
-        Assert.That(ribbon.QuickAccessCandidates, Is.EquivalentTo(new IUIComponent[] { onHome, onView }));
+        Ribbon.RequestQuickAccess(button, add: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(seen.Item, Is.SameAs(item));
+            Assert.That(Ribbon.IsShownInQuickAccess(button), Is.True);
+        });
     }
 
-    // ...and a command that refuses is not offered there either, or the list would promise what the transfer denies.
+    // ...and only by it: another item that runs the same action is a different command.
     [Test]
-    public void TheCandidateList_LeavesOutWhatRefuses()
+    public void ACommandDrawnForAnItem_IsNotTakenForAnotherItemRunningTheSameAction()
     {
-        var offered = Command("Save");
-        var refuses = Command("Grid size");
-        Ribbon.SetCanAddToQuickAccess(refuses, false);
-        var ribbon = new Ribbon();
-        ribbon.Items.Add(TabWith("Home", offered, refuses));
+        var run = new Spy();
+        var button = Command();
+        button.Command = run;
+        button.DataContext = new BarItem { Action = run };
 
-        Assert.That(ribbon.QuickAccessCandidates, Is.EquivalentTo(new IUIComponent[] { offered }));
+        Ribbon.SetQuickAccessItems(button, new object[] { new BarItem { Action = run } });
+
+        Assert.That(Ribbon.IsShownInQuickAccess(button), Is.False);
     }
 
     // The icon is ATTACHED, so a plain control dropped into a group hands one over too - the bar draws what it is

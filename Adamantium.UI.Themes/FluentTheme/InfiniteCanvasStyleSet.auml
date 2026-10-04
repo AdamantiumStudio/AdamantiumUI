@@ -520,22 +520,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasNodePalette">
                     <StackPanel Orientation="Vertical">
-                        <!-- The cross sits ON the field rather than beside it - beside it, the field would end short of
-                             the pane and read as two controls. Hence the field's right padding: what is typed must not
-                             run under it. -->
-                        <Grid MarginBottom="6">
-                            <TextBox Text="{TemplateBinding Search, Mode=TwoWay}"
-                                     Padding="6 0 24 0"
-                                     ToolTip="{Localize CanvasStrings.NarrowList}"/>
-                            <Button x:Name="PART_Clear" Width="18" Height="18" MinWidth="0" MinHeight="0"
-                                    Padding="0" MarginRight="5" Visibility="Collapsed"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center"
-                                    Command="{Ancestor CanvasNodePalette, ClearSearchCommand}"
-                                    ToolTip="{Localize CanvasStrings.ClearSearch}">
-                                <Image Source="{ResourceReference CloseIcon}" Width="8" Height="8"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Button>
-                        </Grid>
+                        <!-- The field clears by its own button, inside it - beside it, the field would end short of the
+                             pane and read as two controls. -->
+                        <TextBox MarginBottom="6"
+                                 Text="{TemplateBinding Search, Mode=TwoWay}"
+                                 Padding="6 0 5 0"
+                                 ShowsClearButton="True"
+                                 ClearButtonToolTip="{Localize CanvasStrings.ClearSearch}"
+                                 ToolTip="{Localize CanvasStrings.NarrowList}"/>
 
                         <TreeView MaxHeight="180" MinWidth="0" ItemsSource="{TemplateBinding Groups}"
                                   SelectedItem="{Ancestor CanvasNodePalette, PickedKind, Mode=TwoWay}">
@@ -556,12 +548,6 @@
                                     Command="{Ancestor CanvasNodePalette, CloseCommand}"/>
                         </StackPanel>
                     </StackPanel>
-
-                    <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="HasSearch" Value="true">
-                            <Setter TargetName="PART_Clear" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

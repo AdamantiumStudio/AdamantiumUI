@@ -207,4 +207,42 @@ public class TextBoxTests
             Assert.That(empty.Height, Is.EqualTo(caps.Height).Within(0.01));
         });
     }
+
+    /// <summary>What the clear button shows by: the box keeps it, typed or assigned.</summary>
+    [Test]
+    public void HasText_FollowsTheText()
+    {
+        var tb = new TextBox();
+        Assert.That(tb.HasText, Is.False);
+
+        Type(tb, "a");
+        Assert.That(tb.HasText, Is.True);
+
+        tb.Text = string.Empty;
+        Assert.That(tb.HasText, Is.False);
+    }
+
+    /// <summary>Clearing is an edit like any other: one step, and undo brings the text back.</summary>
+    [Test]
+    public void Clear_EmptiesTheBox_AsOneUndoableEdit()
+    {
+        var tb = new TextBox();
+        Type(tb, "abc");
+
+        tb.Clear();
+        Assert.That(tb.Text, Is.Empty);
+
+        tb.Undo();
+        Assert.That(tb.Text, Is.EqualTo("abc"));
+    }
+
+    [Test]
+    public void Clear_LeavesAReadOnlyBoxAlone()
+    {
+        var tb = new TextBox { Text = "abc", IsReadOnly = true };
+
+        tb.Clear();
+
+        Assert.That(tb.Text, Is.EqualTo("abc"));
+    }
 }

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- A module of the sandbox's editor shell, built apart from it: the shell does not reference it - it is installed from
+         its file, through the catalog's "Install from file". It brings its own view model and its own tabs. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Platforms>AnyCPU</Platforms>
+        <Configurations>Debug;Release</Configurations>
+        <LangVersion>latest</LangVersion>
+        <OutputType>Library</OutputType>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>Adamantium.UI.Sandbox.Roads</RootNamespace>
+        <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI.Sandbox.Modules\Adamantium.UI.Sandbox.Modules.csproj" />
+        <ProjectReference Include="..\Adamantium.UI.Controls\Adamantium.UI.Controls.csproj" />
+        <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+        <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
+        <Analyzer Include="$(PkgAdamantium_Mathematics)\lib\netstandard2.0\Adamantium.Mathematics.dll" Condition="'$(PkgAdamantium_Mathematics)' != ''" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="$(ProjectDir)**\*.auml" />
+        <AdditionalFiles Include="$(ProjectDir)**\*.alang" />
+        <CompilerVisibleProperty Include="RootNamespace" />
+        <CompilerVisibleProperty Include="NeutralLanguage" />
+        <CompilerVisibleProperty Include="OutputType" />
+    </ItemGroup>
+
+</Project>

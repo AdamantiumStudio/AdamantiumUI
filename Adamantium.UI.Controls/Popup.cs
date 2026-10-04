@@ -33,6 +33,9 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(PlacementMode), typeof(Popup), new PropertyMetadata(PlacementMode.Bottom));
 
+    public static readonly AdamantiumProperty PlacementAlignmentProperty = AdamantiumProperty.Register(nameof(PlacementAlignment),
+        typeof(PlacementAlignment), typeof(Popup), new PropertyMetadata(PlacementAlignment.Center));
+
     public static readonly AdamantiumProperty HorizontalOffsetProperty = AdamantiumProperty.Register(nameof(HorizontalOffset),
         typeof(double), typeof(Popup), new PropertyMetadata(0.0));
 
@@ -40,6 +43,9 @@ public class Popup : MeasurableUIComponent, IContainer
         typeof(double), typeof(Popup), new PropertyMetadata(0.0));
 
     public static readonly AdamantiumProperty FlipToFitProperty = AdamantiumProperty.Register(nameof(FlipToFit),
+        typeof(bool), typeof(Popup), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty StaysBesideTargetProperty = AdamantiumProperty.Register(nameof(StaysBesideTarget),
         typeof(bool), typeof(Popup), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty DockEdgeProperty = AdamantiumProperty.Register(nameof(DockEdge),
@@ -112,6 +118,13 @@ public class Popup : MeasurableUIComponent, IContainer
         set => SetValue(PlacementProperty, value);
     }
 
+    /// <summary>How the popup lines up with the target's side it opens on. Centered by default.</summary>
+    public PlacementAlignment PlacementAlignment
+    {
+        get => GetValue<PlacementAlignment>(PlacementAlignmentProperty);
+        set => SetValue(PlacementAlignmentProperty, value);
+    }
+
     public double HorizontalOffset
     {
         get => GetValue<double>(HorizontalOffsetProperty);
@@ -130,6 +143,16 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         get => GetValue<bool>(FlipToFitProperty);
         set => SetValue(FlipToFitProperty, value);
+    }
+
+    /// <summary>Kept wholly on its side of the target: the child is measured against the room there - below the target
+    /// for <see cref="PlacementMode.Bottom"/>, above it for Top, beside it for Left and Right - instead of the whole
+    /// window, so keeping it inside the window never pushes it over what it belongs to. What does not fit is the
+    /// content's to scroll or shrink. For a drawer opening out of a strip, which must leave the strip in sight.</summary>
+    public bool StaysBesideTarget
+    {
+        get => GetValue<bool>(StaysBesideTargetProperty);
+        set => SetValue(StaysBesideTargetProperty, value);
     }
 
     /// <summary>When set, the child is docked to that EDGE OF THE WINDOW (not positioned against a target): pinned to the
@@ -219,11 +242,20 @@ public class Popup : MeasurableUIComponent, IContainer
     // so closed content is collectable.
     private static readonly ConditionalWeakTable<IUIComponent, IPopupHost> OverlayRootHost = new();
 
-    // Called by PopupLayer.Add, which every route onto the overlay goes through.
-    internal static void RegisterOverlayRoot(IUIComponent overlayRoot, IPopupHost host) =>
-        OverlayRootHost.AddOrUpdate(overlayRoot, host);
+    private static readonly ConditionalWeakTable<IUIComponent, Popup> OverlayRootPopup = new();
 
-    internal static void UnregisterOverlayRoot(IUIComponent overlayRoot) => OverlayRootHost.Remove(overlayRoot);
+    // Called by PopupLayer.Add, which every route onto the overlay goes through.
+    internal static void RegisterOverlayRoot(IUIComponent overlayRoot, IPopupHost host, Popup popup)
+    {
+        OverlayRootHost.AddOrUpdate(overlayRoot, host);
+        OverlayRootPopup.AddOrUpdate(overlayRoot, popup);
+    }
+
+    internal static void UnregisterOverlayRoot(IUIComponent overlayRoot)
+    {
+        OverlayRootHost.Remove(overlayRoot);
+        OverlayRootPopup.Remove(overlayRoot);
+    }
 
     /// <summary>The window whose overlay hosts <paramref name="element"/>, or null outside an open popup.</summary>
     public static IPopupHost HostOf(IUIComponent element)
@@ -301,12 +333,25 @@ public class Popup : MeasurableUIComponent, IContainer
         if (_host is not IInputComponent root) return;
         _lightDismiss ??= OnGlobalPreviewDown;
         root.AddHandler(Mouse.PreviewMouseDownEvent, _lightDismiss, handledEventsToo: true);
+        OpenLightDismissable.Add(this);
     }
 
     private void UnhookLightDismiss(IPopupHost host = null)
     {
+        OpenLightDismissable.Remove(this);
         if (_lightDismiss != null && (host ?? _host) is IInputComponent root)
             root.RemoveHandler(Mouse.PreviewMouseDownEvent, _lightDismiss);
+    }
+
+    internal static void PressedInOverlay(IPopupHost host, MouseButtonEventArgs e)
+    {
+        foreach (var popup in OpenLightDismissable.ToArray())
+        {
+            if (ReferenceEquals(popup._host, host))
+            {
+                popup.OnGlobalPreviewDown(null, e);
+            }
+        }
     }
 
     // Escape is hooked SEPARATELY from the mouse dismiss, because the two are not the same question. Click-outside is
@@ -340,6 +385,8 @@ public class Popup : MeasurableUIComponent, IContainer
     // last one here - a submenu goes before the menu that opened it, and one press closes one level, as everywhere else.
     private static readonly List<Popup> OpenDismissable = new();
 
+    private static readonly List<Popup> OpenLightDismissable = [];
+
     /// <summary>Escape dismisses this popup (default true). Off for a popup that is not a temporary layer at all - a
     /// docked surface that happens to be portalled through one.</summary>
     public static readonly AdamantiumProperty DismissOnEscapeProperty = AdamantiumProperty.Register(
@@ -366,17 +413,28 @@ public class Popup : MeasurableUIComponent, IContainer
 
         var args = new RoutedEventArgs();
         DismissRequested?.Invoke(this, args);
-        if (!args.Handled) IsOpen = false;
+        if (!args.Handled)
+        {
+            Dismiss();
+        }
+
         e.Handled = true;
     }
 
     private void OnGlobalPreviewDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is not IUIComponent src) { IsOpen = false; return; }
-        if (IsWithinOverlayOf(src, _host)) return;      // inside my overlay (or a nested popup opened from it) - keep open
+        if (e.OriginalSource is not IUIComponent src)
+        {
+            Dismiss();
+            return;
+        }
+
+        if (IsWithinOwnOverlay(src)) return;      // inside my overlay (or a nested popup opened from it) - keep open
         if (IgnoreTargetPress && IsWithin(src, EffectiveTarget)) return;   // on the toggle target - it handles the close itself
-        IsOpen = false;
+        Dismiss();
     }
+
+    private void Dismiss() => SetCurrentValue(IsOpenProperty, false);
 
     private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
     {
@@ -397,15 +455,38 @@ public class Popup : MeasurableUIComponent, IContainer
         return null;
     }
 
-    /// <summary>True if <paramref name="node"/> sits inside an open popup hosted by <paramref name="host"/> (any card in the
-    /// menu's own overlay tree). Lets a menu treat a press on a submenu's chrome - a scroll arrow, the card padding - as
-    /// "inside", not a light-dismiss, even though that chrome is neither a MenuItem nor the root popup's own card.</summary>
-    internal static bool IsWithinOverlayOf(IUIComponent node, IPopupHost host)
+    private bool IsWithinOwnOverlay(IUIComponent node)
     {
-        if (host == null) return false;
-        for (var n = node; n != null; n = n.VisualParent)
-            if (OverlayRootHost.TryGetValue(n, out var h) && ReferenceEquals(h, host)) return true;
+        var root = OverlayRootOf(node);
+        while (root != null)
+        {
+            if (ReferenceEquals(root, ChildValue))
+            {
+                return true;
+            }
+
+            if (!OverlayRootPopup.TryGetValue(root, out var shownBy))
+            {
+                return false;
+            }
+
+            root = OverlayRootOf(shownBy);
+        }
+
         return false;
+    }
+
+    private static IUIComponent OverlayRootOf(IUIComponent node)
+    {
+        for (var n = node; n != null; n = n.VisualParent ?? (n as IFundamentalUIComponent)?.LogicalParent as IUIComponent)
+        {
+            if (OverlayRootPopup.TryGetValue(n, out _))
+            {
+                return n;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>A MaxHeight that keeps a scrollable flyout (a long menu) inside <paramref name="host"/>'s window with a small

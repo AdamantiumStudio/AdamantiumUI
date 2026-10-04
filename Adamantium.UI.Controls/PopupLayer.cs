@@ -5,6 +5,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
 
@@ -18,10 +19,12 @@ public class PopupLayer
 {
     private readonly List<Popup> _popups = [];
     private readonly Dictionary<IUIComponent, Rect> _lastRect = new();   // last arranged slot per popup child (arrange gate)
+    private readonly Dictionary<IUIComponent, Size> _lastRoom = new();   // last room a StaysBesideTarget child was measured in
     // _popups/_lastRect are READ on the render (loop) thread (UpdateLayout/Roots) and MUTATED on the pump thread
     // (Popup.Open/Close -> Add/Remove: a dialog opened from a command, a light-dismissed menu). Without this a popup
     // opened/closed mid-render corrupts the enumeration ("Collection was modified"). Guard every touch.
     private readonly object _sync = new();
+    private MouseButtonEventHandler _overlayPress;
 
     /// <summary>The laid-out child of every open popup (declaration order = back-to-front), for the overlay to render.</summary>
     public IReadOnlyList<IUIComponent> Roots
@@ -57,7 +60,7 @@ public class PopupLayer
         // than one way onto it - an OverlayWindow is added to the layer DIRECTLY, never through IsOpen. Registering in
         // the IsOpen path alone left a dialog's content with no route back to the window, so the keyboard could move
         // around inside it with no focus ring anywhere: the ring asks for the window's adorner layer and got null.
-        if (Owner != null && popup.ChildValue is { } overlayRoot) Popup.RegisterOverlayRoot(overlayRoot, Owner);
+        if (Owner != null && popup.ChildValue is { } overlayRoot) Popup.RegisterOverlayRoot(overlayRoot, Owner, popup);
         // Its render units were disposed when it last closed, but its components are still geometry-VALID (closing doesn't
         // invalidate layout), so a clean reopen would record nothing and the cache would "reuse" the disposed units (the
         // fill + border vanish, only re-dirtied text rebuilds). Mark the whole subtree dirty so the next layout re-measures
@@ -66,6 +69,9 @@ public class PopupLayer
         // Attaching gives the content the normal lifecycle (OnAttached, triggers); its layout stays this layer's job, see
         // RemeasureIfDirty.
         AttachToOwner(popup.ChildValue as UIComponent);
+
+        _overlayPress ??= (_, e) => Popup.PressedInOverlay(Owner, e);
+        (popup.ChildValue as IInputComponent)?.AddHandler(Mouse.PreviewMouseDownEvent, _overlayPress, handledEventsToo: true);
     }
 
     public void Remove(Popup popup)
@@ -73,9 +79,18 @@ public class PopupLayer
         lock (_sync)
         {
             _popups.Remove(popup);
-            if (popup.ChildValue is IUIComponent c) _lastRect.Remove(c);   // ChildValue = lock-free field (see Roots): no component lock under _sync
+            if (popup.ChildValue is IUIComponent c)   // ChildValue = lock-free field (see Roots): no component lock under _sync
+            {
+                _lastRect.Remove(c);
+                _lastRoom.Remove(c);
+            }
         }
         if (popup.ChildValue is not { } overlayRoot) return;
+        if (_overlayPress != null)
+        {
+            (overlayRoot as IInputComponent)?.RemoveHandler(Mouse.PreviewMouseDownEvent, _overlayPress);
+        }
+
         // Take the ring down BEFORE the way back out is forgotten - after that nothing inside can reach the layer.
         (Owner as Adorners.IAdornerHost)?.AdornerLayer.ClearFocusWithin(overlayRoot);
         Popup.UnregisterOverlayRoot(overlayRoot);
@@ -131,9 +146,22 @@ public class PopupLayer
                 continue;
             }
 
-            // Measure unconstrained for the content's own size, only when dirty; NaN or non-positive sizes must not reach
-            // arrange or the renderer.
-            var remeasured = RemeasureIfDirty(child, new Size(double.PositiveInfinity, double.PositiveInfinity));
+            // Measure unconstrained for the content's own size - or within the room on its side of the target, for one
+            // that stays beside it, again whenever that room changes - only when dirty; NaN or non-positive sizes must not
+            // reach arrange or the renderer.
+            var available = new Size(double.PositiveInfinity, double.PositiveInfinity);
+            var roomChanged = false;
+            if (popup.StaysBesideTarget)
+            {
+                available = RoomBeside(popup, windowSize);
+                lock (_sync)
+                {
+                    roomChanged = !_lastRoom.TryGetValue(child, out var lastRoom) || lastRoom != available;
+                    _lastRoom[child] = available;
+                }
+            }
+
+            var remeasured = RemeasureIfDirty(child, available, roomChanged);
             var size = child.DesiredSize;
 
             if (!IsFinitePositive(size.Width) || !IsFinitePositive(size.Height)) continue;
@@ -173,9 +201,9 @@ public class PopupLayer
 
     // Re-measures a dirty overlay subtree and returns whether it did. A deep dirty node does not dirty its ancestors, so
     // the whole subtree is invalidated first for the measure to reach it.
-    private static bool RemeasureIfDirty(MeasurableUIComponent child, Size available)
+    private static bool RemeasureIfDirty(MeasurableUIComponent child, Size available, bool force = false)
     {
-        if (!NeedsLayout(child)) return false;
+        if (!force && !NeedsLayout(child)) return false;
         InvalidateSubtree(child);
         child.Measure(available, force: true);
         return true;
@@ -240,6 +268,23 @@ public class PopupLayer
 
     private static bool IsFinitePositive(double v) => !double.IsNaN(v) && !double.IsInfinity(v) && v > 0;
 
+    private static Size RoomBeside(Popup popup, Size windowSize)
+    {
+        var unbounded = double.PositiveInfinity;
+        if (popup.EffectiveTarget is not { } target) return new Size(unbounded, unbounded);
+
+        var t = target.WorldTransform.TranslationVector;
+        var size = target.RenderSize;
+        return popup.Placement switch
+        {
+            PlacementMode.Top => new Size(unbounded, Math.Max(0, t.Y + popup.VerticalOffset)),
+            PlacementMode.Left => new Size(Math.Max(0, t.X + popup.HorizontalOffset), unbounded),
+            PlacementMode.Right => new Size(Math.Max(0, windowSize.Width - (t.X + size.Width) - popup.HorizontalOffset), unbounded),
+            PlacementMode.Bottom => new Size(unbounded, Math.Max(0, windowSize.Height - (t.Y + size.Height) - popup.VerticalOffset)),
+            _ => new Size(unbounded, unbounded)
+        };
+    }
+
     private static Vector2 ComputePosition(Popup popup, Size size, Size windowSize)
     {
         double tx = 0, ty = 0, tw = 0, th = 0;
@@ -249,16 +294,15 @@ public class PopupLayer
             tx = t.X; ty = t.Y; tw = target.RenderSize.Width; th = target.RenderSize.Height;
         }
 
-        // Top/Bottom center horizontally over the target; Left/Right center vertically - the natural tooltip anchor.
-        var cx = tx + (tw - size.Width) / 2;
-        var cy = ty + (th - size.Height) / 2;
+        var cx = Align(tx, tw, size.Width);
+        var cy = Align(ty, th, size.Height);
         double x, y;
         switch (popup.Placement)
         {
             case PlacementMode.Top:      x = cx; y = FlipY(ty - size.Height, ty + th, above: true);   break;
             case PlacementMode.Left:     x = tx - size.Width;  y = cy;             break;
             case PlacementMode.Right:    x = tx + tw;          y = cy;             break;
-            case PlacementMode.Center:   x = cx; y = cy;                           break;
+            case PlacementMode.Center:   x = tx + (tw - size.Width) / 2; y = ty + (th - size.Height) / 2; break;
             case PlacementMode.Relative: x = tx; y = ty;                           break;
             default:                     x = cx; y = FlipY(ty + th, ty - size.Height, above: false);  break;   // Bottom
         }
@@ -274,6 +318,13 @@ public class PopupLayer
             var roomFlipped = above ? windowSize.Height - (ty + th) : ty;
             return (size.Height <= roomPrimary || roomPrimary >= roomFlipped) ? primary : flipped;
         }
+
+        double Align(double start, double length, double extent) => popup.PlacementAlignment switch
+        {
+            PlacementAlignment.Start => start,
+            PlacementAlignment.End => start + length - extent,
+            _ => start + (length - extent) / 2
+        };
         x += popup.HorizontalOffset;
         y += popup.VerticalOffset;
 

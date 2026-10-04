@@ -134,8 +134,17 @@ public class WindowRenderService : UiRenderService
             return false;
         }
         windowRenderer.RecordData();
+        RecordStages();
         _recordedAtLoopLevel = true;
         return true;
+    }
+
+    private void RecordStages()
+    {
+        foreach (var processor in Processors)
+        {
+            if (processor is IRecordingStage stage) stage.Record();
+        }
     }
 
     public override bool BeginDraw()
@@ -179,8 +188,15 @@ public class WindowRenderService : UiRenderService
                 // After the fence wait and before the pass, so this frame draws this frame's tree. Only the loop thread
                 // records: the render thread would race the loop's own record on the same cache.
                 var onRenderThread = Thread.CurrentThread == RenderThreadOptions.RenderThread;
-                if (RenderThreadOptions.SingleThreaded || (!_recordedAtLoopLevel && !onRenderThread)) windowRenderer.PrepareData();
-                else windowRenderer.ApplyData();
+                if (RenderThreadOptions.SingleThreaded || (!_recordedAtLoopLevel && !onRenderThread))
+                {
+                    windowRenderer.PrepareData();
+                    RecordStages();
+                }
+                else
+                {
+                    windowRenderer.ApplyData();
+                }
                 windowRenderer.PreRender();
                 PreRenderProcessors();
             });

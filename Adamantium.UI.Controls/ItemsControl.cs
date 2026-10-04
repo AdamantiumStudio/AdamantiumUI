@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Generators;
 using Adamantium.UI.Controls.Panels;
@@ -15,6 +16,10 @@ namespace Adamantium.UI.Controls;
 /// <see cref="ItemsPanel"/>. The template must contain an <see cref="ItemsPresenter"/> named <c>PART_ItemsPresenter</c>.</summary>
 public class ItemsControl : Control, IContainer
 {
+    private static readonly ConditionalWeakTable<IUIComponent, ItemsControl> AuthoredIn = new();
+    private static readonly ConditionalWeakTable<IUIComponent, object> Refused = new();
+
+    private readonly ConditionalWeakTable<IUIComponent, object> _taken = new();
     private ItemsPresenter _presenter;
 
     public static readonly AdamantiumProperty ItemsSourceProperty = AdamantiumProperty.Register(nameof(ItemsSource),
@@ -189,8 +194,74 @@ public class ItemsControl : Control, IContainer
 
     private void OnItemsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        if (ItemsSource == null)
+        {
+            NoteAuthored(e);
+        }
+
         _presenter?.OnItemsChanged(e);
         OnItemsChanged(e);
+    }
+
+    // An element written into Items belongs to this control, shown or not yet - a tab never opened still owns its buttons.
+    private void NoteAuthored(NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var old in e.OldItems?.OfType<IUIComponent>() ?? [])
+        {
+            if (AuthoredIn.TryGetValue(old, out var owner) && owner == this)
+            {
+                AuthoredIn.Remove(old);
+            }
+        }
+
+        foreach (var item in e.NewItems?.OfType<IUIComponent>() ?? [])
+        {
+            AuthoredIn.AddOrUpdate(item, this);
+        }
+    }
+
+    /// <summary>Whether <paramref name="item"/> may be shown here, remembering an element taken from the items source.
+    /// An element that stands somewhere else - written into another items control, or already in the tree - is not:
+    /// showing it would pull it out of where it stands. Its slot stays empty and the mistake is logged once.</summary>
+    internal bool TryTake(object item)
+    {
+        if (item is not IUIComponent element)
+        {
+            return true;
+        }
+
+        var elsewhere = AuthoredIn.TryGetValue(element, out var owner) && (ShowsFor(owner) || owner.Items.Contains(element))
+            ? !ShowsFor(owner)
+            : !_taken.TryGetValue(element, out _) && (element.VisualParent != null || element.LogicalParent != null);
+        if (!elsewhere)
+        {
+            _taken.AddOrUpdate(element, null);
+            return true;
+        }
+
+        if (!Refused.TryGetValue(element, out _))
+        {
+            Refused.AddOrUpdate(element, null);
+            Serilog.Log.Logger.Error(
+                "{Control} was given {Element} to show, which already stands elsewhere in the tree; it is left where it is. An element has one place: give the list data and draw it with a template",
+                GetType().Name, element.GetType().Name);
+        }
+
+        return false;
+    }
+
+    // The control an element was written into shows it - itself, or a list of its own template it hands its items to.
+    private bool ShowsFor(ItemsControl owner)
+    {
+        for (IAdamantiumComponent node = this; node != null; node = (node as IFundamentalUIComponent)?.TemplatedParent)
+        {
+            if (node == owner)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>The items collection changed. For a subclass that keeps something derived from it - a selection named
@@ -233,6 +304,14 @@ public class ItemsControl : Control, IContainer
             childItems.ItemContainerStyle = hdt.ItemContainerStyle ?? ItemContainerStyle;
             childItems.ItemTemplate = hdt.ItemTemplate ?? hdt;
             if (hdt.ItemsSource != null) childItems.SetBinding(ItemsSourceProperty, (BindingBase)hdt.ItemsSource.Clone());
+            return;
+        }
+
+        if (container is IHeaderedItemsControl row && container is ItemsControl rowItems)
+        {
+            rowItems.DataContext = item;
+            row.Header = item;
+            row.HeaderTemplate = ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(item, (AdamantiumComponent)container);
             return;
         }
 

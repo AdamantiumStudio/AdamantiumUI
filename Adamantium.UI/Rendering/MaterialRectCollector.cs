@@ -339,7 +339,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     public bool TryAdd(RectanglePayload p, Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds,
         int transformSlot = 0, int fadeSlot = -1, ITexture source = null, int clipSlot = -1)
         => Add(p.Brush, world, p.DestinationRect, p.CornerRadius, p.Pen, ShapeRect, opacity, scissor, logicalBounds,
-            transformSlot, fadeSlot, source, clipSlot: clipSlot);
+            transformSlot, fadeSlot, source, clipSlot: clipSlot, border: p.BorderBrush, borderWidth: FrameWidth(p));
 
     /// <summary>An ELLIPSE filled with a material. Same pass, same record - the shader branches on the shape flag baked
     /// into Params.x, exactly as the pattern batch does it, so no separate collector or pass is needed.</summary>
@@ -362,6 +362,11 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     private const float ShapeEllipse = -1f;
     private const float ShapePolygon = -2f;
 
+    private const float InsideTheOutline = -1f;
+
+    private static double FrameWidth(RectanglePayload p) =>
+        p.HasFrame && p.BorderThickness.IsUniform ? p.BorderThickness.Left : 0;
+
     // ONE bake for every figure. What changes between them is the shape flag and, for a polygon, the two numbers that
     // describe it; everything else - bounds, tint, knobs, the slots - is the same record.
     /// <summary>Bake one material fill into an instance record WITHOUT appending it - what the MOVE path needs to
@@ -370,7 +375,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     public static bool BakeItem(RectanglePayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot,
         ITexture source, int clipSlot, out MaterialRectItem item)
         => BakeCore(p.Brush, world, p.DestinationRect, p.CornerRadius, p.Pen, ShapeRect, opacity, transformSlot, fadeSlot,
-            source, 0, 0f, clipSlot, out item);
+            source, 0, 0f, clipSlot, out item, p.BorderBrush, FrameWidth(p));
 
     /// <inheritdoc cref="BakeItem"/>
     public static bool BakeEllipseItem(EllipsePayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot,
@@ -386,7 +391,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
     private static bool BakeCore(Brush brush, Matrix4x4F world, Rect destination, ProceduralGeometry.CornerRadius corners,
         Pen pen, float shape, double opacity, int transformSlot, int fadeSlot, ITexture source,
-        int polygonCorners, float polygonStart, int clipSlot, out MaterialRectItem item)
+        int polygonCorners, float polygonStart, int clipSlot, out MaterialRectItem item, Brush border = null,
+        double borderWidth = 0)
     {
         item = default;
         if (brush is not MaterialBrush material) return false;
@@ -396,6 +402,12 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         // the CPU at all - the vertex shader takes the device scale from the transform slot and hands it to the pixel
         // shader, which is where the width becomes pixels.
         RectBatchCollector.BakeStroke(pen, opacity * material.Opacity, 1f, out var strokeColor, out var stroke0, out var stroke1);
+        if (pen == null && border is SolidColorBrush ring && borderWidth > 0)
+        {
+            strokeColor = ring.Color.ToVector4();
+            strokeColor.W *= (float)(opacity * material.Opacity * ring.Opacity);
+            stroke0 = new Vector4F((float)borderWidth, InsideTheOutline, 0f, 0f);
+        }
         var radii = shape == ShapePolygon
             ? new Vector4F(polygonCorners, polygonStart, 0f, 0f)
             : new Vector4F((float)corners.TopLeft, (float)corners.TopRight,
@@ -433,12 +445,12 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
 
     private bool Add(Brush brush, Matrix4x4F world, Rect destination, ProceduralGeometry.CornerRadius corners, Pen pen,
         float shape, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot, int fadeSlot, ITexture source,
-        int polygonCorners = 0, float polygonStart = 0f, int clipSlot = -1)
+        int polygonCorners = 0, float polygonStart = 0f, int clipSlot = -1, Brush border = null, double borderWidth = 0)
     {
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeCore(brush, world, destination, corners, pen, shape, opacity, transformSlot, fadeSlot, source,
-                polygonCorners, polygonStart, clipSlot, out var item)) return false;
+                polygonCorners, polygonStart, clipSlot, out var item, border, borderWidth)) return false;
 
         Items[Count++] = item;
 

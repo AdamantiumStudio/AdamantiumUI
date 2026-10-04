@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using NUnit.Framework;
 
@@ -189,6 +191,144 @@ public class ListBoxTests
             Assert.That(c2.IsSelected, Is.True, "mutating the bound collection selects the item in the control");
             Assert.That(lb.SelectedItem, Is.EqualTo("c"));
         });
+    }
+
+    // The view-model's every choice reaches the list, not only its first: the list published its own selection at Local
+    // priority, which outranks the binding, so after the first selection the view-model could no longer move it.
+    [Test]
+    public void EveryChoiceOfTheViewModel_ReachesTheList()
+    {
+        var vm = new ChoiceVm { Chosen = "a" };
+        vm.Items.Add("a");
+        vm.Items.Add("b");
+        vm.Items.Add("c");
+        var lb = new ListBox { DataContext = vm };
+        lb.SetBinding("ItemsSource", new Binding("Items"));
+        lb.SetBinding("SelectedItem", new Binding("Chosen") { Mode = BindingMode.TwoWay });
+
+        vm.Chosen = "c";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItem, Is.EqualTo("c"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(2));
+        });
+    }
+
+    // The choice bound before the items arrive: it must survive until they do, and the view-model must not be told
+    // "nothing" in the meantime.
+    [Test]
+    public void AChoiceNamedBeforeTheItemsArrive_IsTheOneSelected()
+    {
+        var vm = new ChoiceVm { Chosen = "c" };
+        vm.Items.Add("a");
+        vm.Items.Add("b");
+        vm.Items.Add("c");
+        var lb = new ListBox { DataContext = vm };
+        lb.SetBinding("SelectedItem", new Binding("Chosen") { Mode = BindingMode.TwoWay });
+        lb.SetBinding("ItemsSource", new Binding("Items"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItem, Is.EqualTo("c"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(2));
+            Assert.That(vm.Chosen, Is.EqualTo("c"));
+        });
+    }
+
+    // The selection is an ITEM: when items come and go above it, the index follows the item rather than staying on a
+    // position that now holds something else.
+    [Test]
+    public void AnItemRemovedAboveTheSelection_KeepsTheSelectedItem()
+    {
+        var items = new ObservableCollection<string> { "a", "b", "c" };
+        var lb = new ListBox { ItemsSource = items };
+        lb.SelectedItem = "c";
+
+        items.Remove("a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItem, Is.EqualTo("c"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void AnItemInsertedAboveTheSelection_KeepsTheSelectedItem()
+    {
+        var items = new ObservableCollection<string> { "a", "b", "c" };
+        var lb = new ListBox { ItemsSource = items };
+        lb.SelectedItem = "b";
+
+        items.Insert(0, "z");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItem, Is.EqualTo("b"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(2));
+        });
+    }
+
+    // A selected item that leaves the list is no longer selected - and the view-model bound to the choice hears it, rather
+    // than keeping an item the list no longer shows while the list lights up whatever took its place.
+    [Test]
+    public void TheSelectedItemLeavingTheList_LeavesNothingSelected()
+    {
+        var vm = new ChoiceVm { Chosen = "a" };
+        vm.Items.Add("a");
+        vm.Items.Add("b");
+        var lb = new ListBox { DataContext = vm };
+        lb.SetBinding("ItemsSource", new Binding("Items"));
+        lb.SetBinding("SelectedItem", new Binding("Chosen") { Mode = BindingMode.TwoWay });
+
+        vm.Items.Remove("a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItem, Is.Null);
+            Assert.That(lb.SelectedIndex, Is.EqualTo(-1));
+            Assert.That(vm.Chosen, Is.Null);
+        });
+    }
+
+    [Test]
+    public void AnItemLeavingAMultipleSelection_LeavesTheOthersSelected()
+    {
+        var items = new ObservableCollection<string> { "a", "b", "c" };
+        var lb = new ListBox { ItemsSource = items, SelectionMode = SelectionMode.Multiple };
+        var g = lb.ItemContainerGenerator;
+        lb.SelectFromContainer((ListBoxItem)g.Realize(0));
+        lb.SelectFromContainer((ListBoxItem)g.Realize(2));
+
+        items.Remove("c");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedItems, Is.EquivalentTo(new[] { "a" }));
+            Assert.That(lb.SelectedItem, Is.EqualTo("a"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(0));
+        });
+    }
+
+    private sealed class ChoiceVm : INotifyPropertyChanged
+    {
+        private string _chosen;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public ObservableCollection<string> Items { get; } = [];
+
+        public string Chosen
+        {
+            get => _chosen;
+            set
+            {
+                _chosen = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Chosen)));
+            }
+        }
     }
 
     [Test]

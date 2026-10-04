@@ -24,6 +24,12 @@ public class Localize : BindingBase
     /// <summary>The table the string is in: a generated table's <c>Current</c>.</summary>
     public LocalizedStrings Table { get; set; }
 
+    /// <summary>Where the table comes from when it is not known before the application runs - the words of a thing
+    /// that brings its own, as a module loaded from a file does: <c>{Localize Table={Binding Phrases}, Key={Binding Name}}</c>.
+    /// A binding, or in a control's template a <see cref="TemplateBinding"/>. Until it gives a table, and for a key the
+    /// table lacks, the key is said as it is.</summary>
+    public object TableSource { get; set; }
+
     /// <summary>The string's key. In markup the positional argument names the table too, <c>Strings.Close</c>, and the
     /// build resolves it.</summary>
     [DefaultProperty]
@@ -43,6 +49,7 @@ public class Localize : BindingBase
     {
         var clone = new Localize(Table, Key)
         {
+            TableSource = TableSource is BindingBase tableSource ? tableSource.Clone() : TableSource,
             KeySource = KeySource is BindingBase source ? source.Clone() : KeySource,
             Delay = Delay,
             FallbackValue = FallbackValue,

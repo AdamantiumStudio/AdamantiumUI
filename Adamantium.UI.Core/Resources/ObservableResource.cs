@@ -28,11 +28,20 @@ public class ObservableResource : MarkupExtension
 
     /// <summary>Connects a live <see cref="ObservableResourceExpression"/> from the keyed resource to
     /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and triggers.</summary>
-    /// <remarks>Works on non-tree targets such as gradient stops, which resolve against Theme and Global.</remarks>
+    /// <remarks>Works on non-tree targets such as gradient stops, which resolve against Theme and Global. A name the target
+    /// has no property for connects nothing, and is reported through <see cref="Diagnostics.PropertyTrace"/>.</remarks>
     public ObservableResourceExpression Apply(IAdamantiumComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Template, object token = null)
     {
-        var expression = new ObservableResourceExpression(target, target.GetProperty(propertyName), Key, priority, token);
+        var property = target.GetProperty(propertyName);
+        if (property == null)
+        {
+            Diagnostics.PropertyTrace.Log(
+                $"{target.GetType().Name} has no property {propertyName} for {{ObservableResource {Key}}}; nothing was connected.");
+            return null;
+        }
+
+        var expression = new ObservableResourceExpression(target, property, Key, priority, token);
         expression.EstablishConnection();
 
         var map = _applied.GetValue(target, static _ => new Dictionary<(string, object), ObservableResourceExpression>());

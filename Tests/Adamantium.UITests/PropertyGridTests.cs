@@ -1689,13 +1689,10 @@ public class PropertyGridTests
         var grid = Searchable();
         grid.SearchText = "offset";
 
-        Assert.That(grid.HasSearchText, Is.True, "the theme reads this to show the cross");
-
         grid.ClearSearch();
         Assert.Multiple(() =>
         {
             Assert.That(grid.SearchText, Is.Null);
-            Assert.That(grid.HasSearchText, Is.False);
             Assert.That(HeadersOf(grid), Does.Contain("Enabled"), "and every property is back");
         });
     }
