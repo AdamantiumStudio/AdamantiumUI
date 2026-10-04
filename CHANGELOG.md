@@ -218,6 +218,14 @@ All packages share one version.
 
 ### Fixed
 
+- A view that left a window was never let go, and with it every texture it drew: video memory grew about 230 MB with
+  each pass over the sandbox's tabs until the device ran out. The window's render cache now hears the departure, does
+  not freeze the layout of a destroyed element again, and keeps no departed element past the frame that dropped it.
+- An element's own resources (`ResourceContext.Resources`, a non-global `ResourceContext.Source`) are released when the
+  element is destroyed. They waited for an `Unloaded` that content leaving a presenter never raises, so the resource
+  manager held every such view for the life of the application.
+- An `Image` of a still picture draws the picture itself instead of a copy of its first frame, so every image showing one
+  file shares one texture rather than uploading its own.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.

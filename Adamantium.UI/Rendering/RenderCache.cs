@@ -331,6 +331,7 @@ public partial class RenderCache
         CaptureSnapshot();
         Core.Diagnostics.RuntimeStats.LastRecordSnapMs = System.Diagnostics.Stopwatch.GetElapsedTime(snapStart).TotalMilliseconds;
         Core.Diagnostics.RuntimeStats.LastSnapBytes = System.GC.GetAllocatedBytesForCurrentThread() - snapBytes0;
+        DropRecordScratch();
         _published.Enqueue(_packet);   // hand it over; the applier drains the queue (see ApplyFrame)
         _packet = null;
 
@@ -339,6 +340,16 @@ public partial class RenderCache
         // the first to finish would wipe marks the second had not read yet. The applier never touches them (it would
         // race the next Update); this runs on the recording thread, which is the same one that marks.
         Dirty.Clear();
+    }
+
+    private void DropRecordScratch()
+    {
+        _walkVisited.Clear();
+        _removedList.Clear();
+        _removedSet.Clear();
+        _staleUnitIds.Clear();
+        _structuralBuf.Clear();
+        _movedNodesCapture.Clear();
     }
 
 

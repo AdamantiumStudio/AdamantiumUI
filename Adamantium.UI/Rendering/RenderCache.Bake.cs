@@ -370,6 +370,7 @@ public partial class RenderCache
         if (_snap.TryGetValue(c, out var s)) return s;
         s = new LayoutSnapshot(c.LocalTransform, c.RenderSize, c.ClipToBounds, c.IsRenderMotionNode, c.RenderParent,
             (float)c.Opacity, (float)c.SelfOpacity, ClipRadiiOf(c));
+        if (c is Core.FundamentalUIComponent { IsDiscarded: true }) return s;
         _snap[c] = s;
         PublishSnapshot(c, s);
         return s;
@@ -470,6 +471,7 @@ public partial class RenderCache
     private void RefreshSnapshot(IUIComponent component)
     {
         if (component == null || !_refreshedThisCapture.Add(component)) return;
+        if (component is Core.FundamentalUIComponent { IsDiscarded: true }) return;
         var snapshot = new LayoutSnapshot(component.LocalTransform, component.RenderSize, component.ClipToBounds,
             component.IsRenderMotionNode, component.RenderParent, (float)component.Opacity, (float)component.SelfOpacity,
             ClipRadiiOf(component));

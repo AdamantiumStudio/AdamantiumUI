@@ -383,7 +383,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          }
          else
          {
-            _frame = _bitmap.HasMipLevels && MipLevel > 0 ? _bitmap.GetMipLevel(MipLevel) : _bitmap.GetFrame(0);
+            _frame = _bitmap.HasMipLevels && MipLevel > 0 ? _bitmap.GetMipLevel(MipLevel) : null;
          }
 
          // The async load can finish AFTER the Source-change layout/render already ran (measuring/painting nothing);
