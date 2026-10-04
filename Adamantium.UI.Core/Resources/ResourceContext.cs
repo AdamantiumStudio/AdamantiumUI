@@ -71,7 +71,10 @@ public static class ResourceContext
     private static void ReleaseDiscarded(ReadOnlySpan<IFundamentalUIComponent> gone)
     {
         var manager = UIAppContext.Current?.ResourceManager;
-        if (manager == null) return;
+        if (manager == null)
+        {
+            return;
+        }
 
         foreach (var component in gone)
         {
@@ -84,8 +87,15 @@ public static class ResourceContext
 
     private static bool HoldsScopedResources(AdamantiumComponent element)
     {
-        if (element is ITheme) return false;
-        if (GetSource(element) is { Scope: not ResourceScope.Global }) return true;
+        if (element is ITheme)
+        {
+            return false;
+        }
+
+        if (GetSource(element) is { Scope: not ResourceScope.Global })
+        {
+            return true;
+        }
 
         return GetResources(element) != null && GetScope(element) != ResourceScope.Global;
     }

@@ -30,7 +30,11 @@ public class ImageDrawsItsSourceTests
         while (dir != null)
         {
             var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", name);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
             dir = dir.Parent;
         }
 

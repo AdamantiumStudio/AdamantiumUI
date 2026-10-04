@@ -89,7 +89,11 @@ public class DepartedViewReleaseTests
     private static void Settle(Stage stage)
     {
         DiscardedVisuals.Drain(int.MaxValue);
-        for (var i = 0; i < 3; i++) stage.Frame();
+        for (var i = 0; i < 3; i++)
+        {
+            stage.Frame();
+        }
+
         for (var i = 0; i < 3; i++)
         {
             GC.Collect();
