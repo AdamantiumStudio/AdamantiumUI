@@ -54,19 +54,25 @@
                             <StackPanel x:Name="PART_ButtonsPanel" Orientation="Horizontal" VerticalAlignment="Center"
                                     Spacing="{ResourceReference TrafficLightGap}">
                                 <Grid>
-                                    <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"/>
+                                    <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"
+                                            AutomationProperties.AutomationId="Close"
+                                            AutomationProperties.Name="{Localize WindowStrings.Close}"/>
                                     <Image x:Name="CloseGlyph" Source="{ResourceReference TrafficLightCloseGlyph}"
                                             Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid>
-                                    <Button x:Name="PART_MinButton" Classes="TrafficLight MinimizeLight" Focusable="False"/>
+                                    <Button x:Name="PART_MinButton" Classes="TrafficLight MinimizeLight" Focusable="False"
+                                            AutomationProperties.AutomationId="Minimize"
+                                            AutomationProperties.Name="{Localize WindowStrings.Minimize}"/>
                                     <Image x:Name="MinimizeGlyph" Source="{ResourceReference TrafficLightMinimizeGlyph}"
                                             Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid>
-                                    <Button x:Name="PART_MaxButton" Classes="TrafficLight ZoomLight" Focusable="False"/>
+                                    <Button x:Name="PART_MaxButton" Classes="TrafficLight ZoomLight" Focusable="False"
+                                            AutomationProperties.AutomationId="Maximize"
+                                            AutomationProperties.Name="{Localize WindowStrings.Maximize}"/>
                                     <Image x:Name="ZoomGlyph" Source="{ResourceReference TrafficLightZoomGlyph}"
                                             Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>

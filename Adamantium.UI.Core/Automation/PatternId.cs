@@ -22,5 +22,14 @@ public enum PatternId
     ExpandCollapse,
 
     /// <summary><see cref="IScrollItemProvider"/>: brought into view inside what scrolls it.</summary>
-    ScrollItem
+    ScrollItem,
+
+    /// <summary><see cref="IRangeValueProvider"/>: holds a number between two limits.</summary>
+    RangeValue,
+
+    /// <summary><see cref="IScrollProvider"/>: scrolls what it shows.</summary>
+    Scroll,
+
+    /// <summary><see cref="IWindowProvider"/>: a window.</summary>
+    Window
 }

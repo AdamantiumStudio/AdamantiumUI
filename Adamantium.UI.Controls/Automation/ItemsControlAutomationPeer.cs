@@ -10,6 +10,7 @@ namespace Adamantium.UI.Controls.Automation;
 public class ItemsControlAutomationPeer : UIComponentAutomationPeer
 {
     private readonly Dictionary<object, ItemAutomationPeer> _itemPeers = new(ReferenceEqualityComparer.Instance);
+    private ScrollViewerAutomationPeer _scroll;
 
     public ItemsControlAutomationPeer(ItemsControl owner) : base(owner)
     {
@@ -17,6 +18,28 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
 
     /// <summary>What an item is to automation while it has no element of its own.</summary>
     protected virtual AutomationControlType ItemControlType => AutomationControlType.ListItem;
+
+    /// <summary>Scrolls through the scroll viewer of its own template that holds its items, when it has one.</summary>
+    public override object GetPattern(PatternId pattern) =>
+        pattern == PatternId.Scroll ? ScrollOfItems() : base.GetPattern(pattern);
+
+    private IScrollProvider ScrollOfItems()
+    {
+        for (var node = ((ItemsControl)Owner).ItemsHostPanel?.VisualParent; node != null && node != Owner; node = node.VisualParent)
+        {
+            if (node is ScrollViewer viewer)
+            {
+                if (_scroll?.Owner != viewer)
+                {
+                    _scroll = new ScrollViewerAutomationPeer(viewer);
+                }
+
+                return _scroll;
+            }
+        }
+
+        return null;
+    }
 
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {

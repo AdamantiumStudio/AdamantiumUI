@@ -1,9 +1,10 @@
-<View xmlns="http://adamantium/ui">
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
     <!-- DataContext is the TabsViewModel. Two strips, each showing one thing a tab strip has to survive. -->
     <Grid RowDefinitions="Auto,*,Auto,*" Margin="24">
 
         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,10">
-            <TextBlock Text="{Localize TabsStrings.ThousandTabs}" FontSize="18"/>
+            <TextBlock x:Name="ThousandTabsLabel" Text="{Localize TabsStrings.ThousandTabs}" FontSize="18"/>
             <TextBlock Margin="0,4,0,0"
                        Text="{Localize TabsStrings.ThousandHint}"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
@@ -16,7 +17,7 @@
         <!-- The long titles are the point: a uniform slot cannot grow to fit one, so the header trims with an ellipsis. -->
         <TabControl Grid.Row="1"
                     AutomationProperties.AutomationId="ManyTabs"
-                    AutomationProperties.Name="{Localize TabsStrings.ThousandTabs}"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ThousandTabsLabel}"
                     ItemsSource="{Binding ManyTabs}"
                     IsVirtualizing="{Binding IsVirtualizing}"
                     TabWidth="220"
@@ -36,14 +37,14 @@
         </TabControl>
 
         <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,24,0,10">
-            <TextBlock Text="{Localize TabsStrings.Capped}" FontSize="18"/>
+            <TextBlock x:Name="CappedLabel" Text="{Localize TabsStrings.Capped}" FontSize="18"/>
             <TextBlock Margin="0,4,0,0"
                        Text="{Localize TabsStrings.CappedHint}"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <TextBlock Text="{Localize TabsStrings.MaxOpened}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock x:Name="MaxOpenedLabel" Text="{Localize TabsStrings.MaxOpened}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <NumericUpDown Width="90" InputMode="Integers"
                                AutomationProperties.AutomationId="MaxOpened"
-                               AutomationProperties.Name="{Localize TabsStrings.MaxOpened}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=MaxOpenedLabel}"
                                Minimum="0" Maximum="12" SmallChange="1"
                                Value="{Binding MaxOpenedTabs, Mode=TwoWay}"/>
                 <TextBlock Text="{Localize TabsStrings.ZeroTurnsOff}" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -53,7 +54,7 @@
 
         <TabControl Grid.Row="3"
                     AutomationProperties.AutomationId="CappedTabs"
-                    AutomationProperties.Name="{Localize TabsStrings.Capped}"
+                    AutomationProperties.LabeledBy="{Binding ElementName=CappedLabel}"
                     ItemsSource="{Binding FewTabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     MaxOpenedTabs="{Binding MaxOpenedTabs}"

@@ -39,6 +39,21 @@ internal static class Printer
             line.Append(' ').Append(state);
         }
 
+        if (element.Minimum is { } minimum && element.Maximum is { } maximum)
+        {
+            line.Append(FormattableString.Invariant($" in {minimum}..{maximum}"));
+        }
+
+        if (element.VerticalScroll is { } down && element.HorizontalScroll is { } across)
+        {
+            line.Append(FormattableString.Invariant($" scrolled {Percent(across)} across, {Percent(down)} down"));
+        }
+
+        if (element.WindowState != null)
+        {
+            line.Append(' ').Append(element.WindowState);
+        }
+
         if (element.IsOffscreen)
         {
             line.Append(" (offscreen)");
@@ -89,4 +104,6 @@ internal static class Printer
             $"  bounds:   {bounds[0]:0},{bounds[1]:0} {bounds[2]:0}x{bounds[3]:0} px",
             $"  focus:    {(element.HasKeyboardFocus ? "has keyboard focus" : "no")}");
     }
+
+    private static string Percent(double percent) => percent < 0 ? "-" : FormattableString.Invariant($"{percent}%");
 }

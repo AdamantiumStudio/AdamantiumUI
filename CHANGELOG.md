@@ -177,7 +177,17 @@ All packages share one version.
   has no name.
 - `ItemsControl.ScrollIntoView`: scrolls until an item is in view, a virtualizing panel making its container on the way.
 - The themes name what their templates add for automation: the tab strip's overflow button (`TabStrings.MoreTabs`) and
-  the pager's buttons, page size and page number (`DataPagerStrings`).
+  the pager's buttons, page size and page number (`DataPagerStrings`); the title bar's minimize, maximize, close and
+  overflow buttons (`WindowStrings`, ids `Minimize`, `Maximize`, `Close`, `MoreWindowCommands`); a range slider's two
+  handles (`RangeSliderStrings`).
+- Automation of numbers, scrolling and windows: new patterns `IRangeValueProvider`, `IScrollProvider` and
+  `IWindowProvider`. `Slider`, `ProgressBar` and `RingProgressBar` (read-only), a standalone `ScrollBar` and
+  `NumericUpDown` hold a number between limits; a `RangeSlider`'s children are its two handles, `Lower` and `Upper`; a
+  `ScrollViewer`, and a list through its own, scroll to percents; an `Expander` opens and folds; a window is minimized,
+  maximized, restored and closed. The driver sets a number with `SetValueAsync`, scrolls with `ScrollToAsync`, and
+  `adam-auto` gains `scroll --vertical/--horizontal` and `window minimize|maximize|restore|close`.
+- `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
+  `AutomationProperties.LabeledBy="{Binding ElementName=VolumeLabel}"`, following the label's text and language.
 
 ### Changed
 
@@ -247,6 +257,8 @@ All packages share one version.
 
 ### Fixed
 
+- A window that does not take activation when shown (`ActivateOnShow` false) took it when restored, and handed it to
+  another window when minimized.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.

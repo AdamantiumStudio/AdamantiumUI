@@ -1,0 +1,13 @@
+# The ScrollBar page: two bars on one value, and a picture larger than its viewer, scrolled both ways.
+select id=GalleryTabs/id=ScrollBar
+wait id=VerticalBar
+expect id=VerticalBar value=20 min=0 max=100
+set id=HorizontalBar 55
+expect id=VerticalBar value=55
+expect id=OffsetText Text=55
+scroll id=Picture --vertical 100 --horizontal 50
+expect id=Picture vscroll=100 hscroll=50
+scroll id=Picture --vertical 0
+expect id=Picture vscroll=0 hscroll=50
+scroll id=Picture --horizontal 0
+expect id=Picture hscroll=0

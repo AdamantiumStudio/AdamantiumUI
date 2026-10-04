@@ -6,21 +6,21 @@
          IsExpanded back to the node). No nodes are authored in markup. -->
     <StackPanel Orientation="Vertical" Margin="24" MaxWidth="900">
 
-        <TextBlock Text="{Localize TreesStrings.Title}"
+        <TextBlock x:Name="TitleLabel" Text="{Localize TreesStrings.Title}"
                    FontSize="20" MarginBottom="4"/>
         <TextBlock Text="{Localize TreesStrings.Hint}"
                    FontSize="13" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="14"/>
 
         <StackPanel Orientation="Horizontal" MarginBottom="12">
-            <TextBlock Text="{Localize TreesStrings.Drive}" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock x:Name="DriveLabel" Text="{Localize TreesStrings.Drive}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding Drives}"
                       AutomationProperties.AutomationId="Drive"
-                      AutomationProperties.Name="{Localize TreesStrings.Drive}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=DriveLabel}"
                       SelectedItem="{Binding SelectedDrive, Mode=TwoWay}" Width="110" MarginRight="24"/>
-            <TextBlock Text="{Localize TreesStrings.SelectionMode}" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBlock x:Name="SelectionModeLabel" Text="{Localize TreesStrings.SelectionMode}" VerticalAlignment="Center" MarginRight="8"/>
             <DropDown ItemsSource="{Binding SelectionModes}"
                       AutomationProperties.AutomationId="SelectionMode"
-                      AutomationProperties.Name="{Localize TreesStrings.SelectionMode}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=SelectionModeLabel}"
                       SelectedItem="{Binding SelectedMode, Mode=TwoWay}" MinWidth="150">
                 <DropDown.ItemTemplate>
                     <DataTemplate>
@@ -37,7 +37,7 @@
                 BorderThickness="1" CornerRadius="10" Padding="8" Height="420">
             <TreeView ItemsSource="{Binding Nodes}" SelectionMode="{Binding SelectedMode}"
                       AutomationProperties.AutomationId="Files"
-                      AutomationProperties.Name="{Localize TreesStrings.Title}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=TitleLabel}"
                       SelectedItem="{Binding SelectedNode, Mode=OneWayToSource}"
                       VerticalOffset="{Binding ScrollOffset, Mode=TwoWay}">
                 <TreeView.ItemContainerStyle>

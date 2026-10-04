@@ -1,7 +1,9 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls;
 
@@ -98,4 +100,6 @@ public class ProgressBar : RangeBase
         if (double.IsNaN(current) || Math.Abs(current - target) > 0.5)
             _indicator.SetValue(property, target);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ProgressBarAutomationPeer(this);
 }

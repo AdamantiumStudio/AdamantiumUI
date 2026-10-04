@@ -11,8 +11,9 @@
         <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->
         <!-- The members of each enum are said by the page's phrases, a member's name being its key. -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="{Localize GalleryStrings.TabPlacement}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <DropDown EnumType="{x:Type controls:TabStripPlacement}"
+            <TextBlock x:Name="TabPlacementLabel" Text="{Localize GalleryStrings.TabPlacement}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <DropDown x:Name="TabPlacement" AutomationProperties.LabeledBy="{Binding ElementName=TabPlacementLabel}"
+                      EnumType="{x:Type controls:TabStripPlacement}"
                       SelectedItem="{Binding TabPlacement, Mode=TwoWay}"
                       Width="140">
                 <DropDown.ItemTemplate>
@@ -21,8 +22,9 @@
                     </DataTemplate>
                 </DropDown.ItemTemplate>
             </DropDown>
-            <TextBlock Text="{Localize GalleryStrings.ContentSlide}" VerticalAlignment="Center" Margin="20,0,8,0"/>
-            <DropDown EnumType="{x:Type controls:ContentTransition}"
+            <TextBlock x:Name="ContentSlideLabel" Text="{Localize GalleryStrings.ContentSlide}" VerticalAlignment="Center" Margin="20,0,8,0"/>
+            <DropDown x:Name="ContentSlide" AutomationProperties.LabeledBy="{Binding ElementName=ContentSlideLabel}"
+                      EnumType="{x:Type controls:ContentTransition}"
                       SelectedItem="{Binding SlideMode, Mode=TwoWay}"
                       Width="140">
                 <DropDown.ItemTemplate>
@@ -31,8 +33,9 @@
                     </DataTemplate>
                 </DropDown.ItemTemplate>
             </DropDown>
-            <TextBlock Text="{Localize GalleryStrings.Indicator}" VerticalAlignment="Center" Margin="20,0,8,0"/>
-            <DropDown EnumType="{x:Type controls:TabIndicatorPlacement}"
+            <TextBlock x:Name="IndicatorLabel" Text="{Localize GalleryStrings.Indicator}" VerticalAlignment="Center" Margin="20,0,8,0"/>
+            <DropDown x:Name="Indicator" AutomationProperties.LabeledBy="{Binding ElementName=IndicatorLabel}"
+                      EnumType="{x:Type controls:TabIndicatorPlacement}"
                       SelectedItem="{Binding IndicatorPlacement, Mode=TwoWay}"
                       Width="120">
                 <DropDown.ItemTemplate>

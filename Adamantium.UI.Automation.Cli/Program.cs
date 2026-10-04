@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Automation.Cli;
@@ -20,7 +22,10 @@ public static class Program
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(300);
 
     private static readonly string[] ElementKeys =
-        ["name", "id", "type", "class", "value", "toggle", "selected", "expanded", "enabled", "offscreen", "focus"];
+    [
+        "name", "id", "type", "class", "value", "toggle", "selected", "expanded", "min", "max", "hscroll", "vscroll",
+        "window", "enabled", "offscreen", "focus"
+    ];
 
     private const string Usage = """
         adam-auto - drives an application that runs the automation agent; by default the sandbox, as an instance of its own.
@@ -36,7 +41,9 @@ public static class Program
           invoke | toggle | select | expand | collapse <selector>   act on the first match by what it can do
           click | rclick | hover <selector>                   or by input made inside the application
           scroll <selector>                                   bring a list's item into view, making its element
-          set <selector> <value>                              write a value
+          scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents
+          window <selector> minimize | maximize | restore | close
+          set <selector> <value>                              write a value: text, or a number
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
           wait <selector> [--timeout 5s]                      wait until something matches
           wait-idle                                           wait until the application has settled
@@ -44,7 +51,8 @@ public static class Program
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
-                                                              selected, enabled, offscreen, focus, or a property name
+                                                              selected, expanded, min, max, hscroll, vscroll, window,
+                                                              enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches
           run <scenario>                                      the commands of a file, one a line, up to the first failure
 
@@ -85,7 +93,8 @@ public static class Program
                 "hover" => await SendAsync(pipe, Target(AutomationCommand.Hover, arguments, allowErrors)),
                 "expand" => await SendAsync(pipe, Target(AutomationCommand.Expand, arguments, allowErrors)),
                 "collapse" => await SendAsync(pipe, Target(AutomationCommand.Collapse, arguments, allowErrors)),
-                "scroll" => await SendAsync(pipe, Target(AutomationCommand.ScrollIntoView, arguments, allowErrors)),
+                "scroll" => await SendAsync(pipe, Scroll(arguments, allowErrors)),
+                "window" => await SendAsync(pipe, Window(arguments, allowErrors)),
                 "set" => await SendAsync(pipe, new AutomationRequest
                 {
                     Command = AutomationCommand.SetValue,
@@ -124,6 +133,48 @@ public static class Program
 
     private static AutomationRequest Target(AutomationCommand command, Arguments arguments, bool allowErrors = false) =>
         new() { Command = command, Target = arguments.At(0), AllowErrors = allowErrors };
+
+    private static AutomationRequest Scroll(Arguments arguments, bool allowErrors)
+    {
+        var across = arguments.Option("horizontal");
+        var down = arguments.Option("vertical");
+        return across == null && down == null
+            ? Target(AutomationCommand.ScrollIntoView, arguments, allowErrors)
+            : new AutomationRequest
+            {
+                Command = AutomationCommand.Scroll,
+                Target = arguments.At(0),
+                Value = $"{across},{down}",
+                AllowErrors = allowErrors
+            };
+    }
+
+    private static AutomationRequest Window(Arguments arguments, bool allowErrors)
+    {
+        var request = new AutomationRequest { Target = arguments.At(0), AllowErrors = allowErrors };
+        switch (arguments.At(1)?.ToLowerInvariant())
+        {
+            case "minimize":
+                request.Command = AutomationCommand.SetWindowState;
+                request.Value = nameof(WindowState.Minimized);
+                break;
+            case "maximize":
+                request.Command = AutomationCommand.SetWindowState;
+                request.Value = nameof(WindowState.Maximized);
+                break;
+            case "restore":
+                request.Command = AutomationCommand.SetWindowState;
+                request.Value = nameof(WindowState.Normal);
+                break;
+            case "close":
+                request.Command = AutomationCommand.Close;
+                break;
+            default:
+                throw new AutomationException("window <selector> minimize | maximize | restore | close");
+        }
+
+        return request;
+    }
 
     private static async Task<int> StartAsync(Arguments arguments, string pipe)
     {
@@ -422,6 +473,11 @@ public static class Program
             "toggle" => element.ToggleState,
             "selected" => element.IsSelected?.ToString(),
             "expanded" => element.ExpandCollapseState,
+            "min" => Invariant(element.Minimum),
+            "max" => Invariant(element.Maximum),
+            "hscroll" => Invariant(element.HorizontalScroll),
+            "vscroll" => Invariant(element.VerticalScroll),
+            "window" => element.WindowState,
             "enabled" => element.IsEnabled.ToString(),
             "offscreen" => element.IsOffscreen.ToString(),
             "focus" => element.HasKeyboardFocus.ToString(),
@@ -459,6 +515,8 @@ public static class Program
             yield return Unquote(token.ToString());
         }
     }
+
+    private static string Invariant(double? number) => number?.ToString(CultureInfo.InvariantCulture);
 
     private static string Unquote(string text) =>
         text is { Length: >= 2 } && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text;

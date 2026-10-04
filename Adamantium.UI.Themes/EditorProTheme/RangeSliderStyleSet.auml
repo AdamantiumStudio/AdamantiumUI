@@ -41,6 +41,7 @@
                             <RangeTrack.LowerThumb>
                                 <!-- Named so it can be turned with the control - see the vertical trigger below. -->
                                 <Thumb x:Name="LowerGrip"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Lower}"
                                        Width="{ResourceReference SliderThumbWidth}"
                                        Height="{ResourceReference SliderThumbLength}">
                                     <Thumb.Template>
@@ -53,6 +54,7 @@
                             </RangeTrack.LowerThumb>
                             <RangeTrack.UpperThumb>
                                 <Thumb x:Name="UpperGrip"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Upper}"
                                        Width="{ResourceReference SliderThumbWidth}"
                                        Height="{ResourceReference SliderThumbLength}">
                                     <Thumb.Template>

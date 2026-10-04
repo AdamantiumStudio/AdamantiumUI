@@ -1,3 +1,7 @@
 <Language>
     <Phrase Key="SwitchingTheme" Text="Переключение темы…"/>
+    <Phrase Key="Minimize" Text="Свернуть"/>
+    <Phrase Key="Maximize" Text="Развернуть"/>
+    <Phrase Key="Close" Text="Закрыть"/>
+    <Phrase Key="MoreCommands" Text="Ещё команды"/>
 </Language>

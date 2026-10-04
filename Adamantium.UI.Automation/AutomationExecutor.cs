@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -196,7 +197,22 @@ public sealed class AutomationExecutor
                 Pattern<IToggleProvider>(peer, PatternId.Toggle).Toggle();
                 break;
             case AutomationCommand.SetValue:
-                Pattern<IValueProvider>(peer, PatternId.Value).SetValue(request.Value ?? string.Empty);
+                SetValue(peer, request.Value ?? string.Empty);
+                break;
+            case AutomationCommand.Scroll:
+                var (horizontal, vertical) = ScrollPercents(request.Value);
+                Pattern<IScrollProvider>(peer, PatternId.Scroll).SetScrollPercent(horizontal, vertical);
+                break;
+            case AutomationCommand.SetWindowState:
+                if (!Enum.TryParse<WindowState>(request.Value, true, out var state))
+                {
+                    throw new AutomationException($"'{request.Value}' is not a window state: Normal, Minimized or Maximized.");
+                }
+
+                Pattern<IWindowProvider>(peer, PatternId.Window).SetVisualState(state);
+                break;
+            case AutomationCommand.Close:
+                Pattern<IWindowProvider>(peer, PatternId.Window).Close();
                 break;
             case AutomationCommand.Select:
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).Select();
@@ -228,6 +244,39 @@ public sealed class AutomationExecutor
         }
 
         return true;
+    }
+
+    private static void SetValue(AutomationPeer peer, string value)
+    {
+        if (peer.GetPattern(PatternId.Value) is IValueProvider text)
+        {
+            text.SetValue(value);
+            return;
+        }
+
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        {
+            throw new FormatException($"'{value}' is not a number.");
+        }
+
+        Pattern<IRangeValueProvider>(peer, PatternId.RangeValue).SetValue(number);
+    }
+
+    private static (double Horizontal, double Vertical) ScrollPercents(string value)
+    {
+        var parts = (value ?? string.Empty).Split(',');
+        if (parts.Length != 2)
+        {
+            throw new AutomationException($"'{value}': expected the percents as across,down - either may be empty.");
+        }
+
+        return (Percent(parts[0]), Percent(parts[1]));
+
+        static double Percent(string part) => part.Trim().Length == 0
+            ? IScrollProvider.NoScroll
+            : double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent)
+                ? percent
+                : throw new FormatException($"'{part}' is not a percent.");
     }
 
     private async Task<AutomationReply> WaitForAsync(string target, TimeSpan timeout)
@@ -346,7 +395,8 @@ public sealed class AutomationExecutor
     }
 
     private static bool ActsOn(AutomationPeer peer) =>
-        Enum.GetValues<PatternId>().Any(pattern => pattern != PatternId.ScrollItem && peer.GetPattern(pattern) != null);
+        Enum.GetValues<PatternId>().Any(pattern =>
+            pattern is not (PatternId.ScrollItem or PatternId.Scroll) && peer.GetPattern(pattern) != null);
 
     private static T Pattern<T>(AutomationPeer peer, PatternId pattern) where T : class =>
         peer.GetPattern(pattern) as T ?? throw new AutomationException($"{Label(peer)} cannot {pattern}.");
@@ -392,6 +442,24 @@ public sealed class AutomationExecutor
         if (peer.GetPattern(PatternId.ExpandCollapse) is IExpandCollapseProvider expandable)
         {
             info.ExpandCollapseState = expandable.ExpandCollapseState.ToString();
+        }
+
+        if (peer.GetPattern(PatternId.RangeValue) is IRangeValueProvider range)
+        {
+            info.Value ??= range.Value.ToString(CultureInfo.InvariantCulture);
+            info.Minimum = range.Minimum;
+            info.Maximum = range.Maximum;
+        }
+
+        if (peer.GetPattern(PatternId.Scroll) is IScrollProvider scroll)
+        {
+            info.HorizontalScroll = Math.Round(scroll.HorizontalScrollPercent, 1);
+            info.VerticalScroll = Math.Round(scroll.VerticalScrollPercent, 1);
+        }
+
+        if (peer.GetPattern(PatternId.Window) is IWindowProvider window)
+        {
+            info.WindowState = window.VisualState.ToString();
         }
 
         return info;

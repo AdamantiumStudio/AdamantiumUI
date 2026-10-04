@@ -20,7 +20,7 @@ public class UIComponentAutomationPeer : AutomationPeer
 
     public override AutomationControlType ControlType => AutomationControlType.Custom;
 
-    public override string Name => AutomationProperties.GetName(Owner) ?? NameCore() ?? string.Empty;
+    public override string Name => AutomationProperties.GetName(Owner) ?? LabelText() ?? NameCore() ?? string.Empty;
 
     public override string AutomationId => AutomationProperties.GetAutomationId(Owner) ?? Owner.Name ?? string.Empty;
 
@@ -155,6 +155,17 @@ public class UIComponentAutomationPeer : AutomationPeer
         }
 
         return null;
+    }
+
+    private string LabelText()
+    {
+        var label = AutomationProperties.GetLabeledBy(Owner);
+        if (label == null)
+        {
+            return null;
+        }
+
+        return (label as UIComponent)?.GetAutomationPeer()?.Name is { Length: > 0 } name ? name : TextOf(label);
     }
 
     /// <summary>Adds the peers of the nearest elements below <paramref name="element"/> that have one.</summary>

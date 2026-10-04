@@ -15,6 +15,11 @@ public static class AutomationProperties
     public static readonly AdamantiumProperty HelpTextProperty = AdamantiumProperty.RegisterAttached("AutomationHelpText",
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
+    /// <summary>The element whose text names this one - the label shown beside it - when no name is set. Set by
+    /// <c>{Binding ElementName=...}</c>.</summary>
+    public static readonly AdamantiumProperty LabeledByProperty = AdamantiumProperty.RegisterAttached("LabeledBy",
+        typeof(IUIComponent), typeof(AdamantiumComponent), new PropertyMetadata(null));
+
     public static string GetAutomationId(IAdamantiumComponent element) => element.GetValue<string>(AutomationIdProperty);
 
     public static void SetAutomationId(IAdamantiumComponent element, string value) =>
@@ -27,4 +32,9 @@ public static class AutomationProperties
     public static string GetHelpText(IAdamantiumComponent element) => element.GetValue<string>(HelpTextProperty);
 
     public static void SetHelpText(IAdamantiumComponent element, string value) => element.SetValue(HelpTextProperty, value);
+
+    public static IUIComponent GetLabeledBy(IAdamantiumComponent element) => element.GetValue<IUIComponent>(LabeledByProperty);
+
+    public static void SetLabeledBy(IAdamantiumComponent element, IUIComponent value) =>
+        element.SetValue(LabeledByProperty, value);
 }

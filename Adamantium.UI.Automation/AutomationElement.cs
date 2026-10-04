@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
+using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Automation;
 
@@ -62,7 +64,18 @@ public sealed class AutomationElement
 
     public Task SelectAsync() => RunAsync(AutomationCommand.Select);
 
+    /// <summary>Writes its text, or its number in the invariant culture.</summary>
     public Task SetValueAsync(string value) => RunAsync(AutomationCommand.SetValue, value);
+
+    /// <summary>Scrolls it to the given percents; null leaves an axis where it is.</summary>
+    public Task ScrollToAsync(double? horizontal, double? vertical) =>
+        RunAsync(AutomationCommand.Scroll, $"{Percent(horizontal)},{Percent(vertical)}");
+
+    /// <summary>Minimizes, maximizes or restores it, as the title bar's buttons do.</summary>
+    public Task SetWindowStateAsync(WindowState state) => RunAsync(AutomationCommand.SetWindowState, state.ToString());
+
+    /// <summary>Closes it, when it is a window.</summary>
+    public Task CloseAsync() => RunAsync(AutomationCommand.Close);
 
     /// <summary>Opens what it holds: a drop-down's list, a submenu, a branch.</summary>
     public Task ExpandAsync() => RunAsync(AutomationCommand.Expand);
@@ -85,6 +98,8 @@ public sealed class AutomationElement
     public Task TypeAsync(string text) => RunAsync(AutomationCommand.Type, text);
 
     public override string ToString() => Selector;
+
+    private static string Percent(double? percent) => percent?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
     private Task<AutomationReply> RunAsync(AutomationCommand command, string value = null) =>
         _session.RunAsync(new AutomationRequest { Command = command, Target = Selector, Value = value });

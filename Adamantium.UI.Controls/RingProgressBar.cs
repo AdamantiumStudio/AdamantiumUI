@@ -1,7 +1,9 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -152,4 +154,6 @@ public class RingProgressBar : RangeBase
         _indicator.StartAngle = 0;
         _indicator.StopAngle = fraction * 360.0;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ProgressBarAutomationPeer(this);
 }

@@ -1,0 +1,41 @@
+# The Ranges page: one value shared by sliders, progress bars and spinners, a span held by two range sliders, a ceiling
+# that rescales them all, and Reset putting everything back.
+select id=GalleryTabs/id=Ranges
+wait id=ValueSlider
+expect id=ValueSlider value=40 min=0 max=100
+set id=ValueSlider 65
+expect id=ValueSliderUpright value=65
+expect id=Progress value=65
+expect id=Ring value=65
+expect id=NumericSplit value=65
+expect id=ValueText Text=65
+set id=NumericLeft 30
+expect id=ValueSlider value=30
+# The span: each handle is a child of its slider, and both sliders share the bounds.
+expect id=Span/id=Lower value=20
+expect id=Span/id=Upper value=70
+set id=Span/id=Upper 80
+expect id=SpanUpright/id=Upper value=80
+expect id=SpanEndText Text=80
+set id=SpanUpright/id=Lower 10
+expect id=Span/id=Lower value=10
+# A lower ceiling rescales every control on it.
+set id=MaximumSlider 50
+expect id=ValueSlider max=50
+expect id=Progress max=50
+expect id=NumericRight max=50
+invoke id=ResetAll
+expect id=ValueSlider value=40 max=100
+expect id=Span/id=Lower value=20
+expect id=Span/id=Upper value=70
+expect id=ReadOnlyNumber value=42
+# The ring's arc and direction come from the drop-downs.
+select id=Direction/name=CounterClockwise
+expect id=Direction value=Counterclockwise
+expect id=Ring Direction=CounterClockwise
+select id=Direction/name=Clockwise
+# The page scrolls to its end and back.
+scroll id=RangesScroll --vertical 100
+expect id=RangesScroll vscroll=100
+scroll id=RangesScroll --vertical 0
+expect id=RangesScroll vscroll=0

@@ -39,4 +39,19 @@ public sealed class ElementInfo
 
     /// <summary>Whether what it holds is open - Expanded, Collapsed or LeafNode - when it can open.</summary>
     public string ExpandCollapseState { get; set; }
+
+    /// <summary>The lower limit of its number, when it holds one between limits.</summary>
+    public double? Minimum { get; set; }
+
+    /// <summary>The upper limit of its number, when it holds one between limits.</summary>
+    public double? Maximum { get; set; }
+
+    /// <summary>How far it is scrolled across, in percent; -1 when it cannot scroll that way.</summary>
+    public double? HorizontalScroll { get; set; }
+
+    /// <summary>How far it is scrolled down, in percent; -1 when it cannot scroll that way.</summary>
+    public double? VerticalScroll { get; set; }
+
+    /// <summary>Normal, Minimized or Maximized, when it is a window.</summary>
+    public string WindowState { get; set; }
 }

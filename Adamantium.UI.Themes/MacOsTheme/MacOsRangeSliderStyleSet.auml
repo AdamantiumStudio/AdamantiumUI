@@ -48,10 +48,12 @@
                                  one lights on ITS OWN drag: the trigger is on the Thumb, so grabbing the lower handle
                                  says nothing about the upper one. -->
                             <RangeTrack.LowerThumb>
-                                <Thumb Width="20" Height="20" Classes="SliderKnob"/>
+                                <Thumb Width="20" Height="20" Classes="SliderKnob"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Lower}"/>
                             </RangeTrack.LowerThumb>
                             <RangeTrack.UpperThumb>
-                                <Thumb Width="20" Height="20" Classes="SliderKnob"/>
+                                <Thumb Width="20" Height="20" Classes="SliderKnob"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Upper}"/>
                             </RangeTrack.UpperThumb>
                         </RangeTrack>
                     </Grid>

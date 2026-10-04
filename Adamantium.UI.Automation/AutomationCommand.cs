@@ -19,8 +19,20 @@ public enum AutomationCommand
 
     Toggle,
 
-    /// <summary>Writes <see cref="AutomationRequest.Value"/> into the target.</summary>
+    /// <summary>Writes <see cref="AutomationRequest.Value"/> into the target: its text, or its number in the invariant
+    /// culture.</summary>
     SetValue,
+
+    /// <summary>Scrolls the target to <see cref="AutomationRequest.Value"/>: the percents across and down, as
+    /// <c>across,down</c>; an axis left empty stays where it is.</summary>
+    Scroll,
+
+    /// <summary>Minimizes, maximizes or restores the target window: <see cref="AutomationRequest.Value"/> is Minimized,
+    /// Maximized or Normal.</summary>
+    SetWindowState,
+
+    /// <summary>Closes the target window.</summary>
+    Close,
 
     Select,
 
