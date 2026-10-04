@@ -1,7 +1,8 @@
 # Builds the UI against the engine's master and runs the tests that need no GPU: for every pull request, and for main
 # once it is merged into. The engine is cloned beside the UI, as on a developer's machine, so the projects reference its
-# source; the published engine packages are what a release builds against (publish-nuget.yml). Windows only: the
-# effects generator compiles the shaders during the build and loads Slang through kernel32.
+# source. Nothing is packed here: packages are made against the published engine packages, and that is a release's
+# build (publish-nuget.yml, a dry run unless told). Windows only: the effects generator compiles the shaders during the
+# build and loads Slang through kernel32.
 name: CI
 
 on:
@@ -101,7 +102,3 @@ jobs:
           wait $sandbox || status=1
           cat "$RUNNER_TEMP/sandbox.log"
           exit $status
-
-      - name: Pack
-        if: steps.changes.outputs.code == 'true'
-        run: dotnet pack AdamantiumUI.sln -c Release --no-build -o artifacts/nupkg
