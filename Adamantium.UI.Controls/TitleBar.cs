@@ -30,7 +30,10 @@ public class TitleBar : Control
         typeof(bool), typeof(TitleBar), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty TitleAlignmentProperty = AdamantiumProperty.Register(nameof(TitleAlignment),
-        typeof(HorizontalAlignment), typeof(TitleBar), new PropertyMetadata(HorizontalAlignment.Left));
+        typeof(HorizontalAlignment), typeof(TitleBar), new PropertyMetadata(HorizontalAlignment.Left, PropertyMetadataOptions.AffectsArrange));
+
+    public static readonly AdamantiumProperty TitleCenteringProperty = AdamantiumProperty.RegisterReadOnly(nameof(TitleCentering),
+        typeof(Thickness), typeof(TitleBar), new PropertyMetadata(default(Thickness)));
 
     /// <summary>Content at the very start of the caption, before the window commands. Deliberately a neutral slot: the
     /// title bar shows what was put in it and knows nothing about what that is.</summary>
@@ -151,6 +154,15 @@ public class TitleBar : Control
         set => SetValue(TitleAlignmentProperty, value);
     }
 
+    /// <summary>What puts a centered title in the middle of the whole bar rather than of the room between its sides:
+    /// the difference between the sides, on the narrower one. Zero unless <see cref="TitleAlignment"/> is Center; the bar
+    /// measures it and the template sets it around the title row.</summary>
+    public Thickness TitleCentering
+    {
+        get => GetValue<Thickness>(TitleCenteringProperty);
+        private set => SetValue(TitleCenteringProperty, value);
+    }
+
     public bool ShowMinButton
     {
         get => GetValue<bool>(ShowMinButtonProperty);
@@ -175,6 +187,7 @@ public class TitleBar : Control
     private ButtonBase _rightOverflowButton;
     private ContextMenu _rightOverflowMenu;
     private IUIComponent _dragArea;    // the ONE draggable region; its bounds become the window's CaptionDragRect
+    private IMeasurableComponent _titleRow;
 
     public override void OnApplyTemplate()
     {
@@ -190,6 +203,7 @@ public class TitleBar : Control
         if (_rightOverflowMenu != null) 
             _rightOverflowMenu.IgnoreTargetPress = true;
         _dragArea = GetTemplateChild("PART_DragArea") as IUIComponent;
+        _titleRow = GetTemplateChild("PART_TitleRow") as IMeasurableComponent;
 
         // Caption drag is MANAGED (not a geometric HTCAPTION), so it respects z-order: the drag only starts when the
         // drag area is genuinely the topmost element under the pointer. Any overlay floating over the title bar (a popup,
@@ -255,7 +269,21 @@ public class TitleBar : Control
         var window = OwnerWindow;
         if (window != null)
             window.CaptionDragRect = _dragArea != null ? RectRelativeTo(_dragArea, window) : default;
+        TitleCentering = CenteringFor(size);
         return size;
+    }
+
+    private Thickness CenteringFor(Size size)
+    {
+        if (TitleAlignment != HorizontalAlignment.Center || _dragArea == null)
+        {
+            return default;
+        }
+
+        var area = RectRelativeTo(_dragArea, this);
+        var rowMargin = _titleRow?.Margin ?? default;
+        var difference = (size.Width - area.Right) - area.X + rowMargin.Right - rowMargin.Left;
+        return difference > 0 ? new Thickness(difference, 0, 0, 0) : new Thickness(0, 0, -difference, 0);
     }
 
     // element's bounds expressed in ancestor-local (here: window-client) coordinates, via the world transforms.

@@ -38,14 +38,17 @@
             </DropDown>
 
             <Button Content="{Localize DockingStrings.Navigate}" Command="{Binding NavigateCommand}" MinWidth="100" Height="32" MarginRight="8"/>
-            <Button Content="{Localize DockingStrings.NewPane}" Command="{Binding NewTabCommand}" MinWidth="100" Height="32" MarginRight="24"/>
+            <Button Content="{Localize DockingStrings.NewPane}" Command="{Binding NewTabCommand}" MinWidth="100" Height="32" MarginRight="8"/>
+            <!-- Sets the open page's PaneZone; the pane follows it, and a drag writes it back. -->
+            <Button Content="{Localize DockingStrings.Move}" Command="{Binding MoveCommand}" MinWidth="100" Height="32" MarginRight="24"/>
 
             <!-- The arrangement is state, so it belongs to the VIEW MODEL: it owns a DockingWorkspace, the area is
                  pointed at it below, and these commands save and restore through it. The control is never told where a
                  layout is kept - that is the application's business. -->
             <Button Content="{Localize DockingStrings.SaveLayout}" Command="{Binding SaveLayoutCommand}" MinWidth="110" Height="32" MarginRight="8"/>
             <Button Content="{Localize DockingStrings.Restore}" Command="{Binding RestoreLayoutCommand}" MinWidth="90" Height="32" MarginRight="8"/>
-            <Button Content="{Localize DockingStrings.Forget}" Command="{Binding ForgetLayoutCommand}" MinWidth="80" Height="32" MarginRight="24"/>
+            <Button Content="{Localize DockingStrings.Forget}" Command="{Binding ForgetLayoutCommand}" MinWidth="80" Height="32" MarginRight="8"/>
+            <Button Content="{Localize DockingStrings.ResetLayout}" Command="{Binding ResetLayoutCommand}" MinWidth="80" Height="32" MarginRight="24"/>
 
             <!-- Pinned tabs: a row of their own (Rider) or sharing the one row (Visual Studio). The area pushes it onto
                  every panel it holds - see DockingArea.PinnedTabsPlacement. -->

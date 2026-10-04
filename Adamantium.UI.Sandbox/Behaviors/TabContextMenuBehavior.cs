@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.MVVM;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Primitives;

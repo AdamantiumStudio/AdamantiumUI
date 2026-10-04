@@ -1,5 +1,7 @@
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -304,6 +306,7 @@ public class DockingArea : Panel
 
         Owner._activePane = paneId;
         Owner.SyncActive();
+        RaiseLayoutChanged();
     }
 
     // The pane a group is CURRENTLY showing - what activating that panel means.
@@ -326,6 +329,9 @@ public class DockingArea : Panel
     private void FollowWindowActivation(WindowBase window)
     {
         if (window == null || !_watchedWindows.Add(window)) return;
+
+        // The main window only: closing it closes the layout; a floating one's panes are not lost with it.
+        if (_owner == null) window.Closing += OnHostWindowClosing;
 
         window.PropertyChanged += (_, e) =>
         {
@@ -405,7 +411,7 @@ public class DockingArea : Panel
 
         public int Index { get; }
 
-        /// <summary>Where the author said this pane belongs - the fallback when the group it was in has since died.</summary>
+        /// <summary>Where the pane was, or where code has sent it since - the fallback when the group it was in has died.</summary>
         public DockZone Zone { get; }
     }
 
@@ -438,7 +444,131 @@ public class DockingArea : Panel
         }
     }
 
-    internal async Task<bool> ClosePaneAsync(Pane pane) => (await ClosePaneAsync(pane, null)).closed;
+    // --- Unsaved work ---------------------------------------------------------------------------------------------------
+
+    /// <summary>Whether closing panes with unsaved work (<see cref="Pane.IsDirty"/>) asks first - one question for all of
+    /// them, however they close: a tab, a "close all", the window. On by default.</summary>
+    public static readonly AdamantiumProperty AsksBeforeClosingUnsavedProperty = AdamantiumProperty.Register(
+        nameof(AsksBeforeClosingUnsaved), typeof(bool), typeof(DockingArea), new PropertyMetadata(true));
+
+    public bool AsksBeforeClosingUnsaved
+    {
+        get => GetValue<bool>(AsksBeforeClosingUnsavedProperty);
+        set => SetValue(AsksBeforeClosingUnsavedProperty, value);
+    }
+
+    /// <summary>The title of the window that asks it. The theme says it, and the question in the look of
+    /// <see cref="UnsavedQuestion"/>.</summary>
+    public static readonly AdamantiumProperty UnsavedTitleProperty = AdamantiumProperty.Register(
+        nameof(UnsavedTitle), typeof(string), typeof(DockingArea), new PropertyMetadata(null));
+
+    public string UnsavedTitle
+    {
+        get => GetValue<string>(UnsavedTitleProperty);
+        set => SetValue(UnsavedTitleProperty, value);
+    }
+
+    /// <summary>Raised before the question; a handler that sets the answer is asked instead of the user.</summary>
+    public event Func<object, UnsavedClosingEventArgs, Task> UnsavedClosing;
+
+    /// <summary>Raised when the answer is to save: the handler saves. Without one nothing can be saved, so nothing closes.
+    /// A docking region handles it for view models that are <see cref="IDocument"/>.</summary>
+    public event Func<object, PanesSavingEventArgs, Task> PanesSaving;
+
+    // One question for every unsaved pane among those about to close; true when they may go on closing.
+    private async Task<bool> SettleUnsavedAsync(IEnumerable<string> paneIds)
+    {
+        var owner = Owner;
+        if (paneIds == null || !owner.AsksBeforeClosingUnsaved) return true;
+
+        var dirty = paneIds.Where(id => owner._panesById.TryGetValue(id, out var pane) && pane.IsDirty).ToList();
+        if (dirty.Count == 0) return true;
+
+        var asked = new UnsavedClosingEventArgs(dirty);
+        foreach (var handler in owner.UnsavedClosing?.GetInvocationList() ?? [])
+        {
+            await ((Func<object, UnsavedClosingEventArgs, Task>)handler)(owner, asked);
+            if (asked.Answer != UnsavedAnswer.None) break;
+        }
+
+        var answer = asked.Answer != UnsavedAnswer.None ? asked.Answer : await AskUnsavedAsync(dirty);
+        if (answer == UnsavedAnswer.Discard) return true;
+        if (answer != UnsavedAnswer.Save || owner.PanesSaving == null) return false;
+
+        var saving = new PanesSavingEventArgs(dirty);
+        foreach (var handler in owner.PanesSaving.GetInvocationList())
+        {
+            await ((Func<object, PanesSavingEventArgs, Task>)handler)(owner, saving);
+        }
+
+        return !saving.Failed;
+    }
+
+    private TaskCompletionSource<UnsavedAnswer> _unsavedAnswer;   // the question while it stands
+
+    // In this area's own window, modal, like every question the framework asks. With no window to ask in, or a question
+    // already up, the answer is to close nothing.
+    private Task<UnsavedAnswer> AskUnsavedAsync(IReadOnlyList<string> dirty)
+    {
+        if (_unsavedAnswer != null || WindowAround() is not { } host) return Task.FromResult(UnsavedAnswer.Cancel);
+
+        var answered = new TaskCompletionSource<UnsavedAnswer>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _unsavedAnswer = answered;
+
+        var question = new UnsavedQuestion { Count = dirty.Count, Subject = Owner._panesById[dirty[0]].Header };
+        var window = new OverlayWindow { IsModal = true, AllowMove = true, CloseOnOverlay = false, Content = question };
+        window.SetBinding(OverlayWindow.TitleProperty, new Binding(nameof(UnsavedTitle)) { Source = Owner });
+
+        // Closed by the cross or Escape is a cancel: losing work is what has to be said out loud.
+        void Finish(UnsavedAnswer answer)
+        {
+            if (!ReferenceEquals(_unsavedAnswer, answered)) return;
+
+            _unsavedAnswer = null;
+            window.Close();
+            answered.TrySetResult(answer);
+        }
+
+        question.Answered += Finish;
+        window.Closed += (_, _) => Finish(UnsavedAnswer.Cancel);
+        host.ShowOverlayWindow(window);
+        return answered.Task;
+    }
+
+    private IPopupHost WindowAround()
+    {
+        for (IUIComponent node = this; node != null; node = node.VisualParent)
+        {
+            if (node is IPopupHost host) return host;
+        }
+
+        return Popup.HostOf(this);
+    }
+
+    // The main window closing asks about the unsaved panes of the whole layout first - closing the window closes them.
+    private void OnHostWindowClosing(object sender, WindowClosingEventArgs e)
+    {
+        if (_closingAfterAnswer || sender is not WindowBase window) return;
+
+        var dirty = _panesById.Values.Where(pane => pane.IsDirty).Select(pane => pane.Id).ToList();
+        if (dirty.Count == 0 || !AsksBeforeClosingUnsaved) return;
+
+        e.Cancel = true;
+        _ = CloseAfterAnswerAsync(window, dirty);
+    }
+
+    private bool _closingAfterAnswer;
+
+    private async Task CloseAfterAnswerAsync(WindowBase window, IReadOnlyList<string> dirty)
+    {
+        if (!await SettleUnsavedAsync(dirty)) return;
+
+        _closingAfterAnswer = true;
+        window.Close();
+    }
+
+    internal async Task<bool> ClosePaneAsync(Pane pane) =>
+        pane?.Id is { Length: > 0 } id && await SettleUnsavedAsync([id]) && (await ClosePaneAsync(pane, null)).closed;
 
     // The shared body. `stop` reports a CancelAll back to a bulk operation, which is the difference between "this one
     // stays" and "stop asking me about the rest".
@@ -507,6 +637,9 @@ public class DockingArea : Panel
     /// <summary>Closes every pane of this layout, in every window of it. Panes still refuse one by one.</summary>
     public Task<int> CloseAllPanesAsync() => CloseAllAsync([.. Owner._panesById.Keys]);
 
+    /// <summary>Closes the named panes one by one; an answer that cancels all stops the rest.</summary>
+    public Task<int> ClosePanesAsync(IEnumerable<string> paneIds) => CloseAllAsync(paneIds == null ? null : [.. paneIds]);
+
     // A COPY of the ids, never the model's own list: closing rewrites it as we go.
     private List<string> PanesBesideAndIncluding(string paneId, string keep)
     {
@@ -519,7 +652,7 @@ public class DockingArea : Panel
 
     private async Task<int> CloseAllAsync(List<string> ids)
     {
-        if (ids == null) return 0;
+        if (ids == null || !await SettleUnsavedAsync(ids)) return 0;
 
         var closed = 0;
         foreach (var id in ids)
@@ -533,8 +666,8 @@ public class DockingArea : Panel
         return closed;
     }
 
-    /// <summary>Brings a put-away tool back - to the group it was in, or, if that group has since died, to the zone its
-    /// author gave it. Returns false for an id that is not put away.</summary>
+    /// <summary>Brings a put-away tool back - to the group it was in, or, if that group has since died, to its
+    /// <see cref="Pane.Zone"/>. Returns false for an id that is not put away.</summary>
     public bool RestorePane(string paneId)
     {
         if (paneId == null || !Owner._hidden.Remove(paneId, out var spot)) return false;
@@ -543,21 +676,15 @@ public class DockingArea : Panel
         if (home is { Parent: not null } || Layout.IsDocument(home))
         {
             home.Insert(System.Math.Min(spot.Index, home.PaneIds.Count), paneId);
-        }
-        else if (spot.Zone is DockZone.Center && Layout.ActiveWellGroup(Owner._activePane) is { } documents)
-        {
-            documents.Add(paneId);
-        }
-        else
-        {
-            var group = new PaneGroupNode();
-            group.Add(paneId);
-            Layout.DockBeside(RootContent, spot.Zone is DockZone.None or DockZone.Center ? DockZone.Right : spot.Zone,
-                group, PaneLength.Pixels(EdgeDockSize));
+            Layout.Normalize();
+            RebuildFamily();
+            return true;
         }
 
-        Layout.Normalize();
-        RebuildFamily();
+        // Its group died while it was away: it goes where its zone says, the way opening it there would.
+        if (!_panesById.TryGetValue(paneId, out var pane)) return false;
+
+        Place(paneId, pane, spot.Zone);
         return true;
     }
 
@@ -575,6 +702,9 @@ public class DockingArea : Panel
         var id = EnsureId(pane);
         RegisterPane(id, pane);
 
+        // Opened under the id of a closed tool: this one is that tool now, and the kept one is not coming back beside it.
+        Owner._hidden.Remove(id);
+
         // Asked before this area has read its own markup (a region adapter attaches first - see EnsureLayout): the pane
         // waits for it rather than founding a layout of its own that the authored one would then replace.
         if (!_layoutBuilt)
@@ -590,12 +720,19 @@ public class DockingArea : Panel
             return id;
         }
 
+        Place(id, pane, zone);
+        return id;
+    }
+
+    // Opening, restoring and a Zone written by code all put a pane in its place here.
+    private void Place(string id, Pane pane, DockZone zone)
+    {
         // A pane that may not be docked cannot START docked: the group holding it inherits the refusal and becomes
         // undockable itself (a group goes only where every pane in it may). It opens in a window of its own instead.
         if (zone is DockZone.Floating || (pane.Allowed & (DockZone.Center | DockZone.Edges)) == 0)
         {
             FloatNew(id, pane.Header?.ToString());
-            return id;
+            return;
         }
 
         // No room for a band down that side and no panel there to join: the well takes it. A place that always exists
@@ -648,12 +785,13 @@ public class DockingArea : Panel
         Owner._activePane = id;
 
         RebuildFamily();
-        return id;
     }
 
-    /// <summary>Brings a pane to the front of whatever group it is in, revealing that group if it is put away.</summary>
+    /// <summary>Brings a pane to the front of whatever group it is in, revealing that group if it is put away - and a
+    /// closed tool back into the layout first.</summary>
     public bool Activate(string paneId)
     {
+        if (paneId != null && Owner._hidden.ContainsKey(paneId) && !RestorePane(paneId)) return false;
         if (Layout.FindGroup(paneId) is not { } group) return false;
 
         group.ActiveIndex = group.PaneIds.IndexOf(paneId);
@@ -676,10 +814,28 @@ public class DockingArea : Panel
         var wasActive = paneId == Owner._activePane;
         var home = wasActive ? Layout.FindGroup(paneId) : null;
 
-        if (!Layout.RemovePane(paneId)) return false;
+        // A closed tool is not in the layout, but it is still kept - and taken out means not kept either.
+        var wasHidden = Owner._hidden.Remove(paneId);
+        if (!Layout.RemovePane(paneId) && !wasHidden) return false;
 
         _panesById.Remove(paneId);
         if (wasActive) HandOffActive(paneId, home);
+        RebuildFamily();
+        return true;
+    }
+
+    /// <summary>Docks a pane against a side of the panel holding another, as a drop on that panel's side arrow does. False
+    /// for a side the pane is not <see cref="Pane.Allowed"/>, or a move the application refuses in
+    /// <see cref="PaneDocking"/>.</summary>
+    public bool DockBeside(string paneId, string targetPaneId, DockZone side)
+    {
+        if (side is not (DockZone.Left or DockZone.Top or DockZone.Right or DockZone.Bottom)) return false;
+        if (paneId == null || !_panesById.TryGetValue(paneId, out var pane) || (pane.Allowed & side) == 0) return false;
+        if (Layout.FindGroup(targetPaneId) is not { } target) return false;
+        if (Refuses(new PaneDockingEventArgs([paneId], target, side))) return false;
+        if (!Layout.MovePane(paneId, target, side)) return false;
+
+        Owner._activePane = paneId;
         RebuildFamily();
         return true;
     }
@@ -712,7 +868,16 @@ public class DockingArea : Panel
 
     private void OnPanePropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {
-        if (e.Property != Pane.AllowedProperty || sender is not Pane pane) return;
+        if (sender is not Pane pane) return;
+
+        if (e.Property == Pane.ZoneProperty)
+        {
+            // Read from the pane, not e.NewValue: that is the raw slot, which a binding's value need not be.
+            if (!_writingZones) MovePane(pane, pane.Zone);
+            return;
+        }
+
+        if (e.Property != Pane.AllowedProperty) return;
         if ((pane.Allowed & (DockZone.Center | DockZone.Edges)) != 0) return;   // still dockable somewhere
         if (string.IsNullOrEmpty(pane.Id) || Layout.FindGroup(pane.Id) == null) return;       // not in the tree: nothing to undo
 
@@ -728,6 +893,62 @@ public class DockingArea : Panel
         FloatNew(id, pane.Header?.ToString());
     }
 
+    private bool _writingZones;   // set while the layout reports zones, so the report is not taken for a move
+
+    // A Zone written by code moves the pane; refused, the property snaps back to where the pane is.
+    private void MovePane(Pane pane, DockZone zone)
+    {
+        if (pane.Id is not { Length: > 0 } id || !_panesById.ContainsKey(id)) return;
+
+        // Put away: nothing moves now, but it comes back there.
+        if (_hidden.ContainsKey(id))
+        {
+            _hidden[id] = new HiddenSpot(null, 0, zone);
+            return;
+        }
+
+        if (Layout.FindGroup(id) is not { } group || Layout.ZoneOf(group) == zone) return;
+
+        if (zone is DockZone.None || (pane.Allowed & zone) == 0 || RefusesMove(id, zone))
+        {
+            System.Console.WriteLine($"[DockingArea] '{pane.Header}' may not go to {zone} - it stays where it is.");
+            SyncZones();
+            return;
+        }
+
+        Layout.RemovePane(id);
+        Place(id, pane, zone);
+    }
+
+    // The events a drag raises, so the application's rules hold for code too.
+    private bool RefusesMove(string id, DockZone zone)
+    {
+        if (zone is DockZone.Floating) return Refuses(new PaneTearingOffEventArgs([id], isWholePanel: false));
+
+        var target = zone is DockZone.Center
+            ? Layout.ActiveWellGroup(_activePane)
+            : (PaneNode)Layout.GroupAt(Layout.Main, zone) ?? Layout.Main?.Content;
+        return Refuses(new PaneDockingEventArgs([id], target, zone));
+    }
+
+    // After any change every pane's Zone says where it IS, so a view model bound to it reads the truth.
+    private void SyncZones()
+    {
+        var owner = Owner;
+        owner._writingZones = true;
+        try
+        {
+            foreach (var (id, pane) in owner._panesById.ToArray())
+            {
+                if (Layout.FindGroup(id) is { } group) pane.SetCurrentValue(Pane.ZoneProperty, Layout.ZoneOf(group));
+            }
+        }
+        finally
+        {
+            owner._writingZones = false;
+        }
+    }
+
     // --- Saving and restoring the arrangement -----------------------------------------------------------------------
 
     /// <summary>The whole arrangement as text: the tree, the edge bars, which panel is put away, which tab is on top,
@@ -740,7 +961,78 @@ public class DockingArea : Panel
 
         return DockingLayoutSerializer.Save(Layout,
             keepPane: id => PaneById(id)?.Restore != false,
-            restoreKeyOf: id => PaneById(id)?.RestoreKey);
+            restoreKeyOf: id => PaneById(id)?.RestoreKey,
+            stateOf: StateOf,
+            layoutVersion: LayoutVersion);
+    }
+
+    private string StateOf(string paneId)
+    {
+        if (Owner.PaneStateSaving is not { } handlers) return null;
+
+        var args = new PaneStateEventArgs(paneId, null);
+        handlers(Owner, args);
+        return args.State;
+    }
+
+    /// <summary>The application's version of its panes, written into every saved layout. Raise it when panes are renamed
+    /// or removed: a layout saved under an older one is then put through <see cref="PaneMigrating"/> on load.</summary>
+    public static readonly AdamantiumProperty LayoutVersionProperty = AdamantiumProperty.Register(nameof(LayoutVersion),
+        typeof(int), typeof(DockingArea), new PropertyMetadata(0));
+
+    public int LayoutVersion
+    {
+        get => GetValue<int>(LayoutVersionProperty);
+        set => SetValue(LayoutVersionProperty, value);
+    }
+
+    /// <summary>Raised on load for every pane id of a layout saved under an older <see cref="LayoutVersion"/>, to give
+    /// the id the pane has now. Without an answer an id that names no pane any more is dropped.</summary>
+    public event EventHandler<PaneMigratingEventArgs> PaneMigrating;
+
+    /// <summary>Raised for every pane a layout saves, to write its own state - see <see cref="PaneStateEventArgs"/>.</summary>
+    public event EventHandler<PaneStateEventArgs> PaneStateSaving;
+
+    /// <summary>Raised after a layout is loaded, for every pane with a state saved in it.</summary>
+    public event EventHandler<PaneStateEventArgs> PaneStateRestoring;
+
+    // A layout saved under an older version of the panes, with their ids brought up to date.
+    private string Migrated(string state)
+    {
+        var saved = DockingLayoutSerializer.ReadLayoutVersion(state);
+        if (saved >= LayoutVersion || Owner.PaneMigrating is not { } handlers) return state;
+
+        return DockingLayoutSerializer.RenamePanes(state, id =>
+        {
+            var args = new PaneMigratingEventArgs(saved, id);
+            handlers(Owner, args);
+            return args.NewId;
+        });
+    }
+
+    // The arrangement as the markup wrote it, taken once it is built: what ResetLayout goes back to.
+    private string _authored;
+
+    /// <summary>Goes back to the arrangement written in markup: its panels where they were declared, the tools put away
+    /// since brought back. Panes opened since stay open, as with <see cref="LoadLayout"/>; documents closed since stay
+    /// closed, as in every editor's "reset window layout".</summary>
+    public bool ResetLayout()
+    {
+        if (_owner != null) return _owner.ResetLayout();
+
+        EnsureLayout();
+        if (_authored is not { } authored) return false;
+
+        // Markup with no panels of its own reads back as nothing: a main root with nothing in it, as it began.
+        Apply(DockingLayoutSerializer.Load(authored, _panesById.ContainsKey) ?? Empty(), authored);
+        return true;
+
+        static DockingLayout Empty()
+        {
+            var layout = new DockingLayout();
+            layout.Roots.Add(new DockingRoot(null, isMain: true));
+            return layout;
+        }
     }
 
     /// <summary>The view model's handle on this area's arrangement: <c>Workspace="{Binding Workspace}"</c>. The view
@@ -769,11 +1061,13 @@ public class DockingArea : Panel
     /// without this everything but the authored panels quietly vanished from a restored arrangement.</para></summary>
     public event EventHandler<PaneRestoringEventArgs> PaneRestoring;
 
-    /// <summary>Restores a saved arrangement of known panes; unknown ids are dropped and unnamed panes stay out. False when the
-    /// text is unreadable or names no known pane.</summary>
+    /// <summary>Restores a saved arrangement of known panes; unknown ids are dropped. A pane open now that it leaves out
+    /// stays open - a document among the documents, the rest by their <see cref="Pane.Zone"/>. False when the text is
+    /// unreadable or names no known pane.</summary>
     public bool LoadLayout(string state)
     {
         EnsureLayout();
+        state = Migrated(state);
 
         // The panes the file expects but this area has not got are asked for FIRST, so that by the time the tree is
         // applied every id in it stands for something. Asking afterwards would mean applying a layout with holes in it
@@ -782,6 +1076,16 @@ public class DockingArea : Panel
 
         var loaded = DockingLayoutSerializer.Load(state, _panesById.ContainsKey);
         if (loaded?.Main == null) return false;
+
+        Apply(loaded, state);
+        return true;
+    }
+
+    private void Apply(DockingLayout loaded, string state)
+    {
+        // What is open stays open: a layout arranges panes, it does not close them. One it leaves out - a document, which
+        // is never saved, or a pane opened since - is placed again below.
+        var open = Panes.Select(pane => pane.Id).ToList();
 
         // Every window of the OLD arrangement goes first: its roots are about to be replaced, and a satellite left
         // behind would be showing a tree that is no longer part of any layout.
@@ -803,8 +1107,26 @@ public class DockingArea : Panel
         Layout = loaded;
         Layout.Normalize();
 
+        // A tool put away here that the layout has open is open now, not kept as well.
+        foreach (var id in Owner._hidden.Keys.ToList())
+        {
+            if (Layout.FindGroup(id) != null) Owner._hidden.Remove(id);
+        }
 
         Rebuild();
+
+        foreach (var id in open)
+        {
+            if (Layout.FindGroup(id) != null || Owner._hidden.ContainsKey(id) || !_panesById.TryGetValue(id, out var pane))
+                continue;
+
+            Place(id, pane, pane.Kind == PaneKind.Document ? DockZone.Center : pane.Zone);
+        }
+
+        foreach (var (id, saved) in DockingLayoutSerializer.ReadStates(state))
+        {
+            if (_panesById.ContainsKey(id)) Owner.PaneStateRestoring?.Invoke(Owner, new PaneStateEventArgs(id, saved));
+        }
 
         // The floating roots come back as windows, each where it was last seen.
         foreach (var root in Layout.Roots)
@@ -814,8 +1136,6 @@ public class DockingArea : Panel
             var ids = string.Join(",", DockingLayout.PanesIn(root.Content));
             OpenWindowFor(root, TitleOf(root), root.Bounds);
         }
-
-        return true;
     }
 
     // Asks the application for every pane the file names and this area has not got. A pane it makes is registered here
@@ -874,7 +1194,7 @@ public class DockingArea : Panel
     }
 
     /// <summary>Every pane the layout holds, in tree order - across floating windows too, since they are roots of the
-    /// same forest.</summary>
+    /// same forest, and in the panels put away along the edges.</summary>
     public IEnumerable<Pane> Panes
     {
         get
@@ -885,9 +1205,28 @@ public class DockingArea : Panel
                 {
                     if (_panesById.TryGetValue(id, out var pane)) yield return pane;
                 }
+
+                foreach (var bar in root.Bars.Values)
+                {
+                    foreach (var group in bar)
+                    {
+                        foreach (var id in group.PaneIds)
+                        {
+                            if (_panesById.TryGetValue(id, out var pane)) yield return pane;
+                        }
+                    }
+                }
             }
         }
     }
+
+    /// <summary>The id of the pane being worked in - the one whose panel wears the accent - or null.</summary>
+    public string ActivePaneId => Owner._activePane;
+
+    /// <summary>Raised after the panes, their places or the one being worked in may have changed.</summary>
+    public event EventHandler LayoutChanged;
+
+    private void RaiseLayoutChanged() => Owner.LayoutChanged?.Invoke(Owner, EventArgs.Empty);
 
     /// <summary>Raised when the pane shown in the document well changes - what a region calls its current view.</summary>
     public event EventHandler ActivePaneChanged;
@@ -984,6 +1323,8 @@ public class DockingArea : Panel
         InvalidateMeasure();
 
         SyncWindowTitle();
+        SyncZones();
+        RaiseLayoutChanged();
     }
 
     private PaneGroup _titleSource;   // the group whose name the floating window wears, so it can be let go of
@@ -1683,10 +2024,17 @@ public class DockingArea : Panel
     // from the model rather than one of them patched.
     private void RebuildFamily()
     {
-        // Skip windows whose root left the layout: rebuilding them would steal content from the live copy.
-        foreach (var area in Family)
+        // Windows whose root left the layout let go of their panes FIRST: a pane still held by a dead panel does not move
+        // into a live one.
+        var family = Family.ToList();
+        foreach (var area in family)
         {
-            if (area._root != null && !Layout.Roots.Contains(area._root)) 
+            if (area._root != null && !Layout.Roots.Contains(area._root)) area.Release();
+        }
+
+        foreach (var area in family)
+        {
+            if (area._root != null && !Layout.Roots.Contains(area._root))
                 continue;
 
             area.Rebuild();
@@ -2166,8 +2514,32 @@ public class DockingArea : Panel
         // they are taken out and opened where they ARE allowed to be - a window of their own.
         var floatOnly = new List<(PaneGroup Group, Pane Pane)>();
 
+        // Panes written straight into the area: one panel per zone they name, so a tool is declared by its pane alone.
+        var loose = new Dictionary<DockZone, PaneGroupNode>();
+
         foreach (var child in Children)
         {
+            if (child is Pane free)
+            {
+                if (free.Zone is DockZone.Floating || (free.Allowed & (DockZone.Center | DockZone.Edges)) == 0)
+                {
+                    floatOnly.Add((null, free));
+                    continue;
+                }
+
+                var freeId = EnsureId(free);
+                RegisterPane(freeId, free);
+
+                if (!loose.TryGetValue(free.Zone, out var gathered))
+                {
+                    gathered = loose[free.Zone] = new PaneGroupNode();
+                    declarations.Add(new ZoneDeclaration(free.Zone, gathered));
+                }
+
+                gathered.Add(freeId);
+                continue;
+            }
+
             if (child is not PaneGroup group) continue;
 
             // A group node holds the ids of its PANES: a gesture moves one pane, so a pane is the smallest nameable
@@ -2198,6 +2570,12 @@ public class DockingArea : Panel
         // that silently vanished helps less.
         foreach (var (group, pane) in floatOnly)
         {
+            if (group == null)
+            {
+                Children.Remove(pane);
+                continue;
+            }
+
             group.Items.Remove(pane);
             System.Console.WriteLine($"[DockingArea] '{pane.Header}' is allowed to float and nothing else, so it cannot " +
                                      "be authored inside a docked panel - opening it in a window of its own instead.");
@@ -2208,18 +2586,18 @@ public class DockingArea : Panel
             // An area with no authored groups is legitimate - a region fills it and nothing else. It still needs its
             // MAIN root: that is where a pane opened from code goes, and a layout without one is not a layout.
             if (Layout.Main == null) Layout.Roots.Add(new DockingRoot(null, isMain: true));
-
-            OpenDeferredPanes();
-            return;
         }
+        else
+        {
+            Layout = DockingLayout.FromZones(declarations);
 
-        Layout = DockingLayout.FromZones(declarations);
+            // The built tree is about to take the authored groups, and a component belongs to one visual tree. Here
+            // rather than in Rebuild, which must not tear the tree down later: that re-applies templates and orphans
+            // items panels.
+            Children.Clear();
 
-        // The built tree is about to take the authored groups, and a component belongs to one visual tree. Here rather
-        // than in Rebuild, which must not tear the tree down later: that re-applies templates and orphans items panels.
-        Children.Clear();
-
-        Rebuild();
+            Rebuild();
+        }
 
         // After the tree exists, so the windows open beside a layout rather than instead of one.
         foreach (var (_, pane) in floatOnly)
@@ -2228,6 +2606,9 @@ public class DockingArea : Panel
             RegisterPane(id, pane);
             FloatNew(id, pane.Header?.ToString());
         }
+
+        // The markup's arrangement, before anything code opens joins it.
+        _authored = DockingLayoutSerializer.Save(Layout);
 
         OpenDeferredPanes();
     }

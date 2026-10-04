@@ -5,9 +5,11 @@
     <Phrase Key="CreateIn" Text="Создать в"/>
     <Phrase Key="Navigate" Text="Перейти"/>
     <Phrase Key="NewPane" Text="Новая панель"/>
+    <Phrase Key="Move" Text="Переместить"/>
     <Phrase Key="SaveLayout" Text="Сохранить раскладку"/>
     <Phrase Key="Restore" Text="Восстановить"/>
     <Phrase Key="Forget" Text="Забыть"/>
+    <Phrase Key="ResetLayout" Text="Сбросить"/>
     <Phrase Key="PinnedRow" Text="Закреплённые вкладки отдельным рядом"/>
 
     <Phrase Key="Scene" Text="Сцена"/>
@@ -49,7 +51,9 @@
             SharedRow="Закреплённые вкладки делят ряд с остальными."
             PanelTornOff="Отрыв панели ({panes}) — разрешён."
             TabTornOff="Отрыв вкладки ({panes}) — разрешён."
-            Docked="Стыковка {panes} {zone} — разрешена."/>
+            Docked="Стыковка {panes} {zone} — разрешена."
+            Moving="«{panes}» просится {zone}: её вьюмодель присвоила PaneZone."
+            NotOpen="«{panes}» не открыта — сначала перейдите к ней."/>
     <Phrase Key="ZoneTo" Select="zone" Center="в центр" Left="влево" Right="вправо" Top="наверх"
             Bottom="вниз" Floating="в отдельное окно"/>
 
@@ -63,7 +67,8 @@
             NothingSaved="Пока ничего не сохранено — сначала нажмите «Сохранить»."
             Restored="Восстановлено. Документы в раскладку НЕ входят: Pane.Restore говорит, что они принадлежат сеансу, а не рабочей области."
             NamesNothing="Сохранённый текст не называет ничего, что ещё есть в этой области."
-            Forgotten="Забыто. При следующем запуске будет раскладка из разметки."/>
+            Forgotten="Забыто. При следующем запуске будет раскладка из разметки."
+            Reset="Раскладка снова как в разметке; всё, что было открыто, осталось открытым."/>
 
     <Phrase Key="CloseDocument" Text="Закрыть документ"/>
     <Phrase Key="CloseQuestion" Text="Закрыть «{pane}»?"/>
@@ -72,4 +77,7 @@
     <Phrase Key="Origin" Select="restored" True="восстановлена вместе с раскладкой" False="{zone}"/>
     <Phrase Key="OpenedIn" Select="zone" Center="область документов" Floating="отдельное окно — и только плавающая: пристыковать обратно нельзя"
             Left="слева" Top="сверху" Right="справа" Bottom="снизу"/>
+    <Phrase Key="Changed" Text="Изменено — вкладка помечена, а закрытие спросит, сохранить ли"/>
+    <Phrase Key="Now" Select="zone" Center="Сейчас в области документов" Left="Сейчас слева" Top="Сейчас сверху"
+            Right="Сейчас справа" Bottom="Сейчас снизу" Floating="Сейчас в отдельном окне"/>
 </Language>

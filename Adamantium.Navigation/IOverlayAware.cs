@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Adamantium.Navigation;
 
@@ -34,7 +36,8 @@ public interface IOverlayAware
     double Left { get => 0; set { } }
     double Top { get => 0; set { } }
 
-    void OnOverlayOpened(NavigationParameters parameters);
+    /// <summary>Awaited before the window appears. One that raises <see cref="RequestClose"/> meanwhile never appears.</summary>
+    Task OnOverlayOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default);
 
     /// <summary>Raise to close the overlay with a result. The x button / Escape also close it (with a null result).</summary>
     event Action<object> RequestClose;

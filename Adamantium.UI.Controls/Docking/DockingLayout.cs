@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Panels;
 
 namespace Adamantium.UI.Controls.Docking;
@@ -132,7 +133,8 @@ public class DockingLayout
         // holding the bands, never into the sides - which is what keeps those full height.
         PaneNode center = null;
 
-        foreach (var declaration in declarations)
+        // The center first wherever it was declared: a tool declared before the documents must not become them.
+        foreach (var declaration in declarations.OrderBy(declaration => declaration.Zone is DockZone.Center ? 0 : 1))
         {
             var group = declaration.Group;
 
@@ -709,7 +711,7 @@ public class DockingLayout
         foreach (var group in GroupsIn(root.Content))
         {
             if (IsDocument(group)) continue;
-            if (EdgeOf(group) == edge) return group;
+            if (SideOf(root, group) == edge) return group;
         }
 
         // The PUT-AWAY panels of that edge count too - they are still the panel on that side, they are just folded
@@ -721,6 +723,69 @@ public class DockingLayout
         }
 
         return null;
+    }
+
+    /// <summary>Every group of every root in tree order, then the panels put away along that root's edges.</summary>
+    public IEnumerable<PaneGroupNode> Groups
+    {
+        get
+        {
+            foreach (var root in Roots)
+            {
+                foreach (var group in GroupsIn(root.Content)) yield return group;
+
+                foreach (var bar in root.Bars.Values)
+                {
+                    foreach (var group in bar)
+                    {
+                        if (!group.IsEmpty) yield return group;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>The groups of the document areas - the main window's and any a floating window has.</summary>
+    public IEnumerable<PaneGroupNode> DocumentGroups => Groups.Where(IsDocument);
+
+    public IEnumerable<PaneGroupNode> ToolGroups => Groups.Where(group => !IsDocument(group));
+
+    /// <summary>Where a group IS, in the words <see cref="Pane.Zone"/> uses: the side of the documents it stands on,
+    /// <see cref="DockZone.Center"/> among them, <see cref="DockZone.Floating"/> in a window of its own. None when it is
+    /// not in this layout.</summary>
+    public DockZone ZoneOf(PaneGroupNode group)
+    {
+        var root = RootOf(group);
+        if (root == null) return DockZone.None;
+        if (!root.IsMain) return DockZone.Floating;
+        return SideOf(root, group);
+    }
+
+    // Decided where the group's branch and the well's part, so a panel stacked in the left column is Left rather than the
+    // Bottom of that column. Without a well, the outermost edge it touches.
+    private DockZone SideOf(DockingRoot root, PaneGroupNode group)
+    {
+        var barred = root.EdgeOfBarred(group);
+        if (barred != DockZone.None) return barred;
+        if (IsDocument(group)) return DockZone.Center;
+
+        var well = root.DocumentWell;
+        var side = DockZone.Center;
+        for (PaneNode walk = group; walk.Parent is { } row; walk = row)
+        {
+            if (Holds(row, well))
+            {
+                var mine = row.Children.IndexOf(walk);
+                var wells = row.Children.FindIndex(child => Holds(child, well));
+                var horizontal = row.Orientation == Orientation.Horizontal;
+                if (mine < wells) return horizontal ? DockZone.Left : DockZone.Top;
+                return horizontal ? DockZone.Right : DockZone.Bottom;
+            }
+
+            if (EdgeOf(walk) is var edge and not DockZone.None) side = edge;
+        }
+
+        return side;
     }
 
     public static IEnumerable<string> PanesIn(PaneNode node)

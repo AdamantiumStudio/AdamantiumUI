@@ -31,10 +31,19 @@ public class AumlXDirectiveCompletionTests
         }
 
         public enum Speed { Slow, Fast }
+
+        public static class ProbeRails
+        {
+            public const double Width = 2;
+            public static double Gap { get; } = 6;
+        }
         """;
 
     private const string Root =
         """<Window xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions" xmlns:local="clr-namespace:Probe">""";
+
+    private const string BareRoot =
+        """<Window xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions">""";
 
     private CompletionEngine _engine;
     private string _probeFile;
@@ -92,11 +101,32 @@ public class AumlXDirectiveCompletionTests
     public void ATypeDirective_OffersTypes(string body, params string[] expected) =>
         Assert.That(Labels(body), Is.SupersetOf(expected));
 
-    private IReadOnlyList<string> Labels(string body)
+    [TestCase("""<Border Width="{x:Static ProbeRails.|}"/>""", "Gap", "Width")]
+    [TestCase("""<Border Width="{x:Static ProbeRails.Wi|}"/>""", "Width")]
+    public void AProjectTypeWithNoNamespaceDeclared_OffersItsStaticMembers(string body, params string[] expected) =>
+        Assert.That(Labels(body, BareRoot), Is.EquivalentTo(expected));
+
+    [Test]
+    public void AProjectTypeWithNoNamespaceDeclared_IsOfferedBare()
     {
-        var marked = Root + body + "</Window>";
+        var items = Items("""<Border Width="{x:Static ProbeR|}"/>""", BareRoot);
+
+        Assert.That(items.Select(i => i.Label), Does.Contain("ProbeRails"));
+        Assert.That(items.First(i => i.Label == "ProbeRails").InsertText, Is.Null, "the build finds it by name, so no prefix");
+    }
+
+    [Test]
+    public void AProjectTypeWhoseShortNameTheBuildTakesForAnother_IsNotOfferedBare() =>
+        Assert.That(Labels("""<Border Width="{x:Static Metr|}"/>""", BareRoot).Count(l => l == "Metrics"), Is.LessThanOrEqualTo(1),
+            "the theme's Metrics is the one the build finds by that name; the probe's would be a second, unreachable one");
+
+    private IReadOnlyList<string> Labels(string body, string root = Root) => Items(body, root).Select(i => i.Label).ToList();
+
+    private IReadOnlyList<AumlCompletionItem> Items(string body, string root)
+    {
+        var marked = root + body + "</Window>";
         var caret = marked.IndexOf('|');
         var text = marked.Remove(caret, 1);
-        return _engine.Complete(text, caret).Select(i => i.Label).ToList();
+        return _engine.Complete(text, caret);
     }
 }

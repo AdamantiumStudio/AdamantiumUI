@@ -9,6 +9,7 @@ namespace Adamantium.UI.Platforms.Windows;
 public class Win32NativeWindowWrapper : AdamantiumComponent, IDisposable
 {
     private const int ERROR_CLASS_ALREADY_EXISTS = 1410;
+    private const int ApplicationIconId = 32512;
     private const string windowName = "AdamantiumWindow";
 
     public Win32NativeWindowWrapper(
@@ -110,6 +111,8 @@ public class Win32NativeWindowWrapper : AdamantiumComponent, IDisposable
             style = classStyle,
             lpszClassName = className,
             hCursor = Win32Interop.LoadCursor(IntPtr.Zero, NativeCursors.Arrow),
+            hIcon = Win32Interop.LoadImage(Win32Interop.GetModuleHandle(null), ApplicationIconId, LoadImageType.Icon, 0, 0,
+                LoadImageFlags.DefaultSize | LoadImageFlags.Shared),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProcDelegate)
         };
 

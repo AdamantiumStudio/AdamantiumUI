@@ -329,12 +329,15 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         if (Lifecycle != VisualLifecycle.Discarded) Lifecycle = VisualLifecycle.Recycled;
     }
 
-    /// <summary>Marks the element live again on (re)entering the visual tree. Discarded is final and is not
-    /// revived.</summary>
+    /// <summary>Marks the element live again on (re)entering the visual tree. Discarded is final once released; one
+    /// back in the tree before its release came back - content a panel let go of and another took up, a docking pane's
+    /// body moving between panels.</summary>
     public void Revive()
     {
-        if (Lifecycle != VisualLifecycle.Discarded) Lifecycle = VisualLifecycle.Live;
+        if (Lifecycle != VisualLifecycle.Discarded || !_released) Lifecycle = VisualLifecycle.Live;
     }
+
+    private bool _released;   // the queue has let go of what held it: its bindings are closed
 
     /// <summary>Which template BUILT this element, by that result's id. TemplatedParent cannot answer it: an
     /// ItemsPanelTemplate stamps the same templated parent on the items panel it makes, so a control's teardown would
@@ -358,6 +361,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     internal void ReleaseFromQueue()
     {
         if (Lifecycle != VisualLifecycle.Discarded) return;
+        _released = true;
         OnDiscarded();
     }
 

@@ -1019,8 +1019,9 @@ public class DefaultAumlTransformer : IAumlTransformer
     }
 
     /// <summary>Registers a control document or theme variant as its generated type before any body is transformed, so
-    /// documents embedding it resolve it regardless of file order. No-op for other roots.</summary>
-    public IResolvedType PreRegisterDocument(AumlDocument document, ITypeResolver typeResolver)
+    /// documents embedding it resolve it regardless of file order; with <paramref name="anyClass"/>, every document that
+    /// generates a class - a style set, a resource dictionary, a theme. No-op for other roots.</summary>
+    public IResolvedType PreRegisterDocument(AumlDocument document, ITypeResolver typeResolver, bool anyClass = false)
     {
         typeResolver.ScanXmlnsAttributes();
         foreach (var mapping in document.NamespaceMappings)
@@ -1040,8 +1041,11 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         var rootType = typeResolver.Resolve(resolvedRoot.GetFullTypeName());
         if (rootType is not { EntityType: EntityType.Window or EntityType.View
-                              or EntityType.UIApplication or EntityType.ThemeVariant })
+                              or EntityType.UIApplication or EntityType.ThemeVariant }
+            && !(anyClass && rootType is { EntityType: not EntityType.Unknown }))
+        {
             return null;
+        }
 
         // Reuse the resolved root reference in the full Transform (which short-circuits on IsResolved) and as the
         // registered type's BaseType chain (MetadataResolvedType.BaseType reads RootNode's type reference).

@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 
@@ -9,7 +11,12 @@ public partial class SettingsPageViewModel : INavigationAware
 {
     [Bindable] private NavigationMode? _arrivedVia;
 
-    public void OnNavigatedTo(NavigationContext context) => ArrivedVia = context.Mode;
-    public void OnNavigatedFrom(NavigationContext context) { }
+    public Task OnNavigatedToAsync(NavigationContext context, CancellationToken cancellationToken = default)
+    {
+        ArrivedVia = context.Mode;
+        return Task.CompletedTask;
+    }
+
+    public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public bool IsNavigationTarget(NavigationContext context) => true;
 }

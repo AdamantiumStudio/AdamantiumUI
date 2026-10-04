@@ -71,6 +71,9 @@ public partial class DockingViewModel : TabPageViewModel
 
     private IRegion Region => _navigation.Regions[RegionName];
 
+    // What the area holds, asked of the region rather than of the control.
+    private IDockingRegion Docking => _navigation.Regions.Docking(RegionName);
+
     /// <summary>Go to the selected name: open where the place says if it is not there, activate it where it is if it
     /// is. Both are the same call - which of the two happens is the region's business, not the caller's.</summary>
     [Command]
@@ -87,6 +90,22 @@ public partial class DockingViewModel : TabPageViewModel
         Pages.Add(name);
         SelectedPage = name;
         return Open(name);
+    }
+
+    /// <summary>Moves the selected page, if it is open, to the selected place - by setting its view model's PaneZone, the
+    /// property a drag writes. The region has no "move": where a pane stands is state.</summary>
+    [Command]
+    private void Move()
+    {
+        var page = Docking.Find<DockPageViewModel>(open => open.Title == SelectedPage);
+        if (page == null)
+        {
+            Answer(DockingAnswer.NotOpen, SelectedPage);
+            return;
+        }
+
+        Answer(DockingAnswer.Moving, SelectedPage, SelectedPlace);
+        page.PaneZone = SelectedPlace;
     }
 
     private Task Open(string page)
@@ -160,7 +179,14 @@ public partial class DockingViewModel : TabPageViewModel
             : DockingLayoutReport.NamesNothing;
     }
 
-    /// <summary>What a real application's "reset window layout" does.</summary>
+    /// <summary>"Reset window layout": the arrangement the markup wrote, with what is open still open.</summary>
+    [Command]
+    private void ResetLayout()
+    {
+        LayoutState = Workspace.Reset() ? DockingLayoutReport.Reset : DockingLayoutReport.NotOnScreen;
+    }
+
+    /// <summary>Forgets the saved arrangement, so the next start begins from the markup's.</summary>
     [Command]
     private void ForgetLayout()
     {

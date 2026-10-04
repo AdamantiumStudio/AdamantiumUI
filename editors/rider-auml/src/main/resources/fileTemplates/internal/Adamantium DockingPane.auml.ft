@@ -1,0 +1,9 @@
+<Pane xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      Header="${NAME}"
+      Kind="Tool"
+      Zone="Right">
+    <Grid>
+
+    </Grid>
+</Pane>

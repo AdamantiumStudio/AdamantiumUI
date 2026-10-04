@@ -28,12 +28,14 @@ dotnet build AdamantiumUI.sln -c Debug
 
 The output goes to `artifacts/bin/<Configuration>/<target framework>/`.
 
-**The engine.** A clone of this repository alone builds against the published engine packages, of the version in
-[`Directory.Build.props`](Directory.Build.props). With [AdamantiumEngine](https://github.com/AdamantiumStudio/AdamantiumEngine)
-cloned beside it, in `../AdamantiumEngine`, the projects reference the engine's source instead, so a change on either
-side is seen at once; `-p:UseEngineSource=false` builds against the packages even then. A change that needs both is
-two pull requests: the engine's first, then this repository's, once the engine packages that carry the change are
-published.
+**The engine.** `main` builds against the engine's `master`, as CI does: with
+[AdamantiumEngine](https://github.com/AdamantiumStudio/AdamantiumEngine) cloned beside this repository, in
+`../AdamantiumEngine`, the projects reference the engine's source, so a change on either side is seen at once. A clone
+of this repository alone builds against the published engine packages, of the version in
+[`Directory.Build.props`](Directory.Build.props) - which `main` may have outgrown until the next release, since packages
+are published only at a release, the engine's first. `-p:UseEngineSource=false` builds against the packages even with
+the engine beside. A change that needs both is two pull requests: the engine's first, then this repository's, once the
+engine's is merged.
 
 **The sandbox.** `Adamantium.UI.Sandbox` is the application the framework is developed and tried in:
 

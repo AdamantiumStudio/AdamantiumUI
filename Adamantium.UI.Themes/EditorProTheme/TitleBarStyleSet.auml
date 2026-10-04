@@ -63,18 +63,24 @@
                                  strip drags. Clips so a long title doesn't spill onto the commands. The command columns
                                  sit outside this element, so their buttons stay clickable. -->
                             <Grid x:Name="PART_DragArea" Grid.Column="3" Background="Transparent" ClipToBounds="True">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                                        HorizontalAlignment="{TemplateBinding TitleAlignment}"
-                                        Margin="{ResourceReference TitleBarTitleInset}">
-                                    <!-- The gap AFTER the icon, which is not the strip's inset before it - two
-                                         different jobs, so two metrics. -->
-                                    <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
-                                            VerticalAlignment="Center" Margin="{ResourceReference TitleBarIconGap}"/>
-                                    <TextBlock x:Name="PART_Title" Text="{TemplateBinding Title}"
-                                            Foreground="{ObservableResource TextFillColorSecondary}"
-                                            FontSize="{TemplateBinding FontSize}"
-                                            VerticalAlignment="Center"/>
-                                </StackPanel>
+                                <!-- Centered, the row stands in the middle of the whole bar: TitleCentering adds the
+                                     difference between the sides to the narrower one. -->
+                                <Border Margin="{TemplateBinding TitleCentering}">
+                                    <StackPanel x:Name="PART_TitleRow"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="{TemplateBinding TitleAlignment}"
+                                            Margin="{ResourceReference TitleBarTitleInset}">
+                                        <!-- The gap AFTER the icon, which is not the strip's inset before it - two
+                                             different jobs, so two metrics. -->
+                                        <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
+                                                VerticalAlignment="Center" Margin="{ResourceReference TitleBarIconGap}"/>
+                                        <TextBlock x:Name="PART_Title" Text="{TemplateBinding Title}"
+                                                Foreground="{ObservableResource TextFillColorSecondary}"
+                                                FontSize="{TemplateBinding FontSize}"
+                                                VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
                             </Grid>
 
                             <!-- RIGHT zone (interactive): right commands + "..." overflow menu + the window buttons. -->

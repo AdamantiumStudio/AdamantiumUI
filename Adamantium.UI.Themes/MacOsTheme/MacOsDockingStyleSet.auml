@@ -13,6 +13,7 @@
          pixel as the window border and at 150% straddles the seam. -->
     <Style Selector="DockingArea">
         <Setter Property="Margin" Value="1"/>
+        <Setter Property="UnsavedTitle" Value="{Localize PaneStrings.UnsavedTitle}"/>
     </Style>
 
     <Style Selector="PaneGroup" BasedOn="TabControl"/>
@@ -24,6 +25,38 @@
     </Style>
 
     <Style Selector="Pane" BasedOn="TabItem"/>
+
+    <!-- Unsaved work: the dot after the name, as on a changed file's tab. -->
+    <Style Selector="Pane">
+        <PropertyTrigger Property="IsDirty" Value="true">
+            <Setter TargetName="DirtyMark" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- The one question before panes with unsaved work close (DockingArea.AsksBeforeClosingUnsaved). -->
+    <Style Selector="UnsavedQuestion">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="UnsavedQuestion">
+                    <StackPanel Orientation="Vertical" Width="360" Margin="18">
+                        <TextBlock x:Name="ManyLabel" TextWrapping="WrapByWords" MarginBottom="20"
+                                   Text="{Localize PaneStrings.SaveMany, count={TemplateBinding Count}}"/>
+                        <TextBlock x:Name="OneLabel" Visibility="Collapsed" TextWrapping="WrapByWords" MarginBottom="20"
+                                   Text="{Localize PaneStrings.SaveOne, name={TemplateBinding Subject}}"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="PART_Save" MinWidth="96" MarginRight="8" Content="{Localize PaneStrings.Save}"/>
+                            <Button x:Name="PART_Discard" MinWidth="96" MarginRight="8" Content="{Localize PaneStrings.DontSave}"/>
+                            <Button x:Name="PART_Cancel" MinWidth="96" Content="{Localize PaneStrings.Cancel}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <PropertyTrigger Property="Count" Value="1">
+            <Setter TargetName="ManyLabel" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="OneLabel" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
 
     <!-- A tab whose panel has folded down against a SIDE: the label lies on its side, because the strip that is left is
          a narrow column. BOTH sides turn the same way - top to bottom - so a glance down one edge reads the same as a

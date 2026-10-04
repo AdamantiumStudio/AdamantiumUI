@@ -1,11 +1,23 @@
+using Adamantium.Navigation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Controls;
 
 namespace Adamantium.UI.Controls.Docking;
 
 /// <summary>The unit of docking: a <see cref="TabItem"/> with header, content, and the policy of where it may live, set as
-/// ordinary properties.</summary>
-public class Pane : TabItem
+/// ordinary properties. A file whose root is <c>&lt;Pane&gt;</c> is a class of its own, the way a <c>&lt;View&gt;</c> is.</summary>
+public class Pane : TabItem, IView
 {
+    public Pane()
+    {
+        InitializeComponent();
+    }
+
+    /// <summary>Builds the pane's content. Overridden by the class generated from a <c>&lt;Pane&gt;</c> file.</summary>
+    protected virtual void InitializeComponent()
+    {
+    }
+
     /// <summary>Where this pane sits. STATE, not a command - it is two-way bindable, so a drag writes it and a
     /// view-model can read it, or set it (<c>Placement = DockZone.Floating</c>) to send the pane away. One setter for
     /// both directions means the gesture and the code cannot drift apart.</summary>
@@ -32,6 +44,18 @@ public class Pane : TabItem
     {
         get => GetValue<PaneKind>(KindProperty);
         set => SetValue(KindProperty, value);
+    }
+
+    /// <summary>Holds work not saved yet: the tab shows it, and closing asks first (see
+    /// <see cref="DockingArea.AsksBeforeClosingUnsaved"/>). A docking region keeps it from the view model's
+    /// <see cref="IDocument.IsDirty"/>.</summary>
+    public static readonly AdamantiumProperty IsDirtyProperty = AdamantiumProperty.Register(nameof(IsDirty),
+        typeof(bool), typeof(Pane), new PropertyMetadata(false));
+
+    public bool IsDirty
+    {
+        get => GetValue<bool>(IsDirtyProperty);
+        set => SetValue(IsDirtyProperty, value);
     }
 
     /// <summary>Which way this pane's tab is turned, set by the group when it folds against a side edge. Three states so the

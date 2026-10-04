@@ -110,7 +110,7 @@ public class MacOsTabStripTests
     {
         var group = new Adamantium.UI.Controls.Docking.PaneGroup
         {
-            Kind = Adamantium.UI.Controls.Docking.PaneKind.Tool
+            Kind = Adamantium.Navigation.PaneKind.Tool
         };
         group.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(group);

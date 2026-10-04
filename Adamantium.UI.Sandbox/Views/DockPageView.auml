@@ -2,6 +2,8 @@
     <StackPanel Margin="16">
         <TextBlock Text="{Binding Title}" FontSize="18" MarginBottom="6"/>
         <TextBlock Text="{Localize DockingStrings.Origin, restored={Binding Restored}, zone={Localize DockingStrings.OpenedIn, zone={Binding OpenedIn}}}" Opacity="0.7"/>
+        <TextBlock Text="{Localize DockingStrings.Now, zone={Binding PaneZone}}" Opacity="0.7"/>
+        <CheckBox Content="{Localize DockingStrings.Changed}" IsChecked="{Binding IsDirty, Mode=TwoWay}" MarginTop="10"/>
         <TextBlock MarginTop="12" Opacity="0.7" MaxWidth="420"
                    Text="{Localize DockingStrings.OpenedByRegion}"/>
     </StackPanel>

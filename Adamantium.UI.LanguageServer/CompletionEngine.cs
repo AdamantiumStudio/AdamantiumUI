@@ -604,9 +604,17 @@ public sealed class CompletionEngine
             {
                 if (!MatchesStart(t.Name, partial)) continue;
                 var insert = ns.Key.Length > 0 ? $"{ns.Key}:{t.Name}" : t.Name;
-                if (!seen.Add(insert)) continue;
+                if (!seen.Add(t.FullName)) continue;
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element,
                     ns.Key.Length > 0 ? ns.Key : null, InsertText: insert, ReplaceBack: partial.Length));
+            }
+        }
+
+        foreach (var t in _model.ProjectTypes)
+        {
+            if (MatchesStart(t.Name, partial) && _model.ResolveShortName(t.Name)?.FullName == t.FullName && seen.Add(t.FullName))
+            {
+                items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length));
             }
         }
         return items.OrderBy(i => i.Label).ToList();
@@ -701,7 +709,7 @@ public sealed class CompletionEngine
     {
         var xmlns = ResolveXmlns(xmlnsPrefix, namespaces);
         if (xmlns.Length > 0 && _model.GetElement(xmlns, typeName) is { } resolved) return resolved;
-        return xmlnsPrefix.Length == 0 ? _model.FindElement(typeName) : null;
+        return xmlnsPrefix.Length == 0 ? _model.ResolveShortName(typeName) : null;
     }
 
     private static string ResolveXmlns(string prefix, IReadOnlyDictionary<string, string> namespaces)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -22,6 +23,7 @@ public class DragThresholdTests
         public uint HoverTime => 400;
 
         public Rect VirtualScreen => default;
+        public IReadOnlyList<ScreenInfo> Screens => [];
     }
 
     private INativePlatformSettings _previous;

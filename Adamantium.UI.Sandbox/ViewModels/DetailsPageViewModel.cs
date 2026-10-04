@@ -15,8 +15,13 @@ public partial class DetailsPageViewModel : INavigationAware, IConfirmNavigation
     // While on, leaving this page is blocked - flip it off to allow navigating away.
     [Bindable] private bool _hasUnsavedChanges;
 
-    public void OnNavigatedTo(NavigationContext context) => Id = context.Parameters.GetValue<int>("id");
-    public void OnNavigatedFrom(NavigationContext context) { }
+    public Task OnNavigatedToAsync(NavigationContext context, CancellationToken cancellationToken = default)
+    {
+        Id = context.Parameters.GetValue<int>("id");
+        return Task.CompletedTask;
+    }
+
+    public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public bool IsNavigationTarget(NavigationContext context) => true;
 
     public Task<bool> CanNavigateAwayAsync(NavigationContext context, CancellationToken cancellationToken = default)

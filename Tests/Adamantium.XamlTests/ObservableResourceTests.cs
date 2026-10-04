@@ -78,6 +78,102 @@ public class ObservableResourceTests
         Assert.That(button.Content, Is.EqualTo("RED"), "a resolve miss keeps the last good value, never clobbers to null");
     }
 
+    // A visual root, so the tree attach that brings an unloaded element back actually happens.
+    private sealed class Root : Adamantium.UI.Controls.Panels.Grid, IRootVisualComponent
+    {
+        public Adamantium.Mathematics.Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Adamantium.Mathematics.Vector2 point) => new(point.X, point.Y);
+        public PixelPoint Position { get; set; }
+        public void AttachContextAndInitialize(IUIContext context) { }
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public string Title { get; set; }
+        public double ClientWidth { get; set; }
+        public double ClientHeight { get; set; }
+        public IUIContext UIContext => null;
+    }
+
+    // What a template teardown raises on every element under it - including content only passing through, on its way
+    // to another tree.
+    private static void Unload(Button button) =>
+        button.RaiseEvent(new Adamantium.UI.Core.RoutedEvents.RoutedEventArgs(
+            Adamantium.UI.Controls.Base.InputUIComponent.UnloadedEvent, button));
+
+    [Test]
+    public void ObservableResource_UnloadedAndPutBackInATree_FollowsTheResourceAgain()
+    {
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
+
+        var root = new Root();
+        var button = new Button();
+        root.Children.Add(button);
+        new ObservableResource("AccentColor").Apply(button, "Content");
+
+        // Moved: unloaded by the tree it leaves, out of any tree for a while.
+        Unload(button);
+        root.Children.Remove(button);
+        _rm.RemoveSources(owner);
+        _rm.AddSource(owner, typeof(ResourcesV2), ResourceScope.Global);
+        _rm.FlushResourceChanges();
+        Assert.That(button.Content, Is.EqualTo("RED"), "out of every tree it listens to nothing");
+
+        root.Children.Add(button);
+        Assert.That(button.Content, Is.EqualTo("BLUE"), "back in a tree, it reads the resource again");
+
+        _rm.RemoveSources(owner);
+        _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
+        _rm.FlushResourceChanges();
+        Assert.That(button.Content, Is.EqualTo("RED"), "...and follows it again");
+    }
+
+    // Waiting for it to come back holds nothing but the element itself: an element thrown away for good is collected.
+    // Tag rather than Content - a layout property would put the element in a layout queue, which is not what is asked.
+    [Test]
+    public void ObservableResource_UnloadedAndThrownAway_IsNotKeptAlive()
+    {
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
+
+        var gone = ThrownAway();
+        for (var i = 0; i < 3; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference ThrownAway()
+    {
+        var button = new Button();
+        new ObservableResource("AccentColor").Apply(button, "Tag");
+        Unload(button);
+        return new WeakReference(button);
+    }
+
+    // The resource manager outlives every element: unloaded, the element is no longer among its listeners.
+    [Test]
+    public void ObservableResource_Unloaded_LeavesTheResourceManager()
+    {
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
+        var changed = typeof(ResourceManager).GetField(nameof(ResourceManager.ResourcesChanged),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        int Listeners() => (changed.GetValue(_rm) as Delegate)?.GetInvocationList().Length ?? 0;
+
+        var before = Listeners();
+        var button = new Button();
+        new ObservableResource("AccentColor").Apply(button, "Tag");
+        Assert.That(Listeners(), Is.EqualTo(before + 1));
+
+        Unload(button);
+
+        Assert.That(Listeners(), Is.EqualTo(before));
+    }
+
     private sealed class ResourcesV1 : ResourceDictionary
     {
         protected override void OnInitialize() => Add("AccentColor", "RED");

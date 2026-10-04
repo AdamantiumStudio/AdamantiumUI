@@ -37,6 +37,7 @@
                                     Background="{TemplateBinding InactiveTitleBarBackground}"
                                     Foreground="{TemplateBinding InactiveTitleBarForeground}"
                                     Title="{TemplateBinding Title}"
+                                    TitleAlignment="{TemplateBinding TitleAlignment}"
                                     Icon="{TemplateBinding Icon}"
                                     LeadingContent="{TemplateBinding TitleBarLeadingContent}"
                                     LeftWindowCommands="{TemplateBinding LeftWindowCommands}"

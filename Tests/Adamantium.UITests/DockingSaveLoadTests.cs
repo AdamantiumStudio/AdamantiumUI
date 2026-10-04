@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Mathematics;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;

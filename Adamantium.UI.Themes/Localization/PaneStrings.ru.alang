@@ -1,0 +1,8 @@
+<Language>
+    <Phrase Key="UnsavedTitle" Text="Несохранённые изменения"/>
+    <Phrase Key="SaveOne" Text="Сохранить изменения в «{name}»?"/>
+    <Phrase Key="SaveMany" Count="count" One="Сохранить изменения в {count} документе?" Few="Сохранить изменения в {count} документах?" Many="Сохранить изменения в {count} документах?" Other="Сохранить изменения в {count} документах?"/>
+    <Phrase Key="Save" Text="Сохранить"/>
+    <Phrase Key="DontSave" Text="Не сохранять"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+</Language>

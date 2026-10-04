@@ -5,9 +5,11 @@
     <Phrase Key="CreateIn" Text="Create in"/>
     <Phrase Key="Navigate" Text="Navigate"/>
     <Phrase Key="NewPane" Text="New pane"/>
+    <Phrase Key="Move" Text="Move"/>
     <Phrase Key="SaveLayout" Text="Save layout"/>
     <Phrase Key="Restore" Text="Restore"/>
     <Phrase Key="Forget" Text="Forget"/>
+    <Phrase Key="ResetLayout" Text="Reset"/>
     <Phrase Key="PinnedRow" Text="Pinned tabs in a separate row"/>
 
     <Phrase Key="Scene" Text="Scene"/>
@@ -49,7 +51,9 @@
             SharedRow="Pinned tabs share the row with the rest."
             PanelTornOff="Tearing off the panel ({panes}) - allowed."
             TabTornOff="Tearing off the tab ({panes}) - allowed."
-            Docked="Docking {panes} {zone} - allowed."/>
+            Docked="Docking {panes} {zone} - allowed."
+            Moving="'{panes}' asked to go {zone}: its view model set PaneZone."
+            NotOpen="'{panes}' is not open - navigate to it first."/>
     <Phrase Key="ZoneTo" Select="zone" Center="to the center" Left="to the left" Right="to the right" Top="to the top"
             Bottom="to the bottom" Floating="into a window of its own"/>
 
@@ -63,7 +67,8 @@
             NothingSaved="Nothing saved yet - press Save first."
             Restored="Restored. Documents are NOT part of it: Pane.Restore says they belong to a session, not to the workspace."
             NamesNothing="The saved text names nothing this area still has."
-            Forgotten="Forgotten. Next start gives you the arrangement written in the markup."/>
+            Forgotten="Forgotten. Next start gives you the arrangement written in the markup."
+            Reset="Back to the arrangement written in the markup; everything that was open is still open."/>
 
     <Phrase Key="CloseDocument" Text="Close document"/>
     <Phrase Key="CloseQuestion" Text="Close '{pane}'?"/>
@@ -72,4 +77,7 @@
     <Phrase Key="Origin" Select="restored" True="restored with the layout" False="{zone}"/>
     <Phrase Key="OpenedIn" Select="zone" Center="the document well" Floating="a window of its own - and float-only: it cannot be docked back"
             Left="left" Top="top" Right="right" Bottom="bottom"/>
+    <Phrase Key="Changed" Text="Changed - the tab is marked, and closing asks whether to save"/>
+    <Phrase Key="Now" Select="zone" Center="Now in the document well" Left="Now on the left" Top="Now at the top"
+            Right="Now on the right" Bottom="Now at the bottom" Floating="Now in a window of its own"/>
 </Language>

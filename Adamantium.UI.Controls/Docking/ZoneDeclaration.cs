@@ -1,3 +1,5 @@
+using Adamantium.Navigation;
+
 namespace Adamantium.UI.Controls.Docking;
 
 /// <summary>

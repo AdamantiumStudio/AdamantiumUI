@@ -1,4 +1,5 @@
 using System.Linq;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Panels;
 using NUnit.Framework;

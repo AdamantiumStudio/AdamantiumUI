@@ -137,6 +137,9 @@ public static class SemanticTokensEngine
         int nameStart = i;
         while (i < end && IsNameChar(text[i])) i++;
         if (i > nameStart) AddQualifiedName(tokens, text, nameStart, i, bareKind: Macro, prefixedKind: Macro);
+        var extension = text[nameStart..i];
+        var namesType = extension.Contains(':') && extension[(extension.IndexOf(':') + 1)..] is "Type" or "Static";
+        var positional = true;
 
         // Body: type references (prefix:Type -> 'type'), binding paths (bare identifiers -> 'property'), nested
         // extensions ({StaticResource …}). Bounded by 'end' (the closing quote), so a missing '}' mid-edit is safe.
@@ -156,10 +159,52 @@ public static class SemanticTokensEngine
             {
                 int s = i;
                 while (i < end && IsNameChar(text[i])) i++;
-                AddQualifiedName(tokens, text, s, i, bareKind: Property, prefixedKind: Type);
+                int next = i;
+                while (next < end && char.IsWhiteSpace(text[next])) next++;
+                if (namesType && positional && (next == end || text[next] != '='))
+                {
+                    AddTypeArgument(tokens, text, s, i, member: extension.EndsWith("Static"), namespaces, model);
+                }
+                else
+                {
+                    AddQualifiedName(tokens, text, s, i, bareKind: Property, prefixedKind: Type);
+                }
+                positional = false;
                 continue;
             }
             i++;
+        }
+    }
+
+    private static void AddTypeArgument(List<SemToken> tokens, string text, int start, int end, bool member,
+        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
+    {
+        var typeEnd = end;
+        if (member)
+        {
+            var dot = text.LastIndexOf('.', end - 1, end - start);
+            if (dot > start)
+            {
+                typeEnd = dot;
+            }
+        }
+
+        var colon = text.IndexOf(':', start, typeEnd - start);
+        var nameStart = colon < 0 ? start : colon + 1;
+        if (colon > start)
+        {
+            tokens.Add(new SemToken(start, colon - start, Namespace));
+        }
+
+        if (typeEnd > nameStart)
+        {
+            var known = model is null || !model.TryResolveWritten(text[start..typeEnd], namespaces, out var type) || type != null;
+            tokens.Add(new SemToken(nameStart, typeEnd - nameStart, known ? Type : Unknown));
+        }
+
+        if (typeEnd + 1 < end)
+        {
+            tokens.Add(new SemToken(typeEnd + 1, end - typeEnd - 1, Property));
         }
     }
 

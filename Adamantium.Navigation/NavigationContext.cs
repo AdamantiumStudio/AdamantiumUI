@@ -19,16 +19,19 @@ public sealed class NavigationContext
         CancellationToken = cancellationToken;
     }
 
+    /// <summary>The region navigated, or null for the view model of a window.</summary>
     public IRegion Region { get; }
     public INavigationService NavigationService { get; }
     public Type TargetViewModelType { get; }
 
     /// <summary>The resolved (or reused) target view model. Null until the region resolves it - available to
-    /// <see cref="INavigationAware.OnNavigatedTo"/>, not to the outgoing guard.</summary>
+    /// <see cref="INavigationAware.OnNavigatedToAsync"/>, not to the outgoing guard.</summary>
     public object TargetViewModel { get; internal set; }
 
     public object SourceViewModel { get; }
     public NavigationParameters Parameters { get; }
     public NavigationMode Mode { get; }
+
+    /// <summary>The caller's token, also canceled when a newer navigation of the same region starts.</summary>
     public CancellationToken CancellationToken { get; }
 }

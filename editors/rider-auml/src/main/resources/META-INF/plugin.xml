@@ -12,8 +12,8 @@
             caret to its line, and Go to Source opens the file a nested view was declared in.</li>
             <li><b>Completion, diagnostics and go to definition</b> from the AUML language server, which knows the
             types of the project and its packages.</li>
-            <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, themes, style sets and
-            resource dictionaries.</li>
+            <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, docking panes, themes,
+            style sets and resource dictionaries.</li>
             <li><b>Language files</b> (<code>.alang</code>), the application's strings in each language: highlighting,
             completion of keys and formats, the build's checks as you type, a quick fix that adds the strings a
             translation lacks, and <b>New | Language File</b> for a table or its translation.</li>
@@ -26,12 +26,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <p>Language files (.alang): a file type with its own icon and XML highlighting; completion of elements, the
-        keys a translation lacks and the formats of Language.Format; the build's checks while typing; a quick fix that
-        adds the missing strings under their base text; and New | Language File, which starts a table or a translation
-        listing every base string - a phrase that changes with a number with the forms the new language has, one
-        chosen by a value with the cases the base names.</p>
-        <p>{Localize} in AUML completes the language tables, their strings and the placeholders a string fills.</p>
+        <p>A type in {x:Type} and a type or member in {x:Static} that the build would not find is underlined while
+        typing, with the build's own message, and painted as unknown.</p>
+        <p>A type written without a prefix is found the way the build finds it - by its short name: {x:Static
+        RegionNames.} completes the members of a project type, the project's own types are offered bare, and
+        &lt;Thickness&gt;, &lt;CornerRadius&gt; or a project type as an element are no longer reported unknown.
+        clr-namespace:System;assembly=System.Runtime resolves, so &lt;sys:Double&gt; is no longer red.</p>
+        <p>New | AUML File offers a Docking Pane: one file with a &lt;Pane&gt; root - its title, whether it is a document
+        or a tool, and where it docks - which the build makes a class of its own.</p>
     ]]></change-notes>
 
     <!-- Declaration order matters: platform + xml, then lsp4ij, then the extensions below. -->
@@ -66,6 +68,7 @@
              Settings | Editor | File and Code Templates. -->
         <internalFileTemplate name="Adamantium Window"/>
         <internalFileTemplate name="Adamantium View"/>
+        <internalFileTemplate name="Adamantium DockingPane"/>
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>

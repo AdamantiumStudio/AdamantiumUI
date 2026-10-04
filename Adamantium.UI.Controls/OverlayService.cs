@@ -26,18 +26,44 @@ public sealed class OverlayService : IOverlayService
         _resolver = resolver;
     }
 
-    public Task<object> ShowOverlayAsync(Type overlayViewModelType, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
+    public async Task<object> ShowOverlayAsync(Type overlayViewModelType, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
     {
         // The overlay lives on a window's popup layer; without a window there is nowhere to show it.
         if ((_application.ActiveWindow ?? _application.MainWindow) is not IPopupHost host)
-            return Task.FromResult<object>(null);
+        {
+            return null;
+        }
 
         var viewModel = _resolver.Resolve(overlayViewModelType);
-        var view = _viewLocator.ResolveView(viewModel);
         var aware = viewModel as IOverlayAware;
+        OverlayWindow window = null;
+        var closedWhileOpening = false;
+        object earlyResult = null;
+
+        void OnRequestClose(object result)
+        {
+            if (window != null)
+            {
+                window.Close(result);
+                return;
+            }
+            closedWhileOpening = true;
+            earlyResult = result;
+        }
+
+        if (aware != null)
+        {
+            aware.RequestClose += OnRequestClose;
+            await aware.OnOverlayOpenedAsync(parameters ?? new NavigationParameters(), cancellationToken);
+            if (closedWhileOpening)
+            {
+                aware.RequestClose -= OnRequestClose;
+                return earlyResult;
+            }
+        }
 
         // Chrome options come from the view model (IOverlayAware defaults them to a plain floating window).
-        var window = new OverlayWindow
+        window = new OverlayWindow
         {
             Title = aware?.Title ?? string.Empty,
             Icon = aware?.Icon,
@@ -47,7 +73,7 @@ public sealed class OverlayService : IOverlayService
             CanPin = aware?.CanPin ?? true,
             CanClose = aware?.CanClose ?? true,
             StartupLocation = aware?.StartupLocation ?? OverlayStartupLocation.CenterOwner,
-            Content = view
+            Content = _viewLocator.ResolveView(viewModel)
         };
 
         // Live title: the view model may change its Title while open; reflect it on the bar.
@@ -69,14 +95,10 @@ public sealed class OverlayService : IOverlayService
             // path doesn't resolve, so the binding no-ops). Set up before Show so a Manual window opens at the VM's value.
             window.SetBinding(OverlayWindow.LeftProperty, new Binding(nameof(IOverlayAware.Left)) { Source = aware, Mode = BindingMode.TwoWay });
             window.SetBinding(OverlayWindow.TopProperty, new Binding(nameof(IOverlayAware.Top)) { Source = aware, Mode = BindingMode.TwoWay });
-
-            void OnRequestClose(object result) => window.Close(result);
-            aware.RequestClose += OnRequestClose;
             window.Closed += (_, _) => aware.RequestClose -= OnRequestClose;
-            aware.OnOverlayOpened(parameters ?? new NavigationParameters());
         }
 
-        return OverlayWindowManager.GetFor(host).ShowAsync(window);
+        return await OverlayWindowManager.GetFor(host).ShowAsync(window);
     }
 
     public Task<object> ShowOverlayAsync<TOverlayViewModel>(NavigationParameters parameters = null, CancellationToken cancellationToken = default)
