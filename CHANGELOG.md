@@ -218,6 +218,9 @@ All packages share one version.
 
 ### Fixed
 
+- A window snapped onto a monitor with a different scale - a quarter of a 100% screen, from a 150% one - drew its
+  content at the old scale in the window's corner. The resize arrives before the DPI change and was divided by the old
+  scale; the window's size is now read again once the scale has changed.
 - A view that left a window was never let go, and with it every texture it drew: video memory grew about 230 MB with
   each pass over the sandbox's tabs until the device ran out. The window's render cache now hears the departure, does
   not freeze the layout of a destroyed element again, and keeps no departed element past the frame that dropped it.
