@@ -149,6 +149,18 @@ All packages share one version.
 - `IDockingAware`: a view model in a docking region hears its own pane - `OnActivated` and `OnDeactivated`, `OnShown`
   and `OnHidden` (on screen means the front tab of a panel not folded away: what a scene view stops drawing for),
   `OnPlacementChanged` - in the order of the change, the pane left behind first. `PanePlacement.IsShown`.
+- Automation peers: a control describes itself to automation - `AutomationPeer` (control type, name, id, rectangle on
+  the screen, enabled, on screen, focus, children) made on request by `UIComponent.GetAutomationPeer`, and what can be
+  done with it: `IInvokeProvider`, `IToggleProvider`, `IValueProvider`, `ISelectionProvider`, `ISelectionItemProvider`.
+  Buttons, toggle buttons, check boxes, text blocks, text boxes, tab controls and their tabs, views and windows have
+  peers; panels, borders and the parts of a template are looked through. `AutomationProperties.AutomationId`, `Name` and
+  `HelpText` say what an element is called; the id is its `x:Name` unless given, and a view's or window's its class name.
+- `WindowCommand.AutomationId`: the themes give it to the caption button, with the command's `Label` as its name.
+- `Adamantium.UI.Automation`, a new package: finds elements by id, name, type or class (`By`, a selector path such as
+  `id=Shell/id=Cut`) and drives them - invoke, toggle, set a value, select, or click and type by input simulated inside
+  the framework, refused when something covers the element - waiting each time for the application to settle.
+  `AutomationSession.InProcess` drives windows a test built, headless; `UseAutomationAgent` lets a running application
+  be driven through a named pipe when `ADAM_AUTOMATION_PIPE` names one, its windows opening in the background.
 
 ### Changed
 
@@ -333,6 +345,11 @@ All packages share one version.
   resource manager and the theme; they connect again once the element is in a tree again.
 - A pane opened under the id of a closed tool left that tool kept as well: bringing it back put the id in the layout
   twice. Likewise a closed tool that a loaded layout has open.
+- A style setter for an attached property of a static service - `KeyTipService.KeyTip`, `ToolTipService.Placement`,
+  `AutomationProperties.AutomationId` - was passed over without a word: only component owners such as `Grid` were
+  looked for.
+- `ItemContainerStyle` of a `TabControl`, a `DropDown`, a `Ribbon` and a `RibbonApplicationMenu` did nothing: the
+  containers were themed after it and lost it. It is applied after the theme, as `ListBox` always did.
 
 ## [0.1.0-alpha] - 2026-10-02
 

@@ -1049,7 +1049,7 @@ public class Ribbon : Selector
     protected internal override IUIComponent GetContainerForItem(object item)
     {
         var header = new RibbonTabHeader();
-        if (ItemContainerStyle != null) header.AttachStyles(ItemContainerStyle);
+        if (ItemContainerStyle != null) header.Styles.Add(ItemContainerStyle);
         return header;
     }
 

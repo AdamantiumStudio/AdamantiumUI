@@ -388,7 +388,7 @@ public class RibbonApplicationMenu : Selector
         var row = new RibbonApplicationMenuItem();
         if (ItemContainerStyle != null)
         {
-            row.AttachStyles(ItemContainerStyle);
+            row.Styles.Add(ItemContainerStyle);
         }
         return row;
     }

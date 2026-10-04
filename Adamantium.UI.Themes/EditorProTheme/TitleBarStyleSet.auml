@@ -45,7 +45,9 @@
                                         <Button Classes="CaptionButton" VerticalAlignment="Stretch"
                                                 ToolTip="{Binding ToolTip}"
                                                 Command="{Binding Command}"
-                                                CommandParameter="{Binding CommandParameter}">
+                                                CommandParameter="{Binding CommandParameter}"
+                                                AutomationProperties.AutomationId="{Binding AutomationId}"
+                                                AutomationProperties.Name="{Binding Label}">
                                             <!-- {Ancestor} walks up to the hosting TitleBar and binds its LIVE
                                                  Foreground, so a command icon follows the same active/inactive color
                                                  as the window buttons (and re-resolves if the tree rebuilds). -->
@@ -94,7 +96,9 @@
                                             <Button Classes="CaptionButton" VerticalAlignment="Stretch"
                                                     ToolTip="{Binding ToolTip}"
                                                     Command="{Binding Command}"
-                                                    CommandParameter="{Binding CommandParameter}">
+                                                    CommandParameter="{Binding CommandParameter}"
+                                                    AutomationProperties.AutomationId="{Binding AutomationId}"
+                                                    AutomationProperties.Name="{Binding Label}">
                                                 <Path Data="{Binding Icon}"
                                                         Stroke="{Ancestor TitleBar, Foreground}"
                                                         StrokeThickness="{ResourceReference StrokeThinValue}"

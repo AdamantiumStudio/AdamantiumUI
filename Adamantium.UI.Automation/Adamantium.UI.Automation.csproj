@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Platforms>AnyCPU</Platforms>
+        <Configurations>Debug;Release</Configurations>
+        <LangVersion>latest</LangVersion>
+        <Nullable>disable</Nullable>
+        <IsPackable>true</IsPackable>
+        <Description>Automation for Adamantium UI: finds elements by id, name or type and drives them - by what the control can do, or by input simulated inside the application, never the system's mouse or keyboard - from a headless test, or in a running application through an agent it opts into.</Description>
+        <PackageTags>adamantium;ui;automation;testing</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
+    </ItemGroup>
+
+</Project>

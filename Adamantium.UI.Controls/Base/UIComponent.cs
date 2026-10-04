@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using Adamantium.Core.Collections;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -12,6 +13,8 @@ namespace Adamantium.UI.Controls.Base;
 public class UIComponent : FundamentalUIComponent, IUIComponent
 {
     private Size renderSize;
+    private AutomationPeer _automationPeer;
+    private bool _automationPeerMade;
 
     protected bool sizeChanged;
     protected Size previousRenderSize;
@@ -1067,4 +1070,21 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     protected virtual void OnRenderCompleted()
     {
     }
+
+    /// <summary>This element's description for automation, made on first request. Null for an element automation looks
+    /// through, such as a panel or a border.</summary>
+    public AutomationPeer GetAutomationPeer()
+    {
+        if (!_automationPeerMade)
+        {
+            _automationPeer = OnCreateAutomationPeer();
+            _automationPeerMade = true;
+        }
+
+        return _automationPeer;
+    }
+
+    /// <summary>Makes the peer that describes this element to automation. Null, the default, leaves the element out: its
+    /// children belong to the nearest ancestor that has one.</summary>
+    protected virtual AutomationPeer OnCreateAutomationPeer() => null;
 }

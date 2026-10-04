@@ -1,5 +1,7 @@
 ﻿using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Base;
@@ -80,4 +82,9 @@ public class Control : TemplatedUIComponent, IControl
       get => GetValue<Thickness>(PaddingProperty);
       set => SetValue(PaddingProperty, value);
    }
+
+   /// <summary>A plain peer for a control in its own right; none for a part of another control's template, which is that
+   /// control's business. A control type that describes itself overrides this.</summary>
+   protected override AutomationPeer OnCreateAutomationPeer() =>
+      TemplatedParent == null ? new UIComponentAutomationPeer(this) : null;
 }

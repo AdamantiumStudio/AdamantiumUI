@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Graphics.Fonts;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -385,4 +387,6 @@ public class TextBlock : InputUIComponent
         EnsureLayout();   // refresh shaping if a render-only property (alignment/wrapping) changed since the last measure
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TextBlockAutomationPeer(this);
 }

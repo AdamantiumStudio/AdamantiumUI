@@ -73,6 +73,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
       <ProjectReference Include="..\..\Adamantium.UI\Adamantium.UI.csproj" />
+      <ProjectReference Include="..\..\Adamantium.UI.Automation\Adamantium.UI.Automation.csproj" />
       <!-- The AUML code-behind generator is instantiated and driven directly by the codegen harness test, so it is a
            normal reference (NOT OutputItemType=Analyzer — we don't want it running on this test project's own build). -->
       <ProjectReference Include="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" />

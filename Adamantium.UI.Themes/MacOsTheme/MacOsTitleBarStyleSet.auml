@@ -92,7 +92,9 @@
                                     <Button Classes="CaptionCommand" VerticalAlignment="Center"
                                             ToolTip="{Binding ToolTip}"
                                             Command="{Binding Command}"
-                                            CommandParameter="{Binding CommandParameter}">
+                                            CommandParameter="{Binding CommandParameter}"
+                                            AutomationProperties.AutomationId="{Binding AutomationId}"
+                                            AutomationProperties.Name="{Binding Label}">
                                         <Path Data="{Binding Icon}"
                                                 Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -119,7 +121,9 @@
                                     <Button Classes="CaptionCommand" VerticalAlignment="Center"
                                             ToolTip="{Binding ToolTip}"
                                             Command="{Binding Command}"
-                                            CommandParameter="{Binding CommandParameter}">
+                                            CommandParameter="{Binding CommandParameter}"
+                                            AutomationProperties.AutomationId="{Binding AutomationId}"
+                                            AutomationProperties.Name="{Binding Label}">
                                         <Path Data="{Binding Icon}"
                                                 Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>

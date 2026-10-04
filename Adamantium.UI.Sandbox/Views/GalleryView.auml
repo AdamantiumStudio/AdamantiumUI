@@ -48,6 +48,7 @@
              maps each tab view-model to its View. No per-tab wiring in markup - add a tab by adding its view-model to
              GalleryViewModel.Tabs. -->
         <TabControl Grid.Row="1"
+                    AutomationProperties.AutomationId="GalleryTabs"
                     ItemsSource="{Binding Tabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     TabStripPlacement="{Binding TabPlacement}"
@@ -69,6 +70,12 @@
             <TabControl.Behaviors>
                 <behaviors:TabTearOffBehavior/>
             </TabControl.Behaviors>
+            <!-- The same key is the tab's id for automation: English, and not translated. -->
+            <TabControl.ItemContainerStyle>
+                <Style Selector="TabItem">
+                    <Setter Property="AutomationProperties.AutomationId" Value="{Binding Header}"/>
+                </Style>
+            </TabControl.ItemContainerStyle>
             <!-- A tab names its page by the key of its title among the gallery's phrases. -->
             <TabControl.ItemTemplate>
                 <DataTemplate>

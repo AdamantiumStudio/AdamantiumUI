@@ -1581,6 +1581,7 @@
                     <!-- Medium: small icon, label beside it - three stack into one column. -->
                     <RibbonButton Classes="Shell"
                                   DataContext="{Binding Commands.Cut}"
+                                  AutomationProperties.AutomationId="Cut"
                                   MaxSize="Medium"/>
                     <RibbonButton Classes="Shell"
                                   DataContext="{Binding Commands.Copy}"
@@ -1980,7 +1981,8 @@
         </Border>
 
         <Border Grid.Row="2" Height="26" Background="{ResourceReference SolidBackgroundFillColorTertiary}">
-            <TextBlock Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" VerticalAlignment="Center" Margin="12 0" FontSize="12"
+            <TextBlock AutomationProperties.AutomationId="StatusLine"
+                       Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" VerticalAlignment="Center" Margin="12 0" FontSize="12"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
         </Border>
     </Grid>

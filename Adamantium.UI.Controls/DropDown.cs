@@ -358,8 +358,8 @@ public class DropDown : Selector
     {
         var container = new DropDownItem { Owner = this };   // back-ref: the popup detaches the container's visual tree
         
-        if (ItemContainerStyle != null) 
-            container.AttachStyles(ItemContainerStyle);
+        if (ItemContainerStyle != null)
+            container.Styles.Add(ItemContainerStyle);
         
         return container;
     }
