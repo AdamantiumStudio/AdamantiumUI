@@ -66,8 +66,8 @@
   </PropertyGroup>
 
   <!-- With the engine checked out beside this repository the projects reference its source, so an engine change is seen
-       at once; without it - a clone of this repository alone, CI - they take the published engine packages of this
-       version. -p:UseEngineSource=false builds against the packages even with the engine beside. -->
+       at once; without it - a clone of this repository alone, a release - they take the published engine packages of
+       this version. -p:UseEngineSource=false builds against the packages even with the engine beside. -->
   <PropertyGroup>
     <UseEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(AdamantiumEngineDir)'))</UseEngineSource>
     <AdamantiumEngineVersion>0.1.0-alpha.4</AdamantiumEngineVersion>

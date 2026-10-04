@@ -1,7 +1,7 @@
-# Builds the UI against the published engine packages and runs the tests that need no GPU: for every pull request, and
-# for main once it is merged into. There is no engine beside the clone on a runner, so this is exactly the build of
-# someone who cloned this repository alone. Windows only: the effects generator compiles the shaders during the build
-# and loads Slang through kernel32.
+# Builds the UI against the engine's master and runs the tests that need no GPU: for every pull request, and for main
+# once it is merged into. The engine is cloned beside the UI, as on a developer's machine, so the projects reference its
+# source; the published engine packages are what a release builds against (publish-nuget.yml). Windows only: the
+# effects generator compiles the shaders during the build and loads Slang through kernel32.
 name: CI
 
 on:
@@ -54,6 +54,15 @@ jobs:
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "Code changed: $code"
+
+      # Where Directory.Build.props looks for it. An engine change is built here once it is merged into master, with no
+      # packages published for it.
+      - name: Engine
+        if: steps.changes.outputs.code == 'true'
+        shell: bash
+        run: |
+          git clone --depth 1 --branch master https://github.com/AdamantiumStudio/AdamantiumEngine.git ../AdamantiumEngine
+          git -C ../AdamantiumEngine log -1 --format='Engine at %h: %s'
 
       # Version comes from global.json, so CI and a developer's machine build with the same SDK.
       - uses: actions/setup-dotnet@v6
