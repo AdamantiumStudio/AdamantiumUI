@@ -2,7 +2,6 @@
 using System.Collections.Specialized;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
-using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
@@ -106,11 +105,6 @@ public class PropertyGrid : Control
         typeof(Boolean), typeof(PropertyGrid),
         new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure, OnShowSearchChanged));
 
-    /// <summary>Whether a search is running. The control keeps it; the theme reads it to show the button that drops
-    /// the search - a cross standing on an empty field would be offering to undo nothing.</summary>
-    public static readonly AdamantiumProperty HasSearchTextProperty = AdamantiumProperty.Register(
-        nameof(HasSearchText), typeof(Boolean), typeof(PropertyGrid), new PropertyMetadata(false));
-
     private readonly List<PropertyRow> _rows = new();
     private readonly List<PropertySection> _openedBySearch = new();
     private readonly List<PropertyDefinition> _watched = new();
@@ -127,7 +121,6 @@ public class PropertyGrid : Control
     private bool _rebuildAgain;
     private Panel _host;
     private TextBox _search;
-    private ButtonBase _clearSearch;
     private PropertyRow _selected;
     private PropertyDefinitionBuilder _builder;
     private IReadOnlyList<PropertySection> _generated = [];
@@ -247,14 +240,8 @@ public class PropertyGrid : Control
         set => SetValue(ShowSearchProperty, value);
     }
 
-    public Boolean HasSearchText
-    {
-        get => GetValue<Boolean>(HasSearchTextProperty);
-        set => SetValue(HasSearchTextProperty, value);
-    }
-
-    /// <summary>Drops the search and shows every property again. What Escape does, and what the cross in the field
-    /// does - one way out, whichever is reached for.</summary>
+    /// <summary>Drops the search and shows every property again. What Escape does, wherever the focus is in the
+    /// inspector.</summary>
     public void ClearSearch()
     {
         if (String.IsNullOrEmpty(SearchText)) return;
@@ -550,7 +537,6 @@ public class PropertyGrid : Control
 
         _host = GetTemplateChild("PART_Sections") as Panel;
         _search = GetTemplateChild("PART_Search") as TextBox;
-        _clearSearch = GetTemplateChild("PART_ClearSearch") as ButtonBase;
 
         if (_search != null)
         {
@@ -558,8 +544,6 @@ public class PropertyGrid : Control
             _search.PropertyChanged += OnSearchTyped;
             _search.KeyDown += OnSearchKeyDown;
         }
-
-        if (_clearSearch != null) _clearSearch.Click += OnClearSearchPressed;
 
         Rebuild();
     }
@@ -570,19 +554,15 @@ public class PropertyGrid : Control
         UnhookSearch();
 
         _search = null;
-        _clearSearch = null;
         _host = null;
     }
 
     private void UnhookSearch()
     {
-        if (_search != null)
-        {
-            _search.PropertyChanged -= OnSearchTyped;
-            _search.KeyDown -= OnSearchKeyDown;
-        }
+        if (_search == null) return;
 
-        if (_clearSearch != null) _clearSearch.Click -= OnClearSearchPressed;
+        _search.PropertyChanged -= OnSearchTyped;
+        _search.KeyDown -= OnSearchKeyDown;
     }
 
     private void OnSearchTyped(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -597,8 +577,6 @@ public class PropertyGrid : Control
         ClearSearch();
         e.Handled = true;
     }
-
-    private void OnClearSearchPressed(object sender, RoutedEventArgs e) => ClearSearch();
 
     // Escape anywhere in the inspector, not only in the field: a search is narrowed down, then a row is clicked, and by
     // then the field no longer has the focus - and the way out has to be the same key it was a moment ago.
@@ -624,7 +602,6 @@ public class PropertyGrid : Control
         var wanted = e.NewValue as String;
         if (grid._search != null && grid._search.Text != wanted) grid._search.Text = wanted;
 
-        grid.HasSearchText = !String.IsNullOrEmpty(wanted?.Trim());
         grid.Rebuild();
     }
 

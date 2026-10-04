@@ -7,6 +7,7 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.ModuleLoading;
@@ -208,8 +209,12 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Bindable] private string _catalogSearch = string.Empty;
 
-    /// <summary>The module the catalog tells about.</summary>
+    /// <summary>The module picked in the catalog's list; null while the filter keeps the pick out of it.</summary>
     [Bindable] private EditorModule _selectedModule;
+
+    /// <summary>The module the catalog tells about: the last one picked, kept when a filter takes it out of the list - a
+    /// module updated under "Updates" leaves that list, and is still the one being looked at.</summary>
+    [Bindable] private EditorModule _shownModule;
 
     private ObservableCollection<EditorModule> _modules;
 
@@ -228,8 +233,13 @@ public partial class RibbonShellViewModel : IWindowAware
             Take(module);
         }
 
+        CatalogModules = new CollectionView(Modules)
+        {
+            Filter = module => Fits((EditorModule)module),
+            IsLiveFiltering = true,
+            LiveFilteringProperties = { nameof(EditorModule.State) }
+        };
         SelectedModule = Surface;
-        ShowCatalog();
         ShowModulesMenu();
 
         QuickAccess.CollectionChanged += OnQuickAccessChanged;
@@ -367,7 +377,6 @@ public partial class RibbonShellViewModel : IWindowAware
         Dependents = nameof(RibbonShellStrings.SurfaceDependents),
         Version = "1.2",
         Accent = "#2E8B62",
-        Icon = "M1,13 L6,6 L9,10 L11,7 L15,13 Z",
         Section = ModuleSection.World,
         State = EditorModuleState.InDocument
     };
@@ -382,7 +391,6 @@ public partial class RibbonShellViewModel : IWindowAware
         Dependents = nameof(RibbonShellStrings.SpaceDependents),
         Version = "1.0",
         Accent = "#6A58C9",
-        Icon = "M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M1,10 L15,6",
         Section = ModuleSection.Space,
         State = EditorModuleState.InDocument,
         IsShown = false
@@ -401,7 +409,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.InteriorsAdds),
             Version = "0.9",
             Accent = "#C98A3E",
-            Icon = "M2,14 L2,6 L8,2 L14,6 L14,14 Z M6,14 L6,9 L10,9 L10,14",
             Section = ModuleSection.Buildings,
             State = EditorModuleState.Installed
         },
@@ -414,7 +421,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Content = nameof(RibbonShellStrings.CharactersContent),
             Version = "0.8",
             Accent = "#C2557A",
-            Icon = "M8,2 A2.5,2.5 0 1 0 8,7 A2.5,2.5 0 1 0 8,2 M3,14 C3,10 5,9 8,9 C11,9 13,10 13,14",
             Section = ModuleSection.Characters,
             State = EditorModuleState.Detached
         },
@@ -426,7 +432,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.StrategyAdds),
             Version = "0.5",
             Accent = "#3F8FBF",
-            Icon = "M3,14 L3,2 M3,2 L12,2 L10,5 L12,8 L3,8",
             Section = ModuleSection.Gameplay,
             State = EditorModuleState.Installed
         },
@@ -438,7 +443,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.SoundAdds),
             Version = "1.0",
             Accent = "#B39A2E",
-            Icon = "M2,6 L2,10 L5,10 L9,13 L9,3 L5,6 Z M11,6 A3,3 0 0 1 11,10",
             Section = ModuleSection.Sound,
             State = EditorModuleState.UpdateAvailable
         },
@@ -450,7 +454,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.VegetationAdds),
             Version = "0.7",
             Accent = "#5E9E3A",
-            Icon = "M8,1 L3,8 L6,8 L2,13 L14,13 L10,8 L13,8 Z M8,13 L8,15",
             Section = ModuleSection.World,
             State = EditorModuleState.Available
         },
@@ -462,7 +465,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.WaterAdds),
             Version = "0.6",
             Accent = "#3A7FC9",
-            Icon = "M8,2 C10,6 12,8 12,10 A4,4 0 0 1 4,10 C4,8 6,6 8,2 Z",
             Section = ModuleSection.World,
             State = EditorModuleState.Available
         },
@@ -474,14 +476,14 @@ public partial class RibbonShellViewModel : IWindowAware
             Adds = nameof(RibbonShellStrings.DestructionAdds),
             Version = "0.4",
             Accent = "#C0643F",
-            Icon = "M2,2 L6,6 L4,8 L8,12 M8,12 L10,10 L14,14",
             Section = ModuleSection.World,
             State = EditorModuleState.Available
         }
     ];
 
-    /// <summary>The modules the catalog lists under its filter, section and search.</summary>
-    public ObservableCollection<EditorModule> CatalogModules { get; } = [];
+    /// <summary>The modules the catalog lists under its filter, section and search: a live view over
+    /// <see cref="Modules"/>, so a module that changes state or arrives from a file finds its place by itself.</summary>
+    public CollectionView CatalogModules { get; }
 
     public IReadOnlyList<ModuleCatalogFilter> CatalogFilters { get; } = Enum.GetValues<ModuleCatalogFilter>();
 
@@ -490,11 +492,19 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>How many modules are in the document - the count beside "Modules" in the strip.</summary>
     public int ModuleCount => Modules.Count(module => module.IsInDocument);
 
-    partial void OnCatalogFilterChanged(ModuleCatalogFilter value) => ShowCatalog();
+    partial void OnCatalogFilterChanged(ModuleCatalogFilter value) => CatalogModules.Refresh();
 
-    partial void OnCatalogSectionChanged(ModuleSection value) => ShowCatalog();
+    partial void OnCatalogSectionChanged(ModuleSection value) => CatalogModules.Refresh();
 
-    partial void OnCatalogSearchChanged(string value) => ShowCatalog();
+    partial void OnCatalogSearchChanged(string value) => CatalogModules.Refresh();
+
+    partial void OnSelectedModuleChanged(EditorModule value)
+    {
+        if (value != null)
+        {
+            ShownModule = value;
+        }
+    }
 
     partial void OnIsModuleCatalogOpenChanged(bool value)
     {
@@ -521,14 +531,7 @@ public partial class RibbonShellViewModel : IWindowAware
 
         RaisePropertyChanged(nameof(ModuleCount));
         LastAction = RibbonAction.ModulesChanged;
-        ShowCatalog();
         ShowModulesMenu();
-    }
-
-    private void ShowCatalog()
-    {
-        var search = CatalogSearch?.Trim() ?? string.Empty;
-        Show(CatalogModules, Modules.Where(module => Fits(module, search)).ToList());
     }
 
     private void ShowModulesMenu()
@@ -583,8 +586,10 @@ public partial class RibbonShellViewModel : IWindowAware
         }
     }
 
-    private bool Fits(EditorModule module, string search)
+    private bool Fits(EditorModule module)
     {
+        var search = CatalogSearch?.Trim() ?? string.Empty;
+
         var listed = CatalogFilter switch
         {
             ModuleCatalogFilter.InDocument => module.IsInDocument,
@@ -654,7 +659,6 @@ public partial class RibbonShellViewModel : IWindowAware
             Modules.Add(module);
         }
 
-        ShowCatalog();
         SelectedModule = fresh[0];
         LastAction = RibbonAction.ModuleInstalled;
     }

@@ -29,7 +29,7 @@ public class Setter : ISetter, IEquatable<Setter>
         switch (Value)
         {
             case BindingBase binding:
-                component.SetBinding(Property, (BindingBase)binding.Clone());
+                Connect(component, property => ((BindingBase)binding.Clone()).CreateExpression(component, property), style);
                 break;
             case ResourceReference resourceReference:
                 ApplyResourceReference(component, style, theme, resourceReference);
@@ -45,10 +45,10 @@ public class Setter : ISetter, IEquatable<Setter>
                 observableResource.Apply(component, Property, SlotFor(component, style), style);
                 break;
             case Ancestor ancestor:
-                ancestor.Apply(component, Property);
+                Connect(component, property => ancestor.CreateExpression(component, property), style);
                 break;
             case Self self:
-                self.Apply(component, Property);
+                Connect(component, property => self.CreateExpression(component, property), style);
                 break;
 
             // x:Shared="False": build this element its OWN value. Everything else in this switch hands out one object to
@@ -65,6 +65,16 @@ public class Setter : ISetter, IEquatable<Setter>
                 component.SetStyleValue(prop, value, style);
                 break;
         }
+    }
+
+    private void Connect(IFundamentalUIComponent component, Func<AdamantiumProperty, BindingExpressionBase> create, Style style)
+    {
+        var property = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
+        if (property == null) return;
+
+        var expression = create(property);
+        expression.OwnerStyle = style;
+        BindingEngine.RegisterOwned(expression, style);
     }
 
     private ValuePriority SlotFor(IFundamentalUIComponent component, Style style)
@@ -112,18 +122,21 @@ public class Setter : ISetter, IEquatable<Setter>
     {
         switch (Value)
         {
-            case BindingBase binding:
-                component.RemoveBinding(Property);
+            case BindingBase:
+            case Ancestor:
+            case Self:
+                if (AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property) is { } property)
+                {
+                    BindingEngine.ClearOwned(component, property, style);
+                }
+
+                component.RemoveStyleValue(Property, style);
                 break;
             case ThemeResource:
                 ThemeResource.Remove(component, Property, SlotFor(component, style), style);
                 break;
             case ObservableResource:
                 ObservableResource.Remove(component, Property, SlotFor(component, style), style);
-                break;
-            case Ancestor:
-            case Self:
-                component.RemoveBinding(Property);   // .Apply registered the expression in BindingEngine, keyed by property
                 break;
             default:
                 component.RemoveStyleValue(Property, style);

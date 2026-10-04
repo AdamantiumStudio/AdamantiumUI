@@ -110,7 +110,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
         var text = Compose();
         if (TargetProperty != null && Target != null)
         {
-            Target.SetValue(TargetProperty, text, ValuePriority.Binding);
+            WriteTarget(text);
         }
         else
         {

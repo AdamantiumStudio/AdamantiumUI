@@ -1,6 +1,8 @@
 using System;
 using Adamantium.MVVM;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Sandbox.Modules;
 
@@ -20,6 +22,8 @@ public partial class EditorModule
 
     /// <summary>The warning before its data is deleted from the document is up.</summary>
     [Bindable] private bool _isDeleteAsked;
+
+    private ImageSource _icon;
 
     /// <summary>The table its words are keys of: the shell's for a module the shell ships, the module's own for one
     /// loaded from a file. A word the table lacks is said as it is.</summary>
@@ -43,8 +47,12 @@ public partial class EditorModule
     /// <summary>Its color, as text the binding parses into a brush.</summary>
     public string Accent { get; init; }
 
-    /// <summary>Its icon, as path data.</summary>
-    public string Icon { get; init; }
+    /// <summary>The key of its icon among the application's resources: its name and "Icon".</summary>
+    public string IconKey => Name + "Icon";
+
+    /// <summary>Its icon - a <see cref="DrawingImage"/> the module states among the application's resources, found by
+    /// <see cref="IconKey"/> when first asked.</summary>
+    public ImageSource Icon => _icon ??= UIAppContext.Current.ResourceManager.FindResource(IconKey) as ImageSource;
 
     public ModuleSection Section { get; init; }
 

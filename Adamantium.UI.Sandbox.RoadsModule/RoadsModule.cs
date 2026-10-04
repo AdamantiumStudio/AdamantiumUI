@@ -20,7 +20,6 @@ public class RoadsModule : EditorModule
         Adds = nameof(RoadsStrings.RoadsAdds);
         Version = "1.0";
         Accent = "#B8732E";
-        Icon = "M3,15 L6,1 M13,15 L10,1 M8,2 L8,4 M8,7 L8,9 M8,12 L8,14";
         Section = ModuleSection.World;
         State = EditorModuleState.Installed;
     }

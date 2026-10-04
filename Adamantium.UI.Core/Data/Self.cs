@@ -24,10 +24,14 @@ public class Self : MarkupExtension
     public SelfBindingExpression Apply(IAdamantiumComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Binding)
     {
-        var expression = new SelfBindingExpression(target, target.GetProperty(propertyName), this) { Priority = priority };
+        var expression = CreateExpression(target, target.GetProperty(propertyName));
+        expression.Priority = priority;
         BindingEngine.Register(expression);
         return expression;
     }
+
+    internal SelfBindingExpression CreateExpression(IAdamantiumComponent target, AdamantiumProperty property)
+        => new(target, property, this);
 
     public override object ProvideObject(MarkupContext context)
     {

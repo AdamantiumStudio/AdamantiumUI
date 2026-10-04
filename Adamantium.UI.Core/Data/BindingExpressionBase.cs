@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -54,6 +55,36 @@ public abstract class BindingExpressionBase
    }
 
    public AdamantiumProperty TargetProperty { get; set; }
+
+   internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
+
+   internal Style OwnerStyle { get; set; }
+
+   internal object TriggerToken { get; set; }
+
+   protected void WriteTarget(object value)
+   {
+      if (OwnerStyle != null)
+      {
+         Target.SetStyleValue(TargetProperty, value, OwnerStyle);
+      }
+      else if (TriggerToken != null)
+      {
+         Target.SetTriggerValue(TargetProperty, value, TriggerToken);
+      }
+      else
+      {
+         Target.SetValue(TargetProperty, value, Priority);
+      }
+   }
+
+   protected T WritingHere<T>(T inner) where T : BindingExpressionBase
+   {
+      inner.Priority = Priority;
+      inner.OwnerStyle = OwnerStyle;
+      inner.TriggerToken = TriggerToken;
+      return inner;
+   }
 
    /// <summary>Whether the source property carries a value WRITTEN INTO IT, as against one arriving from a style, a
    /// trigger or the type's own default. False where the expression cannot tell, which is the safe answer: a panel

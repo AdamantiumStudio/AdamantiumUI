@@ -1,6 +1,21 @@
 <ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
         xmlns="http://adamantium/ui">
 
+    <!-- The module's icon, under its name and "Icon": where the shell shows the module, it shows this. Drawn in a
+         16-unit box, stated by the empty frame first. -->
+    <DrawingImage x:Key="RoadsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,15 L6,1 M13,15 L10,1 M8,2 L8,4 M8,7 L8,9 M8,12 L8,14"
+                             Stroke="#B8732E"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- What the Roads module brings to the ribbon: its tabs under a ledge of its own, bound against the module - the
          buttons run the module's own commands. Found by the shell under the module's key, its name and "Ribbon". The
          shell's quick-access bar holds the shell's own commands, so these are not offered to it. -->

@@ -60,7 +60,7 @@ public class MultiBindingExpression : BindingExpressionBase
       var value = Combine();
       if (!IsProducer && Target != null)
       {
-         Target.SetValue(TargetProperty, value, ValuePriority.Binding);
+         WriteTarget(value);
       }
       else
       {

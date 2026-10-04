@@ -78,8 +78,6 @@ public class BindingExpression : BindingExpressionBase
    private IUIComponent _awaitingAttach;
    private IFundamentalUIComponent _contextOwner;
 
-   internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
-
    internal static PropertyInfo FindProperty(Type type, string name)
    {
       for (var declaring = type; declaring != null; declaring = declaring.BaseType)
@@ -794,7 +792,7 @@ public class BindingExpression : BindingExpressionBase
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
       if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced, FormatCulture)) return;
-      Target.SetValue(TargetProperty, coerced, Priority);
+      WriteTarget(coerced);
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
 
@@ -913,7 +911,7 @@ public class BindingExpression : BindingExpressionBase
          }
          else
          {
-            Target.SetValue(TargetProperty, targetValue, Priority);
+            WriteTarget(targetValue);
          }
       }
       finally

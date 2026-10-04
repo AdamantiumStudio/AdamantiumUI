@@ -44,10 +44,14 @@ public class Ancestor : MarkupExtension
     public AncestorBindingExpression Apply(IAdamantiumComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Binding)
     {
-        var expression = new AncestorBindingExpression(target, target.GetProperty(propertyName), this) { Priority = priority };
+        var expression = CreateExpression(target, target.GetProperty(propertyName));
+        expression.Priority = priority;
         BindingEngine.Register(expression);
         return expression;
     }
+
+    internal AncestorBindingExpression CreateExpression(IAdamantiumComponent target, AdamantiumProperty property)
+        => new(target, property, this);
 
     public override object ProvideObject(MarkupContext context)
     {

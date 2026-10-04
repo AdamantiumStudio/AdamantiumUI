@@ -1,5 +1,6 @@
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls.Navigation;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Sandbox;
 
@@ -10,9 +11,8 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
 {
     public SandboxApplication()
     {
-        // The ribbon shell's commands are styled by class across the window; a set added to every theme reaches them,
-        // whichever theme is current.
         ThemeManager.AddStyleSet<Views.RibbonShellStyleSet>();
+        ResourceManager.AddSource(this, typeof(Views.ModuleIcons), ResourceScope.Global);
     }
 
     protected override void RegisterServices(IContainerRegistry containerRegistry)

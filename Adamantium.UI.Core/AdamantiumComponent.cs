@@ -770,7 +770,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
         var basePriority = GetBaseValuePriority(property);
-        var priority = basePriority <= ValuePriority.Binding || IsFedByTemplateBinding(property, basePriority)
+        var priority = basePriority <= ValuePriority.Binding
+                       || IsFedByTemplateBinding(property, basePriority)
+                       || IsFedByStyleBinding(property, basePriority)
             ? basePriority
             : ValuePriority.Binding;
         SetValue(property, value, priority);
@@ -779,6 +781,11 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)
     {
         return basePriority == ValuePriority.Template && Data.TemplateBindingExpression.Feeds(this, property);
+    }
+
+    private bool IsFedByStyleBinding(AdamantiumProperty property, ValuePriority basePriority)
+    {
+        return basePriority is ValuePriority.Style or ValuePriority.TypeDefault && Data.BindingEngine.IsFedByStyle(this, property);
     }
 
     /// <summary>

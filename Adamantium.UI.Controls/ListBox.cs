@@ -197,8 +197,35 @@ public class ListBox : Selector
 
     protected override void OnSelectedItemSet(object item)
     {
+        if (item != null && Items.Count == 0)
+        {
+            base.OnSelectedItemSet(item);
+            return;
+        }
+
         var index = IndexOfItem(item);
         if (index >= 0) SelectOnly(index); else ClearSelection();
+    }
+
+    protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+    {
+        base.OnItemsChanged(e);
+
+        var pending = TakePendingSelectionIndex();
+        if (pending >= 0)
+        {
+            SelectOnly(pending);
+            return;
+        }
+
+        if (_selectedSet.Count == 0) return;
+
+        var kept = (SelectedItems?.Cast<object>() ?? _selectedSet).Where(item => IndexOfItem(item) >= 0).ToList();
+        var primary = IndexOfItem(SelectedItem);
+        if (primary < 0 && kept.Count > 0) primary = IndexOfItem(kept[^1]);
+        if (kept.Count == _selectedSet.Count && primary == SelectedIndex) return;
+
+        ApplySelection(kept, primary, writeBoundList: true);
     }
 
     private static void OnSelectedItemsChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -235,8 +262,8 @@ public class ListBox : Selector
         _selectedSet = newSet;
 
         SyncingSelection = true;
-        SelectedIndex = primaryIndex;
-        SelectedItem = primaryIndex >= 0 && primaryIndex < Items.Count ? Items[primaryIndex] : null;
+        SetCurrentValue(SelectedIndexProperty, primaryIndex);
+        SetCurrentValue(SelectedItemProperty, primaryIndex >= 0 && primaryIndex < Items.Count ? Items[primaryIndex] : null);
         if (writeBoundList) SyncBoundList(items);
         SyncingSelection = false;
 

@@ -1,0 +1,125 @@
+<ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns="http://adamantium/ui">
+
+    <!-- The icons of the modules the shell ships, by key: the module's name and "Icon". Each is drawn in a 16-unit box;
+         the empty frame first in every icon states that box, so the icons scale alike and none is measured by its own
+         ink. Among the application's resources, so a module finds its icon by key wherever it is shown. -->
+
+    <DrawingImage x:Key="SurfaceModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L6,6 L9,10 L11,7 L15,13 Z"
+                             Stroke="#2E8B62"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SpaceModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M1,10 L15,6"
+                             Stroke="#6A58C9"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="InteriorsModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L2,6 L8,2 L14,6 L14,14 Z M6,14 L6,9 L10,9 L10,14"
+                             Stroke="#C98A3E"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CharactersModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 A2.5,2.5 0 1 0 8,7 A2.5,2.5 0 1 0 8,2 M3,14 C3,10 5,9 8,9 C11,9 13,10 13,14"
+                             Stroke="#C2557A"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StrategyModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,14 L3,2 M3,2 L12,2 L10,5 L12,8 L3,8"
+                             Stroke="#3F8FBF"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SoundModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,6 L2,10 L5,10 L9,13 L9,3 L5,6 Z M11,6 A3,3 0 0 1 11,10"
+                             Stroke="#B39A2E"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="VegetationModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L3,8 L6,8 L2,13 L14,13 L10,8 L13,8 Z M8,13 L8,15"
+                             Stroke="#5E9E3A"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WaterModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 C10,6 12,8 12,10 A4,4 0 0 1 4,10 C4,8 6,6 8,2 Z"
+                             Stroke="#3A7FC9"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DestructionModuleIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L6,6 L4,8 L8,12 M8,12 L10,10 L14,14"
+                             Stroke="#C0643F"
+                             StrokeThickness="1.25"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+</ResourceDictionary>

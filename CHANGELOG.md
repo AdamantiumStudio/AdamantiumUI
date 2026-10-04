@@ -62,7 +62,7 @@ All packages share one version.
 - A library's tables are translated or overridden by an application's file of the same table name.
 - The themes' strings are language tables of `Adamantium.UI.Themes` in English and Russian: `RibbonStrings`,
   `PropertyGridStrings`, `DataPagerStrings`, `ColorPickerStrings`, `DataGridStrings`, `CanvasStrings`,
-  `InspectorStrings`, `WindowStrings`. Their keys are public: an application's `CanvasStrings.de.alang` translates the
+  `InspectorStrings`, `WindowStrings`, `TextBoxStrings`. Their keys are public: an application's `CanvasStrings.de.alang` translates the
   canvas.
 - The language server completes and checks `.alang` files with the build's own generator, offers a quick fix that adds
   the strings a translation lacks, and completes `{Localize}` - tables, strings and placeholders.
@@ -73,6 +73,12 @@ All packages share one version.
   and `DataGridGroupHeader`.
 - `CanvasQuestion`: what the canvas asks before it deletes or clears, a control the theme gives its words and answers.
 - `CanvasInspector.ItemCount` and `ICanvasItem.Parts`: numbers the theme says in words.
+- `TextBox.ShowsClearButton`: a button at the end of the box that empties it in one press, shown while there is text
+  and the box is not read-only. `TextBox.HasText` says whether there is; `TextBox.Clear()` empties the box as one edit,
+  which undo brings back. The themes draw the button. `TextBox.ClearButtonToolTip` is what it says when pointed at:
+  the themes' `TextBoxStrings.Clear` unless a box says what clearing it means - "Clear the search (Esc)".
+- `CollectionView.Refresh()`: filters and orders the source again - for a filter that reads something outside the items,
+  such as the text of a search box.
 
 ### Changed
 
@@ -98,6 +104,10 @@ All packages share one version.
 - Removed `Ribbon.QuickAccessCandidates` and `Ribbon.ToggleQuickAccess`: a list of the ribbon's live commands, and a
   command taking one. A page that listed them took them out of the band. A customization page lists the application's
   commands as data, and the ribbon knows each by its `RibbonQuickAccessEventArgs.Item`.
+- The search fields of `PropertyGrid` and of the canvas's node palette clear by the field's own button
+  (`TextBox.ShowsClearButton`), saying their own words through `ClearButtonToolTip`. Removed what drew a cross of their
+  own: `PropertyGrid.HasSearchText` and the template part `PART_ClearSearch`, `CanvasNodePalette.HasSearch` and
+  `ClearSearchCommand` and the part `PART_Clear`. Escape still drops the inspector's search.
 
 ### Fixed
 
@@ -141,6 +151,20 @@ All packages share one version.
 - A number written out in markup, `count=5`, took the `Other` form of a counted phrase whatever it was.
 - A `{Localize}` argument that was itself a `{Localize}` was built as its text; the designer read it right.
 - A file dialog given a file type without a name showed an empty line for it; it shows the type's patterns.
+- A `ListBox` wrote its selection above the application's binding: after the first pick the view model could no longer
+  change what the list had selected. It writes current values, as the other selectors do.
+- A `ListBox` kept its selection by position when its items changed: an item removed or inserted above the selected one
+  moved the highlight to a neighbor, and a selected item that left the list stayed `SelectedItem`. The selection follows
+  its items; one that leaves is no longer selected, and a bound view model hears so.
+- A `ListBox` whose `SelectedItem` was bound before its items arrived came up with nothing selected.
+- A binding a style's setter states - `{Binding}`, `{Localize}`, `{Ancestor}`, `{Self}` - took the element's own binding
+  slot: it replaced a binding the element stated itself, outranked a value its template set, and stayed when the style
+  went. It is now that style's value: under what the element and its template say, following the DataContext, gone with
+  the style. A control's current value on such a property goes into the style's slot, so a two-way setter keeps
+  following its source. A trigger's `{Ancestor}` and `{Self}` go when the trigger lets go - a data grid row kept its
+  error wash after the error was fixed - and a trigger's `{Binding}` is a live binding rather than the binding object
+  written as the value.
+- `RemoveBinding` did nothing, and threw when given a property; it removes the element's binding.
 
 ## [0.1.0-alpha] - 2026-10-02
 

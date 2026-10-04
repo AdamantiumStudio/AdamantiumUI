@@ -121,6 +121,36 @@ public class PropertyGridThemeTests
         });
     }
 
+    // The search field clears by its own button - the one every field has - and one press brings every property back.
+    [Test]
+    public void ItsSearchClearsByTheFieldsOwnButtonUnderMacOs() => SearchClears(MacOs());
+
+    [Test]
+    public void ItsSearchClearsByTheFieldsOwnButtonUnderFluent() => SearchClears(Fluent());
+
+    [Test]
+    public void ItsSearchClearsByTheFieldsOwnButtonUnderEditorPro() => SearchClears(EditorPro());
+
+    private void SearchClears(Theme theme)
+    {
+        Use(theme);
+        var grid = Built();
+        grid.SearchText = "scale";
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(grid);
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        var search = (Adamantium.UI.Controls.Text.TextBox)grid.GetTemplateChild("PART_Search");
+        var clear = search.GetTemplateChild("PART_ClearButton") as Adamantium.UI.Controls.Primitives.ButtonBase;
+        Assert.That(clear, Is.Not.Null, "the field draws its own clear button");
+        Assert.That(clear.Visibility, Is.EqualTo(Visibility.Visible), "a running search can be cleared");
+        Assert.That(clear.ToolTip, Is.EqualTo(Adamantium.UI.Themes.Localization.PropertyGridStrings.ClearSearch),
+            "it says what it drops, and that Escape does it too");
+
+        clear.PerformClick();
+
+        Assert.That(grid.SearchText, Is.Null.Or.Empty);
+    }
+
     [Test]
     public void EveryRowIsLiveUnderMacOs() => LiveEditors(MacOs());
 

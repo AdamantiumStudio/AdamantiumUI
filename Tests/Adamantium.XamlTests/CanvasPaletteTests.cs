@@ -135,6 +135,54 @@ public class CanvasPaletteTests
         Assert.That(nodes, Has.Count.EqualTo(1), "the canvas itself did not put the node down");
     }
 
+    // What was typed to narrow the list goes in one press of the field's own clear button.
+    [Test]
+    public void TheSearchClearsByTheFieldsOwnButtonUnderMacOs() => SearchClears(new Adamantium.UI.Themes.MacOsTheme.MacOs());
+
+    [Test]
+    public void TheSearchClearsByTheFieldsOwnButtonUnderFluent() =>
+        SearchClears(new Adamantium.UI.Themes.FluentTheme.Fluent());
+
+    [Test]
+    public void TheSearchClearsByTheFieldsOwnButtonUnderEditorPro() =>
+        SearchClears(new Adamantium.UI.Themes.EditorProTheme.EditorPro());
+
+    private void SearchClears(Theme theme)
+    {
+        Use(theme);
+
+        var canvas = new InfiniteCanvas
+        {
+            Mode = CanvasMode.Nodes,
+            Scene = new CanvasScene(),
+            NodeKinds = Catalog,
+            Nodes = new TrackingCollection<ICanvasNode>()
+        };
+
+        var window = new Window { Width = 900, Height = 600, Content = canvas };
+        Settle(window);
+
+        Assert.That(canvas.AskForNode(new Vector2(120, 80)), Is.True, "the palette would not open at all");
+        Settle(window);
+
+        var palette = Found<CanvasNodePalette>(canvas);
+        Assert.That(palette, Is.Not.Null, "no palette in the canvas's own chrome");
+
+        palette.Search = "mix";
+        Settle(window);
+
+        var field = Found<Adamantium.UI.Controls.Text.TextBox>(palette);
+        var clear = field?.GetTemplateChild("PART_ClearButton") as Adamantium.UI.Controls.Primitives.ButtonBase;
+        Assert.That(clear, Is.Not.Null, "the field draws its own clear button");
+        Assert.That(clear.Visibility, Is.EqualTo(Visibility.Visible), "what was typed can be cleared");
+        Assert.That(clear.ToolTip, Is.EqualTo(Adamantium.UI.Themes.Localization.CanvasStrings.ClearSearch));
+
+        clear.PerformClick();
+        Settle(window);
+
+        Assert.That(palette.Search, Is.Empty);
+    }
+
     private sealed class Sort : ICanvasNodeKind
     {
         public Sort(string kind, string group)

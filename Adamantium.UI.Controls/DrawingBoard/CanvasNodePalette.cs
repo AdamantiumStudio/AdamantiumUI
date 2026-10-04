@@ -23,10 +23,6 @@ public class CanvasNodePalette : Control, ICanvasPart
     public static readonly AdamantiumProperty GroupsProperty = AdamantiumProperty.Register(nameof(Groups),
         typeof(IEnumerable), typeof(CanvasNodePalette), new PropertyMetadata(null));
 
-    /// <summary>Whether anything has been typed - what the field's own clear button is shown by.</summary>
-    public static readonly AdamantiumProperty HasSearchProperty = AdamantiumProperty.Register(nameof(HasSearch),
-        typeof(Boolean), typeof(CanvasNodePalette), new PropertyMetadata(false));
-
     /// <summary>The catalog entry picked, handed straight to the canvas; held here because a two-way binding through
     /// <c>Canvas.PickedKind</c> never wrote back.</summary>
     public static readonly AdamantiumProperty PickedKindProperty = AdamantiumProperty.Register(nameof(PickedKind),
@@ -58,17 +54,7 @@ public class CanvasNodePalette : Control, ICanvasPart
         private set => SetCurrentValue(GroupsProperty, value);
     }
 
-    public Boolean HasSearch
-    {
-        get => GetValue<Boolean>(HasSearchProperty);
-        private set => SetCurrentValue(HasSearchProperty, value);
-    }
-
-    private CanvasCommand _clear;
     private CanvasCommand _close;
-
-    /// <summary>Empties the search field.</summary>
-    public CanvasCommand ClearSearchCommand => _clear ??= new CanvasCommand(_ => Cleared(), _ => HasSearch);
 
     /// <summary>Puts the list away without choosing anything.</summary>
     public CanvasCommand CloseCommand => _close ??= new CanvasCommand(_ => Close());
@@ -129,7 +115,6 @@ public class CanvasNodePalette : Control, ICanvasPart
     {
         if (component is not CanvasNodePalette palette) return;
 
-        palette.HasSearch = !String.IsNullOrEmpty(palette.Search);
         palette.Gather();
     }
 

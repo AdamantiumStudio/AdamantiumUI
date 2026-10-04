@@ -199,12 +199,14 @@
                           IsActive="{Binding IsShown}">
                 <RibbonTab Header="{Localize Table={Binding Phrases}, Key={Binding Name}}">
                     <RibbonGroup Header="{Localize RibbonShellStrings.Tools}"
-                                 Icon="{Binding Icon}">
+                                 Icon="{Binding Icon}"
+                                 IconTemplate="{ResourceReference ModuleIcon}">
                         <RibbonButton Content="{Localize RibbonShellStrings.Add}"
                                       Ribbon.CanAddToQuickAccess="False"
                                       Command="{Binding UseCommand}"
                                       CommandParameter="ModuleToolUsed"
-                                      Icon="{Binding Icon}"/>
+                                      Icon="{Binding Icon}"
+                                      IconTemplate="{ResourceReference ModuleIcon}"/>
                     </RibbonGroup>
                 </RibbonTab>
             </RibbonTabSet>
@@ -232,12 +234,19 @@
                     CornerRadius="8"
                     BorderThickness="1"
                     BorderBrush="{Binding Accent}">
-                <Path Data="{Binding Icon}"
-                      Stroke="{Binding Accent}"
-                      StrokeThickness="1.25"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"/>
+                <Image Source="{Binding Icon}"
+                       Width="20"
+                       Height="20"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
             </Border>
+        </DataTemplate>
+
+        <!-- A module's icon is a picture, not path data: the ribbon draws it as one. -->
+        <DataTemplate x:Key="ModuleIcon">
+            <Image Source="{Binding}"
+                   Width="16"
+                   Height="16"/>
         </DataTemplate>
     </ResourceContext.Resources>
     <!-- An editor shell: a ribbon band, a document surface, a status line. Exercises the three command sizes, commands
@@ -552,6 +561,7 @@
                                  VerticalAlignment="Center"
                                  Margin="0 0 16 0"
                                  Placeholder="{Localize RibbonShellStrings.FindModule}"
+                                 ShowsClearButton="True"
                                  Text="{Binding CatalogSearch, Mode=TwoWay}"/>
                         <ListBox Grid.Column="2"
                                  VerticalAlignment="Center"
@@ -642,15 +652,15 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <!-- The module picked in the list: what it is, and what can be done with it from where it
-                             stands. -->
+                        <!-- The module last picked in the list, kept when the filter takes it out: what it is, and
+                             what can be done with it from where it stands. -->
                         <Border Grid.Column="2"
                                 Padding="16"
                                 CornerRadius="8"
                                 BorderThickness="1"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                 Background="{ResourceReference SubtleFillColorSecondary}"
-                                DataContext="{Binding SelectedModule}">
+                                DataContext="{Binding ShownModule}">
                             <StackPanel Orientation="Vertical">
                                 <Grid ColumnDefinitions="Auto,*">
                                     <ContentPresenter Content="{Binding}"
