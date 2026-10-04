@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Adamantium.UI.Core.Automation;
@@ -17,6 +19,9 @@ public static class Program
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(300);
 
+    private static readonly string[] ElementKeys =
+        ["name", "id", "type", "class", "value", "toggle", "selected", "enabled", "offscreen", "focus"];
+
     private const string Usage = """
         adam-auto - drives an application that runs the automation agent; by default the sandbox, as an instance of its own.
 
@@ -24,15 +29,23 @@ public static class Program
           stop                                                close it
           windows                                             the open windows
           tree [<selector>] [--depth <n>] [--out <file>]      the automation tree
+          visual <selector> [--depth <n>] [--out <file>]      the visual tree under it, with layout
           find <selector>                                     every match, with where it stands
-          get <selector>                                      the first match in detail
+          get <selector> [<property>...]                      the first match: properties with their source, bindings, layout
           invoke | toggle | select | click <selector>         act on the first match
           set <selector> <value>                              write a value
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
           wait <selector> [--timeout 5s]                      wait until something matches
           wait-idle                                           wait until the application has settled
+          state                                               keyboard focus, windows, open popups
+          shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
+          mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
+          expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
+                                                              selected, enabled, offscreen, focus, or a property name
+          run <scenario>                                      the commands of a file, one a line, up to the first failure
 
-          --pipe <name>   the agent's pipe (default adam-auto)
+          --pipe <name>     the agent's pipe (default adam-auto)
+          --allow-errors    an action may leave errors in the journal; by default that fails it
 
         A selector: id=Cut   name="Cut out"   type=Button,name=OK   a path: id=Shell/id=Cut
         """;
@@ -40,27 +53,55 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
-        var arguments = new Arguments(args);
-        var pipe = arguments.Option("pipe") ?? DefaultPipe;
+        return await RunAsync(new Arguments(args), DefaultPipe);
+    }
+
+    private static async Task<int> RunAsync(Arguments arguments, string defaultPipe)
+    {
+        var pipe = arguments.Option("pipe") ?? defaultPipe;
+        var allowErrors = arguments.Flag("allow-errors");
         try
         {
             return arguments.Command switch
             {
                 "start" => await StartAsync(arguments, pipe),
                 "stop" => await StopAsync(pipe),
-                "windows" => await SendAsync(pipe, AutomationCommand.Windows),
-                "tree" => await TreeAsync(arguments, pipe),
-                "find" => await SendAsync(pipe, AutomationCommand.Find, arguments.At(0)),
-                "get" => await SendAsync(pipe, AutomationCommand.Get, arguments.At(0), details: true),
-                "invoke" => await SendAsync(pipe, AutomationCommand.Invoke, arguments.At(0)),
-                "toggle" => await SendAsync(pipe, AutomationCommand.Toggle, arguments.At(0)),
-                "select" => await SendAsync(pipe, AutomationCommand.Select, arguments.At(0)),
-                "click" => await SendAsync(pipe, AutomationCommand.Click, arguments.At(0)),
-                "set" => await SendAsync(pipe, AutomationCommand.SetValue, arguments.At(0), arguments.At(1)),
-                "type" => await SendAsync(pipe, AutomationCommand.Type, arguments.Option("into"), arguments.At(0)),
-                "wait" => await SendAsync(pipe, AutomationCommand.WaitFor, arguments.At(0),
-                    timeout: arguments.TimeOption("timeout")),
-                "wait-idle" => await SendAsync(pipe, AutomationCommand.WaitIdle),
+                "windows" => await SendAsync(pipe, new AutomationRequest { Command = AutomationCommand.Windows }),
+                "tree" => await TextAsync(pipe, AutomationCommand.Tree, arguments),
+                "visual" => await TextAsync(pipe, AutomationCommand.Visual, arguments),
+                "state" => await TextAsync(pipe, AutomationCommand.State, arguments),
+                "find" => await SendAsync(pipe, Target(AutomationCommand.Find, arguments)),
+                "get" => await InspectAsync(pipe, arguments),
+                "invoke" => await SendAsync(pipe, Target(AutomationCommand.Invoke, arguments, allowErrors)),
+                "toggle" => await SendAsync(pipe, Target(AutomationCommand.Toggle, arguments, allowErrors)),
+                "select" => await SendAsync(pipe, Target(AutomationCommand.Select, arguments, allowErrors)),
+                "click" => await SendAsync(pipe, Target(AutomationCommand.Click, arguments, allowErrors)),
+                "set" => await SendAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.SetValue,
+                    Target = arguments.At(0),
+                    Value = arguments.At(1),
+                    AllowErrors = allowErrors
+                }),
+                "type" => await SendAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.Type,
+                    Target = arguments.Option("into"),
+                    Value = arguments.At(0),
+                    AllowErrors = allowErrors
+                }),
+                "wait" => await SendAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.WaitFor,
+                    Target = arguments.At(0),
+                    TimeoutMs = (int)(arguments.TimeOption("timeout")?.TotalMilliseconds ?? 0)
+                }),
+                "wait-idle" => await SendAsync(pipe, new AutomationRequest { Command = AutomationCommand.WaitIdle }),
+                "mark" => await MarkAsync(pipe),
+                "errors" => await ErrorsAsync(pipe, arguments),
+                "expect" => await ExpectAsync(pipe, arguments),
+                "shot" => await ShotAsync(pipe, arguments),
+                "run" => await ScenarioAsync(arguments, pipe),
                 _ => Fail(Usage, 2)
             };
         }
@@ -69,6 +110,9 @@ public static class Program
             return Fail(e.Message, 1);
         }
     }
+
+    private static AutomationRequest Target(AutomationCommand command, Arguments arguments, bool allowErrors = false) =>
+        new() { Command = command, Target = arguments.At(0), AllowErrors = allowErrors };
 
     private static async Task<int> StartAsync(Arguments arguments, string pipe)
     {
@@ -115,12 +159,11 @@ public static class Program
         return 0;
     }
 
-    private static async Task<int> TreeAsync(Arguments arguments, string pipe)
+    private static async Task<int> TextAsync(string pipe, AutomationCommand command, Arguments arguments)
     {
-        await using var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout);
-        var reply = await session.SendAsync(new AutomationRequest
+        var reply = await ReplyAsync(pipe, new AutomationRequest
         {
-            Command = AutomationCommand.Tree,
+            Command = command,
             Target = arguments.At(0),
             Depth = arguments.IntOption("depth")
         });
@@ -143,16 +186,13 @@ public static class Program
         return 0;
     }
 
-    private static async Task<int> SendAsync(string pipe, AutomationCommand command, string target = null,
-        string value = null, bool details = false, TimeSpan? timeout = null)
+    private static async Task<int> InspectAsync(string pipe, Arguments arguments)
     {
-        await using var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout);
-        var reply = await session.SendAsync(new AutomationRequest
+        var reply = await ReplyAsync(pipe, new AutomationRequest
         {
-            Command = command,
-            Target = target,
-            Value = value,
-            TimeoutMs = (int)(timeout?.TotalMilliseconds ?? 0)
+            Command = AutomationCommand.Inspect,
+            Target = arguments.At(0),
+            Properties = [.. arguments.From(1)]
         });
 
         if (!reply.Ok)
@@ -160,20 +200,154 @@ public static class Program
             return Fail(reply.Error, 1);
         }
 
-        if (reply.Elements == null || reply.Elements.Count == 0)
+        Console.WriteLine(Printer.Inspection(reply.Details));
+        return 0;
+    }
+
+    private static async Task<int> ShotAsync(string pipe, Arguments arguments)
+    {
+        var reply = await ReplyAsync(pipe, new AutomationRequest
         {
-            Console.WriteLine(command == AutomationCommand.Find ? "Nothing matches." : "Done.");
-            return 0;
+            Command = AutomationCommand.Shot,
+            Target = arguments.At(0),
+            Value = arguments.Option("out") ?? "shot.png"
+        });
+
+        if (!reply.Ok)
+        {
+            return Fail(reply.Error, 1);
         }
 
-        foreach (var element in reply.Elements)
+        Console.WriteLine($"Written to {reply.Text}.");
+        return 0;
+    }
+
+    private static async Task<int> MarkAsync(string pipe)
+    {
+        var reply = await ReplyAsync(pipe, new AutomationRequest { Command = AutomationCommand.Mark });
+        Console.WriteLine(reply.Mark);
+        return 0;
+    }
+
+    private static async Task<int> ErrorsAsync(string pipe, Arguments arguments)
+    {
+        var reply = await ReplyAsync(pipe, new AutomationRequest
         {
-            Console.WriteLine(details ? Printer.Details(element) : command == AutomationCommand.Find
+            Command = AutomationCommand.Errors,
+            Since = long.TryParse(arguments.Option("since"), out var since) ? since : 0
+        });
+
+        foreach (var error in reply.Errors)
+        {
+            Console.WriteLine(Printer.Error(error));
+        }
+
+        Console.WriteLine(reply.Errors.Count == 0 ? $"No errors; the mark is {reply.Mark}." : $"The mark is {reply.Mark}.");
+        return 0;
+    }
+
+    private static async Task<int> ExpectAsync(string pipe, Arguments arguments)
+    {
+        var expected = arguments.From(1).Select(Expectation).ToList();
+        if (expected.Count == 0)
+        {
+            return Fail("expect <selector> <key>=<value>...", 2);
+        }
+
+        var properties = expected.Select(pair => pair.Key).Where(key => !ElementKeys.Contains(key)).ToArray();
+        var reply = await ReplyAsync(pipe, new AutomationRequest
+        {
+            Command = AutomationCommand.Inspect,
+            Target = arguments.At(0),
+            Properties = properties
+        });
+
+        if (!reply.Ok)
+        {
+            return Fail(reply.Error, 1);
+        }
+
+        var misses = expected
+            .Select(pair => (pair.Key, pair.Value, Actual: Actual(reply.Details, pair.Key)))
+            .Where(check => check.Actual != check.Value)
+            .Select(check => $"  {check.Key}: expected \"{check.Value}\", was \"{check.Actual}\"")
+            .ToList();
+
+        if (misses.Count > 0)
+        {
+            return Fail($"{Printer.Line(reply.Details.Element)} does not match:{Environment.NewLine}{string.Join(Environment.NewLine, misses)}", 1);
+        }
+
+        Console.WriteLine($"As expected: {Printer.Line(reply.Details.Element)}");
+        return 0;
+    }
+
+    private static async Task<int> ScenarioAsync(Arguments arguments, string pipe)
+    {
+        var file = arguments.At(0);
+        if (file == null || !File.Exists(file))
+        {
+            return Fail($"No scenario at '{file}'.", 2);
+        }
+
+        var lines = await File.ReadAllLinesAsync(file);
+        for (var number = 1; number <= lines.Length; number++)
+        {
+            var line = lines[number - 1].Trim();
+            if (line.Length == 0 || line.StartsWith('#'))
+            {
+                continue;
+            }
+
+            Console.WriteLine($"> {line}");
+            var step = new Arguments([.. Tokenize(line)]);
+            if (step.Command == "run")
+            {
+                return Fail($"{file}:{number}: a scenario does not run another.", 2);
+            }
+
+            if (await RunAsync(step, pipe) != 0)
+            {
+                return Fail($"{file}:{number}: the scenario stopped here.", 1);
+            }
+        }
+
+        Console.WriteLine($"{file}: every step passed.");
+        return 0;
+    }
+
+    private static async Task<int> SendAsync(string pipe, AutomationRequest request)
+    {
+        var reply = await ReplyAsync(pipe, request);
+        if (!reply.Ok)
+        {
+            return Fail(reply.Error, 1);
+        }
+
+        if (reply.Elements == null || reply.Elements.Count == 0)
+        {
+            Console.WriteLine(request.Command == AutomationCommand.Find ? "Nothing matches." : "Done.");
+        }
+
+        foreach (var element in reply.Elements ?? [])
+        {
+            Console.WriteLine(request.Command == AutomationCommand.Find
                 ? $"{Printer.Line(element)}{Environment.NewLine}  {element.Path}"
                 : Printer.Line(element));
         }
 
+        foreach (var error in reply.Errors ?? [])
+        {
+            Console.WriteLine($"  allowed: {Printer.Error(error)}");
+        }
+
         return 0;
+    }
+
+    private static async Task<AutomationReply> ReplyAsync(string pipe, AutomationRequest request)
+    {
+        await using var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout);
+        return await session.SendAsync(request);
     }
 
     private static async Task<bool> AnswersAsync(string pipe)
@@ -188,6 +362,70 @@ public static class Program
             return false;
         }
     }
+
+    private static KeyValuePair<string, string> Expectation(string text)
+    {
+        var equals = text.IndexOf('=');
+        if (equals <= 0)
+        {
+            throw new AutomationException($"'{text}': expected key=value.");
+        }
+
+        return new KeyValuePair<string, string>(text[..equals], Unquote(text[(equals + 1)..]));
+    }
+
+    private static string Actual(ElementDetails details, string key)
+    {
+        var element = details.Element;
+        return key switch
+        {
+            "name" => element.Name,
+            "id" => element.AutomationId,
+            "type" => element.ControlType,
+            "class" => element.ClassName,
+            "value" => element.Value,
+            "toggle" => element.ToggleState,
+            "selected" => element.IsSelected?.ToString(),
+            "enabled" => element.IsEnabled.ToString(),
+            "offscreen" => element.IsOffscreen.ToString(),
+            "focus" => element.HasKeyboardFocus.ToString(),
+            _ => Unquote(details.Properties.FirstOrDefault(property => property.Name == key)?.Value)
+        };
+    }
+
+    private static IEnumerable<string> Tokenize(string line)
+    {
+        var token = new StringBuilder();
+        var quoted = false;
+        foreach (var character in line)
+        {
+            if (character == '"')
+            {
+                quoted = !quoted;
+            }
+
+            if (char.IsWhiteSpace(character) && !quoted)
+            {
+                if (token.Length > 0)
+                {
+                    yield return Unquote(token.ToString());
+                    token.Clear();
+                }
+
+                continue;
+            }
+
+            token.Append(character);
+        }
+
+        if (token.Length > 0)
+        {
+            yield return Unquote(token.ToString());
+        }
+    }
+
+    private static string Unquote(string text) =>
+        text is { Length: >= 2 } && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text;
 
     private static int Fail(string message, int code)
     {

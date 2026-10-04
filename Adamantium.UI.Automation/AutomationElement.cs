@@ -27,6 +27,20 @@ public sealed class AutomationElement
 
     public async Task<string> NameAsync() => (await GetAsync()).Name;
 
+    /// <summary>The named properties with where each value comes from - every property something has set when none is
+    /// named - and the element's bindings, layout and parents.</summary>
+    public async Task<ElementDetails> InspectAsync(params string[] properties) =>
+        (await _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Inspect,
+            Target = Selector,
+            Properties = properties
+        })).Details;
+
+    /// <summary>The visual tree under the element with every node's layout, as text; <paramref name="depth"/> 0 for all.</summary>
+    public async Task<string> VisualAsync(int depth = 0) =>
+        (await _session.RunAsync(new AutomationRequest { Command = AutomationCommand.Visual, Target = Selector, Depth = depth })).Text;
+
     public async Task<bool> ExistsAsync() => (await RunAsync(AutomationCommand.Find)).Elements.Count > 0;
 
     /// <summary>Waits until the element is there, for <paramref name="timeout"/> at most.</summary>
@@ -37,6 +51,10 @@ public sealed class AutomationElement
             Target = Selector,
             TimeoutMs = (int)(timeout?.TotalMilliseconds ?? 0)
         })).Elements[0];
+
+    /// <summary>A picture of the element, drawn by the application's renderer and written to <paramref name="path"/> as
+    /// PNG - to look at, never to compare. Not in a headless session, which draws nothing.</summary>
+    public async Task<string> ShotAsync(string path) => (await RunAsync(AutomationCommand.Shot, path)).Text;
 
     public Task InvokeAsync() => RunAsync(AutomationCommand.Invoke);
 

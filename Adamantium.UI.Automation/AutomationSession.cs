@@ -22,13 +22,20 @@ public sealed class AutomationSession : IAsyncDisposable
 
     /// <summary>Windows built in this process, with no application loop: the caller's thread is the loop, and the
     /// session lays them out itself.</summary>
-    public static AutomationSession InProcess(params IWindow[] windows) =>
-        new(new InProcessChannel(new AutomationExecutor(new HeadlessHost(windows))));
+    public static AutomationSession InProcess(params IWindow[] windows)
+    {
+        ErrorJournal.Install();
+        return new AutomationSession(new InProcessChannel(new AutomationExecutor(new HeadlessHost(windows))));
+    }
 
     /// <summary>An application whose agent listens on <paramref name="pipeName"/>, waiting for it to start if need be.</summary>
     /// <exception cref="AutomationException">No agent answered in time.</exception>
     public static async Task<AutomationSession> AttachAsync(string pipeName, TimeSpan? timeout = null) =>
         new(await PipeChannel.ConnectAsync(pipeName, timeout ?? DefaultConnectTimeout));
+
+    /// <summary>Whether an action that leaves new entries in the <see cref="ErrorJournal"/> still succeeds. Off: a quiet
+    /// failure fails the step; turn it on where the error is what is being checked.</summary>
+    public bool AllowErrors { get; set; }
 
     /// <summary>The element <paramref name="by"/> finds in any window. Looked up when it is used, not now.</summary>
     public AutomationElement Find(By by) => new(this, [by]);
@@ -47,6 +54,16 @@ public sealed class AutomationSession : IAsyncDisposable
 
     public async Task DumpTreeAsync(string path) => await File.WriteAllTextAsync(path, await TreeAsync());
 
+    /// <summary>The newest entry of the error journal, to ask later what came after it.</summary>
+    public async Task<long> MarkAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.Mark })).Mark;
+
+    /// <summary>What the error journal holds after <paramref name="mark"/>.</summary>
+    public async Task<IReadOnlyList<ErrorEntry>> ErrorsSinceAsync(long mark) =>
+        (await RunAsync(new AutomationRequest { Command = AutomationCommand.Errors, Since = mark })).Errors;
+
+    /// <summary>The element with keyboard focus, the windows and their open popups, as text.</summary>
+    public async Task<string> StateAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.State })).Text;
+
     /// <summary>Sends <paramref name="request"/> as it is and returns the reply as it came, a failure included.</summary>
     public Task<AutomationReply> SendAsync(AutomationRequest request) => _channel.SendAsync(request);
 
@@ -54,6 +71,7 @@ public sealed class AutomationSession : IAsyncDisposable
 
     internal async Task<AutomationReply> RunAsync(AutomationRequest request)
     {
+        request.AllowErrors |= AllowErrors;
         var reply = await _channel.SendAsync(request);
         return reply.Ok ? reply : throw new AutomationException(reply.Error);
     }

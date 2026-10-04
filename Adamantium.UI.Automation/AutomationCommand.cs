@@ -37,5 +37,24 @@ public enum AutomationCommand
     WaitIdle,
 
     /// <summary>Closes the application.</summary>
-    Shutdown
+    Shutdown,
+
+    /// <summary>The target's properties with where each value comes from, its bindings, layout and parents.</summary>
+    Inspect,
+
+    /// <summary>The visual tree under the target, every element with its layout, as indented text.</summary>
+    Visual,
+
+    /// <summary>The sequence of the newest entry of the error journal, to ask later what came after it.</summary>
+    Mark,
+
+    /// <summary>The error journal's entries after <see cref="AutomationRequest.Since"/>.</summary>
+    Errors,
+
+    /// <summary>The element with keyboard focus, the active window and the open popups.</summary>
+    State,
+
+    /// <summary>A picture of the target, or of the first window, drawn by the application's own renderer and written to
+    /// <see cref="AutomationRequest.Value"/> as PNG - to look at, never to compare.</summary>
+    Shot
 }

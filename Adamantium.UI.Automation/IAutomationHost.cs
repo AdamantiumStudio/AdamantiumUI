@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Automation;
 
@@ -11,6 +12,9 @@ public interface IAutomationHost
 {
     /// <summary>The open windows; read on the loop thread.</summary>
     IReadOnlyList<IWindow> Windows { get; }
+
+    /// <summary>What takes pictures of elements; null where nothing is drawn, as in a headless session.</summary>
+    IVisualRenderer Renderer { get; }
 
     /// <summary>Runs <paramref name="work"/> on the thread the visual trees live on.</summary>
     /// <exception cref="TimeoutException">The thread did not get to it in time - the application may be frozen.</exception>

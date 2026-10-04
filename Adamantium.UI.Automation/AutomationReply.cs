@@ -14,6 +14,13 @@ public sealed class AutomationReply
 
     public string Text { get; set; }
 
+    public ElementDetails Details { get; set; }
+
+    public List<ErrorEntry> Errors { get; set; }
+
+    /// <summary>The error journal's newest sequence at the time of the reply.</summary>
+    public long Mark { get; set; }
+
     public static AutomationReply Done() => new() { Ok = true };
 
     public static AutomationReply Failed(string error) => new() { Error = error };

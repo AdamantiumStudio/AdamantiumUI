@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Automation;
 
@@ -28,6 +31,13 @@ public sealed class AutomationExecutor
 
     public async Task<AutomationReply> ExecuteAsync(AutomationRequest request)
     {
+        var reply = await RunAsync(request);
+        reply.Mark = ErrorJournal.Mark();
+        return reply;
+    }
+
+    private async Task<AutomationReply> RunAsync(AutomationRequest request)
+    {
         var timeout = request.TimeoutMs > 0 ? TimeSpan.FromMilliseconds(request.TimeoutMs) : DefaultTimeout;
         try
         {
@@ -41,15 +51,22 @@ public sealed class AutomationExecutor
                 case AutomationCommand.Shutdown:
                     await _host.ShutdownAsync();
                     return AutomationReply.Done();
+                case AutomationCommand.Mark:
+                    return AutomationReply.Done();
+                case AutomationCommand.Errors:
+                    return new AutomationReply { Ok = true, Errors = ErrorJournal.Since(request.Since) };
+                case AutomationCommand.Shot:
+                    return await ShotAsync(request, timeout);
                 case AutomationCommand.Windows:
                 case AutomationCommand.Tree:
                 case AutomationCommand.Find:
                 case AutomationCommand.Get:
+                case AutomationCommand.Inspect:
+                case AutomationCommand.Visual:
+                case AutomationCommand.State:
                     return await _host.RunOnLoopAsync(() => Read(request), timeout);
                 default:
-                    await _host.RunOnLoopAsync(() => Act(request), timeout);
-                    await _host.WaitForIdleAsync(timeout);
-                    return await _host.RunOnLoopAsync(() => Describe(request.Target), timeout);
+                    return await ActAsync(request, timeout);
             }
         }
         catch (TimeoutException)
@@ -67,13 +84,80 @@ public sealed class AutomationExecutor
         }
     }
 
+    private async Task<AutomationReply> ShotAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        if (string.IsNullOrWhiteSpace(request.Value))
+        {
+            throw new AutomationException("A picture needs a file to go to.");
+        }
+
+        var renderer = _host.Renderer ?? throw new AutomationException("Nothing is drawn here, so there is no picture to take.");
+        var taken = new TaskCompletionSource<ImageSource>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await _host.RunOnLoopAsync(() =>
+        {
+            var element = string.IsNullOrWhiteSpace(request.Target)
+                ? _host.Windows.OfType<UIComponent>().FirstOrDefault() ?? throw new AutomationException("No window is open.")
+                : OwnerOf(Resolve(request.Target));
+            renderer.RequestSnapshot(element, image => taken.TrySetResult(image));
+            LoopSignal.Request();
+            return true;
+        }, timeout);
+
+        using var picture = await taken.Task.WaitAsync(timeout);
+        if (picture is not BitmapSource { PixelBytes: not null } bitmap)
+        {
+            throw new AutomationException("The element has no size to take a picture of.");
+        }
+
+        var path = Path.GetFullPath(request.Value);
+        SnapshotFile.Save(bitmap, path);
+        return new AutomationReply { Ok = true, Text = path };
+    }
+
+    private async Task<AutomationReply> ActAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        var mark = ErrorJournal.Mark();
+        await _host.RunOnLoopAsync(() => Act(request), timeout);
+        await _host.WaitForIdleAsync(timeout);
+        var reply = await _host.RunOnLoopAsync(() => Describe(request.Target), timeout);
+
+        var quiet = ErrorJournal.Since(mark);
+        if (quiet.Count == 0)
+        {
+            return reply;
+        }
+
+        reply.Errors = quiet;
+        if (!request.AllowErrors)
+        {
+            reply.Ok = false;
+            reply.Error = $"{request.Command} left {quiet.Count} error(s) behind:{Environment.NewLine}" +
+                          string.Join(Environment.NewLine, quiet.Select(entry => $"  [{entry.Kind}] {entry.Message}"));
+        }
+
+        return reply;
+    }
+
     private AutomationReply Read(AutomationRequest request) => request.Command switch
     {
         AutomationCommand.Windows => new AutomationReply { Ok = true, Elements = [.. Roots().Select(Info)] },
         AutomationCommand.Tree => new AutomationReply { Ok = true, Text = Tree(request.Target, request.Depth) },
         AutomationCommand.Find => new AutomationReply { Ok = true, Elements = [.. FindAll(request.Target).Select(Info)] },
+        AutomationCommand.Inspect => Inspect(request),
+        AutomationCommand.Visual => new AutomationReply
+        {
+            Ok = true,
+            Text = ElementInspector.Visual(OwnerOf(Resolve(request.Target)), request.Depth)
+        },
+        AutomationCommand.State => new AutomationReply { Ok = true, Text = ElementInspector.State(_host.Windows) },
         _ => new AutomationReply { Ok = true, Elements = [Info(Resolve(request.Target))] }
     };
+
+    private AutomationReply Inspect(AutomationRequest request)
+    {
+        var peer = Resolve(request.Target);
+        return new AutomationReply { Ok = true, Details = ElementInspector.Inspect(OwnerOf(peer), Info(peer), request.Properties) };
+    }
 
     private bool Act(AutomationRequest request)
     {
@@ -236,7 +320,7 @@ public sealed class AutomationExecutor
         peer.GetPattern(pattern) as T ?? throw new AutomationException($"{Label(peer)} cannot {pattern}.");
 
     private static UIComponent OwnerOf(AutomationPeer peer) =>
-        (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException($"{Label(peer)} has no element to click.");
+        (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException($"{Label(peer)} stands for no element of the tree.");
 
     private static ElementInfo Info(AutomationPeer peer)
     {

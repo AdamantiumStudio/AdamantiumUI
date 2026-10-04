@@ -161,6 +161,13 @@ All packages share one version.
   the framework, refused when something covers the element - waiting each time for the application to settle.
   `AutomationSession.InProcess` drives windows a test built, headless; `UseAutomationAgent` lets a running application
   be driven through a named pipe when `ADAM_AUTOMATION_PIPE` names one, its windows opening in the background.
+- Automation finds out why: `AutomationElement.InspectAsync` gives an element's properties with where each value comes
+  from, its bindings and why one does not work, its layout and parents; `VisualAsync` its visual tree with layout;
+  `AutomationSession.StateAsync` the keyboard focus, the windows and their popups; `ShotAsync` a picture drawn by the
+  application's own renderer. The `ErrorJournal` collects broken bindings, values set by a name the element has no
+  property for and errors in the log; an action that leaves new entries fails, unless `AllowErrors` says otherwise.
+- `AdamantiumComponent.GetValueSource`: the priority the value of a property comes from. `BindingExpressionBase.Failure`:
+  why a binding does not work.
 
 ### Changed
 

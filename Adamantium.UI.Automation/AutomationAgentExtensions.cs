@@ -20,6 +20,7 @@ public static class AutomationAgentExtensions
         }
 
         WindowBase.ActivateOnShowProperty.OverrideMetadata(typeof(Window), new PropertyMetadata(false));
+        ErrorJournal.Install();
 
         var agent = new AutomationAgent(application, pipe);
         application.Started += (_, _) => agent.Start();

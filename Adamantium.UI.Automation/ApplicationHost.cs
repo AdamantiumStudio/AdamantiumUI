@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Automation;
 
@@ -19,6 +20,8 @@ public sealed class ApplicationHost : IAutomationHost
     }
 
     public IReadOnlyList<IWindow> Windows => _application.Windows;
+
+    public IVisualRenderer Renderer => _application.Container.Resolve<IVisualRenderer>();
 
     public async Task<T> RunOnLoopAsync<T>(Func<T> work, TimeSpan timeout)
     {

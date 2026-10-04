@@ -1,0 +1,10 @@
+# The ribbon shell, opened by the gallery's caption command: its clipboard commands say in the status line what they did.
+# Run against an instance started by `adam-auto start`:  adam-auto run Scenarios/RibbonShell.adam
+invoke id=OpenRibbon
+# The window comes first and its page after it, by navigation: wait for what the next steps read.
+wait id=RibbonWindow/id=StatusLine --timeout 30s
+expect id=StatusLine name=Ready.
+invoke id=Cut
+expect id=StatusLine name="Cut the selection."
+click type=Button,name=Copy
+expect id=StatusLine name="Copied the selection."
