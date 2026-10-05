@@ -4,6 +4,7 @@ using Adamantium.UI.Core.TypeParsers;
 namespace Adamantium.UI.Core.Media.Imaging;
 
 [TypeParser(typeof(ImageSourceParser))]
+[MarkupFile("png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "ico", "tif", "tiff")]
 public abstract class ImageSource : AdamantiumComponent, IDisposable
 {
    public abstract double Width { get; }

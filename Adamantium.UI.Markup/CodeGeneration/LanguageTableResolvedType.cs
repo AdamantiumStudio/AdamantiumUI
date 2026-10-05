@@ -64,6 +64,7 @@ internal sealed class LanguageTableResolvedType : IResolvedType
         public IResolvedType MemberType => null;
         public IResolvedType DeclaringType { get; } = type;
         public bool HasAttribute(string attributeMetadataName) => false;
+        public IResolvedAttribute GetAttribute(string attributeMetadataName) => null;
         public bool HasSetter() => false;
         public bool IsStatic => true;
         public bool IsPublic => true;

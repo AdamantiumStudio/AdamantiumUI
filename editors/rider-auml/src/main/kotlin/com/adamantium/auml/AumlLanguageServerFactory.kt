@@ -5,7 +5,10 @@ import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
+import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import com.redhat.devtools.lsp4ij.client.features.LSPFormattingFeature
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import java.nio.file.Files
@@ -21,6 +24,12 @@ import kotlin.io.path.exists
 class AumlLanguageServerFactory : LanguageServerFactory {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider =
         AumlLanguageServer()
+
+    /** Reformat Code lays markup out by the server's rules, not by the XML formatter the file type would get. */
+    override fun createClientFeatures(): LSPClientFeatures =
+        LSPClientFeatures().setFormattingFeature(object : LSPFormattingFeature() {
+            override fun isExistingFormatterOverrideable(file: PsiFile): Boolean = true
+        })
 }
 
 private const val SERVER_EXE = "Adamantium.UI.LanguageServer.exe"

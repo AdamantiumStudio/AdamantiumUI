@@ -161,6 +161,8 @@ internal static class LspSelfTest
             CodeAction(17, xPrefixUri, xName.Line, xName.Ch),
             DidOpen(semanticUri, semanticDoc),
             SemanticTokens(18, semanticUri),
+            Formatting(29, semanticUri),
+            DidClose(diagUri),
             Request(9, "shutdown"),
             Notification("exit"),
         };
@@ -239,6 +241,14 @@ internal static class LspSelfTest
                     parts.Add($"{types[tokenType]}@{tokLine}:{tokChar}+{length}");
                 }
                 Console.WriteLine($"<- semanticTokens (id 18): {tokenData.Count / 5} tokens: {string.Join(", ", parts)}");
+            }
+            else if (id == "29" && response["result"] is JsonArray formatEdits)
+            {
+                Console.WriteLine($"<- formatting (id 29): {formatEdits.Count} edit(s)");
+                foreach (var edit in formatEdits)
+                {
+                    Console.WriteLine($"     {edit["newText"].GetValue<string>().Replace("\n", "\n     ")}");
+                }
             }
             else if (id is "5" or "6")
             {
@@ -324,6 +334,18 @@ internal static class LspSelfTest
         static JsonObject Request(int id, string method) =>
             new() { ["jsonrpc"] = "2.0", ["id"] = id, ["method"] = method, ["params"] = new JsonObject() };
 
+        static JsonObject Formatting(int id, string uri) => new()
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = id,
+            ["method"] = "textDocument/formatting",
+            ["params"] = new JsonObject
+            {
+                ["textDocument"] = new JsonObject { ["uri"] = uri },
+                ["options"] = new JsonObject { ["tabSize"] = 4, ["insertSpaces"] = true }
+            }
+        };
+
         static JsonObject Notification(string method) =>
             new() { ["jsonrpc"] = "2.0", ["method"] = method, ["params"] = new JsonObject() };
 
@@ -331,6 +353,12 @@ internal static class LspSelfTest
         {
             ["jsonrpc"] = "2.0", ["method"] = "textDocument/didOpen",
             ["params"] = new JsonObject { ["textDocument"] = new JsonObject { ["uri"] = uri, ["text"] = text } }
+        };
+
+        static JsonObject DidClose(string uri) => new()
+        {
+            ["jsonrpc"] = "2.0", ["method"] = "textDocument/didClose",
+            ["params"] = new JsonObject { ["textDocument"] = new JsonObject { ["uri"] = uri } }
         };
 
         static JsonObject Completion(int id, string uri, int line, int character) =>

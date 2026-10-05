@@ -242,9 +242,21 @@ All packages share one version.
   idle: one that loops forever, and a ticker registered with `AnimationManager.AddEndlessTicker` (a caret's blink, an
   animated picture). Automation waits for it after every action instead of for two frames, and `adam-auto` says what
   kept the application busy when it does not settle.
+- `TypeOfAttribute` and `MarkupFileAttribute` say what a markup value may name. `[TypeOf(typeof(StyleSet))]` on a
+  `Type`-valued property admits only types derived from that base - `StyleInclude.Source` takes style sets,
+  `ResourceLink.Source` resource dictionaries - and the build and the live preview reject any other type, naming the
+  property. `[MarkupFile("png", ...)]` on a type or a property says its markup value is a path to such a file;
+  `ImageSource` and `BitmapImage.UriSource` list the picture formats the engine loads. The language server completes by
+  both: a style include is offered only style sets, a resource link only dictionaries - classes in C# and markup files
+  alike - and an image only the pictures of the project and the folders holding them; a type the build would reject is
+  underlined as it is typed. A `Type`-valued attribute is completed in its value too, not only in `{x:Type}`.
 
 ### Changed
 
+- A `Type`-valued property takes a type by name as well as by `{x:Type}`: `<StyleInclude Source="EditorButtons"/>`,
+  `EnumType="local:Priority"`, `{ResourceLink Source=AppColors}`. The live preview took a bare name but the build failed
+  on it in an attribute, and in a markup extension's argument built code that threw "Type parser not found for
+  System.Type" when the window was created. `{Ancestor}` takes its types in `{x:Type}` as well.
 - An animation whose frames use no more than 256 colors in all - most GIFs - keeps them on the GPU as one byte per pixel
   and a shared palette (`BitmapImage.FramePalette`), a quarter of the memory with the same pixels: the sandbox's
   200-frame 960x540 GIF takes 117 MB instead of 469. Animations with more colors keep their full-color frames.

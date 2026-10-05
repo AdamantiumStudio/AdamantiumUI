@@ -65,7 +65,15 @@ public sealed class LspServer
                 var td = msg["params"]["textDocument"];
                 var uri = td["uri"].GetValue<string>();
                 _documents[uri] = td["text"].GetValue<string>();
-                PublishDiagnostics(uri);
+                if (IsLanguageFile(uri))
+                {
+                    PublishLanguageFiles();
+                }
+                else
+                {
+                    PublishDiagnostics(uri);
+                }
+
                 break;
             }
 
@@ -78,11 +86,7 @@ public sealed class LspServer
                     _documents[uri] = changes[^1]["text"].GetValue<string>();
                 if (IsLanguageFile(uri))
                 {
-                    // A table's files are checked together: an edit of one can settle or raise a problem in another.
-                    foreach (var open in _documents.Keys.Where(IsLanguageFile))
-                    {
-                        PublishDiagnostics(open);
-                    }
+                    PublishLanguageFiles();
                 }
                 else
                 {
@@ -93,8 +97,17 @@ public sealed class LspServer
             }
 
             case "textDocument/didClose":
-                _documents.TryRemove(msg["params"]["textDocument"]["uri"].GetValue<string>(), out _);
+            {
+                var uri = msg["params"]["textDocument"]["uri"].GetValue<string>();
+                _documents.TryRemove(uri, out _);
+                PublishDiagnostics(uri);
+                if (IsLanguageFile(uri))
+                {
+                    PublishLanguageFiles();
+                }
+
                 break;
+            }
 
             case "textDocument/completion":
                 Reply(id, CompletionResult(msg["params"]));
@@ -118,6 +131,11 @@ public sealed class LspServer
 
             case "textDocument/semanticTokens/full":
                 Reply(id, SemanticTokensResult(msg["params"]));
+                break;
+
+            case "textDocument/formatting":
+            case "textDocument/rangeFormatting":
+                Reply(id, FormattingResult(msg["params"]));
                 break;
 
             case "shutdown":
@@ -148,6 +166,8 @@ public sealed class LspServer
             ["definitionProvider"] = true,
             ["documentSymbolProvider"] = true,
             ["codeActionProvider"] = true,
+            ["documentFormattingProvider"] = true,
+            ["documentRangeFormattingProvider"] = true,
             ["semanticTokensProvider"] = new JsonObject
             {
                 ["legend"] = new JsonObject
@@ -407,6 +427,71 @@ public sealed class LspServer
         return result;
     }
 
+    private JsonNode FormattingResult(JsonNode @params)
+    {
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        var result = new JsonArray();
+        if (!_documents.TryGetValue(uri, out var text))
+        {
+            return result;
+        }
+
+        var formatting = @params["options"];
+        var options = new AumlFormatOptions(
+            formatting?["tabSize"]?.GetValue<int>() ?? 4,
+            formatting?["insertSpaces"]?.GetValue<bool>() ?? true,
+            IsLanguageFile(uri));
+
+        IReadOnlyList<AumlFormatEdit> edits;
+        if (@params["range"] is { } range)
+        {
+            var start = range["start"];
+            var end = range["end"];
+            edits = AumlFormatter.FormatRange(text,
+                OffsetAt(text, start["line"].GetValue<int>(), start["character"].GetValue<int>()),
+                OffsetAt(text, end["line"].GetValue<int>(), end["character"].GetValue<int>()),
+                options);
+        }
+        else
+        {
+            var formatted = AumlFormatter.Format(text, options);
+            edits = formatted == null || formatted == text ? [] : [new AumlFormatEdit(0, text.Length, formatted)];
+        }
+
+        foreach (var edit in edits)
+        {
+            var (startLine, startCharacter) = PositionAt(text, edit.Start);
+            var (endLine, endCharacter) = PositionAt(text, edit.End);
+            result.Add(new JsonObject
+            {
+                ["range"] = new JsonObject
+                {
+                    ["start"] = new JsonObject { ["line"] = startLine, ["character"] = startCharacter },
+                    ["end"] = new JsonObject { ["line"] = endLine, ["character"] = endCharacter }
+                },
+                ["newText"] = edit.NewText
+            });
+        }
+
+        return result;
+    }
+
+    private static (int Line, int Character) PositionAt(string text, int offset)
+    {
+        var line = 0;
+        var lineStart = 0;
+        for (var i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+                lineStart = i + 1;
+            }
+        }
+
+        return (line, Math.Min(offset, text.Length) - lineStart);
+    }
+
     private static JsonObject ToDocumentSymbol(AumlSymbol symbol)
     {
         var range = new JsonObject
@@ -439,6 +524,14 @@ public sealed class LspServer
         AumlCompletionItemKind.Directive => 14,  // Keyword
         _ => 1
     };
+
+    private void PublishLanguageFiles()
+    {
+        foreach (var open in _documents.Keys.Where(IsLanguageFile))
+        {
+            PublishDiagnostics(open);
+        }
+    }
 
     private void PublishDiagnostics(string uri)
     {

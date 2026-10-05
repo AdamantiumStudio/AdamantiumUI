@@ -28,6 +28,12 @@ public class ReflectionResolvedMember : IResolvedMember
     public bool HasAttribute(string attributeMetadataName) =>
         _member.GetCustomAttributes(false).Any(a => a.GetType().FullName == attributeMetadataName);
 
+    public IResolvedAttribute GetAttribute(string attributeMetadataName) =>
+        _member.GetCustomAttributes(false).OfType<Attribute>()
+            .Where(a => a.GetType().FullName == attributeMetadataName)
+            .Select(a => new ReflectionResolvedAttribute(a))
+            .FirstOrDefault();
+
     public bool HasSetter() => _member switch
     {
         PropertyInfo p => p.SetMethod is { IsPublic: true },

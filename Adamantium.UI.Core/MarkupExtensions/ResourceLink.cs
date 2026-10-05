@@ -4,6 +4,7 @@ namespace Adamantium.UI.Core.MarkupExtensions;
 
 public class ResourceLink : MarkupExtension
 {
+    [TypeOf(typeof(ResourceDictionary))]
     public Type Source { get; set; }
     
     public ResourceScope Scope { get; set; }
