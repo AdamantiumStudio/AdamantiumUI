@@ -17,9 +17,9 @@
                     MinWidth="280" Height="32"/>
             <!-- DragCursor: Animals' DragOverCommand overrides the shape the engine picks from Effects. Tick it, pick a
                  shape, and drag anything over Animals - the whole standard catalog is in the list. -->
-            <CheckBox Content="{Localize DragDropStrings.OverrideCursor}" IsChecked="{Binding OverrideDragCursor, Mode=TwoWay}"
+            <CheckBox x:Name="OverrideCursorToggle" Content="{Localize DragDropStrings.OverrideCursor}" IsChecked="{Binding OverrideDragCursor, Mode=TwoWay}"
                       MarginLeft="24" VerticalAlignment="Center"/>
-            <DropDown ItemsSource="{Binding CursorTypes}" SelectedItem="{Binding DragCursorType, Mode=TwoWay}"
+            <DropDown AutomationProperties.LabeledBy="{Binding ElementName=OverrideCursorToggle}" ItemsSource="{Binding CursorTypes}" SelectedItem="{Binding DragCursorType, Mode=TwoWay}"
                       Width="150" MarginLeft="10" VerticalAlignment="Center"/>
         </StackPanel>
 
@@ -44,8 +44,8 @@
                         </PropertyTrigger>
                     </Style>
                 </Border.Styles>
-                <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Text="{Localize DragDropStrings.Fruits}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                <Grid AutomationProperties.LabeledBy="{Binding ElementName=FruitsHeading}" RowDefinitions="Auto,Auto,*">
+                    <TextBlock x:Name="FruitsHeading" Text="{Localize DragDropStrings.Fruits}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <!-- Off, and the grip goes inactive: the whole row drags again. The switch flips the SAME markup -
                          nothing is added or removed from the tree. -->
                     <StackPanel Grid.Row="1" 
@@ -55,7 +55,7 @@
                         <!-- Off = the plain insertion caret; on (the default) = a real hole with a placeholder card. -->
                         <CheckBox x:Name="LeftGapToggle" Content="{Localize DragDropStrings.Spread}" IsChecked="True"/>
                     </StackPanel>
-                    <ListBox Grid.Row="2"
+                    <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=FruitsHeading}"
                              ItemsSource="{Binding Left}"
                              SelectedItems="{Binding LeftSelection}"
                              DragDrop.UseDropGap="{Binding IsChecked, ElementName=LeftGapToggle}"
@@ -120,11 +120,11 @@
                         </PropertyTrigger>
                     </Style>
                 </Border.Styles>
-                <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Text="{Localize DragDropStrings.Animals}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                <Grid AutomationProperties.LabeledBy="{Binding ElementName=AnimalsHeading}" RowDefinitions="Auto,Auto,*">
+                    <TextBlock x:Name="AnimalsHeading" Text="{Localize DragDropStrings.Animals}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <!-- Uncheck to reject drops here: dragging over Animals then shows the ⊘ no-drop cursor. -->
                     <CheckBox Grid.Row="1" Content="{Localize DragDropStrings.AcceptDrop}" IsChecked="{Binding AnimalsAcceptDrop, Mode=TwoWay}" MarginBottom="8"/>
-                    <ListBox Grid.Row="2" ItemsSource="{Binding Right}" SelectedItems="{Binding RightSelection}"
+                    <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=AnimalsHeading}" ItemsSource="{Binding Right}" SelectedItems="{Binding RightSelection}"
                              SelectionMode="Extended" Background="Transparent">
                         <!-- On the CONTAINER, not the tile - see the note on the Fruits list. -->
                         <ListBox.Styles>
@@ -160,19 +160,19 @@
                         </PropertyTrigger>
                     </Style>
                 </Border.Styles>
-                <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Text="{Localize DragDropStrings.ColorsWrapPanel}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                <Grid AutomationProperties.LabeledBy="{Binding ElementName=ColorsHeading}" RowDefinitions="Auto,Auto,*">
+                    <TextBlock x:Name="ColorsHeading" Text="{Localize DragDropStrings.ColorsWrapPanel}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <StackPanel Grid.Row="1"
                                 Orientation="Horizontal"
                                 MarginBottom="10">
-                        <TextBlock Text="{Localize DragDropStrings.Flow}" VerticalAlignment="Center" MarginRight="8"/>
-                        <DropDown ItemsSource="{Binding Orientations}"
+                        <TextBlock x:Name="FlowLabel" Text="{Localize DragDropStrings.Flow}" VerticalAlignment="Center" MarginRight="8"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=FlowLabel}" ItemsSource="{Binding Orientations}"
                                   SelectedItem="{Binding WrapOrientation, Mode=TwoWay}" Width="130"/>
                         <!-- Off = the plain insertion caret; on (the default) = a real hole with a placeholder card. -->
                         <CheckBox x:Name="WrapGapToggle" Content="{Localize DragDropStrings.Spread}" IsChecked="True"
                                   VerticalAlignment="Center" MarginLeft="12"/>
                     </StackPanel>
-                    <ListBox Grid.Row="2" ItemsSource="{Binding Wrap}" SelectedItems="{Binding WrapSelection}"
+                    <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=ColorsHeading}" ItemsSource="{Binding Wrap}" SelectedItems="{Binding WrapSelection}"
                              DragDrop.UseDropGap="{Binding IsChecked, ElementName=WrapGapToggle}"
                              SelectionMode="Extended" Background="Transparent"
                              ScrollViewer.HorizontalScrollBarVisibility="{Binding WrapHScroll}"
@@ -233,7 +233,7 @@
                 <!-- Grid, not StackPanel: a stack hands every child its desired height and never shares out what is left,
                      so the list has to sit in a STAR row to fill the card (which is itself stretched to the tallest sibling). -->
                 <Grid RowDefinitions="Auto,Auto,Auto,*">
-                    <TextBlock Grid.Row="0" Text="{Localize DragDropStrings.DropFromApp}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                    <TextBlock x:Name="DropFromAppHeading" Grid.Row="0" Text="{Localize DragDropStrings.DropFromApp}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <TextBlock Grid.Row="1"
                                Text="{Localize DragDropStrings.DropFromAppHint}"
                                FontSize="12"
@@ -247,7 +247,7 @@
                             Height="28"
                             HorizontalAlignment="Left"
                             MarginBottom="8"/>
-                    <ListBox Grid.Row="3" ItemsSource="{Binding Dropped}" Background="Transparent">
+                    <ListBox Grid.Row="3" AutomationProperties.LabeledBy="{Binding ElementName=DropFromAppHeading}" ItemsSource="{Binding Dropped}" Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Localize DragDropStrings.Dropped, kind={Binding Kind}, value={Binding Value}, size={Localize DragDropStrings.Bytes, count={Binding Value}}}"/>
@@ -273,14 +273,14 @@
                     </Style>
                 </Border.Styles>
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Grid.Row="0" Text="{Localize DragDropStrings.DroppedPictures}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                    <TextBlock x:Name="DroppedPicturesHeading" Grid.Row="0" Text="{Localize DragDropStrings.DroppedPictures}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <TextBlock Grid.Row="1"
                                Text="{Localize DragDropStrings.DroppedPicturesHint}"
                                FontSize="12"
                                TextWrapping="WrapBySymbols"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="8"/>
-                    <ListBox Grid.Row="2" ItemsSource="{Binding DroppedPictures}" Background="Transparent"
+                    <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=DroppedPicturesHeading}" ItemsSource="{Binding DroppedPictures}" Background="Transparent"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemsPanel>
@@ -319,14 +319,14 @@
                     </Style>
                 </Border.Styles>
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <TextBlock Grid.Row="0" Text="{Localize DragDropStrings.DragOut}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
+                    <TextBlock x:Name="DragOutHeading" Grid.Row="0" Text="{Localize DragDropStrings.DragOut}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
                     <TextBlock Grid.Row="1"
                                Text="{Localize DragDropStrings.DragOutHint}"
                                FontSize="12"
                                TextWrapping="WrapBySymbols"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="8"/>
-                    <ListBox Grid.Row="2" ItemsSource="{Binding Exports}" Background="Transparent">
+                    <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=DragOutHeading}" ItemsSource="{Binding Exports}" Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{ResourceReference TileFillColorDefault}"
@@ -361,8 +361,8 @@
                     </Style>
                 </Border.Styles>
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="{Localize DragDropStrings.TreeDwell}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="10"/>
-                    <TreeView ItemsSource="{Binding Tree}" MaxHeight="230">
+                    <TextBlock x:Name="TreeDwellHeading" Text="{Localize DragDropStrings.TreeDwell}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="10"/>
+                    <TreeView AutomationProperties.LabeledBy="{Binding ElementName=TreeDwellHeading}" ItemsSource="{Binding Tree}" MaxHeight="230">
                         <TreeView.ItemContainerStyle>
                             <Style Selector="TreeViewItem">
                                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>

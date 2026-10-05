@@ -16,7 +16,7 @@
     <Phrase Key="WrapTitle" Text="3. Wrapped tiles keep their arrows"/>
     <Phrase Key="WrapHint" Text="Right at the end of a line carries on at the start of the next. At the edge of the field the arrow does nothing - Tab is how you leave."/>
 
-    <Phrase Key="ListTitle" Text="4. A list is entered once"/>
+    <Phrase Key="ListTitle" Text="4. Rows are entered once"/>
     <Phrase Key="ListHint" Text="Tab lands on a row and the next Tab leaves the whole list - not twenty-four rows later. Arrows move the selection and scroll it into view."/>
     <Phrase Key="TabLandsHere" Text="Tab from the list lands here:"/>
     <Phrase Key="AfterList" Text="After the list"/>

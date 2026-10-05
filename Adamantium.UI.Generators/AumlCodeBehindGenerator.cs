@@ -186,7 +186,17 @@ namespace Adamantium.UI.Generators
         // stops being cacheable.
         private static ParsedAumlFile ParseDocument(string path, string content, string rootNamespace, string projectDir)
         {
-            var document = AumlParser.Parse(content);
+            AumlDocument document;
+            try
+            {
+                document = AumlParser.Parse(content);
+            }
+            catch (System.Xml.XmlException e)
+            {
+                var logger = new Adamantium.Core.Logger();
+                logger.Error(e.Message);
+                document = new AumlDocument { Logger = logger, HasErrors = true };
+            }
 
             var relativePath = path.Replace(projectDir ?? string.Empty, string.Empty).Replace("\\", "/");
             if (relativePath.StartsWith("/"))

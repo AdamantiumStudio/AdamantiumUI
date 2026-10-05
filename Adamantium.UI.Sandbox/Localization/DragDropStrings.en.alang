@@ -22,9 +22,9 @@
     <Phrase Key="DroppedPicturesHint" Text="Drop an image file here, or drag a picture straight out of a browser."/>
     <Phrase Key="DragOut" Text="Drag out to another app"/>
     <Phrase Key="DragOutHint" Text="AllowExternalDrag hands the whole gesture to the OS, ghost image and all. The notes also carry HTML and RTF - drop one into WordPad and the formatting survives. The file is written only if the drop lands."/>
-    <Phrase Key="TreeDwell" Text="Tree — dwell a folder to auto-expand"/>
+    <Phrase Key="TreeDwell" Text="Folders — dwell on one to auto-expand"/>
 
-    <Phrase Key="Window" Text="Drag &amp; Drop Window"/>
+    <Phrase Key="Window" Text="Drag &amp; Drop — second window"/>
     <Phrase Key="Wildlife" Text="Wildlife"/>
     <Phrase Key="WindowHint" Text="Drag items to/from the main window's lists."/>
 </Language>

@@ -15,6 +15,8 @@ public class ListBoxAutomationPeer : ItemsControlAutomationPeer, ISelectionProvi
 
     public bool CanSelectMultiple => ((ListBox)Owner).SelectionMode != SelectionMode.Single;
 
+    public bool IsSelectionRequired => false;
+
     public IReadOnlyList<AutomationPeer> GetSelection() =>
         [.. GetChildren().Where(child => child.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider { IsSelected: true })];
 }

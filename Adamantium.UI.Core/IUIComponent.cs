@@ -63,6 +63,13 @@ public interface IUIComponent : IFundamentalUIComponent
 
     IRootVisualComponent RootVisual { get; }
 
+    /// <summary>This element's description for automation, made on first request. Null for an element automation looks
+    /// through, such as a panel or a border.</summary>
+    Automation.AutomationPeer GetAutomationPeer();
+
+    /// <summary>The peer already made for this element; null while automation has not asked for it.</summary>
+    Automation.AutomationPeer FindAutomationPeer();
+
     /// <summary>The subtree root owning this element's layout when it is not the visual root (the popup layer for overlay
     /// content); null otherwise. Only one owner may lay it out.</summary>
     IUIComponent LayoutRoot { get; }

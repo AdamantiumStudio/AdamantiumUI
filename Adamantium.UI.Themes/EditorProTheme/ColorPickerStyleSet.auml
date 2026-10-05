@@ -142,37 +142,37 @@
                                  point is to be short. Fixed field widths with MinWidth=0 - the field style's minimum
                                  is meant for a form and would push these off the panel. -->
                             <StackPanel Orientation="Horizontal" Margin="{ResourceReference ColorStackGap}">
-                                <TextBlock Text="Hex" Width="{ResourceReference ColorLabelWidth}"
+                                <TextBlock x:Name="HexLabel" Text="Hex" Width="{ResourceReference ColorLabelWidth}"
                                         VerticalAlignment="Center"
                                         Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBox Text="{Ancestor ColorPicker, Hex, Mode=TwoWay}" MinWidth="0"/>
+                                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=HexLabel}" Text="{Ancestor ColorPicker, Hex, Mode=TwoWay}" MinWidth="0"/>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="{ResourceReference ColorStackGap}">
-                                <TextBlock Text="R" Width="{ResourceReference ColorLabelWidth}"
+                                <TextBlock x:Name="RedLabel" Text="R" Width="{ResourceReference ColorLabelWidth}"
                                         VerticalAlignment="Center"
                                         Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBox Text="{Ancestor ColorPicker, Red, Mode=TwoWay}"
+                                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=RedLabel}" Text="{Ancestor ColorPicker, Red, Mode=TwoWay}"
                                         Width="{ResourceReference ColorFieldWidth}" MinWidth="0"/>
-                                <TextBlock Text="G" Width="{ResourceReference ColorLabelWidth}"
+                                <TextBlock x:Name="GreenLabel" Text="G" Width="{ResourceReference ColorLabelWidth}"
                                         VerticalAlignment="Center"
                                         MarginLeft="{ResourceReference GapSmall}"
                                         Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBox Text="{Ancestor ColorPicker, Green, Mode=TwoWay}"
+                                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=GreenLabel}" Text="{Ancestor ColorPicker, Green, Mode=TwoWay}"
                                         Width="{ResourceReference ColorFieldWidth}" MinWidth="0"/>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="{ResourceReference ColorStackGap}">
-                                <TextBlock Text="B" Width="{ResourceReference ColorLabelWidth}"
+                                <TextBlock x:Name="BlueLabel" Text="B" Width="{ResourceReference ColorLabelWidth}"
                                         VerticalAlignment="Center"
                                         Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBox Text="{Ancestor ColorPicker, Blue, Mode=TwoWay}"
+                                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=BlueLabel}" Text="{Ancestor ColorPicker, Blue, Mode=TwoWay}"
                                         Width="{ResourceReference ColorFieldWidth}" MinWidth="0"/>
-                                <TextBlock Text="A" Width="{ResourceReference ColorLabelWidth}"
+                                <TextBlock x:Name="AlphaLabel" Text="A" Width="{ResourceReference ColorLabelWidth}"
                                         VerticalAlignment="Center"
                                         MarginLeft="{ResourceReference GapSmall}"
                                         Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBox Text="{Ancestor ColorPicker, Alpha, Mode=TwoWay}"
+                                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=AlphaLabel}" Text="{Ancestor ColorPicker, Alpha, Mode=TwoWay}"
                                         Width="{ResourceReference ColorFieldWidth}" MinWidth="0"/>
                             </StackPanel>
                         </StackPanel>

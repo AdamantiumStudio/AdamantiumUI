@@ -132,33 +132,33 @@
                                        Value="{Binding Stroke.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashOn}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="100" Value="{Binding Stroke.DashOn, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"
+                        <TextBlock x:Name="DashOnLabel" Text="{Localize ShapesStrings.DashOn}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=DashOnLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="100" Value="{Binding Stroke.DashOn, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=DashOnLabel}" Width="88" Minimum="0" Maximum="100" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.DashOn, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashGap}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="100" Value="{Binding Stroke.DashGap, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"
+                        <TextBlock x:Name="DashGapLabel" Text="{Localize ShapesStrings.DashGap}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=DashGapLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="100" Value="{Binding Stroke.DashGap, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=DashGapLabel}" Width="88" Minimum="0" Maximum="100" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.DashGap, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashOffset}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="60" Value="{Binding Stroke.DashOffset, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="60" SmallChange="1"
+                        <TextBlock x:Name="DashOffsetLabel" Text="{Localize ShapesStrings.DashOffset}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=DashOffsetLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="60" Value="{Binding Stroke.DashOffset, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=DashOffsetLabel}" Width="88" Minimum="0" Maximum="60" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.DashOffset, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.TrimStart}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.TrimStart, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                        <TextBlock x:Name="TrimStartLabel" Text="{Localize ShapesStrings.TrimStart}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=TrimStartLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.TrimStart, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=TrimStartLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                        SnapsToSmallChange="true" StringFormat="N2"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.TrimStart, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -166,25 +166,25 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.TrimEnd}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.TrimEnd, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                        <TextBlock x:Name="TrimEndLabel" Text="{Localize ShapesStrings.TrimEnd}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=TrimEndLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.TrimEnd, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=TrimEndLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                        SnapsToSmallChange="true" StringFormat="N2"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.TrimEnd, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.Corner}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="60" Value="{Binding Stroke.Corner, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="60" SmallChange="1"
+                        <TextBlock x:Name="CornerLabel" Text="{Localize ShapesStrings.Corner}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=CornerLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="60" Value="{Binding Stroke.Corner, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=CornerLabel}" Width="88" Minimum="0" Maximum="60" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.Corner, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.Samples}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="50" Value="{Binding Stroke.Samples, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="50" SmallChange="1"
+                        <TextBlock x:Name="SamplesLabel" Text="{Localize ShapesStrings.Samples}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=SamplesLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="50" Value="{Binding Stroke.Samples, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=SamplesLabel}" Width="88" Minimum="0" Maximum="50" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.Samples, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -194,13 +194,13 @@
                          precisely why the way they interact at the first and last dash went unexamined. Setting the two
                          dash caps DIFFERENTLY (concave behind, convex tip in front) turns each dash into an arrowhead. -->
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashStart}" MinWidth="80" VerticalAlignment="Center"/>
-                        <DropDown Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.DashStartCap, Mode=TwoWay}"
+                        <TextBlock x:Name="DashStartLabel" Text="{Localize ShapesStrings.DashStart}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=DashStartLabel}" Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.DashStartCap, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashEnd}" MinWidth="80" VerticalAlignment="Center"/>
-                        <DropDown Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.DashEndCap, Mode=TwoWay}"
+                        <TextBlock x:Name="DashEndLabel" Text="{Localize ShapesStrings.DashEnd}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=DashEndLabel}" Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.DashEndCap, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
@@ -209,25 +209,25 @@
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.EndCap}" MinWidth="80" VerticalAlignment="Center"/>
-                        <DropDown Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.EndCap, Mode=TwoWay}"
+                        <TextBlock x:Name="EndCapLabel" Text="{Localize ShapesStrings.EndCap}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=EndCapLabel}" Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.EndCap, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.Join}" MinWidth="80" VerticalAlignment="Center"/>
-                        <DropDown Width="176" EnumType="{x:Type m:PenLineJoin}" SelectedItem="{Binding Stroke.Join, Mode=TwoWay}"
+                        <TextBlock x:Name="JoinLabel" Text="{Localize ShapesStrings.Join}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=JoinLabel}" Width="176" EnumType="{x:Type m:PenLineJoin}" SelectedItem="{Binding Stroke.Join, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <!-- A closed contour's perimeter almost never divides by the dash period, and the remainder lands
                          at the seam (for a rounded rect, its bottom-right corner - where the arc length starts). This
                          stretches the pattern to a whole number of periods so the ring closes on itself. -->
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.DashFit}" MinWidth="80" VerticalAlignment="Center"/>
-                        <ToggleSwitch IsChecked="{Binding Stroke.DashFit, Mode=TwoWay}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="DashFitLabel" Text="{Localize ShapesStrings.DashFit}" MinWidth="80" VerticalAlignment="Center"/>
+                        <ToggleSwitch AutomationProperties.LabeledBy="{Binding ElementName=DashFitLabel}" IsChecked="{Binding Stroke.DashFit, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.Color}" MinWidth="80" VerticalAlignment="Center"/>
-                        <ColorPickerButton Width="176" Height="28" SelectedColor="{Binding Stroke.SelectedColor, Mode=TwoWay}"/>
+                        <TextBlock x:Name="StrokeColorLabel" Text="{Localize ShapesStrings.Color}" MinWidth="80" VerticalAlignment="Center"/>
+                        <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=StrokeColorLabel}" Width="176" Height="28" SelectedColor="{Binding Stroke.SelectedColor, Mode=TwoWay}"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -260,20 +260,20 @@
              knots. The B-spline (same control points) stays fixed for comparison. -->
         <TextBlock Text="{Localize ShapesStrings.NurbsParameters}" Margin="0,20,0,6"/>
         <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Localize ShapesStrings.Weight}" MinWidth="60" VerticalAlignment="Center"/>
-            <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0.1" Maximum="10" Value="{Binding Stroke.NurbsWeight, Mode=TwoWay}"/>
-            <NumericUpDown Width="88" Minimum="0.1" Maximum="10" SmallChange="0.1"
+            <TextBlock x:Name="WeightLabel" Text="{Localize ShapesStrings.Weight}" MinWidth="60" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.LabeledBy="{Binding ElementName=WeightLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0.1" Maximum="10" Value="{Binding Stroke.NurbsWeight, Mode=TwoWay}"/>
+            <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=WeightLabel}" Width="88" Minimum="0.1" Maximum="10" SmallChange="0.1"
                            SnapsToSmallChange="true" StringFormat="N2"
                            IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                            Value="{Binding Stroke.NurbsWeight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,24,0"/>
-            <TextBlock Text="{Localize ShapesStrings.Degree}" MinWidth="60" VerticalAlignment="Center"/>
-            <Slider IsValueToolTipEnabled="true" Width="100" Minimum="1" Maximum="5" Value="{Binding Stroke.NurbsDegree, Mode=TwoWay}"/>
-            <NumericUpDown Width="88" Minimum="1" Maximum="5" SmallChange="1"
+            <TextBlock x:Name="DegreeLabel" Text="{Localize ShapesStrings.Degree}" MinWidth="60" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.LabeledBy="{Binding ElementName=DegreeLabel}" IsValueToolTipEnabled="true" Width="100" Minimum="1" Maximum="5" Value="{Binding Stroke.NurbsDegree, Mode=TwoWay}"/>
+            <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=DegreeLabel}" Width="88" Minimum="1" Maximum="5" SmallChange="1"
                            SnapsToSmallChange="true" StringFormat="N0"
                            IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                            Value="{Binding Stroke.NurbsDegree, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,24,0"/>
-            <TextBlock Text="{Localize ShapesStrings.Uniform}" MinWidth="60" Margin="0,0,8,0" VerticalAlignment="Center"/>
-            <ToggleSwitch IsChecked="{Binding Stroke.NurbsUniform, Mode=TwoWay}" VerticalAlignment="Center"/>
+            <TextBlock x:Name="UniformLabel" Text="{Localize ShapesStrings.Uniform}" MinWidth="60" Margin="0,0,8,0" VerticalAlignment="Center"/>
+            <ToggleSwitch AutomationProperties.LabeledBy="{Binding ElementName=UniformLabel}" IsChecked="{Binding Stroke.NurbsUniform, Mode=TwoWay}" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Border showcase: uniform + non-uniform thickness, sharp + rounded corners, all with TRANSLUCENT fills and
@@ -294,8 +294,8 @@
              hexagon, and eventually a circle you cannot tell from the ellipse batch's own. Its OWN record and pass - a
              polygon and an ellipse share a shape of record, not a shape - but the same instanced cost, and the same ring
              trick: hollow a triangle and you have a chevron, as geometry, with the pen still free for an outline. -->
-        <TextBlock Text="{Localize ShapesStrings.Polygon}" Margin="0,20,0,6"/>
-        <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="PolygonHeading" Text="{Localize ShapesStrings.Polygon}" Margin="0,20,0,6"/>
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=PolygonHeading}" Orientation="Horizontal">
             <!-- ONE shape, in a fixed cell: the box is a slider now, so the shape has to be free to grow without pushing
                  the panel beside it around. -->
             <Border Width="300" Height="300" MarginRight="24"
@@ -312,11 +312,11 @@
 
             <StackPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Corners}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="3" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonCornersLabel" Text="{Localize ShapesStrings.Corners}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonCornersLabel}" Width="200" Minimum="3" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.Corners, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="3" Maximum="24" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonCornersLabel}" Width="88" Minimum="3" Maximum="24" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.Corners, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -324,61 +324,61 @@
                 <!-- Turning it must not resize it: the angle offsets the shape's own parameter, so a turned polygon keeps
                      filling the box. Squash the box first and this is the slider that shows it. -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.StartAngle}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonStartAngleLabel" Text="{Localize ShapesStrings.StartAngle}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonStartAngleLabel}" Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.StartAngle, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonStartAngleLabel}" Width="88" Minimum="0" Maximum="360" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.StartAngle, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Ring}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonRingLabel" Text="{Localize ShapesStrings.Ring}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonRingLabel}" Width="200" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.RingThickness, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonRingLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.RingThickness, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Stroke}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonStrokeLabel" Text="{Localize ShapesStrings.Stroke}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonStrokeLabel}" Width="200" Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="16" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonStrokeLabel}" Width="88" Minimum="0" Maximum="16" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.StrokeAlpha}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonStrokeAlphaLabel" Text="{Localize ShapesStrings.StrokeAlpha}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonStrokeAlphaLabel}" Width="200" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.StrokeAlpha, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonStrokeAlphaLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.StrokeAlpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Width}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonWidthLabel" Text="{Localize ShapesStrings.Width}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonWidthLabel}" Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.BoxWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="20" Maximum="280" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonWidthLabel}" Width="88" Minimum="20" Maximum="280" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.BoxWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Localize ShapesStrings.Height}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="PolygonHeightLabel" Text="{Localize ShapesStrings.Height}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PolygonHeightLabel}" Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Polygon.BoxHeight, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="20" Maximum="280" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PolygonHeightLabel}" Width="88" Minimum="20" Maximum="280" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Polygon.BoxHeight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -388,8 +388,8 @@
 
         <!-- SECTOR stand: a sector closes through the center and strokes both radii; edge-to-edge closes by the chord and
              strokes an open arc (turn Fill off). -->
-        <TextBlock Text="{Localize ShapesStrings.Sectors}" Margin="0,20,0,6"/>
-        <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="SectorsHeading" Text="{Localize ShapesStrings.Sectors}" Margin="0,20,0,6"/>
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=SectorsHeading}" Orientation="Horizontal">
             <!-- ONE ellipse in a fixed cell, its BOX on two sliders: squash it and the cut has to follow the ellipse's own
                  parametric angle rather than a circle's, which is the part that is easy to get wrong. -->
             <Border Width="300" Height="300" MarginRight="24"
@@ -407,71 +407,71 @@
 
             <StackPanel Orientation="Vertical">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Start}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcStartLabel" Text="{Localize ShapesStrings.Start}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcStartLabel}" Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.StartAngle, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcStartLabel}" Width="88" Minimum="0" Maximum="360" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.StartAngle, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Sweep}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcSweepLabel" Text="{Localize ShapesStrings.Sweep}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcSweepLabel}" Width="200" Minimum="0" Maximum="360" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.SweepAngle, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcSweepLabel}" Width="88" Minimum="0" Maximum="360" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.SweepAngle, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Stroke}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcStrokeLabel" Text="{Localize ShapesStrings.Stroke}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcStrokeLabel}" Width="200" Minimum="0" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="24" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcStrokeLabel}" Width="88" Minimum="0" Maximum="24" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Ring}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcRingLabel" Text="{Localize ShapesStrings.Ring}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcRingLabel}" Width="200" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.RingThickness, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcRingLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.RingThickness, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.StrokeAlpha}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcStrokeAlphaLabel" Text="{Localize ShapesStrings.StrokeAlpha}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcStrokeAlphaLabel}" Width="200" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.StrokeAlpha, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcStrokeAlphaLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.StrokeAlpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Width}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcWidthLabel" Text="{Localize ShapesStrings.Width}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcWidthLabel}" Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.BoxWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="20" Maximum="280" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcWidthLabel}" Width="88" Minimum="20" Maximum="280" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.BoxWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="{Localize ShapesStrings.Height}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="ArcHeightLabel" Text="{Localize ShapesStrings.Height}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ArcHeightLabel}" Width="200" Minimum="20" Maximum="280" TickFrequency="1" IsSnapToTickEnabled="true"
                             IsValueToolTipEnabled="true"
                             Value="{Binding Arc.BoxHeight, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="20" Maximum="280" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ArcHeightLabel}" Width="88" Minimum="20" Maximum="280" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Arc.BoxHeight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -507,10 +507,10 @@
                     <Rectangle Width="130" Height="18" Fill="{Binding Border.SwatchBrush}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <TextBlock Text="{Localize ShapesStrings.Alpha}" MinWidth="80" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1"
+                    <TextBlock x:Name="BorderAlphaLabel" Text="{Localize ShapesStrings.Alpha}" MinWidth="80" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderAlphaLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1"
                             Value="{Binding Border.Alpha, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderAlphaLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.Alpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -520,37 +520,37 @@
             <StackPanel Orientation="Vertical" Margin="0,0,24,0">
                 <TextBlock Text="{Localize ShapesStrings.Sides}" MarginBottom="4"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Left}" MinWidth="70" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderLeftLabel" Text="{Localize ShapesStrings.Left}" MinWidth="70" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderLeftLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.Left, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderLeftLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.Left, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Top}" MinWidth="70" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderTopLabel" Text="{Localize ShapesStrings.Top}" MinWidth="70" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderTopLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.Top, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderTopLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.Top, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.Right}" MinWidth="70" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderRightLabel" Text="{Localize ShapesStrings.Right}" MinWidth="70" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderRightLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.Right, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderRightLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.Right, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Localize ShapesStrings.Bottom}" MinWidth="70" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderBottomLabel" Text="{Localize ShapesStrings.Bottom}" MinWidth="70" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.Bottom, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.Bottom, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -560,37 +560,37 @@
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="{Localize ShapesStrings.Corners}" MarginBottom="4"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.TopLeft}" MinWidth="86" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderTopLeftLabel" Text="{Localize ShapesStrings.TopLeft}" MinWidth="86" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderTopLeftLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.TopLeft, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="70" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderTopLeftLabel}" Width="88" Minimum="0" Maximum="70" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.TopLeft, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.TopRight}" MinWidth="86" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderTopRightLabel" Text="{Localize ShapesStrings.TopRight}" MinWidth="86" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderTopRightLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.TopRight, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="70" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderTopRightLabel}" Width="88" Minimum="0" Maximum="70" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.TopRight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Localize ShapesStrings.BottomRight}" MinWidth="86" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderBottomRightLabel" Text="{Localize ShapesStrings.BottomRight}" MinWidth="86" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomRightLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.BottomRight, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="70" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomRightLabel}" Width="88" Minimum="0" Maximum="70" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.BottomRight, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Localize ShapesStrings.BottomLeft}" MinWidth="86" VerticalAlignment="Center"/>
-                    <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
+                    <TextBlock x:Name="BorderBottomLeftLabel" Text="{Localize ShapesStrings.BottomLeft}" MinWidth="86" VerticalAlignment="Center"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomLeftLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="true"
                             Value="{Binding Border.BottomLeft, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    <NumericUpDown Width="88" Minimum="0" Maximum="70" SmallChange="1"
+                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BorderBottomLeftLabel}" Width="88" Minimum="0" Maximum="70" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                    Value="{Binding Border.BottomLeft, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -601,11 +601,11 @@
         <!-- TRANSLUCENT OVERLAP. Every stroke here is the same color at the same alpha, so anything that draws a piece
              of coverage TWICE shows up as a darker patch. The swatch is the reference tone: a crossing that matches it
              is correct, a crossing darker than it is double-blended. -->
-        <TextBlock Text="{Localize ShapesStrings.Overlap}" Margin="0,20,0,6"/>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBlock Text="{Localize ShapesStrings.Alpha}" MinWidth="80" VerticalAlignment="Center"/>
-            <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.OverlapAlpha, Mode=TwoWay}"/>
-            <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+        <TextBlock x:Name="OverlapHeading" Text="{Localize ShapesStrings.Overlap}" Margin="0,20,0,6"/>
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=OverlapHeading}" Orientation="Horizontal" Margin="0,0,0,6">
+            <TextBlock x:Name="OverlapAlphaLabel" Text="{Localize ShapesStrings.Alpha}" MinWidth="80" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.LabeledBy="{Binding ElementName=OverlapAlphaLabel}" IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="1" Value="{Binding Stroke.OverlapAlpha, Mode=TwoWay}"/>
+            <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=OverlapAlphaLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                            SnapsToSmallChange="true" StringFormat="N2"
                            IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                            Value="{Binding Stroke.OverlapAlpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>

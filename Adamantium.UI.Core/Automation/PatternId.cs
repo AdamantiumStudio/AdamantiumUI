@@ -40,5 +40,11 @@ public enum PatternId
     GridItem,
 
     /// <summary><see cref="ITableProvider"/>: a grid whose columns have headers.</summary>
-    Table
+    Table,
+
+    /// <summary><see cref="ITextProvider"/>: text read by character, word and line.</summary>
+    Text,
+
+    /// <summary><see cref="ITableItemProvider"/>: one cell of a table, under its headers.</summary>
+    TableItem
 }

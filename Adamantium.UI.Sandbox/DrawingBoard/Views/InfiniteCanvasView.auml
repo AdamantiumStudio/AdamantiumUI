@@ -89,13 +89,13 @@
                  OVER. In the other three modes it is hidden behind the ground and never seen. -->
             <StackPanel Orientation="Vertical" Margin="40,30,0,0" HorizontalAlignment="Left"
                         VerticalAlignment="Top" Width="320">
-                <TextBlock Text="{Localize CanvasPageStrings.OtherScreen}" FontSize="16"/>
+                <TextBlock x:Name="OtherScreenHeading" Text="{Localize CanvasPageStrings.OtherScreen}" FontSize="16"/>
                 <TextBlock Margin="0,6,0,0" TextWrapping="WrapByWords"
                            Text="{Localize CanvasPageStrings.OtherScreenHint}"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                 <Button Content="{Localize CanvasPageStrings.AButton}" Margin="0,14,0,0" HorizontalAlignment="Left"/>
                 <CheckBox Content="{Localize CanvasPageStrings.ACheckbox}" Margin="0,10,0,0"/>
-                <TextBox Text="A field" Margin="0,10,0,0" Width="200" HorizontalAlignment="Left"/>
+                <TextBox AutomationProperties.LabeledBy="{Binding ElementName=OtherScreenHeading}" Text="A field" Margin="0,10,0,0" Width="200" HorizontalAlignment="Left"/>
             </StackPanel>
 
             <!-- The scene comes from the page, which owns undo and saving; pin colors come from the SocketKinds table. -->

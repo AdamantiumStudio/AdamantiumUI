@@ -48,7 +48,8 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         typeof(DataTemplateSelector), typeof(TabItem), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
-        typeof(bool), typeof(TabItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
+        typeof(bool), typeof(TabItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender,
+            (a, e) => AutomationEvents.RaiseSelected((TabItem)a, (bool)e.NewValue)));
 
     // State brushes the default template's triggers project onto the tab chrome (hover / selected). Exposed as properties
     // so ONE template serves every state - the theme just sets these. Null = no change in that state.

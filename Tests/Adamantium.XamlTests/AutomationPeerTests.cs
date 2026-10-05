@@ -284,6 +284,27 @@ public class AutomationPeerTests
         });
     }
 
+    [Test]
+    public void AnElementCutAwayByWhatClipsIt_IsOffscreen_AndOnePartlyInIsNot()
+    {
+        var first = new Button { Content = "First", Width = 80 };
+        var partly = new Button { Content = "Partly", Width = 80 };
+        var cutAway = new Button { Content = "Cut away", Width = 80 };
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(first);
+        row.Children.Add(partly);
+        row.Children.Add(cutAway);
+        var clip = new Border { Width = 100, Height = 40, ClipToBounds = true, HorizontalAlignment = HorizontalAlignment.Left, Child = row };
+        Shown(clip);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.GetAutomationPeer().IsOffscreen, Is.False);
+            Assert.That(partly.GetAutomationPeer().IsOffscreen, Is.False);
+            Assert.That(cutAway.GetAutomationPeer().IsOffscreen, Is.True);
+        });
+    }
+
     private static IEnumerable<AutomationPeer> Descendants(AutomationPeer peer) =>
         peer.GetChildren().SelectMany(child => Descendants(child).Prepend(child));
 

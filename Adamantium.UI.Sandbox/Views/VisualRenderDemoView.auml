@@ -60,10 +60,10 @@
                             Background="#FF10151F"
                             Width="240"
                             HorizontalAlignment="Left">
-                    <TextBlock Text="{Localize VisualRenderStrings.IAmLive}" Foreground="#FFF2C14E" FontSize="16" Margin="16,14,16,10"/>
+                    <TextBlock x:Name="IAmLiveLabel" Text="{Localize VisualRenderStrings.IAmLive}" Foreground="#FFF2C14E" FontSize="16" Margin="16,14,16,10"/>
                     <CheckBox Content="{Localize VisualRenderStrings.ToggleMe}" IsChecked="True" Margin="16,0,16,10"/>
-                    <ToggleSwitch IsChecked="True" Margin="16,0,16,10"/>
-                    <ProgressBar Value="65" Width="200" Margin="16,0,16,16"/>
+                    <ToggleSwitch AutomationProperties.LabeledBy="{Binding ElementName=IAmLiveLabel}" IsChecked="True" Margin="16,0,16,10"/>
+                    <ProgressBar AutomationProperties.LabeledBy="{Binding ElementName=IAmLiveLabel}" Value="65" Width="200" Margin="16,0,16,16"/>
                 </StackPanel>
                 <Button Content="{Localize VisualRenderStrings.SnapshotLive}"
                         Command="{Binding SnapshotLiveCommand}"

@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
     <!-- A BENCH, not a showcase: the numbers at the top are the point. Two sections ask the same question from opposite
          sides - many ANIMATIONS against many PAINTERS of one animated brush - so a frame's cost can be attributed to one
@@ -15,11 +16,11 @@
                 </TextBlock.Behaviors>
             </TextBlock>
         </Border>
-        <TextBlock Text="{Localize AnimationsStrings.Many}" FontSize="16" Margin="0,28,0,0"/>
+        <TextBlock x:Name="ManyHeading" Text="{Localize AnimationsStrings.Many}" FontSize="16" Margin="0,28,0,0"/>
         <TextBlock Opacity="0.7" TextWrapping="WrapByWords"
                    Text="{Localize AnimationsStrings.ManyHint}"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ManyHeading}" Orientation="Horizontal" Margin="0,12,0,0">
             <Button Content="+1" Command="{Binding AddOneCommand}"/>
             <Button Content="+5" Command="{Binding AddFiveCommand}" Margin="8,0,0,0"/>
             <Button Content="+25" Command="{Binding AddTwentyFiveCommand}" Margin="8,0,0,0"/>
@@ -174,11 +175,11 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <TextBlock Text="{Localize AnimationsStrings.Painters}" FontSize="16" Margin="0,28,0,0"/>
+        <TextBlock x:Name="PaintersHeading" Text="{Localize AnimationsStrings.Painters}" FontSize="16" Margin="0,28,0,0"/>
         <TextBlock Opacity="0.7" TextWrapping="WrapByWords"
                    Text="{Localize AnimationsStrings.PaintersHint}"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=PaintersHeading}" Orientation="Horizontal" Margin="0,12,0,0">
             <Button Content="{Localize AnimationsStrings.TogglePulse}" Command="{Binding ToggleSharedPulseCommand}"/>
             <Button Content="{Localize AnimationsStrings.TenCards}" Command="{Binding AddTenSkeletonsCommand}" Margin="8,0,0,0"/>
             <Button Content="{Localize AnimationsStrings.HundredCards}" Command="{Binding AddHundredSkeletonsCommand}" Margin="8,0,0,0"/>

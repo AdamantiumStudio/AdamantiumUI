@@ -1,5 +1,6 @@
 using System;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Primitives;
@@ -53,6 +54,10 @@ public abstract class RangeBase : RangeLimitsBase
         var range = (RangeBase)d;
         range.OnValueChanged(oldValue, newValue);
         range.ValueChanged?.Invoke(range, new ValueChangedEventArgs(oldValue, newValue));
+        if (AutomationEvents.IsListening)
+        {
+            AutomationEvents.RaisePropertyChanged(range, AutomationProperty.RangeValue, oldValue, newValue);
+        }
     }
 
     protected virtual void OnValueChanged(double oldValue, double newValue)

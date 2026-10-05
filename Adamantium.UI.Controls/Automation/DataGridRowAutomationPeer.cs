@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Adamantium.UI.Controls.DataGrid;
 using Adamantium.UI.Core.Automation;
@@ -6,7 +7,8 @@ namespace Adamantium.UI.Controls.Automation;
 
 /// <summary>The peer of a <see cref="DataGridRow"/>: a data item called by its value in the first column, whose children
 /// are its cells. It is selected as a click on its header selects it, and a row with children opens and closes.</summary>
-public class DataGridRowAutomationPeer : UIComponentAutomationPeer, ISelectionItemProvider, IExpandCollapseProvider
+public class DataGridRowAutomationPeer : UIComponentAutomationPeer, ISelectionItemProvider, IExpandCollapseProvider,
+    IGridItemProvider, ITableItemProvider, IScrollItemProvider
 {
     private readonly DataGridRow _row;
 
@@ -40,6 +42,21 @@ public class DataGridRowAutomationPeer : UIComponentAutomationPeer, ISelectionIt
 
     /// <summary>Where the row stands among the rows shown.</summary>
     public int Index => _row.Owner?.Items.IndexOf(_row.Row) ?? -1;
+
+    public int Row => Index;
+
+    public int Column => 0;
+
+    /// <summary>A row takes every column of its grid.</summary>
+    public int ColumnSpan => Math.Max(1, _row.Owner?.Columns.Count ?? 1);
+
+    public AutomationPeer ContainingGrid => SelectionContainer;
+
+    public IReadOnlyList<AutomationPeer> GetRowHeaders() => [];
+
+    public IReadOnlyList<AutomationPeer> GetColumnHeaders() => (ContainingGrid as ITableProvider)?.GetColumnHeaders() ?? [];
+
+    public void ScrollIntoView() => _row.Owner?.ScrollIntoView(Index);
 
     protected override string NameCore() =>
         (_row.Owner?.GetAutomationPeer() as TreeDataGridAutomationPeer)?.NameOfItem(_row.Row);

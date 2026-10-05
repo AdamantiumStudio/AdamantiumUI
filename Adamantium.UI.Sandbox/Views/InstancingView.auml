@@ -8,12 +8,12 @@
          ONE instanced draw (shared mesh + per-instance world/color), which is the whole point being validated here. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="{Localize InstancingStrings.Title}"/>
+            <TextBlock x:Name="InstancingHeading" Text="{Localize InstancingStrings.Title}"/>
             <TextBlock Text="{Localize InstancingStrings.Hint}"
                        Foreground="#94A3B8" Margin="0,4,0,0"/>
         </StackPanel>
 
-        <ListBox AutomationProperties.AutomationId="Stars"
+        <ListBox AutomationProperties.AutomationId="Stars" AutomationProperties.LabeledBy="{Binding ElementName=InstancingHeading}"
                  Grid.Row="1"
                  Margin="0,14,0,0"
                  ItemsSource="{Binding Stars}">

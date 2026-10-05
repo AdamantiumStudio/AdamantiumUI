@@ -21,9 +21,14 @@ public class UIComponentAutomationPeer : AutomationPeer
     public override AutomationControlType ControlType => AutomationControlType.Custom;
 
     /// <summary>The name set on the element, else the text of the label it is labeled by, else what the peer reads from
-    /// the element itself, else its tooltip when that is text - the one word an icon-only button has.</summary>
+    /// the element itself, else its tooltip when that is text - the one word an icon-only button has - else what its
+    /// parent calls it: a cell's editor goes by its column.</summary>
     public override string Name => AutomationProperties.GetName(Owner) ?? LabelText() ?? NameCore() ??
-                                   ToolTipService.GetToolTip(Owner) as string ?? string.Empty;
+                                   ToolTipService.GetToolTip(Owner) as string ??
+                                   (GetParent() as UIComponentAutomationPeer)?.NameForChild(this) ?? string.Empty;
+
+    /// <summary>What a child of this element that names nothing itself is called; null, the default, leaves it unnamed.</summary>
+    protected internal virtual string NameForChild(AutomationPeer child) => null;
 
     public override string AutomationId => AutomationProperties.GetAutomationId(Owner) ?? Owner.Name ?? string.Empty;
 
@@ -34,36 +39,7 @@ public class UIComponentAutomationPeer : AutomationPeer
 
     public override string ClassName => Owner.GetType().Name;
 
-    public override Rect BoundingRectangle
-    {
-        get
-        {
-            var root = Owner.RootVisual;
-            if (root == null)
-            {
-                return Rect.Empty;
-            }
-
-            var size = Owner.RenderSize;
-            var world = Owner.WorldTransform;
-            Vector2[] corners = [new(0, 0), new(size.Width, 0), new(0, size.Height), new(size.Width, size.Height)];
-            var left = double.MaxValue;
-            var top = double.MaxValue;
-            var right = double.MinValue;
-            var bottom = double.MinValue;
-            foreach (var corner in corners)
-            {
-                var client = Vector3F.TransformCoordinate(new Vector3F((float)corner.X, (float)corner.Y, 0), world);
-                var screen = root.PointToScreen(new Vector2(client.X, client.Y));
-                left = Math.Min(left, screen.X);
-                top = Math.Min(top, screen.Y);
-                right = Math.Max(right, screen.X);
-                bottom = Math.Max(bottom, screen.Y);
-            }
-
-            return new Rect(left, top, right - left, bottom - top);
-        }
-    }
+    public override Rect BoundingRectangle => ScreenBounds(Owner);
 
     public override bool IsEnabled => Owner.IsEnabled;
 
@@ -85,7 +61,7 @@ public class UIComponentAutomationPeer : AutomationPeer
             }
 
             var size = Owner.RenderSize;
-            return size.Width <= 0 || size.Height <= 0;
+            return size.Width <= 0 || size.Height <= 0 || OutsideWhatShowsIt();
         }
     }
 
@@ -161,6 +137,60 @@ public class UIComponentAutomationPeer : AutomationPeer
         }
 
         return null;
+    }
+
+    private static Rect ScreenBounds(UIComponent element) =>
+        ScreenRect(element, new Rect(0, 0, element.RenderSize.Width, element.RenderSize.Height));
+
+    /// <summary>A rectangle in <paramref name="element"/>'s own units, on screen in pixels.</summary>
+    protected static Rect ScreenRect(UIComponent element, Rect local)
+    {
+        var root = element.RootVisual;
+        if (root == null)
+        {
+            return Rect.Empty;
+        }
+
+        var world = element.WorldTransform;
+        Vector2[] corners = [new(local.X, local.Y), new(local.Right, local.Y), new(local.X, local.Bottom), new(local.Right, local.Bottom)];
+        var left = double.MaxValue;
+        var top = double.MaxValue;
+        var right = double.MinValue;
+        var bottom = double.MinValue;
+        foreach (var corner in corners)
+        {
+            var client = Vector3F.TransformCoordinate(new Vector3F((float)corner.X, (float)corner.Y, 0), world);
+            var screen = root.PointToScreen(new Vector2(client.X, client.Y));
+            left = Math.Min(left, screen.X);
+            top = Math.Min(top, screen.Y);
+            right = Math.Max(right, screen.X);
+            bottom = Math.Max(bottom, screen.Y);
+        }
+
+        return new Rect(left, top, right - left, bottom - top);
+    }
+
+    /// <summary>A point on screen in <paramref name="element"/>'s own units.</summary>
+    protected static Vector2 LocalPoint(UIComponent element, PixelPoint screen)
+    {
+        var client = element.RootVisual?.PointToClient(screen) ?? Vector2.Zero;
+        var local = Vector3F.TransformCoordinate(new Vector3F((float)client.X, (float)client.Y, 0),
+            Matrix4x4F.Invert(element.WorldTransform));
+        return new Vector2(local.X, local.Y);
+    }
+
+    private bool OutsideWhatShowsIt()
+    {
+        var bounds = ScreenBounds(Owner);
+        for (var node = Owner.VisualParent as UIComponent; node != null; node = node.VisualParent as UIComponent)
+        {
+            if ((node.ClipToBounds || node.VisualParent == null) && !bounds.Intersects(ScreenBounds(node)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string LabelText()

@@ -17,6 +17,8 @@ public class RibbonAutomationPeer : UIComponentAutomationPeer, ISelectionProvide
 
     public bool CanSelectMultiple => false;
 
+    public bool IsSelectionRequired => true;
+
     public IReadOnlyList<AutomationPeer> GetSelection() =>
         [.. GetChildren().Where(child => child.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider { IsSelected: true })];
 

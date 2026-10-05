@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Input;
@@ -187,6 +188,11 @@ public static class FocusManager
       AncestorState.Transition(previous, current,
          Keyboard.GotKeyboardFocusWithinEvent, Keyboard.LostKeyboardFocusWithinEvent,
          evt => new RoutedEventArgs(evt));
+
+      if (current != null && AutomationEvents.IsListening)
+      {
+         AutomationEvents.Raise(current, AutomationEvent.FocusChanged);
+      }
    }
 
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.

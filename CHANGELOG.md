@@ -280,6 +280,25 @@ All packages share one version.
   the application's resources - in its own colors. The themes' ribbon commands, groups and application menu items draw
   their `Icon` with it, so `Icon="{ObservableResource SaveIcon}"` shows the picture; until now a picture there went
   into a path's data and drew nothing.
+- Windows UI Automation: a window answers screen readers and UI Automation clients (Narrator, Inspect, FlaUI) with its
+  elements as automation sees them - names, ids, control types, bounds - and does what their patterns ask: invoke,
+  toggle, expand, select, set a value or a range value, scroll, a grid's cells, the window's state. An open popup is a
+  child of whatever opened it. The bridge is part of `Adamantium.UI` and needs no package.
+- `AutomationEvents`: what changes on an element is told to whoever listens - focus, a press, a toggle, an expand, a
+  selection, a value, a popup opening or closing - with the element's peer and the old and new value. A property change
+  is told only for an element automation has seen. The Windows bridge passes them on to UI Automation clients.
+- `IUIComponent.GetAutomationPeer()` and `FindAutomationPeer()`, the peer already made or null.
+- `ITextProvider`: a `TextBox` is read by character, word, line and paragraph - its selection, where a piece of it is on
+  screen, the place nearest a point. The Windows bridge gives it the Text pattern, so a screen reader follows the caret
+  through it; `AutomationEvent.TextChanged` and `TextSelectionChanged` tell it the text and the caret moved.
+- `ITableItemProvider`, `IGridItemProvider.RowSpan` / `ColumnSpan` and `ISelectionProvider.IsSelectionRequired`. A data
+  grid's row is an item of the table taking every column, under the column headers, and is brought into view; a cell
+  knows its column's header. One tab and one ribbon tab are always selected.
+- A border or a panel given `AutomationProperties.Name` or `LabeledBy` is a group of what it holds - a section under its
+  heading - so two sections' controls that read the same are told apart.
+- `LoopSignal.PostAwaited` and `Pause`: work another thread waits on runs while the loop holds between frames, not at
+  the start of the next one. A UI Automation question is answered in well under a millisecond, not after a frame.
+- `MouseDevice.HitTestTopmost`: the element a click at a point of a window reaches - open popups first, newest on top.
 
 ### Changed
 
@@ -366,6 +385,14 @@ All packages share one version.
 
 ### Fixed
 
+- A markup file that is not well-formed XML - a prefix nobody declared - stopped the AUML generator for the whole
+  project: no class from any file, each reported missing, the cause only a warning. It is reported against that file
+  now, and the rest is generated.
+- An editor in a data grid's cell or a property grid's row had no name for a screen reader; it goes by the column's
+  header and the property's name. The color picker's fields go by their labels, a list's item with no text by what the
+  list calls the item, and a property grid is a pane of properties rather than a table that offers no table.
+- Automation called an element on screen when what clips it - a scrolled tab strip, the window - cut it away entirely;
+  `IsOffscreen` is true for it now, and false for one partly in view.
 - A mistake in the application blueprint - a `StartupWindow` the build does not find - also cost the entry point, and the
   build added "no static Main method" to the real error; the entry point is written regardless now.
 - `{ResourceReference}`, `{ObservableResource}` or `{ThemeResource}` written with no key - `Icon="{ResourceReference }"`

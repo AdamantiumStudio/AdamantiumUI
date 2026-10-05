@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
 
@@ -16,6 +18,9 @@ public static class LoopSignal
     private static readonly Action WakeToken = static () => { };
 
     private static int _wakePending;   // 0/1 - at most one wake token is ever queued at a time
+
+    private static readonly ConcurrentQueue<Action> Awaited = new();
+    private static readonly ManualResetEventSlim AwaitedArrived = new(false, 0);
 
     private static int _posted;
     private static long _requests;
@@ -38,6 +43,39 @@ public static class LoopSignal
         }
     }
 
+    /// <summary>Queues work another thread is waiting on - a question from an accessibility client: it runs the moment the
+    /// loop is between frames, not at the start of the next one. A frame follows it.</summary>
+    public static void PostAwaited(Action action)
+    {
+        Interlocked.Increment(ref _posted);
+        Awaited.Enqueue(action);
+        AwaitedArrived.Set();
+        Request();
+    }
+
+    /// <summary>Holds the loop thread between frames for <paramref name="milliseconds"/>, running awaited work as it
+    /// arrives.</summary>
+    public static void Pause(double milliseconds, CancellationToken token)
+    {
+        var deadline = Stopwatch.GetTimestamp() + (long)(milliseconds * Stopwatch.Frequency / 1000);
+        try
+        {
+            for (var left = milliseconds; left >= 1.0; left = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline).TotalMilliseconds)
+            {
+                if (!AwaitedArrived.Wait((int)left, token))
+                {
+                    return;
+                }
+
+                AwaitedArrived.Reset();
+                RunAwaited();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     /// <summary>Something changed - the loop owes another frame. Idempotent and near-free; safe from any thread.</summary>
     public static void Request()
     {
@@ -53,9 +91,20 @@ public static class LoopSignal
     public static void Drain()
     {
         Interlocked.Exchange(ref _wakePending, 0);
+        RunAwaited();
         while (Pipe.Reader.TryRead(out var action))
         {
             if (ReferenceEquals(action, WakeToken)) continue;
+            Interlocked.Decrement(ref _posted);
+            try { action(); }
+            catch (Exception ex) { Console.WriteLine(ex); }
+        }
+    }
+
+    private static void RunAwaited()
+    {
+        while (Awaited.TryDequeue(out var action))
+        {
             Interlocked.Decrement(ref _posted);
             try { action(); }
             catch (Exception ex) { Console.WriteLine(ex); }

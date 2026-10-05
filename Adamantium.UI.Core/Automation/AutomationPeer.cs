@@ -66,6 +66,8 @@ public abstract class AutomationPeer
         PatternId.Grid => this as IGridProvider,
         PatternId.GridItem => this as IGridItemProvider,
         PatternId.Table => this as ITableProvider,
+        PatternId.Text => this as ITextProvider,
+        PatternId.TableItem => this as ITableItemProvider,
         _ => null
     };
 }

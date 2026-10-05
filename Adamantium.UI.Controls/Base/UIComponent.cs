@@ -196,7 +196,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
         typeof(Boolean), typeof(UIComponent),
-        new PropertyMetadata(true));
+        new PropertyMetadata(true, (a, e) =>
+            AutomationEvents.RaisePropertyChanged((UIComponent)a, AutomationProperty.IsEnabled, e.OldValue, e.NewValue)));
 
     public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
         typeof(Double), typeof(UIComponent),
@@ -1082,17 +1083,24 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     /// <summary>This element's description for automation, made on first request. Null for an element automation looks
-    /// through, such as a panel or a border.</summary>
+    /// through, such as a panel or a border - unless it was given a name or a label, which makes it a group of what it
+    /// holds.</summary>
     public AutomationPeer GetAutomationPeer()
     {
         if (!_automationPeerMade)
         {
-            _automationPeer = OnCreateAutomationPeer();
+            _automationPeer = OnCreateAutomationPeer() ??
+                              (AutomationProperties.GetName(this) != null || AutomationProperties.GetLabeledBy(this) != null
+                                  ? new Automation.GroupAutomationPeer(this)
+                                  : null);
             _automationPeerMade = true;
         }
 
         return _automationPeer;
     }
+
+    /// <summary>The peer already made for this element; null while automation has not asked for it.</summary>
+    public AutomationPeer FindAutomationPeer() => _automationPeer;
 
     /// <summary>Makes the peer that describes this element to automation. Null, the default, leaves the element out: its
     /// children belong to the nearest ancestor that has one.</summary>

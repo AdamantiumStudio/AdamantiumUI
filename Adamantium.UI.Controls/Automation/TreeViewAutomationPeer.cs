@@ -19,6 +19,8 @@ public class TreeViewAutomationPeer : UIComponentAutomationPeer, ISelectionProvi
 
     public bool CanSelectMultiple => ((TreeView)Owner).SelectionMode != TreeViewSelectionMode.Single;
 
+    public bool IsSelectionRequired => false;
+
     public IReadOnlyList<AutomationPeer> GetSelection()
     {
         var rows = Rows();

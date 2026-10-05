@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -297,6 +298,14 @@ public class Popup : MeasurableUIComponent, IContainer
         _isShowing = true;
         if (!KeepOpen) HookLightDismiss();   // click-outside-to-close, hosted centrally here (see OnGlobalPreviewDown)
         if (DismissOnEscape) HookEscape();   // ...and Escape, which a KeepOpen drawer wants just as much
+        AnnounceShown(AutomationEvent.MenuOpened);
+    }
+
+    private void AnnounceShown(AutomationEvent shown)
+    {
+        if (!AutomationEvents.IsListening) return;
+        AutomationEvents.Raise(Child, shown);
+        AutomationEvents.Raise(EffectiveTarget ?? this, AutomationEvent.StructureChanged);
     }
 
     /// <summary>Raised once per frame while this popup is on the layer, from the pass that lays its content out - the
@@ -326,6 +335,7 @@ public class Popup : MeasurableUIComponent, IContainer
         // stranded. See FocusReturn.
         if (wasOpen) _focusReturn.Restore(Child);
         if (wasOpen) Closed?.Invoke(this, EventArgs.Empty);
+        if (wasOpen) AnnounceShown(AutomationEvent.MenuClosed);
     }
 
     // Light dismiss (KeepOpen == false): a preview mouse-press that is neither inside THIS popup's overlay (its card or a

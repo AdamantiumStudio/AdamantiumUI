@@ -5,6 +5,6 @@
     <Phrase Key="Value" Text="Яркость (0 — чёрный)"/>
     <Phrase Key="Swatch" Text="Компактный образец → всплывающее окно (ColorPickerButton)"/>
     <Phrase Key="LiveAccent" Text="Живой акцент темы"/>
-    <Phrase Key="Checkbox" Text="Флажок"/>
-    <Phrase Key="RadioButton" Text="Переключатель"/>
+    <Phrase Key="Checkbox" Text="Отмечено"/>
+    <Phrase Key="RadioButton" Text="Выбрано"/>
 </Language>

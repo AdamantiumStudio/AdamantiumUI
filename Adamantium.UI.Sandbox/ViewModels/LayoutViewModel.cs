@@ -13,7 +13,7 @@ public partial class LayoutViewModel : TabPageViewModel
     public LayoutViewModel() : base("Layout")
     {
         Rectangles = new(Enumerable.Range(0, 60000)
-            .Select(i => new ColorRect { Color = Palette[i % Palette.Length] }));
+            .Select(i => new ColorRect { Number = i + 1, Color = Palette[i % Palette.Length] }));
 
         // No page size here: the PAGER owns it. It pushes its own into whatever source it is given, so a size stated in
         // both places is a size stated twice, and the one written here would simply be overwritten on attach.

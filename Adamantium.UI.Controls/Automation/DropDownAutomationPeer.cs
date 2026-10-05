@@ -17,6 +17,8 @@ public class DropDownAutomationPeer : ItemsControlAutomationPeer, ISelectionProv
 
     public bool CanSelectMultiple => false;
 
+    public bool IsSelectionRequired => false;
+
     public ExpandCollapseState ExpandCollapseState =>
         ((DropDown)Owner).IsDropDownOpen ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed;
 

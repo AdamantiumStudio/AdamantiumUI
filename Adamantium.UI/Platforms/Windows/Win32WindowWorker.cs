@@ -96,6 +96,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[(uint)WindowMessages.MouseWheel] = HandleMouseWheel;
         messageTable[(uint)WindowMessages.MouseHwheel] = HandleMouseWheel;   // horizontal (tilt) wheel
         messageTable[(uint)WindowMessages.Setcursor] = HandleSetCursor;
+        messageTable[(uint)WindowMessages.Getobject] = HandleGetObject;
         messageTable[BeginMoveDragMessage] = HandleBeginMoveDrag;
         messageTable[RelativeModeMessage] = HandleRelativeModeMessage;
     }
@@ -558,6 +559,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             // DestroyWindow leaves the registration dangling on a handle the OS may hand to someone else.
             _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
             {
+                Automation.UiaBridge.Disconnect(closing);
                 Input.DragDrop.UnregisterNativeDropTarget(closing);
                 source.Destroy();
             });
@@ -573,6 +575,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     /// <param name="lParam"></param>
     /// <param name="handled"></param>
     /// <returns></returns>
+    private IntPtr HandleGetObject(WindowMessages message, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = (int)(long)lParam == Automation.UiaInterop.RootObjectId && window != null;
+        return handled ? Automation.UiaBridge.Answer(window, source.Handle, wParam, lParam) : IntPtr.Zero;
+    }
+
     private IntPtr CustomWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (messageTable.TryGetValue(msg, out var handler))

@@ -14,7 +14,7 @@
 
         <!-- Section 1: one shared value across a horizontal + vertical Slider and a linear ProgressBar. -->
         <TextBlock x:Name="OneValueLabel" Text="{Localize RangesStrings.OneValue}" FontSize="18" Margin="0,0,0,10"/>
-        <StackPanel Orientation="Horizontal">
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}" Orientation="Horizontal">
             <Slider AutomationProperties.AutomationId="ValueSlider" AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}" Width="300"
                     Value="{Binding Value, Mode=TwoWay}"
                     TickFrequency="1"

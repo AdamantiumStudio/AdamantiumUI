@@ -10,7 +10,9 @@ public class ToggleButtonAutomationPeer : ButtonBaseAutomationPeer, IToggleProvi
     {
     }
 
-    public ToggleState ToggleState => ((ToggleButton)Owner).IsChecked switch
+    public ToggleState ToggleState => StateOf(((ToggleButton)Owner).IsChecked);
+
+    internal static ToggleState StateOf(bool? isChecked) => isChecked switch
     {
         true => ToggleState.On,
         false => ToggleState.Off,

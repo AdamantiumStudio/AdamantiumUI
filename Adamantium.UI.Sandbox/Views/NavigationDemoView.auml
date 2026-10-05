@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls">
     <!-- DataContext is NavigationDemoViewModel (adopted by the tab's content presenter). No navigation code lives here:
          the buttons run VM commands, and the single ContentControl below is bound to the VM-owned region - the region's
@@ -42,14 +43,14 @@
                  view model to its CardPageView. -->
             <Grid Grid.Column="2" RowDefinitions="Auto,*">
                 <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,10">
-                    <TextBlock Text="{Localize NavigationStrings.ItemsControlRegion}" FontSize="14" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="CardsLabel" Text="{Localize NavigationStrings.ItemsControlRegion}" FontSize="14" Margin="0,0,0,8"/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="{Localize NavigationStrings.AddCard}" Command="{Binding AddCardCommand}"   MinWidth="90" Height="30" Margin="0,0,8,0"/>
                         <Button Content="{Localize NavigationStrings.Clear}"   Command="{Binding ClearCardsCommand}" MinWidth="70" Height="30"/>
                     </StackPanel>
                 </StackPanel>
                 <Border Grid.Row="1" CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="{ResourceReference ControlStrokeColorDefault}">
-                    <ListBox AutomationProperties.AutomationId="Cards" nav:Region.Source="{Binding CardsRegion}"/>
+                    <ListBox AutomationProperties.AutomationId="Cards" AutomationProperties.LabeledBy="{Binding ElementName=CardsLabel}" nav:Region.Source="{Binding CardsRegion}"/>
                 </Border>
             </Grid>
         </Grid>

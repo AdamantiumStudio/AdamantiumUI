@@ -30,6 +30,8 @@ public class TreeDataGridAutomationPeer : ItemsControlAutomationPeer, IGridProvi
 
     public bool CanSelectMultiple => true;
 
+    public bool IsSelectionRequired => false;
+
     public AutomationPeer GetItem(int row, int column) => _grid.CellFor(row, column)?.GetAutomationPeer();
 
     public IReadOnlyList<AutomationPeer> GetColumnHeaders()
@@ -41,6 +43,14 @@ public class TreeDataGridAutomationPeer : ItemsControlAutomationPeer, IGridProvi
         }
 
         return headers;
+    }
+
+    /// <summary>The header of the column at <paramref name="column"/>, as one peer; empty when it shows none.</summary>
+    public IReadOnlyList<AutomationPeer> GetColumnHeaders(int column)
+    {
+        var shown = column >= 0 && column < _grid.Columns.Count ? _grid.Columns[column] : null;
+        return [.. GetColumnHeaders().Where(peer =>
+            peer is UIComponentAutomationPeer { Owner: DataGridColumnHeader header } && ReferenceEquals(header.Column, shown))];
     }
 
     public IReadOnlyList<AutomationPeer> GetSelection() =>

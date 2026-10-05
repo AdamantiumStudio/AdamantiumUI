@@ -20,4 +20,8 @@ public sealed class TransformTile : PropertyChangedBase
 
     private double _scale = 1.0;
     public double Scale { get => _scale; set => SetProperty(ref _scale, value); }
+
+    public int Number { get; init; }
+
+    public override string ToString() => $"{Number} {Color}";
 }

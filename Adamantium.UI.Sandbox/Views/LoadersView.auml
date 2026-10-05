@@ -1,4 +1,5 @@
-﻿<View xmlns="http://adamantium/ui">
+﻿<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
     <!-- DataContext is the LoadersViewModel. The whole pack is theme-authored: BusyIndicator itself carries no look, only
          IsActive - each indicator here is a class-selected template (see BusyIndicatorStyleSet). One toggle drives them
          all, which is also the honest test: switching them OFF must STOP the (infinite) animations, not merely hide them. -->
@@ -18,10 +19,10 @@
              the rest reflow around it instead of being drawn over. Binding a Transform is possible because bindings now
              live on the property system rather than on tree elements (see AdamantiumComponent.SetBinding). -->
         <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBlock Text="{Localize LoadersStrings.Zoom}" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ZoomLabel" Text="{Localize LoadersStrings.Zoom}" VerticalAlignment="Center"/>
             <!-- Snapped to tenths: the exact zoom is never the point, and a free slider just spends its travel on values
                  nobody can tell apart. -->
-            <Slider Minimum="0.5" Maximum="4" Value="{Binding Scale, Mode=TwoWay}"
+            <Slider AutomationProperties.LabeledBy="{Binding ElementName=ZoomLabel}" Minimum="0.5" Maximum="4" Value="{Binding Scale, Mode=TwoWay}"
                     TickFrequency="0.1" IsSnapToTickEnabled="True"
                     Width="260" Margin="12,0,0,0" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding Scale}" VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.6"/>

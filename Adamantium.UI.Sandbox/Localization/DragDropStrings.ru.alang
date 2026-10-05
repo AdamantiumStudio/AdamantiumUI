@@ -22,7 +22,7 @@
     <Phrase Key="DroppedPicturesHint" Text="Бросьте сюда файл картинки или перетащите картинку прямо из браузера."/>
     <Phrase Key="DragOut" Text="Вытащить в другое приложение"/>
     <Phrase Key="DragOutHint" Text="AllowExternalDrag отдаёт ОС весь жест вместе с призраком. Заметки несут ещё HTML и RTF — бросьте одну в WordPad, и форматирование сохранится. Файл пишется, только если бросок состоялся."/>
-    <Phrase Key="TreeDwell" Text="Дерево — задержитесь над папкой, и она раскроется"/>
+    <Phrase Key="TreeDwell" Text="Папки — задержитесь над папкой, и она раскроется"/>
 
     <Phrase Key="Window" Text="Окно перетаскивания"/>
     <Phrase Key="Wildlife" Text="Дикая природа"/>

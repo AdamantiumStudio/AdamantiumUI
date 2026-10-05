@@ -161,6 +161,10 @@ public abstract class ButtonBase : ContentControl
         }
 
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
+        if (AutomationEvents.IsListening && GetAutomationPeer() is IInvokeProvider)
+        {
+            AutomationEvents.Raise(this, AutomationEvent.Invoked);
+        }
     }
 
     protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

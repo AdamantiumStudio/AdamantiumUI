@@ -20,6 +20,8 @@ public class RibbonGalleryAutomationPeer : ItemsControlAutomationPeer, ISelectio
 
     public bool CanSelectMultiple => false;
 
+    public bool IsSelectionRequired => false;
+
     public IReadOnlyList<AutomationPeer> GetSelection() =>
         [.. GetChildren().Where(child => child.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider { IsSelected: true })];
 

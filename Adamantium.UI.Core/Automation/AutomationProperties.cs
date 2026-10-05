@@ -8,7 +8,8 @@ public static class AutomationProperties
     public static readonly AdamantiumProperty AutomationIdProperty = AdamantiumProperty.RegisterAttached("AutomationId",
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
-    /// <summary>What the element is called, in place of what its peer reads from its content.</summary>
+    /// <summary>What the element is called, in place of what its peer reads from its content. On an element automation
+    /// otherwise looks through - a border, a panel - it makes that element a group of what it holds.</summary>
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.RegisterAttached("AutomationName",
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
@@ -16,7 +17,8 @@ public static class AutomationProperties
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
     /// <summary>The element whose text names this one - the label shown beside it - when no name is set. Set by
-    /// <c>{Binding ElementName=...}</c>.</summary>
+    /// <c>{Binding ElementName=...}</c>. Like a name, it makes a border or a panel a group - a section under its
+    /// heading.</summary>
     public static readonly AdamantiumProperty LabeledByProperty = AdamantiumProperty.RegisterAttached("LabeledBy",
         typeof(IUIComponent), typeof(AdamantiumComponent), new PropertyMetadata(null));
 

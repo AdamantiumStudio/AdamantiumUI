@@ -15,7 +15,7 @@ public sealed class TransformSettings : PropertyChangedBase
     public TransformSettings()
     {
         for (var i = 0; i < 240; i++)
-            Tiles.Add(new TransformTile { Color = Palette[i % Palette.Length] });
+            Tiles.Add(new TransformTile { Number = i + 1, Color = Palette[i % Palette.Length] });
         Apply();
     }
 

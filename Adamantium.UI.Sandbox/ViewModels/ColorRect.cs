@@ -5,5 +5,9 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// Hundreds of these prove the ListBox/WrapPanel virtualization: only the on-screen ones are realized.</summary>
 public sealed class ColorRect
 {
+    public int Number { get; init; }
+
     public string Color { get; init; }
+
+    public override string ToString() => $"{Number} {Color}";
 }

@@ -35,5 +35,7 @@ public class ListBoxItemAutomationPeer : ContentControlAutomationPeer, ISelectio
 
     public void ScrollIntoView() => Owner.BringIntoView();
 
-    protected override string NameCore() => base.NameCore() ?? TextOf(Owner);
+    /// <summary>The text it shows, else what its list calls the item it holds - as when the list has not made it.</summary>
+    protected override string NameCore() => base.NameCore() ?? TextOf(Owner) ??
+        (ItemsOwnerPeer()?.NameOfItem(((ContentControl)Owner).Content) is { Length: > 0 } name ? name : null);
 }

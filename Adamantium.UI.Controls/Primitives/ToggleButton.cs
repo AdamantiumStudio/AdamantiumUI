@@ -141,6 +141,11 @@ public class ToggleButton : ButtonBase
         if (a is not ToggleButton toggle) return;
         toggle.OnToggleStateChanged((bool?)e.NewValue);
         toggle.RaiseCheckedEvent((bool?)e.NewValue);
+        if (AutomationEvents.IsListening)
+        {
+            AutomationEvents.RaisePropertyChanged(toggle, AutomationProperty.ToggleState,
+                ToggleButtonAutomationPeer.StateOf((bool?)e.OldValue), ToggleButtonAutomationPeer.StateOf((bool?)e.NewValue));
+        }
     }
 
     /// <summary>Hook for subclasses that react to the new checked state (e.g. <see cref="RadioButton"/> clearing its

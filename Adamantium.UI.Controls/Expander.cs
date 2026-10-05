@@ -144,6 +144,7 @@ public class Expander : ContentControl
 
         if (expander.IsExpanded) expander.Expanded?.Invoke(expander, EventArgs.Empty);
         else expander.Collapsed?.Invoke(expander, EventArgs.Empty);
+        AutomationEvents.RaiseExpandCollapse(expander, expander.IsExpanded);
     }
 
     private void OnHeaderPressed(object sender, MouseButtonEventArgs e)

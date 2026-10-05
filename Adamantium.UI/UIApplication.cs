@@ -849,7 +849,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             var target = 1000.0 / Math.Max(1, UpdateRateHz);
             var elapsed = Stopwatch.GetElapsedTime(_loopFrameStart).TotalMilliseconds;
             var remaining = target - elapsed;
-            if (remaining >= 1.0) Thread.Sleep((int)remaining);
+            if (remaining >= 1.0) LoopSignal.Pause(remaining, cancellationTokenSource.Token);
         }
 
         // Every stage counts, popups and adorners included.
