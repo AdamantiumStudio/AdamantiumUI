@@ -250,6 +250,11 @@ public class ItemsControl : Control, IContainer
         return false;
     }
 
+    internal static ItemsControl AuthoredOwner(IUIComponent element)
+    {
+        return element != null && AuthoredIn.TryGetValue(element, out var owner) ? owner : null;
+    }
+
     // The control an element was written into shows it - itself, or a list of its own template it hands its items to.
     private bool ShowsFor(ItemsControl owner)
     {
