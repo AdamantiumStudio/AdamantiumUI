@@ -345,7 +345,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             textGenerator.NewLine();
         }
 
-        if (entityType is EntityType.Control or EntityType.ApplicationBlueprint)
+        if (entityType is EntityType.Control or EntityType.ApplicationBlueprint or EntityType.DataTemplateSet)
         {
             textGenerator.WriteLine($"public {container.RootClassName}()");
             textGenerator.WriteOpenBraceAndIndent();

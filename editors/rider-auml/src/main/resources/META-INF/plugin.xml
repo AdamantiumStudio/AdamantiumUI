@@ -26,6 +26,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>New | AUML File offers a Data Template Set: templates picked by the type of the item, a file of their own placed
+        by name wherever a template selector goes.</p>
         <p>Ctrl+click on a resource key - {ObservableResource SaveIcon} - goes to the markup that declares it; on a class
         made from markup - ResourceLink Source="RibbonShellIcons", a view's element, {x:Type} - to its .auml file rather
         than the generated code.</p>
@@ -117,6 +119,7 @@
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>
+        <internalFileTemplate name="Adamantium DataTemplateSet"/>
         <internalFileTemplate name="Adamantium ApplicationBlueprint"/>
         <notificationGroup id="Adamantium AUML" displayType="BALLOON"/>
         <notificationGroup id="Adamantium AUML templates offer" displayType="STICKY_BALLOON"/>

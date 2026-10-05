@@ -135,6 +135,7 @@
                                     <ContentPresenter x:Name="PART_SelectedContentHost"
                                             Content="{TemplateBinding SelectedContent}"
                                             ContentTemplate="{TemplateBinding ContentTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
                                             HorizontalAlignment="Stretch"
                                             VerticalAlignment="Stretch"/>
                                 </Border>

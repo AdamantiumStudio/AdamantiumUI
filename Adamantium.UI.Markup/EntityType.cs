@@ -17,6 +17,10 @@
 
         /// <summary>What an application starts with. A project holds one; the build makes it a class, names it to the
         /// assembly and writes the entry point that runs the application.</summary>
-        ApplicationBlueprint
+        ApplicationBlueprint,
+
+        /// <summary>Data templates picked by the type of the item - a class deriving from <c>DataTemplateSet</c>, which
+        /// markup places by name wherever a template selector goes.</summary>
+        DataTemplateSet
     }
 }

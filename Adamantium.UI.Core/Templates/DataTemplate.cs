@@ -10,8 +10,12 @@ public class DataTemplate : UiTemplate
 
     public DataTemplate()
     {
-        
+
     }
+
+    /// <summary>The type of the item the template draws - its <c>x:DataType</c>. A <see cref="DataTemplateSet"/> picks
+    /// the template by it; null for a template written without one.</summary>
+    public Type DataType { get; set; }
    
     public DataTemplate(Func<TemplateResult> templateBuilder)
     {

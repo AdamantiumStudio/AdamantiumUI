@@ -4,6 +4,8 @@ namespace Adamantium.UI.Markup.CodeGeneration.Reflection;
 
 public class ReflectionResolvedType : IResolvedType
 {
+    private const string DataTemplateSetTypeName = "Adamantium.UI.Core.Templates.DataTemplateSet";
+
     private readonly Type _type;
 
     public ReflectionResolvedType(Type type) => _type = type;
@@ -141,6 +143,11 @@ public class ReflectionResolvedType : IResolvedType
             if (ImplementsInterface("IUIComponent"))
             {
                 return EntityType.Control;
+            }
+
+            if (IsAssignableTo(DataTemplateSetTypeName))
+            {
+                return EntityType.DataTemplateSet;
             }
 
             return EntityType.Unknown;

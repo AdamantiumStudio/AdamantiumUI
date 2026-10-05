@@ -264,6 +264,14 @@ All packages share one version.
 - `UIApplication.StartupThemeVariant`: the variant of the theme the application opens on - Light, Dark, System or one
   of the theme's own. A variant the theme does not have fails the start, naming the ones it has.
 - `IThemeManager.AddStyleSet(Type)`: adds a style set known only at run time to every theme.
+- `DataTemplateSet`: a template selector written in markup instead of a class. Its `DataTemplate`s each state the type
+  they draw with `x:DataType`; the item's own type wins, then its base classes, nearest first, then an interface it
+  implements; one template without a type takes what no other fits. It goes wherever a selector goes - inline, or from
+  resources by key - and the build fails on two templates for one type or two without one. `DataTemplate.DataType`
+  carries the `x:DataType` at run time. A markup file with a `DataTemplateSet` at its root is a class of its own that
+  other markup places by name (`<Ribbon.ContentTemplateSelector><RibbonTabContents/></Ribbon.ContentTemplateSelector>`);
+  New | AUML File in Rider offers one.
+- `Ribbon.ContentTemplateSelector`: each data tab's groups picked by the tab's item, as `TabControl` has it.
 - The language server goes from a resource key to the markup that declares it, and from a class made from markup to its
   `.auml` file rather than the generated code - a view's element, `ResourceLink Source=`, `{x:Type}`. It renames a key
   where it is declared and wherever it is used, across the project's markup and that of projects built from source

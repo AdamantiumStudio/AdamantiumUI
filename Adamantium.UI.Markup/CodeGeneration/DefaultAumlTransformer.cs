@@ -15,6 +15,8 @@ public class DefaultAumlTransformer : IAumlTransformer
 
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
 
+    private const string DataTemplateSetName = "DataTemplateSet";
+
     // {Localize Table, Key={Binding Kind}}: where a key known only at run time is read from.
     private const string KeyArgument = "Key";
 
@@ -952,14 +954,18 @@ public class DefaultAumlTransformer : IAumlTransformer
                     }
                     else if (directive.Name == AumlDirectives.DataType)
                     {
-                        // Declared, not inferred: the type is what tooling resolves {Binding} paths against inside the
-                        // template. Nothing is generated from it - what IS checked here is that the name resolves, so a
-                        // renamed model does not leave a template silently pointing at nothing.
+                        // Declared, not inferred: the type tooling resolves {Binding} paths against inside the template, and
+                        // the one a DataTemplateSet picks the template by. The name must resolve, so a renamed model does not
+                        // leave a template silently pointing at nothing; the resolved type replaces the text for the builders.
                         if (directive.Value is AumlAstTextNode dataTypeNode && !string.IsNullOrWhiteSpace(dataTypeNode.Text))
                         {
                             var dataTypeRef = MarkupExtensionParser.ParseTypeName(new ParserContext(null),
                                 UnwrapTypeText(dataTypeNode.Text), directive.GetLineInfo(), document.NamespaceMappings.ToList());
-                            if (ProcessTypeReference(dataTypeRef, directive.GetLineInfo()) is not { IsResolved: true })
+                            if (ProcessTypeReference(dataTypeRef, directive.GetLineInfo()) is { IsResolved: true } resolvedDataType)
+                            {
+                                directive.Value = new AumlAstTypeReferenceValueNode(directive.GetLineInfo(), resolvedDataType);
+                            }
+                            else
                             {
                                 diagnostics.ReportError(document.FileName,
                                     $"x:DataType '{dataTypeNode.Text}' could not be resolved. {directive.GetLineInfo()}");
@@ -1023,6 +1029,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
 
         ReportTargetsIntoHeldBackElements(document, diagnostics);
+        ReportTemplateSetConflicts(document, diagnostics);
 
         foreach (var kvp in usings)
         {
@@ -1132,6 +1139,64 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
     }
 
+    private static void ReportTemplateSetConflicts(AumlDocument document, IDiagnosticSink diagnostics)
+    {
+        Collect(document.Root);
+
+        void Collect(IAumlAstNode node)
+        {
+            switch (node)
+            {
+                case AumlAstObjectNode obj:
+                    if (obj.TypeReference?.Name == DataTemplateSetName)
+                    {
+                        Check(obj);
+                    }
+
+                    foreach (var child in obj.Children)
+                    {
+                        Collect(child);
+                    }
+
+                    break;
+
+                case AumlAstPropertyNode property:
+                    foreach (var value in property.Values)
+                    {
+                        Collect(value);
+                    }
+
+                    break;
+            }
+        }
+
+        void Check(AumlAstObjectNode set)
+        {
+            var fallbacks = 0;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var template in set.GetLogicalChildrenObjects())
+            {
+                var dataType = template.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.DataType);
+                if (dataType == null)
+                {
+                    if (++fallbacks == 2)
+                    {
+                        diagnostics.ReportError(document.FileName,
+                            $"A DataTemplateSet has more than one template without x:DataType; only one can take what no other fits. {template.GetLineInfo()}");
+                    }
+
+                    continue;
+                }
+
+                if (dataType.Value is AumlAstTypeReferenceValueNode { TypeReference: { } type } && !seen.Add(type.GetFullTypeName()))
+                {
+                    diagnostics.ReportError(document.FileName,
+                        $"A DataTemplateSet has two templates for {type.Name}; one type, one template. {template.GetLineInfo()}");
+                }
+            }
+        }
+    }
+
     /// <summary>Registers the project's own language tables (<see cref="LanguageTables"/>) as the types they are
     /// generated into, so markup can name one before it is compiled: <c>{x:Static CanvasStrings.Current}</c>.</summary>
     public void PreRegisterLanguageTables(ITypeResolver typeResolver, string assemblyName)
@@ -1165,7 +1230,8 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         var rootType = typeResolver.Resolve(resolvedRoot.GetFullTypeName());
         if (rootType is not { EntityType: EntityType.Window or EntityType.View
-                              or EntityType.UIApplication or EntityType.ThemeVariant or EntityType.Control }
+                              or EntityType.UIApplication or EntityType.ThemeVariant or EntityType.Control
+                              or EntityType.DataTemplateSet }
             && !(anyClass && rootType is { EntityType: not EntityType.Unknown }))
         {
             return null;
