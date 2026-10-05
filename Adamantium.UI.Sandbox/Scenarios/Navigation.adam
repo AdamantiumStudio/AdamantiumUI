@@ -1,0 +1,22 @@
+# The Navigation page: pages navigated to in the region and back and forward through its journal, cards added to a
+# list region, and an overlay window opened and closed.
+select id=GalleryTabs/id=Navigation
+wait id=Region/id=HomePageView
+invoke id=NavigationDemoView/name="Details (id=42)"
+wait id=Region/id=DetailsPageView
+invoke id=NavigationDemoView/name=Settings
+wait id=Region/id=SettingsPageView
+invoke id=NavigationDemoView/name=Back
+wait id=Region/id=DetailsPageView
+invoke id=NavigationDemoView/name=Forward
+wait id=Region/id=SettingsPageView
+invoke id=NavigationDemoView/name=Home
+wait id=Region/id=HomePageView
+invoke id=NavigationDemoView/name="Add card"
+wait id=Cards/name="Card 3"
+invoke id=NavigationDemoView/name=Clear
+absent id=Cards/type=ListItem
+invoke id=NavigationDemoView/name="Show overlay window"
+wait id=OverlayWindow/id=OverlayDemoView
+window id=OverlayWindow close
+absent id=OverlayWindow

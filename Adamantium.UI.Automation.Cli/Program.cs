@@ -24,7 +24,7 @@ public static class Program
     private static readonly string[] ElementKeys =
     [
         "name", "id", "type", "class", "value", "toggle", "selected", "expanded", "min", "max", "hscroll", "vscroll",
-        "window", "key", "enabled", "offscreen", "focus"
+        "window", "key", "left", "top", "width", "height", "enabled", "offscreen", "focus"
     ];
 
     private const string Usage = """
@@ -55,9 +55,13 @@ public static class Program
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
                                                               selected, expanded, min, max, hscroll, vscroll, window, key,
+                                                              left, top, width, height (on the screen, physical px),
                                                               enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches
           run <scenario>                                      the commands of a file, one a line, up to the first failure
+          run <folder>                                        every scenario in it, in name order, and a summary
+          sweep [<tabs>] [--dwell 4s] [--passes <n>]          open every tab in turn (the gallery's by default): how long
+                                                              each took to settle and what it left in the error journal
 
           --pipe <name>     the agent's pipe (default adam-auto)
           --allow-errors    an action may leave errors in the journal; by default that fails it
@@ -139,6 +143,7 @@ public static class Program
                 "absent" => await AbsentAsync(pipe, arguments),
                 "shot" => await ShotAsync(pipe, arguments),
                 "run" => await ScenarioAsync(arguments, pipe),
+                "sweep" => await SweepAsync(arguments, pipe),
                 _ => Fail(Usage, 2)
             };
         }
@@ -381,12 +386,41 @@ public static class Program
 
     private static async Task<int> ScenarioAsync(Arguments arguments, string pipe)
     {
-        var file = arguments.At(0);
-        if (file == null || !File.Exists(file))
+        var path = arguments.At(0);
+        if (path != null && Directory.Exists(path))
         {
-            return Fail($"No scenario at '{file}'.", 2);
+            return await ScenariosAsync(path, pipe);
         }
 
+        if (path == null || !File.Exists(path))
+        {
+            return Fail($"No scenario at '{path}'.", 2);
+        }
+
+        return await RunScenarioAsync(path, pipe);
+    }
+
+    private static async Task<int> ScenariosAsync(string folder, string pipe)
+    {
+        var files = Directory.GetFiles(folder, "*.adam").OrderBy(file => file, StringComparer.OrdinalIgnoreCase).ToList();
+        var failed = new List<string>();
+        foreach (var file in files)
+        {
+            Console.WriteLine($"=== {Path.GetFileName(file)}");
+            if (await RunScenarioAsync(file, pipe) != 0)
+            {
+                failed.Add(Path.GetFileName(file));
+            }
+        }
+
+        Console.WriteLine(failed.Count == 0
+            ? $"All {files.Count} scenarios passed."
+            : $"{files.Count - failed.Count} of {files.Count} scenarios passed; failed: {string.Join(", ", failed)}.");
+        return failed.Count == 0 ? 0 : 1;
+    }
+
+    private static async Task<int> RunScenarioAsync(string file, string pipe)
+    {
         var lines = await File.ReadAllLinesAsync(file);
         for (var number = 1; number <= lines.Length; number++)
         {
@@ -411,6 +445,68 @@ public static class Program
 
         Console.WriteLine($"{file}: every step passed.");
         return 0;
+    }
+
+    private static async Task<int> SweepAsync(Arguments arguments, string pipe)
+    {
+        var tabs = arguments.At(0) ?? $"id={GalleryTabs}";
+        var dwell = arguments.TimeOption("dwell") ?? TimeSpan.Zero;
+        var passes = Math.Max(1, arguments.IntOption("passes"));
+        var found = await ReplyAsync(pipe, new AutomationRequest { Command = AutomationCommand.Find, Target = $"{tabs}/type=TabItem" });
+        if (!found.Ok)
+        {
+            return Fail(found.Error, 1);
+        }
+
+        var pages = found.Elements.Select(tab => tab.AutomationId is { Length: > 0 } id ? $"id={id}" : $"name=\"{tab.Name}\"").ToList();
+        if (pages.Count == 0)
+        {
+            return Fail($"'{tabs}' holds no tabs.", 1);
+        }
+
+        var troubled = 0;
+        for (var pass = 1; pass <= passes; pass++)
+        {
+            foreach (var page in pages)
+            {
+                var mark = (await ReplyAsync(pipe, new AutomationRequest { Command = AutomationCommand.Mark })).Mark;
+                var watch = Stopwatch.StartNew();
+                var selected = await ReplyAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.Select,
+                    Target = $"{tabs}/{page}",
+                    AllowErrors = true
+                });
+                await ReplyAsync(pipe, new AutomationRequest { Command = AutomationCommand.WaitIdle });
+                var settled = watch.Elapsed;
+                if (dwell > TimeSpan.Zero)
+                {
+                    await Task.Delay(dwell);
+                }
+
+                var errors = (await ReplyAsync(pipe, new AutomationRequest { Command = AutomationCommand.Errors, Since = mark })).Errors;
+                var line = passes > 1 ? $"[{pass}] {page}" : page;
+                if (!selected.Ok)
+                {
+                    troubled++;
+                    Console.WriteLine($"{line}: {selected.Error}");
+                    continue;
+                }
+
+                Console.WriteLine($"{line}: {settled.TotalMilliseconds:0} ms{(errors.Count == 0 ? string.Empty : $", {errors.Count} error(s)")}");
+                foreach (var error in errors)
+                {
+                    Console.WriteLine($"  {Printer.Error(error)}");
+                }
+
+                troubled += errors.Count > 0 ? 1 : 0;
+            }
+        }
+
+        Console.WriteLine(troubled == 0
+            ? $"Every page opened cleanly ({pages.Count} x {passes})."
+            : $"{troubled} page visit(s) failed or left errors.");
+        return troubled == 0 ? 0 : 1;
     }
 
     private static async Task<int> SendAsync(string pipe, AutomationRequest request)
@@ -496,6 +592,10 @@ public static class Program
             "vscroll" => Invariant(element.VerticalScroll),
             "window" => element.WindowState,
             "key" => element.AccessKey,
+            "left" => Invariant(Math.Round(element.Bounds[0])),
+            "top" => Invariant(Math.Round(element.Bounds[1])),
+            "width" => Invariant(Math.Round(element.Bounds[2])),
+            "height" => Invariant(Math.Round(element.Bounds[3])),
             "enabled" => element.IsEnabled.ToString(),
             "offscreen" => element.IsOffscreen.ToString(),
             "focus" => element.HasKeyboardFocus.ToString(),

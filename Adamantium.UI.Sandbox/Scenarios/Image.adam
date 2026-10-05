@@ -1,0 +1,17 @@
+# The Image page: the playground's stretch, direction and alignment chosen, its box resized, the format gallery faded,
+# and the animated images paused.
+select id=GalleryTabs/id=Image
+wait id=StretchChoice
+select id=StretchChoice/name=Fill
+expect id=StretchChoice value=Fill
+select id=StretchChoice/name=UniformToFill
+select id=DirectionChoice/name=DownOnly
+select id=HorizontalChoice/name=Left
+select id=VerticalChoice/name=Top
+set id=BoxWidth 300
+set id=BoxHeight 200
+expect id=BoxWidth value=300
+set id=ImageOpacity 0.5
+select id=StretchChoice/name=Uniform
+select id=HorizontalChoice/name=Center
+select id=VerticalChoice/name=Center

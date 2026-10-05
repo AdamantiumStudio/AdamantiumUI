@@ -4,4 +4,5 @@
     <Phrase Key="Maximize" Text="Maximize"/>
     <Phrase Key="Close" Text="Close"/>
     <Phrase Key="MoreCommands" Text="More commands"/>
+    <Phrase Key="Pin" Text="Pin"/>
 </Language>

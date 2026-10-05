@@ -39,6 +39,8 @@
                                             FontSize="{ResourceReference FontSizeSubtitle}"
                                             VerticalAlignment="Center"/>
                                     <Button x:Name="PART_CloseButton" Grid.Column="1"
+                                            AutomationProperties.AutomationId="Close"
+                                            AutomationProperties.Name="{Localize WindowStrings.Close}"
                                             Width="{ResourceReference SlidePanelCloseSize}"
                                             Height="{ResourceReference SlidePanelCloseSize}"
                                             MinWidth="0" MinHeight="0"

@@ -203,6 +203,16 @@ All packages share one version.
 - Automation of `PropertyGrid`: a table of property rows, each called by its property's name and written the way its
   editor writes it - converted to the property's type, to every object the row stands for, or refused; a true-or-false
   property is toggled and a composite one opens to its parts.
+- `adam-auto run <folder>` runs every scenario in it with a summary; `adam-auto sweep` opens every tab of a tab control
+  in turn - the gallery's by default, `--passes`, `--dwell` - and reports how long each took to settle and what it left
+  in the error journal. `expect` reads an element's place and size (`left`, `top`, `width`, `height`); `key` knows the
+  arrows by `Up`, `Down`, `Left`, `Right`; `state` names the focused element.
+- While a gesture is simulated, the pointer the application asks for - `Mouse.ScreenCoordinates`, which a drag's
+  threshold and drop target read - is the gesture's, and the system cursor is never moved: drag and drop inside the
+  application is driven by automation. A drag that runs through the system's own loop still follows the real mouse.
+- An `OverlayWindow` is a window to automation, called by its title and closed as its close button closes it; a
+  `SlidePanel` is a pane called by its header that opens and shuts, its overlay content its children while open. The
+  themes name their close and pin buttons (`WindowStrings.Close`, `Pin`).
 - Automation drags: `AutomationElement.DragAsync` and `adam-auto drag <selector> <x1,y1> <x2,y2>` press the left button
   at one point of the element, move with it held and let go at the other, in the element's own units. An
   `InfiniteCanvas` and its floating panels are panes; a tool on its rail is a button found by the tool's name and

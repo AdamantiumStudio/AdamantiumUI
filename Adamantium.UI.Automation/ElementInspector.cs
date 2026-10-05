@@ -78,7 +78,7 @@ internal static class ElementInspector
     public static string State(IReadOnlyList<IWindow> windows)
     {
         var text = new StringBuilder();
-        text.Append("focus: ").AppendLine(Describe(KeyboardDevice.CurrentDevice.FocusedComponent) ?? "nothing");
+        text.Append("focus: ").AppendLine(Named(KeyboardDevice.CurrentDevice.FocusedComponent) ?? "nothing");
         text.Append("mouse over: ").AppendLine(Describe(MouseDevice.CurrentDevice.DirectlyOver) ?? "nothing");
         foreach (var window in windows)
         {
@@ -97,13 +97,7 @@ internal static class ElementInspector
                     text.Append(" \"").Append(keyTip.Keys).Append('"');
                 }
 
-                text.Append(" on ").Append(Describe(adorner.AdornedElement) ?? "nothing");
-                if ((adorner.AdornedElement as UIComponent)?.GetAutomationPeer()?.Name is { Length: > 0 } name)
-                {
-                    text.Append(" \"").Append(name).Append('"');
-                }
-
-                text.AppendLine();
+                text.Append(" on ").AppendLine(Named(adorner.AdornedElement) ?? "nothing");
             }
         }
 
@@ -173,6 +167,11 @@ internal static class ElementInspector
         Binding { Path.Path: { } path } => $"Binding {path}",
         _ => binding.GetType().Name
     };
+
+    private static string Named(object node) =>
+        (node as UIComponent)?.GetAutomationPeer()?.Name is { Length: > 0 } name
+            ? $"{Describe(node)} \"{name}\""
+            : Describe(node);
 
     private static string Describe(object node) => node switch
     {

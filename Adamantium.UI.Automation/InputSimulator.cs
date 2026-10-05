@@ -12,7 +12,8 @@ internal static class InputSimulator
 {
     public static void Click(UIComponent element, string label, MouseButtons button)
     {
-        var (window, point) = Hover(element, label);
+        using var pointer = SimulatedPointer.Install();
+        var (window, point) = HoverAt(element, label, Middle(element));
         var (down, up, held) = button == MouseButtons.Right
             ? (RawMouseEventType.RightButtonDown, RawMouseEventType.RightButtonUp, InputModifiers.RightMouseButton)
             : (RawMouseEventType.LeftButtonDown, RawMouseEventType.LeftButtonUp, InputModifiers.LeftMouseButton);
@@ -21,15 +22,16 @@ internal static class InputSimulator
         Send(up, window, point, InputModifiers.None);
     }
 
-    public static (IWindow Window, Vector2 Point) Hover(UIComponent element, string label)
+    public static void Hover(UIComponent element, string label)
     {
-        var size = element.RenderSize;
-        return HoverAt(element, label, new Vector2(size.Width / 2, size.Height / 2));
+        using var pointer = SimulatedPointer.Install();
+        HoverAt(element, label, Middle(element));
     }
 
     public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)
     {
         const int steps = 8;
+        using var pointer = SimulatedPointer.Install();
         var (window, start) = HoverAt(element, label, from);
         var end = InWindow(element, to);
         Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
@@ -109,6 +111,10 @@ internal static class InputSimulator
         "alt" => Key.Alt,
         "shift" => Key.Shift,
         "esc" => Key.Escape,
+        "up" => Key.UpArrow,
+        "down" => Key.DownArrow,
+        "left" => Key.LeftArrow,
+        "right" => Key.RightArrow,
         _ when name.Length == 1 && char.IsDigit(name[0]) => (Key)((int)Key.D0 + name[0] - '0'),
         _ => Enum.TryParse<Key>(name, true, out var key)
             ? key
@@ -149,8 +155,16 @@ internal static class InputSimulator
     private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers)
     {
         var device = MouseDevice.CurrentDevice;
+        if (Mouse.Platform is SimulatedPointer pointer)
+        {
+            pointer.Position = window.PointToScreen(point);
+        }
+
         device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
     }
+
+    private static Vector2 Middle(UIComponent element) =>
+        new(element.RenderSize.Width / 2, element.RenderSize.Height / 2);
 
     private static Vector2 InWindow(UIComponent element, Vector2 local)
     {

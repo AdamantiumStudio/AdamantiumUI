@@ -1,10 +1,12 @@
 using System;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -188,4 +190,6 @@ public class SlidePanel : ContentControl
         if (c.RenderTransform is not Transform t) { t = new Transform(); c.RenderTransform = t; }
         return t;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new SlidePanelAutomationPeer(this);
 }

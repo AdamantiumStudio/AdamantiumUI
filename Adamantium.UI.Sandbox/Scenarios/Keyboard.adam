@@ -1,0 +1,17 @@
+# The Keyboard page: Tab walks the buttons in their stated order and steps over the one taken out of it; in a grid of
+# tiles the arrows move by the grid - Down to the tile below, Right to the next one.
+select id=GalleryTabs/id=Keyboard
+wait id=KeyboardView/name="B (1st)"
+key Tab --into id=KeyboardView/name="B (1st)"
+expect id=KeyboardView/name="D (2nd)" focus=True
+key Tab
+expect id=KeyboardView/name="A (3rd)" focus=True
+key Tab
+expect id=KeyboardView/name="C (4th)" focus=True
+key Tab
+expect id=KeyboardView/name=1 focus=True
+select id=KeyboardView/name=Coral
+key Down --into id=KeyboardView/name=Coral
+expect id=KeyboardView/name=Gold focus=True
+key Right
+expect id=KeyboardView/name=Indigo focus=True

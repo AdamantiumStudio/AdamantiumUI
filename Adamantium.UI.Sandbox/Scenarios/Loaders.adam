@@ -1,0 +1,10 @@
+# The Loaders page: the busy indicators stopped and started by one switch, and scaled by the slider.
+select id=GalleryTabs/id=Loaders
+wait id=LoadersView/name=Running
+toggle id=LoadersView/name=Running
+expect id=LoadersView/name=Running toggle=Off
+toggle id=LoadersView/name=Running
+expect id=LoadersView/name=Running toggle=On
+set id=LoadersView/type=Slider 2
+expect id=LoadersView/type=Slider value=2
+set id=LoadersView/type=Slider 1

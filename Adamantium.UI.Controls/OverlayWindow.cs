@@ -1,8 +1,10 @@
 using Adamantium.Navigation;
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -538,4 +540,6 @@ public class OverlayWindow : ContentControl
         e.Handled = true;
         if (_resizeGrip.IsMouseCaptured) _resizeGrip.ReleaseMouseCapture();
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new OverlayWindowAutomationPeer(this);
 }

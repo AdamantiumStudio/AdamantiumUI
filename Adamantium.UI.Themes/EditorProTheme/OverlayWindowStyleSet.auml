@@ -58,6 +58,8 @@
                                          plate was a small square floating in the strip, and the hover read as landing
                                          beside the glyph rather than on the button. -->
                                     <Button x:Name="PART_PinButton" Grid.Column="1" Visibility="Collapsed"
+                                            AutomationProperties.AutomationId="Pin"
+                                            AutomationProperties.Name="{Localize WindowStrings.Pin}"
                                             Classes="CaptionButton"
                                             Width="{ResourceReference DockHeaderButtonSize}"
                                             MinWidth="0" MinHeight="0" Padding="0"
@@ -74,6 +76,8 @@
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
                                     <Button x:Name="PART_CloseButton" Grid.Column="2"
+                                            AutomationProperties.AutomationId="Close"
+                                            AutomationProperties.Name="{Localize WindowStrings.Close}"
                                             Classes="CaptionButton CloseButton"
                                             Width="{ResourceReference DockHeaderButtonSize}"
                                             MinWidth="0" MinHeight="0" Padding="0"

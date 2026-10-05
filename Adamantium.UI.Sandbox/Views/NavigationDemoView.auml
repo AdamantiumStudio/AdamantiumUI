@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls">
     <!-- DataContext is NavigationDemoViewModel (adopted by the tab's content presenter). No navigation code lives here:
          the buttons run VM commands, and the single ContentControl below is bound to the VM-owned region - the region's
@@ -34,7 +35,7 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,16,300">
             <!-- LEFT: ContentControl region - a SINGLE page (ContentControlRegionAdapter); navigating replaces it. -->
             <Border Grid.Column="0" CornerRadius="8" Padding="2" BorderThickness="1" BorderBrush="{ResourceReference ControlStrokeColorDefault}">
-                <ContentControl nav:Region.Source="{Binding Region}" ContentTransition="SlideLeft"/>
+                <ContentControl x:Name="Region" nav:Region.Source="{Binding Region}" ContentTransition="SlideLeft"/>
             </Border>
 
             <!-- RIGHT: ItemsControl region - EVERY active view model shown at once as a list (ItemsControlRegionAdapter).
@@ -49,7 +50,7 @@
                     </StackPanel>
                 </StackPanel>
                 <Border Grid.Row="1" CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="{ResourceReference ControlStrokeColorDefault}">
-                    <ListBox nav:Region.Source="{Binding CardsRegion}"/>
+                    <ListBox x:Name="Cards" nav:Region.Source="{Binding CardsRegion}"/>
                 </Border>
             </Grid>
         </Grid>

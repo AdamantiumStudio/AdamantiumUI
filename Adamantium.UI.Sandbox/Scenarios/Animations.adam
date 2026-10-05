@@ -1,0 +1,10 @@
+# The Animations page: animated items added in batches of every kind and cleared again, without an error left behind.
+select id=GalleryTabs/id=Animations
+wait id=AnimationsView/name=+1
+invoke id=AnimationsView/name=+1
+invoke id=AnimationsView/name=+5
+invoke id=AnimationsView/name=+25
+invoke id=AnimationsView/name=Clear
+invoke id=AnimationsView/name="+25 of EVERY kind"
+invoke id=AnimationsView/name="+25 Shimmer"
+invoke id=AnimationsView/name="Clear all"
