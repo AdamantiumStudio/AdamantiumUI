@@ -364,6 +364,13 @@ All packages share one version.
 - The language server painted a type written as a value - `StartupWindow="MainWindow"`, `TargetType="Button"` - as plain
   text; it paints it as a type, and underlines one the build does not find. For a project not built yet, where it has no
   types to check against, it says so on the file instead of staying silent.
+- A markup extension whose type the build does not find, nested in another - `Converter={conv:Missing}` - crashed the
+  AUML generator; it is reported as a type not found.
+- A value its property's type cannot take - `HorizontalAlignment="Middle"`, `Width="wide"`, `IsEnabled="yes"` - came out
+  of the build as a C# error in generated code and passed the preview of a template unnoticed. The build and the preview
+  name it in the markup, with what the property expects.
+- The language server's completion threw inside the `<?xml ...?>` declaration, in a file cut short, and for a file
+  not saved to disk; it offers what fits there, or nothing.
 - A window snapped onto a monitor with a different scale - a quarter of a 100% screen, from a 150% one - drew its
   content at the old scale in the window's corner. The resize arrives before the DPI change and was divided by the old
   scale; the window's size is now read again once the scale has changed.

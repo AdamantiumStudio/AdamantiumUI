@@ -842,7 +842,7 @@ public sealed class CompletionEngine
         try { dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(documentPath))); }
         catch { return null; }
         for (; dir is not null; dir = dir.Parent)
-            if (dir.GetFiles("*.csproj").Length > 0) return dir.FullName;
+            if (dir.Exists && dir.GetFiles("*.csproj").Length > 0) return dir.FullName;
         return null;
     }
 

@@ -1,4 +1,5 @@
-﻿using Adamantium.UI.Markup.AST;
+﻿using System.Globalization;
+using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
 using Adamantium.UI.Markup.Exceptions;
@@ -128,6 +129,11 @@ public class DefaultAumlTransformer : IAumlTransformer
         void ProcessMarkupExtension(IAumlAstMarkupExtensionNode markupExtension)
         {
             markupExtension.TypeReference = ProcessTypeReference(markupExtension.TypeReference, markupExtension.GetLineInfo());
+            if (!markupExtension.TypeReference.IsResolved)
+            {
+                return;
+            }
+
             var resolvedAssembly = typeResolver.GetResolvedAssembly(markupExtension.TypeReference.Assembly);
 
             if (resolvedAssembly == null)
@@ -168,7 +174,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     CheckTypeOf(type.GetMemberByName(property.Name), transformedValue);
                 }
 
-                if (transformedValue is AumlAstMarkupExtensionLiteral literal)
+                if (transformedValue is AumlAstMarkupExtensionLiteral literal && property != null)
                 {
                     literal.TypeReference = CreateResolved(property.PropertyType, markupExtension.GetLineInfo());
                 }
@@ -402,6 +408,23 @@ public class DefaultAumlTransformer : IAumlTransformer
             {
                 diagnostics.ReportError(document.FileName,
                     $"{{{marker.TypeReference.Name}}} on {propertyName} names no key (line {marker.Line}, position {marker.Position}).");
+            }
+        }
+
+        void ReportInvalidLiteral(IAumlAstValueNode value, AumlAstPropertyReference reference)
+        {
+            if (reference is not { IsAttachedProperty: false, TargetType.IsResolved: true } || value == null || !value.IsTextNode())
+            {
+                return;
+            }
+
+            var type = typeResolver.Resolve(reference.TargetType.GetFullTypeName());
+            var text = value.GetTextValue()?.Trim() ?? string.Empty;
+            var expected = type == null ? null : ExpectedLiteral(type, text);
+            if (expected != null)
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"'{text}' is not a valid {type.Name} for {reference.Name} (expected: {expected}) (line {value.Line}, position {value.Position}).");
             }
         }
 
@@ -851,6 +874,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                         var transformedValue = ProcessValueNode(ReadTypeName(propertyNode.Values[i], takesType));
                         propertyNode.Values[i] = transformedValue;
                         ReportMissingResourceKey(transformedValue, reference?.Name);
+                        ReportInvalidLiteral(transformedValue, reference);
                         queue.Enqueue(transformedValue);
                     }
 
@@ -1014,6 +1038,44 @@ public class DefaultAumlTransformer : IAumlTransformer
         container.HasSemanticErrors = diagnostics.HasErrors;
 
         return container;
+    }
+
+    private static string ExpectedLiteral(IResolvedType type, string text)
+    {
+        if (type.TypeKind == ResolvedTypeKind.Enum)
+        {
+            var names = type.Members
+                .Where(m => m.MemberKind == ResolvedMemberKind.Field && m.Name != "value__")
+                .Select(m => m.Name)
+                .ToList();
+            var parts = text.Split(',', '|').Select(p => p.Trim()).ToList();
+            var valid = parts.All(p => names.Contains(p) || (p.Length > 0 && long.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)));
+            return valid ? null : string.Join(", ", names);
+        }
+
+        switch (type.SpecialType)
+        {
+            case ResolvedSpecialType.System_Boolean:
+                return bool.TryParse(text, out _) ? null : "true, false";
+            case ResolvedSpecialType.System_Double:
+            case ResolvedSpecialType.System_Single:
+            case ResolvedSpecialType.System_Decimal:
+                var special = type.SpecialType != ResolvedSpecialType.System_Decimal
+                              && text is "Infinity" or "+Infinity" or "-Infinity" or "NaN" or "Auto";
+                return special || double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? null : "a number";
+            case ResolvedSpecialType.System_SByte:
+            case ResolvedSpecialType.System_Int16:
+            case ResolvedSpecialType.System_Int32:
+            case ResolvedSpecialType.System_Int64:
+                return long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number";
+            case ResolvedSpecialType.System_Byte:
+            case ResolvedSpecialType.System_UInt16:
+            case ResolvedSpecialType.System_UInt32:
+            case ResolvedSpecialType.System_UInt64:
+                return ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number, not negative";
+            default:
+                return null;
+        }
     }
 
     // A trigger reaches a template part by NAME, and a name resolves through the names the template registered - which a
