@@ -11,25 +11,32 @@ public class ResourceProvider
     // ancestor, so a global scan was O(ancestors x all-dictionaries) per resolve).
     private readonly Dictionary<IAdamantiumComponent, List<ResourceInfo>> _byOwner = new();
 
-    public void AddSource(IAdamantiumComponent owner, Type sourceType)
+    /// <summary>Registers the dictionary of <paramref name="sourceType"/> under <paramref name="owner"/>, creating it the
+    /// first time. <paramref name="linkIncludes"/> registers what it links before it, so its own keys win over theirs.</summary>
+    public void AddSource(IAdamantiumComponent owner, Type sourceType, Action<ResourceDictionary> linkIncludes = null)
     {
-        if (!_loadedDictionaries.TryGetValue(sourceType, out var info))
+        var isNew = !_loadedDictionaries.TryGetValue(sourceType, out var info);
+        if (isNew)
         {
             info = new ResourceInfo(sourceType);
             _loadedDictionaries[sourceType] = info;
-            _orderedDictionaries.Add(info);
-
-            InvalidateCache();
         }
 
         if (info.Owners.Add(owner))
         {
+            linkIncludes?.Invoke(info.Resource);
             if (!_byOwner.TryGetValue(owner, out var owned))
             {
                 owned = new List<ResourceInfo>();
                 _byOwner[owner] = owned;
             }
             owned.Add(info);
+        }
+
+        if (isNew)
+        {
+            _orderedDictionaries.Add(info);
+            InvalidateCache();
         }
     }
 

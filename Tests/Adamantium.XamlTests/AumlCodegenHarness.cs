@@ -26,6 +26,8 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Core.Data.MultiBinding),
         typeof(Adamantium.Core.TypeParsing.TypeParser),   // force-load Adamantium.Core so codegen resolves OUR TypeParser
         typeof(Adamantium.UI.Markup.Localization.PluralRules),   // what a counted phrase of a table calls
+        typeof(Adamantium.UI.ApplicationModel.ApplicationBlueprint),   // the application and its blueprint
+        typeof(Adamantium.UI.Themes.FluentTheme.Fluent),   // the themes a blueprint starts on
     ];
 
     public const string WindowHeader =
@@ -104,9 +106,11 @@ internal static class AumlCodegenHarness
     }
 
     /// <summary>Runs both generators over several files (paths relative to the project) with extra build properties, and
-    /// compiles the result against <paramref name="references"/> as well.</summary>
+    /// compiles the result against <paramref name="references"/> as well, together with the project's own C#
+    /// <paramref name="sources"/>.</summary>
     public static GeneratedProject Project(IReadOnlyDictionary<string, string> files,
-        IReadOnlyDictionary<string, string> properties = null, IEnumerable<MetadataReference> references = null)
+        IReadOnlyDictionary<string, string> properties = null, IEnumerable<MetadataReference> references = null,
+        IEnumerable<string> sources = null)
     {
         var options = new Dictionary<string, string>
         {
@@ -126,7 +130,8 @@ internal static class AumlCodegenHarness
 
         var compilation = Compilation()
             .WithAssemblyName("Probe" + Guid.NewGuid().ToString("N"))
-            .AddReferences(references ?? []);
+            .AddReferences(references ?? [])
+            .AddSyntaxTrees((sources ?? []).Select(source => CSharpSyntaxTree.ParseText(source)));
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
         return new GeneratedProject((CSharpCompilation)output, diagnostics);
     }

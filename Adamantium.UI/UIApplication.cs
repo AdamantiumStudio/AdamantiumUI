@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.AggregatorEvents;
+using Adamantium.UI.ApplicationModel;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Dispatcher;
@@ -93,7 +95,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         UIAppContext.Initialize(this, this);
         DesiredFPS = 60;
         appTime = new AppTime();
-        ShutDownMode = ShutDownMode.OnMainWindowClosed;
         windowToSystem = new Dictionary<IWindow, WindowRenderService>();
         addedWindows = new List<IWindow>();
         windowsCollection = new AdamantiumCollection<IWindow>();
@@ -278,18 +279,60 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
-    public ShutDownMode ShutDownMode { get; set; }
+    public static readonly AdamantiumProperty ShutDownModeProperty = AdamantiumProperty.Register(nameof(ShutDownMode),
+        typeof(ShutDownMode), typeof(UIApplication), new PropertyMetadata(ShutDownMode.OnMainWindowClosed));
 
-    public Type StartupType { get; set; }
+    public static readonly AdamantiumProperty StartupTypeProperty = AdamantiumProperty.Register(nameof(StartupType),
+        typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
 
-    /// <summary>The name of the theme the application opens on: Fluent (when unset), EditorPro or macOS. Set it in the
-    /// application's constructor, so the designer, which creates the application the same way, previews in it too. The
-    /// ADAM_THEME environment variable overrides it.</summary>
-    public string StartupTheme { get; set; }
+    public static readonly AdamantiumProperty StartupThemeProperty = AdamantiumProperty.Register(nameof(StartupTheme),
+        typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty StartupThemeVariantProperty = AdamantiumProperty.Register(nameof(StartupThemeVariant),
+        typeof(ThemeVariant), typeof(UIApplication), new PropertyMetadata(default(ThemeVariant)));
+
+    public static readonly AdamantiumProperty StartupLanguageProperty = AdamantiumProperty.Register(nameof(StartupLanguage),
+        typeof(string), typeof(UIApplication), new PropertyMetadata(null));
+
+    /// <summary>When the application ends: with its main window (the default), with its last window, or only when told.</summary>
+    public ShutDownMode ShutDownMode
+    {
+        get => GetValue<ShutDownMode>(ShutDownModeProperty);
+        set => SetValue(ShutDownModeProperty, value);
+    }
+
+    /// <summary>The window the application opens first.</summary>
+    public Type StartupType
+    {
+        get => GetValue<Type>(StartupTypeProperty);
+        set => SetValue(StartupTypeProperty, value);
+    }
+
+    /// <summary>The theme the application opens on: Fluent (when unset), EditorPro, MacOs or one of the application's
+    /// own, which is added to the themes. The application's blueprint states it; a value set in code wins over the
+    /// blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
+    public Type StartupTheme
+    {
+        get => GetValue<Type>(StartupThemeProperty);
+        set => SetValue(StartupThemeProperty, value);
+    }
+
+    /// <summary>The variant of the theme the application opens on: Light, Dark, System - which follows the operating
+    /// system and keeps following it - or one of the theme's own; unset opens on the theme's default. A variant the theme
+    /// does not have fails the start, naming the ones it has.</summary>
+    public ThemeVariant StartupThemeVariant
+    {
+        get => GetValue<ThemeVariant>(StartupThemeVariantProperty);
+        set => SetValue(StartupThemeVariantProperty, value);
+    }
 
     /// <summary>The language the application opens in, by name ("en", "ru"); unset opens in the base language of its
     /// language files. The application's own setting: the operating system's language is not read.</summary>
-    public string StartupLanguage { get; set; }
+    public string StartupLanguage
+    {
+        get => GetValue<string>(StartupLanguageProperty);
+        set => SetValue(StartupLanguageProperty, value);
+    }
 
     /// <summary>The language the application shows. Setting it switches every string while the application runs.</summary>
     public string Language
@@ -414,6 +457,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         GraphicsDeviceService.CreateMainDevice("Adamantium Main");
         // Before any window, so a crash while creating shaders costs a child process, not the application.
         ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
+        ReadBlueprint();
         LoadThemes();
         LoadLanguage();
         SubscribeToEvents();
@@ -438,6 +482,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// device of its own: for a host that builds this application's views without running it (the designer).</summary>
     public void InitializeWithoutRunning()
     {
+        ReadBlueprint();
         LoadThemes();
         LoadLanguage();
         OnInitialize();
@@ -451,6 +496,60 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// wins, so a stand-in registered here is what view-models get in the preview.</summary>
     protected virtual void RegisterDesignServices(IContainerRegistry containerRegistry)
     {
+    }
+
+    private ITheme StartupThemeInstance()
+    {
+        if (StartupTheme == null)
+        {
+            return null;
+        }
+
+        var theme = ThemeManager.Themes.FirstOrDefault(t => t.GetType() == StartupTheme);
+        if (theme == null)
+        {
+            theme = (ITheme)Activator.CreateInstance(StartupTheme);
+            ThemeManager.AddTheme(theme.Name, theme);
+        }
+
+        return theme;
+    }
+
+    private void ReadBlueprint()
+    {
+        var blueprintType = GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.BlueprintType;
+        if (blueprintType == null)
+        {
+            return;
+        }
+
+        var blueprint = (IApplicationBlueprint)Activator.CreateInstance(blueprintType);
+        TakeFromBlueprint(StartupTypeProperty, blueprint.StartupWindow);
+        TakeFromBlueprint(StartupThemeProperty, blueprint.StartupTheme);
+        TakeFromBlueprint(StartupThemeVariantProperty, blueprint.StartupThemeVariant);
+        TakeFromBlueprint(StartupLanguageProperty, blueprint.StartupLanguage);
+        TakeFromBlueprint(ShutDownModeProperty, blueprint.ShutDownMode);
+
+        if (blueprint.Resources != null)
+        {
+            ResourceManager.AddSource(this, blueprint.Resources, ResourceScope.Global);
+        }
+
+        foreach (var include in blueprint.StyleIncludes ?? [])
+        {
+            if (include.Source != null)
+            {
+                ThemeManager.AddStyleSet(include.Source);
+            }
+        }
+    }
+
+    private void TakeFromBlueprint(AdamantiumProperty property, object value)
+    {
+        if (value != null)
+        {
+            SetValue(property, value, ValuePriority.Style);
+        }
     }
 
     private void LoadLanguage()
@@ -474,12 +573,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         // ADAM_THEME wins over StartupTheme: a theme is fully exercised only when current from the first frame.
         var requested = Environment.GetEnvironmentVariable("ADAM_THEME");
-        if (string.IsNullOrEmpty(requested))
-        {
-            requested = StartupTheme;
-        }
-
-        var startOn = string.IsNullOrEmpty(requested) ? fluent : ThemeManager[requested];
+        var startOn = string.IsNullOrEmpty(requested) ? StartupThemeInstance() ?? fluent : ThemeManager[requested];
         if (startOn == null)
         {
             throw new InvalidOperationException(
@@ -487,6 +581,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
 
         ThemeManager.SetTheme(startOn);
+
+        var variant = StartupThemeVariant;
+        if (!variant.IsUnspecified && !ThemeManager.SetVariant(variant))
+        {
+            throw new InvalidOperationException(
+                $"The theme '{startOn.Name}' has no variant '{variant}'. Its variants are: {string.Join(", ", startOn.VariantsByKey.Keys)}" +
+                (variant.FollowsSystem ? "; System needs a light and a dark one." : "."));
+        }
     }
 
     private void SubscribeToEvents()
@@ -651,7 +753,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     protected virtual void OnStartup()
     {
-        if (StartupType != null && typeof(IWindow).IsAssignableFrom(StartupType))
+        if (MainWindow == null && StartupType != null && typeof(IWindow).IsAssignableFrom(StartupType))
         {
             var window = (IWindow)Activator.CreateInstance(StartupType);
             if (window == null) 

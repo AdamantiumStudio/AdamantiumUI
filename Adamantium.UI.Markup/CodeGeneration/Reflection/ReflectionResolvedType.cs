@@ -134,6 +134,10 @@ public class ReflectionResolvedType : IResolvedType
             if (ImplementsInterface("IResourceDictionary")) return EntityType.ResourceDictionary;
             if (ImplementsInterface("IStyleSet")) return EntityType.StyleSet;
             if (ImplementsInterface("IThemeVariant")) return EntityType.ThemeVariant;
+            if (ImplementsInterface("IApplicationBlueprint"))
+            {
+                return EntityType.ApplicationBlueprint;
+            }
             if (ImplementsInterface("IUIComponent"))
             {
                 return EntityType.Control;

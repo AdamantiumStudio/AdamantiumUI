@@ -1,18 +1,25 @@
+using System;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.UI.Automation;
 using Adamantium.UI.Controls.Navigation;
-using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Sandbox;
 
-// Graphics debug (Vulkan validation layers) is controlled by the entry point (Program.cs: EnableGraphicsDebug).
-// Previously this ctor forced it true, which silently won over Program.cs's false and left the validation layer
-// loaded - costing ~3/4 of the frame time. Validation is a dev tool; flip it on in Program.cs when chasing a GPU bug.
+// The first window, the module icons and the ribbon shell's styles are stated in AppBlueprint.auml; the build writes
+// the entry point from it. Graphics debug (Vulkan validation layers) stays off unless ADAM_VK_DEBUG=1: it costs about
+// three quarters of the frame time, so it is a tool for chasing a GPU bug, not a default.
 public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
 {
     public SandboxApplication()
     {
-        ThemeManager.AddStyleSet<Views.RibbonShellStyleSet>();
-        ResourceManager.AddSource(this, typeof(Views.ModuleIcons), ResourceScope.Global);
+        // A dragged picture should also travel as a file: many targets (Paint 3D, packaged apps) ask for a file list
+        // and never look at a bitmap. Off by default in the engine because it writes to disk - an application opts in.
+        UI.Input.DragDropOptions.OfferImagesAsFiles = true;
+
+        IsFixedTimeStep = false;
+        EnableGraphicsDebug = Environment.GetEnvironmentVariable("ADAM_VK_DEBUG") == "1";
+        DesiredFPS = 300;
+        this.UseAutomationAgent();
     }
 
     protected override void RegisterServices(IContainerRegistry containerRegistry)

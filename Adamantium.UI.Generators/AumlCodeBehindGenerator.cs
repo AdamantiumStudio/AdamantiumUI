@@ -51,6 +51,7 @@ namespace Adamantium.UI.Generators
                 var (((parsed, compilation), properties), languages) = source;
 
                 var resourceDictionaries = new List<ResourceDictionaryInfo>();
+                var blueprints = new List<(string File, string ClassName)>();
 
                 if (string.IsNullOrEmpty(properties.RootNamespace))
                 {
@@ -146,6 +147,11 @@ namespace Adamantium.UI.Generators
                                 $"{aumlMetadataContainer.FullClassName}");
                             resourceDictionaries.Add(info);
                         }
+
+                        if (aumlMetadataContainer.RootEntityType == EntityType.ApplicationBlueprint)
+                        {
+                            blueprints.Add((aumlDoc.RelativeFilePath, aumlMetadataContainer.FullClassName));
+                        }
                     }
                     catch (System.Exception ex)
                     {
@@ -160,6 +166,8 @@ namespace Adamantium.UI.Generators
                     codeGenerator.GenerateResourceMap(new RoslynOutputSink(spc), resourceDictionaries);
                     codeGenerator.GenerateAssemblyAttribute(new RoslynOutputSink(spc));
                 }
+
+                ApplicationEntryPoint.Emit(spc, compilation, blueprints, codeGenerator, properties.RootNamespace);
             });
         }
         

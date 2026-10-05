@@ -158,18 +158,7 @@ public class ResourceManager : IResourceManager
 
     public void AddSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
-        switch (scope)
-        {
-            case ResourceScope.Local:
-                _localResources.AddSource(owner, source);
-                break;
-            case ResourceScope.Global:
-                _globalResources.AddSource(owner, source);
-                break;
-            case ResourceScope.Theme:
-                _themeResources.AddSource(owner, source);
-                break;
-        }
+        ProviderOf(scope).AddSource(owner, source, dictionary => AddIncludes(owner, dictionary, scope));
         _resourcesDirty = true;
     }
 
@@ -177,20 +166,28 @@ public class ResourceManager : IResourceManager
     // rather than a shared dictionary type. Same scoping/lifecycle as a linked type.
     public void AddSource(IAdamantiumComponent owner, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local)
     {
-        switch (scope)
-        {
-            case ResourceScope.Local:
-                _localResources.AddSource(owner, instance);
-                break;
-            case ResourceScope.Global:
-                _globalResources.AddSource(owner, instance);
-                break;
-            case ResourceScope.Theme:
-                _themeResources.AddSource(owner, instance);
-                break;
-        }
+        AddIncludes(owner, instance, scope);
+        ProviderOf(scope).AddSource(owner, instance);
         _resourcesDirty = true;
     }
+
+    private void AddIncludes(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)
+    {
+        foreach (var include in dictionary.Includes)
+        {
+            if (include?.Source != null)
+            {
+                AddSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+    }
+
+    private ResourceProvider ProviderOf(ResourceScope scope) => scope switch
+    {
+        ResourceScope.Global => _globalResources,
+        ResourceScope.Theme => _themeResources,
+        _ => _localResources,
+    };
 
     public void NotifyResourcesChanged()
     {

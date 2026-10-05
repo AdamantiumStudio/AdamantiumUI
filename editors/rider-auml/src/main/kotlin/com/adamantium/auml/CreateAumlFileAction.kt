@@ -8,7 +8,8 @@ import com.intellij.psi.PsiDirectory
 
 /**
  * Adds "AUML File" to New/Add: creates a `.auml` file of the chosen kind (Window, View, Docking Pane, Ribbon Tab, Ribbon
- * Group, Empty, Theme, StyleSet, ResourceDictionary) from the bundled fileTemplates/internal templates.
+ * Group, Empty, Theme, StyleSet, ResourceDictionary, Application Blueprint) from the bundled fileTemplates/internal
+ * templates.
  */
 class CreateAumlFileAction : CreateFileFromTemplateAction(
     "AUML File",
@@ -28,6 +29,7 @@ class CreateAumlFileAction : CreateFileFromTemplateAction(
             .addKind("Theme", AumlFileType.getIcon(), "Adamantium Theme")
             .addKind("Style Set", AumlFileType.getIcon(), "Adamantium StyleSet")
             .addKind("Resource Dictionary", AumlFileType.getIcon(), "Adamantium ResourceDictionary")
+            .addKind("Application Blueprint", AumlFileType.getIcon(), "Adamantium ApplicationBlueprint")
     }
 
     override fun getActionName(directory: PsiDirectory, newName: String, templateName: String): String =

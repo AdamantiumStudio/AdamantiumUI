@@ -1,3 +1,4 @@
+using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
@@ -22,6 +23,9 @@ public sealed class AumlTypeModel
     // The project's own AUML views (<View>/<Window> roots), pre-registered from the .auml files so they're recognized
     // and complete like framework controls even though the source generator hasn't emitted their classes.
     private readonly List<IResolvedType> _localViews = new();
+    private readonly Dictionary<string, IReadOnlyList<IResolvedType>> _derivedTypes = new(StringComparer.Ordinal);
+    private readonly List<AumlResourceKey> _declaredKeys = [];
+    private IReadOnlyList<AumlResourceKey> _resourceKeys;
     private IReadOnlyList<LanguageTableInfo> _languageTables;
 
     private AumlTypeModel(ITypeResolver resolver, Compilation compilation)
@@ -142,6 +146,74 @@ public sealed class AumlTypeModel
             }
             catch { /* a malformed view is simply not offered; its own diagnostics surface the real error */ }
         }
+    }
+
+    /// <summary>Reads the keys the markup files declare - dictionaries, palettes, the blueprint's resources - straight from
+    /// the files, so they are offered with no build: the project's own, and those of projects compiled from source here.</summary>
+    public void RegisterResourceKeys(IEnumerable<string> aumlFiles)
+    {
+        foreach (var file in aumlFiles)
+        {
+            string content;
+            try
+            {
+                content = File.ReadAllText(file);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+
+            var document = AumlParser.Parse(content);
+            if (document.HasErrors || document.Root is not AumlAstObjectNode root)
+            {
+                continue;
+            }
+
+            foreach (var resource in DeclaredResources.Of(root))
+            {
+                var reference = resource.Value.TypeReference;
+                var elementType = reference == null ? null : GetElement(reference.Namespace ?? string.Empty, reference.Name) ?? ResolveShortName(reference.Name);
+                var valueType = resource.PaletteColorAs == null
+                    ? elementType
+                    : _resolver.Resolve(DeclaredResources.ValueTypeOf(resource, null));
+                _declaredKeys.Add(new AumlResourceKey(resource.Key, valueType));
+            }
+        }
+
+        _resourceKeys = null;
+    }
+
+    /// <summary>Every resource key the project can reach, one per key: those its markup and the markup of projects
+    /// compiled from source here declare, and those the build named in the assemblies it references.</summary>
+    public IReadOnlyList<AumlResourceKey> ResourceKeys => _resourceKeys ??= CollectResourceKeys();
+
+    private IReadOnlyList<AumlResourceKey> CollectResourceKeys()
+    {
+        const string attributeName = "Adamantium.UI.Core.Resources.ResourceKeyAttribute";
+        var keys = new List<AumlResourceKey>(_declaredKeys);
+        foreach (var assembly in Compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            if (assembly.Name != "Adamantium.UI.Core" && !assembly.Modules.SelectMany(m => m.ReferencedAssemblies).Any(a => a.Name == "Adamantium.UI.Core"))
+            {
+                continue;
+            }
+
+            foreach (var type in TypesOf(assembly.GlobalNamespace))
+            {
+                foreach (var attribute in type.GetAttributes())
+                {
+                    if (attribute.AttributeClass?.ToDisplayString() == attributeName && attribute.ConstructorArguments.Length == 2
+                        && attribute.ConstructorArguments[0].Value is string key)
+                    {
+                        var valueType = attribute.ConstructorArguments[1].Value is ITypeSymbol symbol ? new RoslynResolvedType(symbol) : null;
+                        keys.Add(new AumlResourceKey(key, valueType));
+                    }
+                }
+            }
+        }
+
+        return keys.GroupBy(k => k.Key, StringComparer.Ordinal).Select(g => g.FirstOrDefault(k => k.ValueType != null) ?? g.First()).ToList();
     }
 
     // Compiler-generated types (<Module>, <>c, <PrivateImplementationDetails>, <>z__ReadOnlyArray, …) are never
@@ -391,6 +463,61 @@ public sealed class AumlTypeModel
         return true;
     }
 
+    /// <summary>Every public class of the project's references and source that derives from <paramref name="baseFullName"/>,
+    /// abstract ones left out - what a <c>[TypeOf]</c> property can be given by name.</summary>
+    public IReadOnlyList<IResolvedType> TypesDerivedFrom(string baseFullName)
+    {
+        if (_derivedTypes.TryGetValue(baseFullName, out var cached))
+        {
+            return cached;
+        }
+
+        var found = new List<IResolvedType>();
+        foreach (var assembly in Compilation.SourceModule.ReferencedAssemblySymbols.Append(Compilation.Assembly))
+        {
+            foreach (var type in TypesOf(assembly.GlobalNamespace))
+            {
+                if (type.DeclaredAccessibility == Accessibility.Public && type.TypeKind == TypeKind.Class && !type.IsAbstract
+                    && Derives(type, baseFullName))
+                {
+                    found.Add(new RoslynResolvedType(type));
+                }
+            }
+        }
+
+        _derivedTypes[baseFullName] = found;
+        return found;
+    }
+
+    private static IEnumerable<INamedTypeSymbol> TypesOf(INamespaceSymbol @namespace)
+    {
+        foreach (var type in @namespace.GetTypeMembers())
+        {
+            yield return type;
+        }
+
+        foreach (var child in @namespace.GetNamespaceMembers())
+        {
+            foreach (var type in TypesOf(child))
+            {
+                yield return type;
+            }
+        }
+    }
+
+    private static bool Derives(INamedTypeSymbol type, string baseFullName)
+    {
+        for (var current = type.BaseType; current != null; current = current.BaseType)
+        {
+            if (current.ToDisplayString() == baseFullName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>The project's own types: the build finds them by name, with no prefix.</summary>
     public IReadOnlyList<IResolvedType> ProjectTypes => OwnAssembly()?.Types ?? [];
 
@@ -420,6 +547,45 @@ public sealed class AumlTypeModel
             result.Add(new AumlPropertyInfo(name, getter.MemberType));   // getter return type = the property's value type
         }
         return result;
+    }
+
+    /// <summary>Whether markup can write the type as an element: one the build can create - a class or struct, neither
+    /// abstract nor static nor generic, with a public parameterless constructor, and no attribute, event data or
+    /// exception - or the owner of attached properties, which a property element names
+    /// (<c>&lt;ResourceContext.Resources&gt;</c>).</summary>
+    public bool CanBeElement(IResolvedType type)
+    {
+        if (type is MetadataResolvedType)
+        {
+            return true;
+        }
+
+        if (type is not RoslynResolvedType { Symbol: INamedTypeSymbol symbol })
+        {
+            return false;
+        }
+
+        var creatable = symbol.TypeKind is TypeKind.Class or TypeKind.Struct
+                        && !symbol.IsAbstract
+                        && !symbol.IsStatic
+                        && !symbol.IsGenericType
+                        && (symbol.TypeKind == TypeKind.Struct
+                            || symbol.InstanceConstructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public))
+                        && !DerivesFrom(symbol, "System.Attribute", "System.EventArgs", "System.Exception");
+        return creatable || GetAttachedProperties(type).Count > 0;
+    }
+
+    private static bool DerivesFrom(INamedTypeSymbol symbol, params string[] baseNames)
+    {
+        for (var current = symbol.BaseType; current != null; current = current.BaseType)
+        {
+            if (baseNames.Contains(current.ToDisplayString()))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

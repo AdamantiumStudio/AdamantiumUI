@@ -30,9 +30,11 @@ public static class SourceProjectGraph
     /// <summary>
     /// Builds the root project's compilation. <paramref name="repoRoot"/> (the directory holding the shared
     /// <c>artifacts</c> output) is the boundary: project references under it are compiled from source, the rest
-    /// stay as dlls. Returns the root compilation plus the repo root to watch for <c>*.cs</c> changes.
+    /// stay as dlls. Returns the root compilation, the repo root to watch for <c>*.cs</c> changes, and the directories of
+    /// the in-repo dependencies compiled from source - whose markup the build's generator never ran over here.
     /// </summary>
-    public static (Compilation Root, string RepoRoot, IReadOnlyList<(string XmlNamespace, string ClrSpec)> XmlnsMappings) Build(
+    public static (Compilation Root, string RepoRoot, IReadOnlyList<(string XmlNamespace, string ClrSpec)> XmlnsMappings,
+        IReadOnlyList<string> SourceDependencyDirs) Build(
         string rootCsproj, string binDir, SyntaxTreeCache syntaxCache, MetadataReferenceCache metadataCache)
     {
         var repoRoot = FindRepoRoot(binDir) ?? Path.GetDirectoryName(Path.GetFullPath(rootCsproj));
@@ -98,7 +100,8 @@ public static class SourceProjectGraph
             CollectXmlnsMappings(compilation, xmlnsMappings);
         }
 
-        return (compilations[root.CsprojPath], repoRoot, xmlnsMappings);
+        var dependencyDirs = nodes.Values.Where(node => node != root).Select(node => node.Directory).ToList();
+        return (compilations[root.CsprojPath], repoRoot, xmlnsMappings, dependencyDirs);
     }
 
     // [XmlnsDefinition] attributes are read from each project's own compilation, where the constructor

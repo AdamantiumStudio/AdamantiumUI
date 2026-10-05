@@ -23,7 +23,7 @@
       "choices": [
         { "choice": "Fluent", "displayName": "Fluent", "description": "Fluent design, light and dark" },
         { "choice": "EditorPro", "displayName": "Editor Pro", "description": "An editor's dense look: small type, tight radii, dark and light" },
-        { "choice": "macOS", "displayName": "macOS", "description": "The macOS look, light and dark" }
+        { "choice": "MacOs", "displayName": "macOS", "description": "The macOS look, light and dark" }
       ],
       "defaultValue": "Fluent",
       "replaces": "THEME_NAME"

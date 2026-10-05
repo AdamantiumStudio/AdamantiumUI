@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Drawings;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Resources;
 using NUnit.Framework;
 
@@ -172,6 +177,50 @@ public class ObservableResourceTests
         Unload(button);
 
         Assert.That(Listeners(), Is.EqualTo(before));
+    }
+
+    // An icon of the application's own dictionary is no element of any tree, and nothing re-creates it with the theme:
+    // only the live marker can repaint it when the palette changes.
+    [Test]
+    public void ObservableResource_OnADrawingOfADictionary_FollowsThePalette()
+    {
+        var project = AumlCodegenHarness.Project(new Dictionary<string, string>
+        {
+            ["Icons.auml"] =
+                "<ResourceDictionary xmlns=\"http://adamantium/ui\" xmlns:x=\"http://adamantium/ui/xaml/extensions\">" +
+                "<DrawingImage x:Key=\"Icon\"><DrawingGroup>" +
+                "<GeometryDrawing Geometry=\"M0,0 L10,10\" Stroke=\"{ObservableResource IconColor}\" StrokeThickness=\"1\"/>" +
+                "</DrawingGroup></DrawingImage>" +
+                "</ResourceDictionary>",
+        });
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(DarkPalette), ResourceScope.Global);
+        var icons = (ResourceDictionary)Activator.CreateInstance(project.Load().GetType("Test.App.Icons"));
+        icons.Initialize();
+        var drawing = (GeometryDrawing)((DrawingGroup)((DrawingImage)icons["Icon"]).Drawing).Children[0];
+        Assert.That(drawing.Stroke, Is.SameAs(DarkPalette.Ink), "the dark palette's color");
+
+        _rm.RemoveSources(owner);
+        _rm.AddSource(owner, typeof(LightPalette), ResourceScope.Global);
+        _rm.FlushResourceChanges();
+
+        Assert.That(drawing.Stroke, Is.SameAs(LightPalette.Ink), "repainted by the light palette");
+    }
+
+    private sealed class DarkPalette : ResourceDictionary
+    {
+        public static readonly Brush Ink = new SolidColorBrush(Colors.White);
+
+        protected override void OnInitialize() => Add("IconColor", Ink);
+    }
+
+    private sealed class LightPalette : ResourceDictionary
+    {
+        public static readonly Brush Ink = new SolidColorBrush(Colors.Black);
+
+        protected override void OnInitialize() => Add("IconColor", Ink);
     }
 
     private sealed class ResourcesV1 : ResourceDictionary

@@ -60,6 +60,45 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
+    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application.</summary>
+    public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string applicationQualifiedName,
+        string rootNamespace)
+    {
+        var textGenerator = new TextGenerator();
+        textGenerator.WriteLine(_sourceGeneratorNotice);
+        textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
+        textGenerator.NewLine();
+        textGenerator.WriteLine($"namespace {rootNamespace};");
+        textGenerator.NewLine();
+        textGenerator.WriteLine("internal static class Program");
+        textGenerator.WriteOpenBraceAndIndent();
+        textGenerator.WriteLine("// Drag and drop to and from other applications needs a single-threaded apartment.");
+        textGenerator.WriteLine("[global::System.STAThread]");
+        textGenerator.WriteLine("public static void Main()");
+        textGenerator.WriteOpenBraceAndIndent();
+        textGenerator.WriteLine($"new {applicationQualifiedName}().Run();");
+        textGenerator.UnindentAndWriteCloseBrace();
+        textGenerator.UnindentAndWriteCloseBrace();
+
+        output.Emit("Adamantium.UI.ApplicationEntry", textGenerator.ToString());
+    }
+
+    private static void WriteResourceKeys(TextGenerator textGenerator, AumlMetadataContainer container)
+    {
+        foreach (var resource in DeclaredResources.Of(container.RootNode as AumlAstObjectNode))
+        {
+            var elementType = resource.Value.TypeReference is { IsResolved: true } reference ? reference.GetFullTypeName() : null;
+            var valueType = DeclaredResources.ValueTypeOf(resource, elementType);
+            if (string.IsNullOrEmpty(valueType))
+            {
+                continue;
+            }
+
+            var key = resource.Key.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            textGenerator.WriteLine($"[global::Adamantium.UI.Core.Resources.ResourceKeyAttribute(\"{key}\", typeof(global::{valueType}))]");
+        }
+    }
+
     private string GenerateSources(AumlMetadataContainer container, IDiagnosticSink diagnostics)
     {
         return container.RootEntityType switch
@@ -154,6 +193,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.NewLine();
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
+        WriteResourceKeys(textGenerator, container);
         textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
         textGenerator.WriteLine($"public {className}()");
@@ -199,6 +239,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
+        WriteResourceKeys(textGenerator, container);
         textGenerator.WriteLine($"public sealed class {className} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
@@ -248,6 +289,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteLine($"namespace {@namespace};");
         textGenerator.NewLine();
+        WriteResourceKeys(textGenerator, container);
         textGenerator.WriteLine($"public class {container.RootClassName} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
@@ -298,7 +340,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             textGenerator.NewLine();
         }
 
-        if (entityType == EntityType.Control)
+        if (entityType is EntityType.Control or EntityType.ApplicationBlueprint)
         {
             textGenerator.WriteLine($"public {container.RootClassName}()");
             textGenerator.WriteOpenBraceAndIndent();

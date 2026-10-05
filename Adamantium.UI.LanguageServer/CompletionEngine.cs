@@ -99,9 +99,27 @@ public sealed class CompletionEngine
         var extType = _model.ResolveMarkupExtensionType(extLocal);
 
         var (segment, hasComma) = LastArgument(open[^1].Arguments);
+        int eq = segment.IndexOf('=');
+
+        if (extLocal is "ObservableResource" or "ObservableResourceExtension" or "ResourceReference" or "ResourceReferenceExtension")
+        {
+            string keyPartial = null;
+            if (eq >= 0 && segment[..eq].Trim() == "Key")
+            {
+                keyPartial = segment[(eq + 1)..].TrimStart();
+            }
+            else if (eq < 0 && !hasComma)
+            {
+                keyPartial = segment.Trim();
+            }
+
+            if (keyPartial != null)
+            {
+                return CompleteResourceKeys(keyPartial, TargetPropertyType(open, ctx, namespaces));
+            }
+        }
 
         // "Name=value" -> complete the value of that named property by its type.
-        int eq = segment.IndexOf('=');
         if (eq >= 0)
         {
             var propName = segment[..eq].Trim();
@@ -153,6 +171,47 @@ public sealed class CompletionEngine
         var eq = argument.IndexOf('=');
         var name = eq >= 0 ? argument[..eq].Trim() : _model.GetDefaultProperty(outerType)?.Name;
         return name == null ? null : outerType.GetMemberByName(name).TypeOfBase();
+    }
+
+    private IReadOnlyList<AumlCompletionItem> CompleteResourceKeys(string partial, IResolvedType target) =>
+        _model.ResourceKeys
+            .Where(k => Matches(k.Key, partial) && Holds(k, target))
+            .OrderBy(k => k.Key, StringComparer.Ordinal)
+            .Select(k => new AumlCompletionItem(k.Key, AumlCompletionItemKind.Value, k.ValueType?.Name, ReplaceBack: partial.Length))
+            .ToList();
+
+    private static bool Holds(AumlResourceKey key, IResolvedType target) =>
+        target == null || target.FullName == "object" || target.FullName == "System.Object" || key.ValueType == null
+        || key.ValueType.IsAssignableTo(target.FullName) || key.ValueType.ImplementsInterface(target.Name);
+
+    private IResolvedType TargetPropertyType(List<(string Name, string Arguments)> open, AumlCompletionContext ctx,
+        IReadOnlyDictionary<string, string> namespaces)
+    {
+        if (open.Count > 1)
+        {
+            var outerType = _model.ResolveMarkupExtensionType(LocalName(open[^2].Name));
+            if (outerType == null)
+            {
+                return null;
+            }
+
+            var (argument, _) = LastArgument(open[^2].Arguments);
+            var eq = argument.IndexOf('=');
+            var name = eq >= 0 ? argument[..eq].Trim() : _model.GetDefaultProperty(outerType)?.Name;
+            return name == null ? null : _model.GetPropertyType(outerType, name);
+        }
+
+        var attribute = ctx.AttributeName ?? string.Empty;
+        var dot = attribute.IndexOf('.');
+        if (dot > 0)
+        {
+            var (prefix, ownerName) = SplitName(attribute[..dot]);
+            var owner = ResolveType(prefix, ownerName, namespaces);
+            return owner == null ? null : _model.GetAttachedProperties(owner).FirstOrDefault(p => p.Name == attribute[(dot + 1)..])?.Type;
+        }
+
+        var element = ResolveElement(ctx.ElementName, namespaces);
+        return element == null ? null : _model.GetPropertyType(element, attribute);
     }
 
     private static List<(string Name, string Arguments)> OpenExtensions(string text, int offset)
@@ -232,10 +291,6 @@ public sealed class CompletionEngine
 
         if (extLocal is AumlDirectives.Static)
             return CompleteStaticMembers(partial, namespaces);
-
-        // Resource keys (ResourceReference): no resource index in the type model yet -> nothing to offer.
-        if (extLocal is "ResourceReference" or "ResourceReferenceExtension")
-            return [];
 
         // {ThemeResource Key} -> only the theme's OWN brush keys (the Theme class's Brush properties), not the generic
         // color list the Brush-typed default property would otherwise pull in (which was confusing).
@@ -478,7 +533,7 @@ public sealed class CompletionEngine
         if (xmlns.Length == 0) return [];
 
         return _model.GetElements(xmlns)
-            .Where(t => MatchesStart(t.Name, partial))
+            .Where(t => MatchesStart(t.Name, partial) && _model.CanBeElement(t))
             .OrderBy(t => t.Name)
             .Select(t => new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element))
             .ToList();
@@ -688,6 +743,17 @@ public sealed class CompletionEngine
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length));
             }
         }
+
+        if (typeBase != null)
+        {
+            foreach (var t in _model.TypesDerivedFrom(typeBase))
+            {
+                if (MatchesStart(t.Name, partial) && _model.ResolveShortName(t.Name)?.FullName == t.FullName && seen.Add(t.FullName))
+                {
+                    items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length));
+                }
+            }
+        }
         return items.OrderBy(i => i.Label).ToList();
     }
 
@@ -769,7 +835,7 @@ public sealed class CompletionEngine
         extensions.Contains(Path.GetExtension(file).TrimStart('.'), StringComparer.OrdinalIgnoreCase);
 
     // The project root a relative asset path resolves against: the nearest .csproj ancestor of the edited file.
-    private static string FindProjectRoot(string documentPath)
+    internal static string FindProjectRoot(string documentPath)
     {
         if (string.IsNullOrEmpty(documentPath)) return null;
         DirectoryInfo dir;
