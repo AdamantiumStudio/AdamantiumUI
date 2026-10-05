@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -198,4 +200,6 @@ public class RibbonQuickAccess : ItemsControl
         // Not a plain write: a Local value would mask an author's own binding on Visibility.
         SetCurrentValue(VisibilityProperty, slot == Placement ? Visibility.Visible : Visibility.Collapsed);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonQuickAccessAutomationPeer(this);
 }

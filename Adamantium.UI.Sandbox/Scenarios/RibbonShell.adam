@@ -13,3 +13,25 @@ key Alt F --into id=RibbonWindow
 wait id=RibbonWindow/id=PART_BackButton
 key Escape --into id=RibbonWindow
 absent id=RibbonWindow/id=PART_BackButton
+# Tabs are chosen by name; the open tab's groups follow.
+expect id=Band/name=Home key=H selected=True
+select id=Band/name=Modeling
+expect id=Band/type=Pane name=Modeling
+select id=Band/name=Home
+# The gallery is a list picked from by name.
+select id=Band/name=Materials/name=Gold
+expect id=Band/name=Materials/name=Gold selected=True
+# File opens a page by its row.
+expand id=Band/name=File
+select id=Band/name=File/name=Customize
+expect id=CommandChoices name="Choose commands from"
+collapse id=Band/name=File
+# The module catalog still opens after the window was minimized and restored.
+window id=RibbonWindow minimize
+window id=RibbonWindow restore
+expand id=Band/name=Modules
+invoke "id=Band/name=Modules/name=Module catalog..."
+wait id=CatalogModules
+expect id=CatalogSearch name="Find a module"
+invoke id=CloseCatalog
+absent id=CatalogModules

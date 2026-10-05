@@ -11,5 +11,8 @@ public class ContextMenuAutomationPeer : ItemsControlAutomationPeer
 
     public override AutomationControlType ControlType => AutomationControlType.Menu;
 
+    /// <summary>Off the screen while closed: the menu itself is not in the visual tree, its card is.</summary>
+    public override bool IsOffscreen => !((ContextMenu)Owner).IsOpen;
+
     protected override AutomationControlType ItemControlType => AutomationControlType.MenuItem;
 }

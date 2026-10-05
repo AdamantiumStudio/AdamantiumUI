@@ -1,5 +1,7 @@
 using System.Linq;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -148,4 +150,6 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
         Owner?.EnterTab(this);
         e.Handled = true;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonTabHeaderAutomationPeer(this);
 }

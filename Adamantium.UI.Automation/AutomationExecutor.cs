@@ -469,6 +469,7 @@ public sealed class AutomationExecutor
             Name = peer.Name,
             AutomationId = peer.AutomationId,
             ClassName = peer.ClassName,
+            AccessKey = peer.AccessKey,
             Path = PathOf(peer),
             IsEnabled = peer.IsEnabled,
             IsOffscreen = peer.IsOffscreen,

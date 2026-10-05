@@ -29,5 +29,8 @@ public class TextBoxAutomationPeer : UIComponentAutomationPeer, IValueProvider
         Owner.SetCurrentValue(TextBox.TextProperty, value);
     }
 
+    /// <summary>Its placeholder, when nothing else names it: the words that say what goes in.</summary>
+    protected override string NameCore() => ((TextBox)Owner).Placeholder is { Length: > 0 } placeholder ? placeholder : null;
+
     protected override IReadOnlyList<AutomationPeer> ChildrenCore() => [];
 }

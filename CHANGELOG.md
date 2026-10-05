@@ -190,6 +190,13 @@ All packages share one version.
   window, focusing it if it takes the keyboard, or entering the window as activating it does:
   `AutomationElement.PressKeysAsync("Alt H")`, `adam-auto key Alt --into id=MainWindow`. `adam-auto state` lists each
   window's adorners, a key tip with its keys.
+- Automation of the ribbon: the ribbon is tabs to choose from, a tab header a tab item selected the way a click selects
+  it - a minimized band dropping its groups down - and the open tab a pane of named groups; a group the band collapsed
+  opens and closes its commands; a gallery is a list picked from by name, and opens; "File" opens its menu, a row with a
+  page selected to show it; a drop-down command holds its menu while open; the quick-access bar is a toolbar. A key tip
+  is the element's `AutomationPeer.AccessKey`. The themes name the ribbon and the quick-access bar (`RibbonStrings`).
+- An element with no name of its own is called by its tooltip when that is text, and a text box or a drop-down by its
+  placeholder.
 - `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
   `AutomationProperties.LabeledBy="{Binding ElementName=VolumeLabel}"`, following the label's text and language.
 
@@ -261,6 +268,9 @@ All packages share one version.
 
 ### Fixed
 
+- `RibbonGroup.IsDropDownOpen` was written and read by nothing, so setting it did not open a collapsed group. It is the
+  flyout's state now: set, it opens or closes the flyout; the group's button and the flyout closing itself report back
+  to it.
 - `IUIComponent.GetVisualDescendants` returned the children alone; it is every element below, at any depth, and returns
   `IEnumerable<IUIComponent>`. The ribbon looked for its quick-access bars among the window's children with it, so a bar
   in the caption got no key tips.

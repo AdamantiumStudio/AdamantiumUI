@@ -20,11 +20,17 @@ public class UIComponentAutomationPeer : AutomationPeer
 
     public override AutomationControlType ControlType => AutomationControlType.Custom;
 
-    public override string Name => AutomationProperties.GetName(Owner) ?? LabelText() ?? NameCore() ?? string.Empty;
+    /// <summary>The name set on the element, else the text of the label it is labeled by, else what the peer reads from
+    /// the element itself, else its tooltip when that is text - the one word an icon-only button has.</summary>
+    public override string Name => AutomationProperties.GetName(Owner) ?? LabelText() ?? NameCore() ??
+                                   (Owner as InputUIComponent)?.ToolTip as string ?? string.Empty;
 
     public override string AutomationId => AutomationProperties.GetAutomationId(Owner) ?? Owner.Name ?? string.Empty;
 
     public override string HelpText => AutomationProperties.GetHelpText(Owner) ?? string.Empty;
+
+    /// <summary>The element's key tip, when it wears one.</summary>
+    public override string AccessKey => KeyTipService.GetKeyTip(Owner) ?? string.Empty;
 
     public override string ClassName => Owner.GetType().Name;
 

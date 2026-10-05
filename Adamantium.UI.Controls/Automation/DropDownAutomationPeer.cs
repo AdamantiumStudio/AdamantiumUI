@@ -36,4 +36,7 @@ public class DropDownAutomationPeer : ItemsControlAutomationPeer, ISelectionProv
 
     public void SetValue(string value) =>
         throw new InvalidOperationException($"'{AutomationId}' takes no typed value: select one of its items.");
+
+    /// <summary>Its placeholder, when it is text and nothing else names it.</summary>
+    protected override string NameCore() => ((DropDown)Owner).Placeholder as string;
 }

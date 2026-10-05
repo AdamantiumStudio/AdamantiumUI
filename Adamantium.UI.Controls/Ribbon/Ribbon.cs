@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Core.Commands;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -1287,4 +1289,6 @@ public class Ribbon : Selector
 
         return -1;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonAutomationPeer(this);
 }

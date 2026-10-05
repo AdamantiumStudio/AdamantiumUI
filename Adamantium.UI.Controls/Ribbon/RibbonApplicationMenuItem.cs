@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Templates;
 
@@ -58,4 +60,6 @@ public class RibbonApplicationMenuItem : Button, ISelectable
         get => GetValue<Brush>(BackgroundSelectedProperty);
         set => SetValue(BackgroundSelectedProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonApplicationMenuItemAutomationPeer(this);
 }

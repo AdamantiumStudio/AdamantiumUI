@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -418,4 +420,6 @@ public class RibbonApplicationMenu : Selector
         Unwire(row);
         row.IsSelected = false;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonApplicationMenuAutomationPeer(this);
 }

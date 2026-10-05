@@ -24,7 +24,7 @@ public static class Program
     private static readonly string[] ElementKeys =
     [
         "name", "id", "type", "class", "value", "toggle", "selected", "expanded", "min", "max", "hscroll", "vscroll",
-        "window", "enabled", "offscreen", "focus"
+        "window", "key", "enabled", "offscreen", "focus"
     ];
 
     private const string Usage = """
@@ -53,7 +53,7 @@ public static class Program
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
-                                                              selected, expanded, min, max, hscroll, vscroll, window,
+                                                              selected, expanded, min, max, hscroll, vscroll, window, key,
                                                               enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches
           run <scenario>                                      the commands of a file, one a line, up to the first failure
@@ -487,6 +487,7 @@ public static class Program
             "hscroll" => Invariant(element.HorizontalScroll),
             "vscroll" => Invariant(element.VerticalScroll),
             "window" => element.WindowState,
+            "key" => element.AccessKey,
             "enabled" => element.IsEnabled.ToString(),
             "offscreen" => element.IsOffscreen.ToString(),
             "focus" => element.HasKeyboardFocus.ToString(),

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -400,4 +402,5 @@ public class RibbonGallery : Selector
         return index >= 0 && index < Items.Count ? Items[index] : null;
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonGalleryAutomationPeer(this);
 }

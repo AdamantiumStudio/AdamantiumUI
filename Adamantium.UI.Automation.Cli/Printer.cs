@@ -19,6 +19,11 @@ internal static class Printer
         }
 
         line.Append(" [").Append(element.ClassName).Append(']');
+        if (!string.IsNullOrEmpty(element.AccessKey))
+        {
+            line.Append(" key=").Append(element.AccessKey);
+        }
+
         if (element.Value != null)
         {
             line.Append(" value=\"").Append(element.Value).Append('"');

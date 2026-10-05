@@ -25,6 +25,9 @@ public abstract class AutomationPeer
 
     public abstract string HelpText { get; }
 
+    /// <summary>The keys that reach the element from the keyboard, such as a ribbon command's key tip; empty when none.</summary>
+    public virtual string AccessKey => string.Empty;
+
     /// <summary>The class that draws the element.</summary>
     public abstract string ClassName { get; }
 

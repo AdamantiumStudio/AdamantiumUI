@@ -1,8 +1,10 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Sandbox.ModuleLoading;
 using Adamantium.UI.Sandbox.ViewModels;
@@ -45,10 +47,10 @@ public class RibbonShellAutomationTests
         themes.SetTheme(theme);
     }
 
-    private static async Task<AutomationSession> RibbonShell()
+    private static async Task<AutomationSession> RibbonShell(double width = 1280)
     {
         var shell = new RibbonShellView { DataContext = new RibbonShellViewModel() };
-        var window = new Window { Width = 1280, Height = 720, ClientWidth = 1280, ClientHeight = 720, Content = shell };
+        var window = new Window { Width = width, Height = 720, ClientWidth = width, ClientHeight = 720, Content = shell };
         var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         return session;
@@ -79,5 +81,93 @@ public class RibbonShellAutomationTests
         await session.Find(By.Id("Cut")).ClickAsync();
 
         Assert.That(await session.Find(By.Id("StatusLine")).NameAsync(), Is.EqualTo("Cut the selection."));
+    }
+
+    [Test]
+    public async Task TheRibbon_IsTabsToChooseFrom_AndATabIsSelectedByName()
+    {
+        await using var session = await RibbonShell();
+        var band = session.Find(By.Id("Band"));
+
+        var home = await band.Find(By.Type(AutomationControlType.TabItem)).GetAsync();
+        await band.Find(By.Name("Modeling")).SelectAsync();
+        var page = await band.Find(By.Type(AutomationControlType.Pane)).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(home.Name, Is.EqualTo("Home"));
+            Assert.That(home.AccessKey, Is.EqualTo("H"), "a tab's key tip is its access key");
+            Assert.That(page.Name, Is.EqualTo("Modeling"), "the open tab's groups follow the selection");
+        });
+    }
+
+    [Test]
+    public async Task AGroupTheBandCollapsed_OpensItsCommands_AndOneIsPressed()
+    {
+        await using var session = await RibbonShell(width: 900);
+        var groups = await session.FindAllAsync(By.Type(AutomationControlType.Group));
+        var collapsed = groups.FirstOrDefault(group => group.ExpandCollapseState == "Collapsed");
+        Assume.That(collapsed, Is.Not.Null, "at this width the band has to collapse a group, or this proves nothing");
+
+        var group = session.Find(By.Id("Band")).Find(By.Name(collapsed.Name));
+        var before = await group.Find(By.Type(AutomationControlType.Button)).GetAsync();
+        await group.ExpandAsync();
+        var after = await group.Find(By.Type(AutomationControlType.Button)).GetAsync();
+        await group.CollapseAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before.IsOffscreen, Is.True, "a collapsed group's commands are put away");
+            Assert.That(after.IsOffscreen, Is.False, "opened, they are in its flyout");
+        });
+    }
+
+    [Test]
+    public async Task TheGallery_IsAListPickedFromByName()
+    {
+        await using var session = await RibbonShell();
+        var gallery = session.Find(By.Id("Band")).Find(By.Type(AutomationControlType.List));
+
+        await gallery.Find(By.Name("Gold")).SelectAsync();
+        var gold = await gallery.Find(By.Name("Gold")).GetAsync();
+        var list = await gallery.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gold.IsSelected, Is.True);
+            Assert.That(list.Name, Is.EqualTo("Materials"), "an unnamed gallery is called by its group");
+        });
+    }
+
+    [Test]
+    public async Task File_OpensItsMenu_AndARowWithAPageShowsIt()
+    {
+        await using var session = await RibbonShell();
+        var file = session.Find(By.Id("Band")).Find(By.Name("File"));
+
+        await file.ExpandAsync();
+        await file.Find(By.Name("Customize")).SelectAsync();
+        var choices = await session.Find(By.Id("CommandChoices")).GetAsync();
+        await file.CollapseAsync();
+
+        Assert.That(choices.Name, Is.EqualTo("Choose commands from"), "named by the label beside it");
+    }
+
+    [Test]
+    public async Task ADropDownCommand_HoldsItsMenuWhileOpen()
+    {
+        await using var session = await RibbonShell();
+        var modules = session.Find(By.Id("Band")).Find(By.Name("Modules"));
+
+        await modules.ExpandAsync();
+        var menu = await modules.Find(By.Type(AutomationControlType.Menu)).GetAsync();
+        await modules.CollapseAsync();
+        var closed = await modules.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOffscreen, Is.False);
+            Assert.That(closed.ExpandCollapseState, Is.EqualTo("Collapsed"));
+        });
     }
 }

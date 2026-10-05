@@ -13,6 +13,9 @@ public sealed class ElementInfo
 
     public string ClassName { get; set; }
 
+    /// <summary>The keys that reach it from the keyboard, such as a key tip; empty when none.</summary>
+    public string AccessKey { get; set; }
+
     /// <summary>Where it stands, from its window down, for a person to read.</summary>
     public string Path { get; set; }
 

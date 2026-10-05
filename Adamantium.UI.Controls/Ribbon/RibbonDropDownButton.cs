@@ -1,4 +1,6 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -67,4 +69,6 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         if (value == true) menu.Open(this);
         else menu.IsOpen = false;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonDropDownButtonAutomationPeer(this);
 }

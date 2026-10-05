@@ -1,4 +1,5 @@
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
@@ -46,4 +47,7 @@ public class RibbonContextualLedge : ContentControl
         // filled by the property's changed callback - which a default never fires.
         ZIndex = -1;
     }
+
+    /// <summary>None: the ledge is the label of its tabs, and its text speaks for it.</summary>
+    protected override AutomationPeer OnCreateAutomationPeer() => null;
 }

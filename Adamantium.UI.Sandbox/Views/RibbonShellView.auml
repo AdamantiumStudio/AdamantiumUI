@@ -963,10 +963,13 @@
                                 <StackPanel Grid.Row="2"
                                             Orientation="Vertical"
                                             Margin="0 0 0 8">
-                                    <TextBlock Text="{Localize RibbonShellStrings.ChooseCommandsFrom}"
+                                    <TextBlock x:Name="ChooseCommandsFromLabel"
+                                               Text="{Localize RibbonShellStrings.ChooseCommandsFrom}"
                                                Margin="0 0 0 4"
                                                Opacity="0.7"/>
-                                    <DropDown ItemsSource="{Binding CommandSources}"
+                                    <DropDown x:Name="CommandSource"
+                                              AutomationProperties.LabeledBy="{Binding ElementName=ChooseCommandsFromLabel}"
+                                              ItemsSource="{Binding CommandSources}"
                                               SelectedItem="{Binding CommandSource, Mode=TwoWay}">
                                         <DropDown.ItemTemplate>
                                             <DataTemplate>
@@ -975,14 +978,17 @@
                                         </DropDown.ItemTemplate>
                                     </DropDown>
                                 </StackPanel>
-                                <TextBlock Grid.Row="2"
+                                <TextBlock x:Name="InTheBarLabel"
+                                           Grid.Row="2"
                                            Grid.Column="2"
                                            Text="{Localize RibbonShellStrings.InTheBar}"
                                            VerticalAlignment="Bottom"
                                            Margin="0 0 0 12"
                                            Opacity="0.7"/>
 
-                                <ListBox Grid.Row="3"
+                                <ListBox x:Name="CommandChoices"
+                                         AutomationProperties.LabeledBy="{Binding ElementName=ChooseCommandsFromLabel}"
+                                         Grid.Row="3"
                                          Height="320"
                                          ItemsSource="{Binding CommandChoices}"
                                          SelectedItem="{Binding SelectedChoice, Mode=TwoWay}"
@@ -1000,7 +1006,9 @@
                                             Command="{Binding RemoveFromBarCommand}"
                                             HorizontalAlignment="Stretch"/>
                                 </StackPanel>
-                                <ListBox Grid.Row="3"
+                                <ListBox x:Name="BarCommands"
+                                         AutomationProperties.LabeledBy="{Binding ElementName=InTheBarLabel}"
+                                         Grid.Row="3"
                                          Grid.Column="2"
                                          Height="320"
                                          ItemsSource="{Binding QuickAccess}"
@@ -1146,11 +1154,13 @@
                 <Grid RowDefinitions="Auto,*"
                       Margin="20 16 20 20">
                     <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
-                        <TextBlock Text="{Localize RibbonShellStrings.ModuleCatalogTitle}"
+                        <TextBlock x:Name="CatalogTitle"
+                                   Text="{Localize RibbonShellStrings.ModuleCatalogTitle}"
                                    FontSize="18"
                                    VerticalAlignment="Center"
                                    Margin="0 0 16 0"/>
-                        <TextBox Grid.Column="1"
+                        <TextBox x:Name="CatalogSearch"
+                                 Grid.Column="1"
                                  Width="340"
                                  Height="30"
                                  VerticalAlignment="Center"
@@ -1167,7 +1177,8 @@
                                 VerticalAlignment="Center"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                 Background="{ResourceReference SubtleFillColorSecondary}">
-                            <ListBox Classes="Bare"
+                            <ListBox x:Name="CatalogFilters"
+                                     Classes="Bare"
                                      ItemsSource="{Binding CatalogFilters}"
                                      SelectedItem="{Binding CatalogFilter, Mode=TwoWay}">
                                 <ListBox.ItemContainerStyle>
@@ -1191,7 +1202,8 @@
                             </ListBox>
                         </Border>
 
-                        <Button Grid.Column="4"
+                        <Button x:Name="InstallFromFile"
+                                Grid.Column="4"
                                 Command="{Binding InstallModuleFromFileCommand}"
                                 VerticalAlignment="Center"
                                 Margin="0 0 8 0">
@@ -1207,7 +1219,8 @@
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="5"
+                        <Button x:Name="CloseCatalog"
+                                Grid.Column="5"
                                 Classes="Toolbar"
                                 Padding="6"
                                 VerticalAlignment="Center"
@@ -1225,11 +1238,14 @@
                           ColumnDefinitions="200,*,560"
                           Margin="0 16 0 0">
                         <Grid RowDefinitions="Auto,*">
-                            <TextBlock Text="{Localize RibbonShellStrings.Sections}"
+                            <TextBlock x:Name="SectionsLabel"
+                                       Text="{Localize RibbonShellStrings.Sections}"
                                        FontSize="12"
                                        Margin="10 0 0 6"
                                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-                            <ListBox Grid.Row="1"
+                            <ListBox x:Name="CatalogSections"
+                                     AutomationProperties.LabeledBy="{Binding ElementName=SectionsLabel}"
+                                     Grid.Row="1"
                                      Classes="Bare"
                                      ItemsSource="{Binding CatalogSections}"
                                      SelectedItem="{Binding CatalogSection, Mode=TwoWay}">
@@ -1250,7 +1266,9 @@
                         </Grid>
 
                         <!-- The modules as cards: the card is the row itself, rimmed in the accent when picked. -->
-                        <ListBox Grid.Column="1"
+                        <ListBox x:Name="CatalogModules"
+                                 AutomationProperties.LabeledBy="{Binding ElementName=CatalogTitle}"
+                                 Grid.Column="1"
                                  Classes="Bare"
                                  Margin="16 0"
                                  ItemsSource="{Binding CatalogModules}"
@@ -1629,11 +1647,12 @@
                               Ribbon.CanAddToQuickAccess="False"
                               Margin="4 2"
                               IsChecked="{Binding HasSelection, Mode=TwoWay}"/>
-                    <TextBlock Text="{Localize RibbonShellStrings.GridSize}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
+                    <TextBlock x:Name="GridSizeLabel" Text="{Localize RibbonShellStrings.GridSize}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
                     <!-- Not offered to the quick-access bar at all: a 120-wide control does not belong in a caption
                          strip shared with the window title. Word makes the same call - its zoom slider lives in the
                          status bar and cannot be added either. -->
-                    <Slider Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Ribbon.CanAddToQuickAccess="False"
+                    <Slider x:Name="GridSize" AutomationProperties.LabeledBy="{Binding ElementName=GridSizeLabel}"
+                            Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Ribbon.CanAddToQuickAccess="False"
                             Width="120" Margin="4 2"
                             Minimum="0.1" Maximum="4" Value="{Binding GridSize, Mode=TwoWay}"/>
                     <CheckBox Content="{Localize RibbonShellStrings.Backstage}"
