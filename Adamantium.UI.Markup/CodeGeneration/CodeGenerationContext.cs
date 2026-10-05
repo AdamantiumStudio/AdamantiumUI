@@ -224,6 +224,11 @@ public class CodeGenerationContext
                     continue;
                 }
 
+                if (prop.Values.Count == 0)
+                {
+                    continue;
+                }
+
                 if (resolvedType.MemberKind == ResolvedMemberKind.Event)
                 {
                     TextGenerator.WriteLine($"{symbolName} += {prop.GetTextValue()};");

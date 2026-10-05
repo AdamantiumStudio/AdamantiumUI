@@ -42,6 +42,7 @@ public sealed class AumlWorkspace : IDisposable
                 // Deliberately NOT cached: the next request retries, so completion enables itself once the
                 // project is built — no language-server restart needed.
                 Console.Error.WriteLine($"[auml] no build output for {Path.GetFileName(project)} — build it once; completion enables itself after the build (no restart needed)");
+                WatchFirstBuild(project);
                 return null;
             }
 
@@ -154,6 +155,46 @@ public sealed class AumlWorkspace : IDisposable
         var relative = file.Substring(projectDir.Length).TrimStart('/', '\\').Replace('\\', '/');
         return relative.StartsWith("obj/", StringComparison.OrdinalIgnoreCase)
             || relative.StartsWith("bin/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Why <paramref name="filePath"/> has no type model - what the editor tells its author instead of offering
+    /// nothing in silence; null when it has one.</summary>
+    public string WhyNoModel(string filePath)
+    {
+        var project = FindProjectFile(filePath);
+        if (project is null)
+        {
+            return "This file belongs to no project (no .csproj above it): completion, checks and type colors need one.";
+        }
+
+        return FindProjectBinDir(project) is null
+            ? $"{Path.GetFileNameWithoutExtension(project)} has not been built yet: completion, checks and type colors start once it has been built."
+            : null;
+    }
+
+    private void WatchFirstBuild(string project)
+    {
+        var key = project + "|first-build";
+        if (_watchers.ContainsKey(key))
+        {
+            return;
+        }
+
+        try
+        {
+            var watcher = new FileSystemWatcher(Path.GetDirectoryName(project), "*.dll")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                IncludeSubdirectories = true,
+            };
+            watcher.Created += (_, _) => ScheduleInvalidate(project);
+            watcher.EnableRaisingEvents = true;
+            _watchers[key] = watcher;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[auml] could not watch {Path.GetFileName(project)} for its first build ({ex.Message})");
+        }
     }
 
     private void ScheduleInvalidate(string project)

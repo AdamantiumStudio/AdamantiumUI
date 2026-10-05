@@ -8,6 +8,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Sandbox.ModuleLoading;
+using Adamantium.UI.Sandbox.Resources;
 using Adamantium.UI.Sandbox.Views;
 using Adamantium.UI.Themes.EditorProTheme;
 using Adamantium.UI.Themes.FluentTheme;
@@ -43,6 +44,7 @@ public class SandboxViewsPropertyTraceTests
         ((FakeContext)_app.UIContext).ThemeEngine = themes;
         themes.AddStyleSet<RibbonShellStyleSet>();
         _app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
+        _app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
 
         Theme theme = name switch
         {

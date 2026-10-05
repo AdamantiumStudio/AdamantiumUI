@@ -127,6 +127,13 @@ namespace Adamantium.UI.Generators
                         var aumlMetadataContainer = transformer.Transform(aumlDoc, typeResolver, diagnostics);
                         if (diagnostics.HasErrors)
                         {
+                            // Still the project's blueprint: its entry point is written, so the build reports the
+                            // mistake in it and not also "no Main".
+                            if (aumlMetadataContainer?.RootEntityType == EntityType.ApplicationBlueprint)
+                            {
+                                blueprints.Add((aumlDoc.RelativeFilePath, null));
+                            }
+
                             continue;
                         }
 

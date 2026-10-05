@@ -26,6 +26,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>A file the server cannot help with says why, in a warning on its first line: it belongs to no project, or its
+        project has not been built yet. The project's first build is noticed - the warning goes, and completion, checks and
+        type colors start with no restart.</p>
+        <p>A type written as a plain value - StartupWindow="WorkspaceWindow", StartupTheme="Fluent", EnumType - is painted
+        as a type, and red when the build would not find it, instead of looking like any string.</p>
         <p>New | AUML File offers an Application Blueprint: the application's first window, theme, theme variant, language,
         resources and style sets in markup, from which the build writes the entry point. A second blueprint in a project is
         underlined, and its StartupTheme offers only themes.</p>

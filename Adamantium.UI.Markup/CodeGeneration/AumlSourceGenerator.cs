@@ -60,14 +60,19 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
-    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application.</summary>
+    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application. A blueprint whose
+    /// markup failed (<paramref name="blueprintFullName"/> null) is not named; the entry point is written all the same.</summary>
     public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string applicationQualifiedName,
         string rootNamespace)
     {
         var textGenerator = new TextGenerator();
         textGenerator.WriteLine(_sourceGeneratorNotice);
-        textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
-        textGenerator.NewLine();
+        if (blueprintFullName != null)
+        {
+            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
+            textGenerator.NewLine();
+        }
+
         textGenerator.WriteLine($"namespace {rootNamespace};");
         textGenerator.NewLine();
         textGenerator.WriteLine("internal static class Program");

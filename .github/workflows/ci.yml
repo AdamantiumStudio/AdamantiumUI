@@ -102,3 +102,10 @@ jobs:
           wait $sandbox || status=1
           cat "$RUNNER_TEMP/sandbox.log"
           exit $status
+
+      # Sweeps over every markup file of the repository, Explicit in the suite because they take minutes: the editor
+      # flags nothing the build accepts. They read the Release build above, as the language server reads a built project.
+      - name: Markup sweeps
+        if: steps.changes.outputs.code == 'true'
+        shell: bash
+        run: dotnet test Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj -c Release --no-build --filter "TestCategory=MarkupSweep"

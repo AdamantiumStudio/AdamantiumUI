@@ -389,6 +389,22 @@ public class DefaultAumlTransformer : IAumlTransformer
             return new AumlAstTypeReferenceValueNode(text.GetLineInfo(), ProcessTypeReference(typeReference, text.GetLineInfo()));
         }
 
+        void ReportMissingResourceKey(IAumlAstValueNode value, string propertyName)
+        {
+            if (value is not AumlAstMarkupExtensionNode { TypeReference.Name: "ResourceReference" or "ObservableResource" or "ThemeResource" } marker)
+            {
+                return;
+            }
+
+            var hasKey = marker.Arguments.Any(argument => (string.IsNullOrEmpty(argument.Name) || argument.Name == "Key")
+                                                          && !string.IsNullOrWhiteSpace(argument.Value?.GetTextValue()));
+            if (!hasKey)
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{{marker.TypeReference.Name}}} on {propertyName} names no key (line {marker.Line}, position {marker.Position}).");
+            }
+        }
+
         void CheckTypeOf(IResolvedMember member, IAumlAstValueNode value)
         {
             if (member == null || value is not AumlAstTypeReferenceValueNode { TypeReference.IsResolved: true } typeValue)
@@ -834,6 +850,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     {
                         var transformedValue = ProcessValueNode(ReadTypeName(propertyNode.Values[i], takesType));
                         propertyNode.Values[i] = transformedValue;
+                        ReportMissingResourceKey(transformedValue, reference?.Name);
                         queue.Enqueue(transformedValue);
                     }
 

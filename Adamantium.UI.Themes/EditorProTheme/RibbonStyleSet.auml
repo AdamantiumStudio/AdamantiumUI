@@ -417,9 +417,9 @@
             <Setter.Value>
                 <DataTemplate>
                     <Grid Width="{ResourceReference IconSize}" Height="{ResourceReference IconSize}">
-                        <Path Data="{Binding}" StrokeThickness="{ResourceReference StrokeThinValue}" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="{ResourceReference StrokeThinValue}"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>
@@ -757,8 +757,8 @@
         <Setter Property="MinWidth" Value="{ResourceReference RibbonButtonMinWidth}"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeCaption}"/>
-        <!-- Default icon drawing: path data stroked in whatever color the icon slot carries. `{Binding}` is the icon
-             itself - a string converts to a Geometry on the way in, as it does when written as an attribute. -->
+        <!-- Default icon drawing: path data stroked in whatever color the icon slot carries, or a picture (a
+             DrawingImage of the application's resources) drawn in its own colors. -->
         <Setter Property="IconTemplate">
             <Setter.Value>
                 <DataTemplate>
@@ -766,9 +766,9 @@
                          ink (origin -> painted edge), so the Viewbox scales every icon by a different factor and they
                          sit at different heights. -->
                     <Grid Width="{ResourceReference IconSize}" Height="{ResourceReference IconSize}">
-                        <Path Data="{Binding}" StrokeThickness="{ResourceReference StrokeThinValue}" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="{ResourceReference StrokeThinValue}"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>
@@ -823,10 +823,11 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
-        <!-- The ICON grays out with the label - it is the part a person aims at. -->
+        <!-- The ICON fades with the label - it is the part a person aims at. Faded, not recolored: a picture keeps its
+             own colors. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
-            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
+            <Setter TargetName="PART_Icon" Property="Opacity" Value="0.4"/>
         </PropertyTrigger>
         <!-- Medium: small icon, label beside it. The label moves CELL, so one presenter serves every size. -->
         <PropertyTrigger Property="Ribbon.Size" Value="Medium">
@@ -1179,9 +1180,9 @@
             <Setter.Value>
                 <DataTemplate>
                     <Grid Width="{ResourceReference IconSize}" Height="{ResourceReference IconSize}">
-                        <Path Data="{Binding}" StrokeThickness="{ResourceReference StrokeThinValue}" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="{ResourceReference StrokeThinValue}"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>

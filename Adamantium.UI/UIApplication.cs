@@ -25,6 +25,7 @@ using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Platforms.Windows;
 using Adamantium.UI.Core.Resources;
@@ -79,6 +80,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private long _publishedFrame;
     private long _presentedFrame;
     private long _requestsAtRecord;
+    private long _loadsAtRecord;
     private readonly HashSet<IWindow> _minimizedWindows = [];
     private string _unrecordedBecause;
     private readonly List<TaskCompletionSource> _idleWaiters = [];
@@ -793,6 +795,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     {
                         Update(appTime);
                         _requestsAtRecord = LoopSignal.Requests;
+                        _loadsAtRecord = BitmapImage.LoadsFinished;
                         RecordRenderFrame();
                         DispatchRenderFrame(appTime);
 
@@ -804,6 +807,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 {
                     Update(appTime);
                     _requestsAtRecord = LoopSignal.Requests;
+                    _loadsAtRecord = BitmapImage.LoadsFinished;
                     RecordRenderFrame();
                     DispatchRenderFrame(appTime);
 
@@ -873,7 +877,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public string IdleBlocker { get; private set; }
 
     /// <summary>Completes once the application is idle: the loop has nothing left to do - no posted work, nothing to lay
-    /// out or draw, no animation that finishes on its own - and the frame showing that state has been drawn. Endless
+    /// out or draw, no animation that finishes on its own, no picture still being read from its file - and the frame
+    /// showing that state has been drawn. Endless
     /// animations (a caret, a spinner) do not count, nor does work running off the loop until it posts its result.</summary>
     public Task WaitForIdleAsync()
     {
@@ -930,6 +935,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (RenderDirty.AnyHasWork)
         {
             return _unrecordedBecause ?? "a change not recorded yet";
+        }
+
+        if (BitmapImage.LoadsInFlight > 0)
+        {
+            return $"pictures still loading ({BitmapImage.LoadsInFlight})";
+        }
+
+        if (BitmapImage.LoadsFinished != _loadsAtRecord)
+        {
+            return "a picture that arrived after the frame was recorded";
         }
 
         foreach (var window in Windows)

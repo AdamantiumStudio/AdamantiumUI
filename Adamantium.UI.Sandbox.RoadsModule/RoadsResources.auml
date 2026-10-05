@@ -16,6 +16,46 @@
         </DrawingGroup>
     </DrawingImage>
 
+    <!-- The icons of the module's own commands, in the theme's text color. -->
+    <DrawingImage x:Key="RoadsLayRoadIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,15 L6,1 M13,15 L10,1 M8,2 L8,4 M8,7 L8,9 M8,12 L8,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RoadsBridgeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,10 L15,10 M3,10 A5,5 0 0 1 13,10 M3,10 L3,14 M13,10 L13,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RoadsCrossingIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- What the Roads module brings to the ribbon: its tabs under a ledge of its own, bound against the module - the
          buttons run the module's own commands. Found by the shell under the module's key, its name and "Ribbon". The
          shell's quick-access bar holds the shell's own commands, so these are not offered to it. -->
@@ -26,21 +66,21 @@
             <RibbonTab Header="{Localize RoadsStrings.Roads}"
                        KeyTipService.KeyTip="R">
                 <RibbonGroup Header="{Localize RoadsStrings.Build}"
-                             Icon="M3,15 L6,1 M13,15 L10,1 M8,2 L8,4 M8,7 L8,9 M8,12 L8,14">
+                             Icon="{ObservableResource RoadsLayRoadIcon}">
                     <RibbonButton Content="{Localize RoadsStrings.LayRoad}"
                                   Ribbon.CanAddToQuickAccess="False"
                                   Command="{Binding LayRoadCommand}"
-                                  Icon="M3,15 L6,1 M13,15 L10,1 M8,2 L8,4 M8,7 L8,9 M8,12 L8,14"/>
+                                  Icon="{ObservableResource RoadsLayRoadIcon}"/>
                     <RibbonButton Content="{Localize RoadsStrings.Bridge}"
                                   Ribbon.CanAddToQuickAccess="False"
                                   MaxSize="Medium"
                                   Command="{Binding BridgeCommand}"
-                                  Icon="M1,10 L15,10 M3,10 A5,5 0 0 1 13,10 M3,10 L3,14 M13,10 L13,14"/>
+                                  Icon="{ObservableResource RoadsBridgeIcon}"/>
                     <RibbonButton Content="{Localize RoadsStrings.Crossing}"
                                   Ribbon.CanAddToQuickAccess="False"
                                   MaxSize="Medium"
                                   Command="{Binding CrossingCommand}"
-                                  Icon="M8,1 L8,15 M1,8 L15,8"/>
+                                  Icon="{ObservableResource RoadsCrossingIcon}"/>
                 </RibbonGroup>
             </RibbonTab>
         </RibbonTabSet>

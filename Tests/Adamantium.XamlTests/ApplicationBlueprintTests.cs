@@ -130,6 +130,18 @@ public class ApplicationBlueprintTests
             Has.Some.Contains("Icons is not a Theme: ApplicationBlueprint.StartupTheme"));
 
     [Test]
+    public void ABlueprintWithAMistake_StillGetsItsEntryPoint_SoOnlyTheMistakeIsReported()
+    {
+        var project = AumlCodegenHarness.Project(
+            Files(("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} StartupWindow=\"NoSuchWindow\"/>")), sources: [Application]);
+        var messages = project.Errors.Select(e => $"{e.Id}: {e.GetMessage()}").ToList();
+
+        Assert.That(messages, Has.Some.Contains("NoSuchWindow"), string.Join(" | ", messages));
+        Assert.That(project.Source, Does.Contain("new global::Test.App.App().Run();"),
+            "without the entry point the build adds \"no Main\" to the mistake actually made");
+    }
+
+    [Test]
     public void AProjectWithNoBlueprint_GetsNoEntryPoint() =>
         Assert.That(AumlCodegenHarness.Project(Files(), sources: [Application]).Source, Does.Not.Contain("ApplicationBlueprintAttribute"));
 

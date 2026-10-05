@@ -7,6 +7,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Sandbox.ModuleLoading;
+using Adamantium.UI.Sandbox.Resources;
 using Adamantium.UI.Sandbox.ViewModels;
 using Adamantium.UI.Sandbox.Views;
 using Adamantium.UI.Themes.FluentTheme;
@@ -41,6 +42,7 @@ public class RibbonShellAutomationTests
         ((FakeContext)_app.UIContext).ThemeEngine = themes;
         themes.AddStyleSet<RibbonShellStyleSet>();
         _app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
+        _app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
 
         var theme = new Fluent();
         themes.AddTheme(theme.Name, theme);

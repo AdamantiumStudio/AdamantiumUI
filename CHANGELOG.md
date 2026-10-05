@@ -237,8 +237,8 @@ All packages share one version.
   selection and state - and `AutomationSession.TreeAsync` (`adam-auto tree`) lists every element that way, where it
   gave names alone.
 - `UIApplication.WaitForIdleAsync` completes once the application is idle: nothing posted to the loop, no layout,
-  binding or recorded change left to do, no animation that ends on its own still running, no glyphs on their way - and
-  the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
+  binding or recorded change left to do, no animation that ends on its own still running, no glyphs or pictures on their
+  way (`BitmapImage.LoadsInFlight`, `LoadsFinished`) - and the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
   idle: one that loops forever, and a ticker registered with `AnimationManager.AddEndlessTicker` (a caret's blink, an
   animated picture). Automation waits for it after every action instead of for two frames, and `adam-auto` says what
   kept the application busy when it does not settle.
@@ -264,8 +264,15 @@ All packages share one version.
 - `UIApplication.StartupThemeVariant`: the variant of the theme the application opens on - Light, Dark, System or one
   of the theme's own. A variant the theme does not have fails the start, naming the ones it has.
 - `IThemeManager.AddStyleSet(Type)`: adds a style set known only at run time to every theme.
+- `IconPresenter` draws an icon of either kind: path data stroked in its `Stroke`, or a picture - a `DrawingImage` of
+  the application's resources - in its own colors. The themes' ribbon commands, groups and application menu items draw
+  their `Icon` with it, so `Icon="{ObservableResource SaveIcon}"` shows the picture; until now a picture there went
+  into a path's data and drew nothing.
 
 ### Changed
+
+- A ribbon command that cannot run fades its icon instead of recoloring it, so a picture with colors of its own fades
+  alike.
 
 - `UIApplication.StartupTheme` is the theme's type, not its name, and may be one of the application's own themes,
   which is added to the themes; `ADAM_THEME` still names one. `StartupType`, `StartupTheme`, `StartupLanguage` and
@@ -347,6 +354,16 @@ All packages share one version.
 
 ### Fixed
 
+- A mistake in the application blueprint - a `StartupWindow` the build does not find - also cost the entry point, and the
+  build added "no static Main method" to the real error; the entry point is written regardless now.
+- `{ResourceReference}`, `{ObservableResource}` or `{ThemeResource}` written with no key - `Icon="{ResourceReference }"`
+  mid-edit - crashed the AUML generator with an index out of range and the preview said nothing; both now report that
+  the marker on that property names no key.
+- A property element with nothing in it - `<ApplicationBlueprint.StyleIncludes>` holding only a comment - crashed the
+  AUML generator with an index out of range; it sets nothing now.
+- The language server painted a type written as a value - `StartupWindow="MainWindow"`, `TargetType="Button"` - as plain
+  text; it paints it as a type, and underlines one the build does not find. For a project not built yet, where it has no
+  types to check against, it says so on the file instead of staying silent.
 - A window snapped onto a monitor with a different scale - a quarter of a 100% screen, from a 150% one - drew its
   content at the old scale in the window's corner. The resize arrives before the DPI change and was divided by the old
   scale; the window's size is now read again once the scale has changed.

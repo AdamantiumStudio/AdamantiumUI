@@ -17,6 +17,8 @@ public sealed class LspServer
     // Concurrent: the message loop mutates it while the workspace's bin-watcher thread reads it during auto-revalidation.
     private readonly ConcurrentDictionary<string, string> _documents = new();
     private readonly object _writeLock = new();
+    private int _requestCount;
+    private bool _refreshesSemanticTokens;
 
     public LspServer(AumlWorkspace workspace, Stream input, Stream output)
     {
@@ -32,6 +34,18 @@ public sealed class LspServer
     {
         foreach (var uri in _documents.Keys)
             PublishDiagnostics(uri);
+
+        if (!_refreshesSemanticTokens)
+        {
+            return;
+        }
+
+        Write(new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = $"refresh-{Interlocked.Increment(ref _requestCount)}",
+            ["method"] = "workspace/semanticTokens/refresh"
+        });
     }
 
     public void Run()
@@ -53,10 +67,16 @@ public sealed class LspServer
     {
         var method = msg["method"]?.GetValue<string>();
         var id = msg["id"];
+        if (method == null)
+        {
+            return false;
+        }
 
         switch (method)
         {
             case "initialize":
+                _refreshesSemanticTokens = msg["params"]?["capabilities"]?["workspace"]?["semanticTokens"]?["refreshSupport"]
+                    ?.GetValue<bool>() == true;
                 Reply(id, InitializeResult());
                 break;
 
@@ -547,6 +567,11 @@ public sealed class LspServer
             if (!IsLanguageFile(uri) && ApplicationBlueprintCheck.Check(UriToLocalPath(uri), text) is { } blueprint)
             {
                 diagnostics.Add(Diagnostic(blueprint));
+            }
+
+            if (!IsLanguageFile(uri) && _workspace.WhyNoModel(UriToLocalPath(uri)) is { } noModel)
+            {
+                diagnostics.Add(Diagnostic(new AumlDiagnostic(0, 0, 1, noModel, IsWarning: true)));
             }
         }
         Notify("textDocument/publishDiagnostics", new JsonObject { ["uri"] = uri, ["diagnostics"] = diagnostics });
