@@ -26,6 +26,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>New | AUML File offers a Ribbon Tab, a Ribbon Group and an Empty file - a &lt;Grid&gt; root with the
+        namespaces already declared, to be replaced by any control. A file with any control at its root is a class of
+        its own, which other markup places by name: a ribbon can be split into a file per tab and a file per group.</p>
         <p>A type in {x:Type} and a type or member in {x:Static} that the build would not find is underlined while
         typing, with the build's own message, and painted as unknown.</p>
         <p>A type written without a prefix is found the way the build finds it - by its short name: {x:Static
@@ -69,6 +72,9 @@
         <internalFileTemplate name="Adamantium Window"/>
         <internalFileTemplate name="Adamantium View"/>
         <internalFileTemplate name="Adamantium DockingPane"/>
+        <internalFileTemplate name="Adamantium RibbonTab"/>
+        <internalFileTemplate name="Adamantium RibbonGroup"/>
+        <internalFileTemplate name="Adamantium Empty"/>
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>
