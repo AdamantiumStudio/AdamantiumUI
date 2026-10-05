@@ -1,3 +1,5 @@
 <Language>
     <Phrase Key="MoreTabs" Text="Ещё вкладки"/>
+    <Phrase Key="CloseTab" Text="Закрыть вкладку"/>
+    <Phrase Key="PinTab" Text="Закрепить вкладку"/>
 </Language>

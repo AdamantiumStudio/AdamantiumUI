@@ -1,0 +1,23 @@
+# The PropertyGrid page: properties written as their editors write them, converted to their type, a flag toggled, a
+# composite opened to its parts, a value taken back by its reset button, and both inspectors pointed at both objects.
+select id=GalleryTabs/id=PropertyGrid
+wait id=Inspector/name=Name
+set id=Inspector/name=Name Hero
+expect id=Inspector/name=Name value=Hero
+invoke id=Inspector/name=Name/id=PART_Reset
+expect id=Inspector/name=Name value=Player
+set id=Inspector/name=Mass 12.5
+expect id=Inspector/name=Mass value=12.5
+toggle id=Inspector/name=Enabled
+expect id=Inspector/name=Enabled toggle=Off
+toggle id=Inspector/name=Enabled
+expect id=Inspector/name=Enabled toggle=On
+expand id=Inspector/name=Position
+wait id=Inspector/name=X
+collapse id=Inspector/name=Position
+absent id=Inspector/name=X
+expect id=GeneratedInspector/name=Name value=Enemy
+toggle "id=PropertyGridView/name=Point both at both objects"
+expect id=Inspector/name=Name value=
+toggle "id=PropertyGridView/name=Point both at both objects"
+expect id=Inspector/name=Name value=Player

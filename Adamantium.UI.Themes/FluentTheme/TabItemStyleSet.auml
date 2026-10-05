@@ -73,6 +73,8 @@
                                  losing it, and the more destructive of the two belongs at the very edge. Its LOOK is
                                  PinButtonTemplate, so a host restyles it without touching this template. -->
                             <ToggleButton x:Name="PART_PinButton" Grid.Column="3"
+                                    AutomationProperties.AutomationId="PinTab"
+                                    AutomationProperties.Name="{Localize TabStrings.PinTab}"
                                     Template="{TemplateBinding PinButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"
@@ -81,6 +83,8 @@
                             <!-- The close button; its LOOK is CloseButtonTemplate (a themed 'x' from TabControlStyleSet).
                                  Collapsed unless the owner turns close buttons on (see the ShowCloseButton trigger). -->
                             <Button x:Name="PART_CloseButton" Grid.Column="4"
+                                    AutomationProperties.AutomationId="CloseTab"
+                                    AutomationProperties.Name="{Localize TabStrings.CloseTab}"
                                     Template="{TemplateBinding CloseButtonTemplate}"
                                     Margin="8 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"

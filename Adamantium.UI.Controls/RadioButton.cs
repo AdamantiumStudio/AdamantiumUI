@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -100,4 +102,6 @@ public class RadioButton : ToggleButton
     // A radio button can't stretch: its ring + label are a fixed visual. It reports the size it actually draws (not the
     // slot it was handed) so ActualWidth/RenderSize/ClipRectangle stop lying - see ContentControl.ArrangeContentSize.
     protected override Size ArrangeOverride(Size finalSize) => ArrangeContentSize(finalSize);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RadioButtonAutomationPeer(this);
 }

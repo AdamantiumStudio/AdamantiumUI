@@ -82,7 +82,7 @@ public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider
 
     private static bool OwnsItsPopup(object shownFor) => shownFor switch
     {
-        DropDown or MenuItem or Ribbon or RibbonApplicationMenu or RibbonGroup or RibbonGallery => true,
+        DropDown or MenuItem or Ribbon or RibbonApplicationMenu or RibbonGroup or RibbonGallery or ColorPickerButton => true,
         ContextMenu { PlacementTarget: RibbonDropDownButton button } menu => ReferenceEquals(button.DropDownMenu, menu),
         _ => false
     };

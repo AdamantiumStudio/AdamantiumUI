@@ -1,3 +1,5 @@
 <Language>
     <Phrase Key="MoreTabs" Text="More tabs"/>
+    <Phrase Key="CloseTab" Text="Close tab"/>
+    <Phrase Key="PinTab" Text="Pin tab"/>
 </Language>

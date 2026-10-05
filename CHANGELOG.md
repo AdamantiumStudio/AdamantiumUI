@@ -200,6 +200,13 @@ All packages share one version.
   brought into view and, in a tree, opened, with or without an element; a cell is selected and takes a value the way
   committing an edit does - `CellEditEnding`, a blocking rule, the write through the column, the undo history; a row's
   details toggle opens its panel. New patterns `IGridProvider`, `IGridItemProvider` and `ITableProvider`.
+- Automation of `PropertyGrid`: a table of property rows, each called by its property's name and written the way its
+  editor writes it - converted to the property's type, to every object the row stands for, or refused; a true-or-false
+  property is toggled and a composite one opens to its parts.
+- More automation peers: a tab item's children are the close and pin buttons its tab control offers (the themes name
+  them, `TabStrings.CloseTab`, `PinTab`); `ColorPicker`, `ColorWheel` and `ColorPickerButton` hold their color as a
+  value, `#AARRGGBB`, and the button opens its picker; a `RadioButton` is a radio button selected as a click selects
+  it; a `DataPager` is a group.
 - An element with no name of its own is called by its tooltip when that is text, and a text box or a drop-down by its
   placeholder.
 - `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
@@ -273,6 +280,8 @@ All packages share one version.
 
 ### Fixed
 
+- `ColorPickerButton` wrote `IsOpen` on a click and when its flyout closed, and `IsIndeterminate` when a color was
+  chosen, as local values - an application's binding on either stopped driving it. They are current values now.
 - A template took over the parts of a control built inside it that had applied its own template already - as code
   made from markup does. A tab control in a data grid's row details showed no tabs: its strip no longer knew the tab
   control the tabs were written in, and refused them. A template now stamps only what it built.
