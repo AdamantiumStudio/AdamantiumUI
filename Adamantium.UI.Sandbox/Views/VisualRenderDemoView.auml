@@ -17,7 +17,7 @@
 
             <StackPanel Orientation="Vertical" MarginRight="28">
                 <TextBlock x:Name="SourceLabel" Text="{Localize VisualRenderStrings.Source}" FontSize="14" MarginBottom="8"/>
-                <TextBox x:Name="Source" AutomationProperties.LabeledBy="{Binding ElementName=SourceLabel}"
+                <TextBox AutomationProperties.AutomationId="Source" AutomationProperties.LabeledBy="{Binding ElementName=SourceLabel}"
                          Text="{Binding AumlText, Mode=TwoWay}"
                          Width="380" Height="150"/>
                 <Button Content="{Localize VisualRenderStrings.Render}"

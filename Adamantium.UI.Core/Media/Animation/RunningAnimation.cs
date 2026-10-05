@@ -45,6 +45,8 @@ internal sealed class RunningAnimation : IRunningAnimation
     // rode only the transform's own node/global marks).
     public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Owner;
 
+    public bool IsEndless => double.IsPositiveInfinity(_iterationCount);
+
     /// <summary>Advances by <paramref name="deltaSeconds"/>; returns true once finished (final value applied,
     /// completion callback fired). Honors Delay, IterationCount (incl. infinite) and AutoReverse (ping-pong).</summary>
     public bool Advance(double deltaSeconds)

@@ -387,9 +387,11 @@ public sealed class LayoutManager
 
         if (!control.IsMeasureValid)
         {
-            // Measure re-dirtied: re-queue, but only if the node is still ours; one that left would spin the pass, and
-            // re-attaching re-registers it.
-            if (ReferenceEquals(For(node), this)) ToArrange.Enqueue(node);
+            if (ToMeasure.Contains(node))
+            {
+                ToArrange.Enqueue(node);
+            }
+
             return;
         }
 
@@ -438,6 +440,8 @@ public sealed class LayoutManager
         private readonly HashSet<IUIComponent> _members = new();
 
         public bool IsEmpty => _members.Count == 0;
+
+        public bool Contains(IUIComponent node) => _members.Contains(node);
 
         internal int Count => _members.Count;
 

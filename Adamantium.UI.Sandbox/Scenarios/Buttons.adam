@@ -14,8 +14,15 @@ expand id=Priority
 select id=Priority/name="High priority"
 expect id=PriorityChoice name="Priority: high"
 expect id=Priority expanded=Collapsed
-expand id=City
-click id=City/type=ListItem
-expect id=City expanded=Collapsed
+expand id=Priority
+click id=Priority/name="Low priority"
+expect id=Priority expanded=Collapsed
+expect id=PriorityChoice name="Priority: low"
 click id=ButtonsView/name=Reset
 expect id=ClickCount name=0
+# Back as the page opens.
+toggle id=ButtonsView/name=Notify
+click id=ButtonsView/name=Free
+expand id=Priority
+select id=Priority/name="Normal priority"
+expect id=PriorityChoice name="Priority: normal"

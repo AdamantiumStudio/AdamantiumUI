@@ -1,0 +1,14 @@
+# The Vector icons page: one drawing at every size - the showcase size and the group rotation are sliders, the accent
+# a color picker.
+select id=GalleryTabs/id=VectorIcons
+wait id=ShowcaseSize
+set id=ShowcaseSize 200
+expect id=ShowcaseSize value=200
+set id=GroupRotation 90
+expect id=GroupRotation value=90
+set id=Accent #FFEF4444
+expect id=Accent value=#FFEF4444
+# Back as the page opens.
+set id=ShowcaseSize 220
+set id=GroupRotation 0
+set id=Accent #FF00BFFF

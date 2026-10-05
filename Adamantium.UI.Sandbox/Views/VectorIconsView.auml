@@ -143,11 +143,12 @@
                         Margin="0,18,0,0">
                 <StackPanel Orientation="Vertical"
                             MarginRight="28">
-                    <TextBlock Text="{Localize VectorIconsStrings.ShowcaseSize}"
+                    <TextBlock x:Name="ShowcaseSizeLabel" Text="{Localize VectorIconsStrings.ShowcaseSize}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
-                        <Slider Width="230"
+                        <Slider AutomationProperties.AutomationId="ShowcaseSize" AutomationProperties.LabeledBy="{Binding ElementName=ShowcaseSizeLabel}"
+                                Width="230"
                                 Minimum="24"
                                 Maximum="360"
                                 IsMoveToPointEnabled="true"
@@ -160,11 +161,12 @@
                                    Foreground="{ResourceReference TextFillColorSecondary}"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Localize VectorIconsStrings.GroupRotation}"
+                    <TextBlock x:Name="GroupRotationLabel" Text="{Localize VectorIconsStrings.GroupRotation}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                Margin="0,12,0,2"/>
                     <StackPanel Orientation="Horizontal">
-                        <Slider Width="230"
+                        <Slider AutomationProperties.AutomationId="GroupRotation" AutomationProperties.LabeledBy="{Binding ElementName=GroupRotationLabel}"
+                                Width="230"
                                 Minimum="0"
                                 Maximum="360"
                                 IsMoveToPointEnabled="true"
@@ -183,10 +185,11 @@
                     <TextBlock Text="{Localize VectorIconsStrings.Colors}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="8"/>
-                    <TextBlock Text="{Localize VectorIconsStrings.Accent}"
+                    <TextBlock x:Name="AccentLabel" Text="{Localize VectorIconsStrings.Accent}"
                                Foreground="{ResourceReference TextFillColorSecondary}"
                                MarginBottom="2"/>
-                    <ColorPickerButton SelectedColor="{Binding Accent, Mode=TwoWay}"
+                    <ColorPickerButton AutomationProperties.AutomationId="Accent" AutomationProperties.LabeledBy="{Binding ElementName=AccentLabel}"
+                                       SelectedColor="{Binding Accent, Mode=TwoWay}"
                                        Width="200"
                                        Height="30"
                                        MarginBottom="12"/>

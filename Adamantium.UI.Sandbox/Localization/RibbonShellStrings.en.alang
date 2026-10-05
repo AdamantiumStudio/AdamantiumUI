@@ -64,6 +64,11 @@
     <Phrase Key="Wireframe" Text="Wireframe"/>
     <Phrase Key="Grid" Text="Grid"/>
     <Phrase Key="Gizmos" Text="Gizmos"/>
+    <Phrase Key="Transform" Text="Transform"/>
+    <Phrase Key="SelectGizmo" Text="Select"/>
+    <Phrase Key="MoveGizmo" Text="Move"/>
+    <Phrase Key="RotateGizmo" Text="Rotate"/>
+    <Phrase Key="ScaleGizmo" Text="Scale"/>
     <Phrase Key="HasSelection" Text="Has selection"/>
     <Phrase Key="GridSize" Text="Grid size"/>
     <Phrase Key="Backstage" Text="Backstage"/>
@@ -486,5 +491,9 @@
             Smoothed="Terrain smoothed."
             AddedStar="Star added."
             AddedPlanet="Planet added."
-            AddedMoon="Moon added."/>
+            AddedMoon="Moon added."
+            SelectingObjects="Click to select objects."
+            MovingSelection="Drag to move the selection."
+            RotatingSelection="Drag to rotate the selection."
+            ScalingSelection="Drag to scale the selection."/>
 </Language>

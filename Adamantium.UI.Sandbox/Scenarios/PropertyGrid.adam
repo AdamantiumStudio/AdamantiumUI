@@ -8,6 +8,8 @@ invoke id=Inspector/name=Name/id=PART_Reset
 expect id=Inspector/name=Name value=Player
 set id=Inspector/name=Mass 12.5
 expect id=Inspector/name=Mass value=12.5
+invoke id=Inspector/name=Mass/id=PART_Reset
+expect id=Inspector/name=Mass value=80
 toggle id=Inspector/name=Enabled
 expect id=Inspector/name=Enabled toggle=Off
 toggle id=Inspector/name=Enabled

@@ -7,7 +7,7 @@
          and a RingProgressBar; two dropdowns drive the ring's arc start position and sweep direction.
          Scrolls vertically only: with the horizontal bar disabled the content is measured at the viewport WIDTH, so
          nothing here has to fit the window height for the ring section below to be reachable. -->
-    <ScrollViewer x:Name="RangesScroll" Margin="24"
+    <ScrollViewer AutomationProperties.AutomationId="RangesScroll" Margin="24"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
     <StackPanel Orientation="Vertical">
@@ -15,18 +15,18 @@
         <!-- Section 1: one shared value across a horizontal + vertical Slider and a linear ProgressBar. -->
         <TextBlock x:Name="OneValueLabel" Text="{Localize RangesStrings.OneValue}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
-            <Slider x:Name="ValueSlider" AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}" Width="300"
+            <Slider AutomationProperties.AutomationId="ValueSlider" AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}" Width="300"
                     Value="{Binding Value, Mode=TwoWay}"
                     TickFrequency="1"
                     IsSnapToTickEnabled="true"
                     Maximum="{Binding Maximum}"
                     IsValueToolTipEnabled="true"
                     IsMoveToPointEnabled="true"/>
-            <TextBlock x:Name="ValueText" Text="{Binding Value}" VerticalAlignment="Center" FontSize="16" Margin="16,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="ValueText" Text="{Binding Value}" VerticalAlignment="Center" FontSize="16" Margin="16,0,0,0"/>
         </StackPanel>
 
         <TextBlock x:Name="ProgressLabel" Text="{Localize RangesStrings.Progress}" Margin="0,20,0,6"/>
-        <ProgressBar x:Name="Progress" AutomationProperties.LabeledBy="{Binding ElementName=ProgressLabel}" Width="300" Height="12" Value="{Binding Value}" Maximum="{Binding Maximum}" HorizontalAlignment="Left"/>
+        <ProgressBar AutomationProperties.AutomationId="Progress" AutomationProperties.LabeledBy="{Binding ElementName=ProgressLabel}" Width="300" Height="12" Value="{Binding Value}" Maximum="{Binding Maximum}" HorizontalAlignment="Left"/>
 
         <!-- A SPAN of the same scale: two handles that cannot cross, plus the band between them, which drags the whole
              span at once. MinimumRangeWidth keeps that band grabbable even when the span is squeezed to nothing. -->
@@ -35,7 +35,7 @@
              everything after it, and a control sitting there would twitch on every step of a drag.
              Snapping to whole units keeps both the values and that width steady. -->
         <StackPanel Orientation="Horizontal">
-            <RangeSlider x:Name="SpanUpright" AutomationProperties.LabeledBy="{Binding ElementName=RangeLabel}"
+            <RangeSlider AutomationProperties.AutomationId="SpanUpright" AutomationProperties.LabeledBy="{Binding ElementName=RangeLabel}"
                          Orientation="Vertical" Height="150" Margin="0,0,40,0"
                          Minimum="0" Maximum="{Binding Maximum}"
                          MinimumRangeWidth="16"
@@ -45,7 +45,7 @@
                          IsValueToolTipEnabled="true"
                          LowerValue="{Binding SpanStart, Mode=TwoWay}"
                          UpperValue="{Binding SpanEnd, Mode=TwoWay}"/>
-            <RangeSlider x:Name="Span" AutomationProperties.LabeledBy="{Binding ElementName=RangeLabel}" Width="300"
+            <RangeSlider AutomationProperties.AutomationId="Span" AutomationProperties.LabeledBy="{Binding ElementName=RangeLabel}" Width="300"
                          Minimum="0"
                          Maximum="{Binding Maximum}"
                          MinimumRangeWidth="16"
@@ -55,13 +55,13 @@
                          LowerValue="{Binding SpanStart, Mode=TwoWay}"
                          UpperValue="{Binding SpanEnd, Mode=TwoWay}"
                          VerticalAlignment="Center"/>
-            <TextBlock x:Name="SpanStartText" Text="{Binding SpanStart}" VerticalAlignment="Center" FontSize="16" Margin="16,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="SpanStartText" Text="{Binding SpanStart}" VerticalAlignment="Center" FontSize="16" Margin="16,0,0,0"/>
             <TextBlock Text=" .. " VerticalAlignment="Center" FontSize="16"/>
-            <TextBlock x:Name="SpanEndText" Text="{Binding SpanEnd}" VerticalAlignment="Center" FontSize="16"/>
+            <TextBlock AutomationProperties.AutomationId="SpanEndText" Text="{Binding SpanEnd}" VerticalAlignment="Center" FontSize="16"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
-            <Slider x:Name="ValueSliderUpright" AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}"
+            <Slider AutomationProperties.AutomationId="ValueSliderUpright" AutomationProperties.LabeledBy="{Binding ElementName=OneValueLabel}"
                     Orientation="Vertical"
                     Height="170"
                     Value="{Binding Value, Mode=TwoWay}"
@@ -71,14 +71,14 @@
                     IsValueToolTipEnabled="true"/>
             <StackPanel Orientation="Vertical" Margin="28,0,0,0">
                 <TextBlock x:Name="MaximumLabel" Text="{Localize RangesStrings.Maximum}"/>
-                <Slider x:Name="MaximumSlider" AutomationProperties.LabeledBy="{Binding ElementName=MaximumLabel}" Width="240"
+                <Slider AutomationProperties.AutomationId="MaximumSlider" AutomationProperties.LabeledBy="{Binding ElementName=MaximumLabel}" Width="240"
                         Value="{Binding Maximum, Mode=TwoWay}"
                         Minimum="10" 
                         Maximum="200" 
                         TickFrequency="1"
                         IsSnapToTickEnabled="true"
                         IsValueToolTipEnabled="true"/>
-                <Button x:Name="ResetAll" Content="{Localize RangesStrings.ResetAll}" Command="{Binding ResetCommand}" MinWidth="130" Height="34"/>
+                <Button AutomationProperties.AutomationId="ResetAll" Content="{Localize RangesStrings.ResetAll}" Command="{Binding ResetCommand}" MinWidth="130" Height="34"/>
             </StackPanel>
         </StackPanel>
 
@@ -90,7 +90,7 @@
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="SplitLabel" Text="{Localize RangesStrings.Split}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="NumericSplit" AutomationProperties.LabeledBy="{Binding ElementName=SplitLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="NumericSplit" AutomationProperties.LabeledBy="{Binding ElementName=SplitLabel}"
                         Width="150" ButtonsPlacement="Split"
                         Value="{Binding Value, Mode=TwoWay}"
                         Minimum="0" Maximum="{Binding Maximum}"
@@ -98,7 +98,7 @@
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="LeftLabel" Text="{Localize RangesStrings.Left}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="NumericLeft" AutomationProperties.LabeledBy="{Binding ElementName=LeftLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="NumericLeft" AutomationProperties.LabeledBy="{Binding ElementName=LeftLabel}"
                         Width="150" ButtonsPlacement="Left"
                         Value="{Binding Value, Mode=TwoWay}"
                         Minimum="0" Maximum="{Binding Maximum}"
@@ -106,13 +106,13 @@
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="0,0,24,0">
                 <TextBlock x:Name="RightLabel" Text="{Localize RangesStrings.Right}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="NumericRight" AutomationProperties.LabeledBy="{Binding ElementName=RightLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="NumericRight" AutomationProperties.LabeledBy="{Binding ElementName=RightLabel}"
                         Width="150" ButtonsPlacement="Right"
                         Value="{Binding Value, Mode=TwoWay}"
                         Minimum="0" Maximum="{Binding Maximum}"
                         AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
             </StackPanel>
-            <CheckBox x:Name="SwapButtons" Content="{Localize RangesStrings.SwapButtons}" VerticalAlignment="Bottom"
+            <CheckBox AutomationProperties.AutomationId="SwapButtons" Content="{Localize RangesStrings.SwapButtons}" VerticalAlignment="Bottom"
                       IsChecked="{Binding AreNumericButtonsSwapped, Mode=TwoWay}"/>
         </StackPanel>
 
@@ -122,18 +122,18 @@
                  the format shows are digits the value actually has. -->
             <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="FormatLabel" Text="{Localize RangesStrings.StringFormat}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="Formatted" AutomationProperties.LabeledBy="{Binding ElementName=FormatLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="Formatted" AutomationProperties.LabeledBy="{Binding ElementName=FormatLabel}"
                         Width="150" Minimum="0" Maximum="10" Value="2.5"
                         SmallChange="0.25" SnapsToSmallChange="true"
                         StringFormat="{Binding NumericFormat}"/>
-                <DropDown x:Name="FormatChoice" AutomationProperties.LabeledBy="{Binding ElementName=FormatLabel}"
+                <DropDown AutomationProperties.AutomationId="FormatChoice" AutomationProperties.LabeledBy="{Binding ElementName=FormatLabel}"
                           Width="150" Margin="0,6,0,0"
                           ItemsSource="{Binding Formats}"
                           SelectedItem="{Binding NumericFormat, Mode=TwoWay}"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="IntegersLabel" Text="{Localize RangesStrings.IntegersOnly}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="Integers" AutomationProperties.LabeledBy="{Binding ElementName=IntegersLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="Integers" AutomationProperties.LabeledBy="{Binding ElementName=IntegersLabel}"
                         Width="150" Minimum="-50" Maximum="50" Value="7"
                         InputMode="Integers" StringFormat="N0"/>
             </StackPanel>
@@ -141,7 +141,7 @@
                  3D tool puts on every numeric field. Shift for a tenth of a step, Ctrl for a page. -->
             <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="ScrubLabel" Text="{Localize RangesStrings.DragSideways}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="Scrub" AutomationProperties.LabeledBy="{Binding ElementName=ScrubLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="Scrub" AutomationProperties.LabeledBy="{Binding ElementName=ScrubLabel}"
                         Width="150" Minimum="0" Maximum="100" Value="30"
                         AreButtonsVisible="false"
                         IsDragScrubEnabled="true"
@@ -151,7 +151,7 @@
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <TextBlock x:Name="ReadOnlyLabel" Text="{Localize RangesStrings.ReadOnly}" Margin="0,0,0,4"/>
-                <NumericUpDown x:Name="ReadOnlyNumber" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
+                <NumericUpDown AutomationProperties.AutomationId="ReadOnlyNumber" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
                         Width="150" Minimum="0" Maximum="100" Value="42" IsReadOnly="true"/>
             </StackPanel>
         </StackPanel>
@@ -160,11 +160,11 @@
              both start on the plain double-headed arrow; a real .cur can be handed to the same properties in code. -->
         <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
             <TextBlock x:Name="CursorLeftLabel" Text="{Localize RangesStrings.DragCursorLeft}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <DropDown x:Name="CursorLeft" AutomationProperties.LabeledBy="{Binding ElementName=CursorLeftLabel}"
+            <DropDown AutomationProperties.AutomationId="CursorLeft" AutomationProperties.LabeledBy="{Binding ElementName=CursorLeftLabel}"
                       EnumType="{x:Type i:CursorType}" Width="150"
                       SelectedItem="{Binding ScrubLeftCursorType, Mode=TwoWay}"/>
             <TextBlock x:Name="CursorRightLabel" Text="{Localize RangesStrings.DragCursorRight}" VerticalAlignment="Center" Margin="16,0,8,0"/>
-            <DropDown x:Name="CursorRight" AutomationProperties.LabeledBy="{Binding ElementName=CursorRightLabel}"
+            <DropDown AutomationProperties.AutomationId="CursorRight" AutomationProperties.LabeledBy="{Binding ElementName=CursorRightLabel}"
                       EnumType="{x:Type i:CursorType}" Width="150"
                       SelectedItem="{Binding ScrubRightCursorType, Mode=TwoWay}"/>
         </StackPanel>
@@ -174,7 +174,7 @@
         <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,28,0,0"/>
         <TextBlock x:Name="RingLabel" Text="{Localize RangesStrings.RingTitle}" FontSize="18" Margin="0,24,0,10"/>
         <StackPanel Orientation="Horizontal">
-            <RingProgressBar x:Name="Ring" AutomationProperties.LabeledBy="{Binding ElementName=RingLabel}"
+            <RingProgressBar AutomationProperties.AutomationId="Ring" AutomationProperties.LabeledBy="{Binding ElementName=RingLabel}"
                     Width="120" Height="120"
                     Value="{Binding Value}" Maximum="{Binding Maximum}"
                     ShowValueText="true" RingThickness="9"
@@ -183,7 +183,7 @@
             <StackPanel Orientation="Vertical" Margin="36,0,0,0" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                     <TextBlock x:Name="ArcStartLabel" Text="{Localize RangesStrings.ArcStart}" VerticalAlignment="Center" MinWidth="72" MarginRight="6"/>
-                    <DropDown x:Name="ArcStart" AutomationProperties.LabeledBy="{Binding ElementName=ArcStartLabel}"
+                    <DropDown AutomationProperties.AutomationId="ArcStart" AutomationProperties.LabeledBy="{Binding ElementName=ArcStartLabel}"
                               EnumType="{x:Type c:RingStartPosition}" SelectedItem="{Binding StartPosition, Mode=TwoWay}" Width="150">
                         <DropDown.ItemTemplate>
                             <DataTemplate>
@@ -194,7 +194,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock x:Name="DirectionLabel" Text="{Localize RangesStrings.Direction}" VerticalAlignment="Center" MinWidth="72" MarginRight="6"/>
-                    <DropDown x:Name="Direction" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}"
+                    <DropDown AutomationProperties.AutomationId="Direction" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}"
                               EnumType="{x:Type m:SweepDirection}" SelectedItem="{Binding Direction, Mode=TwoWay}" Width="180">
                         <DropDown.ItemTemplate>
                             <DataTemplate>

@@ -25,7 +25,7 @@ internal static class FractalClock
         _registered = true;
         // AddTicker's delegate returns TRUE when done (dropped); FALSE keeps it. Advance Time and keep ticking while any
         // animating fractal is live; when the count hits zero, stop so the loop can idle.
-        AnimationManager.AddTicker(delta =>
+        AnimationManager.AddEndlessTicker(delta =>
         {
             Time += delta * Speed;   // phase grows at the CURRENT speed - changing Speed changes the rate, never jumps the phase
             if (_active > 0) return false;

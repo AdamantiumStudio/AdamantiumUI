@@ -24,13 +24,13 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" MarginBottom="12">
             <TextBlock x:Name="PaneLabel" Text="{Localize DockingStrings.Pane}" VerticalAlignment="Center" MarginRight="6"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <DropDown x:Name="PaneChoice" AutomationProperties.LabeledBy="{Binding ElementName=PaneLabel}"
+            <DropDown AutomationProperties.AutomationId="PaneChoice" AutomationProperties.LabeledBy="{Binding ElementName=PaneLabel}"
                       ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage, Mode=TwoWay}"
                       Width="150" MarginRight="14"/>
 
             <TextBlock x:Name="CreateInLabel" Text="{Localize DockingStrings.CreateIn}" VerticalAlignment="Center" MarginRight="6"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <DropDown x:Name="PlaceChoice" AutomationProperties.LabeledBy="{Binding ElementName=CreateInLabel}"
+            <DropDown AutomationProperties.AutomationId="PlaceChoice" AutomationProperties.LabeledBy="{Binding ElementName=CreateInLabel}"
                       ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace, Mode=TwoWay}"
                       MinWidth="120" MarginRight="14">
                 <DropDown.ItemTemplate>

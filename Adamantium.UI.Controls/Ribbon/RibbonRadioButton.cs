@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls;
 
@@ -17,6 +19,8 @@ public class RibbonRadioButton : RibbonToggleButton
       get => GetValue<string>(GroupNameProperty);
       set => SetValue(GroupNameProperty, value);
    }
+
+   protected override AutomationPeer OnCreateAutomationPeer() => new RibbonRadioButtonAutomationPeer(this);
 
    protected override void OnToggle()
    {

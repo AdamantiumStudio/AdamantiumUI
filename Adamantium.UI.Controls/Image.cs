@@ -419,7 +419,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       if (_runtimePlaying || Design.IsDesignMode || _bitmap is not { FrameCount: > 1 }) return;
       _runtimePlaying = true;
       _playbackElapsedMs = 0;
-      AnimationManager.AddTicker(RuntimeTick);
+      AnimationManager.AddEndlessTicker(RuntimeTick);
    }
 
    private ReplayDirection _replayDirection;

@@ -13,16 +13,16 @@
                    FontSize="13" Foreground="#94A3B8" MarginBottom="16"/>
 
         <StackPanel Orientation="Horizontal" MarginBottom="10">
-            <TextBlock Text="{Localize ZoomBoxStrings.ScaleX}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
-            <Slider Width="240" Minimum="0.15" Maximum="6"
+            <TextBlock x:Name="ScaleXLabel" Text="{Localize ZoomBoxStrings.ScaleX}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ScaleX" AutomationProperties.LabeledBy="{Binding ElementName=ScaleXLabel}" Width="240" Minimum="0.15" Maximum="6"
                     Value="{Binding ScaleX, ElementName=Zoom, Mode=TwoWay}" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding ScaleX, ElementName=Zoom}" Width="60" HorizontalTextAlignment="Right"
                        VerticalAlignment="Center" MarginLeft="12"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" MarginBottom="16">
-            <TextBlock Text="{Localize ZoomBoxStrings.ScaleY}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
-            <Slider Width="240" Minimum="0.15" Maximum="6"
+            <TextBlock x:Name="ScaleYLabel" Text="{Localize ZoomBoxStrings.ScaleY}" MinWidth="56" MarginRight="6" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ScaleY" AutomationProperties.LabeledBy="{Binding ElementName=ScaleYLabel}" Width="240" Minimum="0.15" Maximum="6"
                     Value="{Binding ScaleY, ElementName=Zoom, Mode=TwoWay}" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding ScaleY, ElementName=Zoom}" Width="60" HorizontalTextAlignment="Right"
                        VerticalAlignment="Center" MarginLeft="12"/>

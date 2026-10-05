@@ -11,3 +11,5 @@ scroll id=Picture --vertical 0
 expect id=Picture vscroll=0 hscroll=50
 scroll id=Picture --horizontal 0
 expect id=Picture hscroll=0
+# Back as the page opens.
+set id=HorizontalBar 20

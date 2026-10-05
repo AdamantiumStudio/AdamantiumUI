@@ -118,10 +118,6 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRec
 
     private readonly List<IUIComponent> _flat = new();
 
-    // Apply the theme once so the adorner's ControlTemplate resolves, then lay it out every frame (the element can
-    // move/resize). A frame (selection / hover) fills its element; a BADGE (a key tip) measures to its own content and
-    // asks where to sit - it hangs off an edge. If the theme has no template, Template stays null and the adorner falls
-    // back to its own OnRender, so the designer frames never disappear.
     private static void LayoutAdorner(IUIComponent adorner)
     {
         if (adorner is not Adorner a || a.AdornedElement == null)
@@ -136,17 +132,20 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRec
 
         if (a.Template == null) return;
 
+        var measurable = (IMeasurableComponent)a;
         if (a.FillsAdornedBounds)
         {
             var bounds = a.AdornedBounds;
-            ((IMeasurableComponent)a).Measure(bounds.Size, true);
-            ((IMeasurableComponent)a).Arrange(bounds, true);
-            return;
+            measurable.Measure(bounds.Size);
+            measurable.Arrange(bounds);
+        }
+        else
+        {
+            measurable.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            measurable.Arrange(a.PlaceIn(measurable.DesiredSize));
         }
 
-        var measurable = (IMeasurableComponent)a;
-        measurable.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), true);
-        measurable.Arrange(a.PlaceIn(measurable.DesiredSize), true);
+        LayoutManager.GetOrCreate(a).ExecuteLayoutPass();
     }
 
     private static void Flatten(IUIComponent component, List<IUIComponent> list)

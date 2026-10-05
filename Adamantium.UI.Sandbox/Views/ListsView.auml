@@ -49,7 +49,7 @@
                  AutomationProperties.LabeledBy="{Binding ElementName=LargeLabel}"/>
 
         <!-- The same width as the list it belongs to, so the row of buttons centers over the rows it is turning. -->
-        <DataPager x:Name="LargePager" Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
+        <DataPager AutomationProperties.AutomationId="LargePager" Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
                    Source="{Binding Large}" DisplayMode="{Binding PagerMode}"
                    PageSizes="{Binding PageSteps}"/>
 
@@ -107,7 +107,7 @@
                  AutomationProperties.AutomationId="ServerList"
                  AutomationProperties.LabeledBy="{Binding ElementName=ServerLabel}"/>
 
-        <DataPager x:Name="ServerPager" Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
+        <DataPager AutomationProperties.AutomationId="ServerPager" Width="720" HorizontalAlignment="Left" Margin="0,8,0,0"
                    Source="{Binding Server}"/>
 
         <!-- THE SAME VIEW, THROUGH A NARROWER PAGER. Both turn the same pages - which is the point of one view behind
@@ -115,7 +115,7 @@
              jumps to the ends, then the numbers, and never the step arrows or the page it is on. Watch it against the
              wide one above: the two are always on the same page. -->
         <TextBlock Text="{Localize ListsStrings.NarrowTitle}" Margin="0,16,0,4"/>
-        <DataPager x:Name="CompactPager" Width="420" HorizontalAlignment="Left"
+        <DataPager AutomationProperties.AutomationId="CompactPager" Width="420" HorizontalAlignment="Left"
                    Source="{Binding Large}" DisplayMode="{Binding PagerMode}"
                    PageSizes="{Binding PageSteps}"/>
 

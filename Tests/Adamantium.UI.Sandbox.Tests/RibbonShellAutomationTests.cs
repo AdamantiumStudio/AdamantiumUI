@@ -140,6 +140,27 @@ public class RibbonShellAutomationTests
     }
 
     [Test]
+    public async Task TheTransformTools_AreOneChoice_AndTheViewModelFollows()
+    {
+        await using var session = await RibbonShell();
+        var band = session.Find(By.Id("Band"));
+        await band.Find(By.Name("Modeling")).SelectAsync();
+
+        await band.Find(By.Id("RotateGizmo")).SelectAsync();
+        var select = await band.Find(By.Id("SelectGizmo")).GetAsync();
+        var rotate = await band.Find(By.Id("RotateGizmo")).GetAsync();
+        var status = await session.Find(By.Id("StatusLine")).NameAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rotate.ControlType, Is.EqualTo(nameof(AutomationControlType.RadioButton)));
+            Assert.That(rotate.IsSelected, Is.True);
+            Assert.That(select.IsSelected, Is.False, "the tool picked before stayed picked");
+            Assert.That(status, Is.EqualTo("Drag to rotate the selection."), "the view model did not hear of the choice");
+        });
+    }
+
+    [Test]
     public async Task File_OpensItsMenu_AndARowWithAPageShowsIt()
     {
         await using var session = await RibbonShell();

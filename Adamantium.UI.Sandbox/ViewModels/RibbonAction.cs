@@ -68,4 +68,8 @@ public enum RibbonAction
     AddedStar,
     AddedPlanet,
     AddedMoon,
+    SelectingObjects,
+    MovingSelection,
+    RotatingSelection,
+    ScalingSelection,
 }

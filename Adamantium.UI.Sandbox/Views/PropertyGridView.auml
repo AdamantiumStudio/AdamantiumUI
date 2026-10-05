@@ -70,7 +70,7 @@
 
         <!-- ShowSearch off: an inspector of a handful of rows does not need a field to find them in, and the row it
              would take is worth more to the rows. The left one keeps it, so the page shows both. -->
-        <PropertyGrid Grid.Row="3" Grid.Column="1" x:Name="GeneratedInspector" Margin="8,0,0,0"
+        <PropertyGrid Grid.Row="3" Grid.Column="1" AutomationProperties.AutomationId="GeneratedInspector" Margin="8,0,0,0"
                       AutomationProperties.LabeledBy="{Binding ElementName=RightCaption}"
                       SelectedObjects="{Binding RightSelection}"
                       AutoGenerateSections="True"

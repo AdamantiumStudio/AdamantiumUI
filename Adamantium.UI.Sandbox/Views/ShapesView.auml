@@ -122,9 +122,11 @@
             <Grid Grid.Column="0" ColumnDefinitions="Auto,Auto">
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.Thickness}" MinWidth="80" VerticalAlignment="Center"/>
-                        <Slider IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="30" Value="{Binding Stroke.StrokeWidth, Mode=TwoWay}"/>
-                        <NumericUpDown Width="88" Minimum="0" Maximum="30" SmallChange="1"
+                        <TextBlock x:Name="ThicknessLabel" Text="{Localize ShapesStrings.Thickness}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.AutomationId="Thickness" AutomationProperties.LabeledBy="{Binding ElementName=ThicknessLabel}"
+                                IsValueToolTipEnabled="true" Width="130" Minimum="0" Maximum="30" Value="{Binding Stroke.StrokeWidth, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.AutomationId="ThicknessValue" AutomationProperties.LabeledBy="{Binding ElementName=ThicknessLabel}"
+                                       Width="88" Minimum="0" Maximum="30" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding Stroke.StrokeWidth, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
@@ -202,8 +204,8 @@
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <TextBlock Text="{Localize ShapesStrings.StartCap}" MinWidth="80" VerticalAlignment="Center"/>
-                        <DropDown Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.StartCap, Mode=TwoWay}"
+                        <TextBlock x:Name="StartCapLabel" Text="{Localize ShapesStrings.StartCap}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.AutomationId="StartCap" AutomationProperties.LabeledBy="{Binding ElementName=StartCapLabel}" Width="176" EnumType="{x:Type m:PenLineCap}" SelectedItem="{Binding Stroke.StartCap, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">

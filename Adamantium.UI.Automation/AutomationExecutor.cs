@@ -440,18 +440,7 @@ public sealed class AutomationExecutor
 
         void Write(AutomationPeer peer, int level)
         {
-            text.Append(' ', level * 2).Append(Label(peer));
-            if (peer.IsOffscreen)
-            {
-                text.Append(" (offscreen)");
-            }
-
-            if (!peer.IsEnabled)
-            {
-                text.Append(" (disabled)");
-            }
-
-            text.AppendLine();
+            text.Append(' ', level * 2).AppendLine(Info(peer).ToString());
             if (depth > 0 && level + 1 >= depth)
             {
                 return;

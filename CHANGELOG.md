@@ -231,6 +231,17 @@ All packages share one version.
   placeholder.
 - `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
   `AutomationProperties.LabeledBy="{Binding ElementName=VolumeLabel}"`, following the label's text and language.
+- A `RibbonRadioButton` is a radio button to automation: one choice of its group, selected the way a press selects it,
+  and offering no toggle - a choice is not switched off.
+- `ElementInfo.ToString()` describes an element in one line - what it is, its name and id, its value, switch,
+  selection and state - and `AutomationSession.TreeAsync` (`adam-auto tree`) lists every element that way, where it
+  gave names alone.
+- `UIApplication.WaitForIdleAsync` completes once the application is idle: nothing posted to the loop, no layout,
+  binding or recorded change left to do, no animation that ends on its own still running, no glyphs on their way - and
+  the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
+  idle: one that loops forever, and a ticker registered with `AnimationManager.AddEndlessTicker` (a caret's blink, an
+  animated picture). Automation waits for it after every action instead of for two frames, and `adam-auto` says what
+  kept the application busy when it does not settle.
 
 ### Changed
 
@@ -331,6 +342,21 @@ All packages share one version.
   in the caption got no key tips.
 - A window that does not take activation when shown (`ActivateOnShow` false) took it when restored, and handed it to
   another window when minimized.
+- The focus ring on a part of a control's template wrapped the whole control even when the control has several parts
+  to stop on - a question's two answers - so it did not show which one Enter presses. The whole control is ringed only
+  when the focused part is its one stop, as a numeric's editor is.
+- The adorner stage measured every ring and key tip again on every frame, and each time asked for another: while one
+  was on screen the loop never went to sleep. A ring is measured again when its control's size or its own content
+  changes.
+- A window holding a collapsed element whose template was queued for arrange - a ribbon's hidden contextual tab header
+  - never finished a layout pass: the queue took the part back every iteration, waiting for a measure that nothing
+  would run while it was collapsed, and every frame ran to the iteration limit. A part goes back on the queue only while
+  its measure is queued too; showing the element lays it out.
+- A minimized window stopped every other window of the application from drawing: the render thread they share waited
+  for it to be restored, so the main window took clicks and showed nothing of them. A minimized window is skipped - it
+  neither draws nor holds the others' changes back - and is recorded whole when it comes back.
+- An active `OverlayWindow` in the Fluent theme drew a gray outline around its accent caption, a box inside the window.
+  The outline takes the caption's color when active, as the main window's does.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.

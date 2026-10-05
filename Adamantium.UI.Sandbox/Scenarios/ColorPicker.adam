@@ -12,3 +12,6 @@ expand id=Swatch
 expect id=Swatch expanded=Expanded
 collapse id=Swatch
 expect id=Swatch expanded=Collapsed
+# Back as the page opens: the color is the theme's accent too, so leaving it changed recolors the whole application.
+set id=Picker #FF3D87FF
+expect id=WheelValue value=1

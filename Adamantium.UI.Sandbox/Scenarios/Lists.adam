@@ -26,3 +26,5 @@ expect id=LargePager/id=PART_PageBox value=2
 set id=LargePager/id=PART_PageBox 1
 expect id=LargeList/type=ListItem name="Item 00001"
 select id=LargePager/id=PART_PageSizeSelector/name=30
+# Back as the page opens.
+select id=SingleList/name=Earth

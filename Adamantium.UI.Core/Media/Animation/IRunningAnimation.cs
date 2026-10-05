@@ -18,4 +18,8 @@ internal interface IRunningAnimation
     /// heartbeat marks exactly this component's geometry dirty - a PER-COMPONENT safety net, so an animating frame stays
     /// on the O(dirty) partial render paths instead of a global-flag full re-bake.</summary>
     IUIComponent DirtyTarget { get; }
+
+    /// <summary>True when this animation never finishes on its own (an infinite loop, a caret blink), so the application
+    /// counts as idle while it runs.</summary>
+    bool IsEndless { get; }
 }

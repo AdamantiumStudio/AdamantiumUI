@@ -5,72 +5,7 @@ namespace Adamantium.UI.Automation.Cli;
 
 internal static class Printer
 {
-    public static string Line(ElementInfo element)
-    {
-        var line = new StringBuilder(element.ControlType);
-        if (!string.IsNullOrEmpty(element.Name))
-        {
-            line.Append(" \"").Append(element.Name).Append('"');
-        }
-
-        if (!string.IsNullOrEmpty(element.AutomationId))
-        {
-            line.Append(" #").Append(element.AutomationId);
-        }
-
-        line.Append(" [").Append(element.ClassName).Append(']');
-        if (!string.IsNullOrEmpty(element.AccessKey))
-        {
-            line.Append(" key=").Append(element.AccessKey);
-        }
-
-        if (element.Value != null)
-        {
-            line.Append(" value=\"").Append(element.Value).Append('"');
-        }
-
-        if (element.ToggleState != null)
-        {
-            line.Append(' ').Append(element.ToggleState);
-        }
-
-        if (element.IsSelected == true)
-        {
-            line.Append(" selected");
-        }
-
-        if (element.ExpandCollapseState is { } state && state != "LeafNode")
-        {
-            line.Append(' ').Append(state);
-        }
-
-        if (element.Minimum is { } minimum && element.Maximum is { } maximum)
-        {
-            line.Append(FormattableString.Invariant($" in {minimum}..{maximum}"));
-        }
-
-        if (element.VerticalScroll is { } down && element.HorizontalScroll is { } across && (down >= 0 || across >= 0))
-        {
-            line.Append(FormattableString.Invariant($" scrolled {Percent(across)} across, {Percent(down)} down"));
-        }
-
-        if (element.WindowState != null)
-        {
-            line.Append(' ').Append(element.WindowState);
-        }
-
-        if (element.IsOffscreen)
-        {
-            line.Append(" (offscreen)");
-        }
-
-        if (!element.IsEnabled)
-        {
-            line.Append(" (disabled)");
-        }
-
-        return line.ToString();
-    }
+    public static string Line(ElementInfo element) => element.ToString();
 
     public static string Error(ErrorEntry error) => $"#{error.Sequence} [{error.Kind}] {error.Message}";
 
@@ -109,6 +44,4 @@ internal static class Printer
             $"  bounds:   {bounds[0]:0},{bounds[1]:0} {bounds[2]:0}x{bounds[3]:0} px",
             $"  focus:    {(element.HasKeyboardFocus ? "has keyboard focus" : "no")}");
     }
-
-    private static string Percent(double percent) => percent < 0 ? "-" : FormattableString.Invariant($"{percent}%");
 }

@@ -108,6 +108,10 @@
         <PropertyTrigger Property="ShowTitleBar" Value="false">
             <Setter TargetName="PART_TitleBar" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
+        <!-- Active: the outline takes the caption's color, as the main window's does. -->
+        <PropertyTrigger Property="IsActive" Value="true">
+            <Setter TargetName="PART_Window" Property="BorderBrush" Value="{TemplateBinding TitleBarBackground}"/>
+        </PropertyTrigger>
         <!-- Inactive (not the front-most window): dim the title bar like an inactive OS window. Overrides the window's own
              TitleBarBackground/TitleForeground, which the bar, title, icon and pin/close glyphs all bind to. -->
         <PropertyTrigger Property="IsActive" Value="false">

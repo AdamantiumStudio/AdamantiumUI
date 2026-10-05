@@ -6,7 +6,7 @@
 
         <StackPanel Orientation="Horizontal">
             <TextBlock x:Name="FontSizeLabel" Text="{Localize TextStrings.FontSize}" VerticalAlignment="Center"/>
-            <Slider x:Name="FontSizeSlider" AutomationProperties.LabeledBy="{Binding ElementName=FontSizeLabel}"
+            <Slider AutomationProperties.AutomationId="FontSizeSlider" AutomationProperties.LabeledBy="{Binding ElementName=FontSizeLabel}"
                     Width="240" Minimum="10" Maximum="72" Value="{Binding FontSize, Mode=TwoWay}" Margin="12,0,0,0"/>
             <TextBlock Text="{Binding FontSize}" VerticalAlignment="Center" FontSize="16" Margin="12,0,0,0"/>
         </StackPanel>
@@ -30,7 +30,7 @@
 
         <!-- Editable TextBox: two-way bound to the SAME Message, so typing here live-updates every TextBlock above. -->
         <TextBlock Text="{Localize TextStrings.Editable}" Margin="0,12,0,6"/>
-        <TextBox x:Name="Message" Text="{Binding Message, Mode=TwoWay}"
+        <TextBox AutomationProperties.AutomationId="Message" Text="{Binding Message, Mode=TwoWay}"
                  Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.Message}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
@@ -40,7 +40,7 @@
                  Placeholder="{Localize TextStrings.YourName}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
         <TextBlock x:Name="ReadOnlyLabel" Text="{Localize TextStrings.ReadOnly}" Margin="0,16,0,6"/>
-        <TextBox x:Name="ReadOnlyMessage" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
+        <TextBox AutomationProperties.AutomationId="ReadOnlyMessage" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
                  Text="{Binding Message}" IsReadOnly="True"
                  Width="520" HorizontalAlignment="Left"/>
 
@@ -48,7 +48,7 @@
              are Auto - the horizontal one via the shared ScrollViewer.HorizontalScrollBarVisibility attached policy on the
              TextBox (TextBoxBase now uses the attached props, not its own). Arrow keys navigate; selection spans rows. -->
         <TextBlock x:Name="NotesLabel" Text="{Localize TextStrings.MultiLine}" Margin="0,16,0,6"/>
-        <TextBox x:Name="Notes" AutomationProperties.LabeledBy="{Binding ElementName=NotesLabel}"
+        <TextBox AutomationProperties.AutomationId="Notes" AutomationProperties.LabeledBy="{Binding ElementName=NotesLabel}"
                  Text="{Binding Notes, Mode=TwoWay}"
                  AcceptsReturn="True" TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"

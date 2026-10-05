@@ -14,48 +14,56 @@
 
         <!-- Always-visible toggle in the corner, with the camera's travel speed under it. -->
         <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16">
-            <Button Content="{Localize SceneStrings.MenuButton, visible={Binding IsMenuVisible}}"
+            <Button AutomationProperties.AutomationId="MenuToggle"
+                    Content="{Localize SceneStrings.MenuButton, visible={Binding IsMenuVisible}}"
                     Command="{Binding ToggleMenuCommand}"
                     MinWidth="120" Height="34"/>
-            <TextBlock Text="{Localize SceneStrings.CameraSpeed}" MarginTop="10" MarginBottom="4"
+            <TextBlock x:Name="CameraSpeedLabel" Text="{Localize SceneStrings.CameraSpeed}" MarginTop="10" MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <NumericUpDown Value="{Binding CameraSpeed, Mode=TwoWay}"
+            <NumericUpDown AutomationProperties.AutomationId="CameraSpeed"
+                           AutomationProperties.LabeledBy="{Binding ElementName=CameraSpeedLabel}"
+                           Value="{Binding CameraSpeed, Mode=TwoWay}"
                            Width="120"
                            Minimum="0.01"
                            Maximum="100"
                            SmallChange="0.01"
                            LargeChange="0.1"
                            StringFormat="N2"/>
-            <Button Content="{Localize SceneStrings.ResetCamera}" Command="{Binding ResetCameraCommand}"
+            <Button AutomationProperties.AutomationId="ResetCamera" Content="{Localize SceneStrings.ResetCamera}" Command="{Binding ResetCameraCommand}"
                     MinWidth="120" Height="30" MarginTop="10"/>
             <TextBlock Text="{Localize SceneStrings.Tool}"
                        MarginTop="10"
                        MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <RadioButton Classes="Toggle"
+            <RadioButton AutomationProperties.AutomationId="SelectTool"
+                         Classes="Toggle"
                          GroupName="SceneTool"
                          Content="{Localize SceneStrings.Select}"
                          MinWidth="120"
                          IsChecked="{Binding IsSelecting, Mode=TwoWay}"/>
-            <RadioButton Classes="Toggle"
+            <RadioButton AutomationProperties.AutomationId="MoveTool"
+                         Classes="Toggle"
                          GroupName="SceneTool"
                          Content="{Localize SceneStrings.Move}"
                          MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsMoving, Mode=TwoWay}"/>
-            <RadioButton Classes="Toggle"
+            <RadioButton AutomationProperties.AutomationId="RotateTool"
+                         Classes="Toggle"
                          GroupName="SceneTool"
                          Content="{Localize SceneStrings.Rotate}"
                          MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsRotating, Mode=TwoWay}"/>
-            <RadioButton Classes="Toggle"
+            <RadioButton AutomationProperties.AutomationId="ScaleTool"
+                         Classes="Toggle"
                          GroupName="SceneTool"
                          Content="{Localize SceneStrings.Scale}"
                          MinWidth="120"
                          MarginTop="4"
                          IsChecked="{Binding IsScaling, Mode=TwoWay}"/>
-            <RadioButton Classes="Toggle"
+            <RadioButton AutomationProperties.AutomationId="PivotTool"
+                         Classes="Toggle"
                          GroupName="SceneTool"
                          Content="{Localize SceneStrings.Pivot}"
                          MinWidth="120"
@@ -74,16 +82,19 @@
             <TextBlock Text="{Localize SceneStrings.Lights}"
                        MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <Button Content="{Localize SceneStrings.AddPoint}"
+            <Button AutomationProperties.AutomationId="AddPoint"
+                    Content="{Localize SceneStrings.AddPoint}"
                     Command="{Binding AddPointLightCommand}"
                     MinWidth="120"
                     Height="30"/>
-            <Button Content="{Localize SceneStrings.AddSpot}"
+            <Button AutomationProperties.AutomationId="AddSpot"
+                    Content="{Localize SceneStrings.AddSpot}"
                     Command="{Binding AddSpotLightCommand}"
                     MinWidth="120"
                     Height="30"
                     MarginTop="4"/>
-            <Button Content="{Localize SceneStrings.AddDirectional}"
+            <Button AutomationProperties.AutomationId="AddDirectional"
+                    Content="{Localize SceneStrings.AddDirectional}"
                     Command="{Binding AddDirectionalLightCommand}"
                     MinWidth="120"
                     Height="30"
@@ -94,17 +105,23 @@
                 <TextBlock Text="{Localize SceneStrings.LightName, type={Binding SelectedLightType}}"
                            MarginBottom="4"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <TextBlock Text="{Localize SceneStrings.Color}"
+                <TextBlock x:Name="LightColorLabel"
+                           Text="{Localize SceneStrings.Color}"
                            MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <ColorPickerButton SelectedColor="{Binding Light.Color, Mode=TwoWay, Converter={conv:VectorToColorConverter}}"
+                <ColorPickerButton AutomationProperties.AutomationId="LightColor"
+                                   AutomationProperties.LabeledBy="{Binding ElementName=LightColorLabel}"
+                                   SelectedColor="{Binding Light.Color, Mode=TwoWay, Converter={conv:VectorToColorConverter}}"
                                    Width="120"
                                    Height="30"/>
-                <TextBlock Text="{Localize SceneStrings.Intensity}"
+                <TextBlock x:Name="LightIntensityLabel"
+                           Text="{Localize SceneStrings.Intensity}"
                            MarginTop="6"
                            MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <NumericUpDown Value="{Binding LightIntensity, Mode=TwoWay}"
+                <NumericUpDown AutomationProperties.AutomationId="LightIntensity"
+                               AutomationProperties.LabeledBy="{Binding ElementName=LightIntensityLabel}"
+                               Value="{Binding LightIntensity, Mode=TwoWay}"
                                Width="120"
                                IsDragScrubEnabled="true"
                                Minimum="0"
@@ -114,11 +131,14 @@
                                StringFormat="N2"/>
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding HasRange, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Localize SceneStrings.Range}"
+                    <TextBlock x:Name="LightRangeLabel"
+                               Text="{Localize SceneStrings.Range}"
                                MarginTop="6"
                                MarginBottom="2"
                                Foreground="{ResourceReference TextFillColorSecondary}"/>
-                    <NumericUpDown Value="{Binding LightRange, Mode=TwoWay}"
+                    <NumericUpDown AutomationProperties.AutomationId="LightRange"
+                                   AutomationProperties.LabeledBy="{Binding ElementName=LightRangeLabel}"
+                                   Value="{Binding LightRange, Mode=TwoWay}"
                                    Width="120"
                                    IsDragScrubEnabled="true"
                                    Minimum="0.1"
@@ -129,11 +149,14 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding IsSpotSelected, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Localize SceneStrings.ConeAngle}"
+                    <TextBlock x:Name="ConeAngleLabel"
+                               Text="{Localize SceneStrings.ConeAngle}"
                                MarginTop="6"
                                MarginBottom="2"
                                Foreground="{ResourceReference TextFillColorSecondary}"/>
-                    <NumericUpDown Value="{Binding ConeAngle, Mode=TwoWay}"
+                    <NumericUpDown AutomationProperties.AutomationId="ConeAngle"
+                                   AutomationProperties.LabeledBy="{Binding ElementName=ConeAngleLabel}"
+                                   Value="{Binding ConeAngle, Mode=TwoWay}"
                                    Width="120"
                                    Minimum="2"
                                    Maximum="179"
@@ -141,7 +164,8 @@
                                    LargeChange="10"
                                    StringFormat="N0"/>
                 </StackPanel>
-                <Button Content="{Localize SceneStrings.DeleteLight}"
+                <Button AutomationProperties.AutomationId="DeleteLight"
+                        Content="{Localize SceneStrings.DeleteLight}"
                         Command="{Binding RemoveLightCommand}"
                         MinWidth="120"
                         Height="30"
@@ -189,11 +213,11 @@
                     HorizontalAlignment="Center">
                 <TextBlock Text="{Localize SceneStrings.Menu}" FontSize="22" HorizontalAlignment="Center" Margin="0,0,0,16"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <Button Content="{Localize SceneStrings.Continue}" Command="{Binding ToggleMenuCommand}" Height="36" Margin="0,0,0,8"/>
-                <Button Content="{Localize SceneStrings.LoadF15}" Command="{Binding LoadF15Command}" Height="36" Margin="0,0,0,8"/>
+                <Button AutomationProperties.AutomationId="Continue" Content="{Localize SceneStrings.Continue}" Command="{Binding ToggleMenuCommand}" Height="36" Margin="0,0,0,8"/>
+                <Button AutomationProperties.AutomationId="LoadF15" Content="{Localize SceneStrings.LoadF15}" Command="{Binding LoadF15Command}" Height="36" Margin="0,0,0,8"/>
                 <!-- No Swordman: it is a rigged model and character animation is not connected yet, so loading it
                      takes the application down. Bring the button back with the animation. -->
-                <Button Content="{Localize SceneStrings.LoadMonkey}" Command="{Binding LoadMonkeyCommand}" Height="36"/>
+                <Button AutomationProperties.AutomationId="LoadMonkey" Content="{Localize SceneStrings.LoadMonkey}" Command="{Binding LoadMonkeyCommand}" Height="36"/>
                 <TextBlock Text="{Localize SceneStrings.Status, status={Binding Status}, model={Binding Model}, error={Binding LoadError}}" HorizontalAlignment="Center" Margin="0,16,0,0"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
             </StackPanel>

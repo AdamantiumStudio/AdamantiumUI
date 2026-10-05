@@ -50,6 +50,8 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
 
     public IUIComponent DirtyTarget => _target as IUIComponent;
 
+    public bool IsEndless => _curve.IsEndless;
+
     public bool Advance(double deltaSeconds)
     {
         // Composited: the render thread's clock is THE clock. Read it rather than accumulating a second one - if the loop

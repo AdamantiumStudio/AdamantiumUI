@@ -1,3 +1,6 @@
+using System;
+using System.Text;
+
 namespace Adamantium.UI.Automation;
 
 /// <summary>What automation saw of one element at the moment it was asked.</summary>
@@ -57,4 +60,74 @@ public sealed class ElementInfo
 
     /// <summary>Normal, Minimized or Maximized, when it is a window.</summary>
     public string WindowState { get; set; }
+
+    /// <summary>One line for a person: what it is, what it is called and found by, and the state it is in.</summary>
+    public override string ToString()
+    {
+        var line = new StringBuilder(ControlType);
+        if (!string.IsNullOrEmpty(Name))
+        {
+            line.Append(" \"").Append(Name).Append('"');
+        }
+
+        if (!string.IsNullOrEmpty(AutomationId))
+        {
+            line.Append(" #").Append(AutomationId);
+        }
+
+        line.Append(" [").Append(ClassName).Append(']');
+        if (!string.IsNullOrEmpty(AccessKey))
+        {
+            line.Append(" key=").Append(AccessKey);
+        }
+
+        if (Value != null)
+        {
+            line.Append(" value=\"").Append(Value).Append('"');
+        }
+
+        if (ToggleState != null)
+        {
+            line.Append(' ').Append(ToggleState);
+        }
+
+        if (IsSelected == true)
+        {
+            line.Append(" selected");
+        }
+
+        if (ExpandCollapseState is { } state && state != "LeafNode")
+        {
+            line.Append(' ').Append(state);
+        }
+
+        if (Minimum is { } minimum && Maximum is { } maximum)
+        {
+            line.Append(FormattableString.Invariant($" in {minimum}..{maximum}"));
+        }
+
+        if (VerticalScroll is { } down && HorizontalScroll is { } across && (down >= 0 || across >= 0))
+        {
+            line.Append(FormattableString.Invariant($" scrolled {Percent(across)} across, {Percent(down)} down"));
+        }
+
+        if (WindowState != null)
+        {
+            line.Append(' ').Append(WindowState);
+        }
+
+        if (IsOffscreen)
+        {
+            line.Append(" (offscreen)");
+        }
+
+        if (!IsEnabled)
+        {
+            line.Append(" (disabled)");
+        }
+
+        return line.ToString();
+    }
+
+    private static string Percent(double percent) => percent < 0 ? "-" : FormattableString.Invariant($"{percent}%");
 }

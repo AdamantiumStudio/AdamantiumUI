@@ -17,6 +17,14 @@ absent id=RibbonWindow/id=PART_BackButton
 expect id=Band/name=Home key=H selected=True
 select id=Band/name=Modeling
 expect id=Band/type=Pane name=Modeling
+# The Transform tools are one choice: picking one clears the others, and the status line says what it does.
+expect id=Band/id=SelectGizmo selected=True
+select id=Band/id=MoveGizmo
+expect id=Band/id=MoveGizmo selected=True
+expect id=Band/id=SelectGizmo selected=False
+expect id=StatusLine name="Drag to move the selection."
+select id=Band/id=SelectGizmo
+expect id=Band/id=MoveGizmo selected=False
 select id=Band/name=Home
 # The gallery is a list picked from by name.
 select id=Band/name=Materials/name=Gold

@@ -1,0 +1,19 @@
+# The Transforms page: every tile's rotation, shear, scale and spread come from one slider each.
+select id=GalleryTabs/id=Transforms
+wait id=Rotation
+set id=Rotation 45
+expect id=Rotation value=45
+set id=SkewX 20
+expect id=SkewX value=20
+set id=SkewY -20
+expect id=SkewY value=-20
+set id=TileScale 1.2
+expect id=TileScale value=1.2
+set id=Spread 3
+expect id=Spread value=3
+# Back as the page opens.
+set id=Rotation 20
+set id=SkewX 12
+set id=SkewY 0
+set id=TileScale 1
+set id=Spread 1.5

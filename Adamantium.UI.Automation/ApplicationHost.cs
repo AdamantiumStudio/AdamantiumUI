@@ -6,12 +6,10 @@ using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Automation;
 
-/// <summary>A running application: work goes to its loop thread through the dispatcher, and it has settled once whole
-/// frames have run after the work.</summary>
+/// <summary>A running application: work goes to its loop thread through the dispatcher, and it has settled once the
+/// application reports idle.</summary>
 public sealed class ApplicationHost : IAutomationHost
 {
-    private const int SettleFrames = 2;
-
     private readonly UIApplication _application;
 
     public ApplicationHost(UIApplication application)
@@ -43,28 +41,15 @@ public sealed class ApplicationHost : IAutomationHost
 
     public async Task WaitForIdleAsync(TimeSpan timeout)
     {
-        var frames = 0;
-        var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void OnFrame(object sender, EventArgs e)
-        {
-            if (++frames < SettleFrames)
-            {
-                LoopSignal.Request();
-                return;
-            }
-
-            settled.TrySetResult();
-        }
-
-        _application.CycleFinished += OnFrame;
         try
         {
-            LoopSignal.Request();
-            await settled.Task.WaitAsync(timeout);
+            await _application.WaitForIdleAsync().WaitAsync(timeout);
         }
-        finally
+        catch (TimeoutException)
         {
-            _application.CycleFinished -= OnFrame;
+            throw new AutomationException(
+                $"The application did not go idle within {timeout.TotalSeconds:0.#} s; it waits on " +
+                $"{_application.IdleBlocker ?? "nothing it can name"}.");
         }
     }
 

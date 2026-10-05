@@ -1049,7 +1049,7 @@ public abstract class TextBoxBase : Control
         InvalidateSurface();
         if (_blinking) return;
         _blinking = true;
-        AnimationManager.AddTicker(dt =>
+        AnimationManager.AddEndlessTicker(dt =>
         {
             if (!IsFocused) { _blinking = false; return true; }
             _blinkAccum += dt;

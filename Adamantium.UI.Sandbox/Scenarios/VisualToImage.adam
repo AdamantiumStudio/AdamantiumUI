@@ -1,8 +1,7 @@
-# The Visual -> Image page: markup rendered to a picture, the live tree snapshotted, and its ghost shown and hidden -
-# each without an error left behind.
+# The Visual -> Image page: the markup already in the box rendered to a picture, the live tree snapshotted, and its
+# ghost shown and hidden - each without an error left behind.
 select id=GalleryTabs/id=VisualToImage
 wait id=Source
-set id=Source "<Button Content=\"Rendered\"/>"
 invoke id=VisualRenderDemoView/name=Render
 toggle id=VisualRenderDemoView/name="Toggle me"
 invoke id=VisualRenderDemoView/name="Snapshot live tree"

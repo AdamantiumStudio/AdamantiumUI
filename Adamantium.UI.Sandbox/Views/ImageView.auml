@@ -41,27 +41,27 @@
                 <StackPanel Orientation="Vertical" Margin="24,0,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock x:Name="StretchLabel" Text="{Localize ImageStrings.StretchLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown x:Name="StretchChoice" AutomationProperties.LabeledBy="{Binding ElementName=StretchLabel}" EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"
+                        <DropDown AutomationProperties.AutomationId="StretchChoice" AutomationProperties.LabeledBy="{Binding ElementName=StretchLabel}" EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock x:Name="DirectionLabel" Text="{Localize ImageStrings.DirectionLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown x:Name="DirectionChoice" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}" EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"
+                        <DropDown AutomationProperties.AutomationId="DirectionChoice" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}" EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock x:Name="HorizontalLabel" Text="{Localize ImageStrings.HorizontalLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown x:Name="HorizontalChoice" AutomationProperties.LabeledBy="{Binding ElementName=HorizontalLabel}" EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"
+                        <DropDown AutomationProperties.AutomationId="HorizontalChoice" AutomationProperties.LabeledBy="{Binding ElementName=HorizontalLabel}" EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock x:Name="VerticalLabel" Text="{Localize ImageStrings.VerticalLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown x:Name="VerticalChoice" AutomationProperties.LabeledBy="{Binding ElementName=VerticalLabel}" EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"
+                        <DropDown AutomationProperties.AutomationId="VerticalChoice" AutomationProperties.LabeledBy="{Binding ElementName=VerticalLabel}" EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock x:Name="BoxWidthLabel" Text="{Localize ImageStrings.BoxWidth}" VerticalAlignment="Center" MinWidth="120"/>
-                        <Slider x:Name="BoxWidth" AutomationProperties.LabeledBy="{Binding ElementName=BoxWidthLabel}"
+                        <Slider AutomationProperties.AutomationId="BoxWidth" AutomationProperties.LabeledBy="{Binding ElementName=BoxWidthLabel}"
                                 Width="170" Minimum="60" Maximum="420"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -70,7 +70,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <TextBlock x:Name="BoxHeightLabel" Text="{Localize ImageStrings.BoxHeight}" VerticalAlignment="Center" MinWidth="120"/>
-                        <Slider x:Name="BoxHeight" AutomationProperties.LabeledBy="{Binding ElementName=BoxHeightLabel}"
+                        <Slider AutomationProperties.AutomationId="BoxHeight" AutomationProperties.LabeledBy="{Binding ElementName=BoxHeightLabel}"
                                 Width="170" Minimum="60" Maximum="300"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxHeight, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -93,7 +93,7 @@
             <!-- Opacity belongs to THIS group - it fades the format gallery below, not the playground above. -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                 <TextBlock x:Name="OpacityLabel" Text="{Localize ImageStrings.OpacityLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                <Slider x:Name="ImageOpacity" AutomationProperties.LabeledBy="{Binding ElementName=OpacityLabel}"
+                <Slider AutomationProperties.AutomationId="ImageOpacity" AutomationProperties.LabeledBy="{Binding ElementName=OpacityLabel}"
                         Width="240"
                         Minimum="0.1"
                         Maximum="1"

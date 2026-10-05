@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:m="clr-namespace:Adamantium.UI.Core.Media;assembly=Adamantium.UI.Core"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Stroked SDF tiles, each under its own rotation, shear and scale, all in one instanced batch; the draw count stays
@@ -11,24 +12,24 @@
 
             <WrapPanel Orientation="Horizontal" Margin="0,14,0,0">
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="{Localize TransformsStrings.Rotation}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <Slider Value="{Binding Transforms.Rotation, Mode=TwoWay}" Minimum="0" Maximum="360" Width="200"/>
+                    <TextBlock x:Name="RotationLabel" Text="{Localize TransformsStrings.Rotation}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <Slider AutomationProperties.AutomationId="Rotation" AutomationProperties.LabeledBy="{Binding ElementName=RotationLabel}" Value="{Binding Transforms.Rotation, Mode=TwoWay}" Minimum="0" Maximum="360" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="{Localize TransformsStrings.SkewX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <Slider Value="{Binding Transforms.SkewX, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
+                    <TextBlock x:Name="SkewXLabel" Text="{Localize TransformsStrings.SkewX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <Slider AutomationProperties.AutomationId="SkewX" AutomationProperties.LabeledBy="{Binding ElementName=SkewXLabel}" Value="{Binding Transforms.SkewX, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="{Localize TransformsStrings.SkewY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <Slider Value="{Binding Transforms.SkewY, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
+                    <TextBlock x:Name="SkewYLabel" Text="{Localize TransformsStrings.SkewY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <Slider AutomationProperties.AutomationId="SkewY" AutomationProperties.LabeledBy="{Binding ElementName=SkewYLabel}" Value="{Binding Transforms.SkewY, Mode=TwoWay}" Minimum="-60" Maximum="60" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="{Localize TransformsStrings.Scale}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <Slider Value="{Binding Transforms.Scale, Mode=TwoWay}" Minimum="0.3" Maximum="1.6" Width="200"/>
+                    <TextBlock x:Name="TileScaleLabel" Text="{Localize TransformsStrings.Scale}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <Slider AutomationProperties.AutomationId="TileScale" AutomationProperties.LabeledBy="{Binding ElementName=TileScaleLabel}" Value="{Binding Transforms.Scale, Mode=TwoWay}" Minimum="0.3" Maximum="1.6" Width="200"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Width="220" Margin="0,0,18,8">
-                    <TextBlock Text="{Localize TransformsStrings.Spread}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <Slider Value="{Binding Transforms.Spread, Mode=TwoWay}" Minimum="0" Maximum="6" Width="200"/>
+                    <TextBlock x:Name="SpreadLabel" Text="{Localize TransformsStrings.Spread}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <Slider AutomationProperties.AutomationId="Spread" AutomationProperties.LabeledBy="{Binding ElementName=SpreadLabel}" Value="{Binding Transforms.Spread, Mode=TwoWay}" Minimum="0" Maximum="6" Width="200"/>
                 </StackPanel>
             </WrapPanel>
         </StackPanel>

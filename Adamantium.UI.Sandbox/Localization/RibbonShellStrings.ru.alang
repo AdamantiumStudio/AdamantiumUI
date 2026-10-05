@@ -64,6 +64,11 @@
     <Phrase Key="Wireframe" Text="Каркас"/>
     <Phrase Key="Grid" Text="Сетка"/>
     <Phrase Key="Gizmos" Text="Гизмо"/>
+    <Phrase Key="Transform" Text="Трансформация"/>
+    <Phrase Key="SelectGizmo" Text="Выбор"/>
+    <Phrase Key="MoveGizmo" Text="Перемещение"/>
+    <Phrase Key="RotateGizmo" Text="Поворот"/>
+    <Phrase Key="ScaleGizmo" Text="Масштаб"/>
     <Phrase Key="HasSelection" Text="Есть выделение"/>
     <Phrase Key="GridSize" Text="Шаг сетки"/>
     <Phrase Key="Backstage" Text="Backstage"/>
@@ -486,5 +491,9 @@
             Smoothed="Рельеф сглажен."
             AddedStar="Добавлена звезда."
             AddedPlanet="Добавлена планета."
-            AddedMoon="Добавлена луна."/>
+            AddedMoon="Добавлена луна."
+            SelectingObjects="Щёлкните, чтобы выбрать объекты."
+            MovingSelection="Тяните, чтобы переместить выделенное."
+            RotatingSelection="Тяните, чтобы повернуть выделенное."
+            ScalingSelection="Тяните, чтобы масштабировать выделенное."/>
 </Language>

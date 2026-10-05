@@ -16,6 +16,9 @@ invoke id=NavigationDemoView/name="Add card"
 wait id=Cards/name="Card 3"
 invoke id=NavigationDemoView/name=Clear
 absent id=Cards/type=ListItem
+# Two cards again, as the page opens with; their numbers go on from where the count stands.
+invoke id=NavigationDemoView/name="Add card"
+invoke id=NavigationDemoView/name="Add card"
 invoke id=NavigationDemoView/name="Show overlay window"
 wait id=OverlayWindow/id=OverlayDemoView
 window id=OverlayWindow close

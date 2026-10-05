@@ -134,6 +134,30 @@ public class AutomationPeerTests
     }
 
     [Test]
+    public void ARibbonRadioButton_IsAChoiceSelectedAsAPressSelectsIt_AndCannotBeToggledOff()
+    {
+        var select = new RibbonRadioButton { Content = "Select", GroupName = "Tool", IsChecked = true };
+        var move = new RibbonRadioButton { Content = "Move", GroupName = "Tool" };
+        var group = new RibbonGroup { Header = "Tools" };
+        group.Items.Add(select);
+        group.Items.Add(move);
+        Shown(group);
+        var peer = move.GetAutomationPeer();
+
+        ((ISelectionItemProvider)peer.GetPattern(PatternId.SelectionItem)).Select();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(peer.ControlType, Is.EqualTo(AutomationControlType.RadioButton));
+            Assert.That(peer.Name, Is.EqualTo("Move"));
+            Assert.That(move.IsChecked, Is.True);
+            Assert.That(select.IsChecked, Is.False, "the tool chosen before stayed checked");
+            Assert.That(((ISelectionItemProvider)select.GetAutomationPeer()).IsSelected, Is.False);
+            Assert.That(peer.GetPattern(PatternId.Toggle), Is.Null, "a choice is never toggled off");
+        });
+    }
+
+    [Test]
     public void AToggleButton_Toggles_AndIsNotInvoked()
     {
         var box = new CheckBox { Content = "Wrap" };

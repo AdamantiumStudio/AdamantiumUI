@@ -11,11 +11,12 @@
                        Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="10"/>
 
             <StackPanel Orientation="Horizontal" MarginBottom="12">
-                <TextBlock Text="{Localize ClippingStrings.CornerRadius}" VerticalAlignment="Center" MinWidth="110"
+                <TextBlock x:Name="CornerRadiusLabel" Text="{Localize ClippingStrings.CornerRadius}" VerticalAlignment="Center" MinWidth="110"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <Slider Minimum="0" Maximum="120" Value="{Binding ClipRadius, Mode=TwoWay}" Width="240"/>
+                <Slider AutomationProperties.AutomationId="ClipRadius" AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}"
+                        Minimum="0" Maximum="120" Value="{Binding ClipRadius, Mode=TwoWay}" Width="240"/>
                 <TextBlock Text="{Binding ClipRadius}" MarginLeft="8" Width="48" VerticalAlignment="Center"/>
-                <CheckBox Content="ClipToBounds" IsChecked="{Binding ClipOn, Mode=TwoWay}" MarginLeft="24" VerticalAlignment="Center"/>
+                <CheckBox AutomationProperties.AutomationId="ClipOn" Content="ClipToBounds" IsChecked="{Binding ClipOn, Mode=TwoWay}" MarginLeft="24" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- The container. Its OWN corners drive the clip (ClipCornerRadius unset), which is the common case: a card
@@ -152,9 +153,9 @@
                        Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="10"/>
 
             <StackPanel Orientation="Horizontal" MarginBottom="12">
-                <TextBlock Text="ClipCornerRadius" VerticalAlignment="Center" Width="110"
+                <TextBlock x:Name="ClipCornerRadiusLabel" Text="ClipCornerRadius" VerticalAlignment="Center" Width="110"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <Slider Minimum="0" Maximum="120" Value="{Binding ExplicitRadius, Mode=TwoWay}" Width="240"/>
+                <Slider AutomationProperties.AutomationId="ExplicitRadius" AutomationProperties.LabeledBy="{Binding ElementName=ClipCornerRadiusLabel}" Minimum="0" Maximum="120" Value="{Binding ExplicitRadius, Mode=TwoWay}" Width="240"/>
                 <TextBlock Text="{Binding ExplicitRadius}" MarginLeft="8" Width="48" VerticalAlignment="Center"/>
             </StackPanel>
 
