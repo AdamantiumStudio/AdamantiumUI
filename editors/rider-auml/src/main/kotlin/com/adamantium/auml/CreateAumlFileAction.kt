@@ -7,8 +7,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDirectory
 
 /**
- * Adds "AUML File" to New/Add: creates a `.auml` file of the chosen kind (Window, View, Docking Pane, Theme, StyleSet,
- * ResourceDictionary) from the bundled fileTemplates/internal templates.
+ * Adds "AUML File" to New/Add: creates a `.auml` file of the chosen kind (Window, View, Docking Pane, Ribbon Tab, Ribbon
+ * Group, Empty, Theme, StyleSet, ResourceDictionary) from the bundled fileTemplates/internal templates.
  */
 class CreateAumlFileAction : CreateFileFromTemplateAction(
     "AUML File",
@@ -22,6 +22,9 @@ class CreateAumlFileAction : CreateFileFromTemplateAction(
             .addKind("Window", AumlFileType.getIcon(), "Adamantium Window")
             .addKind("View", AumlFileType.getIcon(), "Adamantium View")
             .addKind("Docking Pane", AumlFileType.getIcon(), "Adamantium DockingPane")
+            .addKind("Ribbon Tab", AumlFileType.getIcon(), "Adamantium RibbonTab")
+            .addKind("Ribbon Group", AumlFileType.getIcon(), "Adamantium RibbonGroup")
+            .addKind("Empty", AumlFileType.getIcon(), "Adamantium Empty")
             .addKind("Theme", AumlFileType.getIcon(), "Adamantium Theme")
             .addKind("Style Set", AumlFileType.getIcon(), "Adamantium StyleSet")
             .addKind("Resource Dictionary", AumlFileType.getIcon(), "Adamantium ResourceDictionary")

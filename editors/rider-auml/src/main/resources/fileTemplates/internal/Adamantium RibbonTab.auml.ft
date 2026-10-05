@@ -1,0 +1,5 @@
+<RibbonTab xmlns="http://adamantium/ui"
+           xmlns:x="http://adamantium/ui/xaml/extensions"
+           Header="${NAME}">
+
+</RibbonTab>
