@@ -1,10 +1,14 @@
 ﻿using Adamantium.UI.Core.MarkupExtensions;
-using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Resources;
 
 public static class ResourceContext
 {
+    static ResourceContext()
+    {
+        DiscardedVisuals.Discarded += ReleaseDiscarded;
+    }
+
     public static readonly AdamantiumProperty SourceProperty =
         AdamantiumProperty.RegisterAttached<ResourceLink>("Source", typeof(AdamantiumComponent));
 
@@ -23,23 +27,6 @@ public static class ResourceContext
         if (element is ITheme) return;
 
         UIAppContext.Current.ResourceManager.AddSource(element, value.Source, value.Scope );
-
-        // Global sources are app-wide and survive their element unloading (e.g. in a theme swap); Local ones are removed
-        // on unload.
-        if (value.Scope == ResourceScope.Global) return;
-
-        if (element is IInputComponent inputComponent)
-        {
-            inputComponent.Unloaded += InputComponentOnUnloaded;
-        }
-
-        static void InputComponentOnUnloaded(object sender, RoutedEventArgs e)
-        {
-            var adamantiumComponent = (IInputComponent)sender;
-            adamantiumComponent.Unloaded -= InputComponentOnUnloaded;
-
-            UIAppContext.Current.ResourceManager.RemoveSources(adamantiumComponent);
-        }
     }
 
     // The scope the inline Resources below are published into. LOCAL by default - a private, tree-scoped dictionary that
@@ -78,30 +65,45 @@ public static class ResourceContext
         // 20 themes doesn't put 20 icon sets into the Theme scope at once. The ThemeManager activates it.
         if (element is ITheme) return;
 
-        var scope = RegisterResources(element, value);
+        RegisterResources(element, value);
+    }
 
-        // A GLOBAL dictionary is app-wide and must outlive the element that declared it (a theme swap unloads and
-        // reloads the subtree) - exactly as a Global Source does.
-        if (scope == ResourceScope.Global) return;
-
-        if (element is IInputComponent inputComponent)
+    private static void ReleaseDiscarded(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        var manager = UIAppContext.Current?.ResourceManager;
+        if (manager == null)
         {
-            inputComponent.Unloaded += InputComponentOnUnloaded;
+            return;
         }
 
-        static void InputComponentOnUnloaded(object sender, RoutedEventArgs e)
+        foreach (var component in gone)
         {
-            var adamantiumComponent = (IInputComponent)sender;
-            adamantiumComponent.Unloaded -= InputComponentOnUnloaded;
-
-            UIAppContext.Current.ResourceManager.RemoveSources(adamantiumComponent);
+            if (component is AdamantiumComponent element && HoldsScopedResources(element))
+            {
+                manager.RemoveSources(element);
+            }
         }
+    }
+
+    private static bool HoldsScopedResources(AdamantiumComponent element)
+    {
+        if (element is ITheme)
+        {
+            return false;
+        }
+
+        if (GetSource(element) is { Scope: not ResourceScope.Global })
+        {
+            return true;
+        }
+
+        return GetResources(element) != null && GetScope(element) != ResourceScope.Global;
     }
 
     // Publish a Resources block: first the linked dictionary FILES, then the block's own keyed entries. Every one of
     // them is registered under the SAME owner, so RemoveSources(element) takes the whole block back down at once.
-    // Returns the scope the block landed in. A link may name its own Scope; left at the default it follows the block.
-    internal static ResourceScope RegisterResources(AdamantiumComponent element, ResourceDictionary resources)
+    // A link may name its own Scope; left at the default it follows the block.
+    internal static void RegisterResources(AdamantiumComponent element, ResourceDictionary resources)
     {
         var scope = GetScope(element);
         var manager = UIAppContext.Current.ResourceManager;
@@ -113,6 +115,5 @@ public static class ResourceContext
         }
 
         manager.AddSource(element, resources, scope);
-        return scope;
     }
 }

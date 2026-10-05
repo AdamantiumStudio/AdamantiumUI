@@ -1006,7 +1006,10 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     private void DetachedFromVisualTree(VisualTreeAttachmentEventArgs e, bool isSubtreeRoot = true)
     {
         // The renderer withdraws a departed control here, where detaching happens on every route; once per subtree.
-        if (isSubtreeRoot) Core.RenderDirty.MarkDetached();
+        if (isSubtreeRoot)
+        {
+            Core.RenderDirty.MarkDetached(this);
+        }
 
         // Clear the root link so IsAttachedToVisualTree (=> RootVisual != null) flips to false for this subtree.
         RootVisual = null;

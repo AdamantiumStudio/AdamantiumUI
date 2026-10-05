@@ -43,7 +43,9 @@ public static class RenderDirty
         foreach (var scope in RenderDirtyRouter.All()) scope.MarkStructural();
     }
 
-    public static void MarkDetached() => RenderDirtyRouter.Default.MarkDetached();
+    /// <summary>A subtree LEFT the tree. Told to the scope that drew it: that cache is the one holding its units, and a
+    /// window's cache never hears the default scope.</summary>
+    public static void MarkDetached(IUIComponent root) => RenderDirtyRouter.Of(root).MarkDetached();
 
     public static long DetachGeneration => RenderDirtyRouter.Default.DetachGeneration;
 

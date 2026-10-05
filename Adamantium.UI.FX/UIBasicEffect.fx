@@ -11,6 +11,10 @@ Texture2D shaderTexture;
 Texture2DArray shaderTextureArray;
 float textureLayer;
 
+// A PALETTED animation: each layer holds one byte per pixel, an index into a 256x1 palette shared by every frame.
+Texture2DArray paletteIndices;
+Texture2D palette;
+
 float zNear;
 float zFar;
 float opacity = 1;
@@ -107,6 +111,35 @@ float4 TexturedArray_PS(VERTEX_OUTPUT input) : SV_TARGET
    return color;
 }
 
+float4 PaletteTexel(int2 p, int2 size, int layer)
+{
+   p = clamp(p, int2(0, 0), size - int2(1, 1));
+   float index = paletteIndices.Load(int4(p, layer, 0)).r;
+   return palette.Load(int3((int)round(index * 255.0), 0, 0));
+}
+
+// Indices cannot be filtered - a blend of two palette numbers is a third, unrelated color - so the four neighbors are
+// looked up first and their COLORS blended, which is what a linear sample of the full-color frame gives.
+float4 PalettedArray_PS(VERTEX_OUTPUT input) : SV_TARGET
+{
+   uint width, height, layers;
+   paletteIndices.GetDimensions(width, height, layers);
+   int2 size = int2(width, height);
+   int layer = (int)textureLayer;
+
+   float2 texel = input.uv0 * float2(size) - 0.5;
+   int2 p = (int2)floor(texel);
+   float2 f = texel - floor(texel);
+
+   float4 top = lerp(PaletteTexel(p, size, layer), PaletteTexel(p + int2(1, 0), size, layer), f.x);
+   float4 bottom = lerp(PaletteTexel(p + int2(0, 1), size, layer), PaletteTexel(p + int2(1, 1), size, layer), f.x);
+   float4 color = lerp(top, bottom, f.y);
+
+   color.a *= opacity;
+
+   return color;
+}
+
 technique Basic
 {
 	pass SolidColor
@@ -131,5 +164,11 @@ technique Basic
 	{
 		VertexShader = UIVertexShader;
 		PixelShader = TexturedArray_PS;
+	}
+
+	pass PalettedArray
+	{
+		VertexShader = UIVertexShader;
+		PixelShader = PalettedArray_PS;
 	}
 }

@@ -1,4 +1,5 @@
-﻿using Adamantium.Graphics.Core;
+﻿using System.Collections.Concurrent;
+using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.RoutedEvents;
@@ -13,6 +14,8 @@ public sealed class BitmapImage : BitmapSource
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
    private readonly Queue<BitmapFrame> _framesCache = new();
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();
+   private readonly ConcurrentDictionary<uint, BitmapFrame> _mipLevels = new();
+   private volatile ITexture _framePalette;
 
    public BitmapImage()
    {
@@ -157,6 +160,11 @@ public sealed class BitmapImage : BitmapSource
    /// inside a frame is what froze the app on entering the tab. Callers draw the single-image path meanwhile.</summary>
    public ITexture FrameArrayTexture => _frameArrayTexture;
 
+   /// <summary>The 256x1 palette of a <see cref="FrameArrayTexture"/> whose layers hold one palette index per pixel; null
+   /// when the layers hold the full colors. Frames of at most 256 colors in all - most GIFs - take a quarter of the
+   /// memory this way.</summary>
+   public ITexture FramePalette => _framePalette;
+
    /// <summary>Starts building <see cref="FrameArrayTexture"/> if it isn't built or being built already. Returns at once.</summary>
    public void RequestFrameArrayTexture(IResourceFactory factory)
    {
@@ -189,7 +197,29 @@ public sealed class BitmapImage : BitmapSource
                ArrayLayers = FrameCount
             };
 
-            _frameArrayTexture = factory.CreateTextureArray(description, layers);
+            if (SurfaceLayout == SurfaceFormat.R8G8B8A8.UNorm &&
+                IndexedFrames.TryIndex(layers, out var palette, out var indices))
+            {
+               _framePalette = factory.CreateTexture(new TextureDescription
+               {
+                  Width = IndexedFrames.PaletteSize,
+                  Height = 1,
+                  Dimension = TextureDimension.Texture2D,
+                  Format = SurfaceLayout,
+                  Depth = 1,
+                  InitialLayout = ImageLayout.Undefined,
+                  ImageAspect = ImageAspectFlagBits.ColorBit,
+                  DesiredImageLayout = Layout,
+                  MipLevels = 1,
+                  ArrayLayers = 1
+               }, palette);
+               description.Format = SurfaceFormat.R8.UNorm;
+               _frameArrayTexture = factory.CreateTextureArray(description, indices);
+            }
+            else
+            {
+               _frameArrayTexture = factory.CreateTextureArray(description, layers);
+            }
 
             // The frames now live on the GPU, so every decoded copy on the CPU is dead weight - and there are two of
             // them per frame (the RGBA pixels and, for a GIF, the palette-index stream), which for a 200-frame 960x540
@@ -290,12 +320,22 @@ public sealed class BitmapImage : BitmapSource
 
    public bool HasMipLevels => MipLevelsCount > 0;
 
+   /// <summary>The picture at mip <paramref name="level"/>, made on first ask and kept by this image, so every image
+   /// showing that level shares one texture. Null while the bitmap has not loaded or has no such level.</summary>
    public BitmapFrame GetMipLevel(uint level)
    {
+      if (_mipLevels.TryGetValue(level, out var kept))
+      {
+         return kept;
+      }
+
       var mipData = _rawBitmap?.GetMipLevelData(level);
-      if (mipData == null) return null;
-      
-      return new BitmapFrame(
+      if (mipData == null)
+      {
+         return null;
+      }
+
+      var frame = new BitmapFrame(
          mipData.Description.Width,
          mipData.Description.Height,
          DpiXScale,
@@ -303,6 +343,7 @@ public sealed class BitmapImage : BitmapSource
          SurfaceLayout,
          mipData.RawPixels,
          level);
+      return _mipLevels.GetOrAdd(level, frame);
    }
 
    private void Load(Uri uri)
@@ -366,8 +407,16 @@ public sealed class BitmapImage : BitmapSource
          bitmapFrame.Value?.Dispose();
       }
       _indexToFrame.Clear();
+      foreach (var mipLevel in _mipLevels.Values)
+      {
+         mipLevel.Dispose();
+      }
+
+      _mipLevels.Clear();
       _frameArrayTexture?.Dispose();
       _frameArrayTexture = null;
+      _framePalette?.Dispose();
+      _framePalette = null;
       _rawBitmap?.ReleaseDecodedFrames();
       // ...and the base's own texture, which is where a still image's ENTIRE picture lives (77 MB for the 4984x3858 TGA).
       // Overriding this without calling it left that texture unreachable and unfreed: the only path to it was here.
