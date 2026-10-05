@@ -12,7 +12,8 @@
 
             <!-- Columns and rows come from the view-model; tile size is derived from them and the space. The panel comes
                  from the TilesHost style sets. -->
-            <TilesHost ItemsSource="{Binding Tiles}"
+            <TilesHost AutomationProperties.AutomationId="Tiles"
+                       ItemsSource="{Binding Tiles}"
                        Columns="{Binding Columns}" 
                        Rows="{Binding Rows}" 
                        Spacing="6"

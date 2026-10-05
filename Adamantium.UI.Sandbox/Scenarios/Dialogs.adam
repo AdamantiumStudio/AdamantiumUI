@@ -1,0 +1,30 @@
+# The main window's caption commands: the confirm dialog in the window's overlay and in a window of its own, About,
+# and the overflow menu that holds the commands - each dialog called by its own title and closed by its answer.
+invoke id=ShowConfirm
+wait id=ConfirmDialogView
+expect id=OverlayWindow name=Confirm
+invoke id=ConfirmDialogView/name=OK
+absent id=ConfirmDialogView
+expect id=LastDialog name="Dialog: OK"
+# The same dialog as a window of its own, by the Navigation page's switch.
+select id=GalleryTabs/id=Navigation
+toggle "id=NavigationDemoView/name=Show dialogs as separate windows"
+invoke id=ShowConfirm
+wait id=ConfirmDialogView
+expect id=Window name=Confirm
+invoke id=ConfirmDialogView/name=Cancel
+absent id=ConfirmDialogView
+expect id=LastDialog name="Dialog: Cancel"
+invoke id=ShowAbout
+wait id=AboutDialogView
+expect id=Window name=About
+expect id=Product name="Adamantium Engine Sandbox"
+invoke id=AboutDialogView/name=OK
+absent id=AboutDialogView
+toggle "id=NavigationDemoView/name=Show dialogs as separate windows"
+# The overflow menu lists the caption's commands by their labels.
+invoke id=MoreWindowCommands
+wait id=PART_RightOverflowMenu/name=Help
+expect id=PART_RightOverflowMenu/id=ShowAbout name=Help
+key Escape --into id=MainWindow
+expect id=PART_RightOverflowMenu offscreen=True

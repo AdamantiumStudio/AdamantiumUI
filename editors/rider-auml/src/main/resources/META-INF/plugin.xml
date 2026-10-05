@@ -26,6 +26,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>New | Language File takes a language picked from its list: the dialog judged the language once, while the
+        box was still empty, and kept saying "Not a language" with OK off.</p>
         <p>New | AUML File offers a Ribbon Tab, a Ribbon Group and an Empty file - a &lt;Grid&gt; root with the
         namespaces already declared, to be replaced by any control. A file with any control at its root is a class of
         its own, which other markup places by name: a ribbon can be split into a file per tab and a file per group.</p>

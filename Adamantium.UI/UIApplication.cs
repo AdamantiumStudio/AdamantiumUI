@@ -392,6 +392,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
         EntityWorld.ForceUpdate();
 
+        if (window == ActiveWindow)
+        {
+            ActiveWindow = null;
+        }
+
         if (window == MainWindow)
         {
             MainWindow = null;

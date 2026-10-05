@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Navigation;
@@ -48,6 +49,7 @@ public sealed class WindowDialogHost : IDialogHost
         await _application.ExecuteOnUIThreadAsync(() =>
         {
             var aware = dialogViewModel as IWindowAware;
+            var dialog = dialogViewModel as IDialogAware;
             if (_shells.Create(aware?.WindowShellKey) is not WindowBase created)
             {
                 return;
@@ -55,7 +57,20 @@ public sealed class WindowDialogHost : IDialogHost
             shell = created;
             shell.RemembersPlacement = false;
 
-            shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : "Dialog";
+            shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : dialog?.Title ?? string.Empty;
+            if (string.IsNullOrEmpty(aware?.Title) && dialog is INotifyPropertyChanged observed)
+            {
+                void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
+                {
+                    if (e.PropertyName == nameof(IDialogAware.Title))
+                    {
+                        shell.Title = dialog.Title;
+                    }
+                }
+
+                observed.PropertyChanged += OnPropertyChanged;
+                shell.Closed += (_, _) => observed.PropertyChanged -= OnPropertyChanged;
+            }
             shell.ClientWidth = aware is { Width: > 0 } ? aware.Width : 440;
             shell.ClientHeight = aware is { Height: > 0 } ? aware.Height : 260;
 

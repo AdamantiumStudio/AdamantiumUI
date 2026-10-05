@@ -355,6 +355,14 @@ All packages share one version.
 - A minimized window stopped every other window of the application from drawing: the render thread they share waited
   for it to be restored, so the main window took clicks and showed nothing of them. A minimized window is skipped - it
   neither draws nor holds the others' changes back - and is recorded whole when it comes back.
+- A window that closed stayed the application's `ActiveWindow` when the system sent no deactivation - as when the
+  application is not in front - so the next overlay or overlay dialog opened in a window that was gone and nothing
+  appeared. A closed window is no longer the active one.
+- A dialog shown in a window of its own was titled "Dialog", an English word in the framework, instead of its
+  `IDialogAware.Title` as the overlay shows it; its title now follows the dialog's, live.
+- The rows of the caption's overflow menu were called by their command object's class name to automation and screen
+  readers; the themes name each row by its command's label and give it the command's `AutomationId`. An item shown
+  without an element of its own is no longer called by its class name.
 - An active `OverlayWindow` in the Fluent theme drew a gray outline around its accent caption, a box inside the window.
   The outline takes the caption's color when active, as the main window's does.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's

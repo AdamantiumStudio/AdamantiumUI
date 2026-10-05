@@ -6,7 +6,10 @@
                     Width="380"
                     HorizontalAlignment="Center"
                     Margin="0 20 0 0">
-            <TextBlock Text="{Binding Product}" FontSize="20" Margin="0,0,0,12"/>
+            <TextBlock AutomationProperties.AutomationId="Product"
+                       Text="{Binding Product}"
+                       FontSize="20"
+                       Margin="0,0,0,12"/>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                 <TextBlock Text="{Localize DialogStrings.Version}" FontSize="13" Margin="0,0,4,0"/>
                 <TextBlock Text="{Binding Version}" FontSize="13"/>

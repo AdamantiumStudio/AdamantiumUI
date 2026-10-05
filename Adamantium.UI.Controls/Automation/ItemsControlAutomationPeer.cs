@@ -55,8 +55,15 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         return children;
     }
 
-    /// <summary>What an item with no element is called: by default the item as text.</summary>
-    protected internal virtual string NameOfItem(object item) => item as string ?? item?.ToString() ?? string.Empty;
+    /// <summary>What an item with no element is called: by default the item as text, and nothing for an item with no text
+    /// of its own - the name of its class is not a name.</summary>
+    protected internal virtual string NameOfItem(object item) => item switch
+    {
+        null => string.Empty,
+        string text => text,
+        _ when item.GetType().GetMethod(nameof(ToString), Type.EmptyTypes)?.DeclaringType == typeof(object) => string.Empty,
+        _ => item.ToString()
+    };
 
     /// <summary>Whether an item with no element is selected; false when the control does not select.</summary>
     protected internal virtual bool IsItemSelected(object item) => Owner switch

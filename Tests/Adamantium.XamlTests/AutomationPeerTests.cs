@@ -134,6 +134,18 @@ public class AutomationPeerTests
     }
 
     [Test]
+    public void AnItemWithNoElement_IsNotCalledByItsTypeName()
+    {
+        List<object> items = [new WindowCommand { Label = "Help" }, "Open"];
+        var menu = new ContextMenu { ItemsSource = items };
+
+        var names = menu.GetAutomationPeer().GetChildren().Select(child => child.Name).ToList();
+
+        Assert.That(names, Is.EqualTo(new List<string> { string.Empty, "Open" }),
+            "an item with no text of its own was called by the name of its class");
+    }
+
+    [Test]
     public void ARibbonRadioButton_IsAChoiceSelectedAsAPressSelectsIt_AndCannotBeToggledOff()
     {
         var select = new RibbonRadioButton { Content = "Select", GroupName = "Tool", IsChecked = true };

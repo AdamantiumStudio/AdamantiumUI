@@ -12,7 +12,9 @@
         </StackPanel>
 
         <!-- A page names its kind by a key of the workspace's phrases, and its number fills it in. -->
-        <TabControl Grid.Row="1" nav:RegionManager.RegionName="workspace">
+        <TabControl AutomationProperties.AutomationId="WorkspaceTabs"
+                    Grid.Row="1"
+                    nav:RegionManager.RegionName="workspace">
             <TabControl.ItemTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Localize WorkspaceStrings, Key={Binding Kind}, number={Binding Number}}" VerticalTextAlignment="Center"/>

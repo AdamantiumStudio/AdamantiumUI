@@ -227,6 +227,8 @@ private class LanguageFileDialog(
 
     override fun getPreferredFocusedComponent(): JComponent = languageBox
 
+    override fun continuousValidation(): Boolean = true
+
     override fun doValidate(): ValidationInfo? {
         if (!Regex("[A-Za-z_][A-Za-z0-9_]*").matches(table)) {
             return ValidationInfo("A table becomes a class: its name is letters, digits and _", tableBox)
