@@ -890,14 +890,6 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             return IntPtr.Zero;
         }
 
-        // Read here, applied on the loop thread: the size setters reach the renderer and layout, which must not race it.
-        Win32Interop.GetWindowRect(window.Handle, out var rect);
-        Win32Interop.GetClientRect(window.Handle, out var client);
-        var w = rect.Width;
-        var h = rect.Height;
-        var cw = client.Width;   // physical client px
-        var ch = client.Height;
-
         // WM_SIZE's type tells us when the OS itself changed the maximize state (Aero Snap, drag-to-maximize, a caption
         // restore-drag) - paths that never go through our button/SysCommand. Sync window.State so StateChanged fires and
         // the title bar's maximize<->restore glyph follows; otherwise it sticks on the state it had before the drag.
@@ -909,6 +901,20 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             _ => null                     // SIZE_MINIMIZED etc. - handled elsewhere / not a caption-drag case
         };
 
+        ReportOsSize(osState);
+        return IntPtr.Zero;
+    }
+
+    private void ReportOsSize(WindowState? osState)
+    {
+        // Read here, applied on the loop thread: the size setters reach the renderer and layout, which must not race it.
+        Win32Interop.GetWindowRect(window.Handle, out var rect);
+        Win32Interop.GetClientRect(window.Handle, out var client);
+        var w = rect.Width;
+        var h = rect.Height;
+        var cw = client.Width;   // physical client px
+        var ch = client.Height;
+
         DispatchInput(() =>
         {
             window.Width = w;
@@ -917,8 +923,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             // request and pushes them back - and since they are marshaled here (a frame or more after the message), the
             // number it pushes is already stale, the OS resizes to it, reports THAT, and the window shakes for good.
             _reportingOsSize = true;
-            // ClientWidth/Height logical (DIP) = physical / DPI. DpiScale is read on the loop thread (where it's updated
-            // by the marshaled WM_DPICHANGED handler), so a DPI change that precedes this resize is already applied.
+            // ClientWidth/Height logical (DIP) = physical / DPI, by the scale in force when this runs on the loop thread.
             window.ClientWidth = cw / window.DpiScale.X;
             window.ClientHeight = ch / window.DpiScale.Y;
             _reportingOsSize = false;
@@ -932,8 +937,6 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
                 window.StateChanged += WindowOnStateChanged;
             }
         });
-
-        return IntPtr.Zero;
     }
 
     // Light/dark switches arrive as a WM_SETTINGCHANGE broadcast with "ImmersiveColorSet" in lParam.
@@ -978,6 +981,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         var r = Marshal.PtrToStructure<RECT>(lParam);
         Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, r.Left, r.Top, r.Width, r.Height,
             SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate);
+
+        if (chromeState != WindowState.Minimized)
+        {
+            ReportOsSize(null);
+        }
+
         return IntPtr.Zero;
     }
 

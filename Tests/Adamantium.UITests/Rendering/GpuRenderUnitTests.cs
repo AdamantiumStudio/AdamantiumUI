@@ -598,6 +598,92 @@ public class GpuRenderUnitTests
             "disposing a RenderTarget must also free its resolve texture (it leaked on every resize)");
     }
 
+    private static uint[] Drawn(OffscreenTestRenderer renderer, TestRoot root, int width, int height)
+    {
+        Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"paletted_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var pixels = Adamantium.Imaging.Image.Load(path).GetPixelBuffer(0, 0);
+            var result = new uint[width * height];
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    result[y * width + x] = pixels.GetPixel<uint>(x, y);
+                }
+            }
+
+            return result;
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    private static int ChannelDifference(uint a, uint b)
+    {
+        var worst = 0;
+        for (var shift = 0; shift < 32; shift += 8)
+        {
+            worst = Math.Max(worst, Math.Abs((int)((a >> shift) & 0xFF) - (int)((b >> shift) & 0xFF)));
+        }
+
+        return worst;
+    }
+
+    // A paletted frame array stores one byte per pixel and looks the color up in the shader; scaled, it must give the
+    // very pixels the full-color frame gives, filtering included.
+    [Test]
+    public void APalettedAnimationDrawsTheSamePixelsAsItsFullColorFrame()
+    {
+        const int width = 320;
+        const int height = 160;
+        var resources = new DeviceResourceFactory(_device);
+        using var renderer = new OffscreenTestRenderer(_device, new RenderUnitFactory(_device, resources), width, height)
+        {
+            ClearColor = Colors.Black
+        };
+
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (!System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", "RotatingEarth2.gif")))
+        {
+            dir = dir.Parent;
+        }
+
+        var picture = new Adamantium.UI.Core.Media.Imaging.BitmapImage(
+            BitmapLoader.Load(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", "RotatingEarth2.gif")));
+        var destination = new Rect(3, 5, 311, 147);
+
+        var fullColorRoot = new TestRoot(width, height);
+        fullColorRoot.Add(new TestControl { RenderAction = s => s.DrawImage(picture, null, destination, new CornerRadius(0)) });
+        var fullColor = Drawn(renderer, fullColorRoot, width, height);
+
+        picture.RequestFrameArrayTexture(resources);
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (picture.FrameArrayTexture == null && waited.Elapsed < TimeSpan.FromSeconds(30))
+        {
+            System.Threading.Thread.Sleep(20);
+        }
+
+        Assume.That(picture.FramePalette, Is.Not.Null, "precondition: the animation fits one palette");
+
+        var palettedRoot = new TestRoot(width, height);
+        palettedRoot.Add(new TestControl { RenderAction = s => s.DrawImageFrame(picture, null, destination, new CornerRadius(0), 0) });
+        var paletted = Drawn(renderer, palettedRoot, width, height);
+
+        var worst = 0;
+        for (var i = 0; i < fullColor.Length; i++)
+        {
+            worst = Math.Max(worst, ChannelDifference(fullColor[i], paletted[i]));
+        }
+
+        Assert.That(fullColor.Distinct().Count(), Is.GreaterThan(100), "precondition: the picture was actually drawn");
+        Assert.That(worst, Is.LessThanOrEqualTo(2), "the paletted frame differs from the full-color one");
+    }
+
     private sealed class StubResourceFactory : IResourceFactory
     {
         public ITexture CreateTexture(TextureDescription description, byte[] pixelData) => throw new NotSupportedException();

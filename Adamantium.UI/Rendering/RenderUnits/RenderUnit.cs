@@ -989,10 +989,12 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         // single-image way - a frame late at worst, instead of a frozen app while ~400 MB is decoded and uploaded here.
         var layer = Payload.FrameLayer;
         ITexture texture = null;
+        ITexture palette = null;
         if (layer.HasValue && image is BitmapImage animated)
         {
             animated.RequestFrameArrayTexture(ResourceFactory);
             texture = animated.FrameArrayTexture;
+            palette = animated.FramePalette;
             if (texture == null) layer = null;
         }
         texture ??= image.GetOrCreateTexture(ResourceFactory);
@@ -1000,7 +1002,8 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         var component = new ImageRenderComponent(GraphicsDevice, UIBasicEffect, mesh, texture, BufferManager)
         {
             Sampler = SamplerStates.LinearClampToEdge,
-            FrameLayer = layer
+            FrameLayer = layer,
+            FramePalette = layer.HasValue ? palette : null
         };
         // A live shared surface (universe→panel): sample it directly, and drive the producer/consumer timeline so the
         // sample never races the producer's write (see ImageRenderComponent.PreRender). Composited with the default

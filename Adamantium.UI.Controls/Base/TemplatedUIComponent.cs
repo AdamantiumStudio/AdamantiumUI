@@ -196,7 +196,11 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
             TraverseVisualTreeAndUnload(child);
         }
 
-        if (component is ObservableUIComponent observableUiComponent)
+        if (component is InputUIComponent input)
+        {
+            input.RaiseUnloaded();
+        }
+        else if (component is ObservableUIComponent observableUiComponent)
         {
             observableUiComponent.RaiseEvent(new RoutedEventArgs(UnloadedEvent, component));
         }

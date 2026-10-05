@@ -152,6 +152,9 @@ All packages share one version.
 
 ### Changed
 
+- An animation whose frames use no more than 256 colors in all - most GIFs - keeps them on the GPU as one byte per pixel
+  and a shared palette (`BitmapImage.FramePalette`), a quarter of the memory with the same pixels: the sandbox's
+  200-frame 960x540 GIF takes 117 MB instead of 469. Animations with more colors keep their full-color frames.
 - `AdamantiumComponent.SetValue(string, ...)` reports a name the type has no property for through `PropertyTrace`
   instead of ignoring it without a word. `ThemeResource.Apply` and `ObservableResource.Apply` report such a name too,
   connect nothing and return null.
@@ -218,6 +221,21 @@ All packages share one version.
 
 ### Fixed
 
+- A window snapped onto a monitor with a different scale - a quarter of a 100% screen, from a 150% one - drew its
+  content at the old scale in the window's corner. The resize arrives before the DPI change and was divided by the old
+  scale; the window's size is now read again once the scale has changed.
+- A view that left a window was never let go, and with it every texture it drew: video memory grew about 230 MB with
+  each pass over the sandbox's tabs until the device ran out. The window's render cache now hears the departure, does
+  not freeze the layout of a destroyed element again, and keeps no departed element past the frame that dropped it.
+- An element's own resources (`ResourceContext.Resources`, a non-global `ResourceContext.Source`) are released when the
+  element is destroyed. They waited for an `Unloaded` that content leaving a presenter never raises, so the resource
+  manager held every such view for the life of the application.
+- `Unloaded` is raised for a loaded element that is destroyed - a view a presenter let go of never heard it, so a
+  handler that unsubscribed there leaked. It comes once: a template part torn down and then released hears it a single
+  time, and an element that never loaded hears nothing.
+- An `Image` of a still picture draws the picture itself instead of a copy of its first frame, so every image showing one
+  file shares one texture rather than uploading its own. `BitmapImage.GetMipLevel` keeps the frame it makes, so images
+  of one mip level share it too.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.
