@@ -281,9 +281,9 @@ public class ContentPresenter : InputUIComponent
 
         if (_currentRoot == null) return;
 
+        SetContentContext(content);
         AddVisualChild(_currentRoot);
         AddLogicalChild(_currentRoot);
-        SetContentContext(content);
         InvalidateMeasure();
     }
 
@@ -296,9 +296,9 @@ public class ContentPresenter : InputUIComponent
 
         _currentTemplateResult = loading;
         _currentRoot = loading.RootComponent;
+        SetContentContext(content);
         AddVisualChild(_currentRoot);
         AddLogicalChild(_currentRoot);
-        SetContentContext(content);
         InvalidateMeasure();
     }
 
@@ -391,9 +391,9 @@ public class ContentPresenter : InputUIComponent
 
         _currentTemplateResult = built;
         _currentRoot = built.RootComponent;
+        SetContentContext(content);
         AddVisualChild(_currentRoot);
         AddLogicalChild(_currentRoot);
-        SetContentContext(content);
         InvalidateMeasure();
     }
 

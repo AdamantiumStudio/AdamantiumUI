@@ -224,7 +224,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     public virtual NavigationCacheMode KeepAlive => NavigationCacheMode.Disabled;
 
     /// <summary>Resolves <see cref="ViewModelType"/> from the application's resolver as the DataContext, once and only if
-    /// none was set explicitly. No-op without a resolver.</summary>
+    /// none was set explicitly and the one it inherits is not already of that type - a view nested in a view of the same
+    /// view model shares it. No-op without a resolver.</summary>
     protected void ApplyViewModel()
     {
         if (_viewModelApplied) return;
@@ -239,7 +240,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             return;
         }
 
-        if (HasExplicitValue(DataContextProperty))
+        if (HasExplicitValue(DataContextProperty) || viewModelType.IsInstanceOfType(DataContext))
         {
             _viewModelApplied = true;   // caller already provided a DataContext; don't override it
             return;
