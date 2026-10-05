@@ -1,0 +1,32 @@
+# The DataGrid page: ten thousand rows - sorted by a header, a cell written and taken back, a far row selected, a branch
+# opened, a record's details opened on one of their tabs.
+select id=GalleryTabs/id=DataGrid
+wait id=Table/name=P-00001
+# A header sorts as a click does: ascending, then the other way round.
+invoke id=Table/name=Code
+invoke id=Table/name=Code
+expect id=Table/type=DataItem name=P-10000
+invoke id=Table/name=Code
+expect id=Table/type=DataItem name=P-00001
+# A cell takes a value the way committing an edit does, and the table's own history takes it back.
+set id=Table/name=P-00001/name=Grace Alice
+expect id=Table/name=P-00001/name=Alice value=Alice
+invoke id=DataGridView/name=Undo
+expect id=Table/name=P-00001/name=Grace value=Grace
+# A row no element has been made for yet is brought into view and selected.
+scroll id=Table/name=P-05000
+select id=Table/name=P-05000
+expect id=Table/name=P-05000 selected=True
+# A branch opens and closes.
+scroll id=Table/name=P-00005
+expand id=Table/name=P-00005
+wait id=Table/name=P-00005.1
+collapse id=Table/name=P-00005
+absent id=Table/name=P-00005.1
+# A record's details open on their tabs.
+scroll id=Table/name=P-00001
+expand id=Table/name=P-00001/type=Button
+select id=Table/type=Tab/name=Note
+expect id=Table/type=Tab/name=Note selected=True
+collapse id=Table/name=P-00001/type=Button
+absent id=Table/type=Tab

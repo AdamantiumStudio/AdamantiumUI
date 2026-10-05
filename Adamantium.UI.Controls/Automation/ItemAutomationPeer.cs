@@ -24,7 +24,7 @@ public class ItemAutomationPeer : AutomationPeer, ISelectionItemProvider, IScrol
 
     public override AutomationControlType ControlType => _controlType;
 
-    public override string Name => Item as string ?? Item?.ToString() ?? string.Empty;
+    public override string Name => ItemsOwner.NameOfItem(Item);
 
     public override string AutomationId => string.Empty;
 
@@ -42,9 +42,7 @@ public class ItemAutomationPeer : AutomationPeer, ISelectionItemProvider, IScrol
 
     public override bool IsKeyboardFocusable => false;
 
-    public bool IsSelected => OwningSelector() is { } selector && (selector is ListBox list
-        ? list.SelectedItems?.Contains(Item) == true
-        : Equals(selector.SelectedItem, Item));
+    public bool IsSelected => ItemsOwner.IsItemSelected(Item);
 
     public AutomationPeer SelectionContainer => ItemsOwner;
 
@@ -57,12 +55,10 @@ public class ItemAutomationPeer : AutomationPeer, ISelectionItemProvider, IScrol
     }
 
     public override object GetPattern(PatternId pattern) =>
-        pattern == PatternId.SelectionItem && OwningSelector() == null ? null : base.GetPattern(pattern);
+        pattern == PatternId.SelectionItem && !ItemsOwner.CanSelectItems ? null : base.GetPattern(pattern);
 
     /// <summary>Makes the item the selected one, as the control's own selection would.</summary>
-    public void Select() => OwningSelector()?.SetCurrentValue(Selector.SelectedItemProperty, Item);
+    public void Select() => ItemsOwner.SelectItem(Item);
 
-    public void ScrollIntoView() => ((ItemsControl)ItemsOwner.Owner).ScrollIntoView(Item);
-
-    private Selector OwningSelector() => ItemsOwner.Owner as Selector;
+    public void ScrollIntoView() => ItemsOwner.ScrollItemIntoView(Item);
 }

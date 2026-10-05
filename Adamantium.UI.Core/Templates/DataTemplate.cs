@@ -29,6 +29,8 @@ public class DataTemplate : UiTemplate
             result.RootComponent.TraverseVisualTree(component =>
             {
                 var fundamental = (FundamentalUIComponent)component;
+                // A control built here may have applied its own template already; its parts are its own, not ours.
+                if (fundamental.TemplatedParent != null && fundamental.TemplatedParent != templatedParent) return;
                 fundamental.TemplatedParent = templatedParent;
                 fundamental.OwningTemplateId = result.Id;
             });

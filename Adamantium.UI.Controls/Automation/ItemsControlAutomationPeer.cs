@@ -55,21 +55,44 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         return children;
     }
 
+    /// <summary>What an item with no element is called: by default the item as text.</summary>
+    protected internal virtual string NameOfItem(object item) => item as string ?? item?.ToString() ?? string.Empty;
+
+    /// <summary>Whether an item with no element is selected; false when the control does not select.</summary>
+    protected internal virtual bool IsItemSelected(object item) => Owner switch
+    {
+        ListBox list => list.SelectedItems?.Contains(item) == true,
+        Selector selector => Equals(selector.SelectedItem, item),
+        _ => false
+    };
+
+    /// <summary>Whether the control selects its items at all.</summary>
+    protected internal virtual bool CanSelectItems => Owner is Selector;
+
+    /// <summary>Makes an item with no element the selected one, as the control's own selection would.</summary>
+    protected internal virtual void SelectItem(object item) => Owner.SetCurrentValue(Selector.SelectedItemProperty, item);
+
+    /// <summary>Scrolls until an item is in view, making its element.</summary>
+    protected internal virtual void ScrollItemIntoView(object item) => ((ItemsControl)Owner).ScrollIntoView(item);
+
     /// <summary>The element made for item <paramref name="index"/>, or null while it has none. By default the one its own
     /// generator made; a control whose template lists the items itself says where to look.</summary>
     protected virtual UIComponent ContainerAt(int index) =>
         ((ItemsControl)Owner).ItemContainerGenerator.ContainerFromIndex(index) as UIComponent;
 
+    /// <summary>Makes the stand-in for an item with no element.</summary>
+    protected virtual ItemAutomationPeer CreateItemPeer(object item) => new(this, item, ItemControlType);
+
     private AutomationPeer PeerFor(object item)
     {
         if (item == null)
         {
-            return new ItemAutomationPeer(this, null, ItemControlType);
+            return CreateItemPeer(null);
         }
 
         if (!_itemPeers.TryGetValue(item, out var peer))
         {
-            peer = new ItemAutomationPeer(this, item, ItemControlType);
+            peer = CreateItemPeer(item);
             _itemPeers[item] = peer;
         }
 

@@ -31,5 +31,14 @@ public enum PatternId
     Scroll,
 
     /// <summary><see cref="IWindowProvider"/>: a window.</summary>
-    Window
+    Window,
+
+    /// <summary><see cref="IGridProvider"/>: laid out in rows and columns.</summary>
+    Grid,
+
+    /// <summary><see cref="IGridItemProvider"/>: one cell of a grid.</summary>
+    GridItem,
+
+    /// <summary><see cref="ITableProvider"/>: a grid whose columns have headers.</summary>
+    Table
 }

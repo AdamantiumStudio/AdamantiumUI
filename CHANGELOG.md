@@ -195,6 +195,11 @@ All packages share one version.
   opens and closes its commands; a gallery is a list picked from by name, and opens; "File" opens its menu, a row with a
   page selected to show it; a drop-down command holds its menu while open; the quick-access bar is a toolbar. A key tip
   is the element's `AutomationPeer.AccessKey`. The themes name the ribbon and the quick-access bar (`RibbonStrings`).
+- Automation of `TreeDataGrid`: a data grid whose children are its column headers, then its rows - a stand-in for a row
+  the virtualizing rows did not make, called by its first column. A header sorts as a click does; a row is selected,
+  brought into view and, in a tree, opened, with or without an element; a cell is selected and takes a value the way
+  committing an edit does - `CellEditEnding`, a blocking rule, the write through the column, the undo history; a row's
+  details toggle opens its panel. New patterns `IGridProvider`, `IGridItemProvider` and `ITableProvider`.
 - An element with no name of its own is called by its tooltip when that is text, and a text box or a drop-down by its
   placeholder.
 - `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
@@ -268,6 +273,9 @@ All packages share one version.
 
 ### Fixed
 
+- A template took over the parts of a control built inside it that had applied its own template already - as code
+  made from markup does. A tab control in a data grid's row details showed no tabs: its strip no longer knew the tab
+  control the tabs were written in, and refused them. A template now stamps only what it built.
 - `RibbonGroup.IsDropDownOpen` was written and read by nothing, so setting it did not open a collapsed group. It is the
   flyout's state now: set, it opens or closes the flyout; the group's button and the flyout closing itself report back
   to it.

@@ -63,6 +63,9 @@ public abstract class AutomationPeer
         PatternId.RangeValue => this as IRangeValueProvider,
         PatternId.Scroll => this as IScrollProvider,
         PatternId.Window => this as IWindowProvider,
+        PatternId.Grid => this as IGridProvider,
+        PatternId.GridItem => this as IGridItemProvider,
+        PatternId.Table => this as ITableProvider,
         _ => null
     };
 }
