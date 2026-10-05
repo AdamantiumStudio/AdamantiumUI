@@ -250,9 +250,30 @@ All packages share one version.
   both: a style include is offered only style sets, a resource link only dictionaries - classes in C# and markup files
   alike - and an image only the pictures of the project and the folders holding them; a type the build would reject is
   underlined as it is typed. A `Type`-valued attribute is completed in its value too, not only in `{x:Type}`.
+- `ApplicationBlueprint`: what an application starts with, written in markup - `<ApplicationBlueprint StartupWindow=
+  "MainWindow" StartupTheme="EditorPro" StartupThemeVariant="Light">` with its `Resources` and `StyleIncludes`. The
+  build makes it a class, names it to the assembly and writes the entry point, so a project has no `Program.cs`; the
+  application reads it through `IApplicationBlueprint` while it initializes, the theme and its variant before the
+  first frame, and what its own code sets wins over it. A project holds one blueprint and one application class: a
+  second blueprint, whatever its file is called, fails the build and is underlined in the editor. The application
+  template and New | AUML File in Rider create one.
+- `ResourceKeyAttribute`: the build names every key a dictionary, a theme variant's palette or a blueprint declares
+  to the assembly, with the type of what it holds. The language server offers keys in `{ObservableResource}` and
+  `{ResourceReference}` from them and from the project's own markup - only those that fit the property: a brush for a
+  `Background`, a picture for an `Image`'s `Source`.
+- `UIApplication.StartupThemeVariant`: the variant of the theme the application opens on - Light, Dark, System or one
+  of the theme's own. A variant the theme does not have fails the start, naming the ones it has.
+- `IThemeManager.AddStyleSet(Type)`: adds a style set known only at run time to every theme.
 
 ### Changed
 
+- `UIApplication.StartupTheme` is the theme's type, not its name, and may be one of the application's own themes,
+  which is added to the themes; `ADAM_THEME` still names one. `StartupType`, `StartupTheme`, `StartupLanguage` and
+  `ShutDownMode` are properties of the property system, so a value set in code outranks the blueprint's whatever the
+  order. `Run(window)` no longer opens `StartupType` beside the window it was given.
+- `ResourceManager.AddSource` registers the dictionaries a dictionary links (`<ResourceLink>` in its `Includes`) with
+  it, whether it is given as a type or as an instance, before it, so its own keys win. A dictionary registered from
+  code had its links ignored; only `ResourceContext.Resources` honored them.
 - A `Type`-valued property takes a type by name as well as by `{x:Type}`: `<StyleInclude Source="EditorButtons"/>`,
   `EnumType="local:Priority"`, `{ResourceLink Source=AppColors}`. The live preview took a bare name but the build failed
   on it in an attribute, and in a markup extension's argument built code that threw "Type parser not found for

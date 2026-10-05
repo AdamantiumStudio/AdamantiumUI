@@ -57,6 +57,13 @@ public class AumlSourceCompletionTests
             """<ResourceDictionary xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions"/>""");
         File.WriteAllText(Path.Combine(_project, "HomeStyles.auml"),
             """<StyleSet xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions"/>""");
+        File.WriteAllText(Path.Combine(_project, "HomeIcons.auml"),
+            """
+            <ResourceDictionary xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions">
+                <DrawingImage x:Key="SelectIcon"><GeometryDrawing Geometry="M0,0 L1,1"/></DrawingImage>
+                <SolidColorBrush x:Key="SelectInk" Color="Red"/>
+            </ResourceDictionary>
+            """);
 
         var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var dll in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
@@ -71,6 +78,7 @@ public class AumlSourceCompletionTests
 
         var model = AumlTypeModel.Build(byName.Values, [_probeFile]);
         model.RegisterViews(Directory.GetFiles(_project, "*.auml"), model.Compilation.AssemblyName, _project);
+        model.RegisterResourceKeys(Directory.GetFiles(_project, "*.auml"));
         _engine = new CompletionEngine(model);
     }
 
@@ -105,6 +113,34 @@ public class AumlSourceCompletionTests
     [Test]
     public void AStyleIncludeWithAPrefix_OffersOnlyTheStyleSetsOfThatNamespace() =>
         Assert.That(Labels("""<StyleInclude Source="local:|"/>"""), Is.EquivalentTo(new[] { "ProbeButtons" }));
+
+    [TestCase("""<Border Background="{ObservableResource Select|}"/>""", "SelectInk", "SelectIcon")]
+    [TestCase("""<Border Background="{ResourceReference Key=Select|}"/>""", "SelectInk", "SelectIcon")]
+    [TestCase("""<Image Source="{ObservableResource Select|}"/>""", "SelectIcon", "SelectInk")]
+    public void AResourceKey_IsOfferedWhereWhatItHoldsFits(string body, string offered, string hidden)
+    {
+        var labels = Labels(body, BareRoot);
+
+        Assert.That(labels, Does.Contain(offered));
+        Assert.That(labels, Does.Not.Contain(hidden));
+    }
+
+    [Test]
+    public void AResourceKeyOfAnObjectProperty_IsOfferedWhateverItHolds() =>
+        Assert.That(Labels("""<Button Content="{ObservableResource Select|}"/>""", BareRoot), Is.SupersetOf(new[] { "SelectIcon", "SelectInk" }));
+
+    [Test]
+    public void TheThemesPaletteKeys_AreOfferedForABrush() =>
+        Assert.That(Labels("""<Border Background="{ObservableResource TextFillColorPri|}"/>""", BareRoot), Does.Contain("TextFillColorPrimary"));
+
+    [Test]
+    public void AStartupTheme_OffersTheThemesTheBuildFinds()
+    {
+        var labels = Labels("""<ApplicationBlueprint StartupTheme="|"/>""", BareRoot);
+
+        Assert.That(labels, Is.SupersetOf(new[] { "Fluent", "EditorPro", "MacOs" }));
+        Assert.That(labels, Has.None.AnyOf("Border", "ProbeButtons", "Theme"));
+    }
 
     [Test]
     public void ATypePropertyWithNoBase_OffersAnyType() =>

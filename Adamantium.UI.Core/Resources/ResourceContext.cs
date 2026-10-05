@@ -100,20 +100,6 @@ public static class ResourceContext
         return GetResources(element) != null && GetScope(element) != ResourceScope.Global;
     }
 
-    // Publish a Resources block: first the linked dictionary FILES, then the block's own keyed entries. Every one of
-    // them is registered under the SAME owner, so RemoveSources(element) takes the whole block back down at once.
-    // A link may name its own Scope; left at the default it follows the block.
-    internal static void RegisterResources(AdamantiumComponent element, ResourceDictionary resources)
-    {
-        var scope = GetScope(element);
-        var manager = UIAppContext.Current.ResourceManager;
-
-        foreach (var include in resources.Includes)
-        {
-            if (include?.Source == null) continue;
-            manager.AddSource(element, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
-        }
-
-        manager.AddSource(element, resources, scope);
-    }
+    internal static void RegisterResources(AdamantiumComponent element, ResourceDictionary resources) =>
+        UIAppContext.Current.ResourceManager.AddSource(element, resources, GetScope(element));
 }

@@ -47,8 +47,9 @@ public sealed class AumlWorkspace : IDisposable
 
             // In-repo dependency projects are compiled from source (CompilationReference), so edits to control
             // types/properties anywhere in the engine show up on save without a build; the rest stay as dlls.
-            var (compilation, repoRoot, xmlnsMappings) = SourceProjectGraph.Build(project, binDir, _syntaxCache, _metadataCache);
+            var (compilation, repoRoot, xmlnsMappings, dependencyDirs) = SourceProjectGraph.Build(project, binDir, _syntaxCache, _metadataCache);
             var model = AumlTypeModel.FromCompilation(compilation, xmlnsMappings);
+            model.RegisterResourceKeys(dependencyDirs.SelectMany(MarkupFiles));
 
             // Pre-register the project's own AUML views so an embedded <ControlsView/> is recognized and its inherited
             // properties complete - the source generator does the same when it builds. Parsed from the .auml files
@@ -56,10 +57,9 @@ public sealed class AumlWorkspace : IDisposable
             var projectDir = Path.GetDirectoryName(project);
             if (projectDir is not null)
             {
-                var aumlFiles = Directory.EnumerateFiles(projectDir, "*.auml", SearchOption.AllDirectories)
-                    .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                             && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
+                var aumlFiles = MarkupFiles(projectDir).ToList();
                 model.RegisterViews(aumlFiles, compilation.AssemblyName, projectDir);
+                model.RegisterResourceKeys(aumlFiles);
             }
 
             _byProject[project] = model;
@@ -73,6 +73,11 @@ public sealed class AumlWorkspace : IDisposable
     /// Builds an assembly-only type model from every managed dll in <paramref name="binDir"/> plus the runtime
     /// (used by the console --demo). The per-project path uses <see cref="SourceProjectGraph"/> for live source.
     /// </summary>
+    private static IEnumerable<string> MarkupFiles(string projectDir) =>
+        Directory.EnumerateFiles(projectDir, "*.auml", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                     && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
+
     public static AumlTypeModel BuildFromBin(string binDir)
     {
         var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

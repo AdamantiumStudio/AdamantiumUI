@@ -37,6 +37,10 @@ public interface IThemeManager : IThemeEngine
     /// constructor is the place, through <see cref="FundamentalUIComponent.AddStyleSetToThemes{T}"/>.</summary>
     void AddStyleSet<T>() where T : StyleSet, new();
 
+    /// <summary>Adds the style set of <paramref name="styleSetType"/> to every theme, as <see cref="AddStyleSet{T}"/> does,
+    /// for a type known only at run time - an application blueprint's style includes.</summary>
+    void AddStyleSet(Type styleSetType);
+
     void RemoveTheme(string name);
 
     void SetTheme(ITheme theme);

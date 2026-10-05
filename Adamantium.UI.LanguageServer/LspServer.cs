@@ -543,6 +543,11 @@ public sealed class LspServer
                 : ResolveModel(uri) is { } model ? AumlValidator.Validate(text, model) : [];
             foreach (var d in found)
                 diagnostics.Add(Diagnostic(d));
+
+            if (!IsLanguageFile(uri) && ApplicationBlueprintCheck.Check(UriToLocalPath(uri), text) is { } blueprint)
+            {
+                diagnostics.Add(Diagnostic(blueprint));
+            }
         }
         Notify("textDocument/publishDiagnostics", new JsonObject { ["uri"] = uri, ["diagnostics"] = diagnostics });
     }

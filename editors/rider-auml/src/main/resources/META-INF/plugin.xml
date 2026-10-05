@@ -13,7 +13,7 @@
             <li><b>Completion, diagnostics, formatting and go to definition</b> from the AUML language server, which
             knows the types of the project and its packages.</li>
             <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, docking panes, themes,
-            style sets and resource dictionaries.</li>
+            style sets, resource dictionaries and the application's blueprint.</li>
             <li><b>Language files</b> (<code>.alang</code>), the application's strings in each language: highlighting,
             completion of keys and formats, the build's checks as you type, a quick fix that adds the strings a
             translation lacks, and <b>New | Language File</b> for a table or its translation.</li>
@@ -26,6 +26,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>New | AUML File offers an Application Blueprint: the application's first window, theme, theme variant, language,
+        resources and style sets in markup, from which the build writes the entry point. A second blueprint in a project is
+        underlined, and its StartupTheme offers only themes.</p>
+        <p>{ObservableResource} and {ResourceReference} complete resource keys - the project's own and those of its
+        packages and themes - and only those that fit the property: a brush for a Background, a picture for an Image.</p>
+        <p>An element name is offered only for what markup can create: no automation peers, interfaces, enums, static or
+        abstract classes, attributes or event data.</p>
         <p>Reformat Code lays out .auml and language files by the framework's rules: an element per line, indented by
         level; one attribute on the tag's line, several one per line under the first; a Setter - and a phrase of a language
         file - on one line; an empty element closed in place; at most one blank line. Values, comments and text are kept as
@@ -95,6 +102,7 @@
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>
+        <internalFileTemplate name="Adamantium ApplicationBlueprint"/>
         <notificationGroup id="Adamantium AUML" displayType="BALLOON"/>
         <notificationGroup id="Adamantium AUML templates offer" displayType="STICKY_BALLOON"/>
     </extensions>

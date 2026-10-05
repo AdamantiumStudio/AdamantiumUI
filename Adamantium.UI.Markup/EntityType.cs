@@ -13,6 +13,10 @@
 
         /// <summary>Any other UI element - a ribbon tab, a group, a panel. A file with it at the root is a class deriving
         /// from it, which other markup places by name.</summary>
-        Control
+        Control,
+
+        /// <summary>What an application starts with. A project holds one; the build makes it a class, names it to the
+        /// assembly and writes the entry point that runs the application.</summary>
+        ApplicationBlueprint
     }
 }

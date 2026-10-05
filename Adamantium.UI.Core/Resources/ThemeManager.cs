@@ -294,19 +294,21 @@ public class ThemeManager : IThemeManager
         _themes.Add(theme);
     }
 
-    public void AddStyleSet<T>() where T : StyleSet, new()
+    public void AddStyleSet<T>() where T : StyleSet, new() => AddStyleSet(typeof(T));
+
+    public void AddStyleSet(Type styleSetType)
     {
         lock (_styleSetsOfEveryTheme)
         {
-            if (_styleSetsOfEveryTheme.Contains(typeof(T)))
+            if (_styleSetsOfEveryTheme.Contains(styleSetType))
             {
                 return;
             }
 
-            _styleSetsOfEveryTheme.Add(typeof(T));
+            _styleSetsOfEveryTheme.Add(styleSetType);
             foreach (var theme in _themes)
             {
-                theme.AddStyleSet(new T());
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(styleSetType));
             }
         }
     }

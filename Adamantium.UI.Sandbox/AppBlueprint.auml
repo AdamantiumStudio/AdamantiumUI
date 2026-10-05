@@ -1,0 +1,10 @@
+<ApplicationBlueprint xmlns="http://adamantium/ui"
+                      xmlns:x="http://adamantium/ui/xaml/extensions"
+                      StartupWindow="MainWindow">
+    <ApplicationBlueprint.Resources>
+        <ResourceLink Source="ModuleIcons"/>
+    </ApplicationBlueprint.Resources>
+    <ApplicationBlueprint.StyleIncludes>
+        <StyleInclude Source="RibbonShellStyleSet"/>
+    </ApplicationBlueprint.StyleIncludes>
+</ApplicationBlueprint>
