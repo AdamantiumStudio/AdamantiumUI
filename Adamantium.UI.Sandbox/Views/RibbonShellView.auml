@@ -887,7 +887,7 @@
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>
 
-                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Open}" Icon="{ObservableResource OpenIcon}">
+                    <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Open}" Icon="{ObservableResource OpenDocumentIcon}">
                         <RibbonApplicationMenuItem.PageContent>
                             <StackPanel>
                                 <TextBlock Text="{Localize RibbonShellStrings.RecentScenes}" FontSize="28" Margin="0 0 0 18"/>
@@ -899,7 +899,7 @@
                     </RibbonApplicationMenuItem>
 
                     <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Save}" Command="{Binding SaveCommand}"
-                                               Icon="{ObservableResource SaveIcon}"/>
+                                               Icon="{ObservableResource SaveDocumentIcon}"/>
 
                     <!-- The rows the pane-follows-the-pointer behavior is worth seeing on: run the pointer down
                          Import / Export / Print and the right half changes under it, with nothing clicked. -->

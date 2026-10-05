@@ -264,6 +264,10 @@ All packages share one version.
 - `UIApplication.StartupThemeVariant`: the variant of the theme the application opens on - Light, Dark, System or one
   of the theme's own. A variant the theme does not have fails the start, naming the ones it has.
 - `IThemeManager.AddStyleSet(Type)`: adds a style set known only at run time to every theme.
+- The language server goes from a resource key to the markup that declares it, and from a class made from markup to its
+  `.auml` file rather than the generated code - a view's element, `ResourceLink Source=`, `{x:Type}`. It renames a key
+  where it is declared and wherever it is used, across the project's markup and that of projects built from source
+  with it, and lists those places. A key added or renamed in a dictionary is known at once, as typed, with no build.
 - `IconPresenter` draws an icon of either kind: path data stroked in its `Stroke`, or a picture - a `DrawingImage` of
   the application's resources - in its own colors. The themes' ribbon commands, groups and application menu items draw
   their `Icon` with it, so `Icon="{ObservableResource SaveIcon}"` shows the picture; until now a picture there went
@@ -359,6 +363,15 @@ All packages share one version.
 - `{ResourceReference}`, `{ObservableResource}` or `{ThemeResource}` written with no key - `Icon="{ResourceReference }"`
   mid-edit - crashed the AUML generator with an index out of range and the preview said nothing; both now report that
   the marker on that property names no key.
+- A view with `x:ViewModel` built from a template for a view model it was given - by navigation into a docking area,
+  a tab control, a list - made a second view model of its own from the container before taking the given one: the
+  presenter now hands the view its view model before the view enters the tree. A view nested in a view of the same
+  view model shares the parent's instead of making another.
+- An application key named like a theme's - `SaveIcon` - was silently never found: a theme's dictionaries are searched
+  before the application's global ones. The language server warns on such a key; the sandbox's two are renamed.
+- The language server offered a binding against an `x:ViewModel` only the properties the view model's own class makes
+  with the MVVM generator, not those of its base classes; and nothing at all after `<ResourceContext.`, whose
+  properties are all attached.
 - A property element with nothing in it - `<ApplicationBlueprint.StyleIncludes>` holding only a comment - crashed the
   AUML generator with an index out of range; it sets nothing now.
 - The language server painted a type written as a value - `StartupWindow="MainWindow"`, `TargetType="Button"` - as plain

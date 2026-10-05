@@ -50,6 +50,11 @@ public sealed class AumlWorkspace : IDisposable
             // types/properties anywhere in the engine show up on save without a build; the rest stay as dlls.
             var (compilation, repoRoot, xmlnsMappings, dependencyDirs) = SourceProjectGraph.Build(project, binDir, _syntaxCache, _metadataCache);
             var model = AumlTypeModel.FromCompilation(compilation, xmlnsMappings);
+            foreach (var dependencyDir in dependencyDirs)
+            {
+                model.TrackMarkupIn(dependencyDir);
+            }
+
             model.RegisterResourceKeys(dependencyDirs.SelectMany(MarkupFiles));
 
             // Pre-register the project's own AUML views so an embedded <ControlsView/> is recognized and its inherited
@@ -59,6 +64,7 @@ public sealed class AumlWorkspace : IDisposable
             if (projectDir is not null)
             {
                 var aumlFiles = MarkupFiles(projectDir).ToList();
+                model.TrackMarkupIn(projectDir);
                 model.RegisterViews(aumlFiles, compilation.AssemblyName, projectDir);
                 model.RegisterResourceKeys(aumlFiles);
             }
@@ -130,16 +136,42 @@ public sealed class AumlWorkspace : IDisposable
             };
             watcher.Filters.Add("*.cs");
             watcher.Filters.Add("*" + Adamantium.UI.Generators.Localization.LanguageFileParser.Extension);
+            watcher.Filters.Add("*.auml");
             FileSystemEventHandler onChange = (_, e) =>
             {
-                if (!IsInObjOrBin(e.FullPath, projectDir)) ScheduleInvalidate(project);
+                if (IsInObjOrBin(e.FullPath, projectDir))
+                {
+                    return;
+                }
+
+                if (IsMarkup(e.FullPath))
+                {
+                    MarkupChangedOnDisk(e.FullPath);
+                }
+                else
+                {
+                    ScheduleInvalidate(project);
+                }
             };
             watcher.Changed += onChange;
             watcher.Created += onChange;
             watcher.Deleted += onChange;
             watcher.Renamed += (_, e) =>
             {
-                if (!IsInObjOrBin(e.FullPath, projectDir)) ScheduleInvalidate(project);
+                if (IsInObjOrBin(e.FullPath, projectDir))
+                {
+                    return;
+                }
+
+                if (IsMarkup(e.FullPath))
+                {
+                    MarkupChangedOnDisk(e.OldFullPath);
+                    MarkupChangedOnDisk(e.FullPath);
+                }
+                else
+                {
+                    ScheduleInvalidate(project);
+                }
             };
             watcher.EnableRaisingEvents = true;
             _watchers[key] = watcher;
@@ -149,6 +181,60 @@ public sealed class AumlWorkspace : IDisposable
             Console.Error.WriteLine($"[auml] could not watch {projectDir} (*.cs) ({ex.Message}); source edits won't auto-refresh completion for {Path.GetFileName(project)}");
         }
     }
+
+    /// <summary>Takes the text of a markup file as the editor holds it, so every model that reads the file knows its keys
+    /// as typed - before it is saved, and long before a build.</summary>
+    public void UpdateMarkup(string file, string text)
+    {
+        foreach (var model in ModelsReading(file))
+        {
+            model.UpdateMarkup(file, text);
+        }
+    }
+
+    private void MarkupChangedOnDisk(string file)
+    {
+        var models = ModelsReading(file);
+        if (models.Count == 0)
+        {
+            return;
+        }
+
+        if (!File.Exists(file))
+        {
+            foreach (var model in models)
+            {
+                model.RemoveMarkup(file);
+            }
+
+            return;
+        }
+
+        string text;
+        try
+        {
+            text = File.ReadAllText(file);
+        }
+        catch (IOException)
+        {
+            return;
+        }
+
+        foreach (var model in models)
+        {
+            model.UpdateMarkup(file, text);
+        }
+    }
+
+    private List<AumlTypeModel> ModelsReading(string file)
+    {
+        lock (_gate)
+        {
+            return _byProject.Values.Where(m => m.TracksMarkup(file)).ToList();
+        }
+    }
+
+    private static bool IsMarkup(string file) => file.EndsWith(".auml", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsInObjOrBin(string file, string projectDir)
     {

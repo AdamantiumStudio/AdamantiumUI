@@ -92,6 +92,7 @@ public sealed class LspServer
                 else
                 {
                     PublishDiagnostics(uri);
+                    _workspace.UpdateMarkup(UriToLocalPath(uri), _documents[uri]);
                 }
 
                 break;
@@ -111,6 +112,7 @@ public sealed class LspServer
                 else
                 {
                     PublishDiagnostics(uri);
+                    _workspace.UpdateMarkup(UriToLocalPath(uri), _documents[uri]);
                 }
 
                 break;
@@ -140,6 +142,40 @@ public sealed class LspServer
             case "textDocument/definition":
                 Reply(id, DefinitionResult(msg["params"]));
                 break;
+
+            case "textDocument/references":
+                Reply(id, ReferencesResult(msg["params"]));
+                break;
+
+            case "textDocument/prepareRename":
+            {
+                var result = PrepareRenameResult(msg["params"], out var why);
+                if (result == null && why != null)
+                {
+                    ReplyError(id, why);
+                }
+                else
+                {
+                    Reply(id, result);
+                }
+
+                break;
+            }
+
+            case "textDocument/rename":
+            {
+                var result = RenameResult(msg["params"], out var why);
+                if (result == null && why != null)
+                {
+                    ReplyError(id, why);
+                }
+                else
+                {
+                    Reply(id, result);
+                }
+
+                break;
+            }
 
             case "textDocument/documentSymbol":
                 Reply(id, DocumentSymbolResult(msg["params"]));
@@ -184,6 +220,8 @@ public sealed class LspServer
             },
             ["hoverProvider"] = true,
             ["definitionProvider"] = true,
+            ["referencesProvider"] = true,
+            ["renameProvider"] = new JsonObject { ["prepareProvider"] = true },
             ["documentSymbolProvider"] = true,
             ["codeActionProvider"] = true,
             ["documentFormattingProvider"] = true,
@@ -340,7 +378,7 @@ public sealed class LspServer
         if (model is null) return null;
 
         int offset = OffsetAt(text, pos["line"].GetValue<int>(), pos["character"].GetValue<int>());
-        var location = new DefinitionEngine(model).Definition(text, offset);
+        var location = new DefinitionEngine(model).Definition(text, offset, UriToLocalPath(uri));
         if (location is null) return null;
 
         return new JsonObject
@@ -353,6 +391,122 @@ public sealed class LspServer
             }
         };
     }
+
+    private JsonNode ReferencesResult(JsonNode @params)
+    {
+        var result = new JsonArray();
+        if (!TryKeyRequest(@params, out var text, out var offset, out var usages))
+        {
+            return result;
+        }
+
+        if (ResourceKeyOccurrences.At(text, offset) is { } key)
+        {
+            foreach (var location in usages.Find(key.Key))
+            {
+                result.Add(LocationJson(location));
+            }
+        }
+
+        return result;
+    }
+
+    private JsonNode PrepareRenameResult(JsonNode @params, out string why)
+    {
+        why = null;
+        if (!TryKeyRequest(@params, out var text, out var offset, out var usages))
+        {
+            return null;
+        }
+
+        var key = usages.Renameable(text, offset, out why);
+        if (key == null)
+        {
+            return null;
+        }
+
+        var (line, character) = TextPositions.LineAndCharacter(text, key.Start);
+        return new JsonObject
+        {
+            ["range"] = RangeJson(line, character, line, character + key.Length),
+            ["placeholder"] = key.Key
+        };
+    }
+
+    private JsonNode RenameResult(JsonNode @params, out string why)
+    {
+        why = null;
+        if (!TryKeyRequest(@params, out var text, out var offset, out var usages))
+        {
+            return null;
+        }
+
+        var key = usages.Renameable(text, offset, out why);
+        if (key == null)
+        {
+            return null;
+        }
+
+        var newName = @params["newName"]?.GetValue<string>()?.Trim();
+        if (!ResourceKeyUsages.IsKeyName(newName))
+        {
+            why = $"'{newName}' cannot be a resource key: a letter or '_' first, then letters, digits, '_', '.' or '-'.";
+            return null;
+        }
+
+        var changes = new JsonObject();
+        foreach (var byFile in usages.Find(key.Key).GroupBy(l => l.FilePath, StringComparer.OrdinalIgnoreCase))
+        {
+            var edits = new JsonArray();
+            foreach (var location in byFile)
+            {
+                edits.Add(new JsonObject
+                {
+                    ["range"] = RangeJson(location.StartLine, location.StartCharacter, location.EndLine, location.EndCharacter),
+                    ["newText"] = newName
+                });
+            }
+
+            changes[new Uri(byFile.Key).AbsoluteUri] = edits;
+        }
+
+        return new JsonObject { ["changes"] = changes };
+    }
+
+    private bool TryKeyRequest(JsonNode @params, out string text, out int offset, out ResourceKeyUsages usages)
+    {
+        offset = 0;
+        usages = null;
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out text))
+        {
+            text = null;
+            return false;
+        }
+
+        var model = ResolveModel(uri);
+        if (model is null)
+        {
+            return false;
+        }
+
+        var pos = @params["position"];
+        offset = OffsetAt(text, pos["line"].GetValue<int>(), pos["character"].GetValue<int>());
+        usages = new ResourceKeyUsages(model, OpenText);
+        return true;
+    }
+
+    private static JsonObject LocationJson(DefinitionLocation location) => new()
+    {
+        ["uri"] = new Uri(location.FilePath).AbsoluteUri,
+        ["range"] = RangeJson(location.StartLine, location.StartCharacter, location.EndLine, location.EndCharacter)
+    };
+
+    private static JsonObject RangeJson(int startLine, int startCharacter, int endLine, int endCharacter) => new()
+    {
+        ["start"] = new JsonObject { ["line"] = startLine, ["character"] = startCharacter },
+        ["end"] = new JsonObject { ["line"] = endLine, ["character"] = endCharacter }
+    };
 
     private JsonNode DocumentSymbolResult(JsonNode @params)
     {
@@ -569,6 +723,14 @@ public sealed class LspServer
                 diagnostics.Add(Diagnostic(blueprint));
             }
 
+            if (!IsLanguageFile(uri))
+            {
+                foreach (var shadowed in ResourceKeyShadowCheck.Check(UriToLocalPath(uri), text, ResolveModel(uri)))
+                {
+                    diagnostics.Add(Diagnostic(shadowed));
+                }
+            }
+
             if (!IsLanguageFile(uri) && _workspace.WhyNoModel(UriToLocalPath(uri)) is { } noModel)
             {
                 diagnostics.Add(Diagnostic(new AumlDiagnostic(0, 0, 1, noModel, IsWarning: true)));
@@ -617,6 +779,13 @@ public sealed class LspServer
         ["jsonrpc"] = "2.0",
         ["id"] = id?.DeepClone(),
         ["result"] = result
+    });
+
+    private void ReplyError(JsonNode id, string message) => Write(new JsonObject
+    {
+        ["jsonrpc"] = "2.0",
+        ["id"] = id?.DeepClone(),
+        ["error"] = new JsonObject { ["code"] = -32803, ["message"] = message }
     });
 
     private void Notify(string method, JsonNode @params) => Write(new JsonObject

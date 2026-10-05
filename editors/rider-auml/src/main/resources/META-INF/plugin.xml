@@ -26,6 +26,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>Ctrl+click on a resource key - {ObservableResource SaveIcon} - goes to the markup that declares it; on a class
+        made from markup - ResourceLink Source="RibbonShellIcons", a view's element, {x:Type} - to its .auml file rather
+        than the generated code.</p>
+        <p>Rename (Shift+F6) on a resource key renames it where it is declared and everywhere it is used, across the
+        project's markup and the markup of projects built from source here; Find Usages lists those places. A key renamed or
+        added in a dictionary is offered at once, as typed - no save, no build. A key another project declares too - an
+        application's icon named like a theme's, which the theme's then hides - is underlined with a warning.</p>
+        <p>{Binding} against an x:ViewModel offers what the view model inherits, the properties the MVVM generator makes
+        from a base class's [Bindable] fields and [Command] methods included. A property element of an owner of attached
+        properties only - &lt;ResourceContext. - offers them.</p>
         <p>A file the server cannot help with says why, in a warning on its first line: it belongs to no project, or its
         project has not been built yet. The project's first build is noticed - the warning goes, and completion, checks and
         type colors start with no restart.</p>

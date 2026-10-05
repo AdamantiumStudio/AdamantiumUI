@@ -1461,7 +1461,7 @@
         </DrawingGroup>
     </DrawingImage>
 
-    <DrawingImage x:Key="OpenIcon">
+    <DrawingImage x:Key="OpenDocumentIcon">
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
@@ -1474,7 +1474,7 @@
         </DrawingGroup>
     </DrawingImage>
 
-    <DrawingImage x:Key="SaveIcon">
+    <DrawingImage x:Key="SaveDocumentIcon">
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>

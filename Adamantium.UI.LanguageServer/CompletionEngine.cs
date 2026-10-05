@@ -523,6 +523,8 @@ public sealed class CompletionEngine
             var memberPartial = partial[(dot + 1)..];
             var ownerDot = partial[..(dot + 1)];   // "Owner." — kept so the inserted local name stays whole
             return _model.GetProperties(owner, includeReadOnlyCollections: true)
+                .Concat(_model.GetAttachedProperties(owner))
+                .DistinctBy(p => p.Name)
                 .Where(p => Matches(p.Name, memberPartial))
                 .OrderBy(p => p.Name)
                 .Select(p => new AumlCompletionItem(ownerDot + p.Name, AumlCompletionItemKind.Property, p.Type?.Name))

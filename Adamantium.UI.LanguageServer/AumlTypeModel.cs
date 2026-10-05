@@ -24,7 +24,10 @@ public sealed class AumlTypeModel
     // and complete like framework controls even though the source generator hasn't emitted their classes.
     private readonly List<IResolvedType> _localViews = new();
     private readonly Dictionary<string, IReadOnlyList<IResolvedType>> _derivedTypes = new(StringComparer.Ordinal);
-    private readonly List<AumlResourceKey> _declaredKeys = [];
+    private readonly object _markupGate = new();
+    private readonly Dictionary<string, List<MarkupResourceKey>> _keysByFile = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<string>> _markupFilesByName = new(StringComparer.Ordinal);
+    private readonly List<string> _markupRoots = [];
     private IReadOnlyList<AumlResourceKey> _resourceKeys;
     private IReadOnlyList<LanguageTableInfo> _languageTables;
 
@@ -164,34 +167,228 @@ public sealed class AumlTypeModel
                 continue;
             }
 
-            var document = AumlParser.Parse(content);
-            if (document.HasErrors || document.Root is not AumlAstObjectNode root)
-            {
-                continue;
-            }
+            UpdateMarkup(file, content);
+        }
+    }
 
+    /// <summary>Counts the markup under <paramref name="directory"/> as this model's: see <see cref="TracksMarkup"/>.</summary>
+    public void TrackMarkupIn(string directory)
+    {
+        var root = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                   + Path.DirectorySeparatorChar;
+        lock (_markupGate)
+        {
+            if (!_markupRoots.Contains(root, StringComparer.OrdinalIgnoreCase))
+            {
+                _markupRoots.Add(root);
+            }
+        }
+    }
+
+    /// <summary>Whether <paramref name="file"/> is markup of this model's project or of a project compiled from source
+    /// here - a file whose keys and classes the model reads.</summary>
+    public bool TracksMarkup(string file)
+    {
+        var full = Path.GetFullPath(file);
+        var sep = Path.DirectorySeparatorChar;
+        if (!full.EndsWith(".auml", StringComparison.OrdinalIgnoreCase)
+            || full.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
+            || full.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        lock (_markupGate)
+        {
+            return _markupRoots.Any(root => full.StartsWith(root, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>Takes a markup file's text as it stands now - typed in the editor or saved - so the keys it declares are
+    /// known at once, with no build. A text that does not parse keeps the keys the file declared before.</summary>
+    public void UpdateMarkup(string file, string text)
+    {
+        file = Path.GetFullPath(file);
+        AumlDocument document;
+        try
+        {
+            document = AumlParser.Parse(text ?? string.Empty);
+        }
+        catch (System.Xml.XmlException)
+        {
+            document = null;
+        }
+
+        List<MarkupResourceKey> keys = null;
+        if (document is { HasErrors: false, Root: AumlAstObjectNode root })
+        {
+            var written = ResourceKeyOccurrences.Find(text).Where(o => o.IsDeclaration).ToList();
+            keys = [];
             foreach (var resource in DeclaredResources.Of(root))
             {
                 var reference = resource.Value.TypeReference;
-                var elementType = reference == null ? null : GetElement(reference.Namespace ?? string.Empty, reference.Name) ?? ResolveShortName(reference.Name);
-                var valueType = resource.PaletteColorAs == null
-                    ? elementType
-                    : _resolver.Resolve(DeclaredResources.ValueTypeOf(resource, null));
-                _declaredKeys.Add(new AumlResourceKey(resource.Key, valueType));
+                var at = written.FirstOrDefault(o => o.Key == resource.Key);
+                var (line, character) = at == null ? (0, 0) : TextPositions.LineAndCharacter(text, at.Start);
+                keys.Add(new MarkupResourceKey(resource.Key, reference?.Namespace ?? string.Empty, reference?.Name,
+                    resource.PaletteColorAs == null ? null : DeclaredResources.ValueTypeOf(resource, null), file, line, character));
             }
         }
 
-        _resourceKeys = null;
+        lock (_markupGate)
+        {
+            if (keys != null)
+            {
+                _keysByFile[file] = keys;
+            }
+
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (!_markupFilesByName.TryGetValue(name, out var files))
+            {
+                _markupFilesByName[name] = files = [];
+            }
+
+            if (!files.Contains(file, StringComparer.OrdinalIgnoreCase))
+            {
+                files.Add(file);
+            }
+
+            _resourceKeys = null;
+        }
+    }
+
+    /// <summary>Forgets a markup file that is gone: its keys and its class.</summary>
+    public void RemoveMarkup(string file)
+    {
+        file = Path.GetFullPath(file);
+        lock (_markupGate)
+        {
+            _keysByFile.Remove(file);
+            if (_markupFilesByName.TryGetValue(Path.GetFileNameWithoutExtension(file), out var files))
+            {
+                files.RemoveAll(f => string.Equals(f, file, StringComparison.OrdinalIgnoreCase));
+            }
+
+            _resourceKeys = null;
+        }
+    }
+
+    /// <summary>Every place the markup the model reads declares <paramref name="key"/> - the same key in several
+    /// dictionaries included.</summary>
+    public IReadOnlyList<AumlResourceKey> DeclarationsOf(string key)
+    {
+        lock (_markupGate)
+        {
+            return _keysByFile.Values.SelectMany(k => k)
+                .Where(k => k.Key == key)
+                .Select(k => new AumlResourceKey(k.Key, null, k.File, k.Line, k.Character))
+                .ToList();
+        }
+    }
+
+    /// <summary>The folder of the project a markup file belongs to - the deepest folder the model reads markup from that
+    /// holds it; null when none does.</summary>
+    public string MarkupRootOf(string file)
+    {
+        if (string.IsNullOrEmpty(file))
+        {
+            return null;
+        }
+
+        var full = Path.GetFullPath(file);
+        lock (_markupGate)
+        {
+            return _markupRoots.Where(root => full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(root => root.Length)
+                .FirstOrDefault();
+        }
+    }
+
+    /// <summary>Every markup file the model reads.</summary>
+    public IReadOnlyList<string> MarkupFiles
+    {
+        get
+        {
+            lock (_markupGate)
+            {
+                return _markupFilesByName.Values.SelectMany(f => f).ToList();
+            }
+        }
+    }
+
+    /// <summary>The markup file a class is made from, or null when it is not made from markup the model reads. Among
+    /// files of the class's name, the one whose folders match the end of its namespace.</summary>
+    public string MarkupFileOf(IResolvedType type)
+    {
+        if (type == null || string.IsNullOrEmpty(type.Name))
+        {
+            return null;
+        }
+
+        List<string> candidates;
+        lock (_markupGate)
+        {
+            if (!_markupFilesByName.TryGetValue(type.Name, out var files) || files.Count == 0)
+            {
+                return null;
+            }
+
+            candidates = files.ToList();
+        }
+
+        var namespaceParts = (type.Namespace ?? string.Empty).Split('.', StringSplitOptions.RemoveEmptyEntries);
+        var best = candidates.Select(f => (File: f, Score: SharedTail(f, namespaceParts))).OrderByDescending(c => c.Score).First();
+        return best.Score > 0 || candidates.Count == 1 ? best.File : null;
+    }
+
+    private static int SharedTail(string file, string[] namespaceParts)
+    {
+        var folderParts = (Path.GetDirectoryName(file) ?? string.Empty)
+            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '.'], StringSplitOptions.RemoveEmptyEntries);
+        var shared = 0;
+        while (shared < folderParts.Length && shared < namespaceParts.Length
+               && string.Equals(folderParts[^(shared + 1)], namespaceParts[^(shared + 1)], StringComparison.OrdinalIgnoreCase))
+        {
+            shared++;
+        }
+
+        return shared;
     }
 
     /// <summary>Every resource key the project can reach, one per key: those its markup and the markup of projects
     /// compiled from source here declare, and those the build named in the assemblies it references.</summary>
-    public IReadOnlyList<AumlResourceKey> ResourceKeys => _resourceKeys ??= CollectResourceKeys();
+    public IReadOnlyList<AumlResourceKey> ResourceKeys
+    {
+        get
+        {
+            var keys = _resourceKeys;
+            if (keys == null)
+            {
+                keys = CollectResourceKeys();
+                _resourceKeys = keys;
+            }
+
+            return keys;
+        }
+    }
 
     private IReadOnlyList<AumlResourceKey> CollectResourceKeys()
     {
         const string attributeName = "Adamantium.UI.Core.Resources.ResourceKeyAttribute";
-        var keys = new List<AumlResourceKey>(_declaredKeys);
+        List<MarkupResourceKey> declared;
+        lock (_markupGate)
+        {
+            declared = _keysByFile.Values.SelectMany(k => k).ToList();
+        }
+
+        var keys = new List<AumlResourceKey>();
+        foreach (var key in declared)
+        {
+            var valueType = key.ValueTypeName != null
+                ? _resolver.Resolve(key.ValueTypeName)
+                : key.ElementName == null ? null : GetElement(key.ElementNamespace, key.ElementName) ?? ResolveShortName(key.ElementName);
+            keys.Add(new AumlResourceKey(key.Key, valueType, key.File, key.Line, key.Character));
+        }
+
         foreach (var assembly in Compilation.SourceModule.ReferencedAssemblySymbols)
         {
             if (assembly.Name != "Adamantium.UI.Core" && !assembly.Modules.SelectMany(m => m.ReferencedAssemblies).Any(a => a.Name == "Adamantium.UI.Core"))
@@ -213,7 +410,20 @@ public sealed class AumlTypeModel
             }
         }
 
-        return keys.GroupBy(k => k.Key, StringComparer.Ordinal).Select(g => g.FirstOrDefault(k => k.ValueType != null) ?? g.First()).ToList();
+        return keys.GroupBy(k => k.Key, StringComparer.Ordinal).Select(Merge).ToList();
+    }
+
+    private static AumlResourceKey Merge(IEnumerable<AumlResourceKey> sameKey)
+    {
+        var all = sameKey.ToList();
+        var typed = all.FirstOrDefault(k => k.ValueType != null);
+        var located = all.FirstOrDefault(k => k.File != null);
+        if (located == null)
+        {
+            return typed ?? all[0];
+        }
+
+        return located.ValueType != null || typed == null ? located : located with { ValueType = typed.ValueType };
     }
 
     // Compiler-generated types (<Module>, <>c, <PrivateImplementationDetails>, <>z__ReadOnlyArray, …) are never
@@ -401,6 +611,15 @@ public sealed class AumlTypeModel
     {
         const string commandAttr = "Adamantium.MVVM.CommandAttribute";
         const string bindableAttr = "Adamantium.MVVM.BindableAttribute";
+        for (var declaring = type; declaring != null; declaring = declaring.BaseType)
+        {
+            AddGeneratedMvvmMembersOf(declaring, commandAttr, bindableAttr, result, seen);
+        }
+    }
+
+    private static void AddGeneratedMvvmMembersOf(IResolvedType type, string commandAttr, string bindableAttr,
+        List<AumlPropertyInfo> result, HashSet<string> seen)
+    {
         foreach (var member in type.Members ?? Enumerable.Empty<IResolvedMember>())
         {
             if (member.MemberKind == ResolvedMemberKind.Method && member.HasAttribute(commandAttr))
