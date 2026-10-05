@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `RibbonRadioButton`: a ribbon command that is one of a set - a tool among tools. Drawn as a `RibbonToggleButton`; a
+  press only checks it and clears the others of its `GroupName`, which does not reach past its `RibbonGroup`. Each one's
+  `IsChecked` binds to the view-model, as radio buttons do.
+- A markup file with any control at its root - a `RibbonTab`, a `RibbonGroup`, a panel - is a class of its own deriving
+  from that control, which other markup places by name (`<ribbon:HomeTab/>`): a large ribbon can be split into a file
+  per tab and a file per group. Until now only windows, views and panes made a class; other roots were skipped.
 - `Ribbon.StripContent`: the application's own commands in the strip right after "File" - a drop-down of the modules a
   document is made of, say. Its commands take key tips with the strip's.
 - `MenuItem.IsCheckable`, `IsChecked` and `StaysOpenOnClick`: a row that is a switch, with a check mark in the icon

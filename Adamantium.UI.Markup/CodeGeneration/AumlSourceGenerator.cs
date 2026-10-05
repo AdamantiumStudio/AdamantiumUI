@@ -298,7 +298,20 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             textGenerator.NewLine();
         }
 
-        textGenerator.WriteLine($"protected override void InitializeComponent()");
+        if (entityType == EntityType.Control)
+        {
+            textGenerator.WriteLine($"public {container.RootClassName}()");
+            textGenerator.WriteOpenBraceAndIndent();
+            textGenerator.WriteLine("BuildFromMarkup();");
+            textGenerator.UnindentAndWriteCloseBrace();
+            textGenerator.NewLine();
+            textGenerator.WriteLine("private void BuildFromMarkup()");
+        }
+        else
+        {
+            textGenerator.WriteLine($"protected override void InitializeComponent()");
+        }
+
         textGenerator.WriteOpenBraceAndIndent();
 
         var codeGenerationContext = new CodeGenerationContext(textGenerator, container, entityType);

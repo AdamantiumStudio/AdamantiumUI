@@ -1041,7 +1041,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         var rootType = typeResolver.Resolve(resolvedRoot.GetFullTypeName());
         if (rootType is not { EntityType: EntityType.Window or EntityType.View
-                              or EntityType.UIApplication or EntityType.ThemeVariant }
+                              or EntityType.UIApplication or EntityType.ThemeVariant or EntityType.Control }
             && !(anyClass && rootType is { EntityType: not EntityType.Unknown }))
         {
             return null;

@@ -268,6 +268,10 @@ public class RoslynResolvedType : IResolvedType
             {
                 return EntityType.ThemeVariant;
             }
+            else if (ImplementsInterface("IUIComponent"))
+            {
+                return EntityType.Control;
+            }
 
             return EntityType.Unknown;
         }
