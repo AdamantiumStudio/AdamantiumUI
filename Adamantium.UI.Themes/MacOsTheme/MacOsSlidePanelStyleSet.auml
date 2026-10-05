@@ -40,6 +40,8 @@
                                          Mac's toolbar glyphs wear. At 28 the plate appears as a square tile that has
                                          little to do with the cross inside it. -->
                                     <Button x:Name="PART_CloseButton" Grid.Column="1"
+                                            AutomationProperties.AutomationId="Close"
+                                            AutomationProperties.Name="{Localize WindowStrings.Close}"
                                             Classes="Icon"
                                             Width="22" Height="22"
                                             CornerRadius="{ResourceReference CornerRadiusDefault}"

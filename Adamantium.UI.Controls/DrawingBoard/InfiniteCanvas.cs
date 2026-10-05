@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Specialized;
 using Adamantium.Graphics.Fonts;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
@@ -1975,4 +1977,5 @@ public partial class InfiniteCanvas : Control
     // guard in PointerDown.
     private bool _pressIsPlane;
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
 }

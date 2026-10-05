@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
       xmlns:docking="clr-namespace:Adamantium.UI.Controls.Docking;assembly=Adamantium.UI.Controls">
@@ -21,14 +22,16 @@
              the region for a NAME, and the docking adapter either activates the pane that name already stands for -
              wherever it has been dragged to since - or opens a new one where "Create in" says. -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" MarginBottom="12">
-            <TextBlock Text="{Localize DockingStrings.Pane}" VerticalAlignment="Center" MarginRight="6"
+            <TextBlock x:Name="PaneLabel" Text="{Localize DockingStrings.Pane}" VerticalAlignment="Center" MarginRight="6"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <DropDown ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage, Mode=TwoWay}"
+            <DropDown AutomationProperties.AutomationId="PaneChoice" AutomationProperties.LabeledBy="{Binding ElementName=PaneLabel}"
+                      ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage, Mode=TwoWay}"
                       Width="150" MarginRight="14"/>
 
-            <TextBlock Text="{Localize DockingStrings.CreateIn}" VerticalAlignment="Center" MarginRight="6"
+            <TextBlock x:Name="CreateInLabel" Text="{Localize DockingStrings.CreateIn}" VerticalAlignment="Center" MarginRight="6"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
-            <DropDown ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace, Mode=TwoWay}"
+            <DropDown AutomationProperties.AutomationId="PlaceChoice" AutomationProperties.LabeledBy="{Binding ElementName=CreateInLabel}"
+                      ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace, Mode=TwoWay}"
                       MinWidth="120" MarginRight="14">
                 <DropDown.ItemTemplate>
                     <DataTemplate>

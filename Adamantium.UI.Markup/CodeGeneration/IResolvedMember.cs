@@ -10,6 +10,8 @@ public interface IResolvedMember
     
     bool HasAttribute(string attributeMetadataName);
 
+    IResolvedAttribute GetAttribute(string attributeMetadataName);
+
     bool HasSetter();
 
     bool IsStatic { get; }

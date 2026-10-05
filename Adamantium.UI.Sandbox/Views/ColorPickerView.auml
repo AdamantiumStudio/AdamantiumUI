@@ -14,34 +14,37 @@
                    MarginBottom="18"/>
 
         <StackPanel Orientation="Horizontal">
-            <ColorPicker SelectedColor="{Binding PickedColor, Mode=TwoWay}"
+            <ColorPicker AutomationProperties.AutomationId="Picker" SelectedColor="{Binding PickedColor, Mode=TwoWay}"
                          VerticalAlignment="Top"/>
 
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="{Localize ColorPageStrings.Wheel}"
+                <TextBlock x:Name="WheelLabel" Text="{Localize ColorPageStrings.Wheel}"
                            FontSize="14"
                            MarginBottom="14"/>
                 <!-- Two-way to the SAME PickedColor as the inline picker. The wheel picks hue+saturation; its OWN Value slider
                      below picks brightness (so the wheel alone is a full picker and can reach black at 0). All stay in sync
                      and drive the theme accent. The wheel dims toward the value. -->
-                <ColorWheel SelectedColor="{Binding PickedColor, Mode=TwoWay}"
+                <ColorWheel AutomationProperties.AutomationId="Wheel" AutomationProperties.LabeledBy="{Binding ElementName=WheelLabel}"
+                            SelectedColor="{Binding PickedColor, Mode=TwoWay}"
                             Value="{Binding WheelValue, Mode=TwoWay}"/>
-                <TextBlock Text="{Localize ColorPageStrings.Value}" FontSize="12" MarginTop="12" MarginBottom="2"
+                <TextBlock x:Name="WheelValueLabel" Text="{Localize ColorPageStrings.Value}" FontSize="12" MarginTop="12" MarginBottom="2"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <Slider Width="256" Minimum="0" Maximum="1" Value="{Binding WheelValue, Mode=TwoWay}"/>
+                <Slider AutomationProperties.AutomationId="WheelValue" AutomationProperties.LabeledBy="{Binding ElementName=WheelValueLabel}"
+                        Width="256" Minimum="0" Maximum="1" Value="{Binding WheelValue, Mode=TwoWay}"/>
             </StackPanel>
 
             <StackPanel Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="{Localize ColorPageStrings.Swatch}"
+                <TextBlock x:Name="SwatchLabel" Text="{Localize ColorPageStrings.Swatch}"
                            FontSize="14"
                            MarginBottom="14"/>
                 <!-- Same PickedColor as the inline picker + wheel: the swatch shows it; clicking opens a floating,
                      light-dismissing ColorPicker flyout - editing there stays in sync and drives the theme accent too. -->
-                <ColorPickerButton SelectedColor="{Binding PickedColor, Mode=TwoWay}"
+                <ColorPickerButton AutomationProperties.AutomationId="Swatch" AutomationProperties.LabeledBy="{Binding ElementName=SwatchLabel}"
+                                   SelectedColor="{Binding PickedColor, Mode=TwoWay}"
                                    Width="180" Height="30"
                                    HorizontalAlignment="Left"/>
             </StackPanel>

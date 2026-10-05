@@ -1,8 +1,10 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -270,4 +272,6 @@ public class ColorWheel : Control
     private static byte ToByte(double value) => (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
 
     private static double Clamp01(double value) => Math.Clamp(value, 0, 1);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ColorAutomationPeer(this, SelectedColorProperty);
 }

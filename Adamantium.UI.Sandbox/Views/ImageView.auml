@@ -40,36 +40,38 @@
 
                 <StackPanel Orientation="Vertical" Margin="24,0,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Localize ImageStrings.StretchLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"
+                        <TextBlock x:Name="StretchLabel" Text="{Localize ImageStrings.StretchLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown AutomationProperties.AutomationId="StretchChoice" AutomationProperties.LabeledBy="{Binding ElementName=StretchLabel}" EnumType="{x:Type m:Stretch}" SelectedItem="{Binding Stretch, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Localize ImageStrings.DirectionLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"
+                        <TextBlock x:Name="DirectionLabel" Text="{Localize ImageStrings.DirectionLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown AutomationProperties.AutomationId="DirectionChoice" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}" EnumType="{x:Type c:StretchDirection}" SelectedItem="{Binding StretchDirection, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Localize ImageStrings.HorizontalLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"
+                        <TextBlock x:Name="HorizontalLabel" Text="{Localize ImageStrings.HorizontalLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown AutomationProperties.AutomationId="HorizontalChoice" AutomationProperties.LabeledBy="{Binding ElementName=HorizontalLabel}" EnumType="{x:Type core:HorizontalAlignment}" SelectedItem="{Binding HorizontalAlignment, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Localize ImageStrings.VerticalLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                        <DropDown EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"
+                        <TextBlock x:Name="VerticalLabel" Text="{Localize ImageStrings.VerticalLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                        <DropDown AutomationProperties.AutomationId="VerticalChoice" AutomationProperties.LabeledBy="{Binding ElementName=VerticalLabel}" EnumType="{x:Type core:VerticalAlignment}" SelectedItem="{Binding VerticalAlignment, Mode=TwoWay}" Width="170"
                                   ItemTemplate="{ResourceReference ImageWord}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Localize ImageStrings.BoxWidth}" VerticalAlignment="Center" MinWidth="120"/>
-                        <Slider Width="170" Minimum="60" Maximum="420"
+                        <TextBlock x:Name="BoxWidthLabel" Text="{Localize ImageStrings.BoxWidth}" VerticalAlignment="Center" MinWidth="120"/>
+                        <Slider AutomationProperties.AutomationId="BoxWidth" AutomationProperties.LabeledBy="{Binding ElementName=BoxWidthLabel}"
+                                Width="170" Minimum="60" Maximum="420"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding BoxWidth}" VerticalAlignment="Center" Width="46"
                                    HorizontalTextAlignment="Right"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <TextBlock Text="{Localize ImageStrings.BoxHeight}" VerticalAlignment="Center" MinWidth="120"/>
-                        <Slider Width="170" Minimum="60" Maximum="300"
+                        <TextBlock x:Name="BoxHeightLabel" Text="{Localize ImageStrings.BoxHeight}" VerticalAlignment="Center" MinWidth="120"/>
+                        <Slider AutomationProperties.AutomationId="BoxHeight" AutomationProperties.LabeledBy="{Binding ElementName=BoxHeightLabel}"
+                                Width="170" Minimum="60" Maximum="300"
                                 TickFrequency="10" IsSnapToTickEnabled="true"
                                 Value="{Binding BoxHeight, Mode=TwoWay}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding BoxHeight}" VerticalAlignment="Center" Width="46"
@@ -90,8 +92,9 @@
 
             <!-- Opacity belongs to THIS group - it fades the format gallery below, not the playground above. -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Text="{Localize ImageStrings.OpacityLabel}" VerticalAlignment="Center" MinWidth="120"/>
-                <Slider Width="240"
+                <TextBlock x:Name="OpacityLabel" Text="{Localize ImageStrings.OpacityLabel}" VerticalAlignment="Center" MinWidth="120"/>
+                <Slider AutomationProperties.AutomationId="ImageOpacity" AutomationProperties.LabeledBy="{Binding ElementName=OpacityLabel}"
+                        Width="240"
                         Minimum="0.1"
                         Maximum="1"
                         Value="{Binding Opacity, Mode=TwoWay}"

@@ -110,6 +110,63 @@ public class RibbonGroupDeferredFlyoutTests
         Assert.That(host.Child, Is.SameAs(content), "the group's commands must end up in the flyout, not stay behind");
     }
 
+    // IsDropDownOpen is the flyout's state, whoever changes it: the view model, automation, the button or the flyout
+    // closing itself. It was written by nothing and read by nothing, so setting it did nothing.
+    [Test]
+    public void IsDropDownOpen_OpensAndClosesTheFlyout_AndTheButtonShowsIt()
+    {
+        var (group, window) = Hosted();
+        var button = group.GetTemplateChild("PART_CollapsedButton") as ToggleButton;
+        Collapse(group, window);
+
+        group.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+        var opened = (PopupOf(group).IsOpen, button.IsChecked);
+
+        group.IsDropDownOpen = false;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened, Is.EqualTo((true, (bool?)true)));
+            Assert.That(PopupOf(group).IsOpen, Is.False);
+            Assert.That(button.IsChecked, Is.False);
+        });
+    }
+
+    [Test]
+    public void TheButton_AndTheFlyoutClosingItself_ReportTheStateBack()
+    {
+        var (group, window) = Hosted();
+        var button = group.GetTemplateChild("PART_CollapsedButton") as ToggleButton;
+        Collapse(group, window);
+
+        button.PerformClick();
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+        var clicked = group.IsDropDownOpen;
+
+        PopupOf(group).IsOpen = false;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clicked, Is.True, "the button's click is the state, not a side door around it");
+            Assert.That(group.IsDropDownOpen, Is.False, "a flyout that put itself away is closed");
+            Assert.That(button.IsChecked, Is.False);
+        });
+    }
+
+    [Test]
+    public void AGroupThatIsNotCollapsed_DropsNothingDown()
+    {
+        var (group, window) = Hosted();
+
+        group.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        Assert.That(PopupOf(group).IsOpen, Is.False, "its commands are already in view");
+    }
+
     // ---- the gallery's drop-down, deferred the same way ----
     // Its CELLS were already built only while the drop-down is down; now the card holding them is too. The panel the
     // cells go into therefore arrives with the content, and the gallery has to fill it then - otherwise the drop-down

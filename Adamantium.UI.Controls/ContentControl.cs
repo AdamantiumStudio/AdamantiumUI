@@ -1,6 +1,8 @@
 ﻿using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -312,4 +314,6 @@ public class ContentControl : Control, IContentControl
       context.ForControl(this)
          .DrawRectangle(Background, new Rect(size));
    }
+
+   protected override AutomationPeer OnCreateAutomationPeer() => new ContentControlAutomationPeer(this);
 }

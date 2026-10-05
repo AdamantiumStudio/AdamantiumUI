@@ -13,9 +13,9 @@
                 BorderThickness="1" CornerRadius="10" Height="180" MarginBottom="20">
             <Grid ColumnDefinitions="*,6,*">
                 <Border Grid.Column="0" Background="{ResourceReference SubtleFillColorSecondary}" CornerRadius="8" Margin="8" ClipToBounds="True">
-                    <TextBlock Text="{Localize SplitterStrings.LeftPane}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock AutomationProperties.AutomationId="LeftPane" Text="{Localize SplitterStrings.LeftPane}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <GridSplitter Grid.Column="1" ResizeDirection="Columns"/>
+                <GridSplitter AutomationProperties.AutomationId="ColumnSplitter" Grid.Column="1" ResizeDirection="Columns"/>
                 <Border Grid.Column="2" Background="{ResourceReference SubtleFillColorSecondary}" CornerRadius="8" Margin="8" ClipToBounds="True">
                     <TextBlock Text="{Localize SplitterStrings.RightPane}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>

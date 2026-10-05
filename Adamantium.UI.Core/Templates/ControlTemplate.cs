@@ -31,6 +31,8 @@ public class ControlTemplate : UiTemplate
             result.RootComponent.TraverseVisualTree(component =>
             {
                 var fundamental = (FundamentalUIComponent)component;
+                // A control built here may have applied its own template already; its parts are its own, not ours.
+                if (fundamental.TemplatedParent != null && fundamental.TemplatedParent != templatedParent) return;
                 fundamental.TemplatedParent = templatedParent;
                 // Stamped HERE, while the template holds nothing but the parts it just made - content is presented into
                 // it later and must never be mistaken for one of them. See FundamentalUIComponent.OwningTemplateId.

@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -97,4 +99,6 @@ public class TextBox : TextBoxBase
             e.Handled = true;
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TextBoxAutomationPeer(this);
 }

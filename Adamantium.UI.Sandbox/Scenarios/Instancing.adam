@@ -1,0 +1,7 @@
+# The Instancing page: the virtualized grid of stars scrolled to its end and back, without an error left behind.
+select id=GalleryTabs/id=Instancing
+wait id=Stars
+scroll id=Stars --vertical 100
+expect id=Stars vscroll=100
+scroll id=Stars --vertical 0
+expect id=Stars vscroll=0

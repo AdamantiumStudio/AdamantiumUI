@@ -64,6 +64,17 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Bindable] private ShadingMode _shadingMode = ShadingMode.Lit;
 
+    /// <summary>The viewport's tool. The Transform group's radio buttons are views of this one value.</summary>
+    [Bindable] private ShellGizmo _gizmo = ShellGizmo.Select;
+
+    partial void OnGizmoChanged(ShellGizmo value) => LastAction = value switch
+    {
+        ShellGizmo.Move => RibbonAction.MovingSelection,
+        ShellGizmo.Rotate => RibbonAction.RotatingSelection,
+        ShellGizmo.Scale => RibbonAction.ScalingSelection,
+        _ => RibbonAction.SelectingObjects
+    };
+
     public IEnumerable<ShadingMode> ShadingModes { get; } = Enum.GetValues<ShadingMode>();
 
     // The gates name the generated [Bindable] properties directly - both halves come out of one generator pass.

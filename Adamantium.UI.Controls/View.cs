@@ -1,4 +1,6 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Controls;
 
 namespace Adamantium.UI.Controls;
@@ -23,4 +25,6 @@ public class View : ContentControl, IView
     protected virtual void InitializeComponent()
     {
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ViewAutomationPeer(this);
 }

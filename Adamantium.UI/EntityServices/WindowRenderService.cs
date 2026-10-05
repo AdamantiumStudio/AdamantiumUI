@@ -23,7 +23,6 @@ public class WindowRenderService : UiRenderService
     private IWindowRenderer windowRenderer;
     private IWindowRenderer _pendingRenderer;
     private IThemeManager _themeManager;
-    private readonly AutoResetEvent pauseEvent;
     private readonly IGraphicsDevice _injectedDevice;
 
     public IWindow Window { get; private set; }
@@ -44,17 +43,7 @@ public class WindowRenderService : UiRenderService
         Window = window;
         _injectedDevice = renderDevice;
         _themeManager = DependencyResolver.Resolve<IThemeManager>();
-        Window.StateChanged += WindowOnStateChanged;
         CreateResources();
-        pauseEvent = new AutoResetEvent(false);
-    }
-
-    private void WindowOnStateChanged(object sender, StateChangedEventArgs e)
-    {
-        if (Window.State is WindowState.Maximized or WindowState.Normal)
-        {
-            pauseEvent.Set();
-        }
     }
 
     private void CreateResources()
@@ -91,7 +80,6 @@ public class WindowRenderService : UiRenderService
         GraphicsDevice?.DeviceWaitIdle();
         // A renderer belongs to one device: left on the window, the next service would build on a dead one after a swap.
         Window.RendererChanged -= WindowOnRendererChanged;
-        Window.StateChanged -= WindowOnStateChanged;
         if (ReferenceEquals(Window.Renderer, windowRenderer))
         {
             Window.Renderer = null;
@@ -152,6 +140,11 @@ public class WindowRenderService : UiRenderService
         // Unloaded, but still in the draw list until its removal propagates.
         if (windowRenderer?.Presenter == null) return false;
 
+        if (Window.State == WindowState.Minimized)
+        {
+            return false;
+        }
+
         // App-global, but windows render one after another.
         Rendering.RenderUnits.AnalyticAa.Enabled = Window?.AnalyticAntialiasing ?? true;
         GraphicsDevice.ClearColor = (Window?.Background as SolidColorBrush)?.Color ?? Colors.Black;
@@ -209,11 +202,6 @@ public class WindowRenderService : UiRenderService
 
     public override void Draw(AppTime appTime)
     {
-        if (Window.State == WindowState.Minimized)
-        {
-            pauseEvent.WaitOne();
-        }
-
         windowRenderer?.Render(appTime);
         var t0 = Stopwatch.GetTimestamp();
         DrawProcessors(appTime);

@@ -525,16 +525,17 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Win32Interop.ShowWindow(window.Handle, ConvertStateToShowStyle(e.State));
     }
 
+    // A window that does not take activation when shown does not take it, nor hand it on, when restored or minimized.
     private WindowShowStyle ConvertStateToShowStyle(WindowState state)
     {
         switch (state)
         {
             case WindowState.Normal:
-                return WindowShowStyle.ShowNormal;
+                return window.ActivateOnShow ? WindowShowStyle.ShowNormal : WindowShowStyle.ShowNormalNoActivate;
             case WindowState.Maximized:
                 return WindowShowStyle.Maximize;
             case WindowState.Minimized:
-                return WindowShowStyle.Minimize;
+                return window.ActivateOnShow ? WindowShowStyle.Minimize : WindowShowStyle.ShowMinNoActivate;
             default:
                 return WindowShowStyle.ShowNormal;
         }

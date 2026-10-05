@@ -1,0 +1,48 @@
+# The ribbon shell, opened by the gallery's caption command: its clipboard commands say in the status line what they did.
+# Run against an instance started by `adam-auto start`:  adam-auto run Scenarios/RibbonShell.adam
+invoke id=OpenRibbon
+# The window comes first and its page after it, by navigation: wait for what the next steps read.
+wait id=RibbonWindow/id=StatusLine --timeout 30s
+expect id=StatusLine name=Ready.
+invoke id=Cut
+expect id=StatusLine name="Cut the selection."
+click id=Band/name=Copy
+expect id=StatusLine name="Copied the selection."
+# Key tips: Alt, then F, opens the File menu; Escape puts it away.
+key Alt F --into id=RibbonWindow
+wait id=RibbonWindow/id=PART_BackButton
+key Escape --into id=RibbonWindow
+absent id=RibbonWindow/id=PART_BackButton
+# Tabs are chosen by name; the open tab's groups follow.
+expect id=Band/name=Home key=H selected=True
+select id=Band/name=Modeling
+expect id=Band/type=Pane name=Modeling
+# The Transform tools are one choice: picking one clears the others, and the status line says what it does.
+expect id=Band/id=SelectGizmo selected=True
+select id=Band/id=MoveGizmo
+expect id=Band/id=MoveGizmo selected=True
+expect id=Band/id=SelectGizmo selected=False
+expect id=StatusLine name="Drag to move the selection."
+select id=Band/id=SelectGizmo
+expect id=Band/id=MoveGizmo selected=False
+select id=Band/name=Home
+# The gallery is a list picked from by name.
+select id=Band/name=Materials/name=Gold
+expect id=Band/name=Materials/name=Gold selected=True
+# File opens a page by its row.
+expand id=Band/name=File
+select id=Band/name=File/name=Customize
+expect id=CommandChoices name="Choose commands from"
+collapse id=Band/name=File
+# The module catalog still opens after the window was minimized and restored.
+window id=RibbonWindow minimize
+window id=RibbonWindow restore
+expand id=Band/name=Modules
+invoke "id=Band/name=Modules/name=Module catalog..."
+wait id=CatalogModules
+expect id=CatalogSearch name="Find a module"
+invoke id=CloseCatalog
+absent id=CatalogModules
+# Closed again, so the next run starts from a fresh shell.
+window id=RibbonWindow close
+absent id=RibbonWindow

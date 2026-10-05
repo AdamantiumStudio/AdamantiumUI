@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -888,4 +890,6 @@ public class DataGridRow : Panel
 
         return finalSize;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataGridRowAutomationPeer(this);
 }

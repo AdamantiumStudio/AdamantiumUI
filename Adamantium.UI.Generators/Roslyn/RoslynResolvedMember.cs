@@ -43,6 +43,13 @@ public class RoslynResolvedMember : IResolvedMember
             attr.AttributeClass?.ToDisplayString() == attributeMetadataName);
     }
 
+    public IResolvedAttribute GetAttribute(string attributeMetadataName)
+    {
+        var attribute = _symbol.GetAttributes().FirstOrDefault(attr =>
+            attr.AttributeClass?.ToDisplayString() == attributeMetadataName);
+        return attribute != null ? new RoslynResolvedAttribute(attribute) : null;
+    }
+
     public bool HasSetter()
     {
         return _symbol switch

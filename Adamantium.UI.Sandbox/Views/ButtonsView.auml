@@ -18,7 +18,7 @@
                           MinWidth="130" Height="34" Delay="400" Interval="80" Margin="0,0,8,0"/>
             <Button Content="{Localize ButtonsStrings.Reset}" Command="{Binding ResetCommand}" MinWidth="90" Height="34" Margin="0,0,16,0"/>
             <TextBlock Text="{Localize ButtonsStrings.Clicks}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-            <TextBlock Text="{Binding ClickCount}" VerticalAlignment="Center" FontSize="16"/>
+            <TextBlock AutomationProperties.AutomationId="ClickCount" Text="{Binding ClickCount}" VerticalAlignment="Center" FontSize="16"/>
         </StackPanel>
 
         <!-- Toggle family: each control is two-way bound to a VM flag, and the line beside it says what the flag is -
@@ -30,7 +30,7 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
             <ToggleButton Content="{Localize ButtonsStrings.Notify}" IsChecked="{Binding Notify, Mode=TwoWay}" MinWidth="120" Height="32"/>
-            <TextBlock Text="{Localize ButtonsStrings.Notifications, on={Binding Notify}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="NotifyState" Text="{Localize ButtonsStrings.Notifications, on={Binding Notify}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
             <CheckBox Content="{Localize ButtonsStrings.AcceptTerms}" IsThreeState="true" IsChecked="{Binding TermsAccepted, Mode=TwoWay}"/>
@@ -43,7 +43,7 @@
             <RadioButton Content="{Localize ButtonsStrings.Free}" GroupName="plan" IsChecked="{Binding PlanFree, Mode=TwoWay}" Margin="0,0,16,0"/>
             <RadioButton Content="{Localize ButtonsStrings.Pro}" GroupName="plan" IsChecked="{Binding PlanPro, Mode=TwoWay}" Margin="0,0,16,0"/>
             <TextBlock Text="{Localize ButtonsStrings.Selected}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-            <TextBlock Text="{Localize ButtonsStrings.ChosenPlan, pro={Binding PlanPro}}" VerticalAlignment="Center"/>
+            <TextBlock AutomationProperties.AutomationId="ChosenPlan" Text="{Localize ButtonsStrings.ChosenPlan, pro={Binding PlanPro}}" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- DropDown: a string list (via ItemsSource) and an enum (via EnumType - each member said by the page's phrases,
@@ -52,13 +52,17 @@
         <TextBlock Text="{Localize ButtonsStrings.Dropdowns}" FontSize="18" Margin="0,24,0,10"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
             <DropDown ItemsSource="{Binding Cities}"
+                      AutomationProperties.AutomationId="City"
+                      AutomationProperties.Name="{Localize ButtonsStrings.CityName}"
                       SelectedItem="{Binding SelectedCity, Mode=TwoWay}"
                       Placeholder="{Localize ButtonsStrings.SelectCity}"
                       Width="200"/>
-            <TextBlock Text="{Localize ButtonsStrings.City, city={Binding SelectedCity}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="CityChoice" Text="{Localize ButtonsStrings.City, city={Binding SelectedCity}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
             <DropDown EnumType="{x:Type vm:Priority}"
+                      AutomationProperties.AutomationId="Priority"
+                      AutomationProperties.Name="{Localize ButtonsStrings.PriorityName}"
                       SelectedItem="{Binding SelectedPriority, Mode=TwoWay}"
                       Width="220">
                 <DropDown.ItemTemplate>
@@ -67,12 +71,14 @@
                     </DataTemplate>
                 </DropDown.ItemTemplate>
             </DropDown>
-            <TextBlock Text="{Localize ButtonsStrings.PriorityIs, priority={Binding SelectedPriority}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="PriorityChoice" Text="{Localize ButtonsStrings.PriorityIs, priority={Binding SelectedPriority}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </StackPanel>
 
         <!-- ItemTemplate DropDown: each row (and the header) renders a color swatch + name, not plain text. -->
         <StackPanel Orientation="Horizontal">
             <DropDown ItemsSource="{Binding Palette}"
+                      AutomationProperties.AutomationId="Color"
+                      AutomationProperties.Name="{Localize ButtonsStrings.ColorName}"
                       SelectedItem="{Binding SelectedColor, Mode=TwoWay}"
                       Width="200">
                 <DropDown.ItemTemplate>

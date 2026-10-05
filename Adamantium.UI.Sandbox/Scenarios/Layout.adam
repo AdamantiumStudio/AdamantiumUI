@@ -1,0 +1,22 @@
+# The Layout page: the cell sliders size the virtualized tiles, Ellipses swaps their template, the opacity slider fades
+# the whole grid, and paging hands the tiles to the pager.
+select id=GalleryTabs/id=Layout
+wait id=CellWidth
+set id=CellWidth 60
+expect id=CellWidth value=60
+set id=CellHeight 40
+expect id=CellHeight value=40
+toggle id=Ellipses
+expect id=Ellipses toggle=On
+toggle id=Ellipses
+set id=GridOpacity 0.5
+expect id=TileGrid Opacity=0.5
+set id=GridOpacity 1
+expect id=TilePager enabled=False
+toggle id=PageTiles
+expect id=TilePager enabled=True
+toggle id=PageTiles
+expect id=TilePager enabled=False
+# Back as the page opens: the smallest cell.
+set id=CellWidth 24
+set id=CellHeight 24

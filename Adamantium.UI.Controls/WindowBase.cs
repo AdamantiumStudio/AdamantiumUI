@@ -1,8 +1,10 @@
 ﻿using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.UI.Controls.Adorners;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Controls;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
@@ -1045,4 +1047,6 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
     }
     public event EventHandler<EventArgs> DpiChanged;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new WindowAutomationPeer(this);
 }

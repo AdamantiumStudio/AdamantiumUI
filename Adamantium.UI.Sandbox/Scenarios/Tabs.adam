@@ -1,0 +1,16 @@
+# The Tabs page: a tab of a thousand that the virtualizing strip has not built is found and selected all the same, and
+# the capped strip closes its oldest tab to make room once the cap is lowered.
+select id=GalleryTabs/id=Tabs
+wait id=TabsView/id=ManyTabs --timeout 20s
+select id=ManyTabs/name="Document 500 - a rather long tab title"
+expect id=ManyTabs/name="Document 500 - a rather long tab title" selected=True
+select id=ManyTabs/name="Document 1 - a rather long tab title"
+expect id=ManyTabs/name="Document 1 - a rather long tab title" selected=True
+set id=MaxOpened 3
+expect id=MaxOpened value=3
+invoke id=TabsView/name="Open a tab"
+absent id=CappedTabs/name="Report 9"
+absent id=CappedTabs/name="Report 10"
+# Back as the page opens, as far as it goes: the ceiling and the report being read. What the ceiling closed stays closed.
+set id=MaxOpened 5
+select id=CappedTabs/name="Report 2"

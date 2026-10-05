@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections.Specialized;
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -1174,7 +1176,7 @@ public class TabControl : Selector
     protected internal override IUIComponent GetContainerForItem(object item)
     {
         var container = new TabItem();
-        if (ItemContainerStyle != null) container.AttachStyles(ItemContainerStyle);
+        if (ItemContainerStyle != null) container.Styles.Add(ItemContainerStyle);
         return container;
     }
 
@@ -1484,4 +1486,6 @@ public class TabControl : Selector
     /// <summary>Whether closing takes the tab out of this strip. A docking group says no: its layout model is the truth
     /// and the strip follows it.</summary>
     protected virtual bool RemoveOnClose(TabItem tab, int index) => true;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TabControlAutomationPeer(this);
 }

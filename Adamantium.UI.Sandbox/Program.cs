@@ -1,4 +1,5 @@
 using System;
+using Adamantium.UI.Automation;
 
 namespace Adamantium.UI.Sandbox;
 
@@ -20,6 +21,7 @@ public class Program
             DesiredFPS = 300,
             StartupType = typeof(MainWindow)
         };
+        sandboxApp.UseAutomationAgent();
         sandboxApp.Run();
     }
 }

@@ -1,8 +1,10 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -563,4 +565,6 @@ public class DataGridCell : ContentControl
             return;
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataGridCellAutomationPeer(this);
 }

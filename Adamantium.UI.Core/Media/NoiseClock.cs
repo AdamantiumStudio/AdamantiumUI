@@ -22,7 +22,7 @@ internal static class NoiseClock
         _active++;
         if (_registered) return;
         _registered = true;
-        AnimationManager.AddTicker(delta =>
+        AnimationManager.AddEndlessTicker(delta =>
         {
             Time += delta * Speed;
             if (_active > 0) return false;

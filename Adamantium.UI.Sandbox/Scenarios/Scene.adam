@@ -1,0 +1,28 @@
+# The Scene page: the overlay menu closes and comes back, the camera speed and the tool are chosen, and a spot light is
+# added, tuned and deleted.
+select id=GalleryTabs/id=Scene
+wait id=Continue --timeout 30s
+invoke id=Continue
+expect id=Continue offscreen=True
+invoke id=MenuToggle
+expect id=Continue offscreen=False
+invoke id=Continue
+set id=CameraSpeed 2.5
+expect id=CameraSpeed value=2.5
+invoke id=ResetCamera
+select id=MoveTool
+expect id=MoveTool selected=True
+expect id=SelectTool selected=False
+select id=SelectTool
+invoke id=AddSpot
+wait id=ConeAngle
+set id=ConeAngle 45
+expect id=ConeAngle value=45
+set id=LightIntensity 3
+expect id=LightIntensity value=3
+invoke id=DeleteLight
+expect id=LightIntensity offscreen=True
+# Back as the page opens: the menu up, the camera at its own speed.
+set id=CameraSpeed 4
+invoke id=MenuToggle
+expect id=Continue offscreen=False

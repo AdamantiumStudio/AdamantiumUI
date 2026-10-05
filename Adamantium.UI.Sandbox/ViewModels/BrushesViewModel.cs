@@ -481,12 +481,7 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private PreviewShape _previewShape = PreviewShape.Rectangle;
 
     /// <summary>Which stand this tab is showing.</summary>
-    // ADAM_PROBE_STAND names the stand to open on, the way ADAM_PROBE_TAB names the tab - so a session spent on one
-    // material does not start with four clicks.
-    [Bindable] private LiveStand _liveStand =
-        Enum.TryParse<LiveStand>(Environment.GetEnvironmentVariable("ADAM_PROBE_STAND"), true, out var wanted)
-            ? wanted
-            : LiveStand.Gradients;
+    [Bindable] private LiveStand _liveStand = LiveStand.Gradients;
 
     // The buttons drive the property; the property drives the region. Navigating to a VIEW of this very object - not to
     // a view-model of its own - is what keeps the shared figure, slot and colors alive across the switch.

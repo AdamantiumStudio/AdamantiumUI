@@ -75,7 +75,7 @@ public class TextTool : ICanvasTool
         if (_blinking) return;
         _blinking = true;
 
-        AnimationManager.AddTicker(dt =>
+        AnimationManager.AddEndlessTicker(dt =>
         {
             // The ticker stops itself when there is nothing left to blink for - a caret is the only reason it is
             // running, and one that outlived its caret would repaint the canvas forever.

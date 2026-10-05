@@ -1,3 +1,5 @@
+using Adamantium.UI.Core.Automation;
+
 namespace Adamantium.UI.Controls.Primitives;
 
 /// <summary>
@@ -7,4 +9,6 @@ namespace Adamantium.UI.Controls.Primitives;
 /// </summary>
 public sealed class ScrollBarPageButton : RepeatButton
 {
+    /// <summary>None: paging is what scrolling does, and automation scrolls through the scroll bar itself.</summary>
+    protected override AutomationPeer OnCreateAutomationPeer() => null;
 }

@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Text;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Panels;
@@ -460,6 +462,13 @@ public partial class TreeDataGrid : Selector
         }
 
         ApplySorting();
+    }
+
+    /// <summary>What a press on a column's header does: sorts by it, ascending first, then the other way round.</summary>
+    internal void SortByHeader(DataGridColumn column)
+    {
+        if (column is not { CanSort: true }) return;
+        SortBy(column, ReferenceEquals(SortColumn, column) && !SortDescending);
     }
 
     /// <summary>Adds a key AFTER the ones already there, or turns an existing one around. The table keeps what it was
@@ -2893,12 +2902,21 @@ public partial class TreeDataGrid : Selector
 
         if (!IsEditing) return true;
 
-        var rows = Rows;
-        var item = rows[EditingRow].Node;
-        var column = Columns[EditingColumn];
-        var value = EditedValue();
+        if (!WriteCell(EditingRow, EditingColumn, EditedValue())) return false;
 
-        var args = new DataGridCellEditEventArgs(item, column, value);
+        EndEdit();
+        return true;
+    }
+
+    /// <summary>Writes <paramref name="value"/> into a cell the way committing its edit does - <see cref="CellEditEnding"/>,
+    /// a blocking rule, the write through the column - for an edit that has no editor open, such as automation's. False
+    /// means the write was refused.</summary>
+    internal bool WriteCell(int row, int column, object value)
+    {
+        var item = Rows[row].Node;
+        var dataColumn = Columns[column];
+
+        var args = new DataGridCellEditEventArgs(item, dataColumn, value);
         CellEditEnding?.Invoke(this, args);
         if (args.Cancel) return false;
 
@@ -2906,18 +2924,21 @@ public partial class TreeDataGrid : Selector
         // there would be nothing left to refuse. The cell keeps the message for as long as it holds on: an editor that
         // will not let go and does not say why is a table that has simply stopped working.
         if (ValidationMode == DataGridValidationMode.Block
-            && column.Refuses(args.Value, item) is { Length: > 0 } refused)
+            && dataColumn.Refuses(args.Value, item) is { Length: > 0 } refused)
         {
-            var held = CellFor(EditingRow, EditingColumn);
+            var held = CellFor(row, column);
             if (held != null) held.Refusal = refused;
             return false;
         }
 
-        if (!WriteThroughColumn(column, item, args.Value)) return false;
-
-        EndEdit();
-        return true;
+        return WriteThroughColumn(dataColumn, item, args.Value);
     }
+
+    /// <summary>Whether a cell refuses editing, by its column or its row's own answer.</summary>
+    internal bool IsCellReadOnly(int row, int column) =>
+        Rows is { } rows && row >= 0 && row < rows.Count && column >= 0 && column < Columns.Count
+            ? IsCellReadOnly(Columns[column], rows[row].Node)
+            : true;
 
     /// <summary>Leaves edit mode without writing anything.</summary>
     public void CancelEdit()
@@ -3307,4 +3328,6 @@ public partial class TreeDataGrid : Selector
     {
         if (container is DataGridRow row) row.Attach(this, null, 0);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TreeDataGridAutomationPeer(this);
 }

@@ -167,17 +167,17 @@ public partial class MainViewModel
     private List<WindowCommand> _rightWindowCommands;
     public IEnumerable RightWindowCommands => _rightWindowCommands ??= new()
     {
-        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M1,5 L13,5",     Label = MainStrings.Workspace, ToolTip = MainStrings.OpenWorkspace, Command = OpenWorkspaceCommand },
-        new WindowCommand { IconData = "M1,1 L13,1 L13,13 L1,13 Z M1,4 L13,4 M4,4 L4,1 M3,7 L6,7 M3,10 L6,10 M8,6 L12,6 L12,11 L8,11 Z", Label = MainStrings.Ribbon, ToolTip = MainStrings.OpenRibbon, Command = OpenRibbonCommand },
-        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M4,6 L10,6 M4,9 L8,9", Label = MainStrings.Dialog, ToolTip = MainStrings.ShowConfirm, Command = ShowConfirmCommand },
-        new WindowCommand { IconData = "M7,0 L14,7 L7,14 L0,7 Z",                  Label = MainStrings.Help, ToolTip = MainStrings.AboutSandbox, Command = ShowAboutCommand },
+        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M1,5 L13,5",     Label = MainStrings.Workspace, ToolTip = MainStrings.OpenWorkspace, Command = OpenWorkspaceCommand, AutomationId = "OpenWorkspace" },
+        new WindowCommand { IconData = "M1,1 L13,1 L13,13 L1,13 Z M1,4 L13,4 M4,4 L4,1 M3,7 L6,7 M3,10 L6,10 M8,6 L12,6 L12,11 L8,11 Z", Label = MainStrings.Ribbon, ToolTip = MainStrings.OpenRibbon, Command = OpenRibbonCommand, AutomationId = "OpenRibbon" },
+        new WindowCommand { IconData = "M1,2 L13,2 L13,12 L1,12 Z M4,6 L10,6 M4,9 L8,9", Label = MainStrings.Dialog, ToolTip = MainStrings.ShowConfirm, Command = ShowConfirmCommand, AutomationId = "ShowConfirm" },
+        new WindowCommand { IconData = "M7,0 L14,7 L7,14 L0,7 Z",                  Label = MainStrings.Help, ToolTip = MainStrings.AboutSandbox, Command = ShowAboutCommand, AutomationId = "ShowAbout" },
     };
 
     private List<WindowCommand> _leftWindowCommands;
     public IEnumerable LeftWindowCommands => _leftWindowCommands ??= new()
     {
-        new WindowCommand { IconData = "M1,13 L1,7 M6,13 L6,2 M11,13 L11,9",       Label = MainStrings.Diagnostics, ToolTip = MainStrings.ToggleDiagnostics, Command = ToggleDiagnosticsPanelCommand },
+        new WindowCommand { IconData = "M1,13 L1,7 M6,13 L6,2 M11,13 L11,9",       Label = MainStrings.Diagnostics, ToolTip = MainStrings.ToggleDiagnostics, Command = ToggleDiagnosticsPanelCommand, AutomationId = "ToggleDiagnostics" },
         // Grip-only resize toggle - a diagonal resize double-arrow.
-        new WindowCommand { IconData = "M2,2 L12,12 M12,12 L12,8 M12,12 L8,12 M2,2 L2,6 M2,2 L6,2", Label = MainStrings.ResizeMode, ToolTip = MainStrings.ToggleGripResize, Command = ToggleGripResizeCommand },
+        new WindowCommand { IconData = "M2,2 L12,12 M12,12 L12,8 M12,12 L8,12 M2,2 L2,6 M2,2 L6,2", Label = MainStrings.ResizeMode, ToolTip = MainStrings.ToggleGripResize, Command = ToggleGripResizeCommand, AutomationId = "ToggleGripResize" },
     };
 }

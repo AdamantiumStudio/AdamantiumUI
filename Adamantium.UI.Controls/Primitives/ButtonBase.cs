@@ -1,5 +1,7 @@
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -261,4 +263,6 @@ public abstract class ButtonBase : ContentControl
         }
         e.Handled = true;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ButtonAutomationPeer(this);
 }

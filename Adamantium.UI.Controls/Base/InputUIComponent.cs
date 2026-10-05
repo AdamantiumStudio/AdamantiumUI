@@ -1210,14 +1210,32 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         }
     }
 
-    // A focused template part rings the control it belongs to, not itself.
     private InputUIComponent FocusVisualOwner()
     {
         var owner = this;
-        while (owner.TemplatedParent is InputUIComponent templated)
+        while (owner.TemplatedParent is InputUIComponent templated && HasOneStop(templated))
+        {
             owner = templated;
+        }
 
         return owner;
+    }
+
+    private static bool HasOneStop(InputUIComponent control)
+    {
+        var stops = 0;
+        foreach (var node in control.GetVisualDescendants())
+        {
+            if (node is InputUIComponent { Focusable: true, Visibility: Visibility.Visible } part &&
+                ReferenceEquals(part.TemplatedParent, control) &&
+                KeyboardNavigation.GetIsTabStop(part) &&
+                ++stops > 1)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected virtual void OnLostFocus(RoutedEventArgs e)

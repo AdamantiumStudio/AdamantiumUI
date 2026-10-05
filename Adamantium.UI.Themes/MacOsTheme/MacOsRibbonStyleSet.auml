@@ -1550,6 +1550,14 @@
         </PropertyTrigger>
     </Style>
 
+    <Style Selector="RibbonQuickAccess">
+        <Setter Property="AutomationProperties.Name" Value="{Localize RibbonStrings.QuickAccess}"/>
+    </Style>
+
+    <Style Selector="Ribbon">
+        <Setter Property="AutomationProperties.Name" Value="{Localize RibbonStrings.Ribbon}"/>
+    </Style>
+
     <!-- A DATA item in the bar. Most commands are an icon button; one that brought its OWN compact form is drawn by
          that instead - the bar's selector owns the choice, because an ItemTemplate would win over it and it would never
          be asked. -->

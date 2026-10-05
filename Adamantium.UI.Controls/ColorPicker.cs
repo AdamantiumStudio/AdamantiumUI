@@ -1,9 +1,11 @@
 using System;
 using System.Globalization;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -429,7 +431,7 @@ public class ColorPicker : Control
         }
     }
 
-    private static bool TryParseHex(string text, out Color color)
+    internal static bool TryParseHex(string text, out Color color)
     {
         color = Colors.Black;
         if (string.IsNullOrWhiteSpace(text))
@@ -465,9 +467,11 @@ public class ColorPicker : Control
         return false;
     }
 
-    private static string FormatHex(Color c) => $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+    internal static string FormatHex(Color c) => $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
 
     private static byte ToByte(double value) => (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
 
     private static double Clamp01(double value) => Math.Clamp(value, 0, 1);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ColorAutomationPeer(this, SelectedColorProperty);
 }

@@ -45,19 +45,11 @@ public class ParkedContainerBindingTests
     // plus the two-item buffer on each side. Stated here so the two viewports below are chosen, not guessed.
     private const double ItemExtent = 20;
 
-    // The item template's Border, wherever the container's own template put it. Walked by hand: GetVisualDescendants()
-    // returns only the IMMEDIATE children despite its name.
-    private static Border TemplatedBorder(IUIComponent node)
-    {
-        if (node is Border border && !double.IsNaN(border.Width)) return border;
-
-        foreach (var child in node.VisualChildren)
-        {
-            if (TemplatedBorder(child) is { } found) return found;
-        }
-
-        return null;
-    }
+    // The item template's Border, wherever the container's own template put it.
+    private static Border TemplatedBorder(IUIComponent node) =>
+        node is Border own && !double.IsNaN(own.Width)
+            ? own
+            : node.GetVisualDescendants().OfType<Border>().FirstOrDefault(border => !double.IsNaN(border.Width));
 
     /// <summary>Shrink the viewport by one item and grow it back: exactly one container is parked and exactly one slot
     /// then needs filling, so the pool hands that container back to THE ITEM IT ALREADY HELD. Nothing about it changes,

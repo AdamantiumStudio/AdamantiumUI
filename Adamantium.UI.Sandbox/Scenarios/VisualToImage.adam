@@ -1,0 +1,9 @@
+# The Visual -> Image page: the markup already in the box rendered to a picture, the live tree snapshotted, and its
+# ghost shown and hidden - each without an error left behind.
+select id=GalleryTabs/id=VisualToImage
+wait id=Source
+invoke id=VisualRenderDemoView/name=Render
+toggle id=VisualRenderDemoView/name="Toggle me"
+invoke id=VisualRenderDemoView/name="Snapshot live tree"
+invoke id=VisualRenderDemoView/name="Show ghost"
+invoke id=VisualRenderDemoView/name="Hide ghost"

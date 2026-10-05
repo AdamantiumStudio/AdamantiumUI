@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -241,12 +243,21 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 
     private void OnCollapsedButtonClick(object sender, RoutedEventArgs e)
     {
-        if (_popup != null) _popup.IsOpen = _collapsedButton?.IsChecked == true;
+        SetCurrentValue(IsDropDownOpenProperty, _collapsedButton?.IsChecked == true);
     }
 
     private void OnFlyoutClosed(object sender, EventArgs e)
     {
-        if (_collapsedButton != null) _collapsedButton.IsChecked = false;
+        SetCurrentValue(IsDropDownOpenProperty, false);
+    }
+
+    private static void OnIsDropDownOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is not RibbonGroup group) return;
+
+        var open = Equals(e.NewValue, true) && group.IsCollapsed;
+        if (group._popup != null) group._popup.IsOpen = open;
+        group._collapsedButton?.SetCurrentValue(Primitives.ToggleButton.IsCheckedProperty, open);
     }
 
     /// <summary>The variant currently drawn - 0 while there is room for everything.</summary>
@@ -286,7 +297,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         if (a is not RibbonGroup group) return;
 
         // Put the flyout away on the way back: a group that is no longer a button has nothing to drop.
-        if (Equals(e.NewValue, false) && group._popup != null) group._popup.IsOpen = false;
+        if (Equals(e.NewValue, false)) group.SetCurrentValue(IsDropDownOpenProperty, false);
         group.HostContent();
     }
 
@@ -296,9 +307,11 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         private set => SetValue(IsCollapsedProperty, value);
     }
 
-    /// <summary>Whether the collapsed group's flyout is showing.</summary>
+    /// <summary>Whether the collapsed group's flyout is showing. Set, it opens or closes the flyout; a group that is not
+    /// collapsed drops nothing down.</summary>
     public static readonly AdamantiumProperty IsDropDownOpenProperty = AdamantiumProperty.Register(nameof(IsDropDownOpen),
-        typeof(bool), typeof(RibbonGroup), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
+        typeof(bool), typeof(RibbonGroup),
+        new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault, OnIsDropDownOpenChanged));
 
     public bool IsDropDownOpen
     {
@@ -355,4 +368,6 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         get => GetValue<int>(ShrinkPriorityProperty);
         set => SetValue(ShrinkPriorityProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonGroupAutomationPeer(this);
 }

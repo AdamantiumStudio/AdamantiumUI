@@ -1,8 +1,10 @@
 using System;
 using System.Globalization;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -717,4 +719,6 @@ public class NumericUpDown : RangeLimitsBase
         Step(Math.Sign(e.Delta), SmallChange);
         e.Handled = true;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new NumericUpDownAutomationPeer(this);
 }

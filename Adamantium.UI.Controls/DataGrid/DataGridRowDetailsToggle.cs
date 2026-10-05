@@ -1,4 +1,6 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
@@ -28,4 +30,6 @@ public class DataGridRowDetailsToggle : ContentControl
         get => GetValue<bool>(IsBlankProperty);
         set => SetValue(IsBlankProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataGridRowDetailsToggleAutomationPeer(this);
 }

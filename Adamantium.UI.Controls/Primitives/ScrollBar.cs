@@ -1,6 +1,8 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -191,4 +193,7 @@ public class ScrollBar : RangeBase
         SetCurrentValue(ValueProperty, newValue);
         Scroll?.Invoke(this, new ScrollEventArgs(type, Value));
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ScrollBarAutomationPeer(this) : null;
 }

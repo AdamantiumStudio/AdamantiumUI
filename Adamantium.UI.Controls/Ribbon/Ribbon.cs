@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Core.Commands;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -979,7 +981,7 @@ public class Ribbon : Selector
     /// <summary>What the FIRST level is gathered from - named places, not "the window": the tab strip, the application
     /// menu, the strip content, and every quick-access bar the window shows. Walking a common ancestor would badge the open tab's commands
     /// too, and those are the level below.</summary>
-    private IReadOnlyList<IUIComponent> TopLevelRoots()
+    internal IReadOnlyList<IUIComponent> TopLevelRoots()
     {
         var roots = new List<IUIComponent>();
         if (_strip != null) roots.Add(_strip);
@@ -1049,7 +1051,7 @@ public class Ribbon : Selector
     protected internal override IUIComponent GetContainerForItem(object item)
     {
         var header = new RibbonTabHeader();
-        if (ItemContainerStyle != null) header.AttachStyles(ItemContainerStyle);
+        if (ItemContainerStyle != null) header.Styles.Add(ItemContainerStyle);
         return header;
     }
 
@@ -1287,4 +1289,6 @@ public class Ribbon : Selector
 
         return -1;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonAutomationPeer(this);
 }

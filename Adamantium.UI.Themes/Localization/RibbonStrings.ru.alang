@@ -4,4 +4,6 @@
     <Phrase Key="MoreCommands" Text="Другие команды"/>
     <Phrase Key="AddToQuickAccess" Text="Добавить на панель быстрого доступа"/>
     <Phrase Key="RemoveFromQuickAccess" Text="Убрать с панели быстрого доступа"/>
+    <Phrase Key="QuickAccess" Text="Панель быстрого доступа"/>
+    <Phrase Key="Ribbon" Text="Лента"/>
 </Language>

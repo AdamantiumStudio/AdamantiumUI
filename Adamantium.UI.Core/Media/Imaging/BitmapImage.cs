@@ -120,6 +120,7 @@ public sealed class BitmapImage : BitmapSource
       set => SetValue(FrameCacheLimitProperty, value);
    }
 
+   [MarkupFile("png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "ico", "tif", "tiff")]
    public Uri UriSource
    {
       get => GetValue<Uri>(UriSourceProperty);

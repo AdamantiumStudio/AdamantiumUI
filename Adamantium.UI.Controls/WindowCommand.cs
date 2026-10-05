@@ -47,6 +47,10 @@ public class WindowCommand
     /// <summary>Optional hover tooltip for the bar button.</summary>
     public string ToolTip { get; set; }
 
+    /// <summary>The id automation finds the bar button by; the themes give it to the button, with <see cref="Label"/>
+    /// as its name.</summary>
+    public string AutomationId { get; set; }
+
     /// <summary>The overflow-menu label - <see cref="Label"/>, else the <see cref="Content"/> text.</summary>
     public object OverflowLabel => Label ?? Content;
 }

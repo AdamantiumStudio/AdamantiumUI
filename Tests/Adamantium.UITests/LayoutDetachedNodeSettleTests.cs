@@ -39,6 +39,30 @@ public class LayoutDetachedNodeSettleTests
             "a node that left the tree must leave the queue - re-queueing it spins the pass forever");
     }
 
+    // A node under a COLLAPSED ancestor - the template of a hidden ribbon tab header: it is queued for arrange, but its
+    // measure is invalid and nothing here will measure it while the ancestor is collapsed. Re-queueing it spun every
+    // pass to the iteration limit for as long as the window lived; showing the ancestor lays it out.
+    [Test]
+    public void ARootStillSettlesWhenAQueuedNodeSitsUnderACollapsedAncestor()
+    {
+        var root = new Grid();
+        var hidden = new Border { Visibility = Visibility.Collapsed };
+        var child = new Border();
+        hidden.Child = child;
+        root.Children.Add(hidden);
+
+        var manager = LayoutManager.For(root);
+        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
+        manager.ExecuteLayoutPass();
+        Assert.That(((IMeasurableComponent)child).IsMeasureValid, Is.False, "precondition: a collapsed subtree is not measured");
+
+        manager.InvalidateArrange(child);
+        manager.ExecuteLayoutPass();
+
+        Assert.That(manager.IsSettled, Is.True, "a node nobody here will measure must leave the arrange queue");
+    }
+
     // The ordinary case the re-queue exists for must keep working: a node still in the tree whose measure was dirtied
     // after its arrange was queued is measured and arranged in the same pass.
     [Test]

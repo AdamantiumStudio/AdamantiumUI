@@ -1,0 +1,27 @@
+# The Docking page: panes chosen by their tabs, a pane opened among the documents and closed by its tab's button, a pane
+# opened by name in a window of its own and closed with it. Groups are found through their panes - a group is a place in
+# the layout, not a name. The panes it closes are ones it opened, so the page is left as it was.
+select id=GalleryTabs/id=Docking
+wait "id=DockingView/type=TabItem,name=Scene"
+select "id=DockingView/type=TabItem,name=Output"
+expect "id=DockingView/type=TabItem,name=Output" selected=True
+select "id=DockingView/type=TabItem,name=Console"
+select id=PaneChoice/name=Terminal
+select id=PlaceChoice/name=Center
+invoke id=DockingView/name=Navigate
+wait "id=DockingView/type=TabItem,name=Terminal"
+invoke "id=DockingView/type=TabItem,name=Terminal/id=CloseTab"
+absent "id=DockingView/type=TabItem,name=Terminal"
+select id=PaneChoice/name=Notes
+select id=PlaceChoice/name=Floating
+invoke id=DockingView/name=Navigate
+wait id=DockingWindow
+expect id=DockingWindow name=Notes
+window id=DockingWindow close
+absent id=DockingWindow
+invoke id=DockingView/name=Reset
+expect "id=DockingView/type=TabItem,name=Scene" selected=True
+wait "id=DockingView/type=TabItem,name=Game"
+# Back as the page opens.
+select id=PaneChoice/name=Assets
+select id=PlaceChoice/name=Center

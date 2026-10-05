@@ -1,4 +1,6 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -85,4 +87,6 @@ public class RibbonGalleryItem : ContentControl, ISelectable
         Owner?.PickFromContainer(this);
         e.Handled = true;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new RibbonGalleryItemAutomationPeer(this);
 }

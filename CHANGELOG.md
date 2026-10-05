@@ -155,9 +155,108 @@ All packages share one version.
 - `IDockingAware`: a view model in a docking region hears its own pane - `OnActivated` and `OnDeactivated`, `OnShown`
   and `OnHidden` (on screen means the front tab of a panel not folded away: what a scene view stops drawing for),
   `OnPlacementChanged` - in the order of the change, the pane left behind first. `PanePlacement.IsShown`.
+- Automation peers: a control describes itself to automation - `AutomationPeer` (control type, name, id, rectangle on
+  the screen, enabled, on screen, focus, children) made on request by `UIComponent.GetAutomationPeer`, and what can be
+  done with it: `IInvokeProvider`, `IToggleProvider`, `IValueProvider`, `ISelectionProvider`, `ISelectionItemProvider`.
+  Buttons, toggle buttons, check boxes, text blocks, text boxes, tab controls and their tabs, views and windows have
+  peers; panels, borders and the parts of a template are looked through. `AutomationProperties.AutomationId`, `Name` and
+  `HelpText` say what an element is called; the id is its `x:Name` unless given, and a view's or window's its class name.
+- `WindowCommand.AutomationId`: the themes give it to the caption button, with the command's `Label` as its name.
+- `Adamantium.UI.Automation`, a new package: finds elements by id, name, type or class (`By`, a selector path such as
+  `id=Shell/id=Cut`) and drives them - invoke, toggle, set a value, select, or click and type by input simulated inside
+  the framework, refused when something covers the element - waiting each time for the application to settle.
+  `AutomationSession.InProcess` drives windows a test built, headless; `UseAutomationAgent` lets a running application
+  be driven through a named pipe when `ADAM_AUTOMATION_PIPE` names one, its windows opening in the background.
+- Automation finds out why: `AutomationElement.InspectAsync` gives an element's properties with where each value comes
+  from, its bindings and why one does not work, its layout and parents; `VisualAsync` its visual tree with layout;
+  `AutomationSession.StateAsync` the keyboard focus, the windows and their popups; `ShotAsync` a picture drawn by the
+  application's own renderer. The `ErrorJournal` collects broken bindings, values set by a name the element has no
+  property for and errors in the log; an action that leaves new entries fails, unless `AllowErrors` says otherwise.
+- `AdamantiumComponent.GetValueSource`: the priority the value of a property comes from. `BindingExpressionBase.Failure`:
+  why a binding does not work.
+- Automation peers for lists, drop-downs, menus, trees and tab strips: an items control's children are its items in
+  order - the item's element where it has one, an `ItemAutomationPeer` (a `TreeRowAutomationPeer` in a tree) where a
+  virtualizing panel has not made it or a closed list has not built it, which can be selected and brought into view. A
+  drop-down's list and a submenu belong to the control that opens them; a context menu and other popups to their
+  window. New patterns `IExpandCollapseProvider` and `IScrollItemProvider`; a `NumericUpDown` is a spinner with a value.
+  The driver expands, collapses, scrolls an item into view, hovers and right-clicks, and lists what can be acted on but
+  has no name.
+- `ItemsControl.ScrollIntoView`: scrolls until an item is in view, a virtualizing panel making its container on the way.
+- The themes name what their templates add for automation: the tab strip's overflow button (`TabStrings.MoreTabs`) and
+  the pager's buttons, page size and page number (`DataPagerStrings`); the title bar's minimize, maximize, close and
+  overflow buttons (`WindowStrings`, ids `Minimize`, `Maximize`, `Close`, `MoreWindowCommands`); a range slider's two
+  handles (`RangeSliderStrings`).
+- Automation of numbers, scrolling and windows: new patterns `IRangeValueProvider`, `IScrollProvider` and
+  `IWindowProvider`. `Slider`, `ProgressBar` and `RingProgressBar` (read-only), a standalone `ScrollBar` and
+  `NumericUpDown` hold a number between limits; a `RangeSlider`'s children are its two handles, `Lower` and `Upper`; a
+  `ScrollViewer`, and a list through its own, scroll to percents; an `Expander` opens and folds; a window is minimized,
+  maximized, restored and closed. The driver sets a number with `SetValueAsync`, scrolls with `ScrollToAsync`, and
+  `adam-auto` gains `scroll --vertical/--horizontal` and `window minimize|maximize|restore|close`.
+- Automation presses keys as the system would - modifiers around the key, a letter with its character - in an element's
+  window, focusing it if it takes the keyboard, or entering the window as activating it does:
+  `AutomationElement.PressKeysAsync("Alt H")`, `adam-auto key Alt --into id=MainWindow`. `adam-auto state` lists each
+  window's adorners, a key tip with its keys.
+- Automation of the ribbon: the ribbon is tabs to choose from, a tab header a tab item selected the way a click selects
+  it - a minimized band dropping its groups down - and the open tab a pane of named groups; a group the band collapsed
+  opens and closes its commands; a gallery is a list picked from by name, and opens; "File" opens its menu, a row with a
+  page selected to show it; a drop-down command holds its menu while open; the quick-access bar is a toolbar. A key tip
+  is the element's `AutomationPeer.AccessKey`. The themes name the ribbon and the quick-access bar (`RibbonStrings`).
+- Automation of `TreeDataGrid`: a data grid whose children are its column headers, then its rows - a stand-in for a row
+  the virtualizing rows did not make, called by its first column. A header sorts as a click does; a row is selected,
+  brought into view and, in a tree, opened, with or without an element; a cell is selected and takes a value the way
+  committing an edit does - `CellEditEnding`, a blocking rule, the write through the column, the undo history; a row's
+  details toggle opens its panel. New patterns `IGridProvider`, `IGridItemProvider` and `ITableProvider`.
+- Automation of `PropertyGrid`: a table of property rows, each called by its property's name and written the way its
+  editor writes it - converted to the property's type, to every object the row stands for, or refused; a true-or-false
+  property is toggled and a composite one opens to its parts.
+- `adam-auto run <folder>` runs every scenario in it with a summary; `adam-auto sweep` opens every tab of a tab control
+  in turn - the gallery's by default, `--passes`, `--dwell` - and reports how long each took to settle and what it left
+  in the error journal. `expect` reads an element's place and size (`left`, `top`, `width`, `height`); `key` knows the
+  arrows by `Up`, `Down`, `Left`, `Right`; `state` names the focused element.
+- While a gesture is simulated, the pointer the application asks for - `Mouse.ScreenCoordinates`, which a drag's
+  threshold and drop target read - is the gesture's, and the system cursor is never moved: drag and drop inside the
+  application is driven by automation. A drag that runs through the system's own loop still follows the real mouse.
+- An `OverlayWindow` is a window to automation, called by its title and closed as its close button closes it; a
+  `SlidePanel` is a pane called by its header that opens and shuts, its overlay content its children while open. The
+  themes name their close and pin buttons (`WindowStrings.Close`, `Pin`).
+- Automation drags: `AutomationElement.DragAsync` and `adam-auto drag <selector> <x1,y1> <x2,y2>` press the left button
+  at one point of the element, move with it held and let go at the other, in the element's own units. An
+  `InfiniteCanvas` and its floating panels are panes; a tool on its rail is a button found by the tool's name and
+  called by it in the user's language.
+- More automation peers: a tab item's children are the close and pin buttons its tab control offers (the themes name
+  them, `TabStrings.CloseTab`, `PinTab`); `ColorPicker`, `ColorWheel` and `ColorPickerButton` hold their color as a
+  value, `#AARRGGBB`, and the button opens its picker; a `RadioButton` is a radio button selected as a click selects
+  it; a `DataPager` is a group.
+- An element with no name of its own is called by its tooltip when that is text, and a text box or a drop-down by its
+  placeholder.
+- `AutomationProperties.LabeledBy`: an element is named by the label shown beside it,
+  `AutomationProperties.LabeledBy="{Binding ElementName=VolumeLabel}"`, following the label's text and language.
+- A `RibbonRadioButton` is a radio button to automation: one choice of its group, selected the way a press selects it,
+  and offering no toggle - a choice is not switched off.
+- `ElementInfo.ToString()` describes an element in one line - what it is, its name and id, its value, switch,
+  selection and state - and `AutomationSession.TreeAsync` (`adam-auto tree`) lists every element that way, where it
+  gave names alone.
+- `UIApplication.WaitForIdleAsync` completes once the application is idle: nothing posted to the loop, no layout,
+  binding or recorded change left to do, no animation that ends on its own still running, no glyphs on their way - and
+  the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
+  idle: one that loops forever, and a ticker registered with `AnimationManager.AddEndlessTicker` (a caret's blink, an
+  animated picture). Automation waits for it after every action instead of for two frames, and `adam-auto` says what
+  kept the application busy when it does not settle.
+- `TypeOfAttribute` and `MarkupFileAttribute` say what a markup value may name. `[TypeOf(typeof(StyleSet))]` on a
+  `Type`-valued property admits only types derived from that base - `StyleInclude.Source` takes style sets,
+  `ResourceLink.Source` resource dictionaries - and the build and the live preview reject any other type, naming the
+  property. `[MarkupFile("png", ...)]` on a type or a property says its markup value is a path to such a file;
+  `ImageSource` and `BitmapImage.UriSource` list the picture formats the engine loads. The language server completes by
+  both: a style include is offered only style sets, a resource link only dictionaries - classes in C# and markup files
+  alike - and an image only the pictures of the project and the folders holding them; a type the build would reject is
+  underlined as it is typed. A `Type`-valued attribute is completed in its value too, not only in `{x:Type}`.
 
 ### Changed
 
+- A `Type`-valued property takes a type by name as well as by `{x:Type}`: `<StyleInclude Source="EditorButtons"/>`,
+  `EnumType="local:Priority"`, `{ResourceLink Source=AppColors}`. The live preview took a bare name but the build failed
+  on it in an attribute, and in a markup extension's argument built code that threw "Type parser not found for
+  System.Type" when the window was created. `{Ancestor}` takes its types in `{x:Type}` as well.
 - An animation whose frames use no more than 256 colors in all - most GIFs - keeps them on the GPU as one byte per pixel
   and a shared palette (`BitmapImage.FramePalette`), a quarter of the memory with the same pixels: the sandbox's
   200-frame 960x540 GIF takes 117 MB instead of 469. Animations with more colors keep their full-color frames.
@@ -242,6 +341,42 @@ All packages share one version.
 - An `Image` of a still picture draws the picture itself instead of a copy of its first frame, so every image showing one
   file shares one texture rather than uploading its own. `BitmapImage.GetMipLevel` keeps the frame it makes, so images
   of one mip level share it too.
+- `ColorPickerButton` wrote `IsOpen` on a click and when its flyout closed, and `IsIndeterminate` when a color was
+  chosen, as local values - an application's binding on either stopped driving it. They are current values now.
+- A template took over the parts of a control built inside it that had applied its own template already - as code
+  made from markup does. A tab control in a data grid's row details showed no tabs: its strip no longer knew the tab
+  control the tabs were written in, and refused them. A template now stamps only what it built.
+- `RibbonGroup.IsDropDownOpen` was written and read by nothing, so setting it did not open a collapsed group. It is the
+  flyout's state now: set, it opens or closes the flyout; the group's button and the flyout closing itself report back
+  to it.
+- `IUIComponent.GetVisualDescendants` returned the children alone; it is every element below, at any depth, and returns
+  `IEnumerable<IUIComponent>`. The ribbon looked for its quick-access bars among the window's children with it, so a bar
+  in the caption got no key tips.
+- A window that does not take activation when shown (`ActivateOnShow` false) took it when restored, and handed it to
+  another window when minimized.
+- The focus ring on a part of a control's template wrapped the whole control even when the control has several parts
+  to stop on - a question's two answers - so it did not show which one Enter presses. The whole control is ringed only
+  when the focused part is its one stop, as a numeric's editor is.
+- The adorner stage measured every ring and key tip again on every frame, and each time asked for another: while one
+  was on screen the loop never went to sleep. A ring is measured again when its control's size or its own content
+  changes.
+- A window holding a collapsed element whose template was queued for arrange - a ribbon's hidden contextual tab header
+  - never finished a layout pass: the queue took the part back every iteration, waiting for a measure that nothing
+  would run while it was collapsed, and every frame ran to the iteration limit. A part goes back on the queue only while
+  its measure is queued too; showing the element lays it out.
+- A minimized window stopped every other window of the application from drawing: the render thread they share waited
+  for it to be restored, so the main window took clicks and showed nothing of them. A minimized window is skipped - it
+  neither draws nor holds the others' changes back - and is recorded whole when it comes back.
+- A window that closed stayed the application's `ActiveWindow` when the system sent no deactivation - as when the
+  application is not in front - so the next overlay or overlay dialog opened in a window that was gone and nothing
+  appeared. A closed window is no longer the active one.
+- A dialog shown in a window of its own was titled "Dialog", an English word in the framework, instead of its
+  `IDialogAware.Title` as the overlay shows it; its title now follows the dialog's, live.
+- The rows of the caption's overflow menu were called by their command object's class name to automation and screen
+  readers; the themes name each row by its command's label and give it the command's `AutomationId`. An item shown
+  without an element of its own is no longer called by its class name.
+- An active `OverlayWindow` in the Fluent theme drew a gray outline around its accent caption, a box inside the window.
+  The outline takes the caption's color when active, as the main window's does.
 - A context menu's rows took the text color of what the menu belongs to, not of the menu's own card: the caption's
   overflow menu showed the caption's white words on the light theme's white card. The card states its own color in all
   three themes. A row's color is a style by type, which inheritance outranks by design.
@@ -357,6 +492,14 @@ All packages share one version.
   resource manager and the theme; they connect again once the element is in a tree again.
 - A pane opened under the id of a closed tool left that tool kept as well: bringing it back put the id in the layout
   twice. Likewise a closed tool that a loaded layout has open.
+- A style setter for an attached property of a static service - `KeyTipService.KeyTip`, `ToolTipService.Placement`,
+  `AutomationProperties.AutomationId` - was passed over without a word: only component owners such as `Grid` were
+  looked for.
+- `ItemContainerStyle` of a `TabControl`, a `DropDown`, a `Ribbon` and a `RibbonApplicationMenu` did nothing: the
+  containers were themed after it and lost it. It is applied after the theme, as `ListBox` always did.
+- A `TreeView` wrote its rows' `IsExpanded` and `IsSelected` at Local priority, above the item container style's
+  bindings: once a row had been shown, clicked or toggled, the view model could no longer open or select it. The tree
+  writes current values.
 
 ## [0.1.0-alpha] - 2026-10-02
 

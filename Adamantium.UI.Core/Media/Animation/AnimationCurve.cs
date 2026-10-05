@@ -40,6 +40,9 @@ public sealed class AnimationCurve
 
     public Track[] Tracks { get; }
 
+    /// <summary>True when the curve loops forever and so never finishes on its own.</summary>
+    public bool IsEndless => double.IsPositiveInfinity(_iterationCount);
+
     /// <summary>True once <paramref name="elapsedSeconds"/> is past the last iteration. An infinite animation never is.</summary>
     public bool IsFinished(double elapsedSeconds)
     {

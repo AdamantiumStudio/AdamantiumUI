@@ -908,6 +908,40 @@ public class KeyboardNavigationTests
         });
     }
 
+    /// <summary>A control made of SEVERAL stops - a question's two answers - rings the stop that has the focus: a ring
+    /// around the whole control would not say which answer Enter presses.</summary>
+    [Test]
+    public void TheRingOnOneOfSeveralPartsMarksThatPart()
+    {
+        var yes = NewButton("yes");
+        var no = NewButton("no");
+        var control = new ContentControl
+        {
+            Width = 100,
+            Height = 30,
+            Template = new ControlTemplate(() =>
+            {
+                var answers = new StackPanel { Orientation = Orientation.Horizontal };
+                answers.Children.Add(yes);
+                answers.Children.Add(no);
+                return new TemplateResult { RootComponent = answers };
+            })
+        };
+
+        var window = new Window { Width = 200, Height = 100, Content = control };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        Assert.That(yes.TemplatedParent, Is.SameAs(control), "sanity: the answers are parts of the control's template");
+
+        FocusManager.Focus(yes, NavigationMethod.Tab);
+
+        var ring = window.AdornerLayer.Adorners.OfType<FocusAdorner>().SingleOrDefault();
+        Assert.Multiple(() =>
+        {
+            Assert.That(ring, Is.Not.Null);
+            Assert.That(ring?.AdornedElement, Is.SameAs(yes), "the ring marks the answer, not the whole question");
+        });
+    }
+
     /// <summary>Stepping INTO a container - what Enter on a tab header does. Tab keeps walking the headers, so the way
     /// into a page cannot be Tab; it is this. False when there is nowhere to land, which is how a caller knows the page
     /// has not been built yet and it should ask again.</summary>

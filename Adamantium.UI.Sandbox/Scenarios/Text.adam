@@ -1,0 +1,19 @@
+# The Text page: the message typed in one box read back in the read-only one, the font size set, a line added to the
+# notes and taken out again, and the floating watermark switched.
+select id=GalleryTabs/id=Text
+wait id=Message
+set id=Message "Hello, automation"
+expect id=ReadOnlyMessage value="Hello, automation"
+key End --into id=Message
+type " again" --into id=Message
+expect id=ReadOnlyMessage value="Hello, automation again"
+set id=FontSizeSlider 24
+expect id=FontSizeSlider value=24
+key Ctrl+End Enter --into id=Notes
+type "added line" --into id=Notes
+key Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace --into id=Notes
+toggle id=TextView/name="Floating watermark"
+toggle id=TextView/name="Floating watermark"
+# Back as the page opens.
+set id=Message "The quick brown fox jumps over the lazy dog"
+set id=FontSizeSlider 22

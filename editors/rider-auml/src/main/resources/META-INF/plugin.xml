@@ -10,8 +10,8 @@
             <li><b>Live preview</b> beside or below the markup, rendered from the application's own build in its own
             theme. It follows edits as you type and plays animations; a click on an element selects it and moves the
             caret to its line, and Go to Source opens the file a nested view was declared in.</li>
-            <li><b>Completion, diagnostics and go to definition</b> from the AUML language server, which knows the
-            types of the project and its packages.</li>
+            <li><b>Completion, diagnostics, formatting and go to definition</b> from the AUML language server, which
+            knows the types of the project and its packages.</li>
             <li>Syntax highlighting, folding, and <b>New | AUML File</b> for windows, views, docking panes, themes,
             style sets and resource dictionaries.</li>
             <li><b>Language files</b> (<code>.alang</code>), the application's strings in each language: highlighting,
@@ -26,6 +26,23 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>Reformat Code lays out .auml and language files by the framework's rules: an element per line, indented by
+        level; one attribute on the tag's line, several one per line under the first; a Setter - and a phrase of a language
+        file - on one line; an empty element closed in place; at most one blank line. Values, comments and text are kept as
+        written. A selection reformats the elements written in it.</p>
+        <p>A type the build would reject is underlined as it is typed, with the build's message: one it would not find, or
+        one of the wrong kind - a resource dictionary given to a StyleInclude - in an attribute, in {x:Type} or in an
+        extension's argument.</p>
+        <p>A source is offered only what it takes: &lt;StyleInclude Source=""&gt; the style sets, &lt;ResourceLink
+        Source=""&gt; the resource dictionaries - classes in C# and markup files alike, typed by name or in {x:Type},
+        nested {ResourceLink Source={x:Type ...}} included - and an image's Source or a bitmap's UriSource the pictures of
+        the project and the folders holding them. Any Type-valued attribute (TargetType, EnumType) completes type names in
+        its value.</p>
+        <p>A file closed or renamed no longer keeps its problems underlined: the server clears them, and opening or
+        closing a language file checks the other open files of its tables again - a renamed base file stopped being
+        reported missing only after a restart.</p>
+        <p>New | Language File takes a language picked from its list: the dialog judged the language once, while the
+        box was still empty, and kept saying "Not a language" with OK off.</p>
         <p>New | AUML File offers a Ribbon Tab, a Ribbon Group and an Empty file - a &lt;Grid&gt; root with the
         namespaces already declared, to be replaced by any control. A file with any control at its root is a class of
         its own, which other markup places by name: a ribbon can be split into a file per tab and a file per group.</p>

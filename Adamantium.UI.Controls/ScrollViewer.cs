@@ -1,8 +1,10 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -444,4 +446,7 @@ public class ScrollViewer : ContentControl
         ScrollBarVisibility.Auto => extent > viewport + 0.5 ? Visibility.Visible : Visibility.Collapsed,
         _ => Visibility.Collapsed   // Disabled, Hidden: no bar (Hidden still scrolls via wheel/programmatic)
     };
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ScrollViewerAutomationPeer(this) : null;
 }

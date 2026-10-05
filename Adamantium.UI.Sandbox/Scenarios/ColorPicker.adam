@@ -1,0 +1,17 @@
+# The ColorPicker page: one color shared by the inline picker, the wheel and the swatch - written in one, read in all -
+# and the swatch's flyout opened and closed.
+select id=GalleryTabs/id=ColorPicker
+wait id=Picker
+set id=Picker #FF2080C0
+expect id=Wheel value=#FF2080C0
+expect id=Swatch value=#FF2080C0
+set id=Swatch #80FF0000
+expect id=Picker value=#80FF0000
+set id=WheelValue 0.5
+expand id=Swatch
+expect id=Swatch expanded=Expanded
+collapse id=Swatch
+expect id=Swatch expanded=Collapsed
+# Back as the page opens: the color is the theme's accent too, so leaving it changed recolors the whole application.
+set id=Picker #FF3D87FF
+expect id=WheelValue value=1

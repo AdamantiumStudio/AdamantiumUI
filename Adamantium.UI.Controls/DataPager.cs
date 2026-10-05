@@ -5,10 +5,12 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Input;
@@ -764,4 +766,6 @@ public class DataPager : Control
 
         RebuildPageItems();
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataPagerAutomationPeer(this);
 }

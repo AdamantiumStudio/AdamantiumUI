@@ -1,11 +1,13 @@
-<View xmlns="http://adamantium/ui">
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
     <!-- DataContext is the TextViewModel. FontSize is slider-driven; Message is shown by several TextBlocks. -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Orientation="Vertical" Margin="24">
 
         <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Localize TextStrings.FontSize}" VerticalAlignment="Center"/>
-            <Slider Width="240" Minimum="10" Maximum="72" Value="{Binding FontSize, Mode=TwoWay}" Margin="12,0,0,0"/>
+            <TextBlock x:Name="FontSizeLabel" Text="{Localize TextStrings.FontSize}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="FontSizeSlider" AutomationProperties.LabeledBy="{Binding ElementName=FontSizeLabel}"
+                    Width="240" Minimum="10" Maximum="72" Value="{Binding FontSize, Mode=TwoWay}" Margin="12,0,0,0"/>
             <TextBlock Text="{Binding FontSize}" VerticalAlignment="Center" FontSize="16" Margin="12,0,0,0"/>
         </StackPanel>
 
@@ -28,7 +30,7 @@
 
         <!-- Editable TextBox: two-way bound to the SAME Message, so typing here live-updates every TextBlock above. -->
         <TextBlock Text="{Localize TextStrings.Editable}" Margin="0,12,0,6"/>
-        <TextBox Text="{Binding Message, Mode=TwoWay}"
+        <TextBox AutomationProperties.AutomationId="Message" Text="{Binding Message, Mode=TwoWay}"
                  Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.Message}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
@@ -37,15 +39,17 @@
         <TextBox Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.YourName}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
-        <TextBlock Text="{Localize TextStrings.ReadOnly}" Margin="0,16,0,6"/>
-        <TextBox Text="{Binding Message}" IsReadOnly="True"
+        <TextBlock x:Name="ReadOnlyLabel" Text="{Localize TextStrings.ReadOnly}" Margin="0,16,0,6"/>
+        <TextBox AutomationProperties.AutomationId="ReadOnlyMessage" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
+                 Text="{Binding Message}" IsReadOnly="True"
                  Width="520" HorizontalAlignment="Left"/>
 
         <!-- Multi-line editor: AcceptsReturn (Enter inserts a newline), NO wrap so long lines scroll horizontally. Both bars
              are Auto - the horizontal one via the shared ScrollViewer.HorizontalScrollBarVisibility attached policy on the
              TextBox (TextBoxBase now uses the attached props, not its own). Arrow keys navigate; selection spans rows. -->
-        <TextBlock Text="{Localize TextStrings.MultiLine}" Margin="0,16,0,6"/>
-        <TextBox Text="{Binding Notes, Mode=TwoWay}"
+        <TextBlock x:Name="NotesLabel" Text="{Localize TextStrings.MultiLine}" Margin="0,16,0,6"/>
+        <TextBox AutomationProperties.AutomationId="Notes" AutomationProperties.LabeledBy="{Binding ElementName=NotesLabel}"
+                 Text="{Binding Notes, Mode=TwoWay}"
                  AcceptsReturn="True" TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                  Width="520" Height="120" HorizontalAlignment="Left"/>

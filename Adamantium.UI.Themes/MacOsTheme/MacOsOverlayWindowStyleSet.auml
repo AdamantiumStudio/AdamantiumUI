@@ -40,13 +40,17 @@
                                         MarginLeft="{ResourceReference TrafficLightsInset}"
                                         Spacing="{ResourceReference TrafficLightGap}">
                                     <Grid>
-                                        <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"/>
+                                        <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"
+                                                AutomationProperties.AutomationId="Close"
+                                                AutomationProperties.Name="{Localize WindowStrings.Close}"/>
                                         <Image x:Name="CloseGlyph" Source="{ResourceReference TrafficLightCloseGlyph}"
                                                 Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                     <Grid x:Name="PinCell" Visibility="Collapsed">
-                                        <Button x:Name="PART_PinButton" Classes="TrafficLight PinLight" Focusable="False"/>
+                                        <Button x:Name="PART_PinButton" Classes="TrafficLight PinLight" Focusable="False"
+                                                AutomationProperties.AutomationId="Pin"
+                                                AutomationProperties.Name="{Localize WindowStrings.Pin}"/>
                                         <Image x:Name="PinGlyphImage" Source="{ResourceReference PinGlyph}"
                                                 Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>

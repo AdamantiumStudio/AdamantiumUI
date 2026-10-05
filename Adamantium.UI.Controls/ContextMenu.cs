@@ -3,7 +3,9 @@ using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -254,4 +256,5 @@ public class ContextMenu : ItemsControl
                 child.IsSubmenuOpen = false;
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new ContextMenuAutomationPeer(this);
 }

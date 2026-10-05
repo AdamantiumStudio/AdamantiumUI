@@ -2,12 +2,14 @@ using System;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -453,4 +455,5 @@ public class RangeSlider : RangeLimitsBase
         return Math.Clamp(Minimum + steps * TickFrequency, Minimum, Maximum);
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new RangeSliderAutomationPeer(this);
 }

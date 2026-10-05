@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Adamantium.Core;
 using Adamantium.UI.Markup.AST;
+using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.Parsers;
 
@@ -31,7 +32,7 @@ public static class AumlValidator
         // per-element "not in scope" diagnostic (with an import quick-fix) beats a generic parse message.
         if (document.Root is AumlAstObjectNode root)
         {
-            Walk(root, model, diagnostics);
+            Walk(root, model, diagnostics, text, AumlNamespaces.Scan(text));
             ValidateClrNamespaces(text, model, diagnostics);
             ValidateTypeReferences(text, model, diagnostics);
         }
@@ -122,7 +123,7 @@ public static class AumlValidator
 
         var colon = typeText.IndexOf(':');
         var name = typeText[(colon + 1)..];
-        return namespaces.TryGetValue(colon < 0 ? string.Empty : typeText[..colon], out var xmlns)
+        return colon >= 0 && namespaces.TryGetValue(typeText[..colon], out var xmlns)
             ? $"Type {name} could not be found in namespace {ClrNamespaceOf(xmlns)}"
             : $"Type {name} could not be found in any linked assembly";
     }
@@ -173,7 +174,8 @@ public static class AumlValidator
         return (line, character);
     }
 
-    private static void Walk(AumlAstObjectNode node, AumlTypeModel model, List<AumlDiagnostic> diagnostics)
+    private static void Walk(AumlAstObjectNode node, AumlTypeModel model, List<AumlDiagnostic> diagnostics, string text,
+        IReadOnlyDictionary<string, string> namespaces)
     {
         var xmlns = node.TypeReference.Namespace;
         var name = node.TypeReference.Name;
@@ -194,21 +196,139 @@ public static class AumlValidator
 
         foreach (var property in node.GetProperties())
         {
-            if (element is not null
-                && property.Property is AumlAstPropertyReference reference
-                && !reference.IsAttachedProperty)
+            if (property.Property is AumlAstPropertyReference reference)
             {
-                ValidateAttribute(reference, property, name, element, model, diagnostics);
+                if (element is not null && !reference.IsAttachedProperty)
+                {
+                    ValidateAttribute(reference, property, name, element, model, diagnostics);
+                }
+
+                ValidateTypeValues(reference, property, element, new TypeValueScan(model, text, namespaces, diagnostics));
             }
 
             // Descend into property-element values: <Setter.Value><ControlTemplate>... etc.
             foreach (var value in property.Values)
                 if (value is AumlAstObjectNode nested)
-                    Walk(nested, model, diagnostics);
+                    Walk(nested, model, diagnostics, text, namespaces);
         }
 
         foreach (var child in node.GetLogicalChildrenObjects())
-            Walk(child, model, diagnostics);
+            Walk(child, model, diagnostics, text, namespaces);
+    }
+
+    private static void ValidateTypeValues(AumlAstPropertyReference reference, AumlAstPropertyNode property,
+        IResolvedType element, TypeValueScan scan)
+    {
+        if (property.Values.Count != 1 || property.Values[0] is AumlAstObjectNode)
+        {
+            return;
+        }
+
+        var nameOffset = OffsetAt(scan.Text, reference.Line, reference.Position);
+        var quote = nameOffset < 0 ? -1 : scan.Text.IndexOfAny(['"', '\''], nameOffset);
+        if (quote < 0)
+        {
+            return;
+        }
+
+        scan.Cursor = quote + 1;
+        var member = reference.IsAttachedProperty ? null : element?.GetMemberByName(reference.Name);
+        ValidateTypeValue(member, property.Values[0], scan);
+    }
+
+    private static void ValidateTypeValue(IResolvedMember member, IAumlAstValueNode value, TypeValueScan scan)
+    {
+        switch (value)
+        {
+            case AumlAstMarkupExtensionNode extension:
+            {
+                var extensionName = extension.TypeReference?.Name ?? string.Empty;
+                var extensionType = scan.Model.ResolveMarkupExtensionType(extensionName[(extensionName.IndexOf(':') + 1)..]);
+                var positional = 0;
+                foreach (var argument in extension.Arguments)
+                {
+                    var argumentName = argument.Name;
+                    if (string.IsNullOrEmpty(argumentName))
+                    {
+                        argumentName = positional++ == 0 && extensionType != null
+                            ? scan.Model.GetDefaultProperty(extensionType)?.Name
+                            : null;
+                    }
+                    else
+                    {
+                        var written = Regex.Match(scan.Text[scan.Cursor..], $@"\b{Regex.Escape(argumentName)}\s*=");
+                        if (written.Success)
+                        {
+                            scan.Cursor += written.Index + written.Length;
+                        }
+                    }
+
+                    var argumentMember = argumentName == null ? null : extensionType?.GetMemberByName(argumentName);
+                    ValidateTypeValue(argumentMember, argument.Value, scan);
+                }
+
+                break;
+            }
+            case AumlAstDirective { Name: AumlDirectives.Type, Value: AumlAstTextNode inner } when TakesType(member):
+                CheckTypeValue(inner.Text.Trim(), member, scan, true);
+                break;
+            case AumlAstTextNode literal when TakesType(member):
+                CheckTypeValue(literal.Text.Trim(), member, scan, false);
+                break;
+        }
+    }
+
+    private static bool TakesType(IResolvedMember member) => member?.MemberType?.FullName == "System.Type";
+
+    private static void CheckTypeValue(string typeText, IResolvedMember member, TypeValueScan scan, bool unknownFlaggedElsewhere)
+    {
+        if (typeText.Length == 0)
+        {
+            return;
+        }
+
+        var offset = scan.Text.IndexOf(typeText, scan.Cursor, StringComparison.Ordinal);
+        if (offset < 0)
+        {
+            return;
+        }
+
+        scan.Cursor = offset + typeText.Length;
+        if (!scan.Model.TryResolveWritten(typeText, scan.Namespaces, out var type))
+        {
+            return;
+        }
+
+        string problem;
+        if (type != null)
+        {
+            problem = member.TypeOfProblem(type);
+        }
+        else
+        {
+            problem = unknownFlaggedElsewhere ? null : TypeProblem(typeText, scan.Namespaces, scan.Model);
+        }
+
+        if (problem != null)
+        {
+            var (line, character) = LineColAt(scan.Text, offset);
+            scan.Diagnostics.Add(new AumlDiagnostic(line, character, typeText.Length, problem, Code: BuildCode));
+        }
+    }
+
+    private static int OffsetAt(string text, int line, int position)
+    {
+        var offset = 0;
+        for (var current = 1; current < line; current++)
+        {
+            offset = text.IndexOf('\n', offset) + 1;
+            if (offset == 0)
+            {
+                return -1;
+            }
+        }
+
+        return Math.Min(text.Length, offset + Math.Max(0, position - 1));
     }
 
     private static void ValidateAttribute(AumlAstPropertyReference reference, AumlAstPropertyNode property,

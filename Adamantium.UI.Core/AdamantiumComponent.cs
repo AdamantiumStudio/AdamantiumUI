@@ -654,6 +654,31 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return Slots(property) is { } container && container.GetValue(priority) != AdamantiumProperty.UnsetValue;
     }
 
+    /// <summary>Where the value <see cref="GetValue(AdamantiumProperty)"/> returns comes from: the highest-priority slot
+    /// holding one, or <see cref="ValuePriority.Default"/> when none does and the declared default stands.</summary>
+    public ValuePriority GetValueSource(AdamantiumProperty property)
+    {
+        ArgumentNullException.ThrowIfNull(property);
+
+        if (property.CanInherit)
+        {
+            ResolveInherited(property);
+        }
+
+        if (Slots(property) is { } container)
+        {
+            for (var priority = ValuePriority.Animation; priority <= ValuePriority.TypeDefault; priority++)
+            {
+                if (container.GetValue(priority) != AdamantiumProperty.UnsetValue)
+                {
+                    return priority;
+                }
+            }
+        }
+
+        return ValuePriority.Default;
+    }
+
     public AdamantiumProperty GetProperty(string propertyName)
     {
         return AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);

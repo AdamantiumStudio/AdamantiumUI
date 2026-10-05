@@ -4,4 +4,6 @@
     <Phrase Key="MoreCommands" Text="More commands"/>
     <Phrase Key="AddToQuickAccess" Text="Add to quick access"/>
     <Phrase Key="RemoveFromQuickAccess" Text="Remove from quick access"/>
+    <Phrase Key="QuickAccess" Text="Quick access"/>
+    <Phrase Key="Ribbon" Text="Ribbon"/>
 </Language>

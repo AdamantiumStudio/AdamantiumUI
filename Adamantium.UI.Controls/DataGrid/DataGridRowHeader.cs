@@ -1,6 +1,8 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
@@ -51,4 +53,6 @@ public class DataGridRowHeader : ContentControl
 
         header.Content = header.Number > 0 ? header.Number.ToString() : null;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataGridRowHeaderAutomationPeer(this);
 }

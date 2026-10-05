@@ -1,0 +1,5 @@
+# The Splitter page: the column splitter dragged to the right and back, by input made inside the application.
+select id=GalleryTabs/id=Splitter
+wait id=ColumnSplitter
+drag id=ColumnSplitter 3,90 103,90
+drag id=ColumnSplitter 3,90 -97,90

@@ -130,7 +130,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         _running = true;
         FrameTrace.Enabled = Dumps;      // TEMP
         LayoutTrace.Counting = Dumps;   // TEMP
-        AnimationManager.AddTicker(dt => Advance(target, dt));
+        AnimationManager.AddEndlessTicker(dt => Advance(target, dt));
     }
 
     protected override void OnDetached(TextBlock target) => _running = false;

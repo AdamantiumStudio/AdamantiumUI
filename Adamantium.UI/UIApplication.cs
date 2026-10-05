@@ -17,6 +17,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.AggregatorEvents;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
@@ -72,6 +73,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private int _framesInFlight;
     private AppTime _renderAppTime;   // time of the newest recorded frame
     private const int MaxFramesInFlight = 2;
+
+    private long _publishedFrame;
+    private long _presentedFrame;
+    private long _requestsAtRecord;
+    private readonly HashSet<IWindow> _minimizedWindows = [];
+    private string _unrecordedBecause;
+    private readonly List<TaskCompletionSource> _idleWaiters = [];
+    private long _idleFrame = -1;
 
     static UIApplication()
     {
@@ -374,10 +383,19 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         {
             service.UnloadContent();
             windowToSystem.Remove(window);
+            lock (_minimizedWindows)
+            {
+                _minimizedWindows.Remove(window);
+            }
             windowsCollection.Remove(window);
             EntityWorld.RemoveService(service);
         }
         EntityWorld.ForceUpdate();
+
+        if (window == ActiveWindow)
+        {
+            ActiveWindow = null;
+        }
 
         if (window == MainWindow)
         {
@@ -672,6 +690,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     if (accumulatedFrameTime >= TimeStep)
                     {
                         Update(appTime);
+                        _requestsAtRecord = LoopSignal.Requests;
                         RecordRenderFrame();
                         DispatchRenderFrame(appTime);
 
@@ -682,6 +701,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 else
                 {
                     Update(appTime);
+                    _requestsAtRecord = LoopSignal.Requests;
                     RecordRenderFrame();
                     DispatchRenderFrame(appTime);
 
@@ -744,6 +764,121 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             RecreateDevicesAndServices();
         }
         CycleFinished?.Invoke(this, EventArgs.Empty);
+        NoteIdle();
+    }
+
+    /// <summary>What kept the application from going idle the last time it was waited for; null once it was idle.</summary>
+    public string IdleBlocker { get; private set; }
+
+    /// <summary>Completes once the application is idle: the loop has nothing left to do - no posted work, nothing to lay
+    /// out or draw, no animation that finishes on its own - and the frame showing that state has been drawn. Endless
+    /// animations (a caret, a spinner) do not count, nor does work running off the loop until it posts its result.</summary>
+    public Task WaitForIdleAsync()
+    {
+        var idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_idleWaiters)
+        {
+            _idleWaiters.Add(idle);
+            _idleFrame = -1;
+        }
+
+        LoopSignal.Request();
+        return idle.Task;
+    }
+
+    private void NoteIdle()
+    {
+        lock (_idleWaiters)
+        {
+            if (_idleWaiters.Count == 0)
+            {
+                return;
+            }
+
+            IdleBlocker = FindIdleBlocker();
+            if (IdleBlocker != null)
+            {
+                _idleFrame = -1;
+                return;
+            }
+
+            if (_idleFrame < 0)
+            {
+                _idleFrame = Volatile.Read(ref _publishedFrame);
+            }
+
+            IdleBlocker = "the frame on its way to the screen";
+        }
+
+        ReleaseIdleWaiters();
+    }
+
+    private string FindIdleBlocker()
+    {
+        if (LoopSignal.HasPostedWork)
+        {
+            return "work posted to the loop";
+        }
+
+        if (LoopSignal.Requests != _requestsAtRecord)
+        {
+            return "a request that came after the frame was recorded";
+        }
+
+        if (RenderDirty.AnyHasWork)
+        {
+            return _unrecordedBecause ?? "a change not recorded yet";
+        }
+
+        foreach (var window in Windows)
+        {
+            var layout = LayoutManager.GetOrCreate(window);
+            if (!layout.IsSettled)
+            {
+                var queued = layout.QueuedCounts();
+                return $"layout still to do (style {queued.Style}, measure {queued.Measure}, arrange {queued.Arrange}, " +
+                       $"next pass {queued.NextPass})";
+            }
+        }
+
+        if (!BindingUpdateQueue.IsEmpty)
+        {
+            return "bindings still to push";
+        }
+
+        if (AnimationManager.IsSettling)
+        {
+            return "a running animation";
+        }
+
+        if (Graphics.Fonts.FontAtlasStore.HasPendingGlyphs)
+        {
+            return "glyphs still being made";
+        }
+
+        return null;
+    }
+
+    private void ReleaseIdleWaiters()
+    {
+        TaskCompletionSource[] released;
+        lock (_idleWaiters)
+        {
+            if (_idleFrame < 0 || Volatile.Read(ref _presentedFrame) < _idleFrame)
+            {
+                return;
+            }
+
+            released = [.. _idleWaiters];
+            _idleWaiters.Clear();
+            _idleFrame = -1;
+            IdleBlocker = null;
+        }
+
+        foreach (var waiter in released)
+        {
+            waiter.TrySetResult();
+        }
     }
 
     // Records every window's render packet after the whole update and before any draw. The dirty set is cleared once,
@@ -755,8 +890,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         var threaded = RenderThreadOptions.RenderThreadEnabled && renderThread != null;
 
+        _unrecordedBecause = null;
+
         // The render is MaxFramesInFlight frames behind: skip the record, not the update. The marks stay for the next one.
-        if (threaded && Volatile.Read(ref _framesInFlight) >= MaxFramesInFlight) return;
+        if (threaded && Volatile.Read(ref _framesInFlight) >= MaxFramesInFlight)
+        {
+            _unrecordedBecause = "the render thread is frames behind";
+            return;
+        }
 
         // Cleared only if every window recorded: one without a renderer yet records nothing, and its marks must stay.
         // A copy, since recording may open windows; not under _renderGate, which would lock the loop to the render thread.
@@ -765,7 +906,31 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         windowToSystem.Values.CopyTo(services, 0);
 
         foreach (var service in services)
-            recordedAll &= service.RecordFrame();
+        {
+            bool restored;
+            lock (_minimizedWindows)
+            {
+                if (service.Window.State == WindowState.Minimized)
+                {
+                    _minimizedWindows.Add(service.Window);
+                    continue;
+                }
+
+                restored = _minimizedWindows.Remove(service.Window);
+            }
+
+            if (restored)
+            {
+                service.Window.InvalidateRender(true);
+            }
+
+            if (!service.RecordFrame())
+            {
+                recordedAll = false;
+                _unrecordedBecause = $"\"{service.Window.Title}\" could not record its frame";
+            }
+        }
+
         _recordedThisFrame = recordedAll;
 
         // Cleared here, on the loop thread: the render thread must never touch RenderDirty.
@@ -816,6 +981,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Threaded: the loop never draws. The device belongs to the render thread, and each packet carries its own projection.
         if (!_recordedThisFrame) return;
         _renderAppTime = appTime;
+        Interlocked.Increment(ref _publishedFrame);
         Interlocked.Increment(ref _framesInFlight);
     }
 
@@ -828,10 +994,13 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             lock (_renderGate)
             {
                 if (cancellationTokenSource.IsCancellationRequested) break;
+                var drawing = Volatile.Read(ref _publishedFrame);
                 Interlocked.Exchange(ref _framesInFlight, 0);   // the apply drains whatever was published
                 try
                 {
                     ExecuteDrawSequence(_renderAppTime);
+                    Volatile.Write(ref _presentedFrame, drawing);
+                    ReleaseIdleWaiters();
                 }
                 catch (Exception ex)
                 {

@@ -1,0 +1,13 @@
+# The Shapes page: one pen drives every shape - its thickness set by the slider and read back in the number beside it,
+# and its start cap chosen.
+select id=GalleryTabs/id=Shapes
+wait id=Thickness
+set id=Thickness 12
+expect id=ThicknessValue value=12
+set id=ThicknessValue 4
+expect id=Thickness value=4
+select id=StartCap/name=ConvexRound
+expect id=StartCap SelectedItem=ConvexRound
+select id=StartCap/name=Flat
+# Back as the page opens.
+set id=Thickness 8

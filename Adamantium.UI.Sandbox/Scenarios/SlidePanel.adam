@@ -1,0 +1,13 @@
+# The SlidePanel page: a panel slid open by its switch and shut by its own close button, the switch following; another
+# opened and closed through the panel itself.
+select id=GalleryTabs/id=SlidePanel
+wait id=SlidePanelView/name=Left
+toggle id=SlidePanelView/name=Left
+expect id=SlidePanelView/name=Left toggle=On
+expect id=SlidePanelView/type=Pane,name="Left panel" expanded=Expanded
+invoke id=SlidePanelView/type=Pane,name="Left panel"/id=Close
+expect id=SlidePanelView/name=Left toggle=Off
+expand id=SlidePanelView/type=Pane,name="Right panel"
+expect id=SlidePanelView/name=Right toggle=On
+collapse id=SlidePanelView/type=Pane,name="Right panel"
+expect id=SlidePanelView/name=Right toggle=Off

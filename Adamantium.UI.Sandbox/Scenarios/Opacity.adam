@@ -1,0 +1,10 @@
+# The Opacity page: the container's opacity and one element's own, each a slider.
+select id=GalleryTabs/id=Opacity
+wait id=ContainerOpacity
+set id=ContainerOpacity 0.8
+expect id=ContainerOpacity value=0.8
+set id=ElementOpacity 0.25
+expect id=ElementOpacity value=0.25
+# Back as the page opens: the container half through, the element whole.
+set id=ContainerOpacity 0.5
+set id=ElementOpacity 1

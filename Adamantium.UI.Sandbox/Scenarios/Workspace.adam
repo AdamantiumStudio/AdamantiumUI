@@ -1,0 +1,12 @@
+# The workspace: a second window opened from the caption, its tabs opened and closed through the navigation region,
+# and the window closed again.
+invoke id=OpenWorkspace
+wait id=WorkspaceWindow/id=WorkspaceShellView --timeout 30s
+invoke "id=WorkspaceShellView/name=Open Doc"
+invoke "id=WorkspaceShellView/name=Open Chart"
+expect "id=WorkspaceTabs/name=Chart 1" selected=True
+invoke "id=WorkspaceShellView/name=Close tab"
+absent "id=WorkspaceTabs/name=Chart 1"
+expect "id=WorkspaceTabs/name=Doc 1" selected=True
+window id=WorkspaceWindow close
+absent id=WorkspaceWindow

@@ -1,0 +1,13 @@
+# The Markup page: an element held back by x:Load built when its binding says so and taken away again, and one held
+# back for good built when it is asked for by name. Both are borders, found by what they say.
+select id=GalleryTabs/id=Markup
+wait id=MarkupView/name="Ask for it"
+absent id=MarkupView/name="built on demand"
+toggle id=MarkupView/type=CheckBox
+wait id=MarkupView/name="built on demand"
+expect id=MarkupView/name="times constructed: 1" type=Text
+toggle id=MarkupView/type=CheckBox
+absent id=MarkupView/name="built on demand"
+absent id=MarkupView/name="asked for by name, built on the spot"
+invoke id=MarkupView/name="Ask for it"
+wait id=MarkupView/name="asked for by name, built on the spot"

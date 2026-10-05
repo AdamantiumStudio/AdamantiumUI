@@ -17,6 +17,18 @@ public static class BindingUpdateQueue
     /// frame), or raise/lower it (e.g. 50000) to taste.</summary>
     public static int MaxAppliesPerFlush { get; set; } = 10000;
 
+    /// <summary>True when no binding waits to push its value - over-budget leftovers included.</summary>
+    public static bool IsEmpty
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return Dirty.Count == 0;
+            }
+        }
+    }
+
     /// <summary>Marks an expression for the next coalesced flush (deduped: enqueuing twice still applies once).</summary>
     public static void Enqueue(BindingExpressionBase expression)
     {

@@ -1,5 +1,6 @@
-using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 
@@ -138,4 +139,6 @@ public class ListBoxItem : ContentControl, ISelectable
         base.OnMouseLeave(e);
         IsPressed = false;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ListBoxItemAutomationPeer(this);
 }

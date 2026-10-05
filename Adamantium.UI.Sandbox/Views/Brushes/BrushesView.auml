@@ -44,8 +44,9 @@
 
             <StackPanel Orientation="Horizontal" MarginBottom="4">
                 <StackPanel Orientation="Vertical" Width="300">
-                    <TextBlock Text="{Localize BrushesStrings.PaintItOn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <DropDown ItemsSource="{Binding PreviewShapes}" SelectedItem="{Binding PreviewShape, Mode=TwoWay}" Width="280">
+                    <TextBlock x:Name="PaintItOnLabel" Text="{Localize BrushesStrings.PaintItOn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <DropDown AutomationProperties.AutomationId="PreviewShape" AutomationProperties.LabeledBy="{Binding ElementName=PaintItOnLabel}"
+                              ItemsSource="{Binding PreviewShapes}" SelectedItem="{Binding PreviewShape, Mode=TwoWay}" Width="280">
                         <DropDown.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
@@ -58,7 +59,7 @@
             <!-- THE STAND ITSELF. Each one is its own view over this same view-model, navigated in by key - so leaving a
                  stand drops its markup instead of leaving it built and hidden, and the shared figure and slot survive
                  the switch because the object behind them never changed. -->
-            <ContentControl nav:RegionManager.RegionName="{x:Static local:RegionNames.BrushStand}" ContentTransition="SlideLeft"/>
+            <ContentControl AutomationProperties.AutomationId="Stand" nav:RegionManager.RegionName="{x:Static local:RegionNames.BrushStand}" ContentTransition="SlideLeft"/>
 
         </StackPanel>
     </ScrollViewer>

@@ -42,7 +42,9 @@
                                     <Button Classes="CaptionButton" VerticalAlignment="Stretch"
                                             ToolTip="{Binding ToolTip}"
                                             Command="{Binding Command}"
-                                            CommandParameter="{Binding CommandParameter}">
+                                            CommandParameter="{Binding CommandParameter}"
+                                            AutomationProperties.AutomationId="{Binding AutomationId}"
+                                            AutomationProperties.Name="{Binding Label}">
                                         <!-- {Ancestor} walks the visual tree up to the hosting TitleBar and binds its LIVE
                                              Foreground, so a command icon follows the SAME active/inactive color as the
                                              title text + window buttons (and re-resolves if the tree rebuilds). -->
@@ -85,7 +87,9 @@
                                         <Button Classes="CaptionButton" VerticalAlignment="Stretch"
                                                 ToolTip="{Binding ToolTip}"
                                                 Command="{Binding Command}"
-                                                CommandParameter="{Binding CommandParameter}">
+                                                CommandParameter="{Binding CommandParameter}"
+                                                AutomationProperties.AutomationId="{Binding AutomationId}"
+                                                AutomationProperties.Name="{Binding Label}">
                                             <Path Data="{Binding Icon}"
                                                     Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -97,7 +101,9 @@
                             <!-- Drops a list, so the second press has to put it away - but a Button, not a ToggleButton:
                                  Button.CaptionButton would not name a ToggleButton (they are siblings under ButtonBase)
                                  and it would fall back to the default toggle look. The open state is the menu's. -->
-                            <Button x:Name="PART_RightOverflowButton" Classes="CaptionButton" VerticalAlignment="Stretch">
+                            <Button x:Name="PART_RightOverflowButton" Classes="CaptionButton" VerticalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="MoreWindowCommands"
+                                    AutomationProperties.Name="{Localize WindowStrings.MoreCommands}">
                                 <Path Data="M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M8,4 L10,4 L10,6 L8,6 Z"
                                         Fill="{TemplateBinding Foreground}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -114,6 +120,8 @@
                                     <Style Selector="MenuItem">
                                         <Setter Property="Command" Value="{Binding Command}"/>
                                         <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                        <Setter Property="AutomationProperties.AutomationId" Value="{Binding AutomationId}"/>
                                         <Setter Property="Icon">
                                             <Setter.Value>
                                                 <!-- The ROW's foreground: a popup is a detached subtree, so {Ancestor}
@@ -140,14 +148,18 @@
                                  property a setter can write. -->
                             <Grid x:Name="PART_ButtonsPanel" Grid.Column="5" ColumnDefinitions="Auto,Auto,Auto"
                                     VerticalAlignment="Stretch">
-                            <Button x:Name="PART_MinButton" Grid.Column="0" Classes="CaptionButton" Focusable="False" Height="{TemplateBinding Height}">
+                            <Button x:Name="PART_MinButton" Grid.Column="0" Classes="CaptionButton" Focusable="False" Height="{TemplateBinding Height}"
+                                    AutomationProperties.AutomationId="Minimize"
+                                    AutomationProperties.Name="{Localize WindowStrings.Minimize}">
                                 <Path Data="M0,5 L10,5"
                                         Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <!-- Maximize <-> restore: two overlaid glyphs, only one shown; the IsWindowMaximized trigger
                                  swaps their Opacity (the CheckBox pattern). -->
-                            <Button x:Name="PART_MaxButton" Grid.Column="1" Classes="CaptionButton" Focusable="False" Height="{TemplateBinding Height}">
+                            <Button x:Name="PART_MaxButton" Grid.Column="1" Classes="CaptionButton" Focusable="False" Height="{TemplateBinding Height}"
+                                    AutomationProperties.AutomationId="Maximize"
+                                    AutomationProperties.Name="{Localize WindowStrings.Maximize}">
                                 <Grid>
                                     <Path x:Name="MaximizeGlyph" Data="M0,0 L10,0 L10,10 L0,10 Z"
                                             Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
@@ -157,7 +169,9 @@
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                             </Button>
-                            <Button x:Name="PART_CloseButton" Grid.Column="2" Classes="CaptionButton CloseButton" Focusable="False" Height="{TemplateBinding Height}">
+                            <Button x:Name="PART_CloseButton" Grid.Column="2" Classes="CaptionButton CloseButton" Focusable="False" Height="{TemplateBinding Height}"
+                                    AutomationProperties.AutomationId="Close"
+                                    AutomationProperties.Name="{Localize WindowStrings.Close}">
                                 <Path Data="M0,0 L10,10 M10,0 L0,10"
                                         Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>

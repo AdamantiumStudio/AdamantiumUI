@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Adamantium.UI.Markup.AST;
+using Adamantium.UI.Markup.CodeGeneration;
 
 namespace Adamantium.UI.LanguageServer;
 
@@ -83,9 +84,13 @@ public sealed class CompletionEngine
     private IReadOnlyList<AumlCompletionItem> CompleteMarkupExtensionArg(
         AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset)
     {
-        // The extension may be written with a prefix (e.g. {x:Type ...}); match on its local name.
-        var ext = ctx.MarkupExtension ?? "";
-        var extLocal = ext.Contains(':') ? ext[(ext.IndexOf(':') + 1)..] : ext;
+        var open = OpenExtensions(text, offset);
+        if (open.Count == 0)
+        {
+            return [];
+        }
+
+        var extLocal = LocalName(open[^1].Name);
         if (extLocal == LocalizeExtension)
         {
             return CompleteLocalize(text, offset, namespaces);
@@ -93,7 +98,7 @@ public sealed class CompletionEngine
 
         var extType = _model.ResolveMarkupExtensionType(extLocal);
 
-        var (segment, hasComma) = CurrentExtensionSegment(text, offset);
+        var (segment, hasComma) = LastArgument(open[^1].Arguments);
 
         // "Name=value" -> complete the value of that named property by its type.
         int eq = segment.IndexOf('=');
@@ -102,7 +107,8 @@ public sealed class CompletionEngine
             var propName = segment[..eq].Trim();
             var partial = segment[(eq + 1)..].TrimStart();
             var propType = extType is null ? null : _model.GetPropertyType(extType, propName);
-            return CompleteExtensionValue(extLocal, propType, partial, text, offset, namespaces);
+            return CompleteExtensionValue(extLocal, propType, partial, text, offset, namespaces,
+                TypeBase(extLocal, extType, propName, open, ctx, namespaces));
         }
 
         var seg = segment.Trim();
@@ -111,7 +117,8 @@ public sealed class CompletionEngine
         // First (positional) segment: complete the extension's default-argument value (its [DefaultProperty], or a
         // name-dispatched source for extensions whose positional value isn't a CLR property of their own).
         if (!hasComma && (defaultProp is not null || IsPositionalValueExtension(extLocal)))
-            return CompleteExtensionValue(extLocal, defaultProp?.PropertyType, seg, text, offset, namespaces);
+            return CompleteExtensionValue(extLocal, defaultProp?.PropertyType, seg, text, offset, namespaces,
+                TypeBase(extLocal, extType, defaultProp?.Name, open, ctx, namespaces));
 
         // After a comma (or an extension with no positional arg) -> the extension's settable property NAMES.
         if (extType is null) return [];
@@ -122,6 +129,77 @@ public sealed class CompletionEngine
                 InsertText: p.Name + "=", ReplaceBack: seg.Length))
             .ToList();
     }
+
+    private string TypeBase(string extLocal, Adamantium.UI.Markup.CodeGeneration.IResolvedType extType, string propName,
+        List<(string Name, string Arguments)> open, AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
+    {
+        if (extLocal is not ("Type" or "TypeExtension"))
+        {
+            return propName == null ? null : extType?.GetMemberByName(propName).TypeOfBase();
+        }
+
+        if (open.Count == 1)
+        {
+            return ResolveElement(ctx.ElementName, namespaces)?.GetMemberByName(ctx.AttributeName ?? "").TypeOfBase();
+        }
+
+        var outerType = _model.ResolveMarkupExtensionType(LocalName(open[^2].Name));
+        if (outerType == null)
+        {
+            return null;
+        }
+
+        var (argument, _) = LastArgument(open[^2].Arguments);
+        var eq = argument.IndexOf('=');
+        var name = eq >= 0 ? argument[..eq].Trim() : _model.GetDefaultProperty(outerType)?.Name;
+        return name == null ? null : outerType.GetMemberByName(name).TypeOfBase();
+    }
+
+    private static List<(string Name, string Arguments)> OpenExtensions(string text, int offset)
+    {
+        var end = Math.Min(offset, text.Length);
+        var value = text[(text.LastIndexOf('"', Math.Max(0, end - 1)) + 1)..end];
+        var starts = new List<int>();
+        for (var i = 0; i < value.Length; i++)
+        {
+            if (value[i] == '{')
+            {
+                starts.Add(i);
+            }
+            else if (value[i] == '}' && starts.Count > 0)
+            {
+                starts.RemoveAt(starts.Count - 1);
+            }
+        }
+
+        var open = new List<(string Name, string Arguments)>();
+        for (var level = 0; level < starts.Count; level++)
+        {
+            var body = value[(starts[level] + 1)..(level + 1 < starts.Count ? starts[level + 1] : value.Length)];
+            var space = body.IndexOf(' ');
+            open.Add(space < 0 ? (body, "") : (body[..space], body[(space + 1)..]));
+        }
+
+        return open;
+    }
+
+    private static (string Segment, bool HasComma) LastArgument(string arguments)
+    {
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < arguments.Length; i++)
+        {
+            depth += arguments[i] switch { '{' => 1, '}' => -1, _ => 0 };
+            if (arguments[i] == ',' && depth == 0)
+            {
+                start = i + 1;
+            }
+        }
+
+        return (arguments[start..], start > 0);
+    }
+
+    private static string LocalName(string name) => name.Contains(':') ? name[(name.IndexOf(':') + 1)..] : name;
 
     // Extensions whose positional argument isn't a CLR property on the extension (so no [DefaultProperty]) but which
     // still complete a positional value, dispatched by name in CompleteExtensionValue.
@@ -136,7 +214,7 @@ public sealed class CompletionEngine
     /// for a PropertyPath, type names for a Type, enum members / booleans / brush colors via the type model.</summary>
     private IReadOnlyList<AumlCompletionItem> CompleteExtensionValue(
         string extLocal, Adamantium.UI.Markup.CodeGeneration.IResolvedType propType,
-        string partial, string text, int offset, IReadOnlyDictionary<string, string> namespaces)
+        string partial, string text, int offset, IReadOnlyDictionary<string, string> namespaces, string typeBase)
     {
         if (extLocal is "TemplateBinding" or "TemplateBindingExtension")
         {
@@ -150,7 +228,7 @@ public sealed class CompletionEngine
         }
 
         if (extLocal is "Type" or "TypeExtension")
-            return CompleteTypeNames(partial, namespaces);
+            return CompleteTypeNames(partial, namespaces, typeBase);
 
         if (extLocal is AumlDirectives.Static)
             return CompleteStaticMembers(partial, namespaces);
@@ -179,7 +257,7 @@ public sealed class CompletionEngine
 
         // A System.Type-valued property -> type names.
         if (propType.Name == "Type")
-            return CompleteTypeNames(partial, namespaces);
+            return CompleteTypeNames(partial, namespaces, typeBase);
 
         // Enum members / booleans / brush colors handled uniformly by the type model.
         var values = _model.GetValueCompletions(propType);
@@ -315,20 +393,6 @@ public sealed class CompletionEngine
         var xmlns = ResolveXmlns(prefix, namespaces);
         var inScope = _model.GetElements(xmlns).Select(t => t.FullName).ToHashSet(StringComparer.Ordinal);
         return tables.Where(t => inScope.Contains(t.FullName));
-    }
-
-    // The current comma-separated argument segment of a "{Name ...}" body up to the caret (top-level commas only;
-    // nested {} are not split for v1), plus whether any comma preceded it (i.e. it isn't the positional first arg).
-    private static (string Segment, bool HasComma) CurrentExtensionSegment(string text, int offset)
-    {
-        int end = Math.Min(offset, text.Length);
-        int brace = text.LastIndexOf('{', Math.Max(0, end - 1));
-        if (brace < 0) return ("", false);
-        var body = text.Substring(brace + 1, end - brace - 1);
-        int sp = body.IndexOf(' ');
-        var argText = sp < 0 ? "" : body[(sp + 1)..];     // after the extension name
-        int comma = argText.LastIndexOf(',');
-        return comma >= 0 ? (argText[(comma + 1)..], true) : (argText, false);
     }
 
     /// <summary>The type named by the nearest <c>&lt;attrLocalName&gt;="..."</c> attribute before the caret
@@ -523,10 +587,15 @@ public sealed class CompletionEngine
         var propertyType = element is null ? null : _model.GetPropertyType(element, ctx.AttributeName ?? "");
         if (propertyType is null) return [];
 
-        // Path-typed properties (e.g. Image.Source : ImageSource) take a file path relative to the project root —
-        // complete the filesystem instead of enum/bool/brush values.
-        if (IsPathLike(propertyType))
-            return CompletePaths(ctx.Prefix, documentPath);
+        if (propertyType.FullName == "System.Type")
+        {
+            return CompleteTypeNames(ctx.Prefix, namespaces, element.GetMemberByName(ctx.AttributeName).TypeOfBase());
+        }
+
+        if (element.GetMemberByName(ctx.AttributeName).FileExtensions() is { } extensions)
+        {
+            return CompletePaths(ctx.Prefix, documentPath, extensions);
+        }
 
         return _model.GetValueCompletions(propertyType)
             .Where(v => Matches(v, ctx.Prefix))
@@ -576,7 +645,8 @@ public sealed class CompletionEngine
 
     // Completes a type reference written as "[prefix:]Partial": offers the types of the prefix's xmlns (a
     // clr-namespace includes its view-models). Shared by {x:Type ...} and the plain type-valued x: directives.
-    private IReadOnlyList<AumlCompletionItem> CompleteTypeNames(string prefixText, IReadOnlyDictionary<string, string> namespaces)
+    private IReadOnlyList<AumlCompletionItem> CompleteTypeNames(string prefixText, IReadOnlyDictionary<string, string> namespaces,
+        string typeBase = null)
     {
         var (prefix, partial) = SplitName(prefixText);
 
@@ -586,7 +656,7 @@ public sealed class CompletionEngine
             var xmlns = ResolveXmlns(prefix, namespaces);
             if (xmlns.Length == 0) return [];
             return _model.GetElements(xmlns)
-                .Where(t => Matches(t.Name, partial))
+                .Where(t => Matches(t.Name, partial) && Fits(t, typeBase))
                 .OrderBy(t => t.Name)
                 .Select(t => new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length))
                 .ToList();
@@ -602,7 +672,7 @@ public sealed class CompletionEngine
         {
             foreach (var t in _model.GetElements(ns.Value))
             {
-                if (!MatchesStart(t.Name, partial)) continue;
+                if (!MatchesStart(t.Name, partial) || !Fits(t, typeBase)) continue;
                 var insert = ns.Key.Length > 0 ? $"{ns.Key}:{t.Name}" : t.Name;
                 if (!seen.Add(t.FullName)) continue;
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element,
@@ -612,13 +682,17 @@ public sealed class CompletionEngine
 
         foreach (var t in _model.ProjectTypes)
         {
-            if (MatchesStart(t.Name, partial) && _model.ResolveShortName(t.Name)?.FullName == t.FullName && seen.Add(t.FullName))
+            if (MatchesStart(t.Name, partial) && Fits(t, typeBase) && _model.ResolveShortName(t.Name)?.FullName == t.FullName
+                && seen.Add(t.FullName))
             {
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length));
             }
         }
         return items.OrderBy(i => i.Label).ToList();
     }
+
+    private static bool Fits(Adamantium.UI.Markup.CodeGeneration.IResolvedType type, string typeBase) =>
+        typeBase == null || (type.FullName != typeBase && type.IsAssignableTo(typeBase));
 
     // True when the attribute is an x: directive whose value names a CLR type (x:ViewModel), per the single-source
     // registry AumlDirectives. Lets the plain "prefix:Type" value complete types, like inside {x:Type}.
@@ -641,17 +715,13 @@ public sealed class CompletionEngine
         return AumlDirectives.Find(attributeName[(colon + 1)..]);
     }
 
-    // Properties whose markup value is a file path (the engine converts the string to the real resource on load).
-    private static bool IsPathLike(Adamantium.UI.Markup.CodeGeneration.IResolvedType type) =>
-        type.Name is "ImageSource" or "BitmapImage" or "BitmapSource" or "Uri";
-
     /// <summary>
     /// Completes a (possibly sub-foldered) file path written in an attribute value against the project root — the
     /// directory relative paths load against (the nearest <c>.csproj</c> ancestor of the edited file). The value
     /// so far is split into an already-typed directory part and a final-segment prefix; folders are offered with a
     /// trailing '/' so the path can be drilled into. Returns nothing without a known document/project.
     /// </summary>
-    private IReadOnlyList<AumlCompletionItem> CompletePaths(string partial, string documentPath)
+    private IReadOnlyList<AumlCompletionItem> CompletePaths(string partial, string documentPath, IReadOnlyList<string> extensions)
     {
         var root = FindProjectRoot(documentPath);
         if (root is null) return [];
@@ -670,20 +740,33 @@ public sealed class CompletionEngine
         // whole "Textures/..." value — otherwise bare file names get filtered out and nothing shows).
         var replaceBack = namePrefix.Length;
         var items = new List<AumlCompletionItem>();
+        var below = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         foreach (var dir in Directory.GetDirectories(lookupDir).OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
             var name = Path.GetFileName(dir);
-            if (name is "bin" or "obj" || name.StartsWith('.') || !Matches(name, namePrefix)) continue;
+            if (name is "bin" or "obj" || name.StartsWith('.') || !Matches(name, namePrefix)
+                || !Directory.EnumerateFiles(dir, "*", below).Any(f => HasExtension(f, extensions)))
+            {
+                continue;
+            }
+
             items.Add(new AumlCompletionItem(name + "/", AumlCompletionItemKind.Value, "folder", ReplaceBack: replaceBack));
         }
         foreach (var file in Directory.GetFiles(lookupDir).OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
             var name = Path.GetFileName(file);
-            if (name.StartsWith('.') || !Matches(name, namePrefix)) continue;
+            if (name.StartsWith('.') || !Matches(name, namePrefix) || !HasExtension(name, extensions))
+            {
+                continue;
+            }
+
             items.Add(new AumlCompletionItem(name, AumlCompletionItemKind.Value, "file", ReplaceBack: replaceBack));
         }
         return items;
     }
+
+    private static bool HasExtension(string file, IReadOnlyList<string> extensions) =>
+        extensions.Contains(Path.GetExtension(file).TrimStart('.'), StringComparer.OrdinalIgnoreCase);
 
     // The project root a relative asset path resolves against: the nearest .csproj ancestor of the edited file.
     private static string FindProjectRoot(string documentPath)

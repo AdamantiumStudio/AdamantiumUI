@@ -22,7 +22,9 @@ public abstract class BindingExpressionBase
 
    public BindingStatus Status { get; internal set; }
 
-   internal string Failure { get; private set; }
+   /// <summary>Why the binding does not work - the message <see cref="Diagnostics.BindingTrace"/> reports; null while it
+   /// works.</summary>
+   public string Failure { get; private set; }
 
    internal void Fail(string message)
    {

@@ -30,7 +30,8 @@
         <views:GalleryView/>
 
         <!-- Shows which title-bar command last ran, so the caption commands visibly do distinct things. -->
-        <TextBlock Text="{Localize MainStrings.LastDialog, result={Binding LastResult}}" FontSize="12"
+        <TextBlock AutomationProperties.AutomationId="LastDialog"
+                   Text="{Localize MainStrings.LastDialog, result={Binding LastResult}}" FontSize="12"
                    Foreground="{ResourceReference TextFillColorSecondary}"
                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,10,0,0"/>
 

@@ -3,4 +3,8 @@
     <Phrase Key="Page" Text="Страница"/>
     <Phrase Key="OfCount" Text="из {count}"/>
     <Phrase Key="OfUnknown" Text="из ?"/>
+    <Phrase Key="FirstPage" Text="Первая страница"/>
+    <Phrase Key="PreviousPage" Text="Предыдущая страница"/>
+    <Phrase Key="NextPage" Text="Следующая страница"/>
+    <Phrase Key="LastPage" Text="Последняя страница"/>
 </Language>

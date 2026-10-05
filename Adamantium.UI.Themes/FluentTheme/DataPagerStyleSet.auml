@@ -35,14 +35,14 @@
                             <StackPanel Grid.Column="0" Orientation="Horizontal"
                                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                                <Button x:Name="PART_FirstPage" Classes="PagerArrow" MarginRight="4"
+                                <Button x:Name="PART_FirstPage" AutomationProperties.Name="{Localize DataPagerStrings.FirstPage}" Classes="PagerArrow" MarginRight="4"
                                         IsEnabled="{TemplateBinding CanGoBack}">
                                     <Image Source="{ResourceReference FirstPageIcon}"
                                            Width="{ResourceReference PagerGlyphSize}"
                                            Height="{ResourceReference PagerGlyphSize}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
-                                <Button x:Name="PART_PreviousPage" Classes="PagerArrow" MarginRight="8"
+                                <Button x:Name="PART_PreviousPage" AutomationProperties.Name="{Localize DataPagerStrings.PreviousPage}" Classes="PagerArrow" MarginRight="8"
                                         IsEnabled="{TemplateBinding CanGoBack}">
                                     <Image Source="{ResourceReference ChevronLeftIcon}"
                                            Width="{ResourceReference PagerGlyphSize}"
@@ -73,14 +73,14 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <Button x:Name="PART_NextPage" Classes="PagerArrow" MarginRight="4"
+                                <Button x:Name="PART_NextPage" AutomationProperties.Name="{Localize DataPagerStrings.NextPage}" Classes="PagerArrow" MarginRight="4"
                                         IsEnabled="{TemplateBinding CanGoForward}">
                                     <Image Source="{ResourceReference ChevronRightIcon}"
                                            Width="{ResourceReference PagerGlyphSize}"
                                            Height="{ResourceReference PagerGlyphSize}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
-                                <Button x:Name="PART_LastPage" Classes="PagerArrow"
+                                <Button x:Name="PART_LastPage" AutomationProperties.Name="{Localize DataPagerStrings.LastPage}" Classes="PagerArrow"
                                         IsEnabled="{TemplateBinding CanGoForward}">
                                     <Image Source="{ResourceReference LastPageIcon}"
                                            Width="{ResourceReference PagerGlyphSize}"
@@ -100,7 +100,7 @@
                                                MarginRight="6"
                                                Foreground="{TemplateBinding Foreground}"
                                                FontSize="{TemplateBinding FontSize}"/>
-                                    <DropDown x:Name="PART_PageSizeSelector" VerticalAlignment="Center"
+                                    <DropDown x:Name="PART_PageSizeSelector" AutomationProperties.Name="{Localize DataPagerStrings.Rows}" VerticalAlignment="Center"
                                               Width="{ResourceReference PagerSizePickerWidth}"
                                               MinWidth="{ResourceReference PagerSizePickerWidth}"
                                               Height="{ResourceReference PagerButtonHeight}"
@@ -117,7 +117,7 @@
                                          NumericUpDown already refuses a decimal separator at the keystroke and clamps
                                          to Minimum/Maximum. The steppers are off because the arrows beside it are the
                                          steppers - two ways to go one page on the same line would be one too many. -->
-                                    <NumericUpDown x:Name="PART_PageBox" VerticalAlignment="Center"
+                                    <NumericUpDown x:Name="PART_PageBox" AutomationProperties.Name="{Localize DataPagerStrings.Page}" VerticalAlignment="Center"
                                                    AreButtonsVisible="False"
                                                    InputMode="Integers"
                                                    Width="{ResourceReference PagerPageBoxWidth}"

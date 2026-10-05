@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
@@ -134,8 +136,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         HeaderTemplate = headerTemplate;
         Indent = row.Depth * IndentStep;
         HasItems = row.HasChildren;
-        IsExpanded = row.IsExpanded;
-        IsSelected = row.IsSelected;
+        SetCurrentValue(IsExpandedProperty, row.IsExpanded);
+        SetCurrentValue(IsSelectedProperty, row.IsSelected);
     }
 
     public override void OnApplyTemplate()
@@ -232,7 +234,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     }
 
     // The TreeView hosting this node; its SelectionMode decides the click policy and it owns the flat-list expansion.
-    private TreeView FindOwnerTreeView()
+    internal TreeView FindOwnerTreeView()
     {
         for (IUIComponent c = VisualParent; c != null; c = c.VisualParent)
         {
@@ -276,4 +278,6 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
             item.RaiseEvent(new RoutedEventArgs(SelectedEvent, item));
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TreeViewItemAutomationPeer(this);
 }

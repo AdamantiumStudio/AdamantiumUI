@@ -49,6 +49,8 @@
                                 </Grid>
 
                                 <Button x:Name="PART_PinButton" Grid.Column="1" Visibility="Collapsed"
+                                        AutomationProperties.AutomationId="Pin"
+                                        AutomationProperties.Name="{Localize WindowStrings.Pin}"
                                         Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch">
                                     <!-- Thumbtack, symmetric about x=7: cap (5..9), flared shoulders (3..11), tapering neck
                                          (6..8), point at (7,12) - the classic push-pin silhouette. -->
@@ -59,6 +61,8 @@
                                 </Button>
 
                                 <Button x:Name="PART_CloseButton" Grid.Column="2"
+                                        AutomationProperties.AutomationId="Close"
+                                        AutomationProperties.Name="{Localize WindowStrings.Close}"
                                         Classes="CaptionButton CloseButton" Height="40" MinWidth="46"
                                         VerticalAlignment="Stretch">
                                     <Path Data="M0,0 L10,10 M10,0 L0,10"
@@ -103,6 +107,10 @@
         </PropertyTrigger>
         <PropertyTrigger Property="ShowTitleBar" Value="false">
             <Setter TargetName="PART_TitleBar" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <!-- Active: the outline takes the caption's color, as the main window's does. -->
+        <PropertyTrigger Property="IsActive" Value="true">
+            <Setter TargetName="PART_Window" Property="BorderBrush" Value="{TemplateBinding TitleBarBackground}"/>
         </PropertyTrigger>
         <!-- Inactive (not the front-most window): dim the title bar like an inactive OS window. Overrides the window's own
              TitleBarBackground/TitleForeground, which the bar, title, icon and pin/close glyphs all bind to. -->

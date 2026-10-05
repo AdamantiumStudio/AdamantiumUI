@@ -14,18 +14,18 @@
                        MaxWidth="900" HorizontalAlignment="Left" MarginBottom="12"/>
 
             <StackPanel Orientation="Horizontal" MarginBottom="8">
-                <TextBlock Text="{Localize OpacityStrings.ContainerOpacity}" VerticalAlignment="Center" MinWidth="140" MarginRight="8"
+                <TextBlock x:Name="ContainerOpacityLabel" Text="{Localize OpacityStrings.ContainerOpacity}" VerticalAlignment="Center" MinWidth="140" MarginRight="8"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <Slider Minimum="0" Maximum="1" Value="{Binding ContainerOpacity, Mode=TwoWay}" Width="260"/>
+                <Slider AutomationProperties.AutomationId="ContainerOpacity" AutomationProperties.LabeledBy="{Binding ElementName=ContainerOpacityLabel}" Minimum="0" Maximum="1" Value="{Binding ContainerOpacity, Mode=TwoWay}" Width="260"/>
                 <TextBlock Text="{Binding ContainerOpacity}" MarginLeft="8" Width="56" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- The SECOND question: an element's own Opacity ON TOP of its container's. The product is what should
                  reach the screen, so a family that reads the slot AND keeps the chain in its color goes too dark. -->
             <StackPanel Orientation="Horizontal" MarginBottom="14">
-                <TextBlock Text="{Localize OpacityStrings.ElementOpacity}" VerticalAlignment="Center" MinWidth="140" MarginRight="8"
+                <TextBlock x:Name="ElementOpacityLabel" Text="{Localize OpacityStrings.ElementOpacity}" VerticalAlignment="Center" MinWidth="140" MarginRight="8"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <Slider Minimum="0" Maximum="1" Value="{Binding ElementOpacity, Mode=TwoWay}" Width="260"/>
+                <Slider AutomationProperties.AutomationId="ElementOpacity" AutomationProperties.LabeledBy="{Binding ElementName=ElementOpacityLabel}" Minimum="0" Maximum="1" Value="{Binding ElementOpacity, Mode=TwoWay}" Width="260"/>
                 <TextBlock Text="{Binding ElementOpacity}" MarginLeft="8" Width="56" VerticalAlignment="Center"/>
                 <TextBlock Text="{Localize OpacityStrings.ElementHint}" MarginLeft="12"
                            VerticalAlignment="Center" Foreground="{ResourceReference TextFillColorSecondary}"/>

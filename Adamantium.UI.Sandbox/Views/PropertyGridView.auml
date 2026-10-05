@@ -10,10 +10,11 @@
         <!-- What each inspector is over, and what the toggle below has just done - said in full, because an inspector
              over several objects behaves differently from one over a single object, and a row standing empty is a
              statement, not a gap. -->
-        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,6" Text="{Localize PropertyPageStrings.LeftCaption, both={Binding Both}}"/>
-        <TextBlock Grid.Row="2" Grid.Column="1" Margin="8,0,0,6" Text="{Localize PropertyPageStrings.RightCaption, both={Binding Both}}"/>
+        <TextBlock x:Name="LeftCaption" Grid.Row="2" Grid.Column="0" Margin="0,0,8,6" Text="{Localize PropertyPageStrings.LeftCaption, both={Binding Both}}"/>
+        <TextBlock x:Name="RightCaption" Grid.Row="2" Grid.Column="1" Margin="8,0,0,6" Text="{Localize PropertyPageStrings.RightCaption, both={Binding Both}}"/>
 
         <PropertyGrid Grid.Row="3" Grid.Column="0" x:Name="Inspector" Margin="0,0,8,0"
+                      AutomationProperties.LabeledBy="{Binding ElementName=LeftCaption}"
                       SelectedObjects="{Binding LeftSelection}"
                       NameColumnWidth="150">
             <PropertySection Header="{Localize PropertyPageStrings.General}" IsExpanded="True">
@@ -69,7 +70,8 @@
 
         <!-- ShowSearch off: an inspector of a handful of rows does not need a field to find them in, and the row it
              would take is worth more to the rows. The left one keeps it, so the page shows both. -->
-        <PropertyGrid Grid.Row="3" Grid.Column="1" Margin="8,0,0,0"
+        <PropertyGrid Grid.Row="3" Grid.Column="1" AutomationProperties.AutomationId="GeneratedInspector" Margin="8,0,0,0"
+                      AutomationProperties.LabeledBy="{Binding ElementName=RightCaption}"
                       SelectedObjects="{Binding RightSelection}"
                       AutoGenerateSections="True"
                       ShowSearch="{Binding Searchable}"

@@ -1,6 +1,8 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -96,7 +98,7 @@ public class ColorPickerButton : Control
         base.OnMouseLeftButtonDown(sender, e);
         if (!IsEnabled) return;
         e.Handled = true;
-        IsOpen = !IsOpen;
+        SetCurrentValue(IsOpenProperty, !IsOpen);
     }
 
     private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -107,7 +109,7 @@ public class ColorPickerButton : Control
 
         // A color was chosen, so there is one to show - whoever is standing for several things has just been told to
         // put this on all of them.
-        b.IsIndeterminate = false;
+        b.SetCurrentValue(IsIndeterminateProperty, false);
     }
 
     private static void OnIsOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -117,5 +119,7 @@ public class ColorPickerButton : Control
     }
 
     // The flyout light-dismissed (a click outside) - reflect it so the swatch's next click reopens.
-    private void OnPopupClosed(object sender, EventArgs e) => IsOpen = false;
+    private void OnPopupClosed(object sender, EventArgs e) => SetCurrentValue(IsOpenProperty, false);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ColorPickerButtonAutomationPeer(this);
 }

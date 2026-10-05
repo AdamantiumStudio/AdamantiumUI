@@ -41,7 +41,7 @@
                                 </Thumb>
                             </RangeTrack.CenterThumb>
                             <RangeTrack.LowerThumb>
-                                <Thumb Width="20" Height="20">
+                                <Thumb Width="20" Height="20" AutomationProperties.Name="{Localize RangeSliderStrings.Lower}">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Border CornerRadius="10"
@@ -51,7 +51,7 @@
                                 </Thumb>
                             </RangeTrack.LowerThumb>
                             <RangeTrack.UpperThumb>
-                                <Thumb Width="20" Height="20">
+                                <Thumb Width="20" Height="20" AutomationProperties.Name="{Localize RangeSliderStrings.Upper}">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Border CornerRadius="10"

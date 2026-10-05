@@ -1,0 +1,30 @@
+# The Lists page: a single-select list picked by what it can do and by a click, the large list filtered live by the
+# search box and turned a page by its pager.
+select id=GalleryTabs/id=Lists
+wait id=ListsView/id=SingleList --timeout 20s
+select id=SingleList/name=Mars
+expect id=SelectedPlanet name=Mars
+click id=SingleList/name=Venus
+expect id=SelectedPlanet name=Venus
+expect id=SingleList/name=Venus selected=True
+set id=Search 00042
+expect id=LargeList/type=ListItem name="Item 00042"
+set id=Search ""
+expect id=LargeList/type=ListItem name="Item 00001"
+invoke id=ListsView/name="Next page"
+expect id=LargeList/type=ListItem name="Item 00031"
+invoke id=ListsView/name="First page"
+expect id=LargeList/type=ListItem name="Item 00001"
+# The pager: a page chosen by its number, the page size chosen from its list - the first row shown stays shown - and
+# the page number typed.
+select id=LargePager/type=RadioButton,name=3
+expect id=LargePager/type=RadioButton,name=3 selected=True
+expect id=LargeList/type=ListItem name="Item 00061"
+select id=LargePager/id=PART_PageSizeSelector/name=60
+expect id=LargeList/type=ListItem name="Item 00061"
+expect id=LargePager/id=PART_PageBox value=2
+set id=LargePager/id=PART_PageBox 1
+expect id=LargeList/type=ListItem name="Item 00001"
+select id=LargePager/id=PART_PageSizeSelector/name=30
+# Back as the page opens.
+select id=SingleList/name=Earth

@@ -1,3 +1,8 @@
 <Language>
     <Phrase Key="SwitchingTheme" Text="Switching theme…"/>
+    <Phrase Key="Minimize" Text="Minimize"/>
+    <Phrase Key="Maximize" Text="Maximize"/>
+    <Phrase Key="Close" Text="Close"/>
+    <Phrase Key="MoreCommands" Text="More commands"/>
+    <Phrase Key="Pin" Text="Pin"/>
 </Language>

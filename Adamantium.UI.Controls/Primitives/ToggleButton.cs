@@ -1,4 +1,6 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -152,4 +154,6 @@ public class ToggleButton : ButtonBase
         var routedEvent = value switch { true => CheckedEvent, false => UncheckedEvent, _ => IndeterminateEvent };
         RaiseEvent(new RoutedEventArgs(routedEvent, this) { RoutedEvent = routedEvent });
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ToggleButtonAutomationPeer(this);
 }

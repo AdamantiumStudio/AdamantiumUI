@@ -1,0 +1,15 @@
+# The Clipping page: the container's corner radius drives its clip, ClipToBounds switches it off and on, and a second
+# radius cuts by something other than how the container is drawn.
+select id=GalleryTabs/id=Clipping
+wait id=ClipRadius
+set id=ClipRadius 60
+expect id=ClipRadius value=60
+toggle id=ClipOn
+expect id=ClipOn toggle=Off
+toggle id=ClipOn
+expect id=ClipOn toggle=On
+set id=ExplicitRadius 40
+expect id=ExplicitRadius value=40
+# Back as the page opens.
+set id=ClipRadius 28
+set id=ExplicitRadius 8

@@ -202,14 +202,17 @@ public static class AdamantiumPropertyMap
 
    private static readonly ConcurrentDictionary<string, Type> OwnerTypeByName = new();
 
-   // A component type by its SHORT name, among loaded AdamantiumComponent-derived types. One-time scan per name (cached).
+   // An owner by its SHORT name: a component (Grid) or a static service (KeyTipService). One-time scan per name (cached).
    private static Type ResolveOwnerType(string name) => OwnerTypeByName.GetOrAdd(name, static n =>
    {
       foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
       {
          foreach (var t in Adamantium.Core.Reflection.LoadableTypes.Of(asm))
          {
-            if (t.Name == n && typeof(AdamantiumComponent).IsAssignableFrom(t)) return t;
+            if (t.Name == n && (typeof(AdamantiumComponent).IsAssignableFrom(t) || t is { IsAbstract: true, IsSealed: true }))
+            {
+               return t;
+            }
          }
       }
       return null;

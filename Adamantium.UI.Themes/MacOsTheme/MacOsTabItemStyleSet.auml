@@ -70,12 +70,16 @@
                             <!-- Pin BEFORE close: pinning keeps the tab and closing loses it, and the more destructive
                                  of the two belongs at the very edge. Its look is PinButtonTemplate. -->
                             <ToggleButton x:Name="PART_PinButton" Grid.Column="3"
+                                    AutomationProperties.AutomationId="PinTab"
+                                    AutomationProperties.Name="{Localize TabStrings.PinTab}"
                                     Template="{TemplateBinding PinButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed"/>
                             <Button x:Name="PART_CloseButton" Grid.Column="4"
+                                    AutomationProperties.AutomationId="CloseTab"
+                                    AutomationProperties.Name="{Localize TabStrings.CloseTab}"
                                     Template="{TemplateBinding CloseButtonTemplate}"
                                     Margin="6 0 0 0"
                                     MinWidth="0" MinHeight="0" Padding="0"

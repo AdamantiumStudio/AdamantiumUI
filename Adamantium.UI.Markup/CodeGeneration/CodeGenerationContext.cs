@@ -515,12 +515,14 @@ public class CodeGenerationContext
                             var positional = 0;
                             foreach (var argument in extension.Arguments)
                             {
-                                var text = argument.Value.GetTextValue();
+                                var text = argument.Value is AumlAstTypeReferenceValueNode typeValue
+                                    ? typeValue.TypeReference.Name
+                                    : argument.Value.GetTextValue();
                                 if (string.IsNullOrEmpty(argument.Name))
                                 {
                                     if (positional == 0)
                                     {
-                                        var resolved = Metadata.TypeResolver.ResolveByShortName(text);
+                                        var resolved = ResolveTypeArgument(argument.Value);
                                         if (resolved == null)
                                             diagnostics.ReportError(Metadata.ClassName, $"Ancestor: type '{text}' could not be resolved.");
                                         else
@@ -542,7 +544,7 @@ public class CodeGenerationContext
                                         case "Logical": TextGenerator.WriteLine($"{acVar}.Logical = {text.ToLowerInvariant()};"); break;
                                         case "Stop":
                                         {
-                                            var st = Metadata.TypeResolver.ResolveByShortName(text);
+                                            var st = ResolveTypeArgument(argument.Value);
                                             if (st == null)
                                                 diagnostics.ReportError(Metadata.ClassName, $"Ancestor: Stop type '{text}' could not be resolved.");
                                             else
@@ -1117,6 +1119,11 @@ public class CodeGenerationContext
     
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
 
+    private IResolvedType ResolveTypeArgument(IAumlAstValueNode value) =>
+        value is AumlAstTypeReferenceValueNode typeValue
+            ? Metadata.TypeResolver.Resolve(typeValue.TypeReference.GetFullTypeName())
+            : Metadata.TypeResolver.ResolveByShortName(value.GetTextValue());
+
     // A child element that is not a visual - <Grid><ColumnDefinition/></Grid> - belongs to the parent's [MarkupItem]
     // collection that accepts it. Returns that property's name, or null when the child is an ordinary tree child.
     private string MarkupCollectionFor(IResolvedType parentType, AumlAstObjectNode child)
@@ -1522,6 +1529,11 @@ public class CodeGenerationContext
         public bool HasAttribute(string attributeMetadataName)
         {
             return false;
+        }
+
+        public IResolvedAttribute GetAttribute(string attributeMetadataName)
+        {
+            return null;
         }
 
         public bool HasSetter()

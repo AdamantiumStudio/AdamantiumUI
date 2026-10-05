@@ -34,7 +34,7 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,16,300">
             <!-- LEFT: ContentControl region - a SINGLE page (ContentControlRegionAdapter); navigating replaces it. -->
             <Border Grid.Column="0" CornerRadius="8" Padding="2" BorderThickness="1" BorderBrush="{ResourceReference ControlStrokeColorDefault}">
-                <ContentControl nav:Region.Source="{Binding Region}" ContentTransition="SlideLeft"/>
+                <ContentControl AutomationProperties.AutomationId="Region" nav:Region.Source="{Binding Region}" ContentTransition="SlideLeft"/>
             </Border>
 
             <!-- RIGHT: ItemsControl region - EVERY active view model shown at once as a list (ItemsControlRegionAdapter).
@@ -49,7 +49,7 @@
                     </StackPanel>
                 </StackPanel>
                 <Border Grid.Row="1" CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="{ResourceReference ControlStrokeColorDefault}">
-                    <ListBox nav:Region.Source="{Binding CardsRegion}"/>
+                    <ListBox AutomationProperties.AutomationId="Cards" nav:Region.Source="{Binding CardsRegion}"/>
                 </Border>
             </Grid>
         </Grid>

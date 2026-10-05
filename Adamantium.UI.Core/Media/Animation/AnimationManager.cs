@@ -63,7 +63,30 @@ public static class AnimationManager
     /// <summary>Registers a custom per-frame ticker driven by the same heartbeat as animations: <paramref name="advance"/>
     /// is called each frame with the frame delta and returns true when it's done (then it's dropped). Used for
     /// physics-style updates that aren't a property animation - e.g. scroll inertia.</summary>
-    public static void AddTicker(Func<double, bool> advance) => Add(new DelegateTicker(advance));
+    public static void AddTicker(Func<double, bool> advance) => Add(new DelegateTicker(advance, false));
+
+    /// <summary>Registers a ticker that runs until something else ends it (a caret blinking while focused, playback that
+    /// loops) rather than settling by itself: the application counts as idle while it runs. <paramref name="advance"/>
+    /// still returns true to stop.</summary>
+    public static void AddEndlessTicker(Func<double, bool> advance) => Add(new DelegateTicker(advance, true));
+
+    /// <summary>True while an animation that finishes on its own is still running - a transition, a fade, inertia. Endless
+    /// ones do not count.</summary>
+    public static bool IsSettling
+    {
+        get
+        {
+            foreach (var animation in Active)
+            {
+                if (!animation.IsEndless)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     /// <summary>Advances every running animation by <paramref name="deltaSeconds"/>. Called once per frame.</summary>
     public static void Tick(double deltaSeconds)
@@ -281,10 +304,17 @@ public static class AnimationManager
     private sealed class DelegateTicker : IRunningAnimation
     {
         private readonly Func<double, bool> _advance;
-        public DelegateTicker(Func<double, bool> advance) => _advance = advance;
+
+        public DelegateTicker(Func<double, bool> advance, bool isEndless)
+        {
+            _advance = advance;
+            IsEndless = isEndless;
+        }
+
         public bool Advance(double deltaSeconds) => _advance(deltaSeconds);
         public bool Animates(AdamantiumComponent target, AdamantiumProperty property) => false;
         public bool AnimatesTarget(AdamantiumComponent target) => false;
         public IUIComponent DirtyTarget => null;
+        public bool IsEndless { get; }
     }
 }

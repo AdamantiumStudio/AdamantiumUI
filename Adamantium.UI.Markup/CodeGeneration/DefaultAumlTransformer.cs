@@ -138,26 +138,36 @@ public class DefaultAumlTransformer : IAumlTransformer
             }
             
             var type = resolvedAssembly.GetTypeByFullName(markupExtension.TypeReference.GetFullTypeName());
-            
+
+            var positional = 0;
             foreach (var argument in markupExtension.Arguments)
             {
-                var transformedValue = ProcessValueNode(argument.Value);
-                argument.Value = transformedValue;
-                
                 IResolvedProperty property = null;
+                var isDefault = false;
                 if (string.IsNullOrEmpty(argument.Name))
                 {
                     var result = type.FindPropertyWithAttribute("Adamantium.UI.Core.MarkupExtensions.DefaultPropertyAttribute", out property);
+                    isDefault = positional++ == 0;
                 }
                 else
                 {
                     property = type.GetAllProperties().FirstOrDefault(x => x.Name == argument.Name);
                 }
 
+                var takesType = property?.PropertyType?.FullName == "System.Type" && (isDefault || !string.IsNullOrEmpty(argument.Name));
+                var transformedValue = ProcessValueNode(ReadTypeName(argument.Value, takesType));
+                argument.Value = transformedValue;
+
                 if (property == null)
+                {
                     diagnostics.ReportError(document.FileName,
                         $"Property {argument.Name} could not be found in {markupExtension.TypeReference.GetFullTypeName()}. {markupExtension.GetLineInfo()}");
-                
+                }
+                else
+                {
+                    CheckTypeOf(type.GetMemberByName(property.Name), transformedValue);
+                }
+
                 if (transformedValue is AumlAstMarkupExtensionLiteral literal)
                 {
                     literal.TypeReference = CreateResolved(property.PropertyType, markupExtension.GetLineInfo());
@@ -367,6 +377,32 @@ public class DefaultAumlTransformer : IAumlTransformer
             );
         }
         
+        IAumlAstValueNode ReadTypeName(IAumlAstValueNode value, bool takesType)
+        {
+            if (!takesType || value is not AumlAstTextNode text || string.IsNullOrWhiteSpace(text.Text))
+            {
+                return value;
+            }
+
+            var typeReference = MarkupExtensionParser.ParseTypeName(new ParserContext(null), text.Text, text.GetLineInfo(),
+                document.NamespaceMappings.ToList());
+            return new AumlAstTypeReferenceValueNode(text.GetLineInfo(), ProcessTypeReference(typeReference, text.GetLineInfo()));
+        }
+
+        void CheckTypeOf(IResolvedMember member, IAumlAstValueNode value)
+        {
+            if (member == null || value is not AumlAstTypeReferenceValueNode { TypeReference.IsResolved: true } typeValue)
+            {
+                return;
+            }
+
+            var type = typeResolver.Resolve(typeValue.TypeReference.GetFullTypeName());
+            if (member.TypeOfProblem(type) is { } problem)
+            {
+                diagnostics.ReportError(document.FileName, $"{problem} (line {value.Line}, position {value.Position}).");
+            }
+        }
+
         IAumlAstValueNode ProcessValueNode(IAumlAstValueNode valueNode)
         {
             switch (valueNode)
@@ -791,13 +827,22 @@ public class DefaultAumlTransformer : IAumlTransformer
 
                     ExpandShorthandCollection(propertyNode);
 
+                    var reference = propertyNode.Property as AumlAstPropertyReference;
+                    var takesType = reference is { IsAttachedProperty: false, TargetType.IsResolved: true }
+                                    && reference.TargetType.GetFullTypeName() == "System.Type";
                     for (int i = 0; i < propertyNode.Values.Count; i++)
                     {
-                        var transformedValue = ProcessValueNode(propertyNode.Values[i]);
+                        var transformedValue = ProcessValueNode(ReadTypeName(propertyNode.Values[i], takesType));
                         propertyNode.Values[i] = transformedValue;
                         queue.Enqueue(transformedValue);
                     }
-                    
+
+                    if (takesType)
+                    {
+                        var owner = typeResolver.Resolve(reference.OwnerType.GetFullTypeName());
+                        CheckTypeOf(owner?.GetMemberByName(reference.Name), propertyNode.Values[0]);
+                    }
+
                     break;
                 case AumlAstDirective directive:
                     // A directive written in VALUE position carries no parent (see MarkupExtensionParser) and has already

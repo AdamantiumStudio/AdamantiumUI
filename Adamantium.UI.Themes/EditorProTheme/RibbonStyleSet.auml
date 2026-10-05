@@ -1602,6 +1602,14 @@
         </PropertyTrigger>
     </Style>
 
+    <Style Selector="RibbonQuickAccess">
+        <Setter Property="AutomationProperties.Name" Value="{Localize RibbonStrings.QuickAccess}"/>
+    </Style>
+
+    <Style Selector="Ribbon">
+        <Setter Property="AutomationProperties.Name" Value="{Localize RibbonStrings.Ribbon}"/>
+    </Style>
+
     <!-- Data items in the bar: the selector picks a command's own compact form or this icon button (an ItemTemplate would
          bypass it). -->
     <Style Selector="RibbonQuickAccess">

@@ -1,0 +1,17 @@
+# The Drag & Drop page: a row dragged down its list and back by input made inside the application - the pointer the
+# drag reads is the gesture's, never the system's - and the window for dragging across windows opened and closed.
+# The list that drags out to other applications runs its gesture through the system's own loop, which follows the real
+# mouse; it is not driven here.
+select id=GalleryTabs/id=DragDrop
+wait id=DragDropDemoView/name="Item 01"
+toggle id=DragDropDemoView/name="Drag by handle only"
+expect id=DragDropDemoView/name="Drag by handle only" toggle=Off
+drag id=DragDropDemoView/name="Item 01" 60,20 60,140
+expect id=DragDropDemoView/type=List/type=ListItem name="Item 02"
+drag id=DragDropDemoView/name="Item 01" 60,20 60,-40
+expect id=DragDropDemoView/type=List/type=ListItem name="Item 01"
+toggle id=DragDropDemoView/name="Drag by handle only"
+invoke id=DragDropDemoView/name="Open drop window (cross-window test)"
+wait id=DragDropWindow
+window id=DragDropWindow close
+absent id=DragDropWindow

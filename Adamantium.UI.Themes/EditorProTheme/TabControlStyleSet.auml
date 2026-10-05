@@ -240,7 +240,7 @@
                             <!-- NOT focusable: it is reached by clicking, keyboard focus belongs to the tabs. It is
                                  also toggled shut in code after a pick, and a focus ring left drawn around it after
                                  every use is exactly the kind of leftover this theme's rings are meant to avoid. -->
-                            <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" Grid.Column="2"
+                            <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" Grid.Column="2"
                                           VerticalAlignment="Stretch"
                                           Focusable="False"
                                           MinWidth="{ResourceReference TabOverflowButtonExtent}"
@@ -411,7 +411,7 @@
                                     </LinearGradientBrush>
                                 </Border.Background>
                             </Border>
-                            <ToggleButton x:Name="PART_TabOverflow" Grid.Column="1" VerticalAlignment="Stretch"
+                            <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Column="1" VerticalAlignment="Stretch"
                                           Focusable="False"
                                           MinWidth="{ResourceReference TabOverflowButtonExtent}"
                                           Padding="0" Visibility="Collapsed"
@@ -523,7 +523,7 @@
                                     </LinearGradientBrush>
                                 </Border.Background>
                             </Border>
-                            <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" HorizontalAlignment="Stretch"
+                            <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Stretch"
                                           Focusable="False"
                                           MinHeight="{ResourceReference TabOverflowButtonExtent}"
                                           Padding="0" Visibility="Collapsed"
@@ -664,7 +664,7 @@
                                     </LinearGradientBrush>
                                 </Border.Background>
                             </Border>
-                            <ToggleButton x:Name="PART_TabOverflow" Grid.Row="1" HorizontalAlignment="Stretch"
+                            <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Stretch"
                                           Focusable="False"
                                           MinHeight="{ResourceReference TabOverflowButtonExtent}"
                                           Padding="0" Visibility="Collapsed"

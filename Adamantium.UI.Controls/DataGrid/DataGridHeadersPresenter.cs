@@ -306,11 +306,9 @@ public class DataGridHeadersPresenter : Panel
             var at = e.GetPosition(this);
             EndReorder(at.X, Owner.StripUnder(this, at));
         }
-        else if (_pressed >= 0 && Owner != null && _pressed < Owner.Columns.Count && Owner.Columns[_pressed].CanSort)
+        else if (_pressed >= 0 && Owner != null && _pressed < Owner.Columns.Count)
         {
-            var column = Owner.Columns[_pressed];
-            var descending = ReferenceEquals(Owner.SortColumn, column) && !Owner.SortDescending;
-            Owner.SortBy(column, descending);
+            Owner.SortByHeader(Owner.Columns[_pressed]);
         }
 
         // The press took the capture, so the press gives it back - whether it turned into a drag or stayed a click.

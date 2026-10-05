@@ -1,0 +1,11 @@
+# The Resources page: theme and local resources cycled live, and the caption buttons moved to the left and back.
+select id=GalleryTabs/id=Resources
+wait id=ResourcesView/name="Cycle critical color"
+invoke id=ResourcesView/name="Cycle critical color"
+invoke id=ResourcesView/name="Cycle accent"
+invoke id=ResourcesView/name="Cycle local accent"
+invoke id=ResourcesView/name="Cycle global accent"
+toggle id=ResourcesView/name="Caption buttons left"
+expect id=ResourcesView/name="Caption buttons left" toggle=On
+toggle id=ResourcesView/name="Caption buttons left"
+expect id=ResourcesView/name="Caption buttons left" toggle=Off
