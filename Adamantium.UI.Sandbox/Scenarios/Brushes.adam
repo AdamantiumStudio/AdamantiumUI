@@ -1,0 +1,28 @@
+# The Brushes page: every brush stand opened in turn in the page's region - each must come up, and leave no error
+# behind - and the surface the brush is painted on changed.
+select id=GalleryTabs/id=Brushes
+wait id=BrushesView
+select id=BrushesView/name="Mesh gradient"
+wait id=Stand/id=MeshStandView
+select id=BrushesView/name=Pattern
+wait id=Stand/id=PatternStandView
+select id=BrushesView/name=Noise
+wait id=Stand/id=NoiseStandView
+select id=BrushesView/name=Fractal
+wait id=Stand/id=FractalStandView
+select id=BrushesView/name=Image
+wait id=Stand/id=ImageStandView
+select id=BrushesView/name=Nine-slice
+wait id=Stand/id=NineSliceStandView
+select id=BrushesView/name=Drawing
+wait id=Stand/id=DrawingStandView
+select id=BrushesView/name=Visual
+wait id=Stand/id=VisualStandView
+select id=BrushesView/name=Material
+wait id=Stand/id=MaterialStandView
+select id=BrushesView/name="Aura / Shadow"
+wait id=Stand/id=AuraStandView
+select id=BrushesView/name=Gradients
+wait id=Stand/id=GradientStandView
+expand id=PreviewShape
+collapse id=PreviewShape

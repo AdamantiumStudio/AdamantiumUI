@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;
@@ -203,6 +204,9 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             // right of the handles, which reads as crooked and is.
             button.Margin = new Thickness(0, 0, gap, gap);
 
+            AutomationProperties.SetAutomationId(button, NameOf(tool));
+            Say(button, AutomationProperties.NameProperty, NameOf(tool));
+
             if (iconic)
             {
                 var image = new Image { Width = IconSize, Height = IconSize };
@@ -245,6 +249,8 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
         var tip = new Text.TextBlock();
         Say(tip, Text.TextBlock.TextProperty, name);
         button.ToolTip = tip;
+        AutomationProperties.SetAutomationId(button, name);
+        Say(button, AutomationProperties.NameProperty, name);
 
         var image = new Image { Width = IconSize, Height = IconSize };
         new ObservableResource(GroupIcon).Apply(image, nameof(Image.Source));
@@ -334,6 +340,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
                 ToolTip = Tip(tool)
             };
 
+            AutomationProperties.SetAutomationId(choice, NameOf(tool));
             choice.Click += OnChoicePicked;
             _of[choice] = tool;
             _choices.Add(choice);

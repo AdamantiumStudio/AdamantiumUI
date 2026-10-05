@@ -40,6 +40,7 @@ public static class Program
           get <selector> [<property>...]                      the first match: properties with their source, bindings, layout
           invoke | toggle | select | expand | collapse <selector>   act on the first match by what it can do
           click | rclick | hover <selector>                   or by input made inside the application
+          drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
           scroll <selector>                                   bring a list's item into view, making its element
           scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents
           window <selector> minimize | maximize | restore | close
@@ -93,6 +94,13 @@ public static class Program
                 "click" => await SendAsync(pipe, Target(AutomationCommand.Click, arguments, allowErrors)),
                 "rclick" => await SendAsync(pipe, Target(AutomationCommand.RightClick, arguments, allowErrors)),
                 "hover" => await SendAsync(pipe, Target(AutomationCommand.Hover, arguments, allowErrors)),
+                "drag" => await SendAsync(pipe, new AutomationRequest
+                {
+                    Command = AutomationCommand.Drag,
+                    Target = arguments.At(0),
+                    Value = $"{arguments.At(1)} {arguments.At(2)}",
+                    AllowErrors = allowErrors
+                }),
                 "expand" => await SendAsync(pipe, Target(AutomationCommand.Expand, arguments, allowErrors)),
                 "collapse" => await SendAsync(pipe, Target(AutomationCommand.Collapse, arguments, allowErrors)),
                 "scroll" => await SendAsync(pipe, Scroll(arguments, allowErrors)),

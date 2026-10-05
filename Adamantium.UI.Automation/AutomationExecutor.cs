@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -232,6 +233,10 @@ public sealed class AutomationExecutor
             case AutomationCommand.Hover:
                 InputSimulator.Hover(OwnerOf(peer), Label(peer));
                 break;
+            case AutomationCommand.Drag:
+                var (from, to) = DragPoints(request.Value);
+                InputSimulator.Drag(OwnerOf(peer), Label(peer), from, to);
+                break;
             case AutomationCommand.Expand:
                 Pattern<IExpandCollapseProvider>(peer, PatternId.ExpandCollapse).Expand();
                 break;
@@ -313,6 +318,30 @@ public sealed class AutomationExecutor
         }
 
         Pattern<IRangeValueProvider>(peer, PatternId.RangeValue).SetValue(number);
+    }
+
+    private static (Vector2 From, Vector2 To) DragPoints(string value)
+    {
+        var points = (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (points.Length != 2)
+        {
+            throw new AutomationException($"'{value}': expected two points, x1,y1 x2,y2.");
+        }
+
+        return (Point(points[0]), Point(points[1]));
+
+        static Vector2 Point(string text)
+        {
+            var parts = text.Split(',');
+            if (parts.Length == 2
+                && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
+                && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+            {
+                return new Vector2(x, y);
+            }
+
+            throw new FormatException($"'{text}' is not a point: x,y.");
+        }
     }
 
     private static (double Horizontal, double Vertical) ScrollPercents(string value)

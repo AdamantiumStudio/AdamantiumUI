@@ -1,0 +1,18 @@
+# The InfiniteCanvas page: the drawing mode and a tool chosen, the plane cleared after its question is answered, a
+# rectangle dragged out on it - listed in the layers - and taken back by undo.
+select id=GalleryTabs/id=InfiniteCanvas
+wait id=Canvas
+select id=PART_Inspector/name="Drawing - ink, shapes and text"
+toggle id=PART_ToolRail/id=Rectangle
+expect id=PART_ToolRail/id=Rectangle toggle=On
+select id=PART_Inspector/name="Everything on the plane, topmost first"
+invoke "id=PART_Inspector/name=Clear the canvas"
+invoke id=PART_Yes
+expect id=ItemCountLabel name="0 items"
+drag id=Canvas 500,150 650,260
+expect id=ItemCountLabel name="1 item"
+expect id=PART_Inspector/type=TreeItem name=Rectangle
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+expect id=ItemCountLabel name="0 items"
+toggle id=PART_ToolRail/id=Select
+expect id=PART_ToolRail/id=Rectangle toggle=Off

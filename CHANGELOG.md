@@ -203,6 +203,10 @@ All packages share one version.
 - Automation of `PropertyGrid`: a table of property rows, each called by its property's name and written the way its
   editor writes it - converted to the property's type, to every object the row stands for, or refused; a true-or-false
   property is toggled and a composite one opens to its parts.
+- Automation drags: `AutomationElement.DragAsync` and `adam-auto drag <selector> <x1,y1> <x2,y2>` press the left button
+  at one point of the element, move with it held and let go at the other, in the element's own units. An
+  `InfiniteCanvas` and its floating panels are panes; a tool on its rail is a button found by the tool's name and
+  called by it in the user's language.
 - More automation peers: a tab item's children are the close and pin buttons its tab control offers (the themes name
   them, `TabStrings.CloseTab`, `PinTab`); `ColorPicker`, `ColorWheel` and `ColorPickerButton` hold their color as a
   value, `#AARRGGBB`, and the button opens its picker; a `RadioButton` is a radio button selected as a click selects

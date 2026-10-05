@@ -45,6 +45,10 @@ public enum AutomationCommand
     /// <summary>The pointer moved over the middle of the target, by input simulated inside the application.</summary>
     Hover,
 
+    /// <summary>A left-button drag across the target, by input simulated inside the application: from and to are
+    /// points in the target's own units, <see cref="AutomationRequest.Value"/> <c>x1,y1 x2,y2</c>.</summary>
+    Drag,
+
     /// <summary>Opens what the target holds: a drop-down's list, a submenu, a branch.</summary>
     Expand,
 

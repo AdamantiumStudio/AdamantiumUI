@@ -144,6 +144,45 @@ public class AutomationDriverTests
     }
 
     [Test]
+    public async Task ADrag_PressesAtOnePoint_MovesWithTheButtonHeld_AndLetsGoAtTheOther()
+    {
+        var pad = new ContentControl
+        {
+            Name = "Pad", Width = 300, Height = 200,
+            Background = Adamantium.UI.Core.Media.Brushes.Gray
+        };
+        var seen = new System.Collections.Generic.List<string>();
+        var held = false;
+        var moves = 0;
+        pad.AddHandler(InputUIComponent.MouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
+        {
+            held = true;
+            seen.Add(At("down", e.GetPosition(pad)));
+        }), handledEventsToo: true);
+        pad.AddHandler(InputUIComponent.MouseLeftButtonUpEvent, new MouseButtonEventHandler((_, e) =>
+        {
+            held = false;
+            seen.Add(At("up", e.GetPosition(pad)));
+        }), handledEventsToo: true);
+        pad.MouseMove += (_, _) =>
+        {
+            if (held) moves++;
+        };
+        await using var session = await Driving(pad);
+
+        await session.Find(By.Id("Pad")).DragAsync(20, 30, 220, 130);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(seen, Is.EqualTo(new[] { "down 20,30", "up 220,130" }));
+            Assert.That(moves, Is.GreaterThan(1), "the pointer travels with the button held");
+        });
+
+        static string At(string what, Adamantium.Mathematics.Vector2 point) =>
+            System.FormattableString.Invariant($"{what} {point.X:0},{point.Y:0}");
+    }
+
+    [Test]
     public void AKeyThatDoesNotExist_IsRefusedByName()
     {
         var failure = Assert.ThrowsAsync<AutomationException>(async () =>

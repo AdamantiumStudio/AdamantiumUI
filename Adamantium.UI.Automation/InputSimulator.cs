@@ -23,16 +23,33 @@ internal static class InputSimulator
 
     public static (IWindow Window, Vector2 Point) Hover(UIComponent element, string label)
     {
+        var size = element.RenderSize;
+        return HoverAt(element, label, new Vector2(size.Width / 2, size.Height / 2));
+    }
+
+    public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)
+    {
+        const int steps = 8;
+        var (window, start) = HoverAt(element, label, from);
+        var end = InWindow(element, to);
+        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
+        for (var step = 1; step <= steps; step++)
+        {
+            var at = start + (end - start) * (step / (double)steps);
+            Send(RawMouseEventType.MouseMove, window, at, InputModifiers.LeftMouseButton);
+        }
+
+        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
+    }
+
+    private static (IWindow Window, Vector2 Point) HoverAt(UIComponent element, string label, Vector2 local)
+    {
         if (element.RootVisual is not IWindow window)
         {
             throw new AutomationException($"{label} is not in a window.");
         }
 
-        var size = element.RenderSize;
-        var middle = Vector3F.TransformCoordinate(
-            new Vector3F((float)(size.Width / 2), (float)(size.Height / 2), 0), element.WorldTransform);
-        var point = new Vector2(middle.X, middle.Y);
-
+        var point = InWindow(element, local);
         Send(RawMouseEventType.MouseMove, window, point, InputModifiers.None);
         var over = MouseDevice.CurrentDevice.DirectlyOver;
         if (!IsWithin(over, element))
@@ -133,6 +150,12 @@ internal static class InputSimulator
     {
         var device = MouseDevice.CurrentDevice;
         device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
+    }
+
+    private static Vector2 InWindow(UIComponent element, Vector2 local)
+    {
+        var point = Vector3F.TransformCoordinate(new Vector3F((float)local.X, (float)local.Y, 0), element.WorldTransform);
+        return new Vector2(point.X, point.Y);
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent element)
