@@ -7,6 +7,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Themes.FluentTheme;
@@ -84,6 +85,59 @@ public class TreeViewModelExpansionTests
         });
     }
 
+    [Test]
+    public async Task ALeafOfAnotherKind_WithoutTheMember_IsNoBrokenBinding_AndTheViewModelStillOpensItsBranch()
+    {
+        var folder = new Node("Folder");
+        folder.Kinds.Add(new Leaf("File"));
+        var containerStyle = new Style { Selector = new StyleSelector { Types = { typeof(TreeViewItem) } } };
+        containerStyle.Setters.Add(new Setter(nameof(TreeViewItem.IsExpanded), new Binding(nameof(Node.IsExpanded)) { Mode = BindingMode.TwoWay }));
+        var tree = new TreeView
+        {
+            Name = "Tree",
+            ItemContainerStyle = containerStyle,
+            ItemTemplate = new HierarchicalDataTemplate(() =>
+            {
+                var title = new TextBlock();
+                title.SetBinding(TextBlock.TextProperty, new Binding(nameof(Node.Title)));
+                return new TemplateResult { RootComponent = title };
+            })
+            {
+                ItemsSource = new Binding(nameof(Node.Kinds))
+            },
+            ItemsSource = new List<Node> { folder }
+        };
+        var messages = new List<string>();
+        BindingTrace.Sink = messages.Add;
+        try
+        {
+            var window = new Window { Width = 400, Height = 300, ClientWidth = 400, ClientHeight = 300, Content = tree };
+            await using var session = AutomationSession.InProcess(window);
+            await session.WaitForIdleAsync();
+
+            folder.IsExpanded = true;
+            await session.WaitForIdleAsync();
+            var leaf = await session.Find(By.Id("Tree")).Find(By.Name("File")).ExistsAsync();
+            await session.Find(By.Id("Tree")).Find(By.Name("Folder")).CollapseAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(leaf, Is.True, "the view model opened the branch");
+                Assert.That(folder.IsExpanded, Is.False, "and the tree wrote the node back when the row closed");
+                Assert.That(messages, Has.None.Contains("IsExpanded"), "a leaf without the member is not a broken binding");
+            });
+        }
+        finally
+        {
+            BindingTrace.Sink = null;
+        }
+    }
+
+    private sealed class Leaf(string title)
+    {
+        public string Title { get; } = title;
+    }
+
     private sealed class Node : INotifyPropertyChanged
     {
         private bool _isExpanded;
@@ -100,6 +154,8 @@ public class TreeViewModelExpansionTests
         public string Title { get; }
 
         public List<Node> Children { get; }
+
+        public List<object> Kinds { get; } = [];
 
         public bool IsExpanded
         {

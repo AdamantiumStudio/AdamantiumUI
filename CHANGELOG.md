@@ -470,6 +470,9 @@ All packages share one version.
 
 - A drag made inside the application dropped into the window it began in even where another of the application's
   windows lay over that spot; it now drops into the one on top.
+- A `TreeView` whose item container style binds `IsExpanded` reported a broken binding for every node without that
+  member - a leaf of another kind. The tree now keeps the member itself: it writes it as rows open and close and follows
+  it on the nodes that have it.
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
 - After a control started drawing text where it had drawn none - a data grid's search showing "1 of 1" - every frame
   threw and nothing more reached the screen until something forced a full redraw: the segment made for it carried no
