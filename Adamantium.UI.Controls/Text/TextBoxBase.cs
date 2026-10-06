@@ -421,7 +421,9 @@ public abstract class TextBoxBase : Control
 
     // Nearest caret index to a text-local point: pick the visual line by Y, then the slot on it nearest X (splitting on
     // glyph mid-points like a text cursor). Empty lines are handled because their single caret slot carries the line.
-    private int IndexFromPoint(double x, double y)
+    private int IndexFromPoint(double x, double y) => SnapToCaretStop(SlotFromPoint(x, y));
+
+    private int SlotFromPoint(double x, double y)
     {
         EnsureLayout();
         if (_caretX.Length == 1) return 0;
@@ -598,8 +600,8 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         if (HasSelection) { ReplaceSelection(string.Empty); return; }
         if (CaretIndex <= 0) return;
-        SelectionStart = CaretIndex - 1;
-        SelectionLength = 1;
+        SelectionStart = PreviousCaretStop(CaretIndex);
+        SelectionLength = CaretIndex - SelectionStart;
         ReplaceSelection(string.Empty);
     }
 
@@ -609,8 +611,30 @@ public abstract class TextBoxBase : Control
         if (HasSelection) { ReplaceSelection(string.Empty); return; }
         if (CaretIndex >= TextLength) return;
         SelectionStart = CaretIndex;
-        SelectionLength = 1;
+        SelectionLength = NextCaretStop(CaretIndex) - CaretIndex;
         ReplaceSelection(string.Empty);
+    }
+
+    private int NextCaretStop(int index)
+    {
+        EnsureLayout();
+        return TextLength == 0 ? 0 : _textLayout.NextCaretStop(index);
+    }
+
+    private int PreviousCaretStop(int index)
+    {
+        EnsureLayout();
+        return TextLength == 0 ? 0 : _textLayout.PreviousCaretStop(index);
+    }
+
+    private int SnapToCaretStop(int index)
+    {
+        if (index <= 0 || index >= TextLength)
+        {
+            return Clamp(index);
+        }
+
+        return PreviousCaretStop(NextCaretStop(index));
     }
 
     private int WordBoundary(int index, int dir)
@@ -650,11 +674,11 @@ public abstract class TextBoxBase : Control
         switch (e.Key)
         {
             case Key.LeftArrow:
-                MoveCaretTo(ctrl ? WordBoundary(CaretIndex, -1) : CaretIndex - 1, shift);
+                MoveCaretTo(ctrl ? WordBoundary(CaretIndex, -1) : PreviousCaretStop(CaretIndex), shift);
                 e.Handled = true;
                 break;
             case Key.RightArrow:
-                MoveCaretTo(ctrl ? WordBoundary(CaretIndex, +1) : CaretIndex + 1, shift);
+                MoveCaretTo(ctrl ? WordBoundary(CaretIndex, +1) : NextCaretStop(CaretIndex), shift);
                 e.Handled = true;
                 break;
             case Key.UpArrow:
