@@ -59,6 +59,7 @@
         </StackPanel>
 
         <ListBox Grid.Row="1" x:Name="TileGrid"
+                 AutomationProperties.Name="{Localize LayoutStrings.Tiles}"
                  Margin="0 14 0 0"
                  ItemsSource="{Binding TileSource}"
                  SelectedItem="{Binding SelectedRect, Mode=TwoWay}">
