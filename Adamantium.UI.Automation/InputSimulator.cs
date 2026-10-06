@@ -60,10 +60,15 @@ internal static class InputSimulator
         var (window, start) = HoverAt(source, sourceLabel, from);
 
         // The events stay with the window the gesture began in, as a captured pointer's do; a target in another window is
-        // reached by the same desktop point, said in this window's terms.
+        // reached by the same desktop point, said in this window's terms, and the pointer is over that window once the
+        // point is in it - which the desktop cannot say when another application's window lies over both.
         var end = ReferenceEquals(targetWindow, window)
             ? InWindow(target, at)
             : window.PointToClient(targetWindow.PointToScreen(InWindow(target, at)));
+        IWindow Over(Vector2 point) => !ReferenceEquals(targetWindow, window) && Holds(targetWindow, window.PointToScreen(point))
+            ? targetWindow
+            : window;
+
         var layout = LayoutManager.GetOrCreate(root);
         Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
         Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
@@ -71,10 +76,17 @@ internal static class InputSimulator
         {
             // A layout pass between moves, as a frame would come between them.
             layout.ExecuteLayoutPass();
-            Send(RawMouseEventType.MouseMove, window, start + (end - start) * (step / (double)steps), InputModifiers.LeftMouseButton);
+            var point = start + (end - start) * (step / (double)steps);
+            Send(RawMouseEventType.MouseMove, window, point, InputModifiers.LeftMouseButton, Over(point));
         }
 
-        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
+        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None, Over(end));
+    }
+
+    private static bool Holds(IWindow window, PixelPoint screen)
+    {
+        var client = window.PointToClient(screen);
+        return client.X >= 0 && client.Y >= 0 && client.X <= window.ClientWidth && client.Y <= window.ClientHeight;
     }
 
     // The first few pixels of a hand's stroke, still over what it pressed: a drag starts once the pointer has gone past
@@ -234,13 +246,14 @@ internal static class InputSimulator
         KeyboardDevice.CurrentDevice.ProcessEvent(new RawKeyboardEventArgs(key, type, press, modifiers, Now()), window);
     }
 
-    private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers)
+    // The event goes to window; the pointer is over the window named, another one only while a captured gesture is over it.
+    private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers, IWindow over = null)
     {
         var device = MouseDevice.CurrentDevice;
         if (Mouse.Platform is SimulatedPointer pointer)
         {
             pointer.Position = window.PointToScreen(point);
-            pointer.Window = window;
+            pointer.Window = over ?? window;
         }
 
         device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
