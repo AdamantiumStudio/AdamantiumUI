@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `Theme.CurrentVariantProperty`: a switch of variant is announced as a property of the theme, once its palette and
+  values are all in the new variant - for what has to know which variant is in force, not only its colors.
 - Input method editors on Windows (IMM32): the IME's composition and candidate windows open at the caret of a
   `TextBox`, and the text it commits arrives as one `TextInput`. `InputMethod.SetCaretBounds` tells the IME where the
   caret of any text control is; `Keyboard.TextCompositionStarted`, `TextCompositionChanged` and `TextCompositionEnded`
