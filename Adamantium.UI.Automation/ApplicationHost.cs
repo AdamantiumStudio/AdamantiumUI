@@ -24,7 +24,7 @@ public sealed class ApplicationHost : IAutomationHost
     public async Task<T> RunOnLoopAsync<T>(Func<T> work, TimeSpan timeout)
     {
         var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _application.Dispatcher.Post(() =>
+        LoopSignal.PostAwaited(() =>
         {
             try
             {

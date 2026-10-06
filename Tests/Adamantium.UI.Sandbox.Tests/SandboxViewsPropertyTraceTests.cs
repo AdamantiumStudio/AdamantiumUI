@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Adamantium.Core.DependencyInjection;
+using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -13,7 +13,6 @@ using Adamantium.UI.Sandbox.Views;
 using Adamantium.UI.Themes.EditorProTheme;
 using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.MacOsTheme;
-using Adamantium.XamlTests;
 using NUnit.Framework;
 
 namespace Adamantium.UI.Sandbox.Tests;
@@ -26,34 +25,17 @@ namespace Adamantium.UI.Sandbox.Tests;
 [TestFixture]
 public class SandboxViewsPropertyTraceTests
 {
-    private FakeApp _app;
-
-    [OneTimeSetUp]
-    public void EnsureAppContext()
+    private static void Use(string name)
     {
-        _app = new FakeApp(new AdamantiumDependencyContainer()) { ResourceManager = new ResourceManager() };
-        UIAppContext.Initialize(_app, null);
-    }
-
-    private void Use(string name)
-    {
-        _app.ResourceManager = new ResourceManager();
-        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
-        var themes = new ThemeManager(new AdamantiumDependencyContainer());
-        _app.ThemeManager = themes;
-        ((FakeContext)_app.UIContext).ThemeEngine = themes;
-        themes.AddStyleSet<RibbonShellStyleSet>();
-        _app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
-        _app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
-
-        Theme theme = name switch
+        var app = name switch
         {
-            "Fluent" => new Fluent(),
-            "EditorPro" => new EditorPro(),
-            _ => new MacOs()
+            "Fluent" => HeadlessApplication.Start<Fluent>(),
+            "EditorPro" => HeadlessApplication.Start<EditorPro>(),
+            _ => HeadlessApplication.Start<MacOs>()
         };
-        themes.AddTheme(theme.Name, theme);
-        themes.SetTheme(theme);
+        app.ThemeManager.AddStyleSet<RibbonShellStyleSet>();
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
     }
 
     private static IEnumerable<Type> ViewTypes() =>

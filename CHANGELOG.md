@@ -288,6 +288,17 @@ All packages share one version.
   selection, a value, a popup opening or closing - with the element's peer and the old and new value. A property change
   is told only for an element automation has seen. The Windows bridge passes them on to UI Automation clients.
 - `IUIComponent.GetAutomationPeer()` and `FindAutomationPeer()`, the peer already made or null.
+- UI tests of an application of your own, with `Adamantium.UI.Automation`: `HeadlessApplication.Start<TTheme>()` is
+  the application a headless test builds its windows in - resources, a theme, its style sets - and a window from markup
+  put in `AutomationSession.InProcess` is initialized as the application would, its view-model made.
+  `AutomationSession.LaunchAsync` starts the application itself with its agent on a pipe of its own and closes it with
+  the session. `RunScenarioAsync` runs a scenario file of `adam-auto`'s commands, `RunCommandAsync` one of them, and
+  `AutomationElement.WaitUntilAsync` waits for a state - its value became 40 - not only for an element; a scenario
+  writes that as `wait <selector> value=40`. `adam-auto` is now a wrapper over the same.
+- `dotnet new adamantium-uitest --app <Application>`: a test project for an application - its main window driven
+  headless and launched, in code and from a scenario file.
+- `UIAppContext.Replace`: the current application and platform in place of those before, for a process that runs
+  one after another.
 - `ITextProvider`: a `TextBox` is read by character, word, line and paragraph - its selection, where a piece of it is on
   screen, the place nearest a point. The Windows bridge gives it the Text pattern, so a screen reader follows the caret
   through it; `AutomationEvent.TextChanged` and `TextSelectionChanged` tell it the text and the caret moved.

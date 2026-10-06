@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
@@ -10,6 +11,9 @@ namespace Adamantium.UI.Automation;
 /// same in the process and through a pipe and never keeps a control alive.</summary>
 public sealed class AutomationElement
 {
+    private static readonly TimeSpan DefaultWait = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan WaitStep = TimeSpan.FromMilliseconds(20);
+
     private readonly AutomationSession _session;
     private readonly IReadOnlyList<By> _path;
 
@@ -53,6 +57,34 @@ public sealed class AutomationElement
             Target = Selector,
             TimeoutMs = (int)(timeout?.TotalMilliseconds ?? 0)
         })).Elements[0];
+
+    /// <summary>Waits until the element is there and <paramref name="condition"/> holds for it - its value became 40, it
+    /// turned on - checking each time the application settles, for <paramref name="timeout"/> at most (ten seconds).</summary>
+    /// <exception cref="AutomationException">It did not come to that in time; the message says how it was last seen.</exception>
+    public async Task<ElementInfo> WaitUntilAsync(Func<ElementInfo, bool> condition, TimeSpan? timeout = null)
+    {
+        var limit = timeout ?? DefaultWait;
+        var clock = Stopwatch.StartNew();
+        ElementInfo last = null;
+        while (true)
+        {
+            var found = await _session.SendAsync(new AutomationRequest { Command = AutomationCommand.Find, Target = Selector });
+            last = found.Ok && found.Elements.Count > 0 ? found.Elements[0] : null;
+            if (last != null && condition(last))
+            {
+                return last;
+            }
+
+            if (clock.Elapsed > limit)
+            {
+                throw new AutomationException($"'{Selector}' did not come to what was waited for within " +
+                                              $"{limit.TotalSeconds:0.#} s; last seen: {(object)last ?? "not there"}.");
+            }
+
+            await _session.WaitForIdleAsync();
+            await Task.Delay(WaitStep);
+        }
+    }
 
     /// <summary>A picture of the element, drawn by the application's renderer and written to <paramref name="path"/> as
     /// PNG - to look at, never to compare. Not in a headless session, which draws nothing.</summary>

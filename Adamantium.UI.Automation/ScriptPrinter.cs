@@ -1,9 +1,9 @@
 using System;
 using System.Text;
 
-namespace Adamantium.UI.Automation.Cli;
+namespace Adamantium.UI.Automation;
 
-internal static class Printer
+internal static class ScriptPrinter
 {
     public static string Line(ElementInfo element) => element.ToString();
 

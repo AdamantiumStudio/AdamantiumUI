@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Adamantium.UI.Automation.Cli;
+namespace Adamantium.UI.Automation;
 
-internal sealed class Arguments
+internal sealed class ScriptArguments
 {
     private static readonly string[] Flags = ["allow-errors"];
 
@@ -12,16 +12,16 @@ internal sealed class Arguments
     private readonly Dictionary<string, string> _options = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _flags = new(StringComparer.OrdinalIgnoreCase);
 
-    public Arguments(string[] args)
+    public ScriptArguments(IReadOnlyList<string> args)
     {
-        for (var i = 0; i < args.Length; i++)
+        for (var i = 0; i < args.Count; i++)
         {
             var name = args[i].StartsWith("--") ? args[i][2..] : null;
             if (name != null && Flags.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 _flags.Add(name);
             }
-            else if (name != null && i + 1 < args.Length)
+            else if (name != null && i + 1 < args.Count)
             {
                 _options[name] = args[++i];
             }

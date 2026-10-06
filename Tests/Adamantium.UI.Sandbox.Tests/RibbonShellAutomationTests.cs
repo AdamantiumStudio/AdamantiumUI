@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Threading.Tasks;
-using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
@@ -11,7 +10,6 @@ using Adamantium.UI.Sandbox.Resources;
 using Adamantium.UI.Sandbox.ViewModels;
 using Adamantium.UI.Sandbox.Views;
 using Adamantium.UI.Themes.FluentTheme;
-using Adamantium.XamlTests;
 using NUnit.Framework;
 
 namespace Adamantium.UI.Sandbox.Tests;
@@ -23,30 +21,13 @@ namespace Adamantium.UI.Sandbox.Tests;
 [TestFixture]
 public class RibbonShellAutomationTests
 {
-    private FakeApp _app;
-
-    [OneTimeSetUp]
-    public void EnsureAppContext()
-    {
-        _app = new FakeApp(new AdamantiumDependencyContainer()) { ResourceManager = new ResourceManager() };
-        UIAppContext.Initialize(_app, null);
-    }
-
     [SetUp]
     public void Fresh()
     {
-        _app.ResourceManager = new ResourceManager();
-        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
-        var themes = new ThemeManager(new AdamantiumDependencyContainer());
-        _app.ThemeManager = themes;
-        ((FakeContext)_app.UIContext).ThemeEngine = themes;
-        themes.AddStyleSet<RibbonShellStyleSet>();
-        _app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
-        _app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
-
-        var theme = new Fluent();
-        themes.AddTheme(theme.Name, theme);
-        themes.SetTheme(theme);
+        var app = HeadlessApplication.Start<Fluent>();
+        app.ThemeManager.AddStyleSet<RibbonShellStyleSet>();
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
     }
 
     private static async Task<AutomationSession> RibbonShell(double width = 1280)
