@@ -20,6 +20,8 @@
     <CompilerVisibleProperty Include="ProjectDir" />
     <CompilerVisibleProperty Include="NeutralLanguage" />
     <CompilerVisibleProperty Include="OutputType" />
+    <!-- true: a button, a field, a list... in markup with no AutomationProperties.AutomationId is a build warning. -->
+    <CompilerVisibleProperty Include="AdamantiumRequireAutomationId" />
   </ItemGroup>
 
   <!-- AdditionalFiles are not inputs of the compile or of Visual Studio's up-to-date check, so an edited view would

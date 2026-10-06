@@ -19,9 +19,11 @@ public static class Program
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(300);
 
     private const string Usage = """
-        adam-auto - drives an application that runs the automation agent; by default the sandbox, as an instance of its own.
+        adam-auto - drives an application that runs the automation agent (it calls UseAutomationAgent()), as an instance
+        of its own.
 
-          start [--tab <Id>] [--theme <Name>] [--exe <path>]   start an instance with the agent and wait for its window
+          start --exe <path> [--tab <Id>] [--theme <Name>]   start an instance with the agent and wait for its window;
+                                                              beside the sandbox, the sandbox when no --exe is named
           stop                                                close it
           windows                                             the open windows
           tree [<selector>] [--depth <n>] [--out <file>]      the automation tree
@@ -109,6 +111,13 @@ public static class Program
         }
 
         var exe = arguments.Option("exe") ?? Path.Combine(AppContext.BaseDirectory, DefaultApplication);
+        if (!File.Exists(exe))
+        {
+            return Fail(arguments.Option("exe") == null
+                ? "Name the application to start: adam-auto start --exe <path>"
+                : $"No application at {Path.GetFullPath(exe)}.", 2);
+        }
+
         await using var session = await AutomationSession.LaunchAsync(exe, options);
         if (arguments.Option("tab") is { } tab)
         {

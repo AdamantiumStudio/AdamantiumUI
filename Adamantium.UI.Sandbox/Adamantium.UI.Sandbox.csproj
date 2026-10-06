@@ -305,6 +305,7 @@
 		<!-- The pages' words: a language table per page (Localization\*.alang). -->
 		<AdditionalFiles Include="$(ProjectDir)**\*.alang" />
 		<CompilerVisibleProperty Include="RootNamespace" />
+		<CompilerVisibleProperty Include="AdamantiumRequireAutomationId" />
 		<CompilerVisibleProperty Include="ProjectDir" />
 		<CompilerVisibleProperty Include="MSBuildProjectName" />
 		<CompilerVisibleProperty Include="NeutralLanguage" />

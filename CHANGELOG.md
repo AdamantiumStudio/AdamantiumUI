@@ -299,6 +299,11 @@ All packages share one version.
   headless and launched, in code and from a scenario file.
 - `UIAppContext.Replace`: the current application and platform in place of those before, for a process that runs
   one after another.
+- `adam-auto` is a package of its own, `Adamantium.UI.Automation.Cli`, installed as a .NET tool
+  (`dotnet tool install -g Adamantium.UI.Automation.Cli`); `adam-auto start --exe <path>` starts an application of yours.
+- `<AdamantiumRequireAutomationId>true</AdamantiumRequireAutomationId>` in a project makes a build warning (AUI011) of
+  every button, field, list, slider... in its markup that has neither `AutomationProperties.AutomationId` nor `x:Name`
+  to be found by. Controls in templates are left out. Off unless set.
 - `ITextProvider`: a `TextBox` is read by character, word, line and paragraph - its selection, where a piece of it is on
   screen, the place nearest a point. The Windows bridge gives it the Text pattern, so a screen reader follows the caret
   through it; `AutomationEvent.TextChanged` and `TextSelectionChanged` tell it the text and the caret moved.

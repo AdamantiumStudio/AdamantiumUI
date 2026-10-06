@@ -21,7 +21,9 @@ namespace Adamantium.UI.Generators
                 options.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
                 options.GlobalOptions.TryGetValue("build_property.projectdir", out var projectDir);
                 options.GlobalOptions.TryGetValue("build_property.NeutralLanguage", out var neutralLanguage);
-                return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage);
+                options.GlobalOptions.TryGetValue("build_property.AdamantiumRequireAutomationId", out var requireAutomationId);
+                return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage,
+                    RequireAutomationId: string.Equals(requireAutomationId, "true", System.StringComparison.OrdinalIgnoreCase));
             });
 
             // Parsing is its own PER-FILE step, so Roslyn caches each document: it used to sit inside the output below,
@@ -146,6 +148,17 @@ namespace Adamantium.UI.Generators
                         }
 
                         codeGenerator.GenerateSourceCode(aumlMetadataContainer, new RoslynOutputSink(spc), diagnostics);
+
+                        if (properties.RequireAutomationId)
+                        {
+                            foreach (var finding in AutomationIdCheck.Run(aumlDoc, compilation))
+                            {
+                                spc.ReportDiagnostic(Diagnostic.Create("AUI011", "Automation",
+                                    $"{aumlDoc.RelativeFilePath}({finding.Line},{finding.Position}): {finding.Type} has no " +
+                                    "AutomationProperties.AutomationId, so a test cannot find it by id.",
+                                    DiagnosticSeverity.Warning, DiagnosticSeverity.Warning, true, 1));
+                            }
+                        }
 
                         if (aumlMetadataContainer.RootEntityType == EntityType.ResourceDictionary)
                         {
