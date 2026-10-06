@@ -111,5 +111,5 @@ public class DataGridColumnChooser : Control
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
-        TemplatedParent == null ? new GroupAutomationPeer(this) : null;
+        new GroupAutomationPeer(this);
 }

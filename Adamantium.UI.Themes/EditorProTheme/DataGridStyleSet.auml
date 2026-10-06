@@ -584,7 +584,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
-                            <TextBox Grid.Column="0" x:Name="PART_Text" MinWidth="140"/>
+                            <TextBox Grid.Column="0"
+                                     x:Name="PART_Text"
+                                     MinWidth="140"
+                                     AutomationProperties.Name="{Localize DataGridStrings.SearchText}"/>
                             <!-- Where the search stands - see the Fluent set. -->
                             <Grid Grid.Column="1" VerticalAlignment="Center" Margin="8 0">
                                 <TextBlock x:Name="SearchingLabel" Visibility="Collapsed"

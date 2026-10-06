@@ -9,6 +9,7 @@
     <Phrase Key="PreviousMatch" Text="Предыдущее совпадение"/>
     <Phrase Key="NextMatch" Text="Следующее совпадение"/>
     <Phrase Key="Find" Text="Найти"/>
+    <Phrase Key="SearchText" Text="Что найти"/>
     <Phrase Key="CloseSearch" Text="Закрыть поиск"/>
     <Phrase Key="GroupByHint" Text="Перетащите сюда заголовок столбца, чтобы сгруппировать по нему"/>
     <Phrase Key="ExpandAll" Text="Развернуть все"/>

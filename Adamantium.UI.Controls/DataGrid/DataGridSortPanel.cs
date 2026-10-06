@@ -141,6 +141,9 @@ public class DataGridSortPanel : Control
     }
 
     /// <summary>Picks a chip up: marks it, and puts the drop mark where it would land.</summary>
+    /// <summary>The chips in the strip, in the order of the keys.</summary>
+    internal IReadOnlyList<DataGridSortChip> Chips => _live;
+
     internal void BeginCarry(int chip, double x)
     {
         _dragging = chip;
@@ -250,5 +253,5 @@ public class DataGridSortPanel : Control
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
-        TemplatedParent == null ? new ToolBarAutomationPeer(this) : null;
+        new ToolBarAutomationPeer(this);
 }

@@ -9,6 +9,7 @@
     <Phrase Key="PreviousMatch" Text="Previous match"/>
     <Phrase Key="NextMatch" Text="Next match"/>
     <Phrase Key="Find" Text="Find"/>
+    <Phrase Key="SearchText" Text="Text to find"/>
     <Phrase Key="CloseSearch" Text="Close the search"/>
     <Phrase Key="GroupByHint" Text="Drag a column header here to group by it"/>
     <Phrase Key="ExpandAll" Text="Expand all"/>

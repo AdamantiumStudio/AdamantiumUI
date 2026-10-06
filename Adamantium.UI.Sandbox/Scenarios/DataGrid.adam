@@ -30,3 +30,21 @@ select id=Table/type=Tab/name=Note
 expect id=Table/type=Tab/name=Note selected=True
 collapse id=Table/name=P-00001/type=Button
 absent id=Table/type=Tab
+# The strips above the table. The search box finds a row and its × puts the strip away; a header sorts, its key's
+# chip turns the key around, and the chip's × takes it out.
+toggle "id=DataGridView/name=Search panel"
+set id=PART_SearchPanel/id=PART_Text P-00042
+invoke id=PART_SearchPanel/id=PART_Find
+expect id=MatchesLabel name="1 of 1"
+set id=PART_SearchPanel/id=PART_Text ""
+invoke id=PART_SearchPanel/id=PART_Close
+expect "id=DataGridView/name=Search panel" toggle=Off
+toggle "id=DataGridView/name=Sorting panel"
+invoke id=PART_SortPanel/id=PART_Clear
+invoke id=Table/type=HeaderItem,name=Code
+expect id=PART_SortPanel/name=Code toggle=Off
+toggle id=PART_SortPanel/name=Code
+expect id=PART_SortPanel/name=Code toggle=On
+invoke id=PART_SortPanel/name=Code/type=Button
+absent id=PART_SortPanel/type=DataItem
+toggle "id=DataGridView/name=Sorting panel"

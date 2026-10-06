@@ -147,6 +147,9 @@ public class DataGridGroupPanel : Control
     }
 
     /// <summary>Picks a chip up: marks it, and puts the drop mark where it would land.</summary>
+    /// <summary>The chips in the strip, outermost grouping first.</summary>
+    internal IReadOnlyList<DataGridGroupChip> Chips => _live;
+
     internal void BeginCarry(int chip, double x)
     {
         _dragging = chip;
@@ -258,5 +261,5 @@ public class DataGridGroupPanel : Control
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
-        TemplatedParent == null ? new ToolBarAutomationPeer(this) : null;
+        new ToolBarAutomationPeer(this);
 }

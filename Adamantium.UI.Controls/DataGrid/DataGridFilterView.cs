@@ -221,5 +221,5 @@ public class DataGridFilterView : Control
     private void OnClear(object sender, RoutedEventArgs e) => Clear();
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
-        TemplatedParent == null ? new GroupAutomationPeer(this) : null;
+        new GroupAutomationPeer(this);
 }

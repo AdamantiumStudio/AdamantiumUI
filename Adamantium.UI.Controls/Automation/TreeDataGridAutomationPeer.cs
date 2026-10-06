@@ -58,7 +58,37 @@ public class TreeDataGridAutomationPeer : ItemsControlAutomationPeer, IGridProvi
 
     protected override AutomationControlType ItemControlType => AutomationControlType.DataItem;
 
-    protected override IReadOnlyList<AutomationPeer> ChildrenCore() => [.. GetColumnHeaders(), .. base.ChildrenCore()];
+    /// <summary>The strips above the table - search, grouping, sorting - and the button that chooses its columns, then the
+    /// column headers and the rows, then the row for a new record and the totals under the table.</summary>
+    protected override IReadOnlyList<AutomationPeer> ChildrenCore()
+    {
+        var children = new List<AutomationPeer>();
+        AddParts(children, "PART_SearchPanel", "PART_GroupPanel", "PART_SortPanel", "PART_ChooserButton");
+        children.AddRange(GetColumnHeaders());
+        children.AddRange(base.ChildrenCore());
+        AddParts(children, "PART_NewRow", "PART_Footer");
+        return children;
+    }
+
+    private void AddParts(List<AutomationPeer> into, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (_grid.GetTemplateChild(name) is not UIComponent { Visibility: Visibility.Visible } part)
+            {
+                continue;
+            }
+
+            if (part.GetAutomationPeer() is { } peer)
+            {
+                into.Add(peer);
+            }
+            else
+            {
+                Collect(part, into);
+            }
+        }
+    }
 
     protected override ItemAutomationPeer CreateItemPeer(object item) =>
         item is TreeRow row ? new TreeDataGridRowStandInAutomationPeer(this, _grid, row) : base.CreateItemPeer(item);

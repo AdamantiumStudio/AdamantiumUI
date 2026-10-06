@@ -103,6 +103,12 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         _segState[index] = (_atlas, _fontRenderer);
     }
 
+    protected override void OnSegmentInserted(int index)
+    {
+        while (_segState.Count < index) _segState.Add(default);
+        _segState.Insert(index, index > 0 ? _segState[index - 1] : default);
+    }
+
     protected override void BindSegment(int index)
     {
         var s = _segState[index];

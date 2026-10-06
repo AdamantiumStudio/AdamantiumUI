@@ -18,6 +18,8 @@ internal sealed class SimulatedPointer : INativeMouse, IDisposable
 
     public PixelPoint Position { get; set; }
 
+    public IWindow Window { get; set; }
+
     /// <summary>Stands in for the system pointer until disposed.</summary>
     public static SimulatedPointer Install()
     {

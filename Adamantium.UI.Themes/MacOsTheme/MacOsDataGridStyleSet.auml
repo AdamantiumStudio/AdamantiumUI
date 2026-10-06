@@ -618,7 +618,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
-                            <TextBox Grid.Column="0" x:Name="PART_Text" MinWidth="140"/>
+                            <TextBox Grid.Column="0"
+                                     x:Name="PART_Text"
+                                     MinWidth="140"
+                                     AutomationProperties.Name="{Localize DataGridStrings.SearchText}"/>
                             <!-- Where the search stands: one line per state, shown by the triggers below. -->
                             <Grid Grid.Column="1" VerticalAlignment="Center" Margin="8 0">
                                 <TextBlock x:Name="SearchingLabel" Visibility="Collapsed"

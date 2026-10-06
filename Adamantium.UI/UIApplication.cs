@@ -78,6 +78,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private const int MaxFramesInFlight = 2;
 
     private long _publishedFrame;
+    private bool _drawFailing;
     private long _presentedFrame;
     private long _requestsAtRecord;
     private long _loadsAtRecord;
@@ -914,7 +915,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 _idleFrame = Volatile.Read(ref _publishedFrame);
             }
 
-            IdleBlocker = "the frame on its way to the screen";
+            IdleBlocker = _drawFailing
+                ? "frames that fail to draw - see the error journal"
+                : "the frame on its way to the screen";
         }
 
         ReleaseIdleWaiters();
@@ -1122,11 +1125,21 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 {
                     ExecuteDrawSequence(_renderAppTime);
                     Volatile.Write(ref _presentedFrame, drawing);
+                    _drawFailing = false;
                     ReleaseIdleWaiters();
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex);
+
+                    // Logged as an error once per run of failed frames: a frame that throws throws again on the next,
+                    // and nothing reaches the screen meanwhile - which nobody can tell from the window.
+                    if (!_drawFailing)
+                    {
+                        _drawFailing = true;
+                        Serilog.Log.Logger.Error(ex, "A frame failed to draw; frames are not reaching the screen");
+                    }
+
                     UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex));
                 }
             }

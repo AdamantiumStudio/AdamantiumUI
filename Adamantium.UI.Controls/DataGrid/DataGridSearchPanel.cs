@@ -155,5 +155,5 @@ public class DataGridSearchPanel : Control
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
-        TemplatedParent == null ? new GroupAutomationPeer(this) : null;
+        new GroupAutomationPeer(this);
 }

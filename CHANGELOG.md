@@ -354,6 +354,10 @@ All packages share one version.
   canvas; a container of one selection refuses a second. The Windows bridge passes both on. `adam-auto select
   <selector> --add`, `unselect <selector>`; `AutomationElement.AddToSelectionAsync`, `RemoveFromSelectionAsync`.
   `TreeDataGrid.DeselectRow` and `DeselectCell`, `DataGridSelection.Remove`.
+- A data grid's strips are in its automation tree - the search box, the grouping and sorting strips, the button that
+  chooses columns, the row for a new record and the totals - where their contents could not be reached before. A key's
+  chip turns its sort around (Toggle), moves along its strip (Transform) and is taken out by its ×, a button of its
+  own. The search box is named in the themes.
 - Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
   search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
   text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
@@ -445,6 +449,11 @@ All packages share one version.
 ### Fixed
 
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
+- After a control started drawing text where it had drawn none - a data grid's search showing "1 of 1" - every frame
+  threw and nothing more reached the screen until something forced a full redraw: the segment made for it carried no
+  font sheet. A frame that fails to draw is now also logged as an error, and waiting for idle says so.
+- A drag made inside the application - by automation - could be dropped on another application's window that lay over
+  the target; it now looks only among the application's own windows.
 - Selecting an item of a list or a tree that selects many, through automation, toggled it as a click does - selecting
   the selected one again took it out. It now makes it the one selected item.
 - A floating docking window whose last pane was moved out by code - a `Zone` written, `DockBeside` - stayed open and

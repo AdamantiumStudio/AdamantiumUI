@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
@@ -62,6 +64,11 @@ public class DataGridSortChip : ContentControl
         IsDescending = key?.Descending ?? false;
         Content = Column?.Header;
     }
+
+    /// <summary>The ×, for automation to press.</summary>
+    internal IUIComponent RemovePart => _remove;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DataGridChipAutomationPeer(this);
 
     // Whether a press landed on the ×. The strip asks before it arms a carry or turns the key around: the × is drawn
     // as the way out of the sort, so it has to be the only thing that takes a column out.

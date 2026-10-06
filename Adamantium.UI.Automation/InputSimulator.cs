@@ -158,6 +158,7 @@ internal static class InputSimulator
         if (Mouse.Platform is SimulatedPointer pointer)
         {
             pointer.Position = window.PointToScreen(point);
+            pointer.Window = window;
         }
 
         device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
