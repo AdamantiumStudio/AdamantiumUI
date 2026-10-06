@@ -482,6 +482,10 @@ All packages share one version.
 
 ### Fixed
 
+- A property set in markup on an element of the project's own, declared through a `clr-namespace` without an
+  assembly - a part of a control template, say - failed to build with "Type ... could not be found in any linked
+  assembly": the property's type was looked up by the element's short name only, which never reaches the project's
+  own types. It is now looked up by its namespace, as the element is.
 - A drag made inside the application dropped into the window it began in even where another of the application's
   windows lay over that spot; it now drops into the one on top.
 - A `TreeView` whose item container style binds `IsExpanded` reported a broken binding for every node without that
