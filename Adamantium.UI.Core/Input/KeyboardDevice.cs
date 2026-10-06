@@ -202,6 +202,18 @@ public class KeyboardDevice
             textArgs.RoutedEvent = Keyboard.TextInputEvent;
             target.RaiseEvent(textArgs);
          }
+         else if (eventArgs is RawTextCompositionEventArgs composition)
+         {
+            target.RaiseEvent(new TextCompositionEventArgs(composition.Text ?? string.Empty, composition.CursorPosition)
+            {
+               RoutedEvent = composition.EventType switch
+               {
+                  RawTextCompositionEventType.Started => Keyboard.TextCompositionStartedEvent,
+                  RawTextCompositionEventType.Changed => Keyboard.TextCompositionChangedEvent,
+                  _ => Keyboard.TextCompositionEndedEvent
+               }
+            });
+         }
       }
    }
 

@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- Input method editors on Windows (IMM32): the IME's composition and candidate windows open at the caret of a
+  `TextBox`, and the text it commits arrives as one `TextInput`. `InputMethod.SetCaretBounds` tells the IME where the
+  caret of any text control is; `Keyboard.TextCompositionStarted`, `TextCompositionChanged` and `TextCompositionEnded`
+  carry the text being composed, for a control that shows it in place.
+- A character outside the Basic Multilingual Plane - an emoji - typed on Windows arrives as one `TextInput`, not as
+  two halves.
 - `RibbonRadioButton`: a ribbon command that is one of a set - a tool among tools. Drawn as a `RibbonToggleButton`; a
   press only checks it and clears the others of its `GroupName`, which does not reach past its `RibbonGroup`. Each one's
   `IsChecked` binds to the view-model, as radio buttons do.

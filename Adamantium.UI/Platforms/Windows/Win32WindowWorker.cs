@@ -28,6 +28,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     // RenderTargetPanel owns the saved cursor position.
     private bool _relativeActive;
     private NativePoint _recenterScreen;
+    private char _highSurrogate;
 
     // PLAIN-FIELD snapshots of the window state the WndProc handlers need. The WndProc runs on the OS message (pump)
     // thread; reading an AdamantiumProperty there calls GetValue -> Monitor.Enter, which DEADLOCKS against the loop
@@ -75,6 +76,10 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[(uint)WindowMessages.Keyup] = HandleKeyUp;
         messageTable[(uint)WindowMessages.Syskeyup] = HandleKeyUp;
         messageTable[(uint)WindowMessages.Char] = HandleChar;
+        messageTable[(uint)WindowMessages.ImeStartcomposition] = HandleImeStartComposition;
+        messageTable[(uint)WindowMessages.ImeComposition] = HandleImeComposition;
+        messageTable[(uint)WindowMessages.ImeEndcomposition] = HandleImeEndComposition;
+        messageTable[(uint)WindowMessages.ImeChar] = HandleImeChar;
         messageTable[(uint)WindowMessages.Mousemove] = HandleMouseMove;
         messageTable[(uint)WindowMessages.Mouseleave] = HandleMouseLeave;
         messageTable[(uint)WindowMessages.Capturechanged] = HandleCaptureChanged;
@@ -1043,16 +1048,125 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private IntPtr HandleChar(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
-        var text = Messages.GetChar(wParam);
-        //Ignoring system keys
-        if (text >= 32)
+        var character = Messages.GetChar(wParam);
+        handled = true;
+        if (char.IsHighSurrogate(character))
         {
-            DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(new RawTextInputEventArgs(text.ToString(),
-                KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp())));
+            _highSurrogate = character;
+            return IntPtr.Zero;
         }
+
+        var text = char.IsLowSurrogate(character) && _highSurrogate != '\0'
+            ? string.Concat(_highSurrogate, character)
+            : character.ToString();
+        _highSurrogate = '\0';
+        //Ignoring system keys
+        if (character >= 32)
+        {
+            DispatchText(text);
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private IntPtr HandleImeStartComposition(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        PlaceInputMethodWindows();
+        DispatchComposition(RawTextCompositionEventType.Started, string.Empty, 0);
+        handled = false;
+        return IntPtr.Zero;
+    }
+
+    private IntPtr HandleImeComposition(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        var flags = (int)lParam;
+        var context = ImmInterop.ImmGetContext(window.Handle);
+        if (context != IntPtr.Zero)
+        {
+            PlaceInputMethodWindows(context);
+            if ((flags & ImmInterop.ResultString) != 0)
+            {
+                var result = ImmInterop.GetString(context, ImmInterop.ResultString);
+                if (result.Length > 0)
+                {
+                    DispatchText(result);
+                }
+            }
+
+            if ((flags & ImmInterop.CompositionString) != 0)
+            {
+                var composition = ImmInterop.GetString(context, ImmInterop.CompositionString);
+                var cursor = (flags & ImmInterop.CursorPosition) != 0
+                    ? ImmInterop.GetCursorPosition(context)
+                    : composition.Length;
+                DispatchComposition(RawTextCompositionEventType.Changed, composition, Math.Clamp(cursor, 0, composition.Length));
+            }
+
+            ImmInterop.ImmReleaseContext(window.Handle, context);
+        }
+
+        handled = false;
+        return IntPtr.Zero;
+    }
+
+    private IntPtr HandleImeEndComposition(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        DispatchComposition(RawTextCompositionEventType.Ended, string.Empty, 0);
+        handled = false;
+        return IntPtr.Zero;
+    }
+
+    private IntPtr HandleImeChar(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
         handled = true;
         return IntPtr.Zero;
     }
+
+    private void PlaceInputMethodWindows()
+    {
+        var context = ImmInterop.ImmGetContext(window.Handle);
+        if (context == IntPtr.Zero)
+        {
+            return;
+        }
+
+        PlaceInputMethodWindows(context);
+        ImmInterop.ImmReleaseContext(window.Handle, context);
+    }
+
+    private void PlaceInputMethodWindows(nint context)
+    {
+        var caret = window.InputMethodCaret;
+        if (caret.Width <= 0 && caret.Height <= 0)
+        {
+            return;
+        }
+
+        var scale = window.DpiScale;
+        var left = (int)Math.Round(caret.X * scale.X);
+        var top = (int)Math.Round(caret.Y * scale.Y);
+        var right = (int)Math.Round(caret.Right * scale.X);
+        var bottom = (int)Math.Round(caret.Bottom * scale.Y);
+        ImmInterop.ImmSetCompositionWindow(context, new ImmCompositionForm { Style = ImmInterop.PointStyle, X = left, Y = top });
+        ImmInterop.ImmSetCandidateWindow(context, new ImmCandidateForm
+        {
+            Style = ImmInterop.ExcludeStyle,
+            X = left,
+            Y = bottom,
+            Left = left,
+            Top = top,
+            Right = right,
+            Bottom = bottom
+        });
+    }
+
+    private void DispatchText(string text) =>
+        DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(new RawTextInputEventArgs(text,
+            KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp())));
+
+    private void DispatchComposition(RawTextCompositionEventType type, string text, int cursor) =>
+        DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(new RawTextCompositionEventArgs(type, text, cursor,
+            KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp())));
 
     private IntPtr HandleMouseMove(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {

@@ -920,7 +920,22 @@ public abstract class TextBoxBase : Control
     // Scroll the enclosing ScrollViewer the minimum needed to keep the caret visible (WPF caret-follow). The caret rect is
     // in text-layout coords; content coords add the vertical text offset (float strip + single-line centering). Horizontal
     // is 1:1 (ox = 0). No-op until the template's ScrollViewer exists / when the caret already fits.
-    private void ScrollCaretIntoView() => ScrollIndexIntoView(CaretIndex);
+    private void ScrollCaretIntoView()
+    {
+        ScrollIndexIntoView(CaretIndex);
+        ShowInputMethodAtCaret();
+    }
+
+    private void ShowInputMethodAtCaret()
+    {
+        if (!IsFocused || _presenter == null)
+        {
+            return;
+        }
+
+        var caret = CaretRect(CaretIndex);
+        InputMethod.SetCaretBounds(_presenter, new Rect(caret.X, caret.Y + _textOy, CaretWidth, caret.Height));
+    }
 
     internal void ScrollIndexIntoView(int index)
     {
@@ -1037,6 +1052,7 @@ public abstract class TextBoxBase : Control
         StartBlink();
         UpdateFloatState();
         InvalidateSurface();
+        ShowInputMethodAtCaret();
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)
