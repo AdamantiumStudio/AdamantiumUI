@@ -21,6 +21,8 @@ public sealed class LaunchOptions
     /// <summary>How long it may take to show its first window; a minute by default.</summary>
     public TimeSpan? StartTimeout { get; set; }
 
-    /// <summary>Whether disposing the session closes the application; true by default.</summary>
+    /// <summary>Whether disposing the session closes the application; true by default. An application left running is
+    /// started apart from this process, holding none of its handles, so a script that reads this process's output does
+    /// not wait for the application to exit.</summary>
     public bool CloseOnDispose { get; set; } = true;
 }

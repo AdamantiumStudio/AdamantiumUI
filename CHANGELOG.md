@@ -299,6 +299,10 @@ All packages share one version.
   headless and launched, in code and from a scenario file.
 - `UIAppContext.Replace`: the current application and platform in place of those before, for a process that runs
   one after another.
+- Selector paths go further than "somewhere below": `>` looks among the children only, `[n]` keeps the n-th match
+  (from 0, `[-1]` the last), and `parent`, `next` and `previous` step from the element before -
+  `id=Orders>type=DataItem[2]/name=Delete`, `id=Cut/next`. In code: `By.At`, `By.Parent` / `Next` / `Previous`,
+  `AutomationElement.Child`, `At`, `Parent()`, `Next()`, `Previous()`.
 - `adam-auto` is a package of its own, `Adamantium.UI.Automation.Cli`, installed as a .NET tool
   (`dotnet tool install -g Adamantium.UI.Automation.Cli`); `adam-auto start --exe <path>` starts an application of yours.
 - `<AdamantiumRequireAutomationId>true</AdamantiumRequireAutomationId>` in a project makes a build warning (AUI011) of

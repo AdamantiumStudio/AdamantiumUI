@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
 
@@ -28,6 +29,21 @@ public sealed class AutomationElement
 
     /// <summary>The element <paramref name="by"/> finds somewhere below this one.</summary>
     public AutomationElement Find(By by) => new(_session, [.. _path, by]);
+
+    /// <summary>The element <paramref name="by"/> finds among this one's children only.</summary>
+    public AutomationElement Child(By by) => new(_session, [.. _path, by.AsChild()]);
+
+    /// <summary>The <paramref name="index"/>-th of the elements this path finds, from 0; -1 for the last.</summary>
+    public AutomationElement At(int index) => new(_session, [.. _path.Take(_path.Count - 1), _path[^1].At(index)]);
+
+    /// <summary>The element that holds this one.</summary>
+    public AutomationElement Parent() => new(_session, [.. _path, By.Parent]);
+
+    /// <summary>The sibling after this one: the next item of a list, the next button of a row.</summary>
+    public AutomationElement Next() => new(_session, [.. _path, By.Next]);
+
+    /// <summary>The sibling before this one.</summary>
+    public AutomationElement Previous() => new(_session, [.. _path, By.Previous]);
 
     public async Task<ElementInfo> GetAsync() => (await RunAsync(AutomationCommand.Get)).Elements[0];
 

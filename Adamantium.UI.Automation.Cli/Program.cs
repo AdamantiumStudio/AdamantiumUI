@@ -60,7 +60,9 @@ public static class Program
           --pipe <name>     the agent's pipe (default adam-auto)
           --allow-errors    an action may leave errors in the journal; by default that fails it
 
-        A selector: id=Cut   name="Cut out"   type=Button,name=OK   a path: id=Shell/id=Cut
+        A selector: id=Cut   name="Cut out"   type=Button,name=OK   class=RibbonButton
+        A path: id=Shell/id=Cut (anywhere below)   id=List>type=ListItem (children only)
+                type=ListItem[2] (the third match; [-1] the last)   id=Cut/next   id=Cut/previous   id=Cut/parent
         """;
 
     public static async Task<int> Main(string[] args)

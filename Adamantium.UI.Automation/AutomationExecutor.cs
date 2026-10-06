@@ -400,13 +400,63 @@ public sealed class AutomationExecutor
         }
 
         var path = By.ParsePath(target);
-        var matches = Roots().SelectMany(SelfAndDescendants).Where(path[0].Matches).ToList();
+        var matches = Pick(Roots().SelectMany(SelfAndDescendants).Where(path[0].Matches).ToList(), path[0].Index);
+        Dictionary<AutomationPeer, AutomationPeer> parents = null;
         foreach (var step in path.Skip(1))
         {
-            matches = matches.SelectMany(peer => SelfAndDescendants(peer).Skip(1)).Where(step.Matches).Distinct().ToList();
+            IEnumerable<AutomationPeer> found;
+            if (step.Relation != null)
+            {
+                parents ??= Parents();
+                found = matches.Select(peer => Related(peer, step.Relation, parents)).Where(peer => peer != null);
+            }
+            else
+            {
+                found = matches.SelectMany(peer => step.IsChild ? peer.GetChildren() : SelfAndDescendants(peer).Skip(1)).Where(step.Matches);
+            }
+
+            matches = Pick(found.Distinct().ToList(), step.Index);
         }
 
         return matches;
+    }
+
+    private Dictionary<AutomationPeer, AutomationPeer> Parents()
+    {
+        var parents = new Dictionary<AutomationPeer, AutomationPeer>();
+        foreach (var peer in Roots().SelectMany(SelfAndDescendants))
+        {
+            foreach (var child in peer.GetChildren())
+            {
+                parents.TryAdd(child, peer);
+            }
+        }
+
+        return parents;
+    }
+
+    private static List<AutomationPeer> Pick(List<AutomationPeer> matches, int? index)
+    {
+        if (index is not { } at)
+        {
+            return matches;
+        }
+
+        var position = at < 0 ? matches.Count + at : at;
+        return position >= 0 && position < matches.Count ? [matches[position]] : [];
+    }
+
+    private AutomationPeer Related(AutomationPeer peer, string relation, Dictionary<AutomationPeer, AutomationPeer> parents)
+    {
+        var parent = parents.GetValueOrDefault(peer);
+        if (relation == "parent")
+        {
+            return parent;
+        }
+
+        var siblings = parent?.GetChildren() ?? [.. Roots()];
+        var position = siblings.ToList().IndexOf(peer) + (relation == "next" ? 1 : -1);
+        return position >= 0 && position < siblings.Count ? siblings[position] : null;
     }
 
     private AutomationPeer Resolve(string target) =>

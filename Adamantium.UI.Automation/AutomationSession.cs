@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -16,6 +17,7 @@ public sealed class AutomationSession : IAsyncDisposable
     private static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan DefaultLaunchTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(10);
+    private static readonly object EnvironmentLock = new();
 
     private readonly IAutomationChannel _channel;
     private Process _process;
@@ -57,19 +59,7 @@ public sealed class AutomationSession : IAsyncDisposable
         }
 
         var pipe = options.PipeName ?? $"adam-auto-{Guid.NewGuid():N}";
-        var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path)
-        };
-        start.Environment[AutomationProtocol.PipeVariable] = pipe;
-        foreach (var variable in options.Environment)
-        {
-            start.Environment[variable.Key] = variable.Value;
-        }
-
-        var process = Process.Start(start) ?? throw new AutomationException($"{path} did not start.");
+        var process = Start(path, options, pipe) ?? throw new AutomationException($"{path} did not start.");
 
         var timeout = options.StartTimeout ?? DefaultLaunchTimeout;
         try
@@ -177,6 +167,61 @@ public sealed class AutomationSession : IAsyncDisposable
 
         await _channel.DisposeAsync();
         _process?.Dispose();
+    }
+
+    private static Process Start(string path, LaunchOptions options, string pipe)
+    {
+        var variables = new Dictionary<string, string>(options.Environment) { [AutomationProtocol.PipeVariable] = pipe };
+        var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
+        {
+            WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path)
+        };
+
+        if (options.CloseOnDispose)
+        {
+            start.UseShellExecute = false;
+            start.CreateNoWindow = true;
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
+            foreach (var variable in variables)
+            {
+                start.Environment[variable.Key] = variable.Value;
+            }
+
+            var process = Process.Start(start);
+            if (process != null)
+            {
+                process.OutputDataReceived += (_, _) => { };
+                process.ErrorDataReceived += (_, _) => { };
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
+
+            return process;
+        }
+
+        start.UseShellExecute = true;
+        start.WindowStyle = ProcessWindowStyle.Hidden;
+        lock (EnvironmentLock)
+        {
+            var before = variables.Keys.ToDictionary(name => name, Environment.GetEnvironmentVariable);
+            try
+            {
+                foreach (var variable in variables)
+                {
+                    Environment.SetEnvironmentVariable(variable.Key, variable.Value);
+                }
+
+                return Process.Start(start);
+            }
+            finally
+            {
+                foreach (var variable in before)
+                {
+                    Environment.SetEnvironmentVariable(variable.Key, variable.Value);
+                }
+            }
+        }
     }
 
     internal async Task<AutomationReply> RunAsync(AutomationRequest request)
