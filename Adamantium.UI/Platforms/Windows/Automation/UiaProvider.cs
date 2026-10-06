@@ -10,10 +10,12 @@ namespace Adamantium.UI.Platforms.Windows.Automation;
 internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProviderFragment, IUiaInvokeProvider,
     IUiaToggleProvider, IUiaValueProvider, IUiaRangeValueProvider, IUiaSelectionProvider, IUiaSelectionItemProvider,
     IUiaExpandCollapseProvider, IUiaScrollProvider, IUiaScrollItemProvider, IUiaGridProvider, IUiaGridItemProvider,
-    IUiaTableProvider, IUiaTableItemProvider, IUiaWindowProvider, IUiaTextProvider
+    IUiaTableProvider, IUiaTableItemProvider, IUiaWindowProvider, IUiaTextProvider, IUiaTransform2Provider
 {
     private const string FrameworkId = "Adamantium";
     private const double ScrollStep = 10;
+    private const double ZoomStep = 10;
+    private const double LargeZoomStep = 100;
 
     protected UiaProvider(UiaBridge bridge)
     {
@@ -216,6 +218,43 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
 
     public UiaSupportedTextSelection GetSupportedTextSelection() => UiaSupportedTextSelection.Single;
 
+    public void Move(double x, double y) => Bridge.Run(() => Transform().Move(x, y));
+
+    public void Resize(double width, double height) => Bridge.Run(() => Transform().Resize(width, height));
+
+    public void Rotate(double degrees) =>
+        throw new COMException("Nothing here is rotated.", unchecked((int)0x80131509));
+
+    public bool GetCanMove() => Bridge.Run(() => Transform().CanMove);
+
+    public bool GetCanResize() => Bridge.Run(() => Transform().CanResize);
+
+    public bool GetCanRotate() => false;
+
+    public void Zoom(double zoom) => Bridge.Run(() => Transform().Zoom(zoom));
+
+    public bool GetCanZoom() => Bridge.Run(() => Transform().CanZoom);
+
+    public double GetZoomLevel() => Bridge.Run(() => Transform().ZoomLevel);
+
+    public double GetZoomMinimum() => Bridge.Run(() => Transform().ZoomMinimum);
+
+    public double GetZoomMaximum() => Bridge.Run(() => Transform().ZoomMaximum);
+
+    public void ZoomByUnit(UiaZoomUnit zoomUnit) => Bridge.Run(() =>
+    {
+        var transform = Transform();
+        var step = zoomUnit switch
+        {
+            UiaZoomUnit.LargeIncrement => LargeZoomStep,
+            UiaZoomUnit.LargeDecrement => -LargeZoomStep,
+            UiaZoomUnit.SmallIncrement => ZoomStep,
+            UiaZoomUnit.SmallDecrement => -ZoomStep,
+            _ => 0
+        };
+        transform.Zoom(Math.Clamp(transform.ZoomLevel + step, transform.ZoomMinimum, transform.ZoomMaximum));
+    });
+
     public static UiaVariant Property(AutomationPeer peer, int propertyId) => propertyId switch
     {
         UiaIds.ControlTypeProperty => UiaVariant.From(ControlTypeOf(peer.ControlType)),
@@ -309,6 +348,8 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
 
     private IRangeValueProvider Range() => Pattern<IRangeValueProvider>(PatternId.RangeValue);
 
+    private ITransformProvider Transform() => Pattern<ITransformProvider>(PatternId.Transform);
+
     private IRawElementProviderFragment Sibling(AutomationPeer peer, int step)
     {
         if (ReferenceEquals(this, Bridge.Root))
@@ -346,6 +387,7 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
         UiaIds.WindowPattern => PatternId.Window,
         UiaIds.TextPattern => PatternId.Text,
         UiaIds.TableItemPattern => PatternId.TableItem,
+        UiaIds.TransformPattern or UiaIds.Transform2Pattern => PatternId.Transform,
         _ => null
     };
 

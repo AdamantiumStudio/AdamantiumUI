@@ -1,6 +1,8 @@
 ﻿using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -173,6 +175,9 @@ public class Thumb : Control
 
       return finalSize;
    }
+
+   protected override AutomationPeer OnCreateAutomationPeer() =>
+      TemplatedParent == null ? new ThumbAutomationPeer(this) : null;
 
    // protected override void OnRender(DrawingContext context)
    // {

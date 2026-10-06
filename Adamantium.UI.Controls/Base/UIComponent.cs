@@ -1083,14 +1083,15 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     /// <summary>This element's description for automation, made on first request. Null for an element automation looks
-    /// through, such as a panel or a border - unless it was given a name or a label, which makes it a group of what it
-    /// holds.</summary>
+    /// through, such as a panel or a border - unless it was given an automation id, a name or a label, which makes it a
+    /// group of what it holds.</summary>
     public AutomationPeer GetAutomationPeer()
     {
         if (!_automationPeerMade)
         {
             _automationPeer = OnCreateAutomationPeer() ??
-                              (AutomationProperties.GetName(this) != null || AutomationProperties.GetLabeledBy(this) != null
+                              (!string.IsNullOrEmpty(AutomationProperties.GetAutomationId(this)) ||
+                               AutomationProperties.GetName(this) != null || AutomationProperties.GetLabeledBy(this) != null
                                   ? new Automation.GroupAutomationPeer(this)
                                   : null);
             _automationPeerMade = true;

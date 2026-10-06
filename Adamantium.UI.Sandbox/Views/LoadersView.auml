@@ -34,8 +34,14 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator IsActive="{Binding IsActive}" Height="56" Width="56"/>
-                <TextBlock Text="{Localize LoadersStrings.Ring}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=RingLabel}"
+                               Height="56"
+                               Width="56"/>
+                <TextBlock x:Name="RingLabel"
+                           Text="{Localize LoadersStrings.Ring}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.RingHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -43,8 +49,14 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Dots" IsActive="{Binding IsActive}" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Localize LoadersStrings.Dots}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Dots"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=DotsLabel}"
+                               HorizontalAlignment="Center"/>
+                <TextBlock x:Name="DotsLabel"
+                           Text="{Localize LoadersStrings.Dots}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.DotsHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -52,8 +64,15 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Ripple" IsActive="{Binding IsActive}" Height="56" Width="56"/>
-                <TextBlock Text="{Localize LoadersStrings.Ripple}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Ripple"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=RippleLabel}"
+                               Height="56"
+                               Width="56"/>
+                <TextBlock x:Name="RippleLabel"
+                           Text="{Localize LoadersStrings.Ripple}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.RippleHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -61,8 +80,14 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Bar" IsActive="{Binding IsActive}" VerticalAlignment="Center"/>
-                <TextBlock Text="{Localize LoadersStrings.Bar}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Bar"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=BarLabel}"
+                               VerticalAlignment="Center"/>
+                <TextBlock x:Name="BarLabel"
+                           Text="{Localize LoadersStrings.Bar}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.BarHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -70,8 +95,15 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Arc" IsActive="{Binding IsActive}" Height="56" Width="56"/>
-                <TextBlock Text="{Localize LoadersStrings.Arc}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Arc"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=ArcLabel}"
+                               Height="56"
+                               Width="56"/>
+                <TextBlock x:Name="ArcLabel"
+                           Text="{Localize LoadersStrings.Arc}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.ArcHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -79,8 +111,15 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Ants" IsActive="{Binding IsActive}" Height="56" Width="56"/>
-                <TextBlock Text="{Localize LoadersStrings.Ants}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Ants"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=AntsLabel}"
+                               Height="56"
+                               Width="56"/>
+                <TextBlock x:Name="AntsLabel"
+                           Text="{Localize LoadersStrings.Ants}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.AntsHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -88,8 +127,15 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Heartbeat" IsActive="{Binding IsActive}" Height="56" Width="56"/>
-                <TextBlock Text="{Localize LoadersStrings.Heartbeat}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Heartbeat"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=HeartbeatLabel}"
+                               Height="56"
+                               Width="56"/>
+                <TextBlock x:Name="HeartbeatLabel"
+                           Text="{Localize LoadersStrings.Heartbeat}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.HeartbeatHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -97,8 +143,14 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Equalizer" IsActive="{Binding IsActive}" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Localize LoadersStrings.Equalizer}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Equalizer"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=EqualizerLabel}"
+                               HorizontalAlignment="Center"/>
+                <TextBlock x:Name="EqualizerLabel"
+                           Text="{Localize LoadersStrings.Equalizer}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.EqualizerHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -106,8 +158,14 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Flip" IsActive="{Binding IsActive}" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Localize LoadersStrings.Flip}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Flip"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=FlipLabel}"
+                               HorizontalAlignment="Center"/>
+                <TextBlock x:Name="FlipLabel"
+                           Text="{Localize LoadersStrings.Flip}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.FlipHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 
@@ -115,8 +173,13 @@
                 <StackPanel.LayoutTransform>
                     <Transform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
                 </StackPanel.LayoutTransform>
-                <BusyIndicator Classes="Shimmer" IsActive="{Binding IsActive}"/>
-                <TextBlock Text="{Localize LoadersStrings.Shimmer}" HorizontalTextAlignment="Center" Margin="0,12,0,0"/>
+                <BusyIndicator Classes="Shimmer"
+                               IsActive="{Binding IsActive}"
+                               AutomationProperties.LabeledBy="{Binding ElementName=ShimmerLabel}"/>
+                <TextBlock x:Name="ShimmerLabel"
+                           Text="{Localize LoadersStrings.Shimmer}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"/>
                 <TextBlock Text="{Localize LoadersStrings.ShimmerHint}" HorizontalTextAlignment="Center" Opacity="0.6" FontSize="12"/>
             </StackPanel>
 

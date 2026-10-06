@@ -111,6 +111,36 @@ public class AutomationGridTests
     }
 
     [Test]
+    public async Task AGroup_IsARowCalledByItsCaption_ThatOpensAndCloses()
+    {
+        var (grid, parts) = Table(6);
+        foreach (var part in parts)
+        {
+            part.Size %= 2;
+        }
+
+        grid.GroupBy(grid.Columns[1]);
+        await using var session = await Driving(grid);
+        var group = session.Find(By.Id("Parts")).Find(By.Type(AutomationControlType.DataItem)).At(0);
+
+        var shown = await group.GetAsync();
+        var rowsClosed = grid.Items.Count;
+        await group.ExpandAsync();
+        var opened = (await group.GetAsync()).ExpandCollapseState;
+        var rowsOpen = grid.Items.Count;
+        await group.CollapseAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Name, Does.Contain("0"), "called by the value its rows share");
+            Assert.That(shown.ExpandCollapseState, Is.EqualTo("Collapsed"), "a group opens closed");
+            Assert.That(opened, Is.EqualTo("Expanded"));
+            Assert.That(rowsOpen, Is.EqualTo(rowsClosed + 3), "opening the group showed its three rows");
+            Assert.That(grid.Items.Count, Is.EqualTo(rowsClosed), "closing it hid them again");
+        });
+    }
+
+    [Test]
     public async Task AHeader_SortsByItsColumn_AsAClickDoes()
     {
         var (grid, _) = Table();

@@ -1,5 +1,8 @@
-# The Splitter page: the column splitter dragged to the right and back, by input made inside the application.
+# The Splitter page: the column splitter dragged to the right and back, by input made inside the application, then
+# moved there and back without input, as a screen reader moves it.
 select id=GalleryTabs/id=Splitter
 wait id=ColumnSplitter
 drag id=ColumnSplitter 3,90 103,90
 drag id=ColumnSplitter 3,90 -97,90
+move id=ColumnSplitter 100 0
+move id=ColumnSplitter -100 0

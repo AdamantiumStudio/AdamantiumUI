@@ -1,11 +1,15 @@
-# The ZoomBox page: each axis slider is bound two-way to the box's own scale.
+# The ZoomBox page: each axis slider is bound two-way to the box's own scale, and the box is zoomed as a whole.
 select id=GalleryTabs/id=ZoomBox
 wait id=ScaleX
 set id=ScaleX 2
 expect id=Zoom ScaleX=2
 set id=ScaleY 0.5
 expect id=Zoom ScaleY=0.5
+zoom id=Zoom 300
+expect id=Zoom zoom=300 ScaleX=3 ScaleY=3
+expect id=ScaleX value=3
 # Back as the page opens: the box at 1:1 on both axes.
+zoom id=Zoom 100
 set id=ScaleX 1
 set id=ScaleY 1
-expect id=Zoom ScaleX=1 ScaleY=1
+expect id=Zoom ScaleX=1 ScaleY=1 zoom=100

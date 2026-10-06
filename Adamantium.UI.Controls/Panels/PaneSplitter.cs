@@ -1,7 +1,9 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -9,7 +11,7 @@ namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>The grip between two neighbors in a <see cref="PaneHost"/>. A drag moves their boundary, editing the pane
 /// lengths in place; the pair keeps its total, so no one else in the row moves.</summary>
-public class PaneSplitter : Thumb
+public class PaneSplitter : Thumb, ISplitter
 {
     private double _originBefore;
     private double _originAfter;
@@ -43,27 +45,50 @@ public class PaneSplitter : Thumb
     protected override void OnDragStarted(DragStartedEventArgs e)
     {
         base.OnDragStarted(e);
+        TakeOrigins();
+    }
 
-        if (VisualParent is not PaneHost host) return;
+    protected override void OnDragDelta(DragEventArgs e)
+    {
+        base.OnDragDelta(e);
+        MoveBoundary(Orientation == Orientation.Horizontal ? e.Change.X : e.Change.Y);
+    }
+
+    bool ISplitter.MovesAcross => Orientation == Orientation.Horizontal;
+
+    bool ISplitter.CanMoveSplit => Neighbors() is ({ }, { });
+
+    void ISplitter.MoveSplit(double delta)
+    {
+        if (TakeOrigins())
+        {
+            MoveBoundary(delta);
+        }
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new SplitterAutomationPeer(this, this) : null;
+
+    private bool TakeOrigins()
+    {
+        if (VisualParent is not PaneHost host) return false;
 
         var (before, after) = Neighbors();
-        if (before == null || after == null) return;
+        if (before == null || after == null) return false;
 
         // Where the two neighbors START, in PIXELS - which is also what the drag will write. A pixel of mouse is a
         // pixel of boundary, with no basis to convert to and nothing to compound: Thumb reports a CUMULATIVE change, so
         // every delta is measured from here rather than added to whatever the last one produced.
         _originBefore = host.PixelsOf(before);
         _originAfter = host.PixelsOf(after);
+        return true;
     }
 
-    protected override void OnDragDelta(DragEventArgs e)
+    private void MoveBoundary(double moved)
     {
-        base.OnDragDelta(e);
-
         var (before, after) = Neighbors();
         if (before == null || after == null) return;
 
-        var moved = Orientation == Orientation.Horizontal ? e.Change.X : e.Change.Y;
         var total = _originBefore + _originAfter;
 
         // Neither side may be squeezed past what it says it needs - that MinSize is also what stops the tree from

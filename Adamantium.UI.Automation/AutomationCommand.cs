@@ -95,5 +95,15 @@ public enum AutomationCommand
 
     /// <summary>A picture of the target, or of the first window, drawn by the application's own renderer and written to
     /// <see cref="AutomationRequest.Value"/> as PNG - to look at, never to compare.</summary>
-    Shot
+    Shot,
+
+    /// <summary>Moves the target by <see cref="AutomationRequest.Value"/>, <c>dx,dy</c> of its own units: a splitter
+    /// along its axis, a node across its canvas.</summary>
+    Move,
+
+    /// <summary>Resizes the target to <see cref="AutomationRequest.Value"/>, <c>width,height</c> of its own units.</summary>
+    Resize,
+
+    /// <summary>Zooms the target to <see cref="AutomationRequest.Value"/> percent.</summary>
+    Zoom
 }

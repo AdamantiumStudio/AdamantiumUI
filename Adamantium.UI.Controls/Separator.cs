@@ -1,6 +1,8 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls;
 
@@ -27,4 +29,7 @@ public class Separator : Control
     {
         FocusableProperty.OverrideMetadata(typeof(Separator), new PropertyMetadata(false));
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new SeparatorAutomationPeer(this) : null;
 }

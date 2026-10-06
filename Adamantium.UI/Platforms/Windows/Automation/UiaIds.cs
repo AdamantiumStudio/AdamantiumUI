@@ -16,7 +16,9 @@ internal static class UiaIds
     public const int TableItemPattern = 10013;
     public const int TextPattern = 10014;
     public const int TogglePattern = 10015;
+    public const int TransformPattern = 10016;
     public const int ScrollItemPattern = 10017;
+    public const int Transform2Pattern = 10028;
 
     public const int StructureChangedEvent = 20002;
     public const int MenuOpenedEvent = 20003;

@@ -133,6 +133,17 @@ public sealed class AutomationElement
     /// <summary>Scrolls its list until it is in view, making its element if it had none.</summary>
     public Task ScrollIntoViewAsync() => RunAsync(AutomationCommand.ScrollIntoView);
 
+    /// <summary>Moves it by an offset of its own units, without input: a splitter along its axis, a node across its
+    /// canvas.</summary>
+    public Task MoveByAsync(double dx, double dy) => RunAsync(AutomationCommand.Move, FormattableString.Invariant($"{dx},{dy}"));
+
+    /// <summary>Resizes it to a size in its own units, without input.</summary>
+    public Task ResizeAsync(double width, double height) =>
+        RunAsync(AutomationCommand.Resize, FormattableString.Invariant($"{width},{height}"));
+
+    /// <summary>Zooms it to <paramref name="percent"/>; 100 shows the content at its own size.</summary>
+    public Task ZoomAsync(double percent) => RunAsync(AutomationCommand.Zoom, percent.ToString(CultureInfo.InvariantCulture));
+
     /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
     public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
 

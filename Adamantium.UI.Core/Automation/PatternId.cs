@@ -46,5 +46,8 @@ public enum PatternId
     Text,
 
     /// <summary><see cref="ITableItemProvider"/>: one cell of a table, under its headers.</summary>
-    TableItem
+    TableItem,
+
+    /// <summary><see cref="ITransformProvider"/>: moved, resized or zoomed as a whole.</summary>
+    Transform
 }

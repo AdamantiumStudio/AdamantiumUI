@@ -319,6 +319,20 @@ All packages share one version.
 - `LoopSignal.PostAwaited` and `Pause`: work another thread waits on runs while the loop holds between frames, not at
   the start of the next one. A UI Automation question is answered in well under a millisecond, not after a frame.
 - `MouseDevice.HitTestTopmost`: the element a click at a point of a window reaches - open popups first, newest on top.
+- An element given only `AutomationProperties.AutomationId` - a border, a panel, a shape - is found by it: it is a group
+  of what it holds. Until now only a name or a label put it in the automation tree.
+- Automation peers of their own: an `Image` is a picture called by its `AutomationProperties.Name`; a `BusyIndicator`
+  is a progress bar with no amount, shown while it runs; a `Thumb`, a grid or pane splitter, a `DragHandle` and a
+  `ResizeGripper` are thumbs; a `Separator` is a separator; a `ToolTip` is a tooltip called by what it says; a window's
+  `TitleBar` is a title bar called by the title, holding the caption buttons.
+- `ITransformProvider` (`PatternId.Transform`): a splitter is moved along its axis and its neighbors follow; a canvas
+  node is moved and resized, each as one step of undo; a `ZoomBox` and an `InfiniteCanvas` are zoomed in percent, about
+  the middle of the view. A `ZoomBox` also scrolls through automation by its own scroll viewer. The Windows bridge gives
+  them the Transform and Transform2 patterns. In code `AutomationElement.MoveByAsync`, `ResizeAsync`, `ZoomAsync`; in
+  `adam-auto` `move <selector> <dx> <dy>`, `resize <selector> <width> <height>`, `zoom <selector> <%>`, and `zoom` to
+  expect. `ZoomBox.ZoomTo` zooms holding the middle of the view.
+- A canvas node is selected through automation as a click selects it, and the canvas says which nodes are selected and
+  tells automation when that changes.
 
 ### Changed
 
@@ -405,6 +419,7 @@ All packages share one version.
 
 ### Fixed
 
+- A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
 - A name given inside a template (`x:Name` in a `DataTemplate`) made a field of the view that nothing ever set - a
   warning, so a build with warnings as errors failed. Such a name belongs to each copy the template stamps; the view
   gets no field for it.

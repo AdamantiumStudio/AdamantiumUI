@@ -36,6 +36,9 @@ public static class Program
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
           scroll <selector>                                   bring a list's item into view, making its element
           scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents
+          move <selector> <dx> <dy>                           move a splitter or a canvas node, in its own units
+          resize <selector> <width> <height>                  resize a canvas node, in its own units
+          zoom <selector> <%>                                 zoom a zoom box or a canvas
           window <selector> minimize | maximize | restore | close
           set <selector> <value>                              write a value: text, or a number
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
@@ -48,7 +51,8 @@ public static class Program
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
-                                                              selected, expanded, min, max, hscroll, vscroll, window, key,
+                                                              selected, expanded, min, max, hscroll, vscroll, window, zoom,
+                                                              key,
                                                               left, top, width, height (on the screen, physical px),
                                                               enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches

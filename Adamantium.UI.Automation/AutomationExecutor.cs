@@ -250,6 +250,15 @@ public sealed class AutomationExecutor
                 peer.SetFocus();
                 InputSimulator.Type(request.Value ?? string.Empty);
                 break;
+            case AutomationCommand.Move:
+                MoveBy(peer, Point(request.Value));
+                break;
+            case AutomationCommand.Resize:
+                ResizeTo(peer, Point(request.Value));
+                break;
+            case AutomationCommand.Zoom:
+                Zoom(peer, request.Value);
+                break;
             default:
                 throw new AutomationException($"{request.Command} is not an action.");
         }
@@ -329,19 +338,74 @@ public sealed class AutomationExecutor
         }
 
         return (Point(points[0]), Point(points[1]));
+    }
 
-        static Vector2 Point(string text)
+    private static Vector2 Point(string text)
+    {
+        var parts = (text ?? string.Empty).Split(',');
+        if (parts.Length == 2
+            && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
+            && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
         {
-            var parts = text.Split(',');
-            if (parts.Length == 2
-                && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
-                && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
-            {
-                return new Vector2(x, y);
-            }
-
-            throw new FormatException($"'{text}' is not a point: x,y.");
+            return new Vector2(x, y);
         }
+
+        throw new FormatException($"'{text}' is not a pair: x,y.");
+    }
+
+    private static void MoveBy(AutomationPeer peer, Vector2 offset)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanMove)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be moved.");
+        }
+
+        var bounds = peer.BoundingRectangle;
+        var pixels = PixelsPerUnit(peer);
+        transform.Move(bounds.X + offset.X * pixels.X, bounds.Y + offset.Y * pixels.Y);
+    }
+
+    private static void ResizeTo(AutomationPeer peer, Vector2 size)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanResize)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be resized.");
+        }
+
+        var pixels = PixelsPerUnit(peer);
+        transform.Resize(size.X * pixels.X, size.Y * pixels.Y);
+    }
+
+    private static void Zoom(AutomationPeer peer, string value)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanZoom)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be zoomed.");
+        }
+
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent))
+        {
+            throw new FormatException($"'{value}' is not a percent.");
+        }
+
+        if (percent < transform.ZoomMinimum || percent > transform.ZoomMaximum)
+        {
+            throw new AutomationException(FormattableString.Invariant(
+                $"{Label(peer)} zooms from {transform.ZoomMinimum}% to {transform.ZoomMaximum}%, not to {percent}%."));
+        }
+
+        transform.Zoom(percent);
+    }
+
+    /// <summary>The screen pixels one of the element's own units takes, across and down.</summary>
+    private static Vector2 PixelsPerUnit(AutomationPeer peer)
+    {
+        var size = OwnerOf(peer).RenderSize;
+        var bounds = peer.BoundingRectangle;
+        return new Vector2(size.Width > 0 ? bounds.Width / size.Width : 1, size.Height > 0 ? bounds.Height / size.Height : 1);
     }
 
     private static (double Horizontal, double Vertical) ScrollPercents(string value)
@@ -582,6 +646,11 @@ public sealed class AutomationExecutor
         if (peer.GetPattern(PatternId.Window) is IWindowProvider window)
         {
             info.WindowState = window.VisualState.ToString();
+        }
+
+        if (peer.GetPattern(PatternId.Transform) is ITransformProvider { CanZoom: true } zoomable)
+        {
+            info.Zoom = Math.Round(zoomable.ZoomLevel, 1);
         }
 
         return info;

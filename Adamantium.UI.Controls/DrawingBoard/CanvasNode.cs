@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
@@ -823,4 +825,6 @@ public class CanvasNode : ContentControl
             pins.Add(pin);
         }
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new CanvasNodeAutomationPeer(this);
 }

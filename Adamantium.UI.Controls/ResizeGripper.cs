@@ -1,6 +1,8 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -44,6 +46,9 @@ public class ResizeGripper : Control
         if (window != null) window.ResizeGripRect = default;   // grip left the tree -> stop hit-testing its (stale) rect
         base.OnDetachedFromVisualTree(e);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ThumbAutomationPeer(this) : null;
 
     // The window this grip is hosted in (walk up the visual tree, fall back to RootVisual). Null outside a WindowBase.
     private WindowBase OwnerWindow
