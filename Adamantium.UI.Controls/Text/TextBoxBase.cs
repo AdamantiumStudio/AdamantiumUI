@@ -245,19 +245,18 @@ public abstract class TextBoxBase : Control
 
     private TextLayout _textLayout;
     private FontFamily _layoutFont;
-    private GlyphWordData[] _glyphs = [];      // shaped glyphs in text order; with newline sentinels, glyph i == character i
-    private double _textWidth;                 // widest line's ink width (horizontal scroll bound in NoWrap)
+    private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
     private double _glyphLineHeight;           // real single-line ink extent (ascent+descent+gap) - reserves the LAST
                                                // line's descent so hanging tails (g y p q j) aren't clipped by the control
     private double _baselineInLine;            // the two reference lines the glyph pipeline anchors ink to, measured
     private double _ascenderRise;              // from the line's top: the baseline, and how far the ascender sits above it
 
-    // Caret model, rebuilt on every (re)shape. For each of the TextLength+1 caret slots (slot i = caret BEFORE character
-    // i; slot TextLength = the end) its text-local X and visual line index. Built from the shaped glyphs (one per
-    // character incl. the zero-width newline sentinel), so it survives soft wrapping AND hard newlines uniformly.
+    // Caret model, rebuilt on every (re)shape: for each of the TextLength+1 slots (slot i = before character i) its
+    // text-local X, visual line and the width of the character starting there, from the layout's caret stops.
     private double[] _caretX = [0];
     private int[] _caretLine = [0];
+    private double[] _caretWidth = [0];
     private int _lineCount = 1;
 
     private string _lastShapedText;
@@ -340,10 +339,10 @@ public abstract class TextBoxBase : Control
 
         if (text.Length == 0)
         {
-            _glyphs = [];
             _textWidth = 0;
             _caretX = [0];
             _caretLine = [0];
+            _caretWidth = [0];
             _lineCount = 1;
         }
         else
@@ -352,9 +351,8 @@ public abstract class TextBoxBase : Control
                 new Size(width, double.NaN),
                 wrapping, TextTrimming.None,
                 HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
-            _glyphs = _textLayout.GetTextData();   // text order, one glyph per character (newline = zero-width sentinel)
             _textWidth = size.Width;
-            BuildCaretModel(text);
+            BuildCaretModel();
         }
 
         _lastShapedText = text;
@@ -363,35 +361,21 @@ public abstract class TextBoxBase : Control
         _lastShapedWidth = width;
     }
 
-    // Populate _caretX/_caretLine (length TextLength+1) from the shaped glyphs. Relies on the shaper emitting exactly one
-    // glyph per character (letters, spaces and the newline sentinel) in text order, so glyph i belongs to character i. If
-    // the counts ever disagree we fall back to a single line so the control stays usable instead of throwing.
-    private void BuildCaretModel(string text)
+    private void BuildCaretModel()
     {
-        var n = text.Length;
-        _caretX = new double[n + 1];
-        _caretLine = new int[n + 1];
-
-        if (_glyphs.Length != n)
-        {
-            for (var i = 0; i <= n; i++) { _caretX[i] = i < _glyphs.Length ? _glyphs[i].Rect.X : _textWidth; _caretLine[i] = 0; }
-            _lineCount = 1;
-            return;
-        }
+        var stops = _textLayout.GetCaretStops();
+        _caretX = new double[stops.Length];
+        _caretLine = new int[stops.Length];
+        _caretWidth = new double[stops.Length];
 
         var maxLine = 0;
-        for (var i = 0; i < n; i++)
+        for (var i = 0; i < stops.Length; i++)
         {
-            _caretX[i] = _glyphs[i].Rect.X;
-            _caretLine[i] = _glyphs[i].LineIndex;
-            if (_glyphs[i].LineIndex > maxLine) maxLine = _glyphs[i].LineIndex;
+            _caretX[i] = stops[i].X;
+            _caretLine[i] = stops[i].LineIndex;
+            _caretWidth[i] = stops[i].Width;
+            maxLine = Math.Max(maxLine, stops[i].LineIndex);
         }
-
-        // End slot: after a trailing newline the caret starts a fresh line below; otherwise it sits just past the last
-        // glyph's right edge on that glyph's line.
-        var last = _glyphs[n - 1];
-        if (last.Symbol == '\n') { _caretX[n] = 0; _caretLine[n] = last.LineIndex + 1; maxLine = Math.Max(maxLine, last.LineIndex + 1); }
-        else { _caretX[n] = last.Rect.Right; _caretLine[n] = last.LineIndex; }
 
         _lineCount = maxLine + 1;
     }
@@ -442,13 +426,14 @@ public abstract class TextBoxBase : Control
         EnsureLayout();
         if (_caretX.Length == 1) return 0;
 
+        var text = _lastShapedText ?? string.Empty;
         var line = Math.Clamp((int)Math.Floor(y / _lineHeight), 0, MaxLineIndex);
         var (first, last) = LineSlotRange(line);
         for (var i = first; i <= last; i++)
         {
-            if (i >= _glyphs.Length) return i;              // end-of-text slot on this line
-            if (_glyphs[i].Symbol == '\n') return i;        // click past the visible end -> before the line's newline
-            if (x < _caretX[i] + _glyphs[i].Rect.Width / 2.0) return i;
+            if (i >= text.Length) return i;                 // end-of-text slot on this line
+            if (text[i] == '\n') return i;                  // click past the visible end -> before the line's newline
+            if (x < _caretX[i] + _caretWidth[i] / 2.0) return i;
         }
         return last;
     }
