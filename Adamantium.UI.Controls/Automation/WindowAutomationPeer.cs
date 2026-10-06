@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls.Automation;
 /// <summary>The peer of a window: the root of its tree, called by its title, and found by its class name unless it is
 /// given an id or a name. Its open popups are among its children, except those that belong to the control that opened
 /// them: a drop-down's list, a submenu, the ribbon's menus, galleries and dropped-down groups.</summary>
-public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider
+public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider, ITransformProvider
 {
     private readonly WindowBase _window;
 
@@ -49,6 +49,48 @@ public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider
     }
 
     public void Close() => _window.Close();
+
+    /// <summary>Moved and resized only while it is neither minimized nor maximized, as with the mouse.</summary>
+    public bool CanMove => _window.State == WindowState.Normal;
+
+    public bool CanResize => CanMove && CanMaximize;
+
+    public bool CanZoom => false;
+
+    public double ZoomLevel => 100;
+
+    public double ZoomMinimum => 100;
+
+    public double ZoomMaximum => 100;
+
+    /// <summary>Puts its top-left at a point of the desktop, in pixels.</summary>
+    public void Move(double x, double y)
+    {
+        if (!CanMove)
+        {
+            throw new InvalidOperationException($"'{Name}' is {_window.State}; it is moved when it is Normal.");
+        }
+
+        // By how far its bounds are to go: the bounds are where it is on screen, and Left/Top need not count from the
+        // same corner - a frame, or no screen at all.
+        var bounds = BoundingRectangle;
+        _window.SetCurrentValue(WindowBase.LeftProperty, _window.Left + x - bounds.X);
+        _window.SetCurrentValue(WindowBase.TopProperty, _window.Top + y - bounds.Y);
+    }
+
+    public void Resize(double width, double height)
+    {
+        if (!CanResize)
+        {
+            throw new InvalidOperationException($"'{Name}' cannot be resized now.");
+        }
+
+        var units = UnitsPerPixel();
+        _window.SetCurrentValue(WindowBase.ClientWidthProperty, width * units.X);
+        _window.SetCurrentValue(WindowBase.ClientHeightProperty, height * units.Y);
+    }
+
+    public void Zoom(double percent) => throw new InvalidOperationException("A window is not zoomed.");
 
     protected override string NameCore() => _window.Title;
 

@@ -487,14 +487,40 @@ public class CanvasPane : ContentControl
         // let go. Measured in screen pixels, because "did not move" is a fact about the hand.
         if ((now - _from).Length() > 3) _moved = true;
 
-        // Kept INSIDE the canvas: a pane dragged off the edge is a pane nobody can get back, and there is no edge on
-        // the plane itself to find it by.
+        MoveTo(wanted, room, size);
+        e.Handled = true;
+    }
+
+    // Kept INSIDE the canvas: a pane dragged off the edge is a pane nobody can get back, and there is no edge on the
+    // plane itself to find it by.
+    private void MoveTo(Vector2 wanted, Size room, Size size)
+    {
         SetCurrentValue(PlacementProperty, CanvasPanePlacement.Free);
         SetCurrentValue(AnchorProperty, AnchorFor(new Vector2(
             Math.Clamp(wanted.X, 0, Math.Max(0, room.Width - size.Width)),
             Math.Clamp(wanted.Y, 0, Math.Max(0, room.Height - size.Height))), room, size));
+    }
 
-        e.Handled = true;
+    /// <summary>Moves the pane by an offset in the canvas's pixels, as a drag by its grip that far does - kept inside the
+    /// canvas, stuck to an edge when let go near one.</summary>
+    internal void MoveBy(Vector2 offset)
+    {
+        if (Layer == null) return;
+
+        MoveTo(new Vector2(Bounds.X, Bounds.Y) + offset, Layer.RenderSize, RenderSize);
+        StickToEdge();
+        Settled();
+    }
+
+    /// <summary>Widens or narrows the pane to <paramref name="width"/>, as a pull on its right edge does.</summary>
+    internal void ResizeTo(double width)
+    {
+        if (Layer == null) return;
+
+        var room = Layer.RenderSize;
+        HoldingEdge(Dock.Right, Bounds.X, Bounds.X + ActualWidth);
+        SizeTo(Widened(ActualWidth, width - ActualWidth, room.Width), room);
+        Settled();
     }
 
     private void OnReleased(object sender, MouseButtonEventArgs e)
@@ -651,5 +677,5 @@ public class CanvasPane : ContentControl
         return true;
     }
 
-    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
+    protected override AutomationPeer OnCreateAutomationPeer() => new CanvasPaneAutomationPeer(this);
 }

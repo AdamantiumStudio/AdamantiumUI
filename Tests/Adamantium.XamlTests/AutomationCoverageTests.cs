@@ -440,6 +440,57 @@ public class AutomationCoverageTests
     }
 
     [Test]
+    public async Task AWindow_IsMovedAndResizedThroughAutomation()
+    {
+        var window = new Window
+        {
+            Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, ResizeMode = WindowResizeMode.CanResize,
+            Left = 100, Top = 100
+        };
+        AutomationProperties.SetAutomationId(window, "Main");
+        var session = AutomationSession.InProcess(window);
+        await using var _ = session;
+        await session.WaitForIdleAsync();
+
+        await session.Find(By.Id("Main")).MoveByAsync(40, 30);
+        var moved = (window.Left, window.Top);
+        await session.Find(By.Id("Main")).ResizeAsync(640, 480);
+        var info = await session.Find(By.Id("Main")).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(info.Patterns, Does.Contain("Transform"));
+            Assert.That(moved.Left, Is.EqualTo(140).Within(1), "a window moves in pixels of the desktop");
+            Assert.That(moved.Top, Is.EqualTo(130).Within(1));
+            Assert.That(window.ClientWidth, Is.EqualTo(640).Within(1));
+            Assert.That(window.ClientHeight, Is.EqualTo(480).Within(1));
+        });
+    }
+
+    [Test]
+    public async Task ACanvasPanel_IsMovedAndWidenedAsItsGripAndEdgeWould()
+    {
+        var canvas = new InfiniteCanvas();
+        var session = await Driving(canvas);
+        await using var _ = session;
+        var inspector = session.Find(By.Id("PART_Inspector"));
+        var was = await inspector.GetAsync();
+
+        await inspector.MoveByAsync(-60, 25);
+        var moved = await inspector.GetAsync();
+        await inspector.ResizeAsync(was.Bounds[2] + 40, was.Bounds[3]);
+        var widened = await inspector.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(was.Patterns, Does.Contain("Transform"));
+            Assert.That(moved.Bounds[0], Is.EqualTo(was.Bounds[0] - 60).Within(2));
+            Assert.That(moved.Bounds[1], Is.EqualTo(was.Bounds[1] + 25).Within(2));
+            Assert.That(widened.Bounds[2], Is.EqualTo(was.Bounds[2] + 40).Within(2));
+        });
+    }
+
+    [Test]
     public async Task AToolTip_IsFoundWhileItShows_AndIsCalledByWhatItSays()
     {
         var button = new Button { Content = "Save" };

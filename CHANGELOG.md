@@ -346,6 +346,9 @@ All packages share one version.
   another pane's panel, or into it as a tab. A panel moves with every pane in it, or tears out whole.
   `adam-auto dock <pane> top|left|bottom|right|fill|none [--beside <pane>]`, `dock` to expect,
   `AutomationElement.DockAsync`.
+- Windows move and resize through automation (the Transform pattern) while they are neither minimized nor maximized;
+  so does an `OverlayWindow`, kept inside the window it is shown over, and a floating `CanvasPane` - moved as its grip
+  and widened as its edge would. `adam-auto move` / `resize` take them like any other element.
 - Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
   search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
   text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and

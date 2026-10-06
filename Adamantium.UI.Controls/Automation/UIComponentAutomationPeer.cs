@@ -114,6 +114,14 @@ public class UIComponentAutomationPeer : AutomationPeer
         return null;
     }
 
+    /// <summary>How many of the owner's own units one screen pixel is, across and down.</summary>
+    protected Vector2 UnitsPerPixel()
+    {
+        var bounds = BoundingRectangle;
+        return new Vector2(bounds.Width > 0 ? Owner.RenderSize.Width / bounds.Width : 1,
+            bounds.Height > 0 ? Owner.RenderSize.Height / bounds.Height : 1);
+    }
+
     /// <summary>The text of the first shown text block under <paramref name="element"/>, depth first: the label a
     /// templated control shows.</summary>
     protected static string TextOf(IUIComponent element)
