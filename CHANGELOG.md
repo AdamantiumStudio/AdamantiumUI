@@ -391,6 +391,10 @@ All packages share one version.
 
 ### Changed
 
+- Text is shaped with the font's OpenType rules (engine `TextShaper`): ligatures, contextual alternates, marks placed
+  on their letters, and a visible box for a character the font lacks. `TextBox` takes its caret positions from the
+  layout instead of counting one glyph per character, so the caret, selection and clicks stay right inside a ligature,
+  over a letter with marks and around an emoji.
 - A ribbon command that cannot run fades its icon instead of recoloring it, so a picture with colors of its own fades
   alike.
 
