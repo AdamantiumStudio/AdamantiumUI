@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Automation;
 
@@ -140,6 +141,18 @@ public sealed class AutomationElement
     /// <summary>Resizes it to a size in its own units, without input.</summary>
     public Task ResizeAsync(double width, double height) =>
         RunAsync(AutomationCommand.Resize, FormattableString.Invariant($"{width},{height}"));
+
+    /// <summary>Docks it - a pane, a panel - against an edge, into the documents (<see cref="DockPosition.Fill"/>) or out
+    /// into a window of its own (<see cref="DockPosition.None"/>); beside <paramref name="beside"/>'s panel when given,
+    /// or into it as a tab for Fill.</summary>
+    public Task DockAsync(DockPosition position, AutomationElement beside = null) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Dock,
+            Target = Selector,
+            Value = position.ToString(),
+            Properties = beside == null ? null : [beside.Selector]
+        });
 
     /// <summary>Joins it - a socket of a node - to <paramref name="other"/>, as a wire pulled by hand would.</summary>
     public Task ConnectAsync(AutomationElement other) => RunAsync(AutomationCommand.Connect, other.Selector);

@@ -70,6 +70,7 @@ public abstract class AutomationPeer
         PatternId.TableItem => this as ITableItemProvider,
         PatternId.Transform => this as ITransformProvider,
         PatternId.Connection => this as IConnectionProvider,
+        PatternId.Dock => this as IDockProvider,
         _ => null
     };
 }

@@ -1,5 +1,7 @@
 using Adamantium.Navigation;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Controls;
 
 namespace Adamantium.UI.Controls.Docking;
@@ -104,4 +106,8 @@ public class Pane : TabItem, IView
     /// <see cref="DockingArea.PaneRestoring"/> on load; null for a pane declared in markup.</summary>
     public string RestoreKey { get; set; }
 
+    /// <summary>The docking area that keeps this pane - the main one of its layout, whichever window shows it.</summary>
+    internal DockingArea Keeper { get; set; }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new DockPaneAutomationPeer(this);
 }

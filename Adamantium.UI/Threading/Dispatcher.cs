@@ -73,6 +73,9 @@ public sealed class Dispatcher : IDispatcher
 
     public Thread MainThread { get; }
 
+    /// <summary>Whether work invoked on this dispatcher is still queued or running.</summary>
+    public bool HasPendingOperations => executor.HasPending;
+
     public Thread UIThread
     {
         get => uiThread;

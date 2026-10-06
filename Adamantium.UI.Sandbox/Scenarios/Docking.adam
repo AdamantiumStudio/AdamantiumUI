@@ -19,6 +19,24 @@ wait id=DockingWindow
 expect id=DockingWindow name=Notes
 window id=DockingWindow close
 absent id=DockingWindow
+# Docked without the mouse: a pane to an edge, out into a window and back into a panel as a tab, a pane beside another's
+# panel, and a whole panel out into a window and back to its edge. Reset puts the layout back.
+expect "id=DockingView/type=TabItem,name=Console" dock=Bottom
+dock "id=DockingView/type=TabItem,name=Console" left
+expect "id=DockingView/type=TabItem,name=Console" dock=Left
+dock "id=DockingView/type=TabItem,name=Console" none
+wait "id=DockingWindow,name=Console"
+dock "type=TabItem,name=Console" fill --beside "id=DockingView/type=TabItem,name=Output"
+absent id=DockingWindow
+expect "id=DockingView/type=TabItem,name=Console" dock=Bottom
+dock "id=DockingView/type=TabItem,name=Hierarchy" bottom --beside "id=DockingView/type=TabItem,name=Inspector"
+expect "id=DockingView/type=TabItem,name=Hierarchy" dock=Right
+dock "id=DockingView/type=TabItem,name=Inspector/parent" none
+wait id=DockingWindow
+expect "type=TabItem,name=Properties" dock=None
+dock "id=DockingWindow/type=Tab" right
+absent id=DockingWindow
+expect "id=DockingView/type=TabItem,name=Properties" dock=Right
 invoke id=DockingView/name=Reset
 expect "id=DockingView/type=TabItem,name=Scene" selected=True
 wait "id=DockingView/type=TabItem,name=Game"

@@ -1,6 +1,8 @@
 using System.Linq;
 using Adamantium.Navigation;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
@@ -600,4 +602,6 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         get => GetValue<double>(SizeProperty);
         set => SetValue(SizeProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new PaneGroupAutomationPeer(this);
 }

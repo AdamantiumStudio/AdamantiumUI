@@ -262,6 +262,9 @@ public sealed class AutomationExecutor
             case AutomationCommand.Connect:
                 Pattern<IConnectionProvider>(peer, PatternId.Connection).Connect(Resolve(request.Value));
                 break;
+            case AutomationCommand.Dock:
+                Dock(peer, request);
+                break;
             case AutomationCommand.Disconnect:
                 Pattern<IConnectionProvider>(peer, PatternId.Connection)
                     .Disconnect(string.IsNullOrWhiteSpace(request.Value) ? null : Resolve(request.Value));
@@ -405,6 +408,24 @@ public sealed class AutomationExecutor
         }
 
         transform.Zoom(percent);
+    }
+
+    private void Dock(AutomationPeer peer, AutomationRequest request)
+    {
+        if (!Enum.TryParse<DockPosition>(request.Value, true, out var position))
+        {
+            throw new AutomationException($"'{request.Value}' is not a place to dock: Top, Left, Bottom, Right, Fill or None.");
+        }
+
+        var dock = Pattern<IDockProvider>(peer, PatternId.Dock);
+        if (request.Properties is [{ Length: > 0 } beside, ..])
+        {
+            dock.DockBeside(Resolve(beside), position);
+        }
+        else
+        {
+            dock.SetDockPosition(position);
+        }
     }
 
     /// <summary>The screen pixels one of the element's own units takes, across and down.</summary>
@@ -653,6 +674,11 @@ public sealed class AutomationExecutor
         if (peer.GetPattern(PatternId.Window) is IWindowProvider window)
         {
             info.WindowState = window.VisualState.ToString();
+        }
+
+        if (peer.GetPattern(PatternId.Dock) is IDockProvider docked)
+        {
+            info.DockPosition = docked.DockPosition.ToString();
         }
 
         if (peer.GetPattern(PatternId.Transform) is ITransformProvider { CanZoom: true } zoomable)

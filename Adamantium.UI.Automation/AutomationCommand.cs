@@ -112,5 +112,10 @@ public enum AutomationCommand
 
     /// <summary>Parts the target from the socket <see cref="AutomationRequest.Value"/> selects, or from all it is joined
     /// to when that is empty.</summary>
-    Disconnect
+    Disconnect,
+
+    /// <summary>Docks the target - a pane, a panel - at <see cref="AutomationRequest.Value"/>: Top, Left, Bottom, Right,
+    /// Fill (the documents) or None (a window of its own); beside the pane the first of
+    /// <see cref="AutomationRequest.Properties"/> selects, when there is one.</summary>
+    Dock
 }

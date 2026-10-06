@@ -41,6 +41,8 @@ public static class Program
           zoom <selector> <%>                                 zoom a zoom box or a canvas
           connect <socket> <socket>                           join two sockets of nodes with a wire
           disconnect <socket> [<socket>]                      part a socket from one, or from all it is joined to
+          dock <pane> top|left|bottom|right|fill|none [--beside <pane>]   dock a pane or a panel: to an edge, into the
+                                                              documents, out into a window; beside a pane's panel
           window <selector> minimize | maximize | restore | close
           set <selector> <value>                              write a value: text, or a number
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
@@ -54,7 +56,7 @@ public static class Program
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
                                                               selected, expanded, min, max, hscroll, vscroll, window, zoom,
-                                                              key,
+                                                              dock, key,
                                                               left, top, width, height (on the screen, physical px),
                                                               enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches

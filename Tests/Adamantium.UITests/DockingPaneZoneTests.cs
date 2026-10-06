@@ -273,6 +273,34 @@ public class DockingPaneZoneTests
         });
     }
 
+    // A pane taken out of a window it stood alone in - by code, not by dragging the window - leaves no window behind. Its
+    // group was that window's document area, which survives being emptied in the main window; a floating window with
+    // no pane in it at all is not a layout anybody can see or use.
+    [Test]
+    public void AWindowsLastPaneLeaving_TakesTheWindowOutOfTheLayout_WhileTheMainWellStays()
+    {
+        var layout = new DockingLayout();
+        var documents = new PaneGroupNode();
+        documents.Add("scene");
+        layout.Roots.Add(new DockingRoot(documents, isMain: true) { DocumentWell = documents });
+
+        var torn = new PaneGroupNode();
+        torn.Add("inspector");
+        layout.Roots.Add(new DockingRoot(torn, isMain: false) { DocumentWell = torn });
+
+        layout.MovePane("inspector", documents, DockZone.Center);
+        var afterMove = layout.Roots.Count;
+        layout.RemovePane("scene");
+        layout.RemovePane("inspector");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterMove, Is.EqualTo(1), "the emptied window's root is gone");
+            Assert.That(layout.Roots.Count, Is.EqualTo(1));
+            Assert.That(layout.Roots[0].Content, Is.SameAs(documents), "the main window keeps its document area empty");
+        });
+    }
+
     [Test]
     public void AGroupInAWindowOfItsOwn_IsFloating()
     {

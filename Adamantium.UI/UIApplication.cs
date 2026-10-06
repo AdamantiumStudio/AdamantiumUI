@@ -927,6 +927,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return "work posted to the loop";
         }
 
+        if (Dispatcher is Threading.Dispatcher { HasPendingOperations: true })
+        {
+            return "work invoked on the dispatcher - a window closing, say";
+        }
+
         if (LoopSignal.Requests != _requestsAtRecord)
         {
             return "a request that came after the frame was recorded";

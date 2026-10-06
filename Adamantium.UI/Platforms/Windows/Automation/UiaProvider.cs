@@ -10,7 +10,8 @@ namespace Adamantium.UI.Platforms.Windows.Automation;
 internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProviderFragment, IUiaInvokeProvider,
     IUiaToggleProvider, IUiaValueProvider, IUiaRangeValueProvider, IUiaSelectionProvider, IUiaSelectionItemProvider,
     IUiaExpandCollapseProvider, IUiaScrollProvider, IUiaScrollItemProvider, IUiaGridProvider, IUiaGridItemProvider,
-    IUiaTableProvider, IUiaTableItemProvider, IUiaWindowProvider, IUiaTextProvider, IUiaTransform2Provider
+    IUiaTableProvider, IUiaTableItemProvider, IUiaWindowProvider, IUiaTextProvider, IUiaTransform2Provider,
+    IUiaDockProvider
 {
     private const string FrameworkId = "Adamantium";
     private const double ScrollStep = 10;
@@ -241,6 +242,11 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
 
     public double GetZoomMaximum() => Bridge.Run(() => Transform().ZoomMaximum);
 
+    public void SetDockPosition(UiaDockPosition dockPosition) =>
+        Bridge.Run(() => Pattern<IDockProvider>(PatternId.Dock).SetDockPosition((DockPosition)(int)dockPosition));
+
+    public UiaDockPosition GetDockPosition() => Bridge.Run(() => (UiaDockPosition)(int)Pattern<IDockProvider>(PatternId.Dock).DockPosition);
+
     public void ZoomByUnit(UiaZoomUnit zoomUnit) => Bridge.Run(() =>
     {
         var transform = Transform();
@@ -388,6 +394,7 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
         UiaIds.TextPattern => PatternId.Text,
         UiaIds.TableItemPattern => PatternId.TableItem,
         UiaIds.TransformPattern or UiaIds.Transform2Pattern => PatternId.Transform,
+        UiaIds.DockPattern => PatternId.Dock,
         _ => null
     };
 

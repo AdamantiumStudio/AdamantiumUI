@@ -11,6 +11,7 @@ internal static class UiaIds
     public const int GridPattern = 10006;
     public const int GridItemPattern = 10007;
     public const int WindowPattern = 10009;
+    public const int DockPattern = 10011;
     public const int SelectionItemPattern = 10010;
     public const int TablePattern = 10012;
     public const int TableItemPattern = 10013;

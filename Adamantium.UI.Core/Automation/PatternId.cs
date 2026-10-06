@@ -52,5 +52,8 @@ public enum PatternId
     Transform,
 
     /// <summary><see cref="IConnectionProvider"/>: an end a connection is made to.</summary>
-    Connection
+    Connection,
+
+    /// <summary><see cref="IDockProvider"/>: docked in a layout.</summary>
+    Dock
 }

@@ -341,6 +341,11 @@ All packages share one version.
   to; `IConnectionProvider` joins it to another socket and parts them, by the graph's rules and as one step of undo
   each (`adam-auto connect <socket> <socket>`, `disconnect <socket> [<socket>]`; `AutomationElement.ConnectAsync`,
   `DisconnectAsync`). A node folds and unfolds through ExpandCollapse.
+- Docking through automation, as the Dock pattern of UI Automation: a pane says where it is docked and goes to an
+  edge, into the documents or out into a window of its own by the layout's rules and the application's; beside
+  another pane's panel, or into it as a tab. A panel moves with every pane in it, or tears out whole.
+  `adam-auto dock <pane> top|left|bottom|right|fill|none [--beside <pane>]`, `dock` to expect,
+  `AutomationElement.DockAsync`.
 - Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
   search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
   text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
@@ -432,6 +437,11 @@ All packages share one version.
 ### Fixed
 
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
+- A floating docking window whose last pane was moved out by code - a `Zone` written, `DockBeside` - stayed open and
+  empty: its document area survived being emptied, as the main window's does. A floating window with no pane left
+  now closes.
+- Waiting for the application to go idle did not wait for work invoked on the dispatcher - a window closing, a drop
+  finishing - so automation could read the state before it changed.
 - A `BezierLine` could not be made: its properties were registered with the value type and the owner swapped.
 - A layer an `InfiniteCanvas` took off its stack - the camera moved away from what it held - kept those controls as
   its children, so each still had the dead layer for a parent. The layer now lets them go.

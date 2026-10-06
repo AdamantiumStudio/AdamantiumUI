@@ -44,6 +44,24 @@ public class DockingArea : Panel
 
     private DockingArea Owner => _owner ?? this;
 
+    /// <summary>The area that keeps the panes of this one and of every window torn out of it.</summary>
+    internal DockingArea Keeper => Owner;
+
+    /// <summary>The panel control showing a pane and the area it stands in, across this layout's windows - null when the
+    /// pane is put away. A pane alone in a floating window is shown without its tab, so it cannot be found by walking up
+    /// from it.</summary>
+    internal (DockingArea Area, PaneGroup Group) Showing(string paneId)
+    {
+        if (Layout.FindGroup(paneId) is not { } node) return default;
+
+        foreach (var area in Family)
+        {
+            if (area._groupsByNode.TryGetValue(node, out var control)) return (area, control);
+        }
+
+        return default;
+    }
+
     /// <summary>Every area of this layout, FLOATING ONES FIRST: a floating window sits over the main one, so where both
     /// could claim the pointer the floating one wins.</summary>
     private IEnumerable<DockingArea> Family
@@ -840,6 +858,22 @@ public class DockingArea : Panel
         return true;
     }
 
+    /// <summary>Puts a pane into the panel holding another, as a tab - what a drop on that panel's middle does. False for
+    /// a panel where the pane is not <see cref="Pane.Allowed"/>, or a move the application refuses.</summary>
+    internal bool DockInto(string paneId, string targetPaneId)
+    {
+        if (paneId == null || !_panesById.TryGetValue(paneId, out var pane)) return false;
+        if (Layout.FindGroup(targetPaneId) is not { } target || ReferenceEquals(Layout.FindGroup(paneId), target)) return false;
+        if ((pane.Allowed & Layout.ZoneOf(target)) == 0) return false;
+        if (Refuses(new PaneDockingEventArgs([paneId], target, DockZone.Center))) return false;
+        if (!Layout.MovePane(paneId, target, DockZone.Center)) return false;
+
+        Owner._activePane = paneId;
+        RebuildFamily();
+        Owner.CloseEmptyWindows();
+        return true;
+    }
+
     /// <summary>Passes the accent on when the active pane goes away, on both removal paths, so a closed pane's id never
     /// leaves the accent pointing at nothing.</summary>
     private void HandOffActive(string paneId, PaneGroupNode home)
@@ -860,6 +894,7 @@ public class DockingArea : Panel
     private void RegisterPane(string id, Pane pane)
     {
         _panesById[id] = pane;
+        pane.Keeper = Owner;
 
         // Idempotent: the same pane is registered again on every rebuild that touches it.
         pane.PropertyChanged -= Owner.OnPanePropertyChanged;

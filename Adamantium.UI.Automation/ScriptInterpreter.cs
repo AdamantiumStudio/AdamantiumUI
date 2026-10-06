@@ -15,7 +15,7 @@ internal sealed class ScriptInterpreter
     public static readonly string[] Commands =
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "click", "rclick",
-        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "connect", "disconnect", "window", "set",
+        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "connect", "disconnect", "dock", "window", "set",
         "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -25,7 +25,7 @@ internal sealed class ScriptInterpreter
     private static readonly string[] ElementKeys =
     [
         "name", "id", "type", "class", "value", "toggle", "selected", "expanded", "min", "max", "hscroll", "vscroll",
-        "window", "zoom", "key", "left", "top", "width", "height", "enabled", "offscreen", "focus"
+        "window", "zoom", "dock", "key", "left", "top", "width", "height", "enabled", "offscreen", "focus"
     ];
 
     private readonly AutomationSession _session;
@@ -101,6 +101,14 @@ internal sealed class ScriptInterpreter
             "zoom" => SendAsync(Second(AutomationCommand.Zoom, arguments, allowErrors)),
             "connect" => SendAsync(Second(AutomationCommand.Connect, arguments, allowErrors)),
             "disconnect" => SendAsync(Second(AutomationCommand.Disconnect, arguments, allowErrors)),
+            "dock" => SendAsync(new AutomationRequest
+            {
+                Command = AutomationCommand.Dock,
+                Target = arguments.At(0),
+                Value = arguments.At(1),
+                Properties = arguments.Option("beside") is { } beside ? [beside] : null,
+                AllowErrors = allowErrors
+            }),
             "window" => SendAsync(Window(arguments, allowErrors)),
             "set" => SendAsync(new AutomationRequest
             {
@@ -406,6 +414,7 @@ internal sealed class ScriptInterpreter
             "hscroll" => Invariant(element.HorizontalScroll),
             "vscroll" => Invariant(element.VerticalScroll),
             "window" => element.WindowState,
+            "dock" => element.DockPosition,
             "zoom" => Invariant(element.Zoom),
             "key" => element.AccessKey,
             "left" => Invariant(Math.Round(element.Bounds[0])),
