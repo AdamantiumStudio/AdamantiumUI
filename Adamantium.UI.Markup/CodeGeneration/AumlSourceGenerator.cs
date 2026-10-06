@@ -88,6 +88,44 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.ApplicationEntry", textGenerator.ToString());
     }
 
+    private static HashSet<AumlAstObjectNode> InsideTemplates(IAumlAstNode root)
+    {
+        var inside = new HashSet<AumlAstObjectNode>();
+        Walk(root, false);
+        return inside;
+
+        void Walk(IAumlAstNode node, bool templated)
+        {
+            if (node is not AumlAstObjectNode element)
+            {
+                return;
+            }
+
+            if (templated)
+            {
+                inside.Add(element);
+            }
+
+            templated |= element is AumlAstTemplateNode;
+            foreach (var child in element.Children)
+            {
+                switch (child)
+                {
+                    case AumlAstObjectNode nested:
+                        Walk(nested, templated);
+                        break;
+                    case AumlAstPropertyNode property:
+                        foreach (var value in property.Values)
+                        {
+                            Walk(value, templated);
+                        }
+
+                        break;
+                }
+            }
+        }
+    }
+
     private static void WriteResourceKeys(TextGenerator textGenerator, AumlMetadataContainer container)
     {
         foreach (var resource in DeclaredResources.Of(container.RootNode as AumlAstObjectNode))
@@ -298,8 +336,14 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteLine($"public class {container.RootClassName} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
+        var templated = InsideTemplates(container.RootNode);
         foreach (var item in container.NamedElements)
         {
+            if (templated.Contains(item.Element))
+            {
+                continue;
+            }
+
             typeContainer = container.TypeResolver.GetResolvedAssembly(item.Element.TypeReference.Assembly);
             var typeInfo = typeContainer.GetTypeByShortName(item.Element.TypeReference.Name);
             // A NAMED element held back by x:Load has no field to hold it - it does not exist yet. What the name means

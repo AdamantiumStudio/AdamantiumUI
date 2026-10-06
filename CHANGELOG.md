@@ -405,6 +405,9 @@ All packages share one version.
 
 ### Fixed
 
+- A name given inside a template (`x:Name` in a `DataTemplate`) made a field of the view that nothing ever set - a
+  warning, so a build with warnings as errors failed. Such a name belongs to each copy the template stamps; the view
+  gets no field for it.
 - A markup file that is not well-formed XML - a prefix nobody declared - stopped the AUML generator for the whole
   project: no class from any file, each reported missing, the cause only a warning. It is reported against that file
   now, and the rest is generated.
