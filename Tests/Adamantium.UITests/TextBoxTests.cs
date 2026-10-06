@@ -74,6 +74,35 @@ public class TextBoxTests
     }
 
     [Test]
+    public void ArrowsStepOverAWholeEmojiAndALetterWithItsAccent()
+    {
+        var tb = new TextBox { Text = "a\U0001F468‍\U0001F469b é" };
+        tb.CaretIndex = 1;
+
+        Press(tb, Key.RightArrow);
+        Assert.That(tb.CaretIndex, Is.EqualTo(6), "the family emoji is one step");
+        Press(tb, Key.LeftArrow);
+        Assert.That(tb.CaretIndex, Is.EqualTo(1));
+
+        tb.CaretIndex = 10;
+        Press(tb, Key.LeftArrow);
+        Assert.That(tb.CaretIndex, Is.EqualTo(8), "e and its accent are one step");
+    }
+
+    [Test]
+    public void BackspaceAndDelete_RemoveAWholeGrapheme()
+    {
+        var tb = new TextBox { Text = "x\U0001F600y é" };
+        tb.CaretIndex = 3;
+        Press(tb, Key.BackSpace);
+        Assert.That(tb.Text, Is.EqualTo("xy é"), "both halves of the emoji go");
+
+        tb.CaretIndex = 3;
+        Press(tb, Key.Delete);
+        Assert.That(tb.Text, Is.EqualTo("xy "), "the accent goes with its letter");
+    }
+
+    [Test]
     public void Backspace_DeletesSelection()
     {
         var tb = new TextBox { Text = "abcd" };

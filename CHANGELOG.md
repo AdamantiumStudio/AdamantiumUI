@@ -397,6 +397,8 @@ All packages share one version.
   over a letter with marks and around an emoji.
 - A text layout of attributed text (engine `AttributedText`) draws each range in its own color, batched or not; text
   without colors of its own draws in the element's `Foreground` as before.
+- `TextBox` moves and deletes by grapheme: an arrow, Backspace or Delete takes an emoji or a letter with its accents as
+  one, and a click or Up/Down never leaves the caret inside one.
 - A ribbon command that cannot run fades its icon instead of recoloring it, so a picture with colors of its own fades
   alike.
 
