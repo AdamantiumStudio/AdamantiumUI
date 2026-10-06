@@ -160,14 +160,17 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         if (first < 0 || first + count > Count) return false;
 
         var color = solid.Color.ToVector4();
-        color.W *= (float)tc.RenderData.Opacity;   // the same fold PackInto does - one color, computed one way
+        var opacity = (float)tc.RenderData.Opacity;
+        color.W *= opacity;   // the same fold PackInto does - one color, computed one way
 
         var span = Items.AsSpan(first, count);
+        var run = tc.GlyphRun;
         var changed = false;
         for (var i = 0; i < span.Length; i++)
         {
-            if (span[i].Color == color) continue;
-            span[i].Color = color;
+            var target = i < run.Count ? GlyphColor(run.Glyphs[i], color, opacity) : color;
+            if (span[i].Color == target) continue;
+            span[i].Color = target;
             changed = true;
         }
 
@@ -207,7 +210,8 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         var run = tc.GlyphRun;                        // FROZEN snapshot - the applier never reads the live TextLayout here
         var area = tc.RenderingParameters.TextArea;
         var color = ((SolidColorBrush)tc.Foreground).Color.ToVector4();
-        color.W *= (float)tc.RenderData.Opacity;      // fold the element's opacity into the glyph alpha
+        var opacity = (float)tc.RenderData.Opacity;
+        color.W *= opacity;                           // fold the element's opacity into the glyph alpha
 
         float sx = relWorld.M11, sy = relWorld.M22, tx = relWorld.M41, ty = relWorld.M42;
         float ax = (float)area.X, ay = (float)area.Y;
@@ -221,11 +225,23 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
                 Source = glyphs[i].Source,
                 Params = new Vector4F(transformSlot, glyphs[i].Layer, glyphs[i].Depth, fadeSlot),
                 Clip = new Vector4F(clipSlot, 0, 0, 0),
-                Color = color
+                Color = GlyphColor(glyphs[i], color, opacity)
             };
         }
 
         return true;
+    }
+
+    private static Vector4F GlyphColor(in FontItem glyph, Vector4F foreground, float opacity)
+    {
+        if (!glyph.HasOwnColor)
+        {
+            return foreground;
+        }
+
+        var own = glyph.Color;
+        own.W *= opacity;
+        return own;
     }
 
     protected override void DrawSegment(IGraphicsDevice device, Buffer<GlyphItem> buffer, uint count, uint firstInstance, Matrix4x4F projection)
