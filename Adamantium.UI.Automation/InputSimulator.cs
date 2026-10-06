@@ -30,10 +30,49 @@ internal static class InputSimulator
 
     public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)
     {
-        const int steps = 8;
         using var pointer = SimulatedPointer.Install();
         var (window, start) = HoverAt(element, label, from);
-        var end = InWindow(element, to);
+        Stroke(window, start, InWindow(element, to));
+    }
+
+    /// <summary>Takes <paramref name="source"/> at <paramref name="from"/> and lets it go over <paramref name="at"/> of
+    /// <paramref name="target"/> - a point that has to be on <paramref name="within"/> - as a hand carrying one onto
+    /// the other would. The point is where the target stands before anything moves: a list that opens a gap for the
+    /// carried row places it by that, not by where the gap pushes its rows.</summary>
+    public static void DragOnto(UIComponent source, string sourceLabel, Vector2 from, UIComponent target, string targetLabel,
+        Vector2 at, UIComponent within)
+    {
+        if (source.RootVisual is not IUIComponent root || !ReferenceEquals(source.RootVisual, target.RootVisual))
+        {
+            throw new AutomationException(
+                $"{sourceLabel} and {targetLabel} are in different windows; a drop across windows is not driven yet.");
+        }
+
+        var end = InWindow(target, at);
+        if (!Reaches(target, at, within))
+        {
+            throw new AutomationException(
+                $"{targetLabel} cannot be reached at ({end.X:0}, {end.Y:0}); scroll it into view first.");
+        }
+
+        const int steps = 8;
+        using var pointer = SimulatedPointer.Install();
+        var (window, start) = HoverAt(source, sourceLabel, from);
+        var layout = LayoutManager.GetOrCreate(root);
+        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
+        for (var step = 1; step <= steps; step++)
+        {
+            // A layout pass between moves, as a frame would come between them.
+            layout.ExecuteLayoutPass();
+            Send(RawMouseEventType.MouseMove, window, start + (end - start) * (step / (double)steps), InputModifiers.LeftMouseButton);
+        }
+
+        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
+    }
+
+    private static void Stroke(IWindow window, Vector2 start, Vector2 end)
+    {
+        const int steps = 8;
         Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
@@ -43,6 +82,11 @@ internal static class InputSimulator
 
         Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
     }
+
+    /// <summary>Whether a pointer at <paramref name="local"/> of <paramref name="element"/> would be on
+    /// <paramref name="within"/> - on screen, and not under something else.</summary>
+    public static bool Reaches(UIComponent element, Vector2 local, UIComponent within) =>
+        element.RootVisual is IUIComponent root && IsWithin(root.HitTest(InWindow(element, local)) as IUIComponent, within);
 
     private static (IWindow Window, Vector2 Point) HoverAt(UIComponent element, string label, Vector2 local)
     {

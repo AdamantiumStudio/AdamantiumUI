@@ -47,4 +47,25 @@ toggle id=PART_SortPanel/name=Code
 expect id=PART_SortPanel/name=Code toggle=On
 invoke id=PART_SortPanel/name=Code/type=Button
 absent id=PART_SortPanel/type=DataItem
+# A header carried onto a strip: onto the sorting strip it becomes a key, onto the grouping strip it groups the rows.
+# Carried before another header it moves there. Each is taken back.
+drop id=Table/type=HeaderItem,name=Size id=PART_SortPanel
+expect id=PART_SortPanel/type=DataItem name=Size
+invoke id=PART_SortPanel/name=Size/type=Button
+absent id=PART_SortPanel/type=DataItem
 toggle "id=DataGridView/name=Sorting panel"
+toggle "id=DataGridView/name=Grouping panel"
+drop id=Table/type=HeaderItem,name=Region id=PART_GroupPanel
+expect id=PART_GroupPanel/type=DataItem name=Region
+invoke id=PART_GroupPanel/name=Region/type=Button
+absent id=PART_GroupPanel/type=DataItem
+toggle "id=DataGridView/name=Grouping panel"
+drop id=Table/type=HeaderItem,name=Name id=Table/type=HeaderItem,name=Owner --before
+expect id=Table/type=HeaderItem[2] name=Name
+drop id=Table/type=HeaderItem,name=Name id=Table/type=HeaderItem,name=Owner --after
+expect id=Table/type=HeaderItem[3] name=Name
+# A header's funnel opens the column's filter, and closes it again.
+invoke id=Table/type=HeaderItem,name=Size/name=Filter
+wait id=PART_FilterView
+invoke id=Table/type=HeaderItem,name=Size/name=Filter
+absent id=PART_FilterView

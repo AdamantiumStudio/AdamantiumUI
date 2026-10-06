@@ -178,6 +178,52 @@ public class AutomationGridTests
     }
 
     [Test]
+    public async Task AHeader_IsCarriedIntoTheStrips_AndAmongTheColumns_AsAHandWouldCarryIt()
+    {
+        var (grid, _) = Table(20);
+        grid.ShowGroupPanel = true;
+        grid.ShowSortPanel = true;
+        await using var session = await Driving(grid);
+        var table = session.Find(By.Id("Parts"));
+        AutomationElement Header(string name) => table.Find(By.Type(AutomationControlType.HeaderItem).And(By.Name(name)));
+
+        await Header("Size").DropOntoAsync(Header("Code"), DropSide.Before);
+        var first = grid.Columns[0].Header;
+        await Header("Code").DropOntoAsync(table.Child(By.Type(AutomationControlType.ToolBar)).At(1));
+        var sorted = grid.SortDescriptions.Select(key => (string)key.Column.Header).ToList();
+        await Header("Size").DropOntoAsync(table.Child(By.Type(AutomationControlType.ToolBar)).At(0));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo("Size"), "dropped before another header, it goes before it");
+            Assert.That(sorted, Is.EqualTo(new[] { "Code" }), "dropped on the sorting strip, it is a sort key");
+            Assert.That(grid.GroupDescriptions, Has.Count.EqualTo(1), "dropped on the grouping strip, it groups the rows");
+        });
+    }
+
+    [Test]
+    public async Task AHeadersFunnel_IsAButton_ThatOpensAndClosesTheColumnsFilter()
+    {
+        var (grid, _) = Table(20);
+        await using var session = await Driving(grid);
+        var funnel = session.Find(By.Id("Parts")).Find(By.Type(AutomationControlType.HeaderItem).And(By.Name("Code")))
+            .Child(By.Type(AutomationControlType.Button));
+
+        var shown = await funnel.GetAsync();
+        await funnel.InvokeAsync();
+        var filter = await session.Find(By.Id("PART_FilterView")).GetAsync();
+        await funnel.InvokeAsync();
+        var stillThere = await session.Find(By.Id("PART_FilterView")).ExistsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Name, Is.EqualTo("Filter"), "called by its tooltip");
+            Assert.That(filter.IsOffscreen, Is.False, "pressed, it opens the column's filter");
+            Assert.That(stillThere, Is.False, "pressed again, it closes it");
+        });
+    }
+
+    [Test]
     public async Task AHeader_SortsByItsColumn_AsAClickDoes()
     {
         var (grid, _) = Table();

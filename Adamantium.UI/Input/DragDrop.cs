@@ -234,7 +234,7 @@ public static partial class DragDrop
         if (input is not IUIComponent source) return true;
         var local = Mouse.GetPosition(input);
         var declared = false;
-        foreach (var handle in DragHandles(source))
+        foreach (var handle in GetDragHandles(source))
         {
             declared = true;
             if (handle.TransformBoundsToVisual(source).Contains(local)) return true;
@@ -242,9 +242,10 @@ public static partial class DragDrop
         return !declared;
     }
 
-    // A grip is either the DragHandle CONTROL (which switches itself off through IsActive - that is what a "drag only by
-    // the handle" toggle binds to) or any element carrying the attached property, for retrofitting a glyph or an icon.
-    private static IEnumerable<IUIComponent> DragHandles(IUIComponent element)
+    /// <summary>The grips inside <paramref name="element"/> a drag has to start on, when it has any: a
+    /// <see cref="IDragHandle"/> that is active - what a "drag only by the handle" switch turns off - or an element
+    /// marked with <see cref="IsDragHandleProperty"/>.</summary>
+    public static IEnumerable<IUIComponent> GetDragHandles(IUIComponent element)
     {
         foreach (var child in element.VisualChildren)
         {
@@ -252,7 +253,7 @@ public static partial class DragDrop
             {
                 yield return child;
             }
-            foreach (var nested in DragHandles(child)) yield return nested;
+            foreach (var nested in GetDragHandles(child)) yield return nested;
         }
     }
 

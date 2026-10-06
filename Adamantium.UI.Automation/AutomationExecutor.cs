@@ -243,6 +243,9 @@ public sealed class AutomationExecutor
                 var (from, to) = DragPoints(request.Value);
                 InputSimulator.Drag(OwnerOf(peer), Label(peer), from, to);
                 break;
+            case AutomationCommand.DropOnto:
+                DropOnto(peer, request);
+                break;
             case AutomationCommand.Expand:
                 Pattern<IExpandCollapseProvider>(peer, PatternId.ExpandCollapse).Expand();
                 break;
@@ -430,6 +433,97 @@ public sealed class AutomationExecutor
 
         transform.Zoom(percent);
     }
+
+    // Before is the target's leading part; after is the leading part of the one after it, or the far end of the row or
+    // column it stands in when it is the last. Read off the neighbors rather than the target's own edge, so it means
+    // the same to a list with an insertion caret, to one that opens a gap in a grid of equal cells and to a row of
+    // column headers.
+    private void DropOnto(AutomationPeer peer, AutomationRequest request)
+    {
+        var target = Resolve(request.Value);
+        var side = request.Properties is [{ } named, ..] ? named.ToLowerInvariant() : null;
+        if (side is not (null or "before" or "after"))
+        {
+            throw new AutomationException($"'{side}' is not a side to drop on: before or after.");
+        }
+
+        var owner = OwnerOf(target);
+        if (side == null)
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target),
+                new Vector2(owner.RenderSize.Width / 2, owner.RenderSize.Height / 2), owner);
+            return;
+        }
+
+        var parent = target.GetParent() as UIComponentAutomationPeer;
+        var within = parent?.Owner ?? owner;
+        var kin = parent?.GetChildren().Where(child => child.ControlType == target.ControlType).ToList() ?? [target];
+        var index = kin.IndexOf(target);
+        var across = new[] { index - 1, index + 1 }
+            .Where(i => i >= 0 && i < kin.Count && kin[i].BoundingRectangle.Width > 0)
+            .Any(i => Beside(kin[i].BoundingRectangle, target.BoundingRectangle));
+
+        if (side == "before")
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target), Leading(owner, across), within);
+        }
+        else if (index + 1 < kin.Count && kin[index + 1] is UIComponentAutomationPeer { IsOffscreen: false } next)
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), next.Owner, Label(target), Leading(next.Owner, across), within);
+        }
+        else
+        {
+            // The last: just past it, else the far end of what holds it, else its own trailing part - whichever the
+            // pointer can reach. A list that opens a gap reads only the first two as after it.
+            var size = owner.RenderSize;
+            var end = within.TranslatePoint(new Vector2(within.RenderSize.Width - 3, within.RenderSize.Height - 3), owner);
+            Vector2[] points = across
+                ? [new(size.Width + 3, size.Height / 2), new(end.X, size.Height / 2), new(size.Width * 0.85, size.Height / 2)]
+                : [new(size.Width / 2, size.Height + 3), new(size.Width / 2, end.Y), new(size.Width / 2, size.Height * 0.85)];
+            var at = points.FirstOrDefault(point => InputSimulator.Reaches(owner, point, within), points[0]);
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target), at, within);
+        }
+    }
+
+    private static Vector2 Leading(UIComponent element, bool across) => across
+        ? new Vector2(element.RenderSize.Width * 0.15, element.RenderSize.Height / 2)
+        : new Vector2(element.RenderSize.Width / 2, element.RenderSize.Height * 0.15);
+
+    private static bool Beside(Rect neighbor, Rect bounds) =>
+        Math.Abs(neighbor.Y + neighbor.Height / 2 - (bounds.Y + bounds.Height / 2)) < bounds.Height / 2;
+
+    // Where a hand takes it: by its grip, when a drag has to start there; else its middle, or along its middle line, off
+    // any part of it that acts on a press of its own - a narrow column header is mostly its funnel.
+    private static Vector2 Grip(AutomationPeer peer)
+    {
+        var owner = OwnerOf(peer);
+        if (UI.Input.DragDrop.GetDragHandles(owner).FirstOrDefault() is { } handle)
+        {
+            var grip = handle.TransformBoundsToVisual(owner);
+            return new Vector2(grip.X + grip.Width / 2, grip.Y + grip.Height / 2);
+        }
+
+        var size = owner.RenderSize;
+        var bounds = peer.BoundingRectangle;
+        var presses = PressedParts(peer).Select(part => part.BoundingRectangle).ToList();
+        foreach (var x in (double[])[0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875])
+        {
+            var at = new Vector2(bounds.X + bounds.Width * x, bounds.Y + bounds.Height / 2);
+            if (!presses.Any(part => at.X >= part.X && at.X < part.X + part.Width && at.Y >= part.Y && at.Y < part.Y + part.Height))
+            {
+                return new Vector2(size.Width * x, size.Height / 2);
+            }
+        }
+
+        return new Vector2(size.Width / 2, size.Height / 2);
+    }
+
+    private static IEnumerable<AutomationPeer> PressedParts(AutomationPeer peer) =>
+        peer.GetChildren().SelectMany(child =>
+            child.GetPattern(PatternId.Invoke) != null || child.GetPattern(PatternId.Toggle) != null ||
+            child.GetPattern(PatternId.ExpandCollapse) != null
+                ? [child]
+                : PressedParts(child));
 
     private void Dock(AutomationPeer peer, AutomationRequest request)
     {

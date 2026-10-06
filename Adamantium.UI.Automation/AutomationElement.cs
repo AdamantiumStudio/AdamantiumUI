@@ -176,6 +176,17 @@ public sealed class AutomationElement
     /// <summary>Opens its context menu - its own, or the nearest one above it - as the menu key would, without the mouse.</summary>
     public Task ShowContextMenuAsync() => RunAsync(AutomationCommand.ShowContextMenu);
 
+    /// <summary>Carries it onto <paramref name="target"/> and lets it go there, as a hand would: over the target's middle,
+    /// or just before or after it - a row among rows, a column among columns.</summary>
+    public Task DropOntoAsync(AutomationElement target, DropSide side = DropSide.Onto) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.DropOnto,
+            Target = Selector,
+            Value = target.Selector,
+            Properties = side == DropSide.Onto ? null : [side.ToString()]
+        });
+
     /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
     public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
 

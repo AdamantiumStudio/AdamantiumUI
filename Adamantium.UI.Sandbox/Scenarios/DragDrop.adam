@@ -1,17 +1,45 @@
-# The Drag & Drop page: a row dragged down its list and back by input made inside the application - the pointer the
-# drag reads is the gesture's, never the system's - and the window for dragging across windows opened and closed.
+# The Drag & Drop page: rows carried onto other rows by input made inside the application - the pointer the drag
+# reads is the gesture's, never the system's - down a list and back, by the grip while the list asks for it and by the
+# whole row when it does not, along a row of tiles, and across into another list and back; then the window for
+# dragging across windows opened and closed. Everything is put back as the page opened.
 # The list that drags out to other applications runs its gesture through the system's own loop, which follows the real
 # mouse; it is not driven here.
 select id=GalleryTabs/id=DragDrop
 wait id=DragDropDemoView/name="Item 01"
+expect id=DragDropDemoView/name="Drag by handle only" toggle=On
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 01" "id=DragDropDemoView/type=List,name=Fruits>name=Item 03" --after
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[2]" name="Item 01"
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 01" "id=DragDropDemoView/type=List,name=Fruits>name=Item 02" --before
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" name="Item 01"
 toggle id=DragDropDemoView/name="Drag by handle only"
-expect id=DragDropDemoView/name="Drag by handle only" toggle=Off
-drag id=DragDropDemoView/name="Item 01" 60,20 60,140
-expect id=DragDropDemoView/type=List/type=ListItem name="Item 02"
-drag id=DragDropDemoView/name="Item 01" 60,20 60,-40
-expect id=DragDropDemoView/type=List/type=ListItem name="Item 01"
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 02" "id=DragDropDemoView/type=List,name=Fruits>name=Item 01" --before
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" name="Item 02"
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 02" "id=DragDropDemoView/type=List,name=Fruits>name=Item 03" --before
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[1]" name="Item 02"
 toggle id=DragDropDemoView/name="Drag by handle only"
+# Along a row of tiles that wraps.
+drop "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Red" "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Blue" --after
+expect "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>type=ListItem[2]" name=Red
+drop "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Red" "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Green" --before
+expect "id=DragDropDemoView/type=List,name=Colors (WrapPanel)>type=ListItem[0]" name=Red
+# Into another list, after its last row, and back where it was.
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 03" "id=DragDropDemoView/type=List,name=Animals>name=Cat" --after
+expect "id=DragDropDemoView/type=List,name=Animals>type=ListItem[2]" name="Item 03"
+absent "id=DragDropDemoView/type=List,name=Fruits>name=Item 03"
+drop "id=DragDropDemoView/type=List,name=Animals>name=Item 03" "id=DragDropDemoView/type=List,name=Fruits>name=Item 04" --before
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[2]" name="Item 03"
+absent "id=DragDropDemoView/type=List,name=Animals>name=Item 03"
+# In a tree: into a folder, and back out after the last one.
+scroll "id=DragDropDemoView/type=Tree>name=Loose item"
+drop "id=DragDropDemoView/type=Tree>name=Loose item" "id=DragDropDemoView/type=Tree>name=Folder A"
+expand "id=DragDropDemoView/type=Tree>name=Folder A"
+wait "id=DragDropDemoView/type=Tree>name=Folder A>name=Loose item"
+scroll "id=DragDropDemoView/type=Tree>name=Folder B"
+drop "id=DragDropDemoView/type=Tree>name=Folder A>name=Loose item" "id=DragDropDemoView/type=Tree>name=Folder B" --after
+collapse "id=DragDropDemoView/type=Tree>name=Folder A"
+expect "id=DragDropDemoView/type=Tree>type=TreeItem[2]" name="Loose item"
 invoke id=DragDropDemoView/name="Open drop window (cross-window test)"
 wait id=DragDropWindow
 window id=DragDropWindow close
 absent id=DragDropWindow
+scroll id=DragDropDemoView>type=Pane --vertical 0

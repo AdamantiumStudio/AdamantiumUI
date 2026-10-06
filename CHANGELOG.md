@@ -375,6 +375,12 @@ All packages share one version.
   under it, with the keyboard on the first row. Until now a context menu opened only by the right button.
 - `AutomationPeer.ShowContextMenu` opens it the same way through automation: `adam-auto context-menu <selector>`,
   `AutomationElement.ShowContextMenuAsync`, and UI Automation's `ShowContextMenu` (`IRawElementProviderSimple2`).
+- Drag and drop by element: `adam-auto drop <selector> <target> [--before|--after]`, `AutomationElement.DropOntoAsync`,
+  carries one element onto another by a gesture made inside the application - a row among rows of a list or a tree,
+  into another list, a column header among the headers or onto the grouping and sorting strips. It takes the element by
+  its drag handle when it has one, and says so when the target cannot be reached. `DragDrop.GetDragHandles`.
+- A column header's funnel is a button to automation that opens and closes the column's filter
+  (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
 

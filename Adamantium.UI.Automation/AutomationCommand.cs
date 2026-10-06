@@ -130,5 +130,10 @@ public enum AutomationCommand
     Pan,
 
     /// <summary>Opens the target's context menu as the menu key would, with the keyboard inside.</summary>
-    ShowContextMenu
+    ShowContextMenu,
+
+    /// <summary>Carries the target onto the element <see cref="AutomationRequest.Value"/> selects and lets it go there,
+    /// by a gesture made inside the application: over its middle, or before or after it when the first of
+    /// <see cref="AutomationRequest.Properties"/> says so.</summary>
+    DropOnto
 }

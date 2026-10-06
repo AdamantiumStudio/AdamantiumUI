@@ -16,7 +16,7 @@ internal sealed class ScriptInterpreter
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
-        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "connect", "disconnect", "dock", "window", "set",
+        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
         "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -104,6 +104,14 @@ internal sealed class ScriptInterpreter
             "zoom" => SendAsync(Second(AutomationCommand.Zoom, arguments, allowErrors)),
             "pan" => SendAsync(Pair(AutomationCommand.Pan, arguments, allowErrors)),
             "context-menu" => SendAsync(Target(AutomationCommand.ShowContextMenu, arguments, allowErrors)),
+            "drop" => SendAsync(new AutomationRequest
+            {
+                Command = AutomationCommand.DropOnto,
+                Target = arguments.At(0),
+                Value = arguments.At(1),
+                Properties = arguments.Flag("before") ? ["before"] : arguments.Flag("after") ? ["after"] : null,
+                AllowErrors = allowErrors
+            }),
             "connect" => SendAsync(Second(AutomationCommand.Connect, arguments, allowErrors)),
             "disconnect" => SendAsync(Second(AutomationCommand.Disconnect, arguments, allowErrors)),
             "dock" => SendAsync(new AutomationRequest

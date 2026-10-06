@@ -13,7 +13,7 @@ namespace Adamantium.UI.Controls.Automation;
 /// does: on is descending.</summary>
 public class DataGridChipAutomationPeer : ContentControlAutomationPeer, IToggleProvider, ITransformProvider
 {
-    private ChipRemoveAutomationPeer _remove;
+    private PartButtonAutomationPeer _remove;
 
     public DataGridChipAutomationPeer(ContentControl owner) : base(owner)
     {
@@ -101,7 +101,7 @@ public class DataGridChipAutomationPeer : ContentControlAutomationPeer, IToggleP
 
         if (_remove?.Owner != remove)
         {
-            _remove = new ChipRemoveAutomationPeer(remove, Remove);
+            _remove = new PartButtonAutomationPeer(remove, Remove);
         }
 
         return [_remove];

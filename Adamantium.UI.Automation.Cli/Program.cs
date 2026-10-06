@@ -35,6 +35,7 @@ public static class Program
           select <selector> --add | unselect <selector>       add to a selection of many, or take out of it
           click | rclick | hover <selector>                   or by input made inside the application
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
+          drop <selector> <target> [--before|--after]         carry it onto another element and let it go there
           scroll <selector>                                   bring a list's item into view, making its element
           scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents
           move <selector> <dx> <dy>                           move a splitter or a canvas node, in its own units

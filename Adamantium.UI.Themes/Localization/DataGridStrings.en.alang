@@ -4,6 +4,14 @@
     <Phrase Key="SelectAll" Text="Select All"/>
     <Phrase Key="ShowRowsWhere" Text="Show rows with value that"/>
     <Phrase Key="MatchCase" Text="Match case"/>
+    <Phrase Key="FilterValues" Text="Values to show"/>
+    <Phrase Key="FirstCondition" Text="First condition"/>
+    <Phrase Key="FirstValue" Text="Value of the first condition"/>
+    <Phrase Key="FirstMatchCase" Text="Match case in the first condition"/>
+    <Phrase Key="ConditionLogic" Text="How the two conditions combine"/>
+    <Phrase Key="SecondCondition" Text="Second condition"/>
+    <Phrase Key="SecondValue" Text="Value of the second condition"/>
+    <Phrase Key="SecondMatchCase" Text="Match case in the second condition"/>
     <Phrase Key="ApplyFilter" Text="Filter"/>
     <Phrase Key="ClearFilter" Text="Clear Filter"/>
     <Phrase Key="PreviousMatch" Text="Previous match"/>
