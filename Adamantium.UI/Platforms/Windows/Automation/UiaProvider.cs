@@ -7,7 +7,7 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Platforms.Windows.Automation;
 
-internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProviderFragment, IUiaInvokeProvider,
+internal abstract class UiaProvider : IRawElementProviderSimple2, IRawElementProviderFragment, IUiaInvokeProvider,
     IUiaToggleProvider, IUiaValueProvider, IUiaRangeValueProvider, IUiaSelectionProvider, IUiaSelectionItemProvider,
     IUiaExpandCollapseProvider, IUiaScrollProvider, IUiaScrollItemProvider, IUiaGridProvider, IUiaGridItemProvider,
     IUiaTableProvider, IUiaTableItemProvider, IUiaWindowProvider, IUiaTextProvider, IUiaTransform2Provider,
@@ -66,6 +66,8 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
     public nint GetEmbeddedFragmentRoots() => 0;
 
     public void SetFocus() => Bridge.Run(() => Peer().SetFocus());
+
+    public void ShowContextMenu() => Bridge.Run(() => Peer().ShowContextMenu());
 
     public IRawElementProviderFragmentRoot GetFragmentRoot() => Bridge.Root;
 

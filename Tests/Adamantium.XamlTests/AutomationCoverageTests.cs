@@ -11,6 +11,7 @@ using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -565,6 +566,58 @@ public class AutomationCoverageTests
         {
             Assert.That(view.CenterX + view.CenterXFine, Is.EqualTo(x - 1.5).Within(1e-9), "the content follows the drag");
             Assert.That(view.CenterY + view.CenterYFine, Is.EqualTo(y + 0.6).Within(1e-9));
+        });
+    }
+
+    [TestCase("Apps")]
+    [TestCase("Shift+F10")]
+    public async Task TheMenuKey_OpensTheNearestContextMenu_UnderTheFocusedElement_WithTheKeyboardInside(string keys)
+    {
+        var menu = new ContextMenu { Name = "Menu" };
+        menu.Items.Add(new MenuItem { Header = "Copy" });
+        menu.Items.Add(new MenuItem { Header = "Paste" });
+        var inside = new Button { Name = "Inside", Content = "Inside" };
+        var panel = new StackPanel { ContextMenu = menu, Children = { new Button { Content = "Above" }, inside } };
+        await using var session = await Driving(panel);
+
+        await session.Find(By.Id("Inside")).PressKeysAsync(keys);
+        await session.WaitForIdleAsync();
+        var copy = await session.Find(By.Id("Menu")).Find(By.Name("Copy")).GetAsync();
+        var below = inside.TranslatePoint(new Vector2(0, inside.RenderSize.Height), panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True);
+            Assert.That(copy.HasKeyboardFocus, Is.True, "the keyboard is on the first row");
+            Assert.That(menu.HorizontalOffset, Is.EqualTo(below.X).Within(0.5), "under the focused element");
+            Assert.That(menu.VerticalOffset, Is.EqualTo(below.Y).Within(0.5));
+        });
+    }
+
+    [Test]
+    public async Task AContextMenu_IsOpenedThroughAutomation_AndOneThatHasNoneSaysSo()
+    {
+        var menu = new ContextMenu { Name = "Menu" };
+        menu.Items.Add(new MenuItem { Header = "Copy" });
+        var host = new Border { Child = new Button { Name = "Inside", Content = "Inside" } };
+        var panel = new StackPanel
+        {
+            Children =
+            {
+                new StackPanel { ContextMenu = menu, Children = { host } },
+                new Button { Name = "Bare", Content = "Bare" }
+            }
+        };
+        await using var session = await Driving(panel);
+
+        await session.Find(By.Id("Inside")).ShowContextMenuAsync();
+        var opened = menu.IsOpen;
+        var none = Assert.ThrowsAsync<AutomationException>(() => session.Find(By.Id("Bare")).ShowContextMenuAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened, Is.True, "the nearest menu above the element");
+            Assert.That(none.Message, Does.Contain("has no context menu"));
         });
     }
 

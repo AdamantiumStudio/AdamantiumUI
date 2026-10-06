@@ -86,6 +86,14 @@ public class UIComponentAutomationPeer : AutomationPeer
 
     public override void SetFocus() => (Owner as IInputComponent)?.Focus();
 
+    public override void ShowContextMenu()
+    {
+        if (!InputUIComponent.OpenContextMenu(Owner))
+        {
+            base.ShowContextMenu();
+        }
+    }
+
     /// <summary>What the element is called when <see cref="AutomationProperties.NameProperty"/> does not say. Nothing by
     /// default.</summary>
     protected virtual string NameCore() => null;

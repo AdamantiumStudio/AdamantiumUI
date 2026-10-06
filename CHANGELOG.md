@@ -371,6 +371,10 @@ All packages share one version.
   Automation has no pattern for a plane with no edges.
 - A `CanvasMiniMap` is a picture to automation, named in the themes (`CanvasStrings.WholePlane`); the canvas's layer
   tree and node palette are named too.
+- The menu key and Shift+F10 open the context menu of the focused element - its own, or the nearest one above it -
+  under it, with the keyboard on the first row. Until now a context menu opened only by the right button.
+- `AutomationPeer.ShowContextMenu` opens it the same way through automation: `adam-auto context-menu <selector>`,
+  `AutomationElement.ShowContextMenuAsync`, and UI Automation's `ShowContextMenu` (`IRawElementProviderSimple2`).
 
 ### Changed
 

@@ -127,5 +127,8 @@ public enum AutomationCommand
 
     /// <summary>Drags what the target - a view of a plane - shows by <see cref="AutomationRequest.Value"/>, <c>dx,dy</c>
     /// of its own units.</summary>
-    Pan
+    Pan,
+
+    /// <summary>Opens the target's context menu as the menu key would, with the keyboard inside.</summary>
+    ShowContextMenu
 }

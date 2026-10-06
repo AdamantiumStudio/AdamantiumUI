@@ -41,6 +41,7 @@ public static class Program
           resize <selector> <width> <height>                  resize a canvas node, in its own units
           zoom <selector> <%>                                 zoom a zoom box, a canvas or a fractal view
           pan <selector> <dx> <dy>                            drag what a canvas or a fractal view shows, in its units
+          context-menu <selector>                             open its context menu as the menu key would
           connect <socket> <socket>                           join two sockets of nodes with a wire
           disconnect <socket> [<socket>]                      part a socket from one, or from all it is joined to
           dock <pane> top|left|bottom|right|fill|none [--beside <pane>]   dock a pane or a panel: to an edge, into the

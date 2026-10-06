@@ -173,6 +173,9 @@ public sealed class AutomationElement
     /// <summary>Drags what it - a view of a plane, a canvas - shows by an offset of its own units, without input.</summary>
     public Task PanAsync(double dx, double dy) => RunAsync(AutomationCommand.Pan, FormattableString.Invariant($"{dx},{dy}"));
 
+    /// <summary>Opens its context menu - its own, or the nearest one above it - as the menu key would, without the mouse.</summary>
+    public Task ShowContextMenuAsync() => RunAsync(AutomationCommand.ShowContextMenu);
+
     /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
     public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
 

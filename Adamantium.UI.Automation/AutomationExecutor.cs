@@ -269,6 +269,17 @@ public sealed class AutomationExecutor
                 var offset = Point(request.Value);
                 Pattern<IPanProvider>(peer, PatternId.Pan).Pan(offset.X, offset.Y);
                 break;
+            case AutomationCommand.ShowContextMenu:
+                try
+                {
+                    peer.ShowContextMenu();
+                }
+                catch (InvalidOperationException e)
+                {
+                    throw new AutomationException(e.Message);
+                }
+
+                break;
             case AutomationCommand.Connect:
                 Pattern<IConnectionProvider>(peer, PatternId.Connection).Connect(Resolve(request.Value));
                 break;

@@ -25,6 +25,12 @@ expect id=Band/id=SelectGizmo selected=False
 expect id=StatusLine name="Drag to move the selection."
 select id=Band/id=SelectGizmo
 expect id=Band/id=MoveGizmo selected=False
+# The menu key opens a command's own menu with the keyboard on its first row; Escape puts it away.
+key Apps --into id=Band/name=Snap
+expect "type=MenuItem,name=Snap settings..." focus=True
+key Escape
+absent "type=MenuItem,name=Snap settings..."
+expect id=Band/name=Snap focus=True
 select id=Band/name=Home
 # The gallery is a list picked from by name.
 select id=Band/name=Materials/name=Gold
