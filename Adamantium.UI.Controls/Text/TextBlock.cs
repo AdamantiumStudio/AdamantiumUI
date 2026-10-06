@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Text;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
@@ -99,6 +100,10 @@ public class TextBlock : InputUIComponent
     private HorizontalTextAlignment _lastHAlign;
     private VerticalTextAlignment _lastVAlign;
     private bool _lastJustify;
+    private TextAttributes _lastShaping;
+    private InlineCollection _inlines;
+    private bool _inlinesDirty = true;
+    private string _inlineText;
 
     public TextBlock()
     {
@@ -134,13 +139,15 @@ public class TextBlock : InputUIComponent
             && !double.IsInfinity(_lastConstraint.Width))
             width = _lastConstraint.Width;
         var height = Height;
+        var text = HasInlines ? InlineText() : Text;
+        var shaping = TextShaping();
 
-        if (_hasLayout
-            && _lastText == Text && _lastFontSize.Equals(FontSize)
+        if (_hasLayout && !_inlinesDirty
+            && _lastText == text && _lastFontSize.Equals(FontSize)
             && _lastWidth.Equals(width) && _lastHeight.Equals(height)
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
-            && _lastJustify == JustifyLastLine)
+            && _lastJustify == JustifyLastLine && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -149,8 +156,14 @@ public class TextBlock : InputUIComponent
         GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
 
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
-        _cachedSize = _textLayout.ProcessText(Text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-            HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
+        var attributed = HasInlines
+            ? InlineAttributedText(text, shaping)
+            : shaping == null ? null : new AttributedText(text, shaping);
+        _cachedSize = attributed == null
+            ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine)
+            : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
 
         // A NoWrap block took that width only so TRIMMING had an edge to work to - it must not then ASK for it. The
         // layout reports the text AREA once one is given, not the letters, so a short label in a wide slot claimed the
@@ -166,7 +179,9 @@ public class TextBlock : InputUIComponent
         ShapeCalls++;
 
         _hasLayout = true;
-        _lastText = Text; _lastFontSize = FontSize; _lastWidth = width; _lastHeight = height;
+        _inlinesDirty = false;
+        _lastShaping = shaping;
+        _lastText = text; _lastFontSize = FontSize; _lastWidth = width; _lastHeight = height;
         _lastWrapping = TextWrapping; _lastTrimming = TextTrimming;
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
         return _cachedSize;
@@ -177,6 +192,8 @@ public class TextBlock : InputUIComponent
         get => GetValue<string>(TextProperty);
         set => SetValue(TextProperty, value);
     }
+
+    internal TextLayout Layout => _textLayout;
     
     public TextTrimming TextTrimming
     {
@@ -225,25 +242,12 @@ public class TextBlock : InputUIComponent
     }
 
     // --- Bindable inline runs -----------------------------------------------------------------------------------------
-    // When Inlines has content it REPLACES Text: the block renders each Run in sequence with its own (bindable) color and
-    // size. Each Run is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and this
-    // block listens to every Run's Changed to re-shape when a bound value updates. Single line, no cross-run wrapping.
-
-    private InlineCollection _inlines;
-    private readonly List<InlinePiece> _pieces = [];
-    private bool _piecesDirty = true;
-    private Size _inlineSize;
-
-    private sealed class InlinePiece
-    {
-        public TextLayout Layout;
-        public double X;
-        public Size Size;
-        public Brush Foreground;
-    }
+    // When Inlines has content it REPLACES Text: the runs lay out as one attributed text, so they shape, wrap and align
+    // together. Each Run is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and this
+    // block listens to every Run's Changed to re-shape when a bound value updates.
 
     /// <summary>Bindable inline content. When non-empty it is rendered instead of <see cref="Text"/>: each <see cref="Run"/>
-    /// carries its own bound Text/Foreground/FontSize.</summary>
+    /// carries its own bound text, color, size, background, lines, features and language.</summary>
     public InlineCollection Inlines
     {
         get
@@ -265,42 +269,108 @@ public class TextBlock : InputUIComponent
             foreach (Inline old in e.OldItems) { old.Changed -= OnInlineChanged; RemoveLogicalChild(old); }
         if (e.NewItems != null)
             foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; }
-        _piecesDirty = true;
+        _inlinesDirty = true;
         InvalidateMeasure();
     }
 
     private void OnInlineChanged(object sender, System.EventArgs e)
     {
-        _piecesDirty = true;
+        _inlinesDirty = true;
         InvalidateMeasure();
     }
 
-    // (Re)build the per-run layouts and their running X offsets. Cheap no-op unless a run/list/font changed.
-    private Size EnsureInlineLayout()
+    private string InlineText()
     {
-        if (!_piecesDirty) return _inlineSize;
-
-        var font = FontFamily ?? DefaultFontFamily;
-        _pieces.Clear();
-        double x = 0, height = 0;
-        foreach (var inline in _inlines)
+        if (_inlinesDirty || _inlineText == null)
         {
-            if (inline is not Run run) continue;
-            var text = run.Text ?? string.Empty;
-            var fs = double.IsNaN(run.FontSize) ? FontSize : run.FontSize;
-            var layout = new TextLayout(font.Typeface, font.Fonts[0]);
-            var size = text.Length == 0
-                ? Size.Zero
-                : layout.ProcessText(text, fs, new Size(double.PositiveInfinity, double.PositiveInfinity),
-                    TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Bottom);
-            _pieces.Add(new InlinePiece { Layout = layout, X = x, Size = size, Foreground = run.Foreground ?? Foreground });
-            x += size.Width;
-            height = System.Math.Max(height, size.Height);
+            var text = new StringBuilder();
+            foreach (var inline in _inlines)
+            {
+                if (inline is Run run)
+                {
+                    text.Append(run.Text);
+                }
+            }
+
+            _inlineText = text.ToString();
         }
 
-        _inlineSize = new Size(x, height);
-        _piecesDirty = false;
-        return _inlineSize;
+        return _inlineText;
+    }
+
+    private AttributedText InlineAttributedText(string text, TextAttributes shaping)
+    {
+        var attributed = new AttributedText(text, shaping);
+        var start = 0;
+        foreach (var inline in _inlines)
+        {
+            if (inline is not Run run)
+            {
+                continue;
+            }
+
+            var length = (run.Text ?? string.Empty).Length;
+            attributed.Apply(start, length, new TextAttributes
+            {
+                Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
+                Language = run.Language,
+                FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
+                Foreground = (run.Foreground as SolidColorBrush)?.Color,
+                Background = (run.Background as SolidColorBrush)?.Color,
+                Decorations = run.TextDecorations == TextDecorations.None ? null : run.TextDecorations,
+            });
+            start += length;
+        }
+
+        return attributed;
+    }
+
+    private void DrawAdornments(IDrawingSession session, bool backgrounds)
+    {
+        if (_textLayout.AttributedText == null)
+        {
+            return;
+        }
+
+        foreach (var adornment in _textLayout.GetAdornments())
+        {
+            if ((adornment.Kind == TextAdornmentKind.Background) != backgrounds)
+            {
+                continue;
+            }
+
+            var brush = adornment.Color is { } color ? new SolidColorBrush(color) : Foreground;
+            var rect = adornment.Rect;
+            if (adornment.Kind == TextAdornmentKind.Squiggle)
+            {
+                DrawSquiggle(session, rect, brush);
+            }
+            else
+            {
+                session.DrawRectangle(brush, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
+            }
+        }
+    }
+
+    private static void DrawSquiggle(IDrawingSession session, RectangleF band, Brush brush)
+    {
+        var thickness = band.Height / 3;
+        var pen = new Pen(brush, thickness);
+        var step = band.Height;
+        var top = band.Y + thickness / 2;
+        var bottom = band.Y + band.Height - thickness / 2;
+        var x = (double)band.X;
+        var up = false;
+        while (x < band.Right)
+        {
+            var next = Math.Min(x + step, band.Right);
+            var fraction = (next - x) / step;
+            var from = up ? bottom : top;
+            var to = from + (up ? top - bottom : bottom - top) * fraction;
+            session.DrawLine(new Vector2(x, from), new Vector2(next, to), pen);
+            x = next;
+            up = !up;
+        }
     }
 
     /// <summary>TEMP: what the block's OWN measure/arrange allocates, against what the layout histogram charges the type
@@ -323,7 +393,7 @@ public class TextBlock : InputUIComponent
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
-        var size = HasInlines ? EnsureInlineLayout() : EnsureLayout();
+        var size = EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
         return size;
@@ -339,7 +409,7 @@ public class TextBlock : InputUIComponent
             _lastConstraint = new Size(finalSize.Width, _lastConstraint.Height);
 
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
-        _ = HasInlines ? EnsureInlineLayout() : EnsureLayout();
+        EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
         return finalSize;
@@ -364,28 +434,10 @@ public class TextBlock : InputUIComponent
     protected override void OnRender(IDrawingContext context)
     {
         var session = context.ForControl(this);
-        if (HasInlines)
-        {
-            EnsureInlineLayout();
-            foreach (var piece in _pieces)
-            {
-                if (piece.Size.Width <= 0) continue;
-                var pars = new TextRenderingParameters
-                {
-                    HorizontalTextAlignment = HorizontalTextAlignment.Left,
-                    VerticalTextAlignment = VerticalTextAlignment.Bottom,
-                    TextTrimming = TextTrimming.None,
-                    TextWrapping = TextWrapping.NoWrap,
-                    Color = (piece.Foreground as SolidColorBrush)?.Color ?? Colors.White,
-                    TextArea = new Rectangle(new Vector2F((float)piece.X, 0), piece.Size)
-                };
-                session.DrawText(pars, piece.Size, piece.Layout, piece.Foreground, Brushes.Transparent, Brushes.Transparent);
-            }
-            return;
-        }
-
         EnsureLayout();   // refresh shaping if a render-only property (alignment/wrapping) changed since the last measure
+        DrawAdornments(session, backgrounds: true);
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
+        DrawAdornments(session, backgrounds: false);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new TextBlockAutomationPeer(this);

@@ -2,12 +2,15 @@
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Controls;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
@@ -799,6 +802,19 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             themes.ThemeChanged += OnThemeChanged;
             IsThemeChanging = themes.IsThemeChanging;   // a window opened mid-swap already shows the busy state
         }
+
+        Languages.Changed += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object sender, EventArgs e)
+    {
+        foreach (var node in GetVisualDescendants())
+        {
+            if (node is TextBlock or TextBoxBase)
+            {
+                ((MeasurableUIComponent)node).InvalidateMeasure();
+            }
+        }
     }
 
     private void PlaceOnScreen(IUIContext context)
@@ -1022,6 +1038,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
                 themes.ThemeChanging -= OnThemeChanging;
                 themes.ThemeChanged -= OnThemeChanged;
             }
+            Languages.Changed -= OnLanguageChanged;
             Closed?.Invoke(this, EventArgs.Empty);
         }
     }

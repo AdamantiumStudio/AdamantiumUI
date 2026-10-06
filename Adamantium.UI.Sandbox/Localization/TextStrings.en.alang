@@ -11,4 +11,11 @@
     <Phrase Key="BindableRuns" Text="Bindable runs:"/>
     <Phrase Key="YouTyped" Text="You typed: "/>
     <Phrase Key="Chars" Count="count" One="  ({count} char)" Other="  ({count} chars)"/>
+    <Phrase Key="StyledRuns" Text="Runs with backgrounds, lines and sizes:"/>
+    <Phrase Key="Highlighted" Text="highlighted"/>
+    <Phrase Key="Underlined" Text="underlined"/>
+    <Phrase Key="Misspelt" Text="mispelled"/>
+    <Phrase Key="Struck" Text="struck out"/>
+    <Phrase Key="Large" Text="and large"/>
+    <Phrase Key="TypographyTitle" Text="Typography (tabular figures; below: no ligatures, fractions):"/>
 </Language>

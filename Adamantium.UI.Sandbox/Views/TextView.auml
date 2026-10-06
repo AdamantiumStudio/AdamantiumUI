@@ -64,6 +64,47 @@
                 <Run Text="{Localize TextStrings.Chars, count={Binding MessageLength}}" Foreground="#64748B"/>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Runs lay out as one text: each carries its own background, lines and size, and they wrap together. -->
+        <TextBlock Text="{Localize TextStrings.StyledRuns}"
+                   Margin="0,20,0,6"/>
+        <TextBlock FontSize="18"
+                   TextWrapping="WrapByWords"
+                   Width="520"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.Highlighted}"
+                     Background="#7C3AED"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Underlined}"
+                     TextDecorations="Underline"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Misspelt}"
+                     TextDecorations="Squiggle"
+                     Foreground="#F87171"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Struck}"
+                     TextDecorations="Strikethrough"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Large}"
+                     FontSize="32"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Typography by name and font features by tag, inherited by the text inside. -->
+        <TextBlock Text="{Localize TextStrings.TypographyTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Typography.NumeralAlignment="Tabular"
+                    Orientation="Vertical">
+            <TextBlock Text="Office affluent 0123456789"
+                       FontSize="22"/>
+            <TextBlock Text="Office affluent 0123456789"
+                       FontSize="22"
+                       FontFeatures="liga=0"/>
+            <TextBlock Text="1/2 3/4"
+                       FontSize="22"
+                       Typography.Fraction="Slashed"/>
+        </StackPanel>
     </StackPanel>
     </ScrollViewer>
 </View>

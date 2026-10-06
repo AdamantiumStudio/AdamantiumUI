@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Adamantium.Core;
+using Adamantium.UI.Markup;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.CodeGeneration;
@@ -344,6 +345,13 @@ public static class AumlValidator
         // Enum value check; skip flags combos and numeric forms to avoid false positives.
         var propertyType = model.GetPropertyType(element, propertyName);
         var value = property.Values.FirstOrDefault();
+        if (value is not null && value.IsTextNode()
+            && MarkupValueChecks.Problem(propertyType?.FullName, value.GetTextValue()) is { } problem)
+        {
+            diagnostics.Add(At(reference, propertyName.Length, problem));
+            return;
+        }
+
         if (propertyType is { TypeKind: ResolvedTypeKind.Enum } && value is not null && value.IsTextNode())
         {
             var valueText = value.GetTextValue();

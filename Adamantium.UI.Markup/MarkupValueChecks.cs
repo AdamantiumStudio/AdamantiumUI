@@ -1,0 +1,33 @@
+using Adamantium.Fonts.Shaping;
+
+namespace Adamantium.UI.Markup;
+
+/// <summary>
+/// Checks of literal attribute values that the build and the language server make before the value reaches its parser at
+/// run time, keyed by the full name of the property's type: a typo is reported where it was written instead of being
+/// dropped when the markup loads.
+/// </summary>
+public static class MarkupValueChecks
+{
+    private static readonly Dictionary<string, Func<string, string>> Checks = new()
+    {
+        ["Adamantium.UI.Core.Media.FontFeatureList"] = FontFeatures,
+    };
+
+    /// <summary>What is wrong with <paramref name="value"/> for a property of the type named
+    /// <paramref name="typeFullName"/>; null when nothing is, or when the type has no check.</summary>
+    public static string Problem(string typeFullName, string value)
+    {
+        if (typeFullName == null || value == null || !Checks.TryGetValue(typeFullName, out var check))
+        {
+            return null;
+        }
+
+        return check(value);
+    }
+
+    private static string FontFeatures(string value)
+    {
+        return FontFeature.TryParseList(value, out _, out var error) ? null : error;
+    }
+}

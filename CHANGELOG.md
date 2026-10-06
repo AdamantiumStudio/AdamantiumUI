@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `FontFeatures` and `Language` on every element, inherited by the text inside: OpenType features as a
+  `FontFeatureList` (`[FontFeature.Ligatures.Off, FontFeature.StylisticSet(1)]` in code, `FontFeatures="liga=0, ss01"`
+  in markup) and a BCP 47 language that picks the font's local forms; text without a language is in the application's
+  (`Languages.Current`) and reshapes when it changes. `Typography.Ligatures`, `Capitals`, `NumeralStyle`,
+  `NumeralAlignment`, `Fraction` and `Variants` name the common features. A feature tag the OpenType registry does not
+  have fails the build and is underlined in the editor, with the tag it most likely meant.
+- `Run.Background`, `TextDecorations` (underline, strikethrough, squiggle), `FontFeatures` and `Language`. A
+  `TextBlock`'s runs lay out as one text: they wrap and align together, a line is as tall as its largest run, and the
+  block draws the runs' backgrounds and lines.
 - Input method editors on Windows (IMM32): the IME's composition and candidate windows open at the caret of a
   `TextBox`, and the text it commits arrives as one `TextInput`. `InputMethod.SetCaretBounds` tells the IME where the
   caret of any text control is; `Keyboard.TextCompositionStarted`, `TextCompositionChanged` and `TextCompositionEnded`

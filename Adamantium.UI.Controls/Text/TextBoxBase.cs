@@ -263,6 +263,7 @@ public abstract class TextBoxBase : Control
     private double _lastShapedFontSize = -1;
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
+    private TextAttributes _lastShapedShaping;
     private double _wrapWidth = double.PositiveInfinity;   // live viewport width for soft wrap; set by measure/render
 
     private const double CaretWidth = 1.0;
@@ -333,9 +334,13 @@ public abstract class TextBoxBase : Control
             ? double.NaN
             : _wrapWidth;
 
+        var shaping = TextShaping();
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
-            && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width))
+            && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
+            && ShapesLike(_lastShapedShaping, shaping))
+        {
             return;
+        }
 
         if (text.Length == 0)
         {
@@ -347,10 +352,15 @@ public abstract class TextBoxBase : Control
         }
         else
         {
-            var size = _textLayout.ProcessText(text, FontSize,
-                new Size(width, double.NaN),
-                wrapping, TextTrimming.None,
-                HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
+            var size = shaping == null
+                ? _textLayout.ProcessText(text, FontSize,
+                    new Size(width, double.NaN),
+                    wrapping, TextTrimming.None,
+                    HorizontalTextAlignment.Left, VerticalTextAlignment.Top)
+                : _textLayout.ProcessText(new AttributedText(text, shaping), FontSize,
+                    new Size(width, double.NaN),
+                    wrapping, TextTrimming.None,
+                    HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
             _textWidth = size.Width;
             BuildCaretModel();
         }
@@ -359,6 +369,7 @@ public abstract class TextBoxBase : Control
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
         _lastShapedWidth = width;
+        _lastShapedShaping = shaping;
     }
 
     private void BuildCaretModel()

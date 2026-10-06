@@ -27,13 +27,16 @@
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
         <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
         <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
         <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
         <Analyzer Include="$(PkgAdamantium_Mathematics)\lib\netstandard2.0\Adamantium.Mathematics.dll" Condition="'$(PkgAdamantium_Mathematics)' != ''" />
+        <Analyzer Include="$(PkgAdamantium_Fonts)\lib\netstandard2.0\Adamantium.Fonts.dll" Condition="'$(PkgAdamantium_Fonts)' != ''" />
     </ItemGroup>
 
     <ItemGroup>

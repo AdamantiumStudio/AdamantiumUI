@@ -14,10 +14,12 @@
 
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
+      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
       <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+      <PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
     </ItemGroup>
 
 </Project>
