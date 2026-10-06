@@ -333,6 +333,9 @@ All packages share one version.
   expect. `ZoomBox.ZoomTo` zooms holding the middle of the view.
 - A canvas node is selected through automation as a click selects it, and the canvas says which nodes are selected and
   tells automation when that changes.
+- A control on an `InfiniteCanvas` that is off screen is still found by automation, by its id and name, through a
+  stand-in; brought into view (`scroll <selector>`, `ScrollIntoViewAsync`) the camera moves to it without zooming, and
+  from then on it is the control itself.
 
 ### Changed
 

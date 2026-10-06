@@ -272,6 +272,35 @@ public class AutomationCoverageTests
     }
 
     [Test]
+    public async Task ACanvasNodeOffScreen_IsFoundByAStandIn_AndBroughtIntoViewIsTheNodeItself()
+    {
+        var far = new CanvasNode { Title = "Far" };
+        AutomationProperties.SetAutomationId(far, "FarNode");
+        var item = new ElementItem(far, new Rect(40000, 30000, 190, 110));
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        canvas.Scene.Add(item);
+        canvas.Scene.Add(new ElementItem(new CanvasNode { Title = "Near" }, new Rect(100, 100, 190, 110)));
+        var session = await Driving(canvas);
+        await using var _ = session;
+        var scale = canvas.Scale;
+
+        var standIn = await session.Find(By.Id("FarNode")).GetAsync();
+        await session.Find(By.Id("FarNode")).ScrollIntoViewAsync();
+        var shown = await session.Find(By.Id("FarNode")).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(standIn.Name, Is.EqualTo("Far"));
+            Assert.That(standIn.ClassName, Is.EqualTo(nameof(CanvasNode)));
+            Assert.That(standIn.IsOffscreen, Is.True);
+            Assert.That(standIn.Patterns, Does.Contain("ScrollItem"));
+            Assert.That(shown.IsOffscreen, Is.False, "in view, it is the node on the plane");
+            Assert.That(shown.Patterns, Does.Contain("Transform"));
+            Assert.That(canvas.Scale, Is.EqualTo(scale), "the camera moved, it did not zoom");
+        });
+    }
+
+    [Test]
     public async Task AToolTip_IsFoundWhileItShows_AndIsCalledByWhatItSays()
     {
         var button = new Button { Content = "Save" };
