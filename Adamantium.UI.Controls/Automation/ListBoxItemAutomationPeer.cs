@@ -20,6 +20,8 @@ public class ListBoxItemAutomationPeer : ContentControlAutomationPeer, ISelectio
 
     public override AutomationPeer GetParent() => ItemsOwnerPeer() ?? base.GetParent();
 
+    /// <summary>Makes it the one selected item - in a list that selects many as well, where a click would toggle it.
+    /// </summary>
     public void Select()
     {
         switch (Owner)
@@ -27,11 +29,35 @@ public class ListBoxItemAutomationPeer : ContentControlAutomationPeer, ISelectio
             case DropDownItem item:
                 (item.Owner ?? item.GetLogicalAncestors().OfType<DropDown>().FirstOrDefault())?.SelectFromContainer(item);
                 break;
-            case ListBoxItem item:
-                item.GetLogicalAncestors().OfType<ListBox>().FirstOrDefault()?.SelectFromContainer(item);
+            case ListBoxItem item when List() is { } list:
+                list.SelectOnlyItem(list.ItemOf(item));
                 break;
         }
     }
+
+    public void AddToSelection()
+    {
+        if (Owner is DropDownItem || List() is not { } list)
+        {
+            ISelectionItemProvider.AddToOnlyOne(this);
+            return;
+        }
+
+        list.AddItemToSelection(list.ItemOf((ListBoxItem)Owner));
+    }
+
+    public void RemoveFromSelection()
+    {
+        if (Owner is DropDownItem || List() is not { } list)
+        {
+            ISelectionItemProvider.RemoveFromOnlyOne(this);
+            return;
+        }
+
+        list.RemoveItemFromSelection(list.ItemOf((ListBoxItem)Owner));
+    }
+
+    private ListBox List() => Owner.GetLogicalAncestors().OfType<ListBox>().FirstOrDefault();
 
     public void ScrollIntoView() => Owner.BringIntoView();
 

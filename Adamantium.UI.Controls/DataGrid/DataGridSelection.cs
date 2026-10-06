@@ -85,6 +85,38 @@ public class DataGridSelection
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Takes a rectangle out of what is selected: every range it crosses keeps what lies above, below and to
+    /// either side of it.</summary>
+    public void Remove(CellRange cut)
+    {
+        var kept = new List<CellRange>(_ranges.Count + 4);
+        var changed = false;
+        foreach (var range in _ranges)
+        {
+            var top = Math.Max(range.FirstRow, cut.FirstRow);
+            var bottom = Math.Min(range.LastRow, cut.LastRow);
+            var left = Math.Max(range.FirstColumn, cut.FirstColumn);
+            var right = Math.Min(range.LastColumn, cut.LastColumn);
+            if (top > bottom || left > right)
+            {
+                kept.Add(range);
+                continue;
+            }
+
+            changed = true;
+            if (range.FirstRow < top) kept.Add(new CellRange(range.FirstRow, range.FirstColumn, top - 1, range.LastColumn));
+            if (range.LastRow > bottom) kept.Add(new CellRange(bottom + 1, range.FirstColumn, range.LastRow, range.LastColumn));
+            if (range.FirstColumn < left) kept.Add(new CellRange(top, range.FirstColumn, bottom, left - 1));
+            if (range.LastColumn > right) kept.Add(new CellRange(top, right + 1, bottom, range.LastColumn));
+        }
+
+        if (!changed) return;
+
+        _ranges.Clear();
+        _ranges.AddRange(kept);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>Grows the last rectangle to reach a cell - Shift+click, and Shift+arrows.</summary>
     public void ExtendTo(int anchorRow, int anchorColumn, int row, int column)
     {

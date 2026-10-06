@@ -90,6 +90,16 @@ public class TreeDataGridAutomationPeer : ItemsControlAutomationPeer, IGridProvi
 
     protected internal override void SelectItem(object item) => _grid.SelectRow(_grid.Items.IndexOf(item));
 
+    protected internal override void AddItemToSelection(object item)
+    {
+        if (!IsItemSelected(item))
+        {
+            _grid.SelectRow(_grid.Items.IndexOf(item), add: true);
+        }
+    }
+
+    protected internal override void RemoveItemFromSelection(object item) => _grid.DeselectRow(_grid.Items.IndexOf(item));
+
     protected internal override void ScrollItemIntoView(object item) => _grid.ScrollIntoView(_grid.Items.IndexOf(item));
 
     private UIComponent HeadersPresenter() =>

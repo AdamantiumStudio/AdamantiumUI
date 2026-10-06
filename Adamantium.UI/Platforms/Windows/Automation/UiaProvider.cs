@@ -104,10 +104,10 @@ internal abstract class UiaProvider : IRawElementProviderSimple, IRawElementProv
 
     public void Select() => Bridge.Run(() => Pattern<ISelectionItemProvider>(PatternId.SelectionItem).Select());
 
-    public void AddToSelection() => Bridge.Run(() => Pattern<ISelectionItemProvider>(PatternId.SelectionItem).Select());
+    public void AddToSelection() => Bridge.Run(() => Pattern<ISelectionItemProvider>(PatternId.SelectionItem).AddToSelection());
 
     public void RemoveFromSelection() =>
-        throw new COMException("An item leaves the selection when another is selected.", unchecked((int)0x80131509));
+        Bridge.Run(() => Pattern<ISelectionItemProvider>(PatternId.SelectionItem).RemoveFromSelection());
 
     public bool GetIsSelected() => Bridge.Run(() => Pattern<ISelectionItemProvider>(PatternId.SelectionItem).IsSelected);
 

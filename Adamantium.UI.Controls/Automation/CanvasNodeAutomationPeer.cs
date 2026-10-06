@@ -65,6 +65,22 @@ public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransform
         canvas.Select(item, false);
     }
 
+    public void AddToSelection()
+    {
+        if (Placed() is ({ } canvas, { } item))
+        {
+            canvas.Select(item, true);
+        }
+    }
+
+    public void RemoveFromSelection()
+    {
+        if (Placed() is ({ } canvas, { } item))
+        {
+            canvas.Deselect(item);
+        }
+    }
+
     protected override string NameCore() => ((CanvasNode)Owner).Title as string ?? TextOf(Owner);
 
     /// <summary>The canvas the node stands on and the item that places it there; nulls for a node off any canvas.</summary>

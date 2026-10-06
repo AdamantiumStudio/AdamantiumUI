@@ -334,6 +334,39 @@ public class ListBox : Selector
         ApplySelection(items, index, writeBoundList: true);   // anchor stays put across a range drag
     }
 
+    /// <summary>Automation's three: this item alone; this one as well; not this one - whatever the mode, which a click
+    /// reads as toggle or replace.</summary>
+    internal object ItemOf(ListBoxItem container)
+    {
+        var index = ItemContainerGenerator.IndexFromContainer(container);
+        return index >= 0 ? Items[index] : null;
+    }
+
+    internal void SelectOnlyItem(object item)
+    {
+        var index = IndexOfItem(item);
+        if (index >= 0) SelectOnly(index);
+    }
+
+    internal void AddItemToSelection(object item)
+    {
+        var index = IndexOfItem(item);
+        if (index < 0 || _selectedSet.Contains(item)) return;
+
+        if (SelectionMode == SelectionMode.Single && _selectedSet.Count > 0)
+        {
+            throw new InvalidOperationException("One item is selected here at a time; select it instead.");
+        }
+
+        ToggleAt(index);
+    }
+
+    internal void RemoveItemFromSelection(object item)
+    {
+        var index = IndexOfItem(item);
+        if (index >= 0 && _selectedSet.Contains(item)) ToggleAt(index);
+    }
+
     // A container was pressed -> change the selection per the current mode + keyboard modifiers (Extended).
     internal void SelectFromContainer(ListBoxItem container, InputModifiers modifiers = InputModifiers.None)
     {

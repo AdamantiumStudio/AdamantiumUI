@@ -60,5 +60,9 @@ public class ItemAutomationPeer : AutomationPeer, ISelectionItemProvider, IScrol
     /// <summary>Makes the item the selected one, as the control's own selection would.</summary>
     public void Select() => ItemsOwner.SelectItem(Item);
 
+    public void AddToSelection() => ItemsOwner.AddItemToSelection(Item);
+
+    public void RemoveFromSelection() => ItemsOwner.RemoveItemFromSelection(Item);
+
     public void ScrollIntoView() => ItemsOwner.ScrollItemIntoView(Item);
 }

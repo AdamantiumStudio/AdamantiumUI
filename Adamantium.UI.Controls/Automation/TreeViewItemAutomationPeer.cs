@@ -28,10 +28,21 @@ public class TreeViewItemAutomationPeer : UIComponentAutomationPeer, ISelectionI
     public override AutomationPeer GetParent() =>
         TreePeer() is { } tree && ((TreeViewItem)Owner).Row is { } row ? tree.ParentOf(row) : base.GetParent();
 
-    public void Select()
+    /// <summary>Makes it the one selected node - in a tree that selects many as well, where a click would toggle it.
+    /// </summary>
+    public void Select() => Act((tree, row) => tree.SelectOnlyRow(row));
+
+    public void AddToSelection() => Act((tree, row) => tree.AddRowToSelection(row));
+
+    public void RemoveFromSelection() => Act((tree, row) => tree.RemoveRowFromSelection(row));
+
+    private void Act(System.Action<TreeView, TreeRow> change)
     {
         var item = (TreeViewItem)Owner;
-        item.FindOwnerTreeView()?.OnItemClicked(item, InputModifiers.None);
+        if (item.FindOwnerTreeView() is { } tree && item.Row is { } row)
+        {
+            change(tree, row);
+        }
     }
 
     public void Expand() => Owner.SetCurrentValue(TreeViewItem.IsExpandedProperty, true);

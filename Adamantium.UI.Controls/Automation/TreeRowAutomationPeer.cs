@@ -59,7 +59,11 @@ public class TreeRowAutomationPeer : AutomationPeer, ISelectionItemProvider, IEx
     {
     }
 
-    public void Select() => _tree.Owner.SetCurrentValue(TreeView.SelectedItemProperty, Node);
+    public void Select() => ((TreeView)_tree.Owner).SelectOnlyRow(_row);
+
+    public void AddToSelection() => ((TreeView)_tree.Owner).AddRowToSelection(_row);
+
+    public void RemoveFromSelection() => ((TreeView)_tree.Owner).RemoveRowFromSelection(_row);
 
     public void Expand() => ((TreeView)_tree.Owner).SetRowExpanded(_row, true);
 

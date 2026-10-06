@@ -224,6 +224,12 @@ public sealed class AutomationExecutor
             case AutomationCommand.Select:
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).Select();
                 break;
+            case AutomationCommand.AddToSelection:
+                Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).AddToSelection();
+                break;
+            case AutomationCommand.RemoveFromSelection:
+                Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).RemoveFromSelection();
+                break;
             case AutomationCommand.Click:
                 InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Left);
                 break;

@@ -36,6 +36,16 @@ public class DataGridRowAutomationPeer : UIComponentAutomationPeer, ISelectionIt
 
     public void Select() => _row.Owner?.SelectRow(Index);
 
+    public void AddToSelection()
+    {
+        if (!IsSelected)
+        {
+            _row.Owner?.SelectRow(Index, add: true);
+        }
+    }
+
+    public void RemoveFromSelection() => _row.Owner?.DeselectRow(Index);
+
     public void Expand() => _row.Owner?.ExpandRow(_row.Row);
 
     public void Collapse() => _row.Owner?.CollapseRow(_row.Row);

@@ -63,6 +63,10 @@ public class CanvasItemStandInAutomationPeer : AutomationPeer, ISelectionItemPro
 
     public void Select() => _canvas.Select(Item, false);
 
+    public void AddToSelection() => _canvas.Select(Item, true);
+
+    public void RemoveFromSelection() => _canvas.Deselect(Item);
+
     /// <summary>Moves the camera so the control is on screen, without zooming - what the canvas's list of everything on
     /// the plane does, short of fitting the view to it.</summary>
     public void ScrollIntoView() => _canvas.BringIntoView(Item.World);

@@ -2606,6 +2606,28 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>Whether every column of this row is taken - what the number strip shows as a selected row.</summary>
+    /// <summary>Takes a row out of the selection, leaving every other cell selected.</summary>
+    public void DeselectRow(int row)
+    {
+        if (row < 0 || Columns.Count == 0) return;
+
+        SelectedCells.Remove(new CellRange(row, 0, row, Columns.Count - 1));
+        RefreshCellSelectionVisuals();
+    }
+
+    /// <summary>Takes one cell out of the selection - its whole row in <see cref="DataGridSelectionUnit.FullRow"/>.</summary>
+    public void DeselectCell(int row, int column)
+    {
+        if (SelectionUnit == DataGridSelectionUnit.FullRow)
+        {
+            DeselectRow(row);
+            return;
+        }
+
+        SelectedCells.Remove(new CellRange(row, column, row, column));
+        RefreshCellSelectionVisuals();
+    }
+
     internal bool IsRowFullySelected(int row)
     {
         if (row < 0 || Columns.Count == 0) return false;

@@ -586,6 +586,36 @@ public class TreeView : ItemsControl
         Chosen(row.Node);
     }
 
+    /// <summary>Automation's three: this row alone; this one as well; not this one - whatever the mode, which a click
+    /// reads as toggle or replace.</summary>
+    internal void SelectOnlyRow(TreeRow row)
+    {
+        SelectOnly(row);
+        _anchorRow = row;
+        SyncSelectionToContainers();
+    }
+
+    internal void AddRowToSelection(TreeRow row)
+    {
+        if (row.IsSelected) return;
+
+        if (SelectionMode == TreeViewSelectionMode.Single && _selectedRows.Count > 0)
+        {
+            throw new InvalidOperationException("One node is selected here at a time; select it instead.");
+        }
+
+        ToggleSelection(row);
+        SyncSelectionToContainers();
+    }
+
+    internal void RemoveRowFromSelection(TreeRow row)
+    {
+        if (!row.IsSelected) return;
+
+        ToggleSelection(row);
+        SyncSelectionToContainers();
+    }
+
     // Flip one row, leaving the rest untouched (Multiple, and Extended's Ctrl+click).
     private void ToggleSelection(TreeRow row)
     {

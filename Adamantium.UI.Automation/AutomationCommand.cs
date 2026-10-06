@@ -117,5 +117,11 @@ public enum AutomationCommand
     /// <summary>Docks the target - a pane, a panel - at <see cref="AutomationRequest.Value"/>: Top, Left, Bottom, Right,
     /// Fill (the documents) or None (a window of its own); beside the pane the first of
     /// <see cref="AutomationRequest.Properties"/> selects, when there is one.</summary>
-    Dock
+    Dock,
+
+    /// <summary>Adds the target to what its container has selected, leaving the rest.</summary>
+    AddToSelection,
+
+    /// <summary>Takes the target out of what its container has selected, leaving the rest.</summary>
+    RemoveFromSelection
 }

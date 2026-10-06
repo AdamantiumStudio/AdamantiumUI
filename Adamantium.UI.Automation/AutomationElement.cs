@@ -111,7 +111,14 @@ public sealed class AutomationElement
 
     public Task ToggleAsync() => RunAsync(AutomationCommand.Toggle);
 
+    /// <summary>Makes it the one selected item of its container.</summary>
     public Task SelectAsync() => RunAsync(AutomationCommand.Select);
+
+    /// <summary>Adds it to what its container has selected, leaving the rest - where the container selects many.</summary>
+    public Task AddToSelectionAsync() => RunAsync(AutomationCommand.AddToSelection);
+
+    /// <summary>Takes it out of what its container has selected, leaving the rest.</summary>
+    public Task RemoveFromSelectionAsync() => RunAsync(AutomationCommand.RemoveFromSelection);
 
     /// <summary>Writes its text, or its number in the invariant culture.</summary>
     public Task SetValueAsync(string value) => RunAsync(AutomationCommand.SetValue, value);

@@ -58,6 +58,10 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
 
     public void Select() => Grid()?.SelectCell(Row, Column);
 
+    public void AddToSelection() => Grid()?.SelectCell(Row, Column, add: !IsSelected);
+
+    public void RemoveFromSelection() => Grid()?.DeselectCell(Row, Column);
+
     /// <summary>An editor in the cell goes by the column's header.</summary>
     protected internal override string NameForChild(AutomationPeer child) =>
         GetColumnHeaders().FirstOrDefault()?.Name is { Length: > 0 } header ? header : null;

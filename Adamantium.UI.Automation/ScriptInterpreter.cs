@@ -14,7 +14,8 @@ internal sealed class ScriptInterpreter
 {
     public static readonly string[] Commands =
     [
-        "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "click", "rclick",
+        "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
+        "rclick",
         "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "connect", "disconnect", "dock", "window", "set",
         "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
@@ -82,7 +83,9 @@ internal sealed class ScriptInterpreter
             "get" => InspectAsync(arguments),
             "invoke" => SendAsync(Target(AutomationCommand.Invoke, arguments, allowErrors)),
             "toggle" => SendAsync(Target(AutomationCommand.Toggle, arguments, allowErrors)),
-            "select" => SendAsync(Target(AutomationCommand.Select, arguments, allowErrors)),
+            "select" => SendAsync(Target(arguments.Flag("add") ? AutomationCommand.AddToSelection : AutomationCommand.Select,
+                arguments, allowErrors)),
+            "unselect" => SendAsync(Target(AutomationCommand.RemoveFromSelection, arguments, allowErrors)),
             "click" => SendAsync(Target(AutomationCommand.Click, arguments, allowErrors)),
             "rclick" => SendAsync(Target(AutomationCommand.RightClick, arguments, allowErrors)),
             "hover" => SendAsync(Target(AutomationCommand.Hover, arguments, allowErrors)),

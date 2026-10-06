@@ -349,6 +349,11 @@ All packages share one version.
 - Windows move and resize through automation (the Transform pattern) while they are neither minimized nor maximized;
   so does an `OverlayWindow`, kept inside the window it is shown over, and a floating `CanvasPane` - moved as its grip
   and widened as its edge would. `adam-auto move` / `resize` take them like any other element.
+- Selections of many through automation: `ISelectionItemProvider.AddToSelection` and `RemoveFromSelection` add an item
+  to what is selected and take it out, leaving the rest - in a list, a tree, a data grid's rows and cells and on a
+  canvas; a container of one selection refuses a second. The Windows bridge passes both on. `adam-auto select
+  <selector> --add`, `unselect <selector>`; `AutomationElement.AddToSelectionAsync`, `RemoveFromSelectionAsync`.
+  `TreeDataGrid.DeselectRow` and `DeselectCell`, `DataGridSelection.Remove`.
 - Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
   search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
   text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
@@ -440,6 +445,8 @@ All packages share one version.
 ### Fixed
 
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
+- Selecting an item of a list or a tree that selects many, through automation, toggled it as a click does - selecting
+  the selected one again took it out. It now makes it the one selected item.
 - A floating docking window whose last pane was moved out by code - a `Zone` written, `DockBeside` - stayed open and
   empty: its document area survived being emptied, as the main window's does. A floating window with no pane left
   now closes.

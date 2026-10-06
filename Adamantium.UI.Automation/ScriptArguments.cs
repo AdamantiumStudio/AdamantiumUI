@@ -6,7 +6,7 @@ namespace Adamantium.UI.Automation;
 
 internal sealed class ScriptArguments
 {
-    private static readonly string[] Flags = ["allow-errors"];
+    private static readonly string[] Flags = ["allow-errors", "add"];
 
     private readonly List<string> _positional = [];
     private readonly Dictionary<string, string> _options = new(StringComparer.OrdinalIgnoreCase);

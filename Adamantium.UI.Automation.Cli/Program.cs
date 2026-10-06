@@ -32,6 +32,7 @@ public static class Program
           unnamed [<selector>]                                what can be acted on but has no name
           get <selector> [<property>...]                      the first match: properties with their source, bindings, layout
           invoke | toggle | select | expand | collapse <selector>   act on the first match by what it can do
+          select <selector> --add | unselect <selector>       add to a selection of many, or take out of it
           click | rclick | hover <selector>                   or by input made inside the application
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
           scroll <selector>                                   bring a list's item into view, making its element

@@ -79,6 +79,33 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
     /// <summary>Makes an item with no element the selected one, as the control's own selection would.</summary>
     protected internal virtual void SelectItem(object item) => Owner.SetCurrentValue(Selector.SelectedItemProperty, item);
 
+    /// <summary>Adds an item with no element to what is selected, leaving the rest - where the control selects many.
+    /// </summary>
+    protected internal virtual void AddItemToSelection(object item)
+    {
+        if (Owner is ListBox list)
+        {
+            list.AddItemToSelection(item);
+        }
+        else if (!IsItemSelected(item))
+        {
+            throw new InvalidOperationException("One item is selected here at a time; select it instead.");
+        }
+    }
+
+    /// <summary>Takes an item with no element out of what is selected, leaving the rest.</summary>
+    protected internal virtual void RemoveItemFromSelection(object item)
+    {
+        if (Owner is ListBox list)
+        {
+            list.RemoveItemFromSelection(item);
+        }
+        else if (IsItemSelected(item))
+        {
+            throw new InvalidOperationException("Something is always selected here; select another item instead.");
+        }
+    }
+
     /// <summary>Scrolls until an item is in view, making its element.</summary>
     protected internal virtual void ScrollItemIntoView(object item) => ((ItemsControl)Owner).ScrollIntoView(item);
 
