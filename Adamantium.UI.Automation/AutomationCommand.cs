@@ -105,5 +105,12 @@ public enum AutomationCommand
     Resize,
 
     /// <summary>Zooms the target to <see cref="AutomationRequest.Value"/> percent.</summary>
-    Zoom
+    Zoom,
+
+    /// <summary>Joins the target - a socket - to the socket <see cref="AutomationRequest.Value"/> selects.</summary>
+    Connect,
+
+    /// <summary>Parts the target from the socket <see cref="AutomationRequest.Value"/> selects, or from all it is joined
+    /// to when that is empty.</summary>
+    Disconnect
 }

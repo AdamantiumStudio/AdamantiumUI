@@ -12,16 +12,16 @@ public class BezierLine : BezierCurveBase
     }
     
     public static readonly AdamantiumProperty BezierTypeProperty = AdamantiumProperty.Register(nameof(BezierType),
-        typeof(BezierLine), typeof(Shape),
+        typeof(BezierType), typeof(BezierLine),
         new PropertyMetadata(BezierType.Quadratic,
             PropertyMetadataOptions.AffectsRender));
-        
+
     public static readonly AdamantiumProperty ControlPoint1Property = AdamantiumProperty.Register(nameof(ControlPoint1),
-        typeof(BezierLine), typeof(Vector2),
+        typeof(Vector2), typeof(BezierLine),
         new PropertyMetadata(default(Vector2), PropertyMetadataOptions.AffectsRender));
-        
+
     public static readonly AdamantiumProperty ControlPoint2Property = AdamantiumProperty.Register(nameof(ControlPoint2),
-        typeof(BezierLine), typeof(Vector2),
+        typeof(Vector2), typeof(BezierLine),
         new PropertyMetadata(default(Vector2), PropertyMetadataOptions.AffectsRender));
 
     public BezierType BezierType

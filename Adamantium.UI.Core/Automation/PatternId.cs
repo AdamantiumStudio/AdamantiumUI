@@ -49,5 +49,8 @@ public enum PatternId
     TableItem,
 
     /// <summary><see cref="ITransformProvider"/>: moved, resized or zoomed as a whole.</summary>
-    Transform
+    Transform,
+
+    /// <summary><see cref="IConnectionProvider"/>: an end a connection is made to.</summary>
+    Connection
 }

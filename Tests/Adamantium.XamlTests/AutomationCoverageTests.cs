@@ -300,6 +300,145 @@ public class AutomationCoverageTests
         });
     }
 
+    private sealed class Node : ICanvasNode
+    {
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+        public double Left { get; set; }
+
+        public double Top { get; set; }
+
+        public double Width { get; set; }
+
+        public string Kind { get; set; }
+
+        public string Title { get; set; }
+
+        public Color? Accent { get; set; }
+
+        public bool IsCollapsed { get; set; }
+
+        public Adamantium.Core.Collections.TrackingCollection<ICanvasSocket> Inputs { get; } = new();
+
+        public Adamantium.Core.Collections.TrackingCollection<ICanvasSocket> Outputs { get; } = new();
+
+        public ICanvasNodeSpecialization Specialization { get; set; }
+
+        public void Touch() => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(null));
+    }
+
+    [Test]
+    public async Task ANodeTheCameraLeaves_LeavesItsLayer_AndIsFoundByAStandIn()
+    {
+        var node = new CanvasNode { Title = "Left behind" };
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        canvas.Scene.Add(new ElementItem(node, new Rect(-50, -50, 190, 110)));
+        var session = await Driving(canvas);
+        await using var _ = session;
+        var shown = await session.Find(By.Name("Left behind")).GetAsync();
+
+        canvas.PanBy(new Vector2(50000, 50000));
+        await session.WaitForIdleAsync();
+        var left = await session.Find(By.Name("Left behind")).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.IsOffscreen, Is.False);
+            Assert.That(node.VisualParent, Is.Null, "a layer taken off the plane lets go of what it held");
+            Assert.That(left.IsOffscreen, Is.True);
+            Assert.That(left.Patterns, Does.Contain("ScrollItem"));
+        });
+    }
+
+    [Test]
+    public async Task AnApplicationsNodeNeverShown_IsFoundByItsModelsTitle()
+    {
+        var canvas = new InfiniteCanvas
+        {
+            Mode = CanvasMode.Nodes,
+            Scene = new CanvasScene(),
+            Nodes = new List<ICanvasNode>
+            {
+                new Node { Title = "Far", Kind = "Blur", Left = 40000, Top = 30000, Width = 190 },
+                new Node { Kind = "Sharpen", Left = 41000, Top = 30000, Width = 190 }
+            }
+        };
+        var session = await Driving(canvas);
+        await using var _ = session;
+
+        var far = await session.Find(By.Name("Far")).GetAsync();
+        var untitled = await session.Find(By.Name("Sharpen")).GetAsync();
+        await session.Find(By.Name("Far")).ScrollIntoViewAsync();
+        var shown = await session.Find(By.Name("Far")).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(far.ControlType, Is.EqualTo("DataItem"));
+            Assert.That(far.ClassName, Is.EqualTo(nameof(CanvasNode)));
+            Assert.That(untitled.IsOffscreen, Is.True, "a node with no title goes by its kind");
+            Assert.That(shown.IsOffscreen, Is.False);
+            Assert.That(shown.Patterns, Does.Contain("Transform"));
+        });
+    }
+
+    [Test]
+    public async Task TwoSockets_AreJoinedAndPartedWithoutTheMouse_AsStepsOfUndo_ByTheGraphsRules()
+    {
+        var source = new CanvasNode { Title = "Source", Inputs = 0, Outputs = 1 };
+        var sink = new CanvasNode { Title = "Sink", Inputs = 1, Outputs = 1 };
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene(), History = new CanvasHistory() };
+        canvas.Scene.Add(new ElementItem(source, new Rect(-350, -150, 190, 110)));
+        canvas.Scene.Add(new ElementItem(sink, new Rect(-50, -150, 190, 110)));
+        var session = await Driving(canvas);
+        await using var _ = session;
+        var output = session.Find(By.Name("Source")).Find(By.Type(AutomationControlType.Thumb));
+        var input = session.Find(By.Name("Sink")).Find(By.Type(AutomationControlType.Thumb)).At(0);
+        var sinkOutput = session.Find(By.Name("Sink")).Find(By.Type(AutomationControlType.Thumb)).At(1);
+        var outputName = (await output.GetAsync()).Name;
+
+        await output.ConnectAsync(input);
+        var joined = await input.GetAsync();
+        var wires = canvas.ItemsHere().OfType<ConnectionItem>().Count();
+        var refused = Assert.ThrowsAsync<AutomationException>(() => output.ConnectAsync(sinkOutput));
+        canvas.Undo();
+        var undone = canvas.ItemsHere().OfType<ConnectionItem>().Count();
+        await output.ConnectAsync(input);
+        await input.DisconnectAsync();
+        var parted = await input.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outputName, Is.Not.Empty, "a socket is called by its pin's name");
+            Assert.That(wires, Is.EqualTo(1));
+            Assert.That(joined.Value, Is.EqualTo($"Source: {outputName}"));
+            Assert.That(joined.Patterns, Does.Contain("Connection"));
+            Assert.That(refused.Message, Does.Contain("cannot be joined"), "an output does not join an output");
+            Assert.That(undone, Is.EqualTo(0), "the join is one step of undo");
+            Assert.That(parted.Value, Is.Empty);
+            Assert.That(sink.InputPins[0].IsConnected, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ACanvasNode_FoldsAndUnfolds()
+    {
+        var node = new CanvasNode { Title = "Blur" };
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        canvas.Scene.Add(new ElementItem(node, new Rect(100, 100, 190, 110)));
+        var session = await Driving(canvas);
+        await using var _ = session;
+
+        await session.Find(By.Name("Blur")).CollapseAsync();
+        var folded = (await session.Find(By.Name("Blur")).GetAsync()).ExpandCollapseState;
+        await session.Find(By.Name("Blur")).ExpandAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(folded, Is.EqualTo("Collapsed"));
+            Assert.That(node.IsCollapsed, Is.False);
+        });
+    }
+
     [Test]
     public async Task AToolTip_IsFoundWhileItShows_AndIsCalledByWhatItSays()
     {

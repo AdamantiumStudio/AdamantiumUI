@@ -259,6 +259,13 @@ public sealed class AutomationExecutor
             case AutomationCommand.Zoom:
                 Zoom(peer, request.Value);
                 break;
+            case AutomationCommand.Connect:
+                Pattern<IConnectionProvider>(peer, PatternId.Connection).Connect(Resolve(request.Value));
+                break;
+            case AutomationCommand.Disconnect:
+                Pattern<IConnectionProvider>(peer, PatternId.Connection)
+                    .Disconnect(string.IsNullOrWhiteSpace(request.Value) ? null : Resolve(request.Value));
+                break;
             default:
                 throw new AutomationException($"{request.Command} is not an action.");
         }

@@ -58,7 +58,10 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {
         var children = new List<AutomationPeer>(base.ChildrenCore());
-        var offScreen = _canvas.ItemsHere().OfType<ElementItem>().Where(item => !OnLayer(item)).ToHashSet();
+        var shown = children.ToHashSet();
+        var offScreen = _canvas.ItemsHere().OfType<ElementItem>()
+            .Where(item => (item.Painted as UIComponent)?.FindAutomationPeer() is not { } peer || !shown.Contains(peer))
+            .ToHashSet();
         foreach (var gone in _standIns.Keys.Where(item => !offScreen.Contains(item)).ToList())
         {
             _standIns.Remove(gone);
@@ -69,7 +72,7 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
     }
 
     private AutomationPeer PeerOf(ElementItem item) =>
-        OnLayer(item) ? (item.Painted as UIComponent)?.GetAutomationPeer() : StandInFor(item);
+        _standIns.TryGetValue(item, out var standIn) ? standIn : (item.Painted as UIComponent)?.GetAutomationPeer();
 
     private CanvasItemStandInAutomationPeer StandInFor(ElementItem item)
     {
@@ -81,6 +84,4 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
 
         return standIn;
     }
-
-    private static bool OnLayer(ElementItem item) => item.Element?.VisualParent is CanvasElementLayer;
 }

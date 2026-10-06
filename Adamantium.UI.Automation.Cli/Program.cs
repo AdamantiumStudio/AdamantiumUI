@@ -39,6 +39,8 @@ public static class Program
           move <selector> <dx> <dy>                           move a splitter or a canvas node, in its own units
           resize <selector> <width> <height>                  resize a canvas node, in its own units
           zoom <selector> <%>                                 zoom a zoom box or a canvas
+          connect <socket> <socket>                           join two sockets of nodes with a wire
+          disconnect <socket> [<socket>]                      part a socket from one, or from all it is joined to
           window <selector> minimize | maximize | restore | close
           set <selector> <value>                              write a value: text, or a number
           type <text> [--into <selector>]                     type into the focused element, or into <selector>

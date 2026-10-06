@@ -15,8 +15,8 @@ internal sealed class ScriptInterpreter
     public static readonly string[] Commands =
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "click", "rclick",
-        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "window", "set", "type", "key", "wait",
-        "wait-idle", "mark", "errors", "expect", "absent", "shot"
+        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "connect", "disconnect", "window", "set",
+        "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
     private static readonly TimeSpan DefaultWait = TimeSpan.FromSeconds(10);
@@ -98,13 +98,9 @@ internal sealed class ScriptInterpreter
             "scroll" => SendAsync(Scroll(arguments, allowErrors)),
             "move" => SendAsync(Pair(AutomationCommand.Move, arguments, allowErrors)),
             "resize" => SendAsync(Pair(AutomationCommand.Resize, arguments, allowErrors)),
-            "zoom" => SendAsync(new AutomationRequest
-            {
-                Command = AutomationCommand.Zoom,
-                Target = arguments.At(0),
-                Value = arguments.At(1),
-                AllowErrors = allowErrors
-            }),
+            "zoom" => SendAsync(Second(AutomationCommand.Zoom, arguments, allowErrors)),
+            "connect" => SendAsync(Second(AutomationCommand.Connect, arguments, allowErrors)),
+            "disconnect" => SendAsync(Second(AutomationCommand.Disconnect, arguments, allowErrors)),
             "window" => SendAsync(Window(arguments, allowErrors)),
             "set" => SendAsync(new AutomationRequest
             {
@@ -147,6 +143,14 @@ internal sealed class ScriptInterpreter
 
     private static AutomationRequest Target(AutomationCommand command, ScriptArguments arguments, bool allowErrors = false) =>
         new() { Command = command, Target = arguments.At(0), AllowErrors = allowErrors };
+
+    private static AutomationRequest Second(AutomationCommand command, ScriptArguments arguments, bool allowErrors) => new()
+    {
+        Command = command,
+        Target = arguments.At(0),
+        Value = arguments.At(1),
+        AllowErrors = allowErrors
+    };
 
     private static AutomationRequest Pair(AutomationCommand command, ScriptArguments arguments, bool allowErrors) => new()
     {

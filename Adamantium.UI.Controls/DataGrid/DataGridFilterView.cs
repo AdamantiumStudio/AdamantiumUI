@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DataGrid;
@@ -217,4 +219,7 @@ public class DataGridFilterView : Control
     private void OnApply(object sender, RoutedEventArgs e) => Apply();
 
     private void OnClear(object sender, RoutedEventArgs e) => Clear();
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new GroupAutomationPeer(this) : null;
 }

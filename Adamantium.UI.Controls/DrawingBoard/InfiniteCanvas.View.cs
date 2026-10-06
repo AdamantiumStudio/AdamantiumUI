@@ -1050,7 +1050,11 @@ public partial class InfiniteCanvas
 
             var made = Layer(hosted, items);
 
-            if (standing != null) _layers.Children.RemoveAt(i);
+            if (standing != null)
+            {
+                Release(standing);
+                _layers.Children.RemoveAt(i);
+            }
 
             _layers.Children.Insert(i, made);
 
@@ -1070,9 +1074,7 @@ public partial class InfiniteCanvas
         {
             var last = _layers.Children.Count - 1;
 
-            if (_layers.Children[last] is CanvasElementLayer host) host.Owner = null;
-            if (_layers.Children[last] is CanvasDrawLayer drawn) drawn.Owner = null;
-
+            Release(_layers.Children[last]);
             _layers.Children.RemoveAt(last);
             changed = true;
         }
@@ -1086,6 +1088,19 @@ public partial class InfiniteCanvas
         // parents, and what is kept of a frame is kept per element - patched, such an element simply stops being
         // drawn. Only when the stack itself changed, which is rare.
         InvalidateRender(true);
+    }
+
+    // A layer taken off the stack LETS GO of the controls it still holds. Left in it, a control kept the dead layer as its
+    // parent - out of the tree, yet not free - and the layer lived on through it.
+    private static void Release(IMeasurableComponent layer)
+    {
+        if (layer is CanvasElementLayer host)
+        {
+            host.Owner = null;
+            host.Sync([]);
+        }
+
+        if (layer is CanvasDrawLayer drawn) drawn.Owner = null;
     }
 
     // EVERY layer of a sort, because there is no longer one of each.

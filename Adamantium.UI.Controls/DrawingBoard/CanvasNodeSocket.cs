@@ -1,6 +1,8 @@
 ﻿using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
@@ -20,4 +22,7 @@ public class CanvasNodeSocket : Border
 
         return this.TranslatePoint(new Vector2(RenderSize.Width / 2, RenderSize.Height / 2), within);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent is CanvasNode node && node.IsStub(this) ? null : new CanvasSocketAutomationPeer(this);
 }

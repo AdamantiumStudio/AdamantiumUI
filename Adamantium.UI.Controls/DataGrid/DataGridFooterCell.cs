@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
@@ -18,4 +20,6 @@ public class DataGridFooterCell : ContentControl
         get => GetValue<bool>(HasTotalProperty);
         set => SetValue(HasTotalProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new CaptionAutomationPeer(this);
 }

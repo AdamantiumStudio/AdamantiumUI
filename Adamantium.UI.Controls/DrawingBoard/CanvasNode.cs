@@ -590,6 +590,10 @@ public class CanvasNode : ContentControl
         _foldedOut = null;
     }
 
+    /// <summary>Whether <paramref name="socket"/> is one of the two stubs a folded node shows for all its sockets of a
+    /// side, standing for no one pin.</summary>
+    internal bool IsStub(CanvasNodeSocket socket) => ReferenceEquals(socket, _foldedIn) || ReferenceEquals(socket, _foldedOut);
+
     /// <summary>Whether a press here picks the node up rather than operating its content: the strip and the node's own chrome
     /// are handles, the application's content is not.</summary>
     public Boolean IsHandle(Object source)
@@ -696,6 +700,7 @@ public class CanvasNode : ContentControl
 
         node._placed = false;
         node.ShowStubs();
+        AutomationEvents.RaiseExpandCollapse(node, !(bool)e.NewValue);
     }
 
     // WHO FOLDED IT. ADAM_FOLD_TRACE=<path> writes every change of this property with the stack that made it - a probe

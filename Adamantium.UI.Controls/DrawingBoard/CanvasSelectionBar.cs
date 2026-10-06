@@ -1,5 +1,7 @@
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -42,4 +44,7 @@ public class CanvasSelectionBar : Control, ICanvasPart
     private void OnModeChanged(object sender, EventArgs e) => ReadMode();
 
     private void ReadMode() => IsDrawing = Canvas is not { } canvas || canvas.Mode == CanvasMode.Drawing;
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ToolBarAutomationPeer(this) : null;
 }

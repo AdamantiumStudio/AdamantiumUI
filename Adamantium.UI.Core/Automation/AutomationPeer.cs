@@ -69,6 +69,7 @@ public abstract class AutomationPeer
         PatternId.Text => this as ITextProvider,
         PatternId.TableItem => this as ITableItemProvider,
         PatternId.Transform => this as ITransformProvider,
+        PatternId.Connection => this as IConnectionProvider,
         _ => null
     };
 }

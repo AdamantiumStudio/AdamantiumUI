@@ -25,7 +25,13 @@ public class CanvasItemStandInAutomationPeer : AutomationPeer, ISelectionItemPro
 
     public override AutomationControlType ControlType => ElementPeer()?.ControlType ?? AutomationControlType.Custom;
 
-    public override string Name => ElementPeer()?.Name is { Length: > 0 } name ? name : Item.Title;
+    /// <summary>What its control is called, else - for a node of the application's graph, whose control has not been on
+    /// screen to bind its title yet - the node's title or kind, else what the canvas's list calls it.</summary>
+    public override string Name => ElementPeer()?.Name is { Length: > 0 } name
+        ? name
+        : Item.Model is ICanvasNode node
+            ? string.IsNullOrEmpty(node.Title) ? node.Kind : node.Title
+            : Item.Title;
 
     public override string AutomationId => ElementPeer()?.AutomationId ?? string.Empty;
 

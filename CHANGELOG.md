@@ -335,7 +335,16 @@ All packages share one version.
   tells automation when that changes.
 - A control on an `InfiniteCanvas` that is off screen is still found by automation, by its id and name, through a
   stand-in; brought into view (`scroll <selector>`, `ScrollIntoViewAsync`) the camera moves to it without zooming, and
-  from then on it is the control itself.
+  from then on it is the control itself. A node of the application's graph that has never been on screen goes by its
+  model's title, or kind.
+- Wires through automation: a node's socket is an element called by its pin's name, whose value says what it is joined
+  to; `IConnectionProvider` joins it to another socket and parts them, by the graph's rules and as one step of undo
+  each (`adam-auto connect <socket> <socket>`, `disconnect <socket> [<socket>]`; `AutomationElement.ConnectAsync`,
+  `DisconnectAsync`). A node folds and unfolds through ExpandCollapse.
+- Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
+  search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
+  text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
+  the docking area's questions are panes called by what they ask.
 
 ### Changed
 
@@ -423,6 +432,9 @@ All packages share one version.
 ### Fixed
 
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
+- A `BezierLine` could not be made: its properties were registered with the value type and the owner swapped.
+- A layer an `InfiniteCanvas` took off its stack - the camera moved away from what it held - kept those controls as
+  its children, so each still had the dead layer for a parent. The layer now lets them go.
 - A name given inside a template (`x:Name` in a `DataTemplate`) made a field of the view that nothing ever set - a
   warning, so a build with warnings as errors failed. Such a name belongs to each copy the template stamps; the view
   gets no field for it.

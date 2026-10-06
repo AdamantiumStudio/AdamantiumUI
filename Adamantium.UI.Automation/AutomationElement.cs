@@ -141,6 +141,12 @@ public sealed class AutomationElement
     public Task ResizeAsync(double width, double height) =>
         RunAsync(AutomationCommand.Resize, FormattableString.Invariant($"{width},{height}"));
 
+    /// <summary>Joins it - a socket of a node - to <paramref name="other"/>, as a wire pulled by hand would.</summary>
+    public Task ConnectAsync(AutomationElement other) => RunAsync(AutomationCommand.Connect, other.Selector);
+
+    /// <summary>Parts it from <paramref name="other"/>, or from every socket it is joined to when that is null.</summary>
+    public Task DisconnectAsync(AutomationElement other = null) => RunAsync(AutomationCommand.Disconnect, other?.Selector);
+
     /// <summary>Zooms it to <paramref name="percent"/>; 100 shows the content at its own size.</summary>
     public Task ZoomAsync(double percent) => RunAsync(AutomationCommand.Zoom, percent.ToString(CultureInfo.InvariantCulture));
 

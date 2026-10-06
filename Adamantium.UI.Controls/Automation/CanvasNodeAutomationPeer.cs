@@ -7,8 +7,10 @@ using Adamantium.UI.Core.Automation;
 namespace Adamantium.UI.Controls.Automation;
 
 /// <summary>The peer of a <see cref="CanvasNode"/>: an item of the canvas's graph, called by its title, selected as a
-/// click selects it, moved and resized on the plane as one undoable step each.</summary>
-public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransformProvider, ISelectionItemProvider
+/// click selects it, folded and unfolded, moved and resized on the plane as one undoable step each. Its sockets are its
+/// children.</summary>
+public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransformProvider, ISelectionItemProvider,
+    IExpandCollapseProvider
 {
     public CanvasNodeAutomationPeer(CanvasNode owner) : base(owner)
     {
@@ -40,6 +42,13 @@ public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransform
             item.Resize(new Rect(item.World.X, item.World.Y, width * worldPerPixel, height * worldPerPixel)));
 
     public void Zoom(double percent) => throw new InvalidOperationException("A node is not zoomed; its canvas is.");
+
+    public ExpandCollapseState ExpandCollapseState =>
+        ((CanvasNode)Owner).IsCollapsed ? ExpandCollapseState.Collapsed : ExpandCollapseState.Expanded;
+
+    public void Expand() => Owner.SetCurrentValue(CanvasNode.IsCollapsedProperty, false);
+
+    public void Collapse() => Owner.SetCurrentValue(CanvasNode.IsCollapsedProperty, true);
 
     public bool IsSelected => Placed() is ({ } canvas, { } item) && canvas.IsSelected(item);
 

@@ -1,7 +1,28 @@
-# The InfiniteCanvas page: the drawing mode and a tool chosen, the plane cleared after its question is answered, a
-# rectangle dragged out on it - listed in the layers - and taken back by undo.
+# The InfiniteCanvas page. The graph first: a node off screen brought into view, a wire parted and put back by undo, a
+# wire laid without the mouse and taken back, a node folded and unfolded. Then the drawing: a tool chosen, the plane
+# cleared after its question is answered - both modes - a rectangle dragged out on it, listed in the layers, and both
+# taken back by undo.
 select id=GalleryTabs/id=InfiniteCanvas
 wait id=Canvas
+select id=PART_Inspector/name="Graph - nodes and the wires between them"
+zoom id=Canvas 100
+scroll "id=Canvas>name=Mix"
+expect "id=Canvas>name=Mix" offscreen=False
+expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value="Number: Out"
+disconnect "id=Canvas>name=Mix/type=Thumb,name=Amount"
+expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value=""
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value="Number: Out"
+expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Scale: Out"
+connect "id=Canvas>name=Mix/type=Thumb,name=Out" "id=Canvas>name=Output/type=Thumb,name=Color"
+expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Mix: Out"
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Scale: Out"
+collapse "id=Canvas>name=Mix"
+expect "id=Canvas>name=Mix" expanded=Collapsed
+expand "id=Canvas>name=Mix"
+expect "id=Canvas>name=Mix" expanded=Expanded
+invoke "id=PART_ViewBar/name=Back to the kept view"
 select id=PART_Inspector/name="Drawing - ink, shapes and text"
 toggle id=PART_ToolRail/id=Rectangle
 expect id=PART_ToolRail/id=Rectangle toggle=On
@@ -14,5 +35,9 @@ expect id=ItemCountLabel name="1 item"
 expect id=PART_Inspector/type=TreeItem name=Rectangle
 invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
 expect id=ItemCountLabel name="0 items"
+# Back as the page opens: the clear taken back too.
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+absent "id=ItemCountLabel,name=0 items"
+wait id=PART_Inspector/type=TreeItem
 toggle id=PART_ToolRail/id=Select
 expect id=PART_ToolRail/id=Rectangle toggle=Off
