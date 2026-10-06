@@ -737,6 +737,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     // thread-safety reason as CaptionDragRect. Empty = no grip / not in grip-resize mode.
     public Rect ResizeGripRect { get; set; }
 
+    public Rect InputMethodCaret { get; set; }
+
     public Double ClientWidth
     {
         get => GetValue<Double>(ClientWidthProperty);

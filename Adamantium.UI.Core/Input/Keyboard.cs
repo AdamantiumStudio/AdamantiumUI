@@ -50,6 +50,17 @@ public static class Keyboard
    public static readonly RoutedEvent PreviewTextInputEvent = EventManager.RegisterRoutedEvent("PreviewTextInput",
       RoutingStrategy.Tunnel, typeof(TextInputEventHandler), typeof(Keyboard));
 
+   /// <summary>An input method began composing text on the focused element. What it composes arrives with
+   /// <see cref="TextCompositionChangedEvent"/>; the text it commits arrives as <see cref="TextInputEvent"/>.</summary>
+   public static readonly RoutedEvent TextCompositionStartedEvent = EventManager.RegisterRoutedEvent("TextCompositionStarted",
+      RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(Keyboard));
+
+   public static readonly RoutedEvent TextCompositionChangedEvent = EventManager.RegisterRoutedEvent("TextCompositionChanged",
+      RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(Keyboard));
+
+   public static readonly RoutedEvent TextCompositionEndedEvent = EventManager.RegisterRoutedEvent("TextCompositionEnded",
+      RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(Keyboard));
+
 
    private static Stopwatch timer;
    private static Dictionary<Key, ButtonState> KeyStates = new Dictionary<Key, ButtonState>();

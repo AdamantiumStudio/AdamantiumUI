@@ -93,6 +93,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// grip.</summary>
     Rect ResizeGripRect { get; set; }
 
+    /// <summary>The focused text's caret in client DIPs, where the input method puts its windows; set through
+    /// <see cref="Input.InputMethod.SetCaretBounds"/> and read by the platform worker from the OS message thread.</summary>
+    Rect InputMethodCaret { get; set; }
+
     /// <summary>Per-window DPI scale (device pixels per DIP), separate X/Y (usually equal on desktop). 1,1 = 96 DPI /
     /// 100%. Set by the platform on create and on WM_DPICHANGED; drives the render scale and the DIP&lt;-&gt;physical map.</summary>
     Vector2 DpiScale { get; set; }
