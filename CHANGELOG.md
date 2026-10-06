@@ -362,6 +362,15 @@ All packages share one version.
   search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
   text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
   the docking area's questions are panes called by what they ask.
+- A ribbon folds down to its tabs and opens again through ExpandCollapse (`adam-auto collapse` / `expand`), as its
+  minimize button does, and tells automation when it does.
+- A `FlipTile` is a button that turns over through Toggle - on is its back shown - and a `FractalView` a pane zoomed
+  in percent through Transform (`adam-auto zoom`), the way the wheel zooms it.
+- `IPanProvider` (`PatternId.Pan`): an `InfiniteCanvas` and a `FractalView` are panned through automation as a drag
+  pans them - `adam-auto pan <selector> <dx> <dy>`, `AutomationElement.PanAsync`. Automation's own capability: UI
+  Automation has no pattern for a plane with no edges.
+- A `CanvasMiniMap` is a picture to automation, named in the themes (`CanvasStrings.WholePlane`); the canvas's layer
+  tree and node palette are named too.
 
 ### Changed
 

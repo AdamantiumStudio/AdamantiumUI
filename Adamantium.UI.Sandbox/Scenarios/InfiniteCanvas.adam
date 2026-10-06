@@ -6,7 +6,13 @@ select id=GalleryTabs/id=InfiniteCanvas
 wait id=Canvas
 select id=PART_Inspector/name="Graph - nodes and the wires between them"
 zoom id=Canvas 100
+expect id=PART_MiniMap/type=Image name="The whole plane, the part in view framed"
 scroll "id=Canvas>name=Mix"
+expect "id=Canvas>name=Mix" offscreen=False
+# Dragged away the node leaves the view, and dragged back it is there again.
+pan id=Canvas 4000 0
+expect "id=Canvas>name=Mix" offscreen=True
+pan id=Canvas -4000 0
 expect "id=Canvas>name=Mix" offscreen=False
 expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value="Number: Out"
 disconnect "id=Canvas>name=Mix/type=Thumb,name=Amount"

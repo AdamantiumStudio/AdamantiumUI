@@ -34,6 +34,11 @@ expand id=Band/name=File
 select id=Band/name=File/name=Customize
 expect id=CommandChoices name="Choose commands from"
 collapse id=Band/name=File
+# The ribbon folds down to its tabs and opens again.
+collapse id=Band
+expect id=Band expanded=Collapsed
+expand id=Band
+expect id=Band expanded=Expanded
 # The module catalog still opens after the window was minimized and restored.
 window id=RibbonWindow minimize
 window id=RibbonWindow restore

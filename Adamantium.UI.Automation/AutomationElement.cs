@@ -170,6 +170,9 @@ public sealed class AutomationElement
     /// <summary>Zooms it to <paramref name="percent"/>; 100 shows the content at its own size.</summary>
     public Task ZoomAsync(double percent) => RunAsync(AutomationCommand.Zoom, percent.ToString(CultureInfo.InvariantCulture));
 
+    /// <summary>Drags what it - a view of a plane, a canvas - shows by an offset of its own units, without input.</summary>
+    public Task PanAsync(double dx, double dy) => RunAsync(AutomationCommand.Pan, FormattableString.Invariant($"{dx},{dy}"));
+
     /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
     public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
 

@@ -71,6 +71,7 @@ public abstract class AutomationPeer
         PatternId.Transform => this as ITransformProvider,
         PatternId.Connection => this as IConnectionProvider,
         PatternId.Dock => this as IDockProvider,
+        PatternId.Pan => this as IPanProvider,
         _ => null
     };
 }

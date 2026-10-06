@@ -55,5 +55,8 @@ public enum PatternId
     Connection,
 
     /// <summary><see cref="IDockProvider"/>: docked in a layout.</summary>
-    Dock
+    Dock,
+
+    /// <summary><see cref="IPanProvider"/>: a view whose content is dragged across it.</summary>
+    Pan
 }

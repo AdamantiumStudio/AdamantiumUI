@@ -56,7 +56,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
         // The drawing side as data too: the canvas draws shapes from descriptions and templates everything else.
         {
-            Put(-300, -90, 200, 48, new SampleButton("Button"));
+            Put(-300, -90, 200, 48, new SampleButton("Press me"));
             Put(-300, 0, 200, 40, new SampleSwitch("Check me"));
             Put(-300, 70, 200, 40, new SampleField("A field"));
 
@@ -287,7 +287,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     // NAMED and PICTURED here and nowhere else. A control tool has no look of its own - what control it puts down is
     // this application's choice - so the application is what says which of the theme's pictures fits.
     public ICanvasTool ButtonTool { get; } =
-        new ElementTool(() => new Button { Content = "Button" })
+        new ElementTool(() => new Button { Content = "Press me" })
         { Name = "Button", Icon = "ToolButtonIcon", Description = "drag out a button" };
 
     public ICanvasTool CheckTool { get; } =

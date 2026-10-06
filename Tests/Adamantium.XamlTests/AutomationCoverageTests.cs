@@ -491,6 +491,120 @@ public class AutomationCoverageTests
     }
 
     [Test]
+    public async Task ARibbon_IsMinimizedAndShownAgain_AsItsBandCollapsesAndExpands()
+    {
+        var ribbon = new Ribbon { Items = { new RibbonTab { Header = "Home" } } };
+        AutomationProperties.SetAutomationId(ribbon, "Ribbon");
+        var session = await Driving(ribbon);
+        await using var _ = session;
+
+        await session.Find(By.Id("Ribbon")).CollapseAsync();
+        var minimized = (ribbon.IsMinimized, (await session.Find(By.Id("Ribbon")).GetAsync()).ExpandCollapseState);
+        await session.Find(By.Id("Ribbon")).ExpandAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(minimized, Is.EqualTo((true, "Collapsed")));
+            Assert.That(ribbon.IsMinimized, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task AFlipTile_IsTurnedOverAsAClickTurnsIt()
+    {
+        var tile = new FlipTile { Width = 40, Height = 40 };
+        AutomationProperties.SetAutomationId(tile, "Tile");
+        var session = await Driving(new StackPanel { Children = { tile } });
+        await using var _ = session;
+
+        await session.Find(By.Id("Tile")).ToggleAsync();
+        var info = await session.Find(By.Id("Tile")).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(info.ControlType, Is.EqualTo("Button"));
+            Assert.That(info.ToggleState, Is.EqualTo("On"));
+            Assert.That(tile.IsFlipped, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task AFractalView_IsZoomedInPercent_WithinItsReach()
+    {
+        var view = new FractalView { Width = 200, Height = 200 };
+        AutomationProperties.SetAutomationId(view, "Fractal");
+        var session = await Driving(new StackPanel { Children = { view } });
+        await using var _ = session;
+
+        await session.Find(By.Id("Fractal")).ZoomAsync(1000);
+        var info = await session.Find(By.Id("Fractal")).GetAsync();
+        var beyond = Assert.ThrowsAsync<AutomationException>(() => session.Find(By.Id("Fractal")).ZoomAsync(1e20));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(view.ZoomExp, Is.EqualTo(1).Within(1e-9), "1000% is ten times");
+            Assert.That(info.Zoom, Is.EqualTo(1000));
+            Assert.That(beyond.Message, Does.Contain("zooms from"));
+        });
+    }
+
+    [Test]
+    public async Task AFractalView_IsPannedAsADragPansIt()
+    {
+        var view = new FractalView { Width = 200, Height = 200 };
+        AutomationProperties.SetAutomationId(view, "Fractal");
+        var session = await Driving(new StackPanel { Children = { view } });
+        await using var _ = session;
+        var x = view.CenterX + view.CenterXFine;
+        var y = view.CenterY + view.CenterYFine;
+
+        // 1.5 across the smaller half of 100 pixels: 0.015 of the plane a pixel.
+        await session.Find(By.Id("Fractal")).PanAsync(100, -40);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(view.CenterX + view.CenterXFine, Is.EqualTo(x - 1.5).Within(1e-9), "the content follows the drag");
+            Assert.That(view.CenterY + view.CenterYFine, Is.EqualTo(y + 0.6).Within(1e-9));
+        });
+    }
+
+    [Test]
+    public async Task ACanvasMap_IsAPictureOfThePlane_NamedByTheTheme()
+    {
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var session = await Driving(canvas);
+        await using var _ = session;
+
+        var map = await session.Find(By.Id("PART_MiniMap")).Find(By.Type(AutomationControlType.Image)).GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(map.ClassName, Is.EqualTo(nameof(CanvasMiniMap)));
+            Assert.That(map.Name, Is.EqualTo("The whole plane, the part in view framed"));
+        });
+    }
+
+    [Test]
+    public async Task ACanvas_IsPannedAsADragPansIt()
+    {
+        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        AutomationProperties.SetAutomationId(canvas, "Canvas");
+        var session = await Driving(canvas);
+        await using var _ = session;
+        var was = canvas.Offset;
+
+        await session.Find(By.Id("Canvas")).PanAsync(120, -30);
+        var notAView = Assert.ThrowsAsync<AutomationException>(() => session.Find(By.Id("Canvas")).MoveByAsync(10, 10));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(canvas.Offset.X - was.X, Is.EqualTo(120).Within(1e-9));
+            Assert.That(canvas.Offset.Y - was.Y, Is.EqualTo(-30).Within(1e-9));
+            Assert.That(notAView.Message, Does.Contain("cannot be moved"));
+        });
+    }
+
+    [Test]
     public async Task AToolTip_IsFoundWhileItShows_AndIsCalledByWhatItSays()
     {
         var button = new Button { Content = "Save" };

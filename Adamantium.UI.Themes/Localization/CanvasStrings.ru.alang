@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="MovePanel" Text="Перетащите, чтобы передвинуть панель; щелчок сворачивает её"/>
     <Phrase Key="Map" Text="Карта"/>
+    <Phrase Key="WholePlane" Text="Вся плоскость, видимая часть в рамке"/>
     <Phrase Key="AddNode" Text="Добавить узел"/>
     <Phrase Key="ResizePanel" Text="Перетащите, чтобы задать ширину панели"/>
     <Phrase Key="StickToEdge" Text="Прилипать к краю, если бросить панель рядом с ним"/>

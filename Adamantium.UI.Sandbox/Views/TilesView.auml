@@ -24,7 +24,8 @@
                        IsFlipped="{Binding AllFlipped}">
                 <TilesHost.ItemTemplate>
                     <DataTemplate>
-                        <FlipTile FrontBrush="{Binding Color}"/>
+                        <FlipTile FrontBrush="{Binding Color}"
+                                  AutomationProperties.Name="{Localize TilesStrings.Tile, row={Binding Row}, column={Binding Column}}"/>
                     </DataTemplate>
                 </TilesHost.ItemTemplate>
             </TilesHost>

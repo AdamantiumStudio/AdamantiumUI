@@ -534,6 +534,7 @@ public class Ribbon : Selector
     {
         if (sender is not Ribbon ribbon) return;
 
+        AutomationEvents.RaiseExpandCollapse(ribbon, !ribbon.IsMinimized);
         ribbon.HostSelectedContent();
         if (!ribbon.IsMinimized)
         {

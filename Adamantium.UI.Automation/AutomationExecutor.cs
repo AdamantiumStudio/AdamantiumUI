@@ -265,6 +265,10 @@ public sealed class AutomationExecutor
             case AutomationCommand.Zoom:
                 Zoom(peer, request.Value);
                 break;
+            case AutomationCommand.Pan:
+                var offset = Point(request.Value);
+                Pattern<IPanProvider>(peer, PatternId.Pan).Pan(offset.X, offset.Y);
+                break;
             case AutomationCommand.Connect:
                 Pattern<IConnectionProvider>(peer, PatternId.Connection).Connect(Resolve(request.Value));
                 break;

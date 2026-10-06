@@ -76,7 +76,8 @@
                                  down the right, the view bar along the bottom middle. -->
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
-                                <CanvasMiniMap Width="190" Height="120" MinWidth="0" MinHeight="0"/>
+                                <CanvasMiniMap Width="190" Height="120" MinWidth="0" MinHeight="0"
+                                               AutomationProperties.Name="{Localize CanvasStrings.WholePlane}"/>
                             </CanvasPane>
 
                             <!-- The INSPECTOR. Its edge is draggable and the width is the PANE's rather than the
@@ -481,6 +482,7 @@
                                            Text="{Localize CanvasStrings.NothingDrawn}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                                 <TreeView MaxHeight="300" MinWidth="0"
+                                          AutomationProperties.Name="{Localize CanvasStrings.Layers}"
                                           ItemsSource="{TemplateBinding Structure}"
                                           SelectedItem="{TemplateBinding Listed, Mode=TwoWay}"
                                           ItemActivatedCommand="{Ancestor CanvasInspector, Canvas.ZoomToCommand}">
@@ -530,7 +532,8 @@
                                  ToolTip="{Localize CanvasStrings.NarrowList}"/>
 
                         <TreeView MaxHeight="180" MinWidth="0" ItemsSource="{TemplateBinding Groups}"
-                                  SelectedItem="{Ancestor CanvasNodePalette, PickedKind, Mode=TwoWay}">
+                                  SelectedItem="{Ancestor CanvasNodePalette, PickedKind, Mode=TwoWay}"
+                                  AutomationProperties.Name="{Localize CanvasStrings.AddNode}">
                             <TreeView.ItemContainerStyle>
                                 <Style Selector="TreeViewItem">
                                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>

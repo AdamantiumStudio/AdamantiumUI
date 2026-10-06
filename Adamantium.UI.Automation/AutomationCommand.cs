@@ -123,5 +123,9 @@ public enum AutomationCommand
     AddToSelection,
 
     /// <summary>Takes the target out of what its container has selected, leaving the rest.</summary>
-    RemoveFromSelection
+    RemoveFromSelection,
+
+    /// <summary>Drags what the target - a view of a plane - shows by <see cref="AutomationRequest.Value"/>, <c>dx,dy</c>
+    /// of its own units.</summary>
+    Pan
 }

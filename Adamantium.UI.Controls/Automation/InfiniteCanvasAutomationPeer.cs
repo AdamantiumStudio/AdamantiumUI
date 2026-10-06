@@ -8,10 +8,10 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of an <see cref="InfiniteCanvas"/>: a pane zoomed about the middle of what it shows, whose
-/// selection is the controls on it that are selected. A control of the canvas's mode that is off screen is a child too,
-/// by a stand-in.</summary>
-public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvider, ISelectionProvider
+/// <summary>The peer of an <see cref="InfiniteCanvas"/>: a pane zoomed about the middle of what it shows and panned as
+/// a drag pans it, whose selection is the controls on it that are selected. A control of the canvas's mode that is off
+/// screen is a child too, by a stand-in.</summary>
+public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvider, ISelectionProvider, IPanProvider
 {
     private readonly InfiniteCanvas _canvas;
     private readonly Dictionary<ElementItem, CanvasItemStandInAutomationPeer> _standIns = new();
@@ -40,6 +40,8 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
     public void Move(double x, double y) => throw new InvalidOperationException("A canvas is not moved; its nodes are.");
 
     public void Resize(double width, double height) => throw new InvalidOperationException("A canvas is not resized.");
+
+    public void Pan(double dx, double dy) => _canvas.PanBy(new Vector2(dx, dy));
 
     public void Zoom(double percent)
     {

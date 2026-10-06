@@ -1,4 +1,5 @@
-# The Tiles 3D page: every tile flipped at once and back again, without an error left behind.
+# The Tiles 3D page: every tile flipped at once and back again, and one tile turned over by itself and back, without an
+# error left behind.
 select id=GalleryTabs/id=Tiles3D
 wait id=Tiles
 expect id=Tiles IsFlipped=False
@@ -6,3 +7,8 @@ invoke "id=TilesView/name=Flip all"
 expect id=Tiles IsFlipped=True
 invoke "id=TilesView/name=Flip all"
 expect id=Tiles IsFlipped=False
+toggle id=Tiles>name="Tile 1, 6"
+expect id=Tiles>name="Tile 1, 6" toggle=On
+expect id=Tiles>name="Tile 1, 7" toggle=Off
+toggle id=Tiles>name="Tile 1, 6"
+expect id=Tiles>name="Tile 1, 6" toggle=Off

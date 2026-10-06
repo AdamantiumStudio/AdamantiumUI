@@ -14,6 +14,7 @@
                          mean the seventeen digits that come out of adding a twentieth to itself - "1,0125000000000002"
                          is the arithmetic showing through. -->
                     <NumericUpDown Value="{Binding Value, Mode=TwoWay}"
+                                   AutomationProperties.Name="{Localize CanvasPageStrings.NodeNumber}"
                                    Minimum="0" Maximum="4" SmallChange="0.05" StringFormat="0.###"
                                    AreButtonsVisible="False" IsDragScrubEnabled="True"/>
                 </DataTemplate>
@@ -22,6 +23,7 @@
             <models:NodeBodySelector.Color>
                 <DataTemplate>
                     <ColorPickerButton SelectedColor="{Binding Color, Mode=TwoWay}"
+                                       AutomationProperties.Name="{Localize CanvasPageStrings.NodeColor}"
                                        Height="26" MinWidth="0" Padding="2"/>
                 </DataTemplate>
             </models:NodeBodySelector.Color>
@@ -65,7 +67,8 @@
 
             <models:PlacedThingSelector.Field>
                 <DataTemplate>
-                    <TextBox Text="{Binding Text, Mode=TwoWay}"/>
+                    <TextBox Text="{Binding Text, Mode=TwoWay}"
+                             AutomationProperties.Name="{Localize CanvasPageStrings.AField}"/>
                 </DataTemplate>
             </models:PlacedThingSelector.Field>
         </models:PlacedThingSelector>

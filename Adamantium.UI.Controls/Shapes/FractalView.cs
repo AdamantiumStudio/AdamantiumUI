@@ -1,5 +1,7 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Animation;
 
@@ -118,21 +120,26 @@ public class FractalView : Rectangle
         base.OnMouseMove(sender, e);
         if (!IsMouseCaptured) return;
         var p = e.GetPosition(this);
-        var k = UnitsPerPixel();
-        if (k > 0.0)
-        {
-            // Into the FINE part: the step is tiny deep down, and adding it to a center of order 1 would round straight
-            // back to where it started. The fine part is what the coarse one could not hold, so its own step is far
-            // smaller and the drag lands - then the pair is re-split so it stays that way.
-            var hiX = CenterX; var loX = CenterXFine - (p.X - _lastX) * k;   // grab the content: the point under the cursor stays put
-            var hiY = CenterY; var loY = CenterYFine - (p.Y - _lastY) * k;
-            Renormalize(ref hiX, ref loX);
-            Renormalize(ref hiY, ref loY);
-            CenterX = hiX; CenterXFine = loX;
-            CenterY = hiY; CenterYFine = loY;
-        }
+        PanBy(p.X - _lastX, p.Y - _lastY);
         _lastX = p.X;
         _lastY = p.Y;
+    }
+
+    /// <summary>Drags the content by <paramref name="dx"/>, <paramref name="dy"/> pixels of the view: the point that was
+    /// under one spot ends up that far from it.</summary>
+    internal void PanBy(double dx, double dy)
+    {
+        var k = UnitsPerPixel();
+        if (k <= 0.0) return;
+        // Into the FINE part: the step is tiny deep down, and adding it to a center of order 1 would round straight
+        // back to where it started. The fine part is what the coarse one could not hold, so its own step is far
+        // smaller and the drag lands - then the pair is re-split so it stays that way.
+        var hiX = CenterX; var loX = CenterXFine - dx * k;   // grab the content: the point under the cursor stays put
+        var hiY = CenterY; var loY = CenterYFine - dy * k;
+        Renormalize(ref hiX, ref loX);
+        Renormalize(ref hiY, ref loY);
+        CenterX = hiX; CenterXFine = loX;
+        CenterY = hiY; CenterYFine = loY;
     }
 
     protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -174,6 +181,21 @@ public class FractalView : Rectangle
             AnimationManager.AddTicker(AdvanceZoom);   // heartbeat: no dirty target, so it keeps the loop presenting while it eases
         }
     }
+
+    /// <summary>The zoom, as log10, the view goes from and to.</summary>
+    internal const double LeastZoomExp = MinExp;
+
+    internal const double MostZoomExp = MaxExp;
+
+    /// <summary>Zooms to <paramref name="exp"/> (log10 of the zoom), kept within the view's reach, about the middle of
+    /// the view - where the center already is - and at once, ending any easing the wheel started.</summary>
+    internal void ZoomTo(double exp)
+    {
+        _zoomActive = false;
+        SetCurrentValue(ZoomExpProperty, Math.Clamp(exp, MinExp, MaxExp));
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new FractalViewAutomationPeer(this);
 
     // One eased zoom step: glide ZoomExp a fraction toward the target and re-anchor the center so the point under the cursor
     // stays put. Returns true (dropping the ticker) once the target is reached. AddTicker's delegate: true = done/removed.

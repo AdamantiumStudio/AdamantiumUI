@@ -16,7 +16,7 @@ internal sealed class ScriptInterpreter
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
-        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "connect", "disconnect", "dock", "window", "set",
+        "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "connect", "disconnect", "dock", "window", "set",
         "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -102,6 +102,7 @@ internal sealed class ScriptInterpreter
             "move" => SendAsync(Pair(AutomationCommand.Move, arguments, allowErrors)),
             "resize" => SendAsync(Pair(AutomationCommand.Resize, arguments, allowErrors)),
             "zoom" => SendAsync(Second(AutomationCommand.Zoom, arguments, allowErrors)),
+            "pan" => SendAsync(Pair(AutomationCommand.Pan, arguments, allowErrors)),
             "connect" => SendAsync(Second(AutomationCommand.Connect, arguments, allowErrors)),
             "disconnect" => SendAsync(Second(AutomationCommand.Disconnect, arguments, allowErrors)),
             "dock" => SendAsync(new AutomationRequest
