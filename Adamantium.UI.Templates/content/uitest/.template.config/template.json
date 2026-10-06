@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Adamantium Studio",
+  "classifications": [ "Test", "NUnit", "Adamantium" ],
+  "identity": "Adamantium.UI.UITest.CSharp",
+  "groupIdentity": "Adamantium.UI.UITest",
+  "name": "Adamantium UI Tests",
+  "description": "UI tests of an Adamantium UI application: its windows driven headless in the test's process and the application itself driven through its automation agent, in code and from scenario files.",
+  "shortName": "adamantium-uitest",
+  "sourceName": "AdamantiumApp.UITests",
+  "defaultName": "AdamantiumApp.UITests",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "app": {
+      "type": "parameter",
+      "datatype": "text",
+      "displayName": "Application",
+      "description": "The application project under test, a folder beside this one with a project of the same name.",
+      "defaultValue": "AdamantiumApp",
+      "replaces": "APP_NAME"
+    },
+    "theme": {
+      "type": "parameter",
+      "datatype": "choice",
+      "displayName": "Theme",
+      "description": "The theme the application starts on, for the windows built headless.",
+      "choices": [
+        { "choice": "Fluent", "displayName": "Fluent", "description": "Fluent design, light and dark" },
+        { "choice": "EditorPro", "displayName": "Editor Pro", "description": "An editor's dense look: small type, tight radii, dark and light" },
+        { "choice": "MacOs", "displayName": "macOS", "description": "The macOS look, light and dark" }
+      ],
+      "defaultValue": "Fluent",
+      "replaces": "THEME_NAME"
+    }
+  },
+  "primaryOutputs": [
+    { "path": "AdamantiumApp.UITests.csproj" }
+  ]
+}

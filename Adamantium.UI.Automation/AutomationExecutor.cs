@@ -224,6 +224,12 @@ public sealed class AutomationExecutor
             case AutomationCommand.Select:
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).Select();
                 break;
+            case AutomationCommand.AddToSelection:
+                Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).AddToSelection();
+                break;
+            case AutomationCommand.RemoveFromSelection:
+                Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).RemoveFromSelection();
+                break;
             case AutomationCommand.Click:
                 InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Left);
                 break;
@@ -237,6 +243,9 @@ public sealed class AutomationExecutor
                 var (from, to) = DragPoints(request.Value);
                 InputSimulator.Drag(OwnerOf(peer), Label(peer), from, to);
                 break;
+            case AutomationCommand.DropOnto:
+                DropOnto(peer, request);
+                break;
             case AutomationCommand.Expand:
                 Pattern<IExpandCollapseProvider>(peer, PatternId.ExpandCollapse).Expand();
                 break;
@@ -249,6 +258,40 @@ public sealed class AutomationExecutor
             case AutomationCommand.Type:
                 peer.SetFocus();
                 InputSimulator.Type(request.Value ?? string.Empty);
+                break;
+            case AutomationCommand.Move:
+                MoveBy(peer, Point(request.Value));
+                break;
+            case AutomationCommand.Resize:
+                ResizeTo(peer, Point(request.Value));
+                break;
+            case AutomationCommand.Zoom:
+                Zoom(peer, request.Value);
+                break;
+            case AutomationCommand.Pan:
+                var offset = Point(request.Value);
+                Pattern<IPanProvider>(peer, PatternId.Pan).Pan(offset.X, offset.Y);
+                break;
+            case AutomationCommand.ShowContextMenu:
+                try
+                {
+                    peer.ShowContextMenu();
+                }
+                catch (InvalidOperationException e)
+                {
+                    throw new AutomationException(e.Message);
+                }
+
+                break;
+            case AutomationCommand.Connect:
+                Pattern<IConnectionProvider>(peer, PatternId.Connection).Connect(Resolve(request.Value));
+                break;
+            case AutomationCommand.Dock:
+                Dock(peer, request);
+                break;
+            case AutomationCommand.Disconnect:
+                Pattern<IConnectionProvider>(peer, PatternId.Connection)
+                    .Disconnect(string.IsNullOrWhiteSpace(request.Value) ? null : Resolve(request.Value));
                 break;
             default:
                 throw new AutomationException($"{request.Command} is not an action.");
@@ -329,19 +372,183 @@ public sealed class AutomationExecutor
         }
 
         return (Point(points[0]), Point(points[1]));
+    }
 
-        static Vector2 Point(string text)
+    private static Vector2 Point(string text)
+    {
+        var parts = (text ?? string.Empty).Split(',');
+        if (parts.Length == 2
+            && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
+            && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
         {
-            var parts = text.Split(',');
-            if (parts.Length == 2
-                && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
-                && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
-            {
-                return new Vector2(x, y);
-            }
-
-            throw new FormatException($"'{text}' is not a point: x,y.");
+            return new Vector2(x, y);
         }
+
+        throw new FormatException($"'{text}' is not a pair: x,y.");
+    }
+
+    private static void MoveBy(AutomationPeer peer, Vector2 offset)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanMove)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be moved.");
+        }
+
+        var bounds = peer.BoundingRectangle;
+        var pixels = PixelsPerUnit(peer);
+        transform.Move(bounds.X + offset.X * pixels.X, bounds.Y + offset.Y * pixels.Y);
+    }
+
+    private static void ResizeTo(AutomationPeer peer, Vector2 size)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanResize)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be resized.");
+        }
+
+        var pixels = PixelsPerUnit(peer);
+        transform.Resize(size.X * pixels.X, size.Y * pixels.Y);
+    }
+
+    private static void Zoom(AutomationPeer peer, string value)
+    {
+        var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
+        if (!transform.CanZoom)
+        {
+            throw new AutomationException($"{Label(peer)} cannot be zoomed.");
+        }
+
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent))
+        {
+            throw new FormatException($"'{value}' is not a percent.");
+        }
+
+        if (percent < transform.ZoomMinimum || percent > transform.ZoomMaximum)
+        {
+            throw new AutomationException(FormattableString.Invariant(
+                $"{Label(peer)} zooms from {transform.ZoomMinimum}% to {transform.ZoomMaximum}%, not to {percent}%."));
+        }
+
+        transform.Zoom(percent);
+    }
+
+    // Before is the target's leading part; after is the leading part of the one after it, or the far end of the row or
+    // column it stands in when it is the last. Read off the neighbors rather than the target's own edge, so it means
+    // the same to a list with an insertion caret, to one that opens a gap in a grid of equal cells and to a row of
+    // column headers.
+    private void DropOnto(AutomationPeer peer, AutomationRequest request)
+    {
+        var target = Resolve(request.Value);
+        var side = request.Properties is [{ } named, ..] ? named.ToLowerInvariant() : null;
+        if (side is not (null or "before" or "after"))
+        {
+            throw new AutomationException($"'{side}' is not a side to drop on: before or after.");
+        }
+
+        var owner = OwnerOf(target);
+        if (side == null)
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target),
+                new Vector2(owner.RenderSize.Width / 2, owner.RenderSize.Height / 2), owner);
+            return;
+        }
+
+        var parent = target.GetParent() as UIComponentAutomationPeer;
+        var within = parent?.Owner ?? owner;
+        var kin = parent?.GetChildren().Where(child => child.ControlType == target.ControlType).ToList() ?? [target];
+        var index = kin.IndexOf(target);
+        var across = new[] { index - 1, index + 1 }
+            .Where(i => i >= 0 && i < kin.Count && kin[i].BoundingRectangle.Width > 0)
+            .Any(i => Beside(kin[i].BoundingRectangle, target.BoundingRectangle));
+
+        if (side == "before")
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target), Leading(owner, across), within);
+        }
+        else if (index + 1 < kin.Count && kin[index + 1] is UIComponentAutomationPeer { IsOffscreen: false } next)
+        {
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), next.Owner, Label(target), Leading(next.Owner, across), within);
+        }
+        else
+        {
+            // The last: just past it, else the far end of what holds it, else its own trailing part - whichever the
+            // pointer can reach. A list that opens a gap reads only the first two as after it.
+            var size = owner.RenderSize;
+            var end = within.TranslatePoint(new Vector2(within.RenderSize.Width - 3, within.RenderSize.Height - 3), owner);
+            Vector2[] points = across
+                ? [new(size.Width + 3, size.Height / 2), new(end.X, size.Height / 2), new(size.Width * 0.85, size.Height / 2)]
+                : [new(size.Width / 2, size.Height + 3), new(size.Width / 2, end.Y), new(size.Width / 2, size.Height * 0.85)];
+            var at = points.FirstOrDefault(point => InputSimulator.Reaches(owner, point, within), points[0]);
+            InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target), at, within);
+        }
+    }
+
+    private static Vector2 Leading(UIComponent element, bool across) => across
+        ? new Vector2(element.RenderSize.Width * 0.15, element.RenderSize.Height / 2)
+        : new Vector2(element.RenderSize.Width / 2, element.RenderSize.Height * 0.15);
+
+    private static bool Beside(Rect neighbor, Rect bounds) =>
+        Math.Abs(neighbor.Y + neighbor.Height / 2 - (bounds.Y + bounds.Height / 2)) < bounds.Height / 2;
+
+    // Where a hand takes it: by its grip, when a drag has to start there; else its middle, or along its middle line, off
+    // any part of it that acts on a press of its own - a narrow column header is mostly its funnel.
+    private static Vector2 Grip(AutomationPeer peer)
+    {
+        var owner = OwnerOf(peer);
+        if (UI.Input.DragDrop.GetDragHandles(owner).FirstOrDefault() is { } handle)
+        {
+            var grip = handle.TransformBoundsToVisual(owner);
+            return new Vector2(grip.X + grip.Width / 2, grip.Y + grip.Height / 2);
+        }
+
+        var size = owner.RenderSize;
+        var bounds = peer.BoundingRectangle;
+        var presses = PressedParts(peer).Select(part => part.BoundingRectangle).ToList();
+        foreach (var x in (double[])[0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875])
+        {
+            var at = new Vector2(bounds.X + bounds.Width * x, bounds.Y + bounds.Height / 2);
+            if (!presses.Any(part => at.X >= part.X && at.X < part.X + part.Width && at.Y >= part.Y && at.Y < part.Y + part.Height))
+            {
+                return new Vector2(size.Width * x, size.Height / 2);
+            }
+        }
+
+        return new Vector2(size.Width / 2, size.Height / 2);
+    }
+
+    private static IEnumerable<AutomationPeer> PressedParts(AutomationPeer peer) =>
+        peer.GetChildren().SelectMany(child =>
+            child.GetPattern(PatternId.Invoke) != null || child.GetPattern(PatternId.Toggle) != null ||
+            child.GetPattern(PatternId.ExpandCollapse) != null
+                ? [child]
+                : PressedParts(child));
+
+    private void Dock(AutomationPeer peer, AutomationRequest request)
+    {
+        if (!Enum.TryParse<DockPosition>(request.Value, true, out var position))
+        {
+            throw new AutomationException($"'{request.Value}' is not a place to dock: Top, Left, Bottom, Right, Fill or None.");
+        }
+
+        var dock = Pattern<IDockProvider>(peer, PatternId.Dock);
+        if (request.Properties is [{ Length: > 0 } beside, ..])
+        {
+            dock.DockBeside(Resolve(beside), position);
+        }
+        else
+        {
+            dock.SetDockPosition(position);
+        }
+    }
+
+    /// <summary>The screen pixels one of the element's own units takes, across and down.</summary>
+    private static Vector2 PixelsPerUnit(AutomationPeer peer)
+    {
+        var size = OwnerOf(peer).RenderSize;
+        var bounds = peer.BoundingRectangle;
+        return new Vector2(size.Width > 0 ? bounds.Width / size.Width : 1, size.Height > 0 ? bounds.Height / size.Height : 1);
     }
 
     private static (double Horizontal, double Vertical) ScrollPercents(string value)
@@ -400,13 +607,63 @@ public sealed class AutomationExecutor
         }
 
         var path = By.ParsePath(target);
-        var matches = Roots().SelectMany(SelfAndDescendants).Where(path[0].Matches).ToList();
+        var matches = Pick(Roots().SelectMany(SelfAndDescendants).Where(path[0].Matches).ToList(), path[0].Index);
+        Dictionary<AutomationPeer, AutomationPeer> parents = null;
         foreach (var step in path.Skip(1))
         {
-            matches = matches.SelectMany(peer => SelfAndDescendants(peer).Skip(1)).Where(step.Matches).Distinct().ToList();
+            IEnumerable<AutomationPeer> found;
+            if (step.Relation != null)
+            {
+                parents ??= Parents();
+                found = matches.Select(peer => Related(peer, step.Relation, parents)).Where(peer => peer != null);
+            }
+            else
+            {
+                found = matches.SelectMany(peer => step.IsChild ? peer.GetChildren() : SelfAndDescendants(peer).Skip(1)).Where(step.Matches);
+            }
+
+            matches = Pick(found.Distinct().ToList(), step.Index);
         }
 
         return matches;
+    }
+
+    private Dictionary<AutomationPeer, AutomationPeer> Parents()
+    {
+        var parents = new Dictionary<AutomationPeer, AutomationPeer>();
+        foreach (var peer in Roots().SelectMany(SelfAndDescendants))
+        {
+            foreach (var child in peer.GetChildren())
+            {
+                parents.TryAdd(child, peer);
+            }
+        }
+
+        return parents;
+    }
+
+    private static List<AutomationPeer> Pick(List<AutomationPeer> matches, int? index)
+    {
+        if (index is not { } at)
+        {
+            return matches;
+        }
+
+        var position = at < 0 ? matches.Count + at : at;
+        return position >= 0 && position < matches.Count ? [matches[position]] : [];
+    }
+
+    private AutomationPeer Related(AutomationPeer peer, string relation, Dictionary<AutomationPeer, AutomationPeer> parents)
+    {
+        var parent = parents.GetValueOrDefault(peer);
+        if (relation == "parent")
+        {
+            return parent;
+        }
+
+        var siblings = parent?.GetChildren() ?? [.. Roots()];
+        var position = siblings.ToList().IndexOf(peer) + (relation == "next" ? 1 : -1);
+        return position >= 0 && position < siblings.Count ? siblings[position] : null;
     }
 
     private AutomationPeer Resolve(string target) =>
@@ -532,6 +789,16 @@ public sealed class AutomationExecutor
         if (peer.GetPattern(PatternId.Window) is IWindowProvider window)
         {
             info.WindowState = window.VisualState.ToString();
+        }
+
+        if (peer.GetPattern(PatternId.Dock) is IDockProvider docked)
+        {
+            info.DockPosition = docked.DockPosition.ToString();
+        }
+
+        if (peer.GetPattern(PatternId.Transform) is ITransformProvider { CanZoom: true } zoomable)
+        {
+            info.Zoom = Math.Round(zoomable.ZoomLevel, 1);
         }
 
         return info;

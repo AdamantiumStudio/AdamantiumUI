@@ -44,130 +44,130 @@
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16">
                 <!-- Only for the polygon: on a rect or an ellipse these two numbers mean nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="CornersLabel" Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
-                        <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=CornersLabel}" Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
-                        <NumericUpDown Width="88" Minimum="3" Maximum="24" SmallChange="1" SnapsToSmallChange="true" StringFormat="N0"
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=CornersLabel}" Width="88" Minimum="3" Maximum="24" SmallChange="1" SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="StartAngleLabel" Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=StartAngleLabel}" Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="180"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1" SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                       Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=StartAngleLabel}"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.TileMode}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding TileModes}" SelectedItem="{Binding DrawingTileMode, Mode=TwoWay}" Width="280" MarginBottom="10"
+                <TextBlock x:Name="TileModeLabel" Text="{Localize BrushesStrings.TileMode}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=TileModeLabel}" ItemsSource="{Binding TileModes}" SelectedItem="{Binding DrawingTileMode, Mode=TwoWay}" Width="280" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
-                <TextBlock Text="{Localize BrushesStrings.StretchOneTile}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding Stretches}" SelectedItem="{Binding DrawingStretch, Mode=TwoWay}" Width="280" MarginBottom="10"
+                <TextBlock x:Name="StretchLabel" Text="{Localize BrushesStrings.StretchOneTile}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=StretchLabel}" ItemsSource="{Binding Stretches}" SelectedItem="{Binding DrawingStretch, Mode=TwoWay}" Width="280" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
-                <TextBlock Text="{Localize BrushesStrings.AlignXRoom}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding AlignmentsX}" SelectedItem="{Binding DrawingAlignmentX, Mode=TwoWay}" Width="280" MarginBottom="10"
+                <TextBlock x:Name="AlignXLabel" Text="{Localize BrushesStrings.AlignXRoom}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=AlignXLabel}" ItemsSource="{Binding AlignmentsX}" SelectedItem="{Binding DrawingAlignmentX, Mode=TwoWay}" Width="280" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
-                <TextBlock Text="{Localize BrushesStrings.AlignY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding AlignmentsY}" SelectedItem="{Binding DrawingAlignmentY, Mode=TwoWay}" Width="280" MarginBottom="10"
+                <TextBlock x:Name="AlignYLabel" Text="{Localize BrushesStrings.AlignY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=AlignYLabel}" ItemsSource="{Binding AlignmentsY}" SelectedItem="{Binding DrawingAlignmentY, Mode=TwoWay}" Width="280" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
-                <TextBlock Text="{Localize BrushesStrings.ViewportUnits}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding MappingModes}" SelectedItem="{Binding DrawingViewportUnits, Mode=TwoWay}" Width="280" MarginBottom="10"
+                <TextBlock x:Name="ViewportUnitsLabel" Text="{Localize BrushesStrings.ViewportUnits}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=ViewportUnitsLabel}" ItemsSource="{Binding MappingModes}" SelectedItem="{Binding DrawingViewportUnits, Mode=TwoWay}" Width="280" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
-                <TextBlock Text="{Localize BrushesStrings.ViewportSize}" Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="2"/>
+                <TextBlock x:Name="ViewportSizeLabel" Text="{Localize BrushesStrings.ViewportSize}" Foreground="{ResourceReference TextFillColorSecondary}" TextWrapping="WrapByWords" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewportSize, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="16" Maximum="200" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ViewportSizeLabel}" Value="{Binding DrawingViewportSize, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="16" Maximum="200" Width="186"/>
                     <NumericUpDown Width="88" Minimum="16" Maximum="200" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewportSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewportSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=ViewportSizeLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.ViewportOriginX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="OriginXLabel" Text="{Localize BrushesStrings.ViewportOriginX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewportOriginX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-100" Maximum="100" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=OriginXLabel}" Value="{Binding DrawingViewportOriginX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-100" Maximum="100" Width="186"/>
                     <NumericUpDown Width="88" Minimum="-100" Maximum="100" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewportOriginX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewportOriginX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=OriginXLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.ViewportOriginY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="OriginYLabel" Text="{Localize BrushesStrings.ViewportOriginY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewportOriginY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-100" Maximum="100" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=OriginYLabel}" Value="{Binding DrawingViewportOriginY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-100" Maximum="100" Width="186"/>
                     <NumericUpDown Width="88" Minimum="-100" Maximum="100" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewportOriginY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewportOriginY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=OriginYLabel}"/>
                 </StackPanel>
             </StackPanel>
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16">
-                <TextBlock Text="{Localize BrushesStrings.ViewboxX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="ViewboxXLabel" Text="{Localize BrushesStrings.ViewboxX}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewboxX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ViewboxXLabel}" Value="{Binding DrawingViewboxX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewboxX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewboxX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=ViewboxXLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.ViewboxY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="ViewboxYLabel" Text="{Localize BrushesStrings.ViewboxY}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewboxY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ViewboxYLabel}" Value="{Binding DrawingViewboxY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewboxY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewboxY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=ViewboxYLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.ViewboxSize}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="ViewboxSizeLabel" Text="{Localize BrushesStrings.ViewboxSize}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingViewboxSize, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0.1" Maximum="1" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ViewboxSizeLabel}" Value="{Binding DrawingViewboxSize, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0.1" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0.1" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingViewboxSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingViewboxSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=ViewboxSizeLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Width}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="WidthLabel" Text="{Localize BrushesStrings.Width}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingWidth, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="340" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=WidthLabel}" Value="{Binding DrawingWidth, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="340" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="340" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingWidth, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingWidth, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=WidthLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Height}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="HeightLabel" Text="{Localize BrushesStrings.Height}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingHeight, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="220" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=HeightLabel}" Value="{Binding DrawingHeight, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="40" Maximum="220" Width="186"/>
                     <NumericUpDown Width="88" Minimum="40" Maximum="220" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingHeight, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingHeight, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=HeightLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="CornerRadiusLabel" Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="100" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}" Value="{Binding DrawingRadius, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="100" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="100" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.GridRotationContent}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="RotationLabel" Text="{Localize BrushesStrings.GridRotationContent}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingRotation, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=RotationLabel}" Value="{Binding DrawingRotation, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingRotation, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingRotation, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=RotationLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <TextBlock x:Name="OpacityLabel" Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Value="{Binding DrawingOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=OpacityLabel}" Value="{Binding DrawingOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding DrawingOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                   Value="{Binding DrawingOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=OpacityLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Tint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding DrawingTint, Mode=TwoWay}"/>
+                <TextBlock x:Name="TintLabel" Text="{Localize BrushesStrings.Tint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=TintLabel}" Width="48" Height="32" SelectedColor="{Binding DrawingTint, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>
     </StackPanel>

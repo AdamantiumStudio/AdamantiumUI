@@ -2,9 +2,16 @@
 select id=GalleryTabs/id=Animations
 wait id=AnimationsView/name=+1
 invoke id=AnimationsView/name=+1
+expect id=RingIndicator type=ProgressBar name=Ring
 invoke id=AnimationsView/name=+5
 invoke id=AnimationsView/name=+25
+expect id=RingIndicator[30] name=Ring
 invoke id=AnimationsView/name=Clear
+absent id=RingIndicator
 invoke id=AnimationsView/name="+25 of EVERY kind"
 invoke id=AnimationsView/name="+25 Shimmer"
+expect id=DotsIndicator[24] name=Dots
+expect id=ShimmerIndicator[49] name=Shimmer
+absent id=ShimmerIndicator[50]
 invoke id=AnimationsView/name="Clear all"
+absent id=DotsIndicator

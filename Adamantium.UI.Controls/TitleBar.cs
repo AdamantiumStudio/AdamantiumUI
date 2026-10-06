@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -324,6 +326,8 @@ public class TitleBar : Control
 
     private void OnWindowStateChanged(object sender, StateChangedEventArgs e)
         => IsWindowMaximized = e.State == WindowState.Maximized;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new TitleBarAutomationPeer(this);
 
     // The window this title bar is hosted in. Walk up the visual tree (robust before RootVisual is wired), falling back
     // to RootVisual. Null if the title bar isn't inside a WindowBase (e.g. dropped in a virtual window) - buttons no-op.

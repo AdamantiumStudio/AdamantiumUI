@@ -40,5 +40,23 @@ public enum PatternId
     GridItem,
 
     /// <summary><see cref="ITableProvider"/>: a grid whose columns have headers.</summary>
-    Table
+    Table,
+
+    /// <summary><see cref="ITextProvider"/>: text read by character, word and line.</summary>
+    Text,
+
+    /// <summary><see cref="ITableItemProvider"/>: one cell of a table, under its headers.</summary>
+    TableItem,
+
+    /// <summary><see cref="ITransformProvider"/>: moved, resized or zoomed as a whole.</summary>
+    Transform,
+
+    /// <summary><see cref="IConnectionProvider"/>: an end a connection is made to.</summary>
+    Connection,
+
+    /// <summary><see cref="IDockProvider"/>: docked in a layout.</summary>
+    Dock,
+
+    /// <summary><see cref="IPanProvider"/>: a view whose content is dragged across it.</summary>
+    Pan
 }

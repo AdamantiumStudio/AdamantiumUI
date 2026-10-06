@@ -347,6 +347,7 @@ public class DropDown : Selector
         // whether it was opened by the keyboard, by a click on the header, or set from code.
         if (open) dd.Highlight(dd.SelectedIndex);
         else dd.Highlight(-1);
+        AutomationEvents.RaiseExpandCollapse(dd, open);
     }
 
     // The popup light-dismissed (a click outside the control + list) - reflect it so the next header click reopens.

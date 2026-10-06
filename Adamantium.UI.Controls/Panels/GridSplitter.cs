@@ -1,11 +1,13 @@
-﻿using Adamantium.UI.Controls.Primitives;
+﻿using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Panels;
 
-public class GridSplitter:Thumb
+public class GridSplitter:Thumb, ISplitter
 {
    public static readonly AdamantiumProperty ResizeDirectionProperty =
       AdamantiumProperty.Register(nameof(ResizeDirection),
@@ -92,7 +94,33 @@ public class GridSplitter:Thumb
    {
       if (!isResizeBehaviorValid) return;
 
-      double delta = ResizeDirection == ResizeDirection.Columns ? e.Change.X : e.Change.Y;
+      Spread(ResizeDirection == ResizeDirection.Columns ? e.Change.X : e.Change.Y);
+
+      if (!DeferredResizeEnabled)
+      {
+         SetLength(definition1LengthNew, definition2LengthNew);
+      }
+   }
+
+   bool ISplitter.MovesAcross => ResizeDirection == ResizeDirection.Columns;
+
+   bool ISplitter.CanMoveSplit => isResizeBehaviorValid && definition1 != null;
+
+   void ISplitter.MoveSplit(double delta)
+   {
+      if (!((ISplitter)this).CanMoveSplit)
+      {
+         return;
+      }
+
+      originLength1 = GetActualLength(definition1);
+      originLength2 = GetActualLength(definition2);
+      Spread(delta);
+      SetLength(definition1LengthNew, definition2LengthNew);
+   }
+
+   private void Spread(double delta)
+   {
       GetDeltaConstraints(out var min, out var max);
       delta = Math.Min(Math.Max(delta, min), max);
 
@@ -101,11 +129,6 @@ public class GridSplitter:Thumb
       // function of definition1 so their sum stays exactly (origin1 + origin2), free of drift.
       definition1LengthNew = originLength1 + delta;
       definition2LengthNew = originLength1 + originLength2 - definition1LengthNew;
-
-      if (!DeferredResizeEnabled)
-      {
-         SetLength(definition1LengthNew, definition2LengthNew);
-      }
    }
 
    private void SetLength(double prevDefinitionPixels, double nextDefinitionPixels)
@@ -258,14 +281,23 @@ public class GridSplitter:Thumb
       PrepareGridSplitter();
    }
 
+   protected override AutomationPeer OnCreateAutomationPeer() =>
+      TemplatedParent == null ? new SplitterAutomationPeer(this, this) : null;
+
    private void PrepareGridSplitter()
    {
       isResizeBehaviorValid = true;
       var behavior = ResizeBehavior;
       grid = this.GetVisualParent<Grid>();
+      Cursor = ResizeDirection == ResizeDirection.Columns ? Cursors.SizeEWE : Cursors.SizeNS;
+      if (grid == null)
+      {
+         isResizeBehaviorValid = false;
+         return;
+      }
+
       if (ResizeDirection == ResizeDirection.Columns)
       {
-         Cursor = Cursors.SizeEWE;
          definitions = grid.ColumnDefinitions.Cast<DefinitionBase>().ToList();
          var col = GetValue<int>(Grid.ColumnProperty);
          switch (behavior)
@@ -307,7 +339,6 @@ public class GridSplitter:Thumb
       }
       else
       {
-         Cursor = Cursors.SizeNS;
          definitions = grid.RowDefinitions.Cast<DefinitionBase>().ToList();
          var row = GetValue<int>(Grid.RowProperty);
          switch (behavior)

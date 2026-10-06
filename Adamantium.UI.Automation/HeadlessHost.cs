@@ -18,11 +18,22 @@ public sealed class HeadlessHost : IAutomationHost
     private readonly List<IWindow> _windows;
 
     /// <summary>Hosts <paramref name="windows"/> with a pointer of its own: a capture an earlier test left on the shared
-    /// mouse device is let go.</summary>
+    /// mouse device is let go. Under a platform - a <see cref="HeadlessApplication"/> - a window not yet initialized is
+    /// initialized as the application would: its markup built, its view-model made, its theme applied.</summary>
     public HeadlessHost(IEnumerable<IWindow> windows)
     {
         _windows = [.. windows];
         MouseDevice.CurrentDevice.Capture(null);
+        if (UIAppContext.PlatformService != null && UIAppContext.Current?.UIContext is { } context)
+        {
+            foreach (var window in _windows)
+            {
+                if (window is IRootVisualComponent { UIContext: null } root)
+                {
+                    root.AttachContextAndInitialize(context);
+                }
+            }
+        }
     }
 
     public IReadOnlyList<IWindow> Windows => _windows;

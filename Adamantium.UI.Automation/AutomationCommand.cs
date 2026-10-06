@@ -95,5 +95,45 @@ public enum AutomationCommand
 
     /// <summary>A picture of the target, or of the first window, drawn by the application's own renderer and written to
     /// <see cref="AutomationRequest.Value"/> as PNG - to look at, never to compare.</summary>
-    Shot
+    Shot,
+
+    /// <summary>Moves the target by <see cref="AutomationRequest.Value"/>, <c>dx,dy</c> of its own units: a splitter
+    /// along its axis, a node across its canvas.</summary>
+    Move,
+
+    /// <summary>Resizes the target to <see cref="AutomationRequest.Value"/>, <c>width,height</c> of its own units.</summary>
+    Resize,
+
+    /// <summary>Zooms the target to <see cref="AutomationRequest.Value"/> percent.</summary>
+    Zoom,
+
+    /// <summary>Joins the target - a socket - to the socket <see cref="AutomationRequest.Value"/> selects.</summary>
+    Connect,
+
+    /// <summary>Parts the target from the socket <see cref="AutomationRequest.Value"/> selects, or from all it is joined
+    /// to when that is empty.</summary>
+    Disconnect,
+
+    /// <summary>Docks the target - a pane, a panel - at <see cref="AutomationRequest.Value"/>: Top, Left, Bottom, Right,
+    /// Fill (the documents) or None (a window of its own); beside the pane the first of
+    /// <see cref="AutomationRequest.Properties"/> selects, when there is one.</summary>
+    Dock,
+
+    /// <summary>Adds the target to what its container has selected, leaving the rest.</summary>
+    AddToSelection,
+
+    /// <summary>Takes the target out of what its container has selected, leaving the rest.</summary>
+    RemoveFromSelection,
+
+    /// <summary>Drags what the target - a view of a plane - shows by <see cref="AutomationRequest.Value"/>, <c>dx,dy</c>
+    /// of its own units.</summary>
+    Pan,
+
+    /// <summary>Opens the target's context menu as the menu key would, with the keyboard inside.</summary>
+    ShowContextMenu,
+
+    /// <summary>Carries the target onto the element <see cref="AutomationRequest.Value"/> selects and lets it go there,
+    /// by a gesture made inside the application: over its middle, or before or after it when the first of
+    /// <see cref="AutomationRequest.Properties"/> says so.</summary>
+    DropOnto
 }

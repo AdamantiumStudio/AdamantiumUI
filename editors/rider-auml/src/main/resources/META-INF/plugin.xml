@@ -26,6 +26,23 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>New | AUML File offers a Data Template Set: templates picked by the type of the item, a file of their own placed
+        by name wherever a template selector goes.</p>
+        <p>Ctrl+click on a resource key - {ObservableResource SaveIcon} - goes to the markup that declares it; on a class
+        made from markup - ResourceLink Source="RibbonShellIcons", a view's element, {x:Type} - to its .auml file rather
+        than the generated code.</p>
+        <p>Rename (Shift+F6) on a resource key renames it where it is declared and everywhere it is used, across the
+        project's markup and the markup of projects built from source here; Find Usages lists those places. A key renamed or
+        added in a dictionary is offered at once, as typed - no save, no build. A key another project declares too - an
+        application's icon named like a theme's, which the theme's then hides - is underlined with a warning.</p>
+        <p>{Binding} against an x:ViewModel offers what the view model inherits, the properties the MVVM generator makes
+        from a base class's [Bindable] fields and [Command] methods included. A property element of an owner of attached
+        properties only - &lt;ResourceContext. - offers them.</p>
+        <p>A file the server cannot help with says why, in a warning on its first line: it belongs to no project, or its
+        project has not been built yet. The project's first build is noticed - the warning goes, and completion, checks and
+        type colors start with no restart.</p>
+        <p>A type written as a plain value - StartupWindow="WorkspaceWindow", StartupTheme="Fluent", EnumType - is painted
+        as a type, and red when the build would not find it, instead of looking like any string.</p>
         <p>New | AUML File offers an Application Blueprint: the application's first window, theme, theme variant, language,
         resources and style sets in markup, from which the build writes the entry point. A second blueprint in a project is
         underlined, and its StartupTheme offers only themes.</p>
@@ -102,6 +119,7 @@
         <internalFileTemplate name="Adamantium Theme"/>
         <internalFileTemplate name="Adamantium StyleSet"/>
         <internalFileTemplate name="Adamantium ResourceDictionary"/>
+        <internalFileTemplate name="Adamantium DataTemplateSet"/>
         <internalFileTemplate name="Adamantium ApplicationBlueprint"/>
         <notificationGroup id="Adamantium AUML" displayType="BALLOON"/>
         <notificationGroup id="Adamantium AUML templates offer" displayType="STICKY_BALLOON"/>

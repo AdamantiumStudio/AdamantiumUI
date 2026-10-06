@@ -49,10 +49,11 @@
                                    HorizontalAlignment="Left"/>
             </StackPanel>
 
-            <StackPanel Orientation="Vertical"
+            <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=LiveAccentHeading}"
+                        Orientation="Vertical"
                         MarginLeft="32"
                         VerticalAlignment="Top">
-                <TextBlock Text="{Localize ColorPageStrings.LiveAccent}"
+                <TextBlock x:Name="LiveAccentHeading" Text="{Localize ColorPageStrings.LiveAccent}"
                            FontSize="14"
                            MarginBottom="14"/>
                 <CheckBox Content="{Localize ColorPageStrings.Checkbox}"
@@ -61,12 +62,15 @@
                 <RadioButton Content="{Localize ColorPageStrings.RadioButton}"
                              IsChecked="True"
                              MarginBottom="12"/>
-                <ToggleSwitch IsChecked="True"
+                <ToggleSwitch AutomationProperties.LabeledBy="{Binding ElementName=LiveAccentHeading}"
+                              IsChecked="True"
                               MarginBottom="16"/>
-                <Slider Width="200"
+                <Slider AutomationProperties.LabeledBy="{Binding ElementName=LiveAccentHeading}"
+                        Width="200"
                         Value="60"
                         MarginBottom="16"/>
-                <ProgressBar Width="200"
+                <ProgressBar AutomationProperties.LabeledBy="{Binding ElementName=LiveAccentHeading}"
+                             Width="200"
                              Value="60"/>
             </StackPanel>
         </StackPanel>

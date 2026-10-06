@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<DataTemplateSet xmlns="http://adamantium/ui"
+                 xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- One template per type of item: x:DataType="{x:Type ItemViewModel}". A template without one takes the rest. -->
+    <DataTemplate>
+        <TextBlock Text="{Binding}"/>
+    </DataTemplate>
+</DataTemplateSet>

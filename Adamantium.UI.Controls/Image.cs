@@ -1,6 +1,8 @@
 ﻿using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -585,6 +587,9 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          HorizontalAlignment == HorizontalAlignment.Stretch ? finalSize.Width : fitted.Width,
          VerticalAlignment == VerticalAlignment.Stretch ? finalSize.Height : fitted.Height);
    }
+
+   protected override AutomationPeer OnCreateAutomationPeer() =>
+      TemplatedParent == null ? new ImageAutomationPeer(this) : null;
 
    protected override void OnRender(IDrawingContext context)
    {

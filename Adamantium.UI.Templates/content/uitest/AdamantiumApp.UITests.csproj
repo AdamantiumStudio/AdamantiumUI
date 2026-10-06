@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Adamantium.UI.Automation" Version="ADAMANTIUM_UI_VERSION" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\APP_NAME\APP_NAME.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Scenarios\**\*.adam" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

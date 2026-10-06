@@ -1,4 +1,5 @@
-﻿using Adamantium.UI.Markup.AST;
+﻿using System.Globalization;
+using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
 using Adamantium.UI.Markup.Exceptions;
@@ -13,6 +14,8 @@ public class DefaultAumlTransformer : IAumlTransformer
     public IReadOnlyCollection<LanguageTableShape> LanguageTables { get; set; } = [];
 
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
+
+    private const string DataTemplateSetName = "DataTemplateSet";
 
     // {Localize Table, Key={Binding Kind}}: where a key known only at run time is read from.
     private const string KeyArgument = "Key";
@@ -128,6 +131,11 @@ public class DefaultAumlTransformer : IAumlTransformer
         void ProcessMarkupExtension(IAumlAstMarkupExtensionNode markupExtension)
         {
             markupExtension.TypeReference = ProcessTypeReference(markupExtension.TypeReference, markupExtension.GetLineInfo());
+            if (!markupExtension.TypeReference.IsResolved)
+            {
+                return;
+            }
+
             var resolvedAssembly = typeResolver.GetResolvedAssembly(markupExtension.TypeReference.Assembly);
 
             if (resolvedAssembly == null)
@@ -168,7 +176,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     CheckTypeOf(type.GetMemberByName(property.Name), transformedValue);
                 }
 
-                if (transformedValue is AumlAstMarkupExtensionLiteral literal)
+                if (transformedValue is AumlAstMarkupExtensionLiteral literal && property != null)
                 {
                     literal.TypeReference = CreateResolved(property.PropertyType, markupExtension.GetLineInfo());
                 }
@@ -387,6 +395,39 @@ public class DefaultAumlTransformer : IAumlTransformer
             var typeReference = MarkupExtensionParser.ParseTypeName(new ParserContext(null), text.Text, text.GetLineInfo(),
                 document.NamespaceMappings.ToList());
             return new AumlAstTypeReferenceValueNode(text.GetLineInfo(), ProcessTypeReference(typeReference, text.GetLineInfo()));
+        }
+
+        void ReportMissingResourceKey(IAumlAstValueNode value, string propertyName)
+        {
+            if (value is not AumlAstMarkupExtensionNode { TypeReference.Name: "ResourceReference" or "ObservableResource" or "ThemeResource" } marker)
+            {
+                return;
+            }
+
+            var hasKey = marker.Arguments.Any(argument => (string.IsNullOrEmpty(argument.Name) || argument.Name == "Key")
+                                                          && !string.IsNullOrWhiteSpace(argument.Value?.GetTextValue()));
+            if (!hasKey)
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"{{{marker.TypeReference.Name}}} on {propertyName} names no key (line {marker.Line}, position {marker.Position}).");
+            }
+        }
+
+        void ReportInvalidLiteral(IAumlAstValueNode value, AumlAstPropertyReference reference)
+        {
+            if (reference is not { IsAttachedProperty: false, TargetType.IsResolved: true } || value == null || !value.IsTextNode())
+            {
+                return;
+            }
+
+            var type = typeResolver.Resolve(reference.TargetType.GetFullTypeName());
+            var text = value.GetTextValue()?.Trim() ?? string.Empty;
+            var expected = type == null ? null : ExpectedLiteral(type, text);
+            if (expected != null)
+            {
+                diagnostics.ReportError(document.FileName,
+                    $"'{text}' is not a valid {type.Name} for {reference.Name} (expected: {expected}) (line {value.Line}, position {value.Position}).");
+            }
         }
 
         void CheckTypeOf(IResolvedMember member, IAumlAstValueNode value)
@@ -834,6 +875,8 @@ public class DefaultAumlTransformer : IAumlTransformer
                     {
                         var transformedValue = ProcessValueNode(ReadTypeName(propertyNode.Values[i], takesType));
                         propertyNode.Values[i] = transformedValue;
+                        ReportMissingResourceKey(transformedValue, reference?.Name);
+                        ReportInvalidLiteral(transformedValue, reference);
                         queue.Enqueue(transformedValue);
                     }
 
@@ -911,14 +954,18 @@ public class DefaultAumlTransformer : IAumlTransformer
                     }
                     else if (directive.Name == AumlDirectives.DataType)
                     {
-                        // Declared, not inferred: the type is what tooling resolves {Binding} paths against inside the
-                        // template. Nothing is generated from it - what IS checked here is that the name resolves, so a
-                        // renamed model does not leave a template silently pointing at nothing.
+                        // Declared, not inferred: the type tooling resolves {Binding} paths against inside the template, and
+                        // the one a DataTemplateSet picks the template by. The name must resolve, so a renamed model does not
+                        // leave a template silently pointing at nothing; the resolved type replaces the text for the builders.
                         if (directive.Value is AumlAstTextNode dataTypeNode && !string.IsNullOrWhiteSpace(dataTypeNode.Text))
                         {
                             var dataTypeRef = MarkupExtensionParser.ParseTypeName(new ParserContext(null),
                                 UnwrapTypeText(dataTypeNode.Text), directive.GetLineInfo(), document.NamespaceMappings.ToList());
-                            if (ProcessTypeReference(dataTypeRef, directive.GetLineInfo()) is not { IsResolved: true })
+                            if (ProcessTypeReference(dataTypeRef, directive.GetLineInfo()) is { IsResolved: true } resolvedDataType)
+                            {
+                                directive.Value = new AumlAstTypeReferenceValueNode(directive.GetLineInfo(), resolvedDataType);
+                            }
+                            else
                             {
                                 diagnostics.ReportError(document.FileName,
                                     $"x:DataType '{dataTypeNode.Text}' could not be resolved. {directive.GetLineInfo()}");
@@ -982,6 +1029,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
 
         ReportTargetsIntoHeldBackElements(document, diagnostics);
+        ReportTemplateSetConflicts(document, diagnostics);
 
         foreach (var kvp in usings)
         {
@@ -997,6 +1045,44 @@ public class DefaultAumlTransformer : IAumlTransformer
         container.HasSemanticErrors = diagnostics.HasErrors;
 
         return container;
+    }
+
+    private static string ExpectedLiteral(IResolvedType type, string text)
+    {
+        if (type.TypeKind == ResolvedTypeKind.Enum)
+        {
+            var names = type.Members
+                .Where(m => m.MemberKind == ResolvedMemberKind.Field && m.Name != "value__")
+                .Select(m => m.Name)
+                .ToList();
+            var parts = text.Split(',', '|').Select(p => p.Trim()).ToList();
+            var valid = parts.All(p => names.Contains(p) || (p.Length > 0 && long.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)));
+            return valid ? null : string.Join(", ", names);
+        }
+
+        switch (type.SpecialType)
+        {
+            case ResolvedSpecialType.System_Boolean:
+                return bool.TryParse(text, out _) ? null : "true, false";
+            case ResolvedSpecialType.System_Double:
+            case ResolvedSpecialType.System_Single:
+            case ResolvedSpecialType.System_Decimal:
+                var special = type.SpecialType != ResolvedSpecialType.System_Decimal
+                              && text is "Infinity" or "+Infinity" or "-Infinity" or "NaN" or "Auto";
+                return special || double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? null : "a number";
+            case ResolvedSpecialType.System_SByte:
+            case ResolvedSpecialType.System_Int16:
+            case ResolvedSpecialType.System_Int32:
+            case ResolvedSpecialType.System_Int64:
+                return long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number";
+            case ResolvedSpecialType.System_Byte:
+            case ResolvedSpecialType.System_UInt16:
+            case ResolvedSpecialType.System_UInt32:
+            case ResolvedSpecialType.System_UInt64:
+                return ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number, not negative";
+            default:
+                return null;
+        }
     }
 
     // A trigger reaches a template part by NAME, and a name resolves through the names the template registered - which a
@@ -1053,6 +1139,64 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
     }
 
+    private static void ReportTemplateSetConflicts(AumlDocument document, IDiagnosticSink diagnostics)
+    {
+        Collect(document.Root);
+
+        void Collect(IAumlAstNode node)
+        {
+            switch (node)
+            {
+                case AumlAstObjectNode obj:
+                    if (obj.TypeReference?.Name == DataTemplateSetName)
+                    {
+                        Check(obj);
+                    }
+
+                    foreach (var child in obj.Children)
+                    {
+                        Collect(child);
+                    }
+
+                    break;
+
+                case AumlAstPropertyNode property:
+                    foreach (var value in property.Values)
+                    {
+                        Collect(value);
+                    }
+
+                    break;
+            }
+        }
+
+        void Check(AumlAstObjectNode set)
+        {
+            var fallbacks = 0;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var template in set.GetLogicalChildrenObjects())
+            {
+                var dataType = template.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.DataType);
+                if (dataType == null)
+                {
+                    if (++fallbacks == 2)
+                    {
+                        diagnostics.ReportError(document.FileName,
+                            $"A DataTemplateSet has more than one template without x:DataType; only one can take what no other fits. {template.GetLineInfo()}");
+                    }
+
+                    continue;
+                }
+
+                if (dataType.Value is AumlAstTypeReferenceValueNode { TypeReference: { } type } && !seen.Add(type.GetFullTypeName()))
+                {
+                    diagnostics.ReportError(document.FileName,
+                        $"A DataTemplateSet has two templates for {type.Name}; one type, one template. {template.GetLineInfo()}");
+                }
+            }
+        }
+    }
+
     /// <summary>Registers the project's own language tables (<see cref="LanguageTables"/>) as the types they are
     /// generated into, so markup can name one before it is compiled: <c>{x:Static CanvasStrings.Current}</c>.</summary>
     public void PreRegisterLanguageTables(ITypeResolver typeResolver, string assemblyName)
@@ -1086,7 +1230,8 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         var rootType = typeResolver.Resolve(resolvedRoot.GetFullTypeName());
         if (rootType is not { EntityType: EntityType.Window or EntityType.View
-                              or EntityType.UIApplication or EntityType.ThemeVariant or EntityType.Control }
+                              or EntityType.UIApplication or EntityType.ThemeVariant or EntityType.Control
+                              or EntityType.DataTemplateSet }
             && !(anyClass && rootType is { EntityType: not EntityType.Unknown }))
         {
             return null;

@@ -42,6 +42,7 @@ public sealed class AumlWorkspace : IDisposable
                 // Deliberately NOT cached: the next request retries, so completion enables itself once the
                 // project is built — no language-server restart needed.
                 Console.Error.WriteLine($"[auml] no build output for {Path.GetFileName(project)} — build it once; completion enables itself after the build (no restart needed)");
+                WatchFirstBuild(project);
                 return null;
             }
 
@@ -49,6 +50,11 @@ public sealed class AumlWorkspace : IDisposable
             // types/properties anywhere in the engine show up on save without a build; the rest stay as dlls.
             var (compilation, repoRoot, xmlnsMappings, dependencyDirs) = SourceProjectGraph.Build(project, binDir, _syntaxCache, _metadataCache);
             var model = AumlTypeModel.FromCompilation(compilation, xmlnsMappings);
+            foreach (var dependencyDir in dependencyDirs)
+            {
+                model.TrackMarkupIn(dependencyDir);
+            }
+
             model.RegisterResourceKeys(dependencyDirs.SelectMany(MarkupFiles));
 
             // Pre-register the project's own AUML views so an embedded <ControlsView/> is recognized and its inherited
@@ -58,6 +64,7 @@ public sealed class AumlWorkspace : IDisposable
             if (projectDir is not null)
             {
                 var aumlFiles = MarkupFiles(projectDir).ToList();
+                model.TrackMarkupIn(projectDir);
                 model.RegisterViews(aumlFiles, compilation.AssemblyName, projectDir);
                 model.RegisterResourceKeys(aumlFiles);
             }
@@ -129,16 +136,42 @@ public sealed class AumlWorkspace : IDisposable
             };
             watcher.Filters.Add("*.cs");
             watcher.Filters.Add("*" + Adamantium.UI.Generators.Localization.LanguageFileParser.Extension);
+            watcher.Filters.Add("*.auml");
             FileSystemEventHandler onChange = (_, e) =>
             {
-                if (!IsInObjOrBin(e.FullPath, projectDir)) ScheduleInvalidate(project);
+                if (IsInObjOrBin(e.FullPath, projectDir))
+                {
+                    return;
+                }
+
+                if (IsMarkup(e.FullPath))
+                {
+                    MarkupChangedOnDisk(e.FullPath);
+                }
+                else
+                {
+                    ScheduleInvalidate(project);
+                }
             };
             watcher.Changed += onChange;
             watcher.Created += onChange;
             watcher.Deleted += onChange;
             watcher.Renamed += (_, e) =>
             {
-                if (!IsInObjOrBin(e.FullPath, projectDir)) ScheduleInvalidate(project);
+                if (IsInObjOrBin(e.FullPath, projectDir))
+                {
+                    return;
+                }
+
+                if (IsMarkup(e.FullPath))
+                {
+                    MarkupChangedOnDisk(e.OldFullPath);
+                    MarkupChangedOnDisk(e.FullPath);
+                }
+                else
+                {
+                    ScheduleInvalidate(project);
+                }
             };
             watcher.EnableRaisingEvents = true;
             _watchers[key] = watcher;
@@ -149,11 +182,105 @@ public sealed class AumlWorkspace : IDisposable
         }
     }
 
+    /// <summary>Takes the text of a markup file as the editor holds it, so every model that reads the file knows its keys
+    /// as typed - before it is saved, and long before a build.</summary>
+    public void UpdateMarkup(string file, string text)
+    {
+        foreach (var model in ModelsReading(file))
+        {
+            model.UpdateMarkup(file, text);
+        }
+    }
+
+    private void MarkupChangedOnDisk(string file)
+    {
+        var models = ModelsReading(file);
+        if (models.Count == 0)
+        {
+            return;
+        }
+
+        if (!File.Exists(file))
+        {
+            foreach (var model in models)
+            {
+                model.RemoveMarkup(file);
+            }
+
+            return;
+        }
+
+        string text;
+        try
+        {
+            text = File.ReadAllText(file);
+        }
+        catch (IOException)
+        {
+            return;
+        }
+
+        foreach (var model in models)
+        {
+            model.UpdateMarkup(file, text);
+        }
+    }
+
+    private List<AumlTypeModel> ModelsReading(string file)
+    {
+        lock (_gate)
+        {
+            return _byProject.Values.Where(m => m.TracksMarkup(file)).ToList();
+        }
+    }
+
+    private static bool IsMarkup(string file) => file.EndsWith(".auml", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsInObjOrBin(string file, string projectDir)
     {
         var relative = file.Substring(projectDir.Length).TrimStart('/', '\\').Replace('\\', '/');
         return relative.StartsWith("obj/", StringComparison.OrdinalIgnoreCase)
             || relative.StartsWith("bin/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Why <paramref name="filePath"/> has no type model - what the editor tells its author instead of offering
+    /// nothing in silence; null when it has one.</summary>
+    public string WhyNoModel(string filePath)
+    {
+        var project = FindProjectFile(filePath);
+        if (project is null)
+        {
+            return "This file belongs to no project (no .csproj above it): completion, checks and type colors need one.";
+        }
+
+        return FindProjectBinDir(project) is null
+            ? $"{Path.GetFileNameWithoutExtension(project)} has not been built yet: completion, checks and type colors start once it has been built."
+            : null;
+    }
+
+    private void WatchFirstBuild(string project)
+    {
+        var key = project + "|first-build";
+        if (_watchers.ContainsKey(key))
+        {
+            return;
+        }
+
+        try
+        {
+            var watcher = new FileSystemWatcher(Path.GetDirectoryName(project), "*.dll")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                IncludeSubdirectories = true,
+            };
+            watcher.Created += (_, _) => ScheduleInvalidate(project);
+            watcher.EnableRaisingEvents = true;
+            _watchers[key] = watcher;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[auml] could not watch {Path.GetFileName(project)} for its first build ({ex.Message})");
+        }
     }
 
     private void ScheduleInvalidate(string project)

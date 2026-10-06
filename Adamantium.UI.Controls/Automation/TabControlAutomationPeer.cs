@@ -19,6 +19,8 @@ public class TabControlAutomationPeer : ItemsControlAutomationPeer, ISelectionPr
 
     public bool CanSelectMultiple => false;
 
+    public bool IsSelectionRequired => true;
+
     public IReadOnlyList<AutomationPeer> GetSelection() =>
         [.. base.ChildrenCore().Where(child => child.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider { IsSelected: true })];
 

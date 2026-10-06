@@ -13,8 +13,9 @@ namespace Adamantium.XamlTests;
 [TestFixture]
 public class AumlDirectiveRegistryTests
 {
-    private static string Attribute(string directive, string value = "Whatever") =>
-        AumlCodegenHarness.WindowHeader + $"x:{directive}=\"{value}\"><Grid /></Window>";
+    private static string Attribute(string directive, string value = "Whatever") => directive == AumlDirectives.Namespace
+        ? AumlCodegenHarness.WindowHeader.Replace("x:Namespace=\"Test.App\"", $"x:Namespace=\"{value}\"") + "><Grid /></Window>"
+        : AumlCodegenHarness.WindowHeader + $"x:{directive}=\"{value}\"><Grid /></Window>";
 
     // What this test asks is "is the directive ACCEPTED", so it has to hand over a value the directive would accept:
     // one that NAMES A TYPE needs a type that resolves, and one with a fixed set of answers needs one of them -

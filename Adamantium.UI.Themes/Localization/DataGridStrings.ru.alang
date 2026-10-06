@@ -4,11 +4,20 @@
     <Phrase Key="SelectAll" Text="Выбрать все"/>
     <Phrase Key="ShowRowsWhere" Text="Показать строки, значение которых"/>
     <Phrase Key="MatchCase" Text="С учётом регистра"/>
+    <Phrase Key="FilterValues" Text="Какие значения показать"/>
+    <Phrase Key="FirstCondition" Text="Первое условие"/>
+    <Phrase Key="FirstValue" Text="Значение первого условия"/>
+    <Phrase Key="FirstMatchCase" Text="С учётом регистра в первом условии"/>
+    <Phrase Key="ConditionLogic" Text="Как сочетаются два условия"/>
+    <Phrase Key="SecondCondition" Text="Второе условие"/>
+    <Phrase Key="SecondValue" Text="Значение второго условия"/>
+    <Phrase Key="SecondMatchCase" Text="С учётом регистра во втором условии"/>
     <Phrase Key="ApplyFilter" Text="Применить"/>
     <Phrase Key="ClearFilter" Text="Сбросить фильтр"/>
     <Phrase Key="PreviousMatch" Text="Предыдущее совпадение"/>
     <Phrase Key="NextMatch" Text="Следующее совпадение"/>
     <Phrase Key="Find" Text="Найти"/>
+    <Phrase Key="SearchText" Text="Что найти"/>
     <Phrase Key="CloseSearch" Text="Закрыть поиск"/>
     <Phrase Key="GroupByHint" Text="Перетащите сюда заголовок столбца, чтобы сгруппировать по нему"/>
     <Phrase Key="ExpandAll" Text="Развернуть все"/>

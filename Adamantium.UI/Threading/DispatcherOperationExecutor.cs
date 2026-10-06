@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Platforms;
@@ -14,6 +15,7 @@ internal class DispatcherOperationExecutor
         Select(_ => new Queue<IDispatcherOperation>()).ToArray();
     private IApplicationPlatform platform;
     private object locker = new object();
+    private int pending;
 
     public DispatcherOperationExecutor(IApplicationPlatform platform)
     {
@@ -46,6 +48,9 @@ internal class DispatcherOperationExecutor
         return operation.Task;
     }
 
+    /// <summary>Whether an operation is queued or running - work the application has not done yet.</summary>
+    public bool HasPending => Volatile.Read(ref pending) > 0;
+
     // Operations are dequeued under the lock but run outside it, since running foreign code under it can deadlock.
     public void Execute()
     {
@@ -64,7 +69,14 @@ internal class DispatcherOperationExecutor
                     operation = queue.Dequeue();
                 }
 
-                operation.Run();
+                try
+                {
+                    operation.Run();
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref pending);
+                }
             }
         }
     }
@@ -76,6 +88,7 @@ internal class DispatcherOperationExecutor
             var queue = operationQueue[(int)operation.Priority];
             bool sendNotification = queue.Count == 0;
             queue.Enqueue(operation);
+            Interlocked.Increment(ref pending);
 
             if (sendNotification)
             {

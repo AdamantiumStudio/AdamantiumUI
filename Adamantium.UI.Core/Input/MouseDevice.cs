@@ -296,9 +296,9 @@ public class MouseDevice
         }
     }
 
-    // Open popups first, newest on top, then the window content. boundsForContent: false is the pixel-accurate click
-    // hit; true is bounds containment for the hover chain, so a transparent gap does not drop its container from it.
-    private static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2 p, bool boundsForContent = false)
+    /// <summary>What the pointer is over at <paramref name="p"/> (client units) of <paramref name="rootComponent"/>: open
+    /// popups first, newest on top, then the window content - the element a click there reaches.</summary>
+    public static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2 p, bool boundsForContent = false)
     {
         if (rootComponent is IWindow window)
         {

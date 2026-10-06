@@ -63,6 +63,11 @@ public class RoslynTypeResolver : ITypeResolver
     {
         if (string.IsNullOrEmpty(metadataName))
         {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(assembly))
+        {
             var assemblySymbol = GetOrCreateTypeContainerForAssembly(assembly);
             var type = assemblySymbol.GetTypeByShortName(metadataName);
             return type;

@@ -24,9 +24,4 @@
         <ProjectReference Include="..\..\Adamantium.UI.Sandbox\Adamantium.UI.Sandbox.csproj" />
     </ItemGroup>
 
-    <!-- The inert application the markup tests run under, shared as source rather than copied. -->
-    <ItemGroup>
-        <Compile Include="..\Adamantium.XamlTests\Fakes\*.cs" Link="Fakes\%(Filename)%(Extension)" />
-    </ItemGroup>
-
 </Project>

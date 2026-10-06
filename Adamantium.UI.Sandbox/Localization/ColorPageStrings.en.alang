@@ -5,6 +5,6 @@
     <Phrase Key="Value" Text="Value (brightness — 0 = black)"/>
     <Phrase Key="Swatch" Text="Compact swatch → flyout (ColorPickerButton)"/>
     <Phrase Key="LiveAccent" Text="Live theme accent"/>
-    <Phrase Key="Checkbox" Text="Checkbox"/>
-    <Phrase Key="RadioButton" Text="Radio button"/>
+    <Phrase Key="Checkbox" Text="Checked"/>
+    <Phrase Key="RadioButton" Text="Selected"/>
 </Language>

@@ -1,0 +1,4 @@
+# One command a line, as adam-auto takes them. A selector finds by id (an element's AutomationId, else its x:Name),
+# by name or by type: id=Save, name="Save as", type=Button,name=OK, a path: id=Toolbar/id=Save.
+wait id=MainWindow
+expect id=MainWindow type=Window name=APP_NAME

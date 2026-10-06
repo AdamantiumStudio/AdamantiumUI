@@ -1,6 +1,8 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -201,6 +203,31 @@ public class ZoomBox : ContentControl
         SetCurrentValue(OffsetYProperty, (double)off.Y);
         _syncingOffset = false;
     }
+
+    /// <summary>Zooms both axes to <paramref name="scale"/>, kept between <see cref="MinScale"/> and
+    /// <see cref="MaxScale"/>, holding the middle of the view where it is.</summary>
+    public void ZoomTo(double scale)
+    {
+        var next = Math.Clamp(scale, MinScale, MaxScale);
+        _zoomActive = false;
+        if (next == ScaleX && next == ScaleY)
+        {
+            return;
+        }
+
+        if (_scroll != null && next != ScaleX)
+        {
+            var middle = new Vector2((float)(_scroll.ViewportSize.Width / 2), (float)(_scroll.ViewportSize.Height / 2));
+            _pendingOffset = (_scroll.ScrollOffset + middle) * (float)(next / ScaleX) - middle;
+        }
+
+        SetCurrentValue(ScaleXProperty, next);
+        SetCurrentValue(ScaleYProperty, next);
+    }
+
+    internal ScrollViewer ScrollPart => _scroll;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ZoomBoxAutomationPeer(this);
 
     /// <summary>Resets zoom to 100% and scroll to the origin.</summary>
     public void Reset()

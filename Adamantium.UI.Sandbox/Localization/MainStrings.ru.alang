@@ -1,5 +1,5 @@
 <Language>
-    <Phrase Key="WindowTitle" Text="Окно Adamantium"/>
+    <Phrase Key="WindowTitle" Text="Песочница Adamantium"/>
     <Phrase Key="Diagnostics" Text="Диагностика"/>
     <Phrase Key="AnalyticAa" Text="Аналитическое сглаживание"/>
     <Phrase Key="Presentation" Text="Вывод кадров"/>

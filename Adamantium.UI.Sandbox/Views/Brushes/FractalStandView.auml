@@ -6,7 +6,11 @@
     <StackPanel Orientation="Vertical">
         <TextBlock Text="{Localize BrushesStrings.FractalTitle}" FontSize="18" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal">
-            <FractalView Width="720" Height="580" CornerRadius="12" Margin="10"
+            <FractalView AutomationProperties.AutomationId="LiveFractal"
+                         Width="720"
+                         Height="580"
+                         CornerRadius="12"
+                         Margin="10"
                          Fill="{Binding LiveFractal}"
                          CenterX="{Binding FractalCenterX, Mode=TwoWay}"
                          CenterY="{Binding FractalCenterY, Mode=TwoWay}"
@@ -14,8 +18,8 @@
                          CenterYFine="{Binding FractalCenterFineY, Mode=TwoWay}"
                          ZoomExp="{Binding FractalZoomExp, Mode=TwoWay}"/>
             <StackPanel Orientation="Vertical" Width="300" MarginLeft="16" VerticalAlignment="Center">
-                <TextBlock Text="{Localize BrushesStrings.Formula}" Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <DropDown ItemsSource="{Binding FractalFormulas}"
+                <TextBlock x:Name="FormulaLabel" Text="{Localize BrushesStrings.Formula}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=FormulaLabel}" ItemsSource="{Binding FractalFormulas}"
                           SelectedItem="{Binding Formula, Mode=TwoWay}"
                           Width="290" Margin="0 10 0 10">
                     <DropDown.ItemTemplate>
@@ -30,80 +34,80 @@
                 <CheckBox Content="{Localize BrushesStrings.MandelbrotMode}"
                           IsChecked="{Binding FractalMandelbrot, Mode=TwoWay}"
                           MarginBottom="12"/>
-                <TextBlock Text="{Localize BrushesStrings.Power}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="PowerLabel" Text="{Localize BrushesStrings.Power}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalPower, Mode=TwoWay}" Minimum="2" Maximum="8" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PowerLabel}" Value="{Binding FractalPower, Mode=TwoWay}" Minimum="2" Maximum="8" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="2" Maximum="8" SmallChange="0.1"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalPower, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalPower, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=PowerLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Zoom}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="ZoomLabel" Text="{Localize BrushesStrings.Zoom}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalZoomExp, Mode=TwoWay}" Minimum="-0.52" Maximum="15" IsMoveToPointEnabled="true" Width="120"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ZoomLabel}" Value="{Binding FractalZoomExp, Mode=TwoWay}" Minimum="-0.52" Maximum="15" IsMoveToPointEnabled="true" Width="120"/>
                     <NumericUpDown Width="88" Minimum="-0.52" Maximum="15" SmallChange="0.1"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalZoomExp, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalZoomExp, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=ZoomLabel}"/>
                     <TextBlock Text="{Binding ZoomText}" MarginLeft="8" VerticalAlignment="Center" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.Iterations}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="IterationsLabel" Text="{Localize BrushesStrings.Iterations}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalIterations, Mode=TwoWay}" Minimum="20" Maximum="2000" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=IterationsLabel}" Value="{Binding FractalIterations, Mode=TwoWay}" Minimum="20" Maximum="2000" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="20" Maximum="2000" SmallChange="1"
                                    SnapsToSmallChange="true" StringFormat="N0"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalIterations, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalIterations, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=IterationsLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.MorphSpeed}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="MorphSpeedLabel" Text="{Localize BrushesStrings.MorphSpeed}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalMorphSpeed, Mode=TwoWay}" Minimum="0" Maximum="4" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=MorphSpeedLabel}" Value="{Binding FractalMorphSpeed, Mode=TwoWay}" Minimum="0" Maximum="4" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="0" Maximum="4" SmallChange="0.1"
                                    SnapsToSmallChange="true" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalMorphSpeed, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalMorphSpeed, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=MorphSpeedLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.JuliaX}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="JuliaXLabel" Text="{Localize BrushesStrings.JuliaX}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalCx, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=JuliaXLabel}" Value="{Binding FractalCx, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="-1" Maximum="1" SmallChange="0.01"
                                    SnapsToSmallChange="true" StringFormat="N3"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalCx, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalCx, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=JuliaXLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.JuliaY}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="JuliaYLabel" Text="{Localize BrushesStrings.JuliaY}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalCy, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=JuliaYLabel}" Value="{Binding FractalCy, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="-1" Maximum="1" SmallChange="0.01"
                                    SnapsToSmallChange="true" StringFormat="N3"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalCy, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalCy, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=JuliaYLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.PanX}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="PanXLabel" Text="{Localize BrushesStrings.PanX}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <Slider Value="{Binding FractalFineX, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PanXLabel}" Value="{Binding FractalFineX, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="-1" Maximum="1" SmallChange="0.01"
                                    SnapsToSmallChange="true" StringFormat="N3"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalFineX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalFineX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=PanXLabel}"/>
                 </StackPanel>
-                <TextBlock Text="{Localize BrushesStrings.PanY}" Foreground="{ResourceReference TextFillColorSecondary}"/>
+                <TextBlock x:Name="PanYLabel" Text="{Localize BrushesStrings.PanY}" Foreground="{ResourceReference TextFillColorSecondary}"/>
                 <StackPanel Orientation="Horizontal">
-                    <Slider Value="{Binding FractalFineY, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=PanYLabel}" Value="{Binding FractalFineY, Mode=TwoWay}" Minimum="-1" Maximum="1" IsMoveToPointEnabled="true" Width="176"/>
                     <NumericUpDown Width="88" Minimum="-1" Maximum="1" SmallChange="0.01"
                                    SnapsToSmallChange="true" StringFormat="N3"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding FractalFineY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding FractalFineY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=PanYLabel}"/>
                 </StackPanel>
             </StackPanel>
             <!-- Colors: right of the controls, in the free zone. Cohesive ColorPickerButton controls - a swatch that
                  reveals the ColorPicker inline (compact when closed), so the editors don't scatter the panel. -->
             <StackPanel Orientation="Vertical" MarginLeft="24" VerticalAlignment="Top">
                 <TextBlock Text="{Localize BrushesStrings.FractalColors}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="8"/>
-                <TextBlock Text="{Localize BrushesStrings.ColorInside}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <ColorPickerButton SelectedColor="{Binding FractalColor1, Mode=TwoWay}" Width="200" Height="30" MarginBottom="12"/>
-                <TextBlock Text="{Localize BrushesStrings.ColorOutside}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <ColorPickerButton SelectedColor="{Binding FractalColor2, Mode=TwoWay}" Width="200" Height="30"/>
+                <TextBlock x:Name="ColorInsideLabel" Text="{Localize BrushesStrings.ColorInside}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=ColorInsideLabel}" SelectedColor="{Binding FractalColor1, Mode=TwoWay}" Width="200" Height="30" MarginBottom="12"/>
+                <TextBlock x:Name="ColorOutsideLabel" Text="{Localize BrushesStrings.ColorOutside}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=ColorOutsideLabel}" SelectedColor="{Binding FractalColor2, Mode=TwoWay}" Width="200" Height="30"/>
             </StackPanel>
         </StackPanel>
         <TextBlock Text="{Localize BrushesStrings.DragFractal}"

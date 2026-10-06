@@ -7,6 +7,7 @@ using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -919,11 +920,53 @@ public abstract class TextBoxBase : Control
     // Scroll the enclosing ScrollViewer the minimum needed to keep the caret visible (WPF caret-follow). The caret rect is
     // in text-layout coords; content coords add the vertical text offset (float strip + single-line centering). Horizontal
     // is 1:1 (ox = 0). No-op until the template's ScrollViewer exists / when the caret already fits.
-    private void ScrollCaretIntoView()
+    private void ScrollCaretIntoView() => ScrollIndexIntoView(CaretIndex);
+
+    internal void ScrollIndexIntoView(int index)
     {
         if (_scrollViewer == null) return;
-        var c = CaretRect(CaretIndex);
+        var c = CaretRect(Clamp(index));
         _scrollViewer.BringIntoView(new Rect(c.X, c.Y + _textOy, CaretWidth + CaretPadding, c.Height));
+    }
+
+    internal UIComponent TextSurface => _presenter;
+
+    internal int LineOfIndex(int index) => CaretLineOf(Clamp(index));
+
+    internal (int Start, int End) LineIndexRange(int line)
+    {
+        EnsureLayout();
+        var (first, last) = LineSlotRange(Math.Clamp(line, 0, MaxLineIndex));
+        return (first, Math.Min(last + 1, TextLength));
+    }
+
+    internal int IndexAtSurfacePoint(double x, double y) => IndexFromPoint(x, y - _textOy);
+
+    internal List<Rect> SurfaceRects(int start, int end)
+    {
+        EnsureLayout();
+        (start, end) = (Clamp(Math.Min(start, end)), Clamp(Math.Max(start, end)));
+        if (start == end)
+        {
+            var caret = CaretRect(start);
+            return [new Rect(caret.X, caret.Y + _textOy, 0, caret.Height)];
+        }
+
+        var rects = new List<Rect>();
+        var startLine = CaretLineOf(start);
+        var endLine = CaretLineOf(end);
+        for (var line = startLine; line <= endLine; line++)
+        {
+            var (first, last) = LineSlotRange(line);
+            var x0 = line == startLine ? _caretX[start] : _caretX[first];
+            var x1 = line == endLine ? _caretX[end] : _caretX[last];
+            if (x1 > x0)
+            {
+                rects.Add(new Rect(x0, _textOy + line * _lineHeight, x1 - x0, _lineHeight));
+            }
+        }
+
+        return rects;
     }
 
     private TextRenderingParameters BuildTextParameters(Brush color, double originX, double originY, Size size)
@@ -1084,7 +1127,12 @@ public abstract class TextBoxBase : Control
     }
 
     private static void OnCaretOrSelectionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
-        => (a as TextBoxBase)?.InvalidateSurface();
+    {
+        if (a is not TextBoxBase box) return;
+        box.InvalidateSurface();
+        if (AutomationEvents.IsListening && box.FindAutomationPeer() != null)
+            AutomationEvents.Raise(box, AutomationEvent.TextSelectionChanged);
+    }
 
     // A property that changes how the text lays out (e.g. wrapping, the floating-label strip): drop the shaping cache,
     // resolve the label state, and re-measure (InvalidateSurface re-measures the box + Border + presenter so the strip

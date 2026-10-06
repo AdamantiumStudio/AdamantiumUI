@@ -25,6 +25,7 @@ using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Platforms.Windows;
 using Adamantium.UI.Core.Resources;
@@ -77,8 +78,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private const int MaxFramesInFlight = 2;
 
     private long _publishedFrame;
+    private bool _drawFailing;
     private long _presentedFrame;
     private long _requestsAtRecord;
+    private long _loadsAtRecord;
     private readonly HashSet<IWindow> _minimizedWindows = [];
     private string _unrecordedBecause;
     private readonly List<TaskCompletionSource> _idleWaiters = [];
@@ -793,6 +796,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     {
                         Update(appTime);
                         _requestsAtRecord = LoopSignal.Requests;
+                        _loadsAtRecord = BitmapImage.LoadsFinished;
                         RecordRenderFrame();
                         DispatchRenderFrame(appTime);
 
@@ -804,6 +808,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 {
                     Update(appTime);
                     _requestsAtRecord = LoopSignal.Requests;
+                    _loadsAtRecord = BitmapImage.LoadsFinished;
                     RecordRenderFrame();
                     DispatchRenderFrame(appTime);
 
@@ -845,7 +850,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             var target = 1000.0 / Math.Max(1, UpdateRateHz);
             var elapsed = Stopwatch.GetElapsedTime(_loopFrameStart).TotalMilliseconds;
             var remaining = target - elapsed;
-            if (remaining >= 1.0) Thread.Sleep((int)remaining);
+            if (remaining >= 1.0) LoopSignal.Pause(remaining, cancellationTokenSource.Token);
         }
 
         // Every stage counts, popups and adorners included.
@@ -873,7 +878,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public string IdleBlocker { get; private set; }
 
     /// <summary>Completes once the application is idle: the loop has nothing left to do - no posted work, nothing to lay
-    /// out or draw, no animation that finishes on its own - and the frame showing that state has been drawn. Endless
+    /// out or draw, no animation that finishes on its own, no picture still being read from its file - and the frame
+    /// showing that state has been drawn. Endless
     /// animations (a caret, a spinner) do not count, nor does work running off the loop until it posts its result.</summary>
     public Task WaitForIdleAsync()
     {
@@ -909,7 +915,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 _idleFrame = Volatile.Read(ref _publishedFrame);
             }
 
-            IdleBlocker = "the frame on its way to the screen";
+            IdleBlocker = _drawFailing
+                ? "frames that fail to draw - see the error journal"
+                : "the frame on its way to the screen";
         }
 
         ReleaseIdleWaiters();
@@ -922,6 +930,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return "work posted to the loop";
         }
 
+        if (Dispatcher is Threading.Dispatcher { HasPendingOperations: true })
+        {
+            return "work invoked on the dispatcher - a window closing, say";
+        }
+
         if (LoopSignal.Requests != _requestsAtRecord)
         {
             return "a request that came after the frame was recorded";
@@ -930,6 +943,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (RenderDirty.AnyHasWork)
         {
             return _unrecordedBecause ?? "a change not recorded yet";
+        }
+
+        if (BitmapImage.LoadsInFlight > 0)
+        {
+            return $"pictures still loading ({BitmapImage.LoadsInFlight})";
+        }
+
+        if (BitmapImage.LoadsFinished != _loadsAtRecord)
+        {
+            return "a picture that arrived after the frame was recorded";
         }
 
         foreach (var window in Windows)
@@ -1102,11 +1125,21 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 {
                     ExecuteDrawSequence(_renderAppTime);
                     Volatile.Write(ref _presentedFrame, drawing);
+                    _drawFailing = false;
                     ReleaseIdleWaiters();
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex);
+
+                    // Logged as an error once per run of failed frames: a frame that throws throws again on the next,
+                    // and nothing reaches the screen meanwhile - which nobody can tell from the window.
+                    if (!_drawFailing)
+                    {
+                        _drawFailing = true;
+                        Serilog.Log.Logger.Error(ex, "A frame failed to draw; frames are not reaching the screen");
+                    }
+
                     UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex));
                 }
             }

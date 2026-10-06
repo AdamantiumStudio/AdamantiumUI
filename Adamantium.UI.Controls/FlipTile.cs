@@ -1,6 +1,8 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -130,9 +132,17 @@ public class FlipTile : Control
     protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(sender, e);
+        Flip();
+    }
+
+    /// <summary>Turns the tile over now, as a click does - not waiting its turn in a wave.</summary>
+    internal void Flip()
+    {
         _clickFlip = true;
         IsFlipped = !IsFlipped;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new FlipTileAutomationPeer(this);
 
     protected override void OnRender(IDrawingContext context)
     {

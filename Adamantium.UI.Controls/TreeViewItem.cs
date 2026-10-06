@@ -264,6 +264,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         // expander click - so the child rows actually splice/unsplice. The owner no-ops when the row is already in that
         // state, so this stays idempotent with ToggleRow and with container recycling (BindRow sets it to the row's state).
         item.FindOwnerTreeView()?.SyncRowExpansion(item, expanded);
+        AutomationEvents.RaiseExpandCollapse(item, expanded);
     }
 
     private static void OnIsSelectedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -277,6 +278,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         {
             item.RaiseEvent(new RoutedEventArgs(SelectedEvent, item));
         }
+
+        AutomationEvents.RaiseSelected(item, (bool)e.NewValue);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new TreeViewItemAutomationPeer(this);

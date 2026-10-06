@@ -60,14 +60,19 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
-    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application.</summary>
+    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application. A blueprint whose
+    /// markup failed (<paramref name="blueprintFullName"/> null) is not named; the entry point is written all the same.</summary>
     public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string applicationQualifiedName,
         string rootNamespace)
     {
         var textGenerator = new TextGenerator();
         textGenerator.WriteLine(_sourceGeneratorNotice);
-        textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
-        textGenerator.NewLine();
+        if (blueprintFullName != null)
+        {
+            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
+            textGenerator.NewLine();
+        }
+
         textGenerator.WriteLine($"namespace {rootNamespace};");
         textGenerator.NewLine();
         textGenerator.WriteLine("internal static class Program");
@@ -81,6 +86,44 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.UnindentAndWriteCloseBrace();
 
         output.Emit("Adamantium.UI.ApplicationEntry", textGenerator.ToString());
+    }
+
+    private static HashSet<AumlAstObjectNode> InsideTemplates(IAumlAstNode root)
+    {
+        var inside = new HashSet<AumlAstObjectNode>();
+        Walk(root, false);
+        return inside;
+
+        void Walk(IAumlAstNode node, bool templated)
+        {
+            if (node is not AumlAstObjectNode element)
+            {
+                return;
+            }
+
+            if (templated)
+            {
+                inside.Add(element);
+            }
+
+            templated |= element is AumlAstTemplateNode;
+            foreach (var child in element.Children)
+            {
+                switch (child)
+                {
+                    case AumlAstObjectNode nested:
+                        Walk(nested, templated);
+                        break;
+                    case AumlAstPropertyNode property:
+                        foreach (var value in property.Values)
+                        {
+                            Walk(value, templated);
+                        }
+
+                        break;
+                }
+            }
+        }
     }
 
     private static void WriteResourceKeys(TextGenerator textGenerator, AumlMetadataContainer container)
@@ -293,8 +336,14 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteLine($"public class {container.RootClassName} : {rootBaseType.QualifiedName}");
         textGenerator.WriteOpenBraceAndIndent();
 
+        var templated = InsideTemplates(container.RootNode);
         foreach (var item in container.NamedElements)
         {
+            if (templated.Contains(item.Element))
+            {
+                continue;
+            }
+
             typeContainer = container.TypeResolver.GetResolvedAssembly(item.Element.TypeReference.Assembly);
             var typeInfo = typeContainer.GetTypeByShortName(item.Element.TypeReference.Name);
             // A NAMED element held back by x:Load has no field to hold it - it does not exist yet. What the name means
@@ -340,7 +389,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             textGenerator.NewLine();
         }
 
-        if (entityType is EntityType.Control or EntityType.ApplicationBlueprint)
+        if (entityType is EntityType.Control or EntityType.ApplicationBlueprint or EntityType.DataTemplateSet)
         {
             textGenerator.WriteLine($"public {container.RootClassName}()");
             textGenerator.WriteOpenBraceAndIndent();

@@ -31,79 +31,79 @@
                          Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Star}"/>
             </Grid>
             <StackPanel Orientation="Vertical" Width="330" MarginLeft="16" VerticalAlignment="Center">
-                <TextBlock Text="{Localize BrushesStrings.Geometry}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientKinds}" SelectedItem="{Binding GradientKind, Mode=TwoWay}" Width="300" MarginBottom="10"
+                <TextBlock x:Name="GeometryLabel" Text="{Localize BrushesStrings.Geometry}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=GeometryLabel}" ItemsSource="{Binding GradientKinds}" SelectedItem="{Binding GradientKind, Mode=TwoWay}" Width="300" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
 
                 <!-- Only the linear one runs along a direction; on the other two an angle would mean nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Linear}">
-                    <TextBlock Text="{Localize BrushesStrings.DirectionDegrees}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="DirectionLabel" Text="{Localize BrushesStrings.DirectionDegrees}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
-                        <Slider Value="{Binding GradientAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}" Value="{Binding GradientAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="360" SmallChange="1" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding GradientAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                       Value="{Binding GradientAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=DirectionLabel}"/>
                     </StackPanel>
-                    <TextBlock Text="{Localize BrushesStrings.Span}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="SpanLabel" Text="{Localize BrushesStrings.Span}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
-                        <Slider Value="{Binding GradientSpan, Mode=TwoWay}" Minimum="0.1" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=SpanLabel}" Value="{Binding GradientSpan, Mode=TwoWay}" Minimum="0.1" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0.1" Maximum="1" SmallChange="0.05" StringFormat="N2"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding GradientSpan, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                       Value="{Binding GradientSpan, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=SpanLabel}"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Radial}">
-                    <TextBlock Text="{Localize BrushesStrings.Radius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="RadiusLabel" Text="{Localize BrushesStrings.Radius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
-                        <Slider Value="{Binding GradientRadius, Mode=TwoWay}" Minimum="0.05" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=RadiusLabel}" Value="{Binding GradientRadius, Mode=TwoWay}" Minimum="0.05" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0.05" Maximum="1" SmallChange="0.05" StringFormat="N2"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding GradientRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                       Value="{Binding GradientRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=RadiusLabel}"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Conic}">
-                    <TextBlock Text="{Localize BrushesStrings.SweepStart}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="SweepStartLabel" Text="{Localize BrushesStrings.SweepStart}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
-                        <Slider Value="{Binding GradientStartAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=SweepStartLabel}" Value="{Binding GradientStartAngle, Mode=TwoWay}" Minimum="0" Maximum="360" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="360" SmallChange="1" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding GradientStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                       Value="{Binding GradientStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=SweepStartLabel}"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Only the rectangle has corners to round; on the other figures the number would drive nothing. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="CornerRadiusLabel" Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="8">
-                        <Slider Value="{Binding GradientCorner, Mode=TwoWay}" Minimum="0" Maximum="120" IsMoveToPointEnabled="true" Width="190"/>
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}" Value="{Binding GradientCorner, Mode=TwoWay}" Minimum="0" Maximum="120" IsMoveToPointEnabled="true" Width="190"/>
                         <NumericUpDown Width="96" Minimum="0" Maximum="120" SmallChange="1" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding GradientCorner, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                       Value="{Binding GradientCorner, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}"/>
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="{Localize BrushesStrings.OutsideStops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientSpreads}" SelectedItem="{Binding GradientSpread, Mode=TwoWay}" Width="300" MarginBottom="10"
+                <TextBlock x:Name="OutsideStopsLabel" Text="{Localize BrushesStrings.OutsideStops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=OutsideStopsLabel}" ItemsSource="{Binding GradientSpreads}" SelectedItem="{Binding GradientSpread, Mode=TwoWay}" Width="300" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
 
-                <TextBlock Text="{Localize BrushesStrings.InterpolatedIn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding GradientInterpolations}" SelectedItem="{Binding GradientInterpolation, Mode=TwoWay}" Width="300" MarginBottom="10"
+                <TextBlock x:Name="InterpolatedInLabel" Text="{Localize BrushesStrings.InterpolatedIn}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=InterpolatedInLabel}" ItemsSource="{Binding GradientInterpolations}" SelectedItem="{Binding GradientInterpolation, Mode=TwoWay}" Width="300" MarginBottom="10"
                           ItemTemplate="{ResourceReference BrushWord}"/>
 
-                <TextBlock Text="{Localize BrushesStrings.Stops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <StackPanel Orientation="Horizontal" MarginBottom="8">
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor1, Mode=TwoWay}" MarginRight="8"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor3, Mode=TwoWay}" MarginRight="8"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding GradientColor2, Mode=TwoWay}"/>
+                <TextBlock x:Name="StopsLabel" Text="{Localize BrushesStrings.Stops}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=StopsLabel}" Orientation="Horizontal" MarginBottom="8">
+                    <ColorPickerButton AutomationProperties.Name="1" Width="48" Height="32" SelectedColor="{Binding GradientColor1, Mode=TwoWay}" MarginRight="8"/>
+                    <ColorPickerButton AutomationProperties.Name="2" Width="48" Height="32" SelectedColor="{Binding GradientColor3, Mode=TwoWay}" MarginRight="8"/>
+                    <ColorPickerButton AutomationProperties.Name="3" Width="48" Height="32" SelectedColor="{Binding GradientColor2, Mode=TwoWay}"/>
                 </StackPanel>
-                <CheckBox Content="{Localize BrushesStrings.MiddleStop}" IsChecked="{Binding GradientMidStop, Mode=TwoWay}" MarginBottom="6"/>
+                <CheckBox x:Name="MiddleStopToggle" Content="{Localize BrushesStrings.MiddleStop}" IsChecked="{Binding GradientMidStop, Mode=TwoWay}" MarginBottom="6"/>
                 <StackPanel Orientation="Horizontal">
-                    <Slider Value="{Binding GradientMidOffset, Mode=TwoWay}" Minimum="0.05" Maximum="0.95" IsMoveToPointEnabled="true" Width="190"/>
+                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=MiddleStopToggle}" Value="{Binding GradientMidOffset, Mode=TwoWay}" Minimum="0.05" Maximum="0.95" IsMoveToPointEnabled="true" Width="190"/>
                     <NumericUpDown Width="96" Minimum="0.05" Maximum="0.95" SmallChange="0.05" StringFormat="N2"
                                    IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding GradientMidOffset, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8"/>
+                                   Value="{Binding GradientMidOffset, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=MiddleStopToggle}"/>
                 </StackPanel>
             </StackPanel>
         </StackPanel>

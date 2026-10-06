@@ -1,5 +1,5 @@
 <Language>
-    <Phrase Key="OneValue" Text="Horizontal + vertical ScrollBar bound to one value"/>
+    <Phrase Key="OneValue" Text="Horizontal + vertical bars bound to one value"/>
     <Phrase Key="Offset" Text="Offset:"/>
     <Phrase Key="DragToPan" Text="Drag to pan (touch-style, with inertia)"/>
 </Language>

@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="MovePanel" Text="Перетащите, чтобы передвинуть панель; щелчок сворачивает её"/>
     <Phrase Key="Map" Text="Карта"/>
+    <Phrase Key="WholePlane" Text="Вся плоскость, видимая часть в рамке"/>
     <Phrase Key="AddNode" Text="Добавить узел"/>
     <Phrase Key="ResizePanel" Text="Перетащите, чтобы задать ширину панели"/>
     <Phrase Key="StickToEdge" Text="Прилипать к краю, если бросить панель рядом с ним"/>
@@ -34,7 +35,7 @@
     <Phrase Key="Redo" Text="Повторить (Ctrl+Y)"/>
     <Phrase Key="ZoomOut" Text="Уменьшить"/>
     <Phrase Key="ZoomIn" Text="Увеличить"/>
-    <Phrase Key="GoHome" Text="Вернуться к виду, сохранённому кнопкой рядом"/>
+    <Phrase Key="GoHome" Text="Вернуться к сохранённому виду"/>
     <Phrase Key="KeepHome" Text="Запомнить этот вид — к нему будет возвращать «Домой»"/>
     <Phrase Key="ForgetHome" Text="Забыть сохранённый вид — «Домой» вернёт к началу координат в масштабе 1:1"/>
     <Phrase Key="FoldNode" Text="Свернуть узел до заголовка"/>

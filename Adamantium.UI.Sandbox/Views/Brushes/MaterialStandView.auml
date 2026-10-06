@@ -73,22 +73,22 @@
             </Border>
 
             <StackPanel Orientation="Vertical" Width="320" MarginLeft="16" VerticalAlignment="Center">
-                <TextBlock Text="{Localize BrushesStrings.MaterialKind}"
+                <TextBlock x:Name="KindLabel" Text="{Localize BrushesStrings.MaterialKind}"
                            Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                <DropDown ItemsSource="{Binding MaterialTypes}" SelectedItem="{Binding MaterialKind, Mode=TwoWay}"
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=KindLabel}" ItemsSource="{Binding MaterialTypes}" SelectedItem="{Binding MaterialKind, Mode=TwoWay}"
                           Width="300" MarginBottom="10" ItemTemplate="{ResourceReference BrushWord}"/>
 
-                <TextBlock Text="{Localize BrushesStrings.SittingOver}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown ItemsSource="{Binding MaterialUnderlays}" SelectedItem="{Binding MaterialUnderlay, Mode=TwoWay}"
+                <TextBlock x:Name="UnderlayLabel" Text="{Localize BrushesStrings.SittingOver}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=UnderlayLabel}" ItemsSource="{Binding MaterialUnderlays}" SelectedItem="{Binding MaterialUnderlay, Mode=TwoWay}"
                           Width="300" MarginBottom="10" ItemTemplate="{ResourceReference BrushWord}"/>
 
                 <!-- MICA ONLY. Acrylic and glass ARE what is directly beneath them - that is the whole of what they
                      are - so they have no source to choose. Mica is the one reading a picture from elsewhere. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Source}">
-                    <TextBlock Text="{Localize BrushesStrings.SourceHint}"
+                    <TextBlock x:Name="SourceLabel" Text="{Localize BrushesStrings.SourceHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <DropDown ItemsSource="{Binding MaterialSources}" SelectedItem="{Binding MaterialSource, Mode=TwoWay}"
+                    <DropDown AutomationProperties.LabeledBy="{Binding ElementName=SourceLabel}" ItemsSource="{Binding MaterialSources}" SelectedItem="{Binding MaterialSource, Mode=TwoWay}"
                               Width="300" MarginBottom="10" ItemTemplate="{ResourceReference BrushWord}"/>
                 </StackPanel>
 
@@ -96,9 +96,9 @@
                      window to tell them apart: Desktop stays put while the window moves over it, Window travels with
                      it, Element travels AND turns with the shape. -->
                 <StackPanel Orientation="Vertical" Visibility="{Binding HasOwnSource, Converter={conv:BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Localize BrushesStrings.AnchorHint}"
+                    <TextBlock x:Name="AnchorLabel" Text="{Localize BrushesStrings.AnchorHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <DropDown ItemsSource="{Binding MaterialAnchors}" SelectedItem="{Binding MaterialAnchor, Mode=TwoWay}"
+                    <DropDown AutomationProperties.LabeledBy="{Binding ElementName=AnchorLabel}" ItemsSource="{Binding MaterialAnchors}" SelectedItem="{Binding MaterialAnchor, Mode=TwoWay}"
                               Width="300" MarginBottom="10" ItemTemplate="{ResourceReference BrushWord}"/>
                 </StackPanel>
 
@@ -107,53 +107,53 @@
                      it teaches the wrong thing about the feature. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}">
-                    <TextBlock Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="CornerRadiusLabel" Text="{Localize BrushesStrings.CornerRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="75" Value="{Binding MaterialRadius, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="75" Value="{Binding MaterialRadius, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=CornerRadiusLabel}"/>
                         <TextBlock Text="{Binding MaterialRadius}" MarginLeft="8" Width="48"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}">
-                    <TextBlock Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="CornersLabel" Text="{Localize BrushesStrings.CornersHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="6">
-                        <Slider Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=CornersLabel}" Value="{Binding ShapeCorners, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="3" Maximum="24"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="200"/>
                         <NumericUpDown Width="88" Minimum="3" Maximum="24" SmallChange="1" SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                       Value="{Binding ShapeCorners, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=CornersLabel}"/>
                     </StackPanel>
-                    <TextBlock Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="StartAngleLabel" Text="{Localize BrushesStrings.StartAngleHint}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=StartAngleLabel}" Value="{Binding ShapeStartAngle, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="360"
                                 TickFrequency="1" IsSnapToTickEnabled="true" Width="200"/>
                         <NumericUpDown Width="88" Minimum="0" Maximum="360" SmallChange="1" SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                       Value="{Binding ShapeStartAngle, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=StartAngleLabel}"/>
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="{Localize BrushesStrings.ElementOpacity}"
+                <TextBlock x:Name="ElementOpacityLabel" Text="{Localize BrushesStrings.ElementOpacity}"
                            Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Minimum="0" Maximum="1" Value="{Binding MaterialOpacity, Mode=TwoWay}" Width="240"/>
+                    <Slider Minimum="0" Maximum="1" Value="{Binding MaterialOpacity, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=ElementOpacityLabel}"/>
                     <TextBlock Text="{Binding MaterialOpacity}" MarginLeft="8" Width="48"/>
                 </StackPanel>
 
-                <TextBlock Text="{Localize BrushesStrings.StrokeHint}"
+                <TextBlock x:Name="StrokeLabel" Text="{Localize BrushesStrings.StrokeHint}"
                            Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                 <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider Minimum="0" Maximum="20" Value="{Binding MaterialStroke, Mode=TwoWay}" Width="240"/>
+                    <Slider Minimum="0" Maximum="20" Value="{Binding MaterialStroke, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=StrokeLabel}"/>
                     <TextBlock Text="{Binding MaterialStroke}" MarginLeft="8" Width="48"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Tint}">
-                    <TextBlock Text="{Localize BrushesStrings.TintStrength}"
+                    <TextBlock x:Name="TintStrengthLabel" Text="{Localize BrushesStrings.TintStrength}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialTintOpacity, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialTintOpacity, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=TintStrengthLabel}"/>
                         <TextBlock Text="{Binding MaterialTintOpacity}" MarginLeft="8" Width="48"/>
                     </StackPanel>
                 </StackPanel>
@@ -164,38 +164,38 @@
                      there, turning the light changes nothing. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Surface}">
-                    <TextBlock Text="{Localize BrushesStrings.GrainScale}"
+                    <TextBlock x:Name="GrainScaleLabel" Text="{Localize BrushesStrings.GrainScale}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="1" Maximum="40" Value="{Binding MaterialGrainScale, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="1" Maximum="40" Value="{Binding MaterialGrainScale, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=GrainScaleLabel}"/>
                         <TextBlock Text="{Binding MaterialGrainScale}" MarginLeft="8" Width="48"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Localize BrushesStrings.GrainDirection}"
+                    <TextBlock x:Name="GrainDirectionLabel" Text="{Localize BrushesStrings.GrainDirection}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="360" Value="{Binding MaterialGrainDirection, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="360" Value="{Binding MaterialGrainDirection, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=GrainDirectionLabel}"/>
                         <TextBlock Text="{Binding MaterialGrainDirection}" MarginLeft="8" Width="48"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Localize BrushesStrings.Roughness}"
+                    <TextBlock x:Name="RoughnessLabel" Text="{Localize BrushesStrings.Roughness}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialRoughness, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialRoughness, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=RoughnessLabel}"/>
                         <TextBlock Text="{Binding MaterialRoughness}" MarginLeft="8" Width="48"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Localize BrushesStrings.LightAngle}"
+                    <TextBlock x:Name="LightAngleLabel" Text="{Localize BrushesStrings.LightAngle}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="360" Value="{Binding MaterialLightAngle, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="360" Value="{Binding MaterialLightAngle, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=LightAngleLabel}"/>
                         <TextBlock Text="{Binding MaterialLightAngle}" MarginLeft="8" Width="48"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Localize BrushesStrings.LightElevation}"
+                    <TextBlock x:Name="LightElevationLabel" Text="{Localize BrushesStrings.LightElevation}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialLightElevation, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="1" Value="{Binding MaterialLightElevation, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=LightElevationLabel}"/>
                         <TextBlock Text="{Binding MaterialLightElevation}" MarginLeft="8" Width="48"/>
                     </StackPanel>
 
@@ -203,89 +203,89 @@
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Nap}">
-                    <TextBlock Text="{Localize BrushesStrings.ClothColor}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialNapColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <TextBlock x:Name="ClothColorLabel" Text="{Localize BrushesStrings.ClothColor}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialNapColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=ClothColorLabel}" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.SheenColor}"
+                    <TextBlock x:Name="SheenColorLabel" Text="{Localize BrushesStrings.SheenColor}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialSheenColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialSheenColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=SheenColorLabel}" MarginBottom="10"/>
                 </StackPanel>
 
                 <!-- METAL. Steel, gold and chrome are THIS material with other numbers - that is what separates them,
                      so they are knobs rather than six entries in the dropdown. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Metal}">
-                    <TextBlock Text="{Localize BrushesStrings.MetalHint}"
+                    <TextBlock x:Name="MetalLabel" Text="{Localize BrushesStrings.MetalHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <DropDown ItemsSource="{Binding MetalPresets}" SelectedItem="{Binding MetalPreset, Mode=TwoWay}"
+                    <DropDown AutomationProperties.LabeledBy="{Binding ElementName=MetalLabel}" ItemsSource="{Binding MetalPresets}" SelectedItem="{Binding MetalPreset, Mode=TwoWay}"
                               Width="270" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.MetalColor}"
+                    <TextBlock x:Name="MetalColorLabel" Text="{Localize BrushesStrings.MetalColor}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialMetalColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialMetalColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=MetalColorLabel}" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.EnvironmentHint}"
+                    <TextBlock x:Name="EnvironmentLabel" Text="{Localize BrushesStrings.EnvironmentHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialEnvironmentColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialEnvironmentColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=EnvironmentLabel}" MarginBottom="10"/>
                 </StackPanel>
 
                 <!-- WOOD. Two colors rather than one: a ring is a broad pale band closed by a narrow dark one, and the
                      contrast between them is what tells oak from walnut. -->
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Wood}">
-                    <TextBlock Text="{Localize BrushesStrings.Timber}"
+                    <TextBlock x:Name="TimberLabel" Text="{Localize BrushesStrings.Timber}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <DropDown ItemsSource="{Binding WoodPresets}" SelectedItem="{Binding WoodPreset, Mode=TwoWay}"
+                    <DropDown AutomationProperties.LabeledBy="{Binding ElementName=TimberLabel}" ItemsSource="{Binding WoodPresets}" SelectedItem="{Binding WoodPreset, Mode=TwoWay}"
                               Width="270" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.WoodCutHint}"
+                    <TextBlock x:Name="WoodCutLabel" Text="{Localize BrushesStrings.WoodCutHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <DropDown ItemsSource="{Binding WoodCuts}" SelectedItem="{Binding MaterialWoodCut, Mode=TwoWay}"
+                    <DropDown AutomationProperties.LabeledBy="{Binding ElementName=WoodCutLabel}" ItemsSource="{Binding WoodCuts}" SelectedItem="{Binding MaterialWoodCut, Mode=TwoWay}"
                               Width="270" MarginBottom="10" ItemTemplate="{ResourceReference BrushWord}"/>
 
                     <CheckBox Content="{Localize BrushesStrings.Varnished}"
                               IsChecked="{Binding MaterialVarnished, Mode=TwoWay}" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.EarlyWood}"
+                    <TextBlock x:Name="EarlyWoodLabel" Text="{Localize BrushesStrings.EarlyWood}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialEarlyWoodColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialEarlyWoodColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=EarlyWoodLabel}" MarginBottom="10"/>
 
-                    <TextBlock Text="{Localize BrushesStrings.LateWood}"
+                    <TextBlock x:Name="LateWoodLabel" Text="{Localize BrushesStrings.LateWood}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
-                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialLateWoodColor, Mode=TwoWay}" MarginBottom="10"/>
+                    <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialLateWoodColor, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=LateWoodLabel}" MarginBottom="10"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Blur}">
-                    <TextBlock Text="{Localize BrushesStrings.Blur}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="BlurLabel" Text="{Localize BrushesStrings.Blur}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="40" Value="{Binding MaterialBlur, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="40" Value="{Binding MaterialBlur, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=BlurLabel}"/>
                         <TextBlock Text="{Binding MaterialBlur}" MarginLeft="8" Width="48"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=Refraction}">
-                    <TextBlock Text="{Localize BrushesStrings.Refraction}"
+                    <TextBlock x:Name="RefractionLabel" Text="{Localize BrushesStrings.Refraction}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="60" Value="{Binding MaterialRefraction, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="60" Value="{Binding MaterialRefraction, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=RefractionLabel}"/>
                         <TextBlock Text="{Binding MaterialRefraction}" MarginLeft="8" Width="48"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical"
                             Visibility="{Binding MaterialKind, Converter={conv:MaterialKnobVisibilityConverter}, ConverterParameter=FilmGrain}">
-                    <TextBlock Text="{Localize BrushesStrings.Grain}"
+                    <TextBlock x:Name="GrainLabel" Text="{Localize BrushesStrings.Grain}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2" TextWrapping="WrapByWords"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider Minimum="0" Maximum="0.2" Value="{Binding MaterialGrain, Mode=TwoWay}" Width="240"/>
+                        <Slider Minimum="0" Maximum="0.2" Value="{Binding MaterialGrain, Mode=TwoWay}" Width="240" AutomationProperties.LabeledBy="{Binding ElementName=GrainLabel}"/>
                         <TextBlock Text="{Binding MaterialGrain}" MarginLeft="8" Width="48"/>
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="{Localize BrushesStrings.TintColor}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialTint, Mode=TwoWay}"/>
+                <TextBlock x:Name="TintColorLabel" Text="{Localize BrushesStrings.TintColor}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                <ColorPickerButton Width="48" Height="32" SelectedColor="{Binding MaterialTint, Mode=TwoWay}" AutomationProperties.LabeledBy="{Binding ElementName=TintColorLabel}"/>
             </StackPanel>
         </StackPanel>
     </StackPanel>

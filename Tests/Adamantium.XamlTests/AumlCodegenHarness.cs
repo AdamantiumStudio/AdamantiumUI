@@ -136,6 +136,31 @@ internal static class AumlCodegenHarness
         return new GeneratedProject((CSharpCompilation)output, diagnostics);
     }
 
+    private static readonly Lazy<CSharpCompilation> SharedCompilation = new(Compilation);
+
+    /// <summary>The AUML generator's diagnostics for one file at <paramref name="relativePath"/>, its output also compiled
+    /// when <paramref name="compile"/> - with one reference set shared by every call, for sweeps that run thousands.</summary>
+    public static IReadOnlyList<Diagnostic> Diagnose(string relativePath, string auml, bool compile)
+    {
+        var driver = CSharpGeneratorDriver.Create(
+            generators: [new AumlCodeBehindGenerator().AsSourceGenerator()],
+            additionalTexts: [new InMemoryAdditionalText(@"C:\Test\" + relativePath.Replace('/', '\\'), auml)],
+            parseOptions: null,
+            optionsProvider: new DictOptionsProvider(new Dictionary<string, string>
+            {
+                ["build_property.RootNamespace"] = "Test.App",
+                ["build_property.projectdir"] = @"C:\Test\",
+            }));
+
+        if (!compile)
+        {
+            return driver.RunGenerators(SharedCompilation.Value).GetRunResult().Diagnostics;
+        }
+
+        driver.RunGeneratorsAndUpdateCompilation(SharedCompilation.Value, out var output, out var diagnostics);
+        return diagnostics.Concat(output.GetDiagnostics()).ToArray();
+    }
+
     private static CSharpCompilation Compilation()
     {
         _ = _seed.Length;   // touch the seed so the assemblies are loaded

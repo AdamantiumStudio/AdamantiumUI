@@ -147,6 +147,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     private static void OnIsSubmenuOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not MenuItem mi) return;
+        AutomationEvents.RaiseExpandCollapse(mi, (bool)e.NewValue);
         if ((bool)e.NewValue)
         {
             // Opening: cap the submenu's scroll to the window (the row is in the overlay, so find the window via the popup

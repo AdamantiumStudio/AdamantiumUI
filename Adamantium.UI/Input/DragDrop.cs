@@ -234,7 +234,7 @@ public static partial class DragDrop
         if (input is not IUIComponent source) return true;
         var local = Mouse.GetPosition(input);
         var declared = false;
-        foreach (var handle in DragHandles(source))
+        foreach (var handle in GetDragHandles(source))
         {
             declared = true;
             if (handle.TransformBoundsToVisual(source).Contains(local)) return true;
@@ -242,9 +242,10 @@ public static partial class DragDrop
         return !declared;
     }
 
-    // A grip is either the DragHandle CONTROL (which switches itself off through IsActive - that is what a "drag only by
-    // the handle" toggle binds to) or any element carrying the attached property, for retrofitting a glyph or an icon.
-    private static IEnumerable<IUIComponent> DragHandles(IUIComponent element)
+    /// <summary>The grips inside <paramref name="element"/> a drag has to start on, when it has any: a
+    /// <see cref="IDragHandle"/> that is active - what a "drag only by the handle" switch turns off - or an element
+    /// marked with <see cref="IsDragHandleProperty"/>.</summary>
+    public static IEnumerable<IUIComponent> GetDragHandles(IUIComponent element)
     {
         foreach (var child in element.VisualChildren)
         {
@@ -252,7 +253,7 @@ public static partial class DragDrop
             {
                 yield return child;
             }
-            foreach (var nested in DragHandles(child)) yield return nested;
+            foreach (var nested in GetDragHandles(child)) yield return nested;
         }
     }
 
@@ -1242,6 +1243,20 @@ public static partial class DragDrop
         var app = UIApplication.Current;
         if (app == null) return null;
 
+        // A gesture made inside the application is over the application's own windows only: the one of them the desktop
+        // shows on top there, else the one the gesture says it is over. Another application's window over that spot
+        // does not take the drop.
+        if (Mouse.Platform?.Window is { } over)
+        {
+            if (Platform?.WindowFromScreenPoint(screen) is { } top && top != IntPtr.Zero &&
+                app.Windows.FirstOrDefault(w => w.Handle == top) is { } ours)
+            {
+                return ours;
+            }
+
+            return Holds(over, screen) ? over : app.Windows.FirstOrDefault(w => !ReferenceEquals(w, over) && Holds(w, screen));
+        }
+
         if (Platform?.WindowFromScreenPoint(screen) is { } handle && handle != IntPtr.Zero)
         {
             foreach (var w in app.Windows)
@@ -1253,10 +1268,15 @@ public static partial class DragDrop
 
         foreach (var w in app.Windows)
         {
-            var client = w.PointToClient(screen);
-            if (client.X >= 0 && client.Y >= 0 && client.X <= w.ClientWidth && client.Y <= w.ClientHeight) return w;
+            if (Holds(w, screen)) return w;
         }
         return null;
+    }
+
+    private static bool Holds(IWindow window, PixelPoint screen)
+    {
+        var client = window.PointToClient(screen);
+        return client.X >= 0 && client.Y >= 0 && client.X <= window.ClientWidth && client.Y <= window.ClientHeight;
     }
 
     private static void Reset()

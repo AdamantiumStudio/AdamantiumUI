@@ -235,16 +235,25 @@ public class DataGridColumnHeader : ContentControl
 
     private void OnFilterPressed(object sender, MouseButtonEventArgs e)
     {
-        if (!CanFilter || _popup == null) return;
+        if (PressFilter()) e.Handled = true;
+    }
 
-        e.Handled = true;
+    /// <summary>The funnel, while the column can be filtered.</summary>
+    internal UIComponent FilterPart => CanFilter && _popup != null ? _filterButton as UIComponent : null;
+
+    /// <summary>What a press on the funnel does: opens the filter, or closes it when it is open.</summary>
+    internal bool PressFilter()
+    {
+        if (!CanFilter || _popup == null) return false;
+
         if (_popup.IsOpen)
         {
             _popup.IsOpen = false;
-            return;
+            return true;
         }
 
         OpenFilter();
+        return true;
     }
 
     /// <summary>Opens the filter flyout and fills it from this column's current filter - what the funnel does, offered

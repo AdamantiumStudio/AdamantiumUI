@@ -13,10 +13,10 @@
             </Style>
         </Border.Styles>
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="{Localize DragDropStrings.Wildlife}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="4"/>
+            <TextBlock x:Name="WildlifeHeading" Text="{Localize DragDropStrings.Wildlife}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="4"/>
             <TextBlock Text="{Localize DragDropStrings.WindowHint}" FontSize="12"
                        Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="10"/>
-            <ListBox ItemsSource="{Binding Items}" SelectedItems="{Binding Selection}"
+            <ListBox AutomationProperties.LabeledBy="{Binding ElementName=WildlifeHeading}" ItemsSource="{Binding Items}" SelectedItems="{Binding Selection}"
                      SelectionMode="Extended" Background="Transparent">
                 <ListBox.ItemTemplate>
                     <DataTemplate>

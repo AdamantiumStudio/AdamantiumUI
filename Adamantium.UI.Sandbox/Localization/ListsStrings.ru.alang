@@ -5,7 +5,7 @@
     <Phrase Key="MultipleSelect" Text="Множественный выбор"/>
     <Phrase Key="SelectedSingle" Text="Выбрано (одиночный):"/>
 
-    <Phrase Key="LargeTitle" Text="Большой список — 20 000 строк, живой фильтр и страницы"/>
+    <Phrase Key="LargeTitle" Text="20 000 строк, живой фильтр и страницы"/>
     <Phrase Key="Search" Text="Поиск"/>
     <Phrase Key="PartsToShow" Text="Что показывать"/>
     <Phrase Key="FirstLast" Text="Первая/последняя"/>

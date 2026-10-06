@@ -10,6 +10,13 @@ select id=BrushesView/name=Noise
 wait id=Stand/id=NoiseStandView
 select id=BrushesView/name=Fractal
 wait id=Stand/id=FractalStandView
+# The live fractal zoomed and panned through automation, and back as it opened.
+expect id=LiveFractal zoom=110
+zoom id=LiveFractal 1000
+expect id=LiveFractal zoom=1000
+zoom id=LiveFractal 110
+pan id=LiveFractal 120 -40
+pan id=LiveFractal -120 40
 select id=BrushesView/name=Image
 wait id=Stand/id=ImageStandView
 select id=BrushesView/name=Nine-slice

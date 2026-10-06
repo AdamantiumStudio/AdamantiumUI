@@ -248,6 +248,11 @@ public class Ribbon : Selector
     public static readonly AdamantiumProperty ContentTemplateProperty = AdamantiumProperty.Register(nameof(ContentTemplate),
         typeof(DataTemplate), typeof(Ribbon), new PropertyMetadata(null));
 
+    /// <summary>Picks how each DATA tab is rendered in the groups area when <see cref="ContentTemplate"/> is not set - a
+    /// <see cref="DataTemplateSet"/> written in markup, or a selector class.</summary>
+    public static readonly AdamantiumProperty ContentTemplateSelectorProperty = AdamantiumProperty.Register(
+        nameof(ContentTemplateSelector), typeof(DataTemplateSelector), typeof(Ribbon), new PropertyMetadata(null));
+
     /// <summary>Height of the groups area, INCLUDING the group captions - constant on purpose: switching tabs must not
     /// change how tall the band is. The theme restates it as a metric; the default here is concrete rather than NaN
     /// because NaN sizes the band to whichever tab is open, and a bottom-anchored caption then rides up and down with
@@ -529,6 +534,7 @@ public class Ribbon : Selector
     {
         if (sender is not Ribbon ribbon) return;
 
+        AutomationEvents.RaiseExpandCollapse(ribbon, !ribbon.IsMinimized);
         ribbon.HostSelectedContent();
         if (!ribbon.IsMinimized)
         {
@@ -558,6 +564,12 @@ public class Ribbon : Selector
     {
         get => GetValue<DataTemplate>(ContentTemplateProperty);
         set => SetValue(ContentTemplateProperty, value);
+    }
+
+    public DataTemplateSelector ContentTemplateSelector
+    {
+        get => GetValue<DataTemplateSelector>(ContentTemplateSelectorProperty);
+        set => SetValue(ContentTemplateSelectorProperty, value);
     }
 
     // A ribbon always has a tab open. Honors a selection the source named before the items existed.

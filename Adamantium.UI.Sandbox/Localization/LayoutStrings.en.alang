@@ -5,4 +5,5 @@
     <Phrase Key="BindMs" Text="Bind ms:"/>
     <Phrase Key="Opacity" Text="Opacity:"/>
     <Phrase Key="PageTiles" Text="Page the tiles instead of virtualizing them"/>
+    <Phrase Key="Tiles" Text="Tiles"/>
 </Language>

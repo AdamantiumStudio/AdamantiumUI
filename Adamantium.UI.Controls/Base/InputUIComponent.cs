@@ -1,3 +1,4 @@
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -150,6 +151,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         RawMouseMiddleButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseMiddleButtonUpHandler));
 
         MouseRightButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(OpenContextMenuHandler));
+        Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OpenContextMenuByKeyHandler));
 
         // The one place guaranteed to run before any element exists.
         KeyboardNavigation.Register();
@@ -160,14 +162,41 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     // Right-button-up is Direct, so the walk up finds the nearest ContextMenu.
     private static void OpenContextMenuHandler(object sender, MouseButtonEventArgs e)
     {
-        if (e.Handled) return;
-        for (var node = sender as IUIComponent; node != null; node = node.VisualParent)
-            if (node is InputUIComponent { ContextMenu: { } menu } host)
-            {
-                menu.Open(host, e.GetPosition(host));
-                e.Handled = true;
-                return;
-            }
+        if (e.Handled || ContextMenuHost(sender as IUIComponent) is not { } host) return;
+
+        host.ContextMenu.Open(host, e.GetPosition(host));
+        e.Handled = true;
+    }
+
+    // The menu key, or Shift+F10.
+    private static void OpenContextMenuByKeyHandler(object sender, KeyEventArgs e)
+    {
+        var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+        if (e.Handled || !(e.Key == Key.Apps || (e.Key == Key.F10 && shift))) return;
+
+        if (OpenContextMenu(sender as IUIComponent)) e.Handled = true;
+    }
+
+    /// <summary>Opens the context menu of <paramref name="element"/>, or of the nearest element above it that has one,
+    /// under <paramref name="element"/> and with the keyboard on its first row - what the menu key does. False when
+    /// there is none.</summary>
+    internal static bool OpenContextMenu(IUIComponent element)
+    {
+        if (ContextMenuHost(element) is not { } host) return false;
+
+        host.ContextMenu.Open(host, element.TranslatePoint(new Vector2(0, element.RenderSize.Height), host));
+        host.ContextMenu.MoveKeyboardInsideWhenReady();
+        return true;
+    }
+
+    private static InputUIComponent ContextMenuHost(IUIComponent element)
+    {
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (node is InputUIComponent { ContextMenu: not null } host) return host;
+        }
+
+        return null;
     }
 
     public static readonly AdamantiumProperty IsFocusedProperty =

@@ -224,6 +224,11 @@ public class CodeGenerationContext
                     continue;
                 }
 
+                if (prop.Values.Count == 0)
+                {
+                    continue;
+                }
+
                 if (resolvedType.MemberKind == ResolvedMemberKind.Event)
                 {
                     TextGenerator.WriteLine($"{symbolName} += {prop.GetTextValue()};");
@@ -981,6 +986,10 @@ public class CodeGenerationContext
         // ItemTemplate) aren't part of that visual - emit them onto the template variable itself.
         var templateVar = targetVar.StartsWith("var ") ? targetVar.Substring(4) : targetVar;
         EmitTemplateConfigProperties(templateVar, templateNode, isResource, diagnostics);
+        if (DataTypeOf(templateNode) is { } dataType)
+        {
+            TextGenerator.WriteLine($"{templateVar}.DataType = typeof({dataType.QualifiedName});");
+        }
 
         TextGenerator.NewLine();
         TextGenerator.WriteLine($"{Metadata.DefaultTypeContainer.TemplateResult.QualifiedName} {templateBuilderMethod}()");
@@ -1020,6 +1029,21 @@ public class CodeGenerationContext
 
         TextGenerator.WriteLine($"return result;");
         TextGenerator.UnindentAndWriteCloseBrace();
+    }
+
+    private IResolvedType DataTypeOf(IAumlAstNode templateNode)
+    {
+        if (templateNode is not AumlAstObjectNode template
+            || Metadata.TypeResolver.Resolve(template.TypeReference.GetFullTypeName()) is not { } templateType
+            || !templateType.IsAssignableTo(DataTemplateTypeName))
+        {
+            return null;
+        }
+
+        var directive = template.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.DataType);
+        return directive?.Value is AumlAstTypeReferenceValueNode { TypeReference: { IsResolved: true } type }
+            ? Metadata.TypeResolver.Resolve(type.GetFullTypeName())
+            : null;
     }
 
     // A template's own configuration (e.g. ItemsSource as a binding object, ItemContainerStyle). Text values such as
@@ -1118,6 +1142,8 @@ public class CodeGenerationContext
     }
     
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
+
+    private const string DataTemplateTypeName = "Adamantium.UI.Core.Templates.DataTemplate";
 
     private IResolvedType ResolveTypeArgument(IAumlAstValueNode value) =>
         value is AumlAstTypeReferenceValueNode typeValue

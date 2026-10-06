@@ -15,4 +15,8 @@
         <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="adam-auto" />
+    </ItemGroup>
+
 </Project>

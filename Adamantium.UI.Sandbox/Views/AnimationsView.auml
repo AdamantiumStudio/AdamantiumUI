@@ -1,4 +1,5 @@
 <View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
     <!-- A BENCH, not a showcase: the numbers at the top are the point. Two sections ask the same question from opposite
          sides - many ANIMATIONS against many PAINTERS of one animated brush - so a frame's cost can be attributed to one
@@ -15,11 +16,11 @@
                 </TextBlock.Behaviors>
             </TextBlock>
         </Border>
-        <TextBlock Text="{Localize AnimationsStrings.Many}" FontSize="16" Margin="0,28,0,0"/>
+        <TextBlock x:Name="ManyHeading" Text="{Localize AnimationsStrings.Many}" FontSize="16" Margin="0,28,0,0"/>
         <TextBlock Opacity="0.7" TextWrapping="WrapByWords"
                    Text="{Localize AnimationsStrings.ManyHint}"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ManyHeading}" Orientation="Horizontal" Margin="0,12,0,0">
             <Button Content="+1" Command="{Binding AddOneCommand}"/>
             <Button Content="+5" Command="{Binding AddFiveCommand}" Margin="8,0,0,0"/>
             <Button Content="+25" Command="{Binding AddTwentyFiveCommand}" Margin="8,0,0,0"/>
@@ -33,7 +34,12 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator IsActive="True" Width="32" Height="32" Margin="6"/>
+                    <BusyIndicator IsActive="True"
+                                   AutomationProperties.AutomationId="RingIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Ring}"
+                                   Width="32"
+                                   Height="32"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -65,7 +71,11 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Dots" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Dots"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="DotsIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Dots}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -78,7 +88,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Ripple" IsActive="True" Width="32" Height="32" Margin="6"/>
+                    <BusyIndicator Classes="Ripple"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="RippleIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Ripple}"
+                                   Width="32"
+                                   Height="32"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -91,7 +107,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Arc" IsActive="True" Width="32" Height="32" Margin="6"/>
+                    <BusyIndicator Classes="Arc"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="ArcIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Arc}"
+                                   Width="32"
+                                   Height="32"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -104,7 +126,11 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Bar" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Bar"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="BarIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Bar}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -117,7 +143,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Ants" IsActive="True" Width="32" Height="32" Margin="6"/>
+                    <BusyIndicator Classes="Ants"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="AntsIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Ants}"
+                                   Width="32"
+                                   Height="32"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -130,7 +162,11 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Equalizer" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Equalizer"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="EqualizerIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Equalizer}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -143,7 +179,11 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Flip" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Flip"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="FlipIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Flip}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -156,7 +196,11 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Heartbeat" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Heartbeat"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="HeartbeatIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Heartbeat}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -169,16 +213,20 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <BusyIndicator Classes="Shimmer" IsActive="True" Margin="6"/>
+                    <BusyIndicator Classes="Shimmer"
+                                   IsActive="True"
+                                   AutomationProperties.AutomationId="ShimmerIndicator"
+                                   AutomationProperties.Name="{Localize LoadersStrings.Shimmer}"
+                                   Margin="6"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <TextBlock Text="{Localize AnimationsStrings.Painters}" FontSize="16" Margin="0,28,0,0"/>
+        <TextBlock x:Name="PaintersHeading" Text="{Localize AnimationsStrings.Painters}" FontSize="16" Margin="0,28,0,0"/>
         <TextBlock Opacity="0.7" TextWrapping="WrapByWords"
                    Text="{Localize AnimationsStrings.PaintersHint}"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+        <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=PaintersHeading}" Orientation="Horizontal" Margin="0,12,0,0">
             <Button Content="{Localize AnimationsStrings.TogglePulse}" Command="{Binding ToggleSharedPulseCommand}"/>
             <Button Content="{Localize AnimationsStrings.TenCards}" Command="{Binding AddTenSkeletonsCommand}" Margin="8,0,0,0"/>
             <Button Content="{Localize AnimationsStrings.HundredCards}" Command="{Binding AddHundredSkeletonsCommand}" Margin="8,0,0,0"/>

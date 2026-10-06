@@ -1,7 +1,9 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -188,4 +190,6 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
             _world.X + (at.X - _origin.X) / _scale,
             _world.Y + (at.Y - _origin.Y) / _scale));
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new CanvasMiniMapAutomationPeer(this);
 }

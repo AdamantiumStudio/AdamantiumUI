@@ -12,3 +12,12 @@ hover id=SurfaceMenu/name=Zoom/name="Fit to window"
 expect id=SurfaceMenu/name=Zoom expanded=Expanded
 click id=SurfaceMenu/name=Zoom/name="Fit to window"
 expect id=MenuReport name="Picked: Zoom · Fit to window"
+# Without the mouse: the menu opened as the menu key opens it, with the keyboard on its first row; the next row
+# chosen from the keyboard.
+context-menu id=MenuSurface
+expect id=SurfaceMenu/name=Cut focus=True
+key Down
+expect id=SurfaceMenu/name=Copy focus=True
+key Enter
+expect id=MenuReport name="Picked: Copy"
+absent id=SurfaceMenu/name=Copy

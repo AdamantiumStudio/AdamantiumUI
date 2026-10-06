@@ -49,6 +49,11 @@ public abstract class AutomationPeer
 
     public abstract void SetFocus();
 
+    /// <summary>Opens the element's context menu as the menu key would - its own, or the nearest one above it - with the
+    /// keyboard inside. Throws when there is none.</summary>
+    public virtual void ShowContextMenu() =>
+        throw new InvalidOperationException($"{ControlType} \"{Name}\" has no context menu.");
+
     /// <summary>The object that provides <paramref name="pattern"/>, or null when the element has no such capability. By
     /// default the peer itself, when it implements the pattern's interface.</summary>
     public virtual object GetPattern(PatternId pattern) => pattern switch
@@ -66,6 +71,12 @@ public abstract class AutomationPeer
         PatternId.Grid => this as IGridProvider,
         PatternId.GridItem => this as IGridItemProvider,
         PatternId.Table => this as ITableProvider,
+        PatternId.Text => this as ITextProvider,
+        PatternId.TableItem => this as ITableItemProvider,
+        PatternId.Transform => this as ITransformProvider,
+        PatternId.Connection => this as IConnectionProvider,
+        PatternId.Dock => this as IDockProvider,
+        PatternId.Pan => this as IPanProvider,
         _ => null
     };
 }

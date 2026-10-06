@@ -4,6 +4,8 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -139,6 +141,9 @@ public class DataGridSortPanel : Control
     }
 
     /// <summary>Picks a chip up: marks it, and puts the drop mark where it would land.</summary>
+    /// <summary>The chips in the strip, in the order of the keys.</summary>
+    internal IReadOnlyList<DataGridSortChip> Chips => _live;
+
     internal void BeginCarry(int chip, double x)
     {
         _dragging = chip;
@@ -246,4 +251,7 @@ public class DataGridSortPanel : Control
         // Nothing to clear while nothing is sorted, so the command is not offered then.
         if (_clear != null) _clear.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        new ToolBarAutomationPeer(this);
 }

@@ -257,7 +257,8 @@
                         <Border BorderBrush="{ObservableResource ControlStrokeColorDefault}"
                                 BorderThickness="1" CornerRadius="4" Padding="2" ClipToBounds="True">
                             <ListBox x:Name="PART_Values" MaxHeight="180" ClipToBounds="True"
-                                     BorderThickness="0" Background="Transparent">
+                                     BorderThickness="0" Background="Transparent"
+                                     AutomationProperties.Name="{Localize DataGridStrings.FilterValues}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
@@ -271,7 +272,8 @@
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
 
                         <!-- One item per DataGridFilterOperator, in its order: the editor reads the position. -->
-                        <DropDown x:Name="PART_FirstOperator" Margin="0 0 0 4">
+                        <DropDown x:Name="PART_FirstOperator" Margin="0 0 0 4"
+                                  AutomationProperties.Name="{Localize DataGridStrings.FirstCondition}">
                             <DropDownItem Content="{Localize DataGridStrings.IsEqualTo}"/>
                             <DropDownItem Content="{Localize DataGridStrings.IsNotEqualTo}"/>
                             <DropDownItem Content="{Localize DataGridStrings.Contains}"/>
@@ -285,16 +287,20 @@
                         </DropDown>
                         <!-- aA = match case - see the macOS set. -->
                         <Grid ColumnDefinitions="*,Auto" Margin="0 0 0 4">
-                            <TextBox Grid.Column="0" x:Name="PART_FirstValue"/>
+                            <TextBox Grid.Column="0" x:Name="PART_FirstValue"
+                                     AutomationProperties.Name="{Localize DataGridStrings.FirstValue}"/>
                             <ToggleButton Grid.Column="1" x:Name="PART_FirstMatchCase" Content="aA"
+                                          AutomationProperties.Name="{Localize DataGridStrings.FirstMatchCase}"
                                           Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="{Localize DataGridStrings.MatchCase}"/>
                         </Grid>
                         <!-- One item per DataGridFilterLogic, in its order. -->
-                        <DropDown x:Name="PART_Logic" Margin="0 0 0 4">
+                        <DropDown x:Name="PART_Logic" Margin="0 0 0 4"
+                                  AutomationProperties.Name="{Localize DataGridStrings.ConditionLogic}">
                             <DropDownItem Content="{Localize DataGridStrings.And}"/>
                             <DropDownItem Content="{Localize DataGridStrings.Or}"/>
                         </DropDown>
-                        <DropDown x:Name="PART_SecondOperator" Margin="0 0 0 4">
+                        <DropDown x:Name="PART_SecondOperator" Margin="0 0 0 4"
+                                  AutomationProperties.Name="{Localize DataGridStrings.SecondCondition}">
                             <DropDownItem Content="{Localize DataGridStrings.IsEqualTo}"/>
                             <DropDownItem Content="{Localize DataGridStrings.IsNotEqualTo}"/>
                             <DropDownItem Content="{Localize DataGridStrings.Contains}"/>
@@ -307,8 +313,10 @@
                             <DropDownItem Content="{Localize DataGridStrings.IsNotEmpty}"/>
                         </DropDown>
                         <Grid ColumnDefinitions="*,Auto" Margin="0 0 0 8">
-                            <TextBox Grid.Column="0" x:Name="PART_SecondValue"/>
+                            <TextBox Grid.Column="0" x:Name="PART_SecondValue"
+                                     AutomationProperties.Name="{Localize DataGridStrings.SecondValue}"/>
                             <ToggleButton Grid.Column="1" x:Name="PART_SecondMatchCase" Content="aA"
+                                          AutomationProperties.Name="{Localize DataGridStrings.SecondMatchCase}"
                                           Margin="4 0 0 0" MinWidth="32" ToolTipService.ToolTip="{Localize DataGridStrings.MatchCase}"/>
                         </Grid>
 
@@ -588,7 +596,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
-                            <TextBox Grid.Column="0" x:Name="PART_Text" MinWidth="160"/>
+                            <TextBox Grid.Column="0"
+                                     x:Name="PART_Text"
+                                     MinWidth="160"
+                                     AutomationProperties.Name="{Localize DataGridStrings.SearchText}"/>
                             <!-- Where the search stands: one line per state, shown by the triggers below. -->
                             <Grid Grid.Column="1" VerticalAlignment="Center" Margin="10 0">
                                 <TextBlock x:Name="SearchingLabel" Visibility="Collapsed"

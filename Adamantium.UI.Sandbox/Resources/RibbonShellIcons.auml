@@ -1,0 +1,1893 @@
+<ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns="http://adamantium/ui">
+
+    <!-- The commands' icons of the ribbon shell, by key. Each is drawn in a 16-unit box; the empty frame first in every
+         icon states that box, so the icons scale alike and none is measured by its own ink. The stroke follows the
+         theme's text color. -->
+
+    <DrawingImage x:Key="TerrainIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L6,6 L9,10 L11,7 L15,13 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NewTerrainIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L6,6 L9,10 L11,7 L15,13 Z M12,1 L12,5 M10,3 L14,3"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ImportToTrayIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,10 L2,14 L14,14 L14,10 M8,2 L8,10 M5,7 L8,10 L11,7"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RaiseIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,14 L5,10 L11,10 L15,14 M8,2 L8,7 M6,4 L8,2 L10,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LowerIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,10 L5,14 L11,14 L15,10 M8,2 L8,7 M6,5 L8,7 L10,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SmoothIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,11 L4,8 L7,9 L10,8 L15,9"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="FlattenIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,11 L15,11 M4,7 L12,7 M6,4 L10,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StampIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,2 L11,2 L10,8 L6,8 Z M2,11 L14,11 L14,14 L2,14 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BrushIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,13 L10,6 L12,8 L5,15 Z M10,6 L12,2 L14,4 L12,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AutoFillIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L14,8 L8,14 L2,8 Z M2,15 L14,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RiverIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,1 L5,5 L4,9 L7,12 L8,15 M7,1 L9,5 L8,9 L11,12 L12,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WaterLevelIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,9 L15,9 M3,12 L13,12 M5,15 L11,15 M8,2 L8,6 M6,4 L8,6 L10,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LakeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,4 0 1 0 14,8 A6,4 0 1 0 2,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ErosionIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L5,7 L7,9 L9,5 L15,13 M5,13 L6,11 M10,13 L11,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PlantIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L3,9 L6,9 L3,13 L13,13 L10,9 L13,9 Z M8,13 L8,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ZoneIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M2,8 L8,2 M2,14 L14,2 M8,14 L14,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PolygonIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L12,2 L14,9 L8,14 L2,10 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LockIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,7 L12,7 L12,14 L4,14 Z M6,7 L6,4 A2,2 0 0 1 10,4 L10,7"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RegenerateIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M13,8 A5,5 0 1 1 11,4 M11,1 L11,4 L14,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SettlementsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L2,7 L6,4 L10,7 L10,14 Z M10,9 L14,9 L14,14 L10,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SettlementIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L2,7 L6,4 L10,7 L10,14 Z M10,9 L14,9 L14,14 L10,14 M5,14 L5,10 L7,10 L7,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ListIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 L14,4 M2,8 L14,8 M2,12 L14,12"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PinIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M6,2 L10,2 L10,7 L12,9 L4,9 L6,7 Z M8,9 L8,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="UnpinIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M6,2 L10,2 L10,7 L12,9 L4,9 L6,7 Z M8,9 L8,15 M2,2 L14,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PlotsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L8,8 M8,10 L14,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="EditBordersIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M3,3 L1,1 M13,3 L15,1 M13,13 L15,15 M3,13 L1,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CatalogIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L7,2 L7,7 L2,7 Z M9,2 L14,2 L14,7 L9,7 Z M2,9 L7,9 L7,14 L2,14 Z M9,9 L14,9 L14,14 L9,14 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RoadIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,15 L7,1 M11,15 L9,1 M8,3 L8,5 M8,8 L8,10 M8,13 L8,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AddPointIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,3 L8,13 M3,8 L13,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RemovePointIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,8 L13,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="JunctionIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BridgeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,6 L15,6 M3,6 L3,14 M13,6 L13,14 M3,14 A5,5 0 0 1 13,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="TunnelIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L2,8 A6,6 0 0 1 14,8 L14,14 Z M5,14 L5,9 A3,3 0 0 1 11,9 L11,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="FordIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,10 L4,8 L7,10 L10,8 L13,10 L15,9 M1,13 L4,11 L7,13 L10,11 L13,13 L15,12 M3,2 L3,6 M13,2 L13,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CulvertIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,6 L15,6 M1,14 L15,14 M5,14 A3,3 0 0 1 11,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ConnectIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,5 A2,2 0 1 0 5,5 A2,2 0 1 0 1,5 M11,11 A2,2 0 1 0 15,11 A2,2 0 1 0 11,11 M4,6 L12,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BreakSectionIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L7,7 L5,9 L9,13 M9,13 L11,11 L15,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RestoreIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,8 A5,5 0 1 0 5,4 M5,1 L5,4 L2,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="FlagIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,15 L3,2 M3,2 L13,2 L11,5 L13,8 L3,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StarIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L9.8,5.6 L14.6,5.8 L10.8,8.8 L12.2,13.6 L8,10.8 L3.8,13.6 L5.2,8.8 L1.4,5.8 L6.2,5.6 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BinaryStarIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,8 A3,3 0 1 0 7,8 A3,3 0 1 0 1,8 M9,8 A2.5,2.5 0 1 0 14,8 A2.5,2.5 0 1 0 9,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ClusterIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 A1.5,1.5 0 1 0 5,4 A1.5,1.5 0 1 0 2,4 M10,3 A1.5,1.5 0 1 0 13,3 A1.5,1.5 0 1 0 10,3 M5,11 A1.5,1.5 0 1 0 8,11 A1.5,1.5 0 1 0 5,11 M11,11 A1,1 0 1 0 13,11 A1,1 0 1 0 11,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PlanetIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M1,10 L15,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MoonIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M10,2 A6,6 0 1 0 14,11 A5,5 0 1 1 10,2 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DwarfPlanetIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AsteroidBeltIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,8 A7,3 0 1 0 15,8 A7,3 0 1 0 1,8 M4,6 L4,6.5 M10,10 L10,10.5 M12,6 L12,6.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="OrbitIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,8 A7,4 0 1 0 15,8 A7,4 0 1 0 1,8 M12,6 A1.5,1.5 0 1 0 15,6 A1.5,1.5 0 1 0 12,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ResonanceIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,8 A7,4 0 1 0 15,8 A7,4 0 1 0 1,8 M4,8 A4,2 0 1 0 12,8 A4,2 0 1 0 4,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LagrangeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A2,2 0 1 0 6,8 A2,2 0 1 0 2,8 M12,8 L12,8.5 M8,3 L8,3.5 M8,13 L8,13.5 M15,8 L15,8.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="GenerateSystemIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,5 L5,5.5 M11,5 L11,5.5 M8,8 L8,8.5 M5,11 L5,11.5 M11,11 L11,11.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NewPlanetIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M13,1 L13,5 M11,3 L15,3"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ReliefNoiseIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,10 L3,7 L5,11 L7,5 L9,9 L11,6 L13,10 L15,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CratersIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M5,6 A1.5,1.5 0 1 0 8,6 A1.5,1.5 0 1 0 5,6 M9,10 A1,1 0 1 0 11,10 A1,1 0 1 0 9,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RidgesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L5,5 L8,10 L11,3 L15,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="TectonicsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M3,6 L8,8 L7,14 M8,8 L13,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="OceanLevelIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M2,9 L14,9"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PolarCapsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M4,4 L12,4 M4,12 L12,12"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="GlaciersIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M2,4 L14,12 M2,12 L14,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BiomesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M8,2 L8,14 M2,8 L8,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RingsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M1,9 A7,2.5 0 1 0 15,9 A7,2.5 0 1 0 1,9"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="VolcanoIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,14 L6,6 L10,6 L15,14 Z M8,6 L8,2 M6,3 L8,1 L10,3"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MeteorShowerIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L9,9 M7,2 L11,6 M2,7 L6,11 M10,10 A2,2 0 1 0 14,10 A2,2 0 1 0 10,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ImpactIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AtmosphereIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RayleighIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,12 L15,12 M4,12 A4,4 0 0 1 12,12 M8,2 L8,5 M3,5 L5,7 M13,5 L11,7"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MieIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,5 L14,5 M1,8 L15,8 M3,11 L13,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DawnIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L15,13 M4,13 A4,4 0 0 1 12,13 M8,5 L8,2 M6,4 L8,2 L10,4"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CloudLayersIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,11 L12,11 A3,3 0 0 0 11,5 A4,4 0 0 0 4,7 A2,2 0 0 0 4,11 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StormsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,6 A2,2 0 1 1 6,8 M8,3 A5,5 0 1 1 3,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CloudShadowsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,9 L12,9 A3,3 0 0 0 11,3 A4,4 0 0 0 4,5 A2,2 0 0 0 4,9 Z M3,13 L13,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AurorasIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L4,5 L7,12 L10,4 L13,11 L15,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NightGlowIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M10,2 A6,6 0 1 0 14,11 A5,5 0 1 1 10,2 Z M13,3 L13,3.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DustStormsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,5 L10,5 M4,8 L14,8 M2,11 L9,11 M12,11 L12,11.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WindIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,6 L10,6 A2,2 0 1 0 8,4 M1,10 L12,10 A2,2 0 1 1 10,12"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PrecipitationIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,8 L12,8 A3,3 0 0 0 11,2 A4,4 0 0 0 4,4 A2,2 0 0 0 4,8 Z M5,10 L4,13 M8,10 L7,13 M11,10 L10,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SeasonsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M8,8 L8,4 M8,8 L11,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RoomsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,9 M8,11 L8,14 M2,8 L6,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NewRoomIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,5 L8,11 M5,8 L11,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SplitIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MergeRoomsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M6,8 L10,8 M8,6 L10,8 L8,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DoorIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,14 L4,2 L12,2 L12,14 M10,8 L10,8.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WindowOpeningIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ArchIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,14 L3,8 A5,5 0 0 1 13,8 L13,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="FurnitureIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,9 L14,9 L14,12 L2,12 Z M3,12 L3,14 M13,12 L13,14 M3,9 L3,5 L13,5 L13,9"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CeilingLampIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,4 M4,9 A4,5 0 0 1 12,9 Z M7,11 L9,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WallLampIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L2,14 M2,8 L6,8 M6,5 L12,5 L10,11 L8,11 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="FloorLampIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M5,2 L11,2 L12,6 L4,6 Z M8,6 L8,14 M5,14 L11,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DaylightIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8 M14,1 L15,0"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BakeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,12 L14,12 M4,12 L4,7 A4,4 0 0 1 12,7 L12,12 M6,4 L6,2 M10,4 L10,2"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BonesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,4 A2,2 0 1 0 4,4.1 M12,12 A2,2 0 1 0 12,12.1 M5,5 L11,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AddBoneIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 A2,2 0 1 0 3,3.1 M11,11 A2,2 0 1 0 11,11.1 M4,4 L10,10 M13,1 L13,5 M11,3 L15,3"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MirrorBonesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M6,4 L2,8 L6,12 M10,4 L14,8 L10,12"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AutoRigIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 A2,2 0 1 0 8,2.1 M8,4 L8,10 M8,6 L4,8 M8,6 L12,8 M8,10 L5,14 M8,10 L11,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="IkChainIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L6,6 L14,4 M2,14 A1,1 0 1 0 2,14.1 M6,6 A1,1 0 1 0 6,6.1"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NormalizeWeightsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,12 L14,12 M4,12 L4,6 M8,12 L8,6 M12,12 L12,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ClipsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 L14,4 L14,12 L2,12 Z M5,4 L5,12 M11,4 L11,12"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NewClipIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 L14,4 L14,12 L2,12 Z M8,6 L8,10 M6,8 L10,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SetKeyIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,3 L13,8 L8,13 L3,8 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AutoKeyIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M8,8 L8,8.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StateGraphIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,8 A2,2 0 1 0 5,8 A2,2 0 1 0 1,8 M11,8 A2,2 0 1 0 15,8 A2,2 0 1 0 11,8 M5,8 L11,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BlendTreeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L8,6 M8,6 L3,10 M8,6 L13,10 M3,10 L3,14 M13,10 L13,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="UnitIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 A2,2 0 1 0 8,6 A2,2 0 1 0 8,2 M4,14 L4,10 A4,3 0 0 1 12,10 L12,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MoveOrderIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 L12,8 M9,5 L12,8 L9,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AttackOrderIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,13 L13,3 M10,3 L13,3 L13,6 M3,10 L6,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PatrolOrderIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,8 A5,5 0 1 1 8,13 M8,13 L6,11 M8,13 L6,15"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DepositIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L14,7 L11,14 L5,14 L2,7 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="BalanceIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,14 L2,9 M6,14 L6,5 M10,14 L10,7 M14,14 L14,2"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="GatheringIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,13 L10,6 M10,6 L13,3 M8,4 L12,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="StorageIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,6 L8,2 L14,6 L14,14 L2,14 Z M6,14 L6,9 L10,9 L10,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WaterfallIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,3 L14,3 M5,3 L5,13 M8,3 L8,13 M11,3 L11,13 M2,14 L14,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RapidsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,6 L4,4 L7,6 L10,4 L13,6 L15,5 M1,11 L4,9 L7,11 L10,9 L13,11 L15,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="NewIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="OpenDocumentIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 L7,4 L8,6 L14,6 L14,13 L2,13 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SaveDocumentIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ImportIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L8,10 M5,7 L8,10 L11,7 M3,13 L13,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ExportIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,10 L8,2 M5,5 L8,2 L11,5 M3,13 L13,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PrintIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,6 L4,2 L12,2 L12,6 M4,10 L12,10 L12,14 L4,14 Z M2,6 L14,6 L14,10 L2,10 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="CustomizeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ExitIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M6,3 L3,3 L3,13 L6,13 M9,5 L12,8 L9,11 M12,8 L6,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ModulesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,9 L7,9 L7,14 L2,14 Z M9,9 L14,9 L14,14 L9,14 Z M5.5,2 L10.5,2 L10.5,7 L5.5,7 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ClipboardIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SceneIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ViewIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,8 A6,4 0 0 0 14,8 A6,4 0 0 0 2,8 M8,6 A2,2 0 1 0 8,10 A2,2 0 1 0 8,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MaterialsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M3,8 L13,8 M8,3 L8,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ArrangeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,3 L14,3 M2,8 L10,8 M2,13 L14,13"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="OrderIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,3 L11,3 L11,11 L3,11 Z M5,5 L13,5 L13,13 L5,13 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LightIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PhysicsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SelectionIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LedgeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,4 L14,4 L14,7 L2,7 Z M2,10 L6,10 M8,10 L14,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ToolsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,13 L13,3 M10,3 L13,3 L13,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="TransformIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8 M8,1 L6,3 M8,1 L10,3 M15,8 L13,6 M15,8 L13,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SelectGizmoIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M4,2 L4,13 L7,10 L9,14 L11,13 L9,9 L13,9 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MoveGizmoIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8 M8,1 L6,3 M8,1 L10,3 M8,15 L6,13 M8,15 L10,13 M1,8 L3,6 M1,8 L3,10 M15,8 L13,6 M15,8 L13,10"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="RotateGizmoIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M13,8 A5,5 0 1 1 8,3 M8,3 L6,1 M8,3 L6,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ScaleGizmoIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,9 L7,9 L7,14 L2,14 Z M7,9 L14,2 M10,2 L14,2 L14,6"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PrimitivesIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="MeshIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="SnappingIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8 M5,5 L11,11 M11,5 L5,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LibraryIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ChannelsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,11 L5,7 L8,11 L11,5 L14,11"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="PreviewIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DisplayIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="UnwrapIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M2,8 L14,8 M8,2 L8,14"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="EmissionIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,16,16"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"
+                             Stroke="{ObservableResource TextFillColorPrimary}"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+</ResourceDictionary>

@@ -10,7 +10,8 @@ namespace Adamantium.UI.Controls.Automation;
 /// <summary>The peer of a <see cref="DataGridCell"/>: a cell of its grid, called by what it shows. Its value is written as
 /// committing an edit writes it - through the grid's events and rules and the column's binding. Text it shows is not
 /// a child; anything a template puts in it to act on is.</summary>
-public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValueProvider, IGridItemProvider, ISelectionItemProvider
+public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValueProvider, IGridItemProvider, ITableItemProvider,
+    ISelectionItemProvider
 {
     private readonly DataGridCell _cell;
 
@@ -20,7 +21,7 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
     }
 
     public override AutomationControlType ControlType =>
-        IsReadOnly ? AutomationControlType.Text : AutomationControlType.Edit;
+        IsReadOnly ? AutomationControlType.Text : AutomationControlType.DataItem;
 
     public string Value => TextOf(_cell) ?? string.Empty;
 
@@ -56,6 +57,19 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
     }
 
     public void Select() => Grid()?.SelectCell(Row, Column);
+
+    public void AddToSelection() => Grid()?.SelectCell(Row, Column, add: !IsSelected);
+
+    public void RemoveFromSelection() => Grid()?.DeselectCell(Row, Column);
+
+    /// <summary>An editor in the cell goes by the column's header.</summary>
+    protected internal override string NameForChild(AutomationPeer child) =>
+        GetColumnHeaders().FirstOrDefault()?.Name is { Length: > 0 } header ? header : null;
+
+    public IReadOnlyList<AutomationPeer> GetRowHeaders() => [];
+
+    public IReadOnlyList<AutomationPeer> GetColumnHeaders() =>
+        (ContainingGrid as TreeDataGridAutomationPeer)?.GetColumnHeaders(Column) ?? [];
 
     protected override string NameCore() => TextOf(_cell);
 

@@ -509,13 +509,17 @@ public class OverlayWindow : ContentControl
     {
         if (!_resizing || HostPopup?.PlacementTarget is not IInputComponent frame) return;
         var delta = e.GetPosition(frame) - _resizeStart;
+        SizeCard(_resizeBaseW + delta.X, _resizeBaseH + delta.Y, _resizeLeft, _resizeTop, _resizeParentW, _resizeParentH);
+    }
 
+    private void SizeCard(double width, double height, double left, double top, double parentWidth, double parentHeight)
+    {
         // Grow from the fixed top-left; clamp the bottom-right so it can't leave the parent window (the grip stops at the
         // edge instead of the opposite side stretching), and not below the minimum.
-        var maxW = Math.Max(MinCardWidth, _resizeParentW - _resizeLeft);
-        var maxH = Math.Max(MinCardHeight, _resizeParentH - _resizeTop);
-        var newW = Math.Clamp(_resizeBaseW + delta.X, MinCardWidth, maxW);
-        var newH = Math.Clamp(_resizeBaseH + delta.Y, MinCardHeight, maxH);
+        var maxW = Math.Max(MinCardWidth, parentWidth - left);
+        var maxH = Math.Max(MinCardHeight, parentHeight - top);
+        var newW = Math.Clamp(width, MinCardWidth, maxW);
+        var newH = Math.Clamp(height, MinCardHeight, maxH);
         Width = newW;
         Height = newH;
 
@@ -523,14 +527,35 @@ public class OverlayWindow : ContentControl
         // back half the (parent - size) change; a manually-placed (Relative) card's offset already IS its top-left.
         if (HostPopup.Placement == PlacementMode.Center)
         {
-            HostPopup.HorizontalOffset = _resizeLeft - (_resizeParentW - newW) / 2;
-            HostPopup.VerticalOffset = _resizeTop - (_resizeParentH - newH) / 2;
+            HostPopup.HorizontalOffset = left - (parentWidth - newW) / 2;
+            HostPopup.VerticalOffset = top - (parentHeight - newH) / 2;
         }
         else
         {
-            HostPopup.HorizontalOffset = _resizeLeft;
-            HostPopup.VerticalOffset = _resizeTop;
+            HostPopup.HorizontalOffset = left;
+            HostPopup.VerticalOffset = top;
         }
+    }
+
+    /// <summary>Moves the card by an offset of the window it is shown over, kept inside it - what a drag by its title bar
+    /// does.</summary>
+    internal void MoveCard(Vector2 offset)
+    {
+        if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
+
+        // From where the card IS, as a drag starts: a centered card's Left is not its place until it has been moved once.
+        var at = WorldTransform.TranslationVector;
+        SetCurrentValue(LeftProperty, Math.Clamp(at.X + offset.X, 0, Math.Max(0, frame.RenderSize.Width - RenderSize.Width)));
+        SetCurrentValue(TopProperty, Math.Clamp(at.Y + offset.Y, 0, Math.Max(0, frame.RenderSize.Height - RenderSize.Height)));
+    }
+
+    /// <summary>Resizes the card from its top-left, kept inside the window it is shown over - what its grip does.</summary>
+    internal void ResizeCard(double width, double height)
+    {
+        if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
+
+        var at = WorldTransform.TranslationVector;
+        SizeCard(width, height, at.X, at.Y, frame.RenderSize.Width, frame.RenderSize.Height);
     }
 
     private void OnResizeRelease(object sender, MouseButtonEventArgs e)

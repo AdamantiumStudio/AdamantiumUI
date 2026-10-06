@@ -70,6 +70,9 @@ public class CanvasElementLayer : Panel
         InvalidateMeasure();
     }
 
+    /// <summary>The item this layer shows <paramref name="element"/> for, when it is one of the layer's children.</summary>
+    internal ElementItem ItemOf(IUIComponent element) => _items.Find(item => ReferenceEquals(item.Element, element));
+
     /// <summary>Puts hosted controls out of the pointer's reach while editing, so the tool gets the press; nodes stay live and
     /// are dragged by their title strip (<see cref="OnPressed"/>).</summary>
     internal void ApplyDesignMode()

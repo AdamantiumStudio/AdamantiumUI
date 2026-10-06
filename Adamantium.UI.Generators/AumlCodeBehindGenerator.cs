@@ -21,7 +21,9 @@ namespace Adamantium.UI.Generators
                 options.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
                 options.GlobalOptions.TryGetValue("build_property.projectdir", out var projectDir);
                 options.GlobalOptions.TryGetValue("build_property.NeutralLanguage", out var neutralLanguage);
-                return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage);
+                options.GlobalOptions.TryGetValue("build_property.AdamantiumRequireAutomationId", out var requireAutomationId);
+                return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage,
+                    RequireAutomationId: string.Equals(requireAutomationId, "true", System.StringComparison.OrdinalIgnoreCase));
             });
 
             // Parsing is its own PER-FILE step, so Roslyn caches each document: it used to sit inside the output below,
@@ -127,6 +129,13 @@ namespace Adamantium.UI.Generators
                         var aumlMetadataContainer = transformer.Transform(aumlDoc, typeResolver, diagnostics);
                         if (diagnostics.HasErrors)
                         {
+                            // Still the project's blueprint: its entry point is written, so the build reports the
+                            // mistake in it and not also "no Main".
+                            if (aumlMetadataContainer?.RootEntityType == EntityType.ApplicationBlueprint)
+                            {
+                                blueprints.Add((aumlDoc.RelativeFilePath, null));
+                            }
+
                             continue;
                         }
 
@@ -139,6 +148,17 @@ namespace Adamantium.UI.Generators
                         }
 
                         codeGenerator.GenerateSourceCode(aumlMetadataContainer, new RoslynOutputSink(spc), diagnostics);
+
+                        if (properties.RequireAutomationId)
+                        {
+                            foreach (var finding in AutomationIdCheck.Run(aumlDoc, compilation))
+                            {
+                                spc.ReportDiagnostic(Diagnostic.Create("AUI011", "Automation",
+                                    $"{aumlDoc.RelativeFilePath}({finding.Line},{finding.Position}): {finding.Type} has no " +
+                                    "AutomationProperties.AutomationId, so a test cannot find it by id.",
+                                    DiagnosticSeverity.Warning, DiagnosticSeverity.Warning, true, 1));
+                            }
+                        }
 
                         if (aumlMetadataContainer.RootEntityType == EntityType.ResourceDictionary)
                         {
@@ -179,7 +199,17 @@ namespace Adamantium.UI.Generators
         // stops being cacheable.
         private static ParsedAumlFile ParseDocument(string path, string content, string rootNamespace, string projectDir)
         {
-            var document = AumlParser.Parse(content);
+            AumlDocument document;
+            try
+            {
+                document = AumlParser.Parse(content);
+            }
+            catch (System.Xml.XmlException e)
+            {
+                var logger = new Adamantium.Core.Logger();
+                logger.Error(e.Message);
+                document = new AumlDocument { Logger = logger, HasErrors = true };
+            }
 
             var relativePath = path.Replace(projectDir ?? string.Empty, string.Empty).Replace("\\", "/");
             if (relativePath.StartsWith("/"))

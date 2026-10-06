@@ -34,14 +34,18 @@ public partial class TilesViewModel : TabPageViewModel
         for (var row = 0; row < RowCount; row++)
         for (var col = 0; col < ColumnCount; col++)
         {
-            tiles.Add(new TileItem(Palette[(row + col) % Palette.Length]));
+            tiles.Add(new TileItem(Palette[(row + col) % Palette.Length], row + 1, col + 1));
         }
         Tiles = tiles;
     }
 }
 
-/// <summary>One board tile: just its front color - geometry, photo fragment and wave timing come from the host.</summary>
-public sealed class TileItem(string color)
+/// <summary>One board tile: its front color and place - geometry, photo fragment and wave timing come from the host.</summary>
+public sealed class TileItem(string color, int row, int column)
 {
     public string Color { get; } = color;
+
+    public int Row { get; } = row;
+
+    public int Column { get; } = column;
 }

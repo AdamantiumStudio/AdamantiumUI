@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls;
 
@@ -16,4 +18,6 @@ public class BusyIndicator : TemplatedUIComponent
         get => GetValue<bool>(IsActiveProperty);
         set => SetValue(IsActiveProperty, value);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new BusyIndicatorAutomationPeer(this);
 }

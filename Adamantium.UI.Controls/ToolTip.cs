@@ -1,5 +1,7 @@
 using Adamantium.ProceduralGeometry;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
@@ -14,4 +16,5 @@ public class ToolTip : ContentControl
             new PropertyMetadata(12.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new ToolTipAutomationPeer(this);
 }

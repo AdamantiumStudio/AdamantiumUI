@@ -22,7 +22,8 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
     public Core.IUIComponent KeyTipContent => Owner?.SelectedContentHost;
 
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
-        typeof(bool), typeof(RibbonTabHeader), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
+        typeof(bool), typeof(RibbonTabHeader), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender,
+            (a, e) => AutomationEvents.RaiseSelected((RibbonTabHeader)a, (bool)e.NewValue)));
 
     // State brushes the theme's triggers project onto the chrome. Null = no change in that state.
     public static readonly AdamantiumProperty BackgroundPointerOverProperty = AdamantiumProperty.Register(

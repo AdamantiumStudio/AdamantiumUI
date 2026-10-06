@@ -77,10 +77,13 @@ public class AumlTypeReferenceValidationTests
     [TestCase("""<Border Tag="{x:Type local:ProbeRails}"/>""", "ProbeRails", SemanticTokensEngine.Type)]
     [TestCase("""<Border Width="{x:Static ProbeRails.Gap}"/>""", "ProbeRails", SemanticTokensEngine.Type)]
     [TestCase("""<Border Width="{x:Static ProbeRails.Gap}"/>""", "Gap", SemanticTokensEngine.Property)]
+    [TestCase("""<StyleInclude Source="ProbeRails"/>""", "ProbeRails", SemanticTokensEngine.Type)]
+    [TestCase("""<StyleInclude Source="local:Missing"/>""", "Missing", SemanticTokensEngine.Unknown)]
+    [TestCase("""<DropDown EnumType="HorizontalAlignment"/>""", "HorizontalAlignment", SemanticTokensEngine.Type)]
     public void TheTypeIsPaintedByWhetherItExists(string body, string word, int expected)
     {
         var text = Root + body + "</Window>";
-        var start = text.IndexOf(word, text.IndexOf('{'), StringComparison.Ordinal);
+        var start = text.IndexOf(word, Root.Length, StringComparison.Ordinal);
 
         var token = SemanticTokensEngine.Tokenize(text, _model).Single(t => t.Start == start);
 

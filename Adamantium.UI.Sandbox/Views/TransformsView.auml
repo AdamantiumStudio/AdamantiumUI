@@ -6,7 +6,7 @@
          put while dragging Spread. -->
     <Grid RowDefinitions="Auto,*" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="{Localize TransformsStrings.Title}"/>
+            <TextBlock x:Name="TransformsHeading" Text="{Localize TransformsStrings.Title}"/>
             <TextBlock Text="{Localize TransformsStrings.Hint}"
                        Foreground="#94A3B8" Margin="0,4,0,0"/>
 
@@ -34,7 +34,7 @@
             </WrapPanel>
         </StackPanel>
 
-        <ListBox Grid.Row="1" Margin="0,14,0,0" ItemsSource="{Binding Transforms.Tiles}">
+        <ListBox AutomationProperties.LabeledBy="{Binding ElementName=TransformsHeading}" Grid.Row="1" Margin="0,14,0,0" ItemsSource="{Binding Transforms.Tiles}">
             <ListBox.ItemContainerStyle>
                 <Style Selector="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

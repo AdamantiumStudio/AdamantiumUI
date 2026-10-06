@@ -71,6 +71,9 @@ public class PropertyRowAutomationPeer : UIComponentAutomationPeer, IValueProvid
 
     protected override string NameCore() => _row.Definition?.Header as string ?? TextOf(_row);
 
+    /// <summary>The row's editor goes by the property's name.</summary>
+    protected internal override string NameForChild(AutomationPeer child) => Name is { Length: > 0 } name ? name : null;
+
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {
         var children = new List<AutomationPeer>();

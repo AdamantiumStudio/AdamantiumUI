@@ -111,6 +111,119 @@ public class AutomationGridTests
     }
 
     [Test]
+    public async Task AGroup_IsARowCalledByItsCaption_ThatOpensAndCloses()
+    {
+        var (grid, parts) = Table(6);
+        foreach (var part in parts)
+        {
+            part.Size %= 2;
+        }
+
+        grid.GroupBy(grid.Columns[1]);
+        await using var session = await Driving(grid);
+        var group = session.Find(By.Id("Parts")).Find(By.Type(AutomationControlType.DataItem)).At(0);
+
+        var shown = await group.GetAsync();
+        var rowsClosed = grid.Items.Count;
+        await group.ExpandAsync();
+        var opened = (await group.GetAsync()).ExpandCollapseState;
+        var rowsOpen = grid.Items.Count;
+        await group.CollapseAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Name, Does.Contain("0"), "called by the value its rows share");
+            Assert.That(shown.ExpandCollapseState, Is.EqualTo("Collapsed"), "a group opens closed");
+            Assert.That(opened, Is.EqualTo("Expanded"));
+            Assert.That(rowsOpen, Is.EqualTo(rowsClosed + 3), "opening the group showed its three rows");
+            Assert.That(grid.Items.Count, Is.EqualTo(rowsClosed), "closing it hid them again");
+        });
+    }
+
+    [Test]
+    public async Task TheStripsAboveTheTable_AreFound_AndTheirKeysTurnMoveAndGo()
+    {
+        var (grid, _) = Table(20);
+        grid.ShowSearchPanel = true;
+        grid.ShowGroupPanel = true;
+        grid.ShowSortPanel = true;
+        grid.SortBy(grid.Columns[0]);
+        grid.AddSort(grid.Columns[1]);
+        grid.GroupBy(grid.Columns[1]);
+        await using var session = await Driving(grid);
+        var sorting = session.Find(By.Id("Parts")).Child(By.Type(AutomationControlType.ToolBar)).At(1);
+        var code = sorting.Child(By.Name("Code"));
+        var size = sorting.Child(By.Name("Size"));
+
+        var search = await session.Find(By.Id("Parts")).Child(By.Type(AutomationControlType.Group)).Find(By.Type(AutomationControlType.Edit)).GetAsync();
+        await code.ToggleAsync();
+        var turned = grid.SortDescriptions[0].Descending;
+        var sizeBounds = (await size.GetAsync()).Bounds;
+        var codeBounds = (await code.GetAsync()).Bounds;
+        await size.MoveByAsync(codeBounds[0] - sizeBounds[0] - 10, 0);
+        var first = grid.SortDescriptions[0].Column;
+        await code.Child(By.Type(AutomationControlType.Button)).InvokeAsync();
+        var keys = grid.SortDescriptions.Count;
+        await session.Find(By.Id("Parts")).Child(By.Type(AutomationControlType.ToolBar)).At(0).Child(By.Name("Size"))
+            .Child(By.Type(AutomationControlType.Button)).InvokeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(search.ControlType, Is.EqualTo("Edit"), "the search box is reachable");
+            Assert.That(turned, Is.True, "a sort key turns around");
+            Assert.That(first, Is.SameAs(grid.Columns[1]), "carried before the first key, it decides");
+            Assert.That(keys, Is.EqualTo(1), "its × took a key out");
+            Assert.That(grid.GroupDescriptions, Is.Empty, "the grouping chip's × took the grouping out");
+        });
+    }
+
+    [Test]
+    public async Task AHeader_IsCarriedIntoTheStrips_AndAmongTheColumns_AsAHandWouldCarryIt()
+    {
+        var (grid, _) = Table(20);
+        grid.ShowGroupPanel = true;
+        grid.ShowSortPanel = true;
+        await using var session = await Driving(grid);
+        var table = session.Find(By.Id("Parts"));
+        AutomationElement Header(string name) => table.Find(By.Type(AutomationControlType.HeaderItem).And(By.Name(name)));
+
+        await Header("Size").DropOntoAsync(Header("Code"), DropSide.Before);
+        var first = grid.Columns[0].Header;
+        await Header("Code").DropOntoAsync(table.Child(By.Type(AutomationControlType.ToolBar)).At(1));
+        var sorted = grid.SortDescriptions.Select(key => (string)key.Column.Header).ToList();
+        await Header("Size").DropOntoAsync(table.Child(By.Type(AutomationControlType.ToolBar)).At(0));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo("Size"), "dropped before another header, it goes before it");
+            Assert.That(sorted, Is.EqualTo(new[] { "Code" }), "dropped on the sorting strip, it is a sort key");
+            Assert.That(grid.GroupDescriptions, Has.Count.EqualTo(1), "dropped on the grouping strip, it groups the rows");
+        });
+    }
+
+    [Test]
+    public async Task AHeadersFunnel_IsAButton_ThatOpensAndClosesTheColumnsFilter()
+    {
+        var (grid, _) = Table(20);
+        await using var session = await Driving(grid);
+        var funnel = session.Find(By.Id("Parts")).Find(By.Type(AutomationControlType.HeaderItem).And(By.Name("Code")))
+            .Child(By.Type(AutomationControlType.Button));
+
+        var shown = await funnel.GetAsync();
+        await funnel.InvokeAsync();
+        var filter = await session.Find(By.Id("PART_FilterView")).GetAsync();
+        await funnel.InvokeAsync();
+        var stillThere = await session.Find(By.Id("PART_FilterView")).ExistsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Name, Is.EqualTo("Filter"), "called by its tooltip");
+            Assert.That(filter.IsOffscreen, Is.False, "pressed, it opens the column's filter");
+            Assert.That(stillThere, Is.False, "pressed again, it closes it");
+        });
+    }
+
+    [Test]
     public async Task AHeader_SortsByItsColumn_AsAClickDoes()
     {
         var (grid, _) = Table();

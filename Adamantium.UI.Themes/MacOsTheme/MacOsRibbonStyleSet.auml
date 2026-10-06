@@ -135,6 +135,7 @@
                                     <ContentPresenter x:Name="PART_SelectedContentHost"
                                             Content="{TemplateBinding SelectedContent}"
                                             ContentTemplate="{TemplateBinding ContentTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
                                             HorizontalAlignment="Stretch"
                                             VerticalAlignment="Stretch"/>
                                 </Border>
@@ -418,9 +419,9 @@
             <Setter.Value>
                 <DataTemplate>
                     <Grid Width="16" Height="16">
-                        <Path Data="{Binding}" StrokeThickness="1" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>
@@ -766,9 +767,9 @@
                     <!-- The 16-unit box icons are authored on, stated. Without it a Shape is measured by its own tight
                          ink, so the Viewbox scales every icon by a different factor and they sit at different heights. -->
                     <Grid Width="16" Height="16">
-                        <Path Data="{Binding}" StrokeThickness="1" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>
@@ -822,10 +823,11 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
-        <!-- The ICON grays out with the label - it is the part a person aims at. -->
+        <!-- The ICON fades with the label - it is the part a person aims at. Faded, not recolored: a picture keeps its
+             own colors, and path data at this opacity is the disabled text color. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
-            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
+            <Setter TargetName="PART_Icon" Property="Opacity" Value="0.25"/>
         </PropertyTrigger>
         <!-- Medium: small icon, label beside it. The label moves CELL, so one presenter serves every size. -->
         <PropertyTrigger Property="Ribbon.Size" Value="Medium">
@@ -1154,9 +1156,9 @@
             <Setter.Value>
                 <DataTemplate>
                     <Grid Width="16" Height="16">
-                        <Path Data="{Binding}" StrokeThickness="1" Fill="Transparent"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
                     </Grid>
                 </DataTemplate>
             </Setter.Value>

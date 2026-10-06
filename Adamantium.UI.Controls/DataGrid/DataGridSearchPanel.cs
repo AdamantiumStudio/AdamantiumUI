@@ -2,6 +2,8 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -151,4 +153,7 @@ public class DataGridSearchPanel : Control
         Owner.SetCurrentValue(TreeDataGrid.SearchTextProperty, _text?.Text);
         Owner.Search();
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        new GroupAutomationPeer(this);
 }

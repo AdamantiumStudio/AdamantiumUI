@@ -9,6 +9,8 @@ namespace Adamantium.UI.Core.Media.Imaging;
 
 public sealed class BitmapImage : BitmapSource
 {
+   private static int _loadsInFlight;
+   private static long _loadsFinished;
    private IRawBitmap _rawBitmap;
    // Initialized HERE, not per-constructor: the IRawBitmap overload chains to base() rather than this(), so it used to
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
@@ -70,6 +72,7 @@ public sealed class BitmapImage : BitmapSource
             // Load OFF the UI thread: decoding (especially every frame of an animated APNG/GIF) is heavy and froze the UI
             // while a view full of images was being built (a multi-second tab-switch hang). Consumers await LoadTask
             // before reading frames (see Image.ProcessImageSource); FrameCount/GetFrame report empty until it completes.
+            Interlocked.Increment(ref _loadsInFlight);
             bitmap.LoadTask = Task.Run(() => bitmap.Load(uri));
          }
       }
@@ -136,6 +139,13 @@ public sealed class BitmapImage : BitmapSource
    /// <summary>The background load kicked off when <see cref="UriSource"/> was set (null if the bitmap was built from raw
    /// data). Await it before reading frames so decoding never runs on the UI thread.</summary>
    public Task LoadTask { get; private set; }
+
+   /// <summary>How many pictures are being read from their files right now, across the application.</summary>
+   public static int LoadsInFlight => Volatile.Read(ref _loadsInFlight);
+
+   /// <summary>How many pictures have finished reading their files, loaded or failed, counting up: a change says one
+   /// has arrived since the count was last looked at.</summary>
+   public static long LoadsFinished => Interlocked.Read(ref _loadsFinished);
 
    /// <summary>Completes when a URI-sourced bitmap has finished loading; completes immediately if there is no pending load.</summary>
    public Task EnsureLoadedAsync() => LoadTask ?? Task.CompletedTask;
@@ -362,6 +372,11 @@ public sealed class BitmapImage : BitmapSource
       catch (Exception e)
       {
          LoadError = e;
+      }
+      finally
+      {
+         Interlocked.Increment(ref _loadsFinished);
+         Interlocked.Decrement(ref _loadsInFlight);
       }
    }
 

@@ -1,6 +1,8 @@
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Docking;
@@ -82,4 +84,6 @@ public class UnsavedQuestion : Control
     private void OnDiscard(object sender, RoutedEventArgs e) => Answered?.Invoke(UnsavedAnswer.Discard);
 
     private void OnCancel(object sender, RoutedEventArgs e) => Answered?.Invoke(UnsavedAnswer.Cancel);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new QuestionAutomationPeer(this);
 }

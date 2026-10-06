@@ -1,7 +1,9 @@
 using System;
 using System.Globalization;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -50,4 +52,7 @@ public class CanvasViewBar : Control, ICanvasPart
             ? "1x"
             : String.Format(CultureInfo.InvariantCulture, "{0:0.###}x", canvas.Scale);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ToolBarAutomationPeer(this) : null;
 }

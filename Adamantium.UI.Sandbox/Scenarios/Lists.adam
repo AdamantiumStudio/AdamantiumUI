@@ -7,6 +7,19 @@ expect id=SelectedPlanet name=Mars
 click id=SingleList/name=Venus
 expect id=SelectedPlanet name=Venus
 expect id=SingleList/name=Venus selected=True
+# The list of many: one selected, two more added, one taken out - and selecting one again keeps it selected.
+select id=MultipleList/name=Mercury
+select id=MultipleList/name=Earth --add
+select id=MultipleList/name=Mars --add
+expect id=MultipleList/name=Earth selected=True
+unselect id=MultipleList/name=Earth
+expect id=MultipleList/name=Earth selected=False
+expect id=MultipleList/name=Mars selected=True
+select id=MultipleList/name=Mercury
+select id=MultipleList/name=Mercury
+expect id=MultipleList/name=Mercury selected=True
+expect id=MultipleList/name=Mars selected=False
+unselect id=MultipleList/name=Mercury
 set id=Search 00042
 expect id=LargeList/type=ListItem name="Item 00042"
 set id=Search ""

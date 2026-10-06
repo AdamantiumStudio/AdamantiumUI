@@ -61,6 +61,12 @@ public sealed class ElementInfo
     /// <summary>Normal, Minimized or Maximized, when it is a window.</summary>
     public string WindowState { get; set; }
 
+    /// <summary>How far it is zoomed, in percent, when it zooms.</summary>
+    public double? Zoom { get; set; }
+
+    /// <summary>Where it is docked - Top, Left, Bottom, Right, Fill or None - when it docks.</summary>
+    public string DockPosition { get; set; }
+
     /// <summary>One line for a person: what it is, what it is called and found by, and the state it is in.</summary>
     public override string ToString()
     {
@@ -114,6 +120,16 @@ public sealed class ElementInfo
         if (WindowState != null)
         {
             line.Append(' ').Append(WindowState);
+        }
+
+        if (Zoom is { } zoom)
+        {
+            line.Append(" zoomed ").Append(Percent(zoom));
+        }
+
+        if (DockPosition != null)
+        {
+            line.Append(" docked ").Append(DockPosition);
         }
 
         if (IsOffscreen)

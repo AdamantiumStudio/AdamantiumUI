@@ -1,5 +1,5 @@
 # The Navigation page: pages navigated to in the region and back and forward through its journal, cards added to a
-# list region, and an overlay window opened and closed.
+# list region, and an overlay window opened, moved, resized and closed.
 select id=GalleryTabs/id=Navigation
 wait id=Region/id=HomePageView
 invoke id=NavigationDemoView/name="Details (id=42)"
@@ -21,5 +21,7 @@ invoke id=NavigationDemoView/name="Add card"
 invoke id=NavigationDemoView/name="Add card"
 invoke id=NavigationDemoView/name="Show overlay window"
 wait id=OverlayWindow/id=OverlayDemoView
+move id=OverlayWindow -20 10
+resize id=OverlayWindow 480 300
 window id=OverlayWindow close
 absent id=OverlayWindow

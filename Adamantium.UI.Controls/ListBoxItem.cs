@@ -11,7 +11,8 @@ namespace Adamantium.UI.Controls;
 public class ListBoxItem : ContentControl, ISelectable
 {
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
-        typeof(bool), typeof(ListBoxItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
+        typeof(bool), typeof(ListBoxItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender,
+            (a, e) => AutomationEvents.RaiseSelected((ListBoxItem)a, (bool)e.NewValue)));
 
     public static readonly AdamantiumProperty IsPressedProperty = AdamantiumProperty.Register(nameof(IsPressed),
         typeof(bool), typeof(ListBoxItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));

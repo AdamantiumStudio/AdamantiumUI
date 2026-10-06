@@ -75,7 +75,14 @@ internal sealed class AumlInstantiator
                     case AumlAstObjectNode objectNode:
                         var childObj = Instantiate(objectNode);
                         if (childObj is IAdamantiumComponent && instance is IContainer container)
+                        {
                             container.AddOrSetChildComponent(childObj);
+                        }
+                        else if (childObj != null && ContentListOf(instance) is { } content)
+                        {
+                            content.Add(childObj);
+                        }
+
                         break;
 
                     case AumlAstPropertyNode { Property: AumlAstPropertyReference pref } prop:
@@ -128,6 +135,11 @@ internal sealed class AumlInstantiator
         }
     }
 
+    private static System.Collections.IList ContentListOf(object instance) =>
+        instance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(p => p.GetCustomAttribute<ContentAttribute>() != null)
+            ?.GetValue(instance) as System.Collections.IList;
+
     // A template is a factory, as the generator emits it: every Build() makes a fresh copy of its content.
     private object BuildTemplate(AumlAstObjectNode node, Type templateType)
     {
@@ -154,6 +166,12 @@ internal sealed class AumlInstantiator
         }
 
         SourceMap[template] = new AumlSourceSpan(node.Line, node.Position);
+        if (template is DataTemplate dataTemplate
+            && node.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.DataType)?.Value
+                is AumlAstTypeReferenceValueNode { TypeReference: { } dataType })
+        {
+            dataTemplate.DataType = ResolveClrType(dataType);
+        }
 
         // The template's own configuration - ControlTemplate.TargetType, HierarchicalDataTemplate.ItemsSource, ...
         foreach (var prop in properties.Where(p => ((AumlAstPropertyReference)p.Property).Name != "Triggers"))

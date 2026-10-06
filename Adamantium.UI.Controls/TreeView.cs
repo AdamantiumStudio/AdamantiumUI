@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
@@ -94,6 +95,15 @@ public class TreeView : ItemsControl
     // Writes a node's OWN IsExpanded (the ItemContainerStyle's IsExpanded binding path), so SyncRowExpansion can trigger a
     // lazy branch's load synchronously BEFORE the flattener reads its children - no reliance on binding-vs-callback order.
     private Action<object, bool> _setNodeExpanded = static (_, _) => { };
+
+    // The containers' style as given and as applied, the member it opens rows by, and the nodes shown now - see
+    // ContainerStyle. _writingNode is up while the tree writes that member itself.
+    private Style _containerStyleOf;
+    private Style _containerStyle;
+    private string _expandMember;
+    private Func<object, bool> _isNodeExpanded = static _ => false;
+    private readonly Dictionary<TreeViewItem, INotifyPropertyChanged> _watched = new();
+    private bool _writingNode;
 
     // Two-way scroll-offset plumbing: _scrollViewer is the template's ScrollViewer; _applyingOffset guards the property
     // <-> scrollbar echo from looping; a set offset that can't land yet (extent not measured) is kept _desired and retried
@@ -270,16 +280,105 @@ public class TreeView : ItemsControl
     }
 
     // Every row is a TreeViewItem (flat and indented), whatever the template: the template draws the node.
-    protected internal override IUIComponent GetContainerForItem(object item) => TreeViewItem.CreateContainer(ItemContainerStyle);
+    protected internal override IUIComponent GetContainerForItem(object item) => TreeViewItem.CreateContainer(ContainerStyle());
+
+    // The container style without its IsExpanded binding, when that names one member: the tree keeps that member itself -
+    // writes it as rows open and close, and follows it on the nodes that have it - so a node of another kind, a leaf
+    // without the member, is not a binding that cannot resolve.
+    private Style ContainerStyle()
+    {
+        if (ReferenceEquals(_containerStyleOf, ItemContainerStyle))
+        {
+            return _containerStyle;
+        }
+
+        _containerStyleOf = ItemContainerStyle;
+        _containerStyle = _containerStyleOf;
+        var path = MemberPath(nameof(TreeViewItem.IsExpanded));
+        _expandMember = path != null && !path.Contains('.') ? path : null;
+        _isNodeExpanded = TreeChildResolver.ForBoolPath(_expandMember);
+        if (_expandMember == null)
+        {
+            return _containerStyle;
+        }
+
+        var copy = new Style { Selector = _containerStyleOf.Selector, BasedOn = _containerStyleOf.BasedOn };
+        foreach (var setter in _containerStyleOf.Setters)
+        {
+            if (setter is not Setter { Property: nameof(TreeViewItem.IsExpanded), Value: Binding })
+            {
+                copy.Setters.Add(setter);
+            }
+        }
+
+        foreach (var trigger in _containerStyleOf.Triggers)
+        {
+            copy.Triggers.Add(trigger);
+        }
+
+        _containerStyle = copy;
+        return copy;
+    }
+
+    private void Watch(TreeViewItem container, object node)
+    {
+        if (_watched.Remove(container, out var old))
+        {
+            old.PropertyChanged -= OnNodePropertyChanged;
+        }
+
+        if (_expandMember != null && node is INotifyPropertyChanged observed)
+        {
+            observed.PropertyChanged += OnNodePropertyChanged;
+            _watched[container] = observed;
+        }
+    }
+
+    // A node's own member changed - by the application, not by the tree writing it: open or close its row to match.
+    private void OnNodePropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (_writingNode || (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _expandMember))
+        {
+            return;
+        }
+
+        TreeViewItem shown = null;
+        foreach (var (container, node) in _watched)
+        {
+            if (ReferenceEquals(node, sender))
+            {
+                shown = container;
+                break;
+            }
+        }
+
+        shown?.SetCurrentValue(TreeViewItem.IsExpandedProperty, _isNodeExpanded(sender));
+    }
+
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        if (container is TreeViewItem item)
+        {
+            Watch(item, null);
+        }
+
+        base.ClearContainer(container);
+    }
 
     // Bind a (new or recycled) container to a flat row: draw the node via the template header, indent by depth, mirror
-    // the row's expand/selection state. The node is the DataContext so the header's {Binding}s and the ItemContainerStyle's
-    // IsExpanded two-way binding resolve against it.
+    // the row's expand/selection state. The node is the DataContext so the header's {Binding}s resolve against it.
     protected internal override void PrepareContainer(IUIComponent container, object item)
     {
         if (container is TreeViewItem node && item is TreeRow row)
         {
             node.BindRow(row, ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(row.Node, node));
+            Watch(node, row.Node);
+
+            // A node opened or closed while it had no row on screen catches up as it is shown.
+            if (_expandMember != null && row.HasChildren && _isNodeExpanded(row.Node) != row.IsExpanded)
+            {
+                node.SetCurrentValue(TreeViewItem.IsExpandedProperty, !row.IsExpanded);
+            }
 
             // The focus rides the ROW, exactly as the selection does. A container is not a place in the tree: the panel
             // recycles containers onto other rows as the view scrolls, so a focus left pinned to one drifts onto
@@ -337,13 +436,26 @@ public class TreeView : ItemsControl
 
         if (expanded)
         {
-            _setNodeExpanded(row.Node, true);   // trigger the lazy load before the flattener reads the children
+            WriteNodeExpanded(row.Node, true);   // trigger the lazy load before the flattener reads the children
             _flattener.Expand(row);
         }
         else
         {
             _flattener.Collapse(row);
-            _setNodeExpanded(row.Node, false);
+            WriteNodeExpanded(row.Node, false);
+        }
+    }
+
+    private void WriteNodeExpanded(object node, bool expanded)
+    {
+        _writingNode = true;
+        try
+        {
+            _setNodeExpanded(node, expanded);
+        }
+        finally
+        {
+            _writingNode = false;
         }
     }
 
@@ -584,6 +696,36 @@ public class TreeView : ItemsControl
         ClearSelection();
         Select(row);
         Chosen(row.Node);
+    }
+
+    /// <summary>Automation's three: this row alone; this one as well; not this one - whatever the mode, which a click
+    /// reads as toggle or replace.</summary>
+    internal void SelectOnlyRow(TreeRow row)
+    {
+        SelectOnly(row);
+        _anchorRow = row;
+        SyncSelectionToContainers();
+    }
+
+    internal void AddRowToSelection(TreeRow row)
+    {
+        if (row.IsSelected) return;
+
+        if (SelectionMode == TreeViewSelectionMode.Single && _selectedRows.Count > 0)
+        {
+            throw new InvalidOperationException("One node is selected here at a time; select it instead.");
+        }
+
+        ToggleSelection(row);
+        SyncSelectionToContainers();
+    }
+
+    internal void RemoveRowFromSelection(TreeRow row)
+    {
+        if (!row.IsSelected) return;
+
+        ToggleSelection(row);
+        SyncSelectionToContainers();
     }
 
     // Flip one row, leaving the rest untouched (Multiple, and Extended's Ctrl+click).

@@ -237,8 +237,8 @@ All packages share one version.
   selection and state - and `AutomationSession.TreeAsync` (`adam-auto tree`) lists every element that way, where it
   gave names alone.
 - `UIApplication.WaitForIdleAsync` completes once the application is idle: nothing posted to the loop, no layout,
-  binding or recorded change left to do, no animation that ends on its own still running, no glyphs on their way - and
-  the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
+  binding or recorded change left to do, no animation that ends on its own still running, no glyphs or pictures on their
+  way (`BitmapImage.LoadsInFlight`, `LoadsFinished`) - and the frame showing that drawn. `IdleBlocker` says what it is still waiting on. An animation that never ends counts as
   idle: one that loops forever, and a ticker registered with `AnimationManager.AddEndlessTicker` (a caret's blink, an
   animated picture). Automation waits for it after every action instead of for two frames, and `adam-auto` says what
   kept the application busy when it does not settle.
@@ -264,8 +264,129 @@ All packages share one version.
 - `UIApplication.StartupThemeVariant`: the variant of the theme the application opens on - Light, Dark, System or one
   of the theme's own. A variant the theme does not have fails the start, naming the ones it has.
 - `IThemeManager.AddStyleSet(Type)`: adds a style set known only at run time to every theme.
+- `DataTemplateSet`: a template selector written in markup instead of a class. Its `DataTemplate`s each state the type
+  they draw with `x:DataType`; the item's own type wins, then its base classes, nearest first, then an interface it
+  implements; one template without a type takes what no other fits. It goes wherever a selector goes - inline, or from
+  resources by key - and the build fails on two templates for one type or two without one. `DataTemplate.DataType`
+  carries the `x:DataType` at run time. A markup file with a `DataTemplateSet` at its root is a class of its own that
+  other markup places by name (`<Ribbon.ContentTemplateSelector><RibbonTabContents/></Ribbon.ContentTemplateSelector>`);
+  New | AUML File in Rider offers one.
+- `Ribbon.ContentTemplateSelector`: each data tab's groups picked by the tab's item, as `TabControl` has it.
+- The language server goes from a resource key to the markup that declares it, and from a class made from markup to its
+  `.auml` file rather than the generated code - a view's element, `ResourceLink Source=`, `{x:Type}`. It renames a key
+  where it is declared and wherever it is used, across the project's markup and that of projects built from source
+  with it, and lists those places. A key added or renamed in a dictionary is known at once, as typed, with no build.
+- `IconPresenter` draws an icon of either kind: path data stroked in its `Stroke`, or a picture - a `DrawingImage` of
+  the application's resources - in its own colors. The themes' ribbon commands, groups and application menu items draw
+  their `Icon` with it, so `Icon="{ObservableResource SaveIcon}"` shows the picture; until now a picture there went
+  into a path's data and drew nothing.
+- Windows UI Automation: a window answers screen readers and UI Automation clients (Narrator, Inspect, FlaUI) with its
+  elements as automation sees them - names, ids, control types, bounds - and does what their patterns ask: invoke,
+  toggle, expand, select, set a value or a range value, scroll, a grid's cells, the window's state. An open popup is a
+  child of whatever opened it. The bridge is part of `Adamantium.UI` and needs no package.
+- `AutomationEvents`: what changes on an element is told to whoever listens - focus, a press, a toggle, an expand, a
+  selection, a value, a popup opening or closing - with the element's peer and the old and new value. A property change
+  is told only for an element automation has seen. The Windows bridge passes them on to UI Automation clients.
+- `IUIComponent.GetAutomationPeer()` and `FindAutomationPeer()`, the peer already made or null.
+- UI tests of an application of your own, with `Adamantium.UI.Automation`: `HeadlessApplication.Start<TTheme>()` is
+  the application a headless test builds its windows in - resources, a theme, its style sets - and a window from markup
+  put in `AutomationSession.InProcess` is initialized as the application would, its view-model made.
+  `AutomationSession.LaunchAsync` starts the application itself with its agent on a pipe of its own and closes it with
+  the session. `RunScenarioAsync` runs a scenario file of `adam-auto`'s commands, `RunCommandAsync` one of them, and
+  `AutomationElement.WaitUntilAsync` waits for a state - its value became 40 - not only for an element; a scenario
+  writes that as `wait <selector> value=40`. `adam-auto` is now a wrapper over the same.
+- `dotnet new adamantium-uitest --app <Application>`: a test project for an application - its main window driven
+  headless and launched, in code and from a scenario file.
+- `UIAppContext.Replace`: the current application and platform in place of those before, for a process that runs
+  one after another.
+- Selector paths go further than "somewhere below": `>` looks among the children only, `[n]` keeps the n-th match
+  (from 0, `[-1]` the last), and `parent`, `next` and `previous` step from the element before -
+  `id=Orders>type=DataItem[2]/name=Delete`, `id=Cut/next`. In code: `By.At`, `By.Parent` / `Next` / `Previous`,
+  `AutomationElement.Child`, `At`, `Parent()`, `Next()`, `Previous()`.
+- `adam-auto` is a package of its own, `Adamantium.UI.Automation.Cli`, installed as a .NET tool
+  (`dotnet tool install -g Adamantium.UI.Automation.Cli`); `adam-auto start --exe <path>` starts an application of yours.
+- `<AdamantiumRequireAutomationId>true</AdamantiumRequireAutomationId>` in a project makes a build warning (AUI011) of
+  every button, field, list, slider... in its markup that has neither `AutomationProperties.AutomationId` nor `x:Name`
+  to be found by. Controls in templates are left out. Off unless set.
+- `ITextProvider`: a `TextBox` is read by character, word, line and paragraph - its selection, where a piece of it is on
+  screen, the place nearest a point. The Windows bridge gives it the Text pattern, so a screen reader follows the caret
+  through it; `AutomationEvent.TextChanged` and `TextSelectionChanged` tell it the text and the caret moved.
+- `ITableItemProvider`, `IGridItemProvider.RowSpan` / `ColumnSpan` and `ISelectionProvider.IsSelectionRequired`. A data
+  grid's row is an item of the table taking every column, under the column headers, and is brought into view; a cell
+  knows its column's header. One tab and one ribbon tab are always selected.
+- A border or a panel given `AutomationProperties.Name` or `LabeledBy` is a group of what it holds - a section under its
+  heading - so two sections' controls that read the same are told apart.
+- `LoopSignal.PostAwaited` and `Pause`: work another thread waits on runs while the loop holds between frames, not at
+  the start of the next one. A UI Automation question is answered in well under a millisecond, not after a frame.
+- `MouseDevice.HitTestTopmost`: the element a click at a point of a window reaches - open popups first, newest on top.
+- An element given only `AutomationProperties.AutomationId` - a border, a panel, a shape - is found by it: it is a group
+  of what it holds. Until now only a name or a label put it in the automation tree.
+- Automation peers of their own: an `Image` is a picture called by its `AutomationProperties.Name`; a `BusyIndicator`
+  is a progress bar with no amount, shown while it runs; a `Thumb`, a grid or pane splitter, a `DragHandle` and a
+  `ResizeGripper` are thumbs; a `Separator` is a separator; a `ToolTip` is a tooltip called by what it says; a window's
+  `TitleBar` is a title bar called by the title, holding the caption buttons.
+- `ITransformProvider` (`PatternId.Transform`): a splitter is moved along its axis and its neighbors follow; a canvas
+  node is moved and resized, each as one step of undo; a `ZoomBox` and an `InfiniteCanvas` are zoomed in percent, about
+  the middle of the view. A `ZoomBox` also scrolls through automation by its own scroll viewer. The Windows bridge gives
+  them the Transform and Transform2 patterns. In code `AutomationElement.MoveByAsync`, `ResizeAsync`, `ZoomAsync`; in
+  `adam-auto` `move <selector> <dx> <dy>`, `resize <selector> <width> <height>`, `zoom <selector> <%>`, and `zoom` to
+  expect. `ZoomBox.ZoomTo` zooms holding the middle of the view.
+- A canvas node is selected through automation as a click selects it, and the canvas says which nodes are selected and
+  tells automation when that changes.
+- A control on an `InfiniteCanvas` that is off screen is still found by automation, by its id and name, through a
+  stand-in; brought into view (`scroll <selector>`, `ScrollIntoViewAsync`) the camera moves to it without zooming, and
+  from then on it is the control itself. A node of the application's graph that has never been on screen goes by its
+  model's title, or kind.
+- Wires through automation: a node's socket is an element called by its pin's name, whose value says what it is joined
+  to; `IConnectionProvider` joins it to another socket and parts them, by the graph's rules and as one step of undo
+  each (`adam-auto connect <socket> <socket>`, `disconnect <socket> [<socket>]`; `AutomationElement.ConnectAsync`,
+  `DisconnectAsync`). A node folds and unfolds through ExpandCollapse.
+- Docking through automation, as the Dock pattern of UI Automation: a pane says where it is docked and goes to an
+  edge, into the documents or out into a window of its own by the layout's rules and the application's; beside
+  another pane's panel, or into it as a tab. A panel moves with every pane in it, or tears out whole.
+  `adam-auto dock <pane> top|left|bottom|right|fill|none [--beside <pane>]`, `dock` to expect,
+  `AutomationElement.DockAsync`.
+- Windows move and resize through automation (the Transform pattern) while they are neither minimized nor maximized;
+  so does an `OverlayWindow`, kept inside the window it is shown over, and a floating `CanvasPane` - moved as its grip
+  and widened as its edge would. `adam-auto move` / `resize` take them like any other element.
+- Selections of many through automation: `ISelectionItemProvider.AddToSelection` and `RemoveFromSelection` add an item
+  to what is selected and take it out, leaving the rest - in a list, a tree, a data grid's rows and cells and on a
+  canvas; a container of one selection refuses a second. The Windows bridge passes both on. `adam-auto select
+  <selector> --add`, `unselect <selector>`; `AutomationElement.AddToSelectionAsync`, `RemoveFromSelectionAsync`.
+  `TreeDataGrid.DeselectRow` and `DeselectCell`, `DataGridSelection.Remove`.
+- A data grid's strips are in its automation tree - the search box, the grouping and sorting strips, the button that
+  chooses columns, the row for a new record and the totals - where their contents could not be reached before. A key's
+  chip turns its sort around (Toggle), moves along its strip (Transform) and is taken out by its ×, a button of its
+  own. The search box is named in the themes.
+- Automation types for what was a nameless "custom" element: a plain `ItemsControl` is a group; the data grid's
+  search, filter and column panels are groups and its sort and group strips tool bars, its totals and group captions
+  text; the canvas's inspector and node palette are panes and its selection and view bars tool bars; the canvas's and
+  the docking area's questions are panes called by what they ask.
+- A ribbon folds down to its tabs and opens again through ExpandCollapse (`adam-auto collapse` / `expand`), as its
+  minimize button does, and tells automation when it does.
+- A `FlipTile` is a button that turns over through Toggle - on is its back shown - and a `FractalView` a pane zoomed
+  in percent through Transform (`adam-auto zoom`), the way the wheel zooms it.
+- `IPanProvider` (`PatternId.Pan`): an `InfiniteCanvas` and a `FractalView` are panned through automation as a drag
+  pans them - `adam-auto pan <selector> <dx> <dy>`, `AutomationElement.PanAsync`. Automation's own capability: UI
+  Automation has no pattern for a plane with no edges.
+- A `CanvasMiniMap` is a picture to automation, named in the themes (`CanvasStrings.WholePlane`); the canvas's layer
+  tree and node palette are named too.
+- The menu key and Shift+F10 open the context menu of the focused element - its own, or the nearest one above it -
+  under it, with the keyboard on the first row. Until now a context menu opened only by the right button.
+- `AutomationPeer.ShowContextMenu` opens it the same way through automation: `adam-auto context-menu <selector>`,
+  `AutomationElement.ShowContextMenuAsync`, and UI Automation's `ShowContextMenu` (`IRawElementProviderSimple2`).
+- Drag and drop by element: `adam-auto drop <selector> <target> [--before|--after]`, `AutomationElement.DropOntoAsync`,
+  carries one element onto another by a gesture made inside the application - a row among rows of a list or a tree,
+  into another list, a column header among the headers or onto the grouping and sorting strips. It takes the element by
+  its drag handle when it has one, and says so when the target cannot be reached. `DragDrop.GetDragHandles`.
+  It drops into another of the application's windows too.
+- A column header's funnel is a button to automation that opens and closes the column's filter
+  (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
+
+- A ribbon command that cannot run fades its icon instead of recoloring it, so a picture with colors of its own fades
+  alike.
 
 - `UIApplication.StartupTheme` is the theme's type, not its name, and may be one of the application's own themes,
   which is added to the themes; `ADAM_THEME` still names one. `StartupType`, `StartupTheme`, `StartupLanguage` and
@@ -347,6 +468,64 @@ All packages share one version.
 
 ### Fixed
 
+- A drag made inside the application dropped into the window it began in even where another of the application's
+  windows lay over that spot; it now drops into the one on top.
+- A `TreeView` whose item container style binds `IsExpanded` reported a broken binding for every node without that
+  member - a leaf of another kind. The tree now keeps the member itself: it writes it as rows open and close and follows
+  it on the nodes that have it.
+- A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
+- After a control started drawing text where it had drawn none - a data grid's search showing "1 of 1" - every frame
+  threw and nothing more reached the screen until something forced a full redraw: the segment made for it carried no
+  font sheet. A frame that fails to draw is now also logged as an error, and waiting for idle says so.
+- A drag made inside the application - by automation - could be dropped on another application's window that lay over
+  the target; it now looks only among the application's own windows.
+- Selecting an item of a list or a tree that selects many, through automation, toggled it as a click does - selecting
+  the selected one again took it out. It now makes it the one selected item.
+- A floating docking window whose last pane was moved out by code - a `Zone` written, `DockBeside` - stayed open and
+  empty: its document area survived being emptied, as the main window's does. A floating window with no pane left
+  now closes.
+- Waiting for the application to go idle did not wait for work invoked on the dispatcher - a window closing, a drop
+  finishing - so automation could read the state before it changed.
+- A `BezierLine` could not be made: its properties were registered with the value type and the owner swapped.
+- A layer an `InfiniteCanvas` took off its stack - the camera moved away from what it held - kept those controls as
+  its children, so each still had the dead layer for a parent. The layer now lets them go.
+- A name given inside a template (`x:Name` in a `DataTemplate`) made a field of the view that nothing ever set - a
+  warning, so a build with warnings as errors failed. Such a name belongs to each copy the template stamps; the view
+  gets no field for it.
+- A markup file that is not well-formed XML - a prefix nobody declared - stopped the AUML generator for the whole
+  project: no class from any file, each reported missing, the cause only a warning. It is reported against that file
+  now, and the rest is generated.
+- An editor in a data grid's cell or a property grid's row had no name for a screen reader; it goes by the column's
+  header and the property's name. The color picker's fields go by their labels, a list's item with no text by what the
+  list calls the item, and a property grid is a pane of properties rather than a table that offers no table.
+- Automation called an element on screen when what clips it - a scrolled tab strip, the window - cut it away entirely;
+  `IsOffscreen` is true for it now, and false for one partly in view.
+- A mistake in the application blueprint - a `StartupWindow` the build does not find - also cost the entry point, and the
+  build added "no static Main method" to the real error; the entry point is written regardless now.
+- `{ResourceReference}`, `{ObservableResource}` or `{ThemeResource}` written with no key - `Icon="{ResourceReference }"`
+  mid-edit - crashed the AUML generator with an index out of range and the preview said nothing; both now report that
+  the marker on that property names no key.
+- A view with `x:ViewModel` built from a template for a view model it was given - by navigation into a docking area,
+  a tab control, a list - made a second view model of its own from the container before taking the given one: the
+  presenter now hands the view its view model before the view enters the tree. A view nested in a view of the same
+  view model shares the parent's instead of making another.
+- An application key named like a theme's - `SaveIcon` - was silently never found: a theme's dictionaries are searched
+  before the application's global ones. The language server warns on such a key; the sandbox's two are renamed.
+- The language server offered a binding against an `x:ViewModel` only the properties the view model's own class makes
+  with the MVVM generator, not those of its base classes; and nothing at all after `<ResourceContext.`, whose
+  properties are all attached.
+- A property element with nothing in it - `<ApplicationBlueprint.StyleIncludes>` holding only a comment - crashed the
+  AUML generator with an index out of range; it sets nothing now.
+- The language server painted a type written as a value - `StartupWindow="MainWindow"`, `TargetType="Button"` - as plain
+  text; it paints it as a type, and underlines one the build does not find. For a project not built yet, where it has no
+  types to check against, it says so on the file instead of staying silent.
+- A markup extension whose type the build does not find, nested in another - `Converter={conv:Missing}` - crashed the
+  AUML generator; it is reported as a type not found.
+- A value its property's type cannot take - `HorizontalAlignment="Middle"`, `Width="wide"`, `IsEnabled="yes"` - came out
+  of the build as a C# error in generated code and passed the preview of a template unnoticed. The build and the preview
+  name it in the markup, with what the property expects.
+- The language server's completion threw inside the `<?xml ...?>` declaration, in a file cut short, and for a file
+  not saved to disk; it offers what fits there, or nothing.
 - A window snapped onto a monitor with a different scale - a quarter of a 100% screen, from a 150% one - drew its
   content at the old scale in the window's corner. The resize arrives before the DPI change and was divided by the old
   scale; the window's size is now read again once the scale has changed.

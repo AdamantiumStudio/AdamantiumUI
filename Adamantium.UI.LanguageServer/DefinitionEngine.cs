@@ -5,7 +5,9 @@ using Microsoft.CodeAnalysis;
 namespace Adamantium.UI.LanguageServer;
 
 /// <summary>
-/// Resolves the C# declaration of the element/attribute under the caret (go-to-definition). In-repo types —
+/// Resolves the declaration of what is under the caret (go-to-definition): a resource key goes to the markup that
+/// declares it; a type - an element's, or one written as a value - to its C# file, or to its markup file when the build
+/// makes the class from markup; an attribute to its C# property. In-repo types —
 /// including the engine base controls, which the source graph compiles from source — resolve to their real
 /// source file; types that live only in an external assembly are decompiled on demand (see
 /// <see cref="MetadataDecompiler"/>). Reuses the hover token detector by placing the caret at the token end.
@@ -18,14 +20,26 @@ public sealed class DefinitionEngine
 
     public DefinitionEngine(AumlTypeModel model) => _model = model;
 
-    public DefinitionLocation Definition(string text, int offset)
+    /// <summary>Where what is at <paramref name="offset"/> is declared; null when nothing there is. A resource key
+    /// declared more than once is taken from <paramref name="documentPath"/>'s own project first.</summary>
+    public DefinitionLocation Definition(string text, int offset, string documentPath = null)
     {
         if (string.IsNullOrEmpty(text) || offset < 0 || offset > text.Length) return null;
+
+        if (ResourceKeyOccurrences.At(text, offset) is { } key)
+        {
+            return key.IsDeclaration ? null : KeyDefinition(key.Key, documentPath);
+        }
 
         int tokenEnd = offset;
         while (tokenEnd < text.Length && IsNameChar(text[tokenEnd])) tokenEnd++;
 
         var namespaces = AumlNamespaces.Scan(text);
+        if (TypeWrittenAt(text, offset, namespaces) is { } written)
+        {
+            return LocateType(written);
+        }
+
         var ctx = AumlCaretContext.Detect(text, tokenEnd);
         var symbol = ctx.Kind switch
         {
@@ -64,6 +78,63 @@ public sealed class DefinitionEngine
 
         return MemberSymbol(ResolveElement(ctx.ElementName, namespaces), local);
     }
+
+    private DefinitionLocation KeyDefinition(string key, string documentPath)
+    {
+        var ownRoot = _model.MarkupRootOf(documentPath);
+        var declared = _model.DeclarationsOf(key)
+            .OrderBy(k => ownRoot != null && _model.MarkupRootOf(k.File) == ownRoot ? 0 : 1)
+            .FirstOrDefault();
+        return declared == null
+            ? null
+            : new DefinitionLocation(declared.File, declared.Line, declared.Character, declared.Line, declared.Character + key.Length);
+    }
+
+    private IResolvedType TypeWrittenAt(string text, int offset, IReadOnlyDictionary<string, string> namespaces)
+    {
+        var tokens = SemanticTokensEngine.Tokenize(text, _model);
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var token = tokens[i];
+            if (token.TokenType != SemanticTokensEngine.Type || offset < token.Start || offset > token.Start + token.Length)
+            {
+                continue;
+            }
+
+            var start = token.Start;
+            if (i > 0 && tokens[i - 1] is { TokenType: SemanticTokensEngine.Namespace } prefix
+                      && prefix.Start + prefix.Length + 1 == token.Start && text[token.Start - 1] == ':')
+            {
+                start = prefix.Start;
+            }
+
+            var written = text[start..(token.Start + token.Length)];
+            return _model.TryResolveWritten(written, namespaces, out var type) ? type : null;
+        }
+
+        return null;
+    }
+
+    private DefinitionLocation LocateType(IResolvedType type)
+    {
+        var symbol = SymbolOf(type);
+        if (symbol != null && symbol.Locations.Any(IsHandWritten))
+        {
+            return Locate(symbol);
+        }
+
+        var markup = _model.MarkupFileOf(type);
+        if (markup != null)
+        {
+            return new DefinitionLocation(markup, 0, 0, 0, 0);
+        }
+
+        return symbol == null ? null : Locate(symbol);
+    }
+
+    private static bool IsHandWritten(Location location) =>
+        location.IsInSource && location.SourceTree is { FilePath: { Length: > 0 } path }
+                            && !path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) && File.Exists(path);
 
     private DefinitionLocation Locate(ISymbol symbol)
     {

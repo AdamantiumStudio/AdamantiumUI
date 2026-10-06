@@ -1,5 +1,7 @@
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls;
@@ -25,4 +27,7 @@ public class DragHandle : Control, IDragHandle
     }
 
     bool IDragHandle.IsDragHandleActive => IsActive;
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new ThumbAutomationPeer(this) : null;
 }

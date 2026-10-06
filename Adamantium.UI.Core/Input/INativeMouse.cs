@@ -11,4 +11,9 @@ public interface INativeMouse
 {
     /// <summary>Where the pointer is on the DESKTOP - see <see cref="PixelPoint"/> for why that has a type of its own.</summary>
     PixelPoint Position { get; set; }
+
+    /// <summary>The window a gesture made inside the application is in - null for the system pointer, whose window is
+    /// whichever the desktop has on top at <see cref="Position"/>. A made gesture is in the window it was made in, whatever
+    /// another application has over it.</summary>
+    IWindow Window => null;
 }

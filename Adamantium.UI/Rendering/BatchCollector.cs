@@ -579,8 +579,13 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         items.CopyTo(Items.AsSpan(first));
         UploadRange(first, items.Length);
         var id = ++_nextSegmentId;
-        _indexById[id] = _segments.Count;
+        var index = _segments.Count;
+        _indexById[id] = index;
         _segments.Add(new Segment { Id = id, Scissor = scissor, Count = (uint)items.Length, First = (uint)first, Capacity = (uint)want });
+
+        // A segment like any other, so per-segment state - a font sheet, a texture - is taken for it as a walk takes it.
+        // Without it the next draw of this segment bound state it never had, and threw on every frame after.
+        OnSegmentRecorded(index);
         return id;   // its footprint comes from the caller (GrowSegmentBounds): only it knows the logical bounds it baked
     }
 

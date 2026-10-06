@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -158,4 +160,7 @@ public class CanvasNodePalette : Control, ICanvasPart
         || (kind.Title ?? String.Empty).Contains(wanted, StringComparison.CurrentCultureIgnoreCase)
         || (kind.Kind ?? String.Empty).Contains(wanted, StringComparison.CurrentCultureIgnoreCase)
         || (kind.Group ?? String.Empty).Contains(wanted, StringComparison.CurrentCultureIgnoreCase);
+
+    protected override AutomationPeer OnCreateAutomationPeer() =>
+        TemplatedParent == null ? new PaneAutomationPeer(this) : null;
 }

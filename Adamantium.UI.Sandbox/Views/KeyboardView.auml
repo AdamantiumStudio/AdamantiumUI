@@ -47,10 +47,10 @@
             <!-- 3. Wrapped lines: along the line, across to the next, and round the end the way reading does. The panel
                     KEEPS the arrows, so one arrow too many cannot cost you your place. -->
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="{Localize KeyboardStrings.WrapTitle}" FontSize="16" Margin="0,20,0,6"/>
+            <TextBlock x:Name="WrapHeading" Text="{Localize KeyboardStrings.WrapTitle}" FontSize="16" Margin="0,20,0,6"/>
             <TextBlock Text="{Localize KeyboardStrings.WrapHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,8"/>
-            <ListBox Height="150" Width="470" HorizontalAlignment="Left"
+            <ListBox AutomationProperties.LabeledBy="{Binding ElementName=WrapHeading}" Height="150" Width="470" HorizontalAlignment="Left"
                      ItemsSource="{Binding Tiles}"
                      Background="Transparent">
                 <ListBox.ItemsPanel>
@@ -62,11 +62,11 @@
 
             <!-- 4. A list: Tab enters it ONCE and leaves it whole; the arrows move the selection, and the view follows. -->
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="{Localize KeyboardStrings.ListTitle}" FontSize="16" Margin="0,20,0,6"/>
+            <TextBlock x:Name="ListHeading" Text="{Localize KeyboardStrings.ListTitle}" FontSize="16" Margin="0,20,0,6"/>
             <TextBlock Text="{Localize KeyboardStrings.ListHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,8"/>
-            <StackPanel Orientation="Horizontal">
-                <ListBox Width="220" Height="160" ItemsSource="{Binding Rows}"/>
+            <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ListHeading}" Orientation="Horizontal">
+                <ListBox AutomationProperties.LabeledBy="{Binding ElementName=ListHeading}" Width="220" Height="160" ItemsSource="{Binding Rows}"/>
                 <StackPanel Orientation="Vertical" Margin="20,0,0,0">
                     <TextBlock Text="{Localize KeyboardStrings.TabLandsHere}" Margin="0,0,0,8"/>
                     <Button Content="{Localize KeyboardStrings.AfterList}" Width="160" Height="34" MarginBottom="8"/>
@@ -76,14 +76,14 @@
 
             <!-- 5. The controls whose arrows are their own: the value ones eat them, so the focus stays put. -->
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="{Localize KeyboardStrings.ClaimTitle}" FontSize="16" Margin="0,20,0,6"/>
+            <TextBlock x:Name="ClaimHeading" Text="{Localize KeyboardStrings.ClaimTitle}" FontSize="16" Margin="0,20,0,6"/>
             <TextBlock Text="{Localize KeyboardStrings.ClaimHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,8"/>
             <TextBlock Text="{Localize KeyboardStrings.NumberHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,8"/>
             <StackPanel Orientation="Horizontal">
-                <Slider Width="220" Minimum="0" Maximum="100" Value="40" VerticalAlignment="Center"/>
-                <NumericUpDown Width="150" Minimum="0" Maximum="100" Value="7" Margin="20,0,0,0"/>
+                <Slider AutomationProperties.LabeledBy="{Binding ElementName=ClaimHeading}" Width="220" Minimum="0" Maximum="100" Value="40" VerticalAlignment="Center"/>
+                <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ClaimHeading}" Width="150" Minimum="0" Maximum="100" Value="7" Margin="20,0,0,0"/>
                 <TextBox Width="180" Placeholder="{Localize KeyboardStrings.TextTakesThem}" Margin="20,0,0,0"/>
             </StackPanel>
 
@@ -119,10 +119,10 @@
                     looking the way it looked. Otherwise the focus is stranded on something no longer on screen and the
                     next Tab starts again from the top of the window. -->
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
-            <TextBlock Text="{Localize KeyboardStrings.OverlayTitle}" FontSize="16" Margin="0,20,0,6"/>
+            <TextBlock x:Name="OverlayHeading" Text="{Localize KeyboardStrings.OverlayTitle}" FontSize="16" Margin="0,20,0,6"/>
             <TextBlock Text="{Localize KeyboardStrings.OverlayHint}"
                        Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,8"/>
-            <StackPanel Orientation="Horizontal" MarginBottom="24">
+            <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=OverlayHeading}" Orientation="Horizontal" MarginBottom="24">
                 <DropDown Width="200" Placeholder="{Localize KeyboardStrings.OpenWithEnter}" ItemsSource="{Binding Tiles}"/>
                 <TextBlock Text="{Localize KeyboardStrings.TabLandsAfter}" VerticalAlignment="Center" Margin="20,0,0,0"
                            Foreground="{ResourceReference TextFillColorSecondary}"/>

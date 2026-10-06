@@ -1,6 +1,8 @@
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -70,4 +72,6 @@ public class CanvasQuestion : Control
     private void OnYes(object sender, RoutedEventArgs e) => Answered?.Invoke(true);
 
     private void OnNo(object sender, RoutedEventArgs e) => Answered?.Invoke(false);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new QuestionAutomationPeer(this);
 }

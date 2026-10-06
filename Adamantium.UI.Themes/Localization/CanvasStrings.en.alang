@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="MovePanel" Text="Drag to move the panel, click to fold it away"/>
     <Phrase Key="Map" Text="Map"/>
+    <Phrase Key="WholePlane" Text="The whole plane, the part in view framed"/>
     <Phrase Key="AddNode" Text="Add a node"/>
     <Phrase Key="ResizePanel" Text="Drag to set how wide the panel is"/>
     <Phrase Key="StickToEdge" Text="Stick to an edge when dropped near one"/>
@@ -34,7 +35,7 @@
     <Phrase Key="Redo" Text="Redo (Ctrl+Y)"/>
     <Phrase Key="ZoomOut" Text="Zoom out"/>
     <Phrase Key="ZoomIn" Text="Zoom in"/>
-    <Phrase Key="GoHome" Text="Back to the view kept beside this button"/>
+    <Phrase Key="GoHome" Text="Back to the kept view"/>
     <Phrase Key="KeepHome" Text="Keep this view as the one Home goes back to"/>
     <Phrase Key="ForgetHome" Text="Give up the kept view - Home goes back to the origin at one to one"/>
     <Phrase Key="FoldNode" Text="Fold the node down to its title"/>

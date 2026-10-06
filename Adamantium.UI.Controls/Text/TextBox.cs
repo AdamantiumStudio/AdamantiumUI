@@ -87,7 +87,11 @@ public class TextBox : TextBoxBase
 
     private static void OnTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        if (a is TextBox box) box.SetCurrentValue(HasTextProperty, !string.IsNullOrEmpty(box.Text));
+        if (a is not TextBox box) return;
+        box.SetCurrentValue(HasTextProperty, !string.IsNullOrEmpty(box.Text));
+        AutomationEvents.RaisePropertyChanged(box, AutomationProperty.Value, e.OldValue, e.NewValue);
+        if (AutomationEvents.IsListening && box.FindAutomationPeer() != null)
+            AutomationEvents.Raise(box, AutomationEvent.TextChanged);
     }
 
     protected override void OnUnhandledKey(KeyEventArgs e)

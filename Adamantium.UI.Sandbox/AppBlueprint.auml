@@ -3,6 +3,7 @@
                       StartupWindow="MainWindow">
     <ApplicationBlueprint.Resources>
         <ResourceLink Source="ModuleIcons"/>
+        <ResourceLink Source="RibbonShellIcons"/>
     </ApplicationBlueprint.Resources>
     <ApplicationBlueprint.StyleIncludes>
         <StyleInclude Source="RibbonShellStyleSet"/>

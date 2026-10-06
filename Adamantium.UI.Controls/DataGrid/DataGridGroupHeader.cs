@@ -1,6 +1,8 @@
 using System;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -88,4 +90,6 @@ public class DataGridGroupHeader : ContentControl
 
         header.SetBinding(ContentProperty, caption);
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new CaptionAutomationPeer(this);
 }

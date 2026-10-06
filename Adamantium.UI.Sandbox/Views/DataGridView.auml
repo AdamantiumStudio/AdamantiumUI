@@ -9,14 +9,14 @@
     <Grid ColumnDefinitions="*,Auto" Margin="16">
     <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" Margin="0,0,16,0">
 
-        <TextBlock Grid.Row="0" Text="TreeDataGrid" FontSize="18"/>
+        <TextBlock x:Name="TableHeading" Grid.Row="0" Text="TreeDataGrid" FontSize="18"/>
         <TextBlock Grid.Row="1" Margin="0,4,0,10" TextWrapping="WrapByWords"
                    Foreground="{ObservableResource TextFillColorSecondary}"
                    Text="{Localize GridPageStrings.Intro}"/>
 
         <!-- The tint comes from the picker below by ELEMENT, not through the view-model: the swatch's brush is the one
              live object and both the button and the table paint from it. -->
-        <TreeDataGrid Grid.Row="2" x:Name="Table"
+        <TreeDataGrid Grid.Row="2" x:Name="Table" AutomationProperties.LabeledBy="{Binding ElementName=TableHeading}"
                       ItemsSource="{Binding TreeSource}"
                       ChildrenPath="{Binding TreeChildrenPath}"
                       KeyPath="{Binding TreeKeyPath}"
@@ -363,8 +363,8 @@
 
                 <TextBlock Text="{Localize GridPageStrings.Totals}" FontSize="11" Margin="0,10,0,6"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
-                <TextBlock Text="{Localize GridPageStrings.SizeColumn}" Margin="0,0,0,4"/>
-                <DropDown Margin="0,0,0,6"
+                <TextBlock x:Name="SizeColumnLabel" Text="{Localize GridPageStrings.SizeColumn}" Margin="0,0,0,4"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=SizeColumnLabel}" Margin="0,0,0,6"
                           ItemsSource="{Binding AggregateChoices}"
                           SelectedItem="{Binding SizeAggregate, Mode=TwoWay}">
                     <DropDown.ItemTemplate>
@@ -384,20 +384,20 @@
                 <CheckBox Content="{Localize GridPageStrings.RowNumbers}" Margin="0,0,0,8"
                           IsChecked="{Binding ShowRowNumbers, Mode=TwoWay}"/>
 
-                <TextBlock Text="{Localize GridPageStrings.TintEvery}" Margin="0,0,0,4"/>
-                <NumericUpDown InputMode="Integers" Minimum="0" Maximum="4" SmallChange="1" Margin="0,0,0,4"
+                <TextBlock x:Name="TintEveryLabel" Text="{Localize GridPageStrings.TintEvery}" Margin="0,0,0,4"/>
+                <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=TintEveryLabel}" InputMode="Integers" Minimum="0" Maximum="4" SmallChange="1" Margin="0,0,0,4"
                                Value="{Binding AlternationCount, Mode=TwoWay}"/>
                 <TextBlock Text="{Localize GridPageStrings.TintHint}" FontSize="11" Margin="0,0,0,8"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                <TextBlock Text="{Localize GridPageStrings.TintColor}" Margin="0,0,0,4"/>
-                <ColorPickerButton x:Name="TintPicker" Width="72" Height="24" HorizontalAlignment="Left"
+                <TextBlock x:Name="TintColorLabel" Text="{Localize GridPageStrings.TintColor}" Margin="0,0,0,4"/>
+                <ColorPickerButton x:Name="TintPicker" AutomationProperties.LabeledBy="{Binding ElementName=TintColorLabel}" Width="72" Height="24" HorizontalAlignment="Left"
                                    Margin="0,0,0,8" SelectedColor="#332F6FED"/>
 
                 <TextBlock Text="{Localize GridPageStrings.Look}" FontSize="11" Margin="0,10,0,6"
                            Foreground="{ObservableResource TextFillColorSecondary}"/>
-                <TextBlock Text="{Localize GridPageStrings.GridLines}" Margin="0,0,0,4"/>
-                <DropDown Margin="0,0,0,8"
+                <TextBlock x:Name="GridLinesLabel" Text="{Localize GridPageStrings.GridLines}" Margin="0,0,0,4"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=GridLinesLabel}" Margin="0,0,0,8"
                           ItemsSource="{Binding GridLineChoices}"
                           SelectedItem="{Binding GridLines, Mode=TwoWay}">
                     <DropDown.ItemTemplate>
@@ -409,8 +409,8 @@
 
                 <!-- What a click takes. In FullRow the press, the drag and the arrows all take rows - one funnel
                      answers for the mode, so they cannot disagree. -->
-                <TextBlock Text="{Localize GridPageStrings.SelectionUnit}" Margin="0,0,0,4"/>
-                <DropDown Margin="0,0,0,8"
+                <TextBlock x:Name="SelectionUnitLabel" Text="{Localize GridPageStrings.SelectionUnit}" Margin="0,0,0,4"/>
+                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=SelectionUnitLabel}" Margin="0,0,0,8"
                           ItemsSource="{Binding SelectionUnitChoices}"
                           SelectedItem="{Binding SelectionUnit, Mode=TwoWay}">
                     <DropDown.ItemTemplate>

@@ -850,12 +850,17 @@ public class DockingLayout
         {
             var root = Roots[i];
             root.Content = NormalizeNode(root, root.Content);
-            if (root.Content == null && !root.IsMain) Roots.RemoveAt(i);
+            if (!root.IsMain && (root.Content == null || HoldsNoPane(root))) Roots.RemoveAt(i);
         }
 
         // No "unfold the ones that lost their edge" pass any more: put-away panels are not in these trees at all, so
         // nothing that happens here can take an edge away from them.
     }
+
+    // A FLOATING window with no pane left in it, docked or put away. Its document area survives being emptied - that is
+    // for the main window - so its content need not be null, yet nothing in it can be seen or used.
+    private static bool HoldsNoPane(DockingRoot root) =>
+        !PanesIn(root.Content).Any() && root.Bars.Values.All(bar => bar.Count == 0);
 
     private static PaneNode NormalizeNode(DockingRoot root, PaneNode node)
     {

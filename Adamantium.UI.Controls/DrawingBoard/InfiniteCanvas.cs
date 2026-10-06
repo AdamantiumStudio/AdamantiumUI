@@ -31,6 +31,7 @@ public partial class InfiniteCanvas : Control
     private bool _cameraPlaced;
 
     private readonly List<ICanvasItem> _selection = new();
+    private readonly List<IUIComponent> _announcedSelected = [];
     private Pen _selectionPen;
     private Brush _selectionPenBrush;
 
@@ -1633,9 +1634,40 @@ public partial class InfiniteCanvas : Control
         _chromeLayer?.SyncSelection();
         _chromeLayer?.InvalidateArrange();
 
+        AnnounceSelection();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
         Refresh();
         Repaint();
+    }
+
+    // Tells automation which controls on the plane were selected and which were let go since it was last told.
+    private void AnnounceSelection()
+    {
+        if (!AutomationEvents.IsListening)
+        {
+            _announcedSelected.Clear();
+            return;
+        }
+
+        var now = _selection.OfType<ElementItem>().Select(item => item.Painted).ToList();
+        foreach (var element in _announcedSelected)
+        {
+            if (!now.Contains(element))
+            {
+                AutomationEvents.RaiseSelected(element, false);
+            }
+        }
+
+        foreach (var element in now)
+        {
+            if (!_announcedSelected.Contains(element))
+            {
+                AutomationEvents.RaiseSelected(element, true);
+            }
+        }
+
+        _announcedSelected.Clear();
+        _announcedSelected.AddRange(now);
     }
 
     public CanvasGridStyle GridStyle
@@ -1977,5 +2009,5 @@ public partial class InfiniteCanvas : Control
     // guard in PointerDown.
     private bool _pressIsPlane;
 
-    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
+    protected override AutomationPeer OnCreateAutomationPeer() => new InfiniteCanvasAutomationPeer(this);
 }

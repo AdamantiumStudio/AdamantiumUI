@@ -8,6 +8,8 @@ namespace Adamantium.UI.Generators.Roslyn;
 
 public class RoslynResolvedType : IResolvedType
 {
+    private const string DataTemplateSetTypeName = "Adamantium.UI.Core.Templates.DataTemplateSet";
+
     private readonly ITypeSymbol _symbol;
     
     public RoslynResolvedType(ITypeSymbol symbol)
@@ -275,6 +277,10 @@ public class RoslynResolvedType : IResolvedType
             else if (ImplementsInterface("IUIComponent"))
             {
                 return EntityType.Control;
+            }
+            else if (IsAssignableTo(DataTemplateSetTypeName))
+            {
+                return EntityType.DataTemplateSet;
             }
 
             return EntityType.Unknown;

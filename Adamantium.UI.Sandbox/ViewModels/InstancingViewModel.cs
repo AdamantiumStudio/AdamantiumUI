@@ -15,5 +15,5 @@ public partial class InstancingViewModel : TabPageViewModel
         ["#3B82F6", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#14B8A6", "#EC4899", "#EAB308"];
 
     public ObservableCollection<ColorRect> Stars { get; } =
-        new(Enumerable.Range(0, 600).Select(i => new ColorRect { Color = Palette[i % Palette.Length] }));
+        new(Enumerable.Range(0, 600).Select(i => new ColorRect { Number = i + 1, Color = Palette[i % Palette.Length] }));
 }

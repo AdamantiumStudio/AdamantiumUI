@@ -30,6 +30,8 @@ public static class SemanticTokensEngine
             int nameStart = i;
             while (i < text.Length && IsNameChar(text[i])) i++;
             if (i > nameStart) AddName(tokens, text, nameStart, i, element: true, namespaces, model);
+            var elementName = text[nameStart..i];
+            string attributeName = null;
 
             // Attributes until the end of the tag.
             while (i < text.Length && text[i] != '>')
@@ -40,6 +42,11 @@ public static class SemanticTokensEngine
                     int valStart = ++i;
                     while (i < text.Length && text[i] != c) i++;
                     TokenizeValue(tokens, text, valStart, i, namespaces, model);   // color {Binding}/{x:Type}/… inside
+                    if (TakesType(elementName, attributeName, namespaces, model))
+                    {
+                        TokenizeTypeValue(tokens, text, valStart, i, namespaces, model);
+                    }
+
                     if (i < text.Length) i++;                  // past the closing quote
                     continue;
                 }
@@ -51,7 +58,10 @@ public static class SemanticTokensEngine
                     while (j < text.Length && char.IsWhiteSpace(text[j])) j++;
                     // Only an attribute name (followed by '='); xmlns declarations are left to XML syntax coloring.
                     if (j < text.Length && text[j] == '=' && !StartsWith(text, attrStart, "xmlns"))
+                    {
                         AddName(tokens, text, attrStart, i, element: false, namespaces, model);
+                        attributeName = text[attrStart..i];
+                    }
                     continue;
                 }
                 i++;
@@ -173,6 +183,36 @@ public static class SemanticTokensEngine
                 continue;
             }
             i++;
+        }
+    }
+
+    private static bool TakesType(string elementName, string attributeName, IReadOnlyDictionary<string, string> namespaces,
+        AumlTypeModel model)
+    {
+        if (model is null || string.IsNullOrEmpty(attributeName) || attributeName.Contains('.') || attributeName.Contains(':'))
+        {
+            return false;
+        }
+
+        var colon = elementName.IndexOf(':');
+        var prefix = colon < 0 ? string.Empty : elementName[..colon];
+        if (!namespaces.TryGetValue(prefix, out var xmlns))
+        {
+            return false;
+        }
+
+        var element = model.GetElement(xmlns, elementName[(colon + 1)..]);
+        return element != null && model.GetPropertyType(element, attributeName)?.FullName == "System.Type";
+    }
+
+    private static void TokenizeTypeValue(List<SemToken> tokens, string text, int start, int end,
+        IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
+    {
+        while (start < end && char.IsWhiteSpace(text[start])) start++;
+        while (end > start && char.IsWhiteSpace(text[end - 1])) end--;
+        if (end > start && text[start] != '{')
+        {
+            AddTypeArgument(tokens, text, start, end, member: false, namespaces, model);
         }
     }
 
