@@ -317,26 +317,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return CreateResolved(propertyInfo.PropertyType, lineInfo);
             }
 
-            // not XmlNamespaceDeclaration
-            if (string.IsNullOrEmpty(typeReference.Assembly) || string.IsNullOrEmpty(typeReference.Namespace))
-            {
-                return ResolveByNameOnly(typeReference, lineInfo);
-            }
-
-            // CLR type reference
-            var clrTypeContainer = typeResolver.ResolveAssembly(typeReference.Assembly);
-            if (clrTypeContainer != null)
-            {
-                var typeInfo = clrTypeContainer.GetTypeByShortName(typeReference.Name);
-                if (typeInfo == null)
-                {
-                    diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
-                    return typeReference;
-                }
-                return CreateResolved(typeInfo, lineInfo);
-            }
-
-            throw new TypeNotAvailableException($"Type {typeReference.Name} is not available");
+            return ProcessTypeReference(typeReference, lineInfo);
         }
 
         IAumlAstTypeReference ResolveByFullTypeNameWithoutAssembly(IAumlAstTypeReference typeReference, IAumlLineInfo lineInfo)
