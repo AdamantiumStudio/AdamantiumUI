@@ -5,6 +5,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
+using Adamantium.UI.Platforms;
 
 namespace Adamantium.UI.Automation;
 
@@ -42,24 +43,30 @@ internal static class InputSimulator
     public static void DragOnto(UIComponent source, string sourceLabel, Vector2 from, UIComponent target, string targetLabel,
         Vector2 at, UIComponent within)
     {
-        if (source.RootVisual is not IUIComponent root || !ReferenceEquals(source.RootVisual, target.RootVisual))
+        if (source.RootVisual is not IUIComponent root || target.RootVisual is not IWindow targetWindow)
         {
-            throw new AutomationException(
-                $"{sourceLabel} and {targetLabel} are in different windows; a drop across windows is not driven yet.");
+            throw new AutomationException($"{sourceLabel} or {targetLabel} is not in a window.");
         }
 
-        var end = InWindow(target, at);
         if (!Reaches(target, at, within))
         {
+            var point = InWindow(target, at);
             throw new AutomationException(
-                $"{targetLabel} cannot be reached at ({end.X:0}, {end.Y:0}); scroll it into view first.");
+                $"{targetLabel} cannot be reached at ({point.X:0}, {point.Y:0}): it is off screen or covered - by another window, too.");
         }
 
         const int steps = 8;
         using var pointer = SimulatedPointer.Install();
         var (window, start) = HoverAt(source, sourceLabel, from);
+
+        // The events stay with the window the gesture began in, as a captured pointer's do; a target in another window is
+        // reached by the same desktop point, said in this window's terms.
+        var end = ReferenceEquals(targetWindow, window)
+            ? InWindow(target, at)
+            : window.PointToClient(targetWindow.PointToScreen(InWindow(target, at)));
         var layout = LayoutManager.GetOrCreate(root);
         Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
+        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             // A layout pass between moves, as a frame would come between them.
@@ -70,10 +77,20 @@ internal static class InputSimulator
         Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
     }
 
+    // The first few pixels of a hand's stroke, still over what it pressed: a drag starts once the pointer has gone past
+    // the threshold over its source, and a first step an eighth of a long way across would leave the source before that.
+    private static Vector2 LeadIn(Vector2 start, Vector2 end)
+    {
+        var way = end - start;
+        var length = way.Length();
+        return length <= 8 ? end : start + way * (8 / length);
+    }
+
     private static void Stroke(IWindow window, Vector2 start, Vector2 end)
     {
         const int steps = 8;
         Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
+        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             var at = start + (end - start) * (step / (double)steps);
@@ -84,9 +101,30 @@ internal static class InputSimulator
     }
 
     /// <summary>Whether a pointer at <paramref name="local"/> of <paramref name="element"/> would be on
-    /// <paramref name="within"/> - on screen, and not under something else.</summary>
-    public static bool Reaches(UIComponent element, Vector2 local, UIComponent within) =>
-        element.RootVisual is IUIComponent root && IsWithin(root.HitTest(InWindow(element, local)) as IUIComponent, within);
+    /// <paramref name="within"/> - on screen, and not under something else, another of the application's windows
+    /// included.</summary>
+    public static bool Reaches(UIComponent element, Vector2 local, UIComponent within)
+    {
+        if (element.RootVisual is not IWindow window || window is not IUIComponent root)
+        {
+            return false;
+        }
+
+        var point = InWindow(element, local);
+        if (!IsWithin(root.HitTest(point) as IUIComponent, within))
+        {
+            return false;
+        }
+
+        var app = UIApplication.Current;
+        if (app?.Container is not { } container || !container.IsRegistered<IApplicationPlatform>())
+        {
+            return true;
+        }
+
+        var top = container.Resolve<IApplicationPlatform>().WindowFromScreenPoint(window.PointToScreen(point));
+        return app.Windows.FirstOrDefault(w => w.Handle == top) is not { } ours || ReferenceEquals(ours, window);
+    }
 
     private static (IWindow Window, Vector2 Point) HoverAt(UIComponent element, string label, Vector2 local)
     {

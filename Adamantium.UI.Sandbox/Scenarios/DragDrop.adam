@@ -1,7 +1,7 @@
 # The Drag & Drop page: rows carried onto other rows by input made inside the application - the pointer the drag
 # reads is the gesture's, never the system's - down a list and back, by the grip while the list asks for it and by the
-# whole row when it does not, along a row of tiles, and across into another list and back; then the window for
-# dragging across windows opened and closed. Everything is put back as the page opened.
+# whole row when it does not, along a row of tiles, into another list, within a tree and into a window of its own,
+# each and back. Everything is put back as the page opened.
 # The list that drags out to other applications runs its gesture through the system's own loop, which follows the real
 # mouse; it is not driven here.
 select id=GalleryTabs/id=DragDrop
@@ -38,8 +38,18 @@ scroll "id=DragDropDemoView/type=Tree>name=Folder B"
 drop "id=DragDropDemoView/type=Tree>name=Folder A>name=Loose item" "id=DragDropDemoView/type=Tree>name=Folder B" --after
 collapse "id=DragDropDemoView/type=Tree>name=Folder A"
 expect "id=DragDropDemoView/type=Tree>type=TreeItem[2]" name="Loose item"
+# Into the window of its own, and back.
 invoke id=DragDropDemoView/name="Open drop window (cross-window test)"
 wait id=DragDropWindow
+scroll id=DragDropDemoView>type=Pane --vertical 0
+drop "id=DragDropDemoView/type=List,name=Fruits>name=Item 01" id=DragDropWindow/name=Tiger --before
+expect id=DragDropWindow/type=ListItem[1] name="Item 01"
+absent "id=DragDropDemoView/type=List,name=Fruits>name=Item 01"
+# The window lies over the list it came from; moved aside, the list can be reached again.
+move id=DragDropWindow 1400 0
+drop "id=DragDropWindow/name=Item 01" "id=DragDropDemoView/type=List,name=Fruits>name=Item 02" --before
+expect "id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" name="Item 01"
+absent "id=DragDropWindow/name=Item 01"
 window id=DragDropWindow close
 absent id=DragDropWindow
 scroll id=DragDropDemoView>type=Pane --vertical 0

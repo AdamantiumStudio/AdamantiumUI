@@ -379,6 +379,7 @@ All packages share one version.
   carries one element onto another by a gesture made inside the application - a row among rows of a list or a tree,
   into another list, a column header among the headers or onto the grouping and sorting strips. It takes the element by
   its drag handle when it has one, and says so when the target cannot be reached. `DragDrop.GetDragHandles`.
+  It drops into another of the application's windows too.
 - A column header's funnel is a button to automation that opens and closes the column's filter
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
@@ -467,6 +468,8 @@ All packages share one version.
 
 ### Fixed
 
+- A drag made inside the application dropped into the window it began in even where another of the application's
+  windows lay over that spot; it now drops into the one on top.
 - A `GridSplitter` anywhere but in a `Grid` threw as it was shown. With nothing to resize it now does nothing.
 - After a control started drawing text where it had drawn none - a data grid's search showing "1 of 1" - every frame
   threw and nothing more reached the screen until something forced a full redraw: the segment made for it carried no

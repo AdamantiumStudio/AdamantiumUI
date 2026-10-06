@@ -1243,10 +1243,17 @@ public static partial class DragDrop
         var app = UIApplication.Current;
         if (app == null) return null;
 
-        // A gesture made inside the application is over the application's own windows only - the one it was made in
-        // first. Asking the desktop would hand the drop to whatever another application has over that spot.
+        // A gesture made inside the application is over the application's own windows only: the one of them the desktop
+        // shows on top there, else the one it was made in first. Another application's window over that spot does not
+        // take the drop.
         if (Mouse.Platform?.Window is { } madeIn)
         {
+            if (Platform?.WindowFromScreenPoint(screen) is { } top && top != IntPtr.Zero &&
+                app.Windows.FirstOrDefault(w => w.Handle == top) is { } ours)
+            {
+                return ours;
+            }
+
             return Holds(madeIn, screen) ? madeIn : app.Windows.FirstOrDefault(w => !ReferenceEquals(w, madeIn) && Holds(w, screen));
         }
 
