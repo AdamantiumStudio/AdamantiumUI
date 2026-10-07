@@ -41,6 +41,9 @@ public class Run : Inline
     public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
         typeof(FontStretch?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
+    public static readonly AdamantiumProperty FontSynthesisProperty = AdamantiumProperty.Register(nameof(FontSynthesis),
+        typeof(FontSynthesis?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
@@ -100,6 +103,13 @@ public class Run : Inline
     {
         get => GetValue<FontStretch?>(FontStretchProperty);
         set => SetValue(FontStretchProperty, value);
+    }
+
+    /// <summary>What may be drawn for a bold or italic face the family lacks; null takes the TextBlock's.</summary>
+    public FontSynthesis? FontSynthesis
+    {
+        get => GetValue<FontSynthesis?>(FontSynthesisProperty);
+        set => SetValue(FontSynthesisProperty, value);
     }
 
     /// <summary>OpenType features for this run; null takes the TextBlock's.</summary>

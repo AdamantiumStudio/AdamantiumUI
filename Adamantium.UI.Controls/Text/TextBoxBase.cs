@@ -339,7 +339,7 @@ public abstract class TextBoxBase : Control
             ? double.NaN
             : _wrapWidth;
 
-        var shaping = TextShaping();
+        var shaping = TextShaping(font);
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
             && ShapesLike(_lastShapedShaping, shaping))

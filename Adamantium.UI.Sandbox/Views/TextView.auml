@@ -150,6 +150,38 @@
             </TextBlock>
         </StackPanel>
 
+        <!-- A family with one face: bold and italic draw that face as it is, unless synthesis is allowed. -->
+        <TextBlock Text="{Localize TextStrings.SynthesisTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="Ink Free"
+                    FontSize="22"
+                    Orientation="Vertical">
+            <TextBlock>
+                <TextBlock.Inlines>
+                    <Run Text="Regular "/>
+                    <Run Text="Bold "
+                         FontWeight="Bold"/>
+                    <Run Text="Italic "
+                         FontStyle="Italic"/>
+                    <Run Text="Bold Italic"
+                         FontWeight="Bold"
+                         FontStyle="Italic"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+            <TextBlock FontSynthesis="Weight, Style">
+                <TextBlock.Inlines>
+                    <Run Text="Regular "/>
+                    <Run Text="Bold "
+                         FontWeight="Bold"/>
+                    <Run Text="Italic "
+                         FontStyle="Italic"/>
+                    <Run Text="Bold Italic"
+                         FontWeight="Bold"
+                         FontStyle="Italic"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+        </StackPanel>
+
         <!-- Characters the theme's font lacks come from the system's fallback fonts; the last one is in no font. -->
         <TextBlock Text="{Localize TextStrings.FallbackTitle}"
                    Margin="0,20,0,6"/>

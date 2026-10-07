@@ -19,6 +19,7 @@
     <Phrase Key="Large" Text="and large"/>
     <Phrase Key="WeightsTitle" Text="Weights and slants of one family:"/>
     <Phrase Key="VariableTitle" Text="A variable font (Bahnschrift): weights between the named ones, and widths:"/>
+    <Phrase Key="SynthesisTitle" Text="A family with no bold or italic (Ink Free): as it is, then FontSynthesis=&quot;Weight, Style&quot;:"/>
     <Phrase Key="FallbackTitle" Text="Fallback fonts (the last character is in no font):"/>
     <Phrase Key="TypographyTitle" Text="Typography (as is; small capitals with oldstyle figures; fractions):"/>
 </Language>

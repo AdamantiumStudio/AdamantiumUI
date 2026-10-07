@@ -6,6 +6,7 @@ using Adamantium.Fonts.Shaping;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -153,6 +154,24 @@ public class TextBlockTypographyTests
 
         Assert.That(text.Layout.Font, Is.Not.SameAs(plain.Layout.Font), "another face of the family");
         Assert.That(text.Layout.Font.FullName, Does.Contain("Bold"));
+    }
+
+    [Test]
+    public void SynthesisOnAContainer_DrawsWhatTheFaceLacks()
+    {
+        var host = new Border
+        {
+            FontWeight = FontWeight.Bold,
+            FontStyle = FontStyle.Italic,
+            FontSynthesis = FontSynthesis.Weight | FontSynthesis.Style
+        };
+        var text = Hosted(new TextBlock { Text = "synthesized" }, host);
+        var regular = new TextBlock().ResolveFont(UIComponent.DefaultFontFamily);
+
+        Assert.That(text.TextShaping(regular).Synthesis, Is.EqualTo(FontSynthesis.Weight | FontSynthesis.Style),
+            "a regular face set for bold italic text is thickened and slanted");
+        Assert.That(new TextBlock { FontWeight = FontWeight.Bold }.TextShaping(regular)?.Synthesis, Is.Null,
+            "nothing is synthesized unless asked for");
     }
 
     [Test]
