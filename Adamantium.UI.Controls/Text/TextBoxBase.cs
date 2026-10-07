@@ -249,8 +249,8 @@ public abstract class TextBoxBase : Control
     private IFont _placeholderFont;
     private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
-    private double _baselineInLine;            // the two reference lines the glyph pipeline anchors ink to, measured
-    private double _ascenderRise;              // from the line's top: the baseline, and how far the ascender sits above it
+    private double[] _lineTops = [0];
+    private double[] _lineHeights = [0];
 
     // Caret model, rebuilt on every (re)shape: for each of the TextLength+1 slots (slot i = before character i) its
     // text-local X, visual line and the width of the character starting there, from the layout's caret stops.
@@ -320,16 +320,9 @@ public abstract class TextBoxBase : Control
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
 
-        // Match ProcessText's own line advance EXACTLY (it places each line this far below the previous). Deriving the
-        // caret Y from a different guess (e.g. 1.4 * FontSize) made the caret drift off its line onto the next row.
+        // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
-        var lgScale = FontSize / iFont.UnitsPerEm;
-        _lineHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * lgScale;
-        // The caret band: the baseline (half the gap plus the ascent below the line top, as ProcessText places it),
-        // rounded to a whole pixel as CalculateGlyphPosition rounds it, up to the rounded ascender line - the same for
-        // every string, so the caret keeps its height whatever is typed.
-        _baselineInLine = (iFont.LineGap / 2.0 + iFont.LineAscent) * lgScale;
-        _ascenderRise = iFont.Ascender * lgScale;
+        _lineHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * (FontSize / iFont.UnitsPerEm);
 
         var text = Text ?? string.Empty;
         var wrapping = TextWrapping;
@@ -354,6 +347,8 @@ public abstract class TextBoxBase : Control
             _caretLine = [0];
             _caretWidth = [0];
             _lineCount = 1;
+            _lineTops = [0];
+            _lineHeights = [_lineHeight];
         }
         else
         {
@@ -399,24 +394,44 @@ public abstract class TextBoxBase : Control
         }
 
         _lineCount = maxLine + 1;
+        _lineTops = new double[_lineCount];
+        _lineHeights = new double[_lineCount];
+        for (var line = 0; line < _lineCount; line++)
+        {
+            var metrics = _textLayout.GetLine(line);
+            _lineTops[line] = metrics.Top;
+            _lineHeights[line] = metrics.Height;
+        }
+    }
+
+    private int LineAt(double y)
+    {
+        for (var line = 0; line < _lineCount - 1; line++)
+        {
+            if (y < _lineTops[line] + _lineHeights[line])
+            {
+                return line;
+            }
+        }
+
+        return _lineCount - 1;
     }
 
     // --- Caret / selection geometry ------------------------------------------------------------------------------
 
     private int MaxLineIndex => _lineCount - 1;
-    private double ContentHeight => _lineCount * _lineHeight;
+    private double ContentHeight => _lineTops[_lineCount - 1] + _lineHeights[_lineCount - 1];
 
-    // Text-local caret rect before character index: from the ascender line to the baseline, rounded as glyphs are, not
-    // the font's ascent-descent band, which sits low.
+    // Text-local caret rect before character index: the whole height of its line, as the selection covers it, on whole
+    // pixels.
     internal Rect CaretRect(int index)
     {
         EnsureLayout();
         index = Math.Clamp(index, 0, _caretX.Length - 1);
 
         var line = _caretLine[index];
-        var baseline = line * _lineHeight + _baselineInLine;
-        var top = Math.Round(baseline - _ascenderRise);
-        return new Rect(_caretX[index], top, CaretWidth, Math.Round(baseline) - top);
+        var top = Math.Round(_lineTops[line]);
+        return new Rect(_caretX[index], top, CaretWidth, Math.Round(_lineTops[line] + _lineHeights[line]) - top);
     }
 
     private int CaretLineOf(int index)
@@ -448,7 +463,7 @@ public abstract class TextBoxBase : Control
         if (_caretX.Length == 1) return 0;
 
         var text = _lastShapedText ?? string.Empty;
-        var line = Math.Clamp((int)Math.Floor(y / _lineHeight), 0, MaxLineIndex);
+        var line = LineAt(y);
         var (first, last) = LineSlotRange(line);
         for (var i = first; i <= last; i++)
         {
@@ -504,7 +519,7 @@ public abstract class TextBoxBase : Control
         if (target > MaxLineIndex) { MoveCaretTo(TextLength, extend); return; }
 
         var col = _desiredColumnX ?? CaretRect(CaretIndex).X;
-        var idx = IndexFromPoint(col, target * _lineHeight + _lineHeight / 2.0);
+        var idx = IndexFromPoint(col, _lineTops[target] + _lineHeights[target] / 2.0);
         MoveCaretTo(idx, extend, keepColumn: true);
         _desiredColumnX = col;
     }
@@ -940,8 +955,8 @@ public abstract class TextBoxBase : Control
             var x0 = line == startLine ? _caretX[s] : _caretX[first];
             var x1 = line == endLine ? _caretX[en] : _caretX[last];
             var w = Math.Max(0, x1 - x0);
-            if (line != endLine && w <= 0) w = _lineHeight * 0.4;   // sliver so a selected empty/blank line is visible
-            session.DrawRectangle(brush, new Rect(ox + x0, oy + line * _lineHeight, w, _lineHeight));
+            if (line != endLine && w <= 0) w = _lineHeights[line] * 0.4;   // sliver so a selected empty/blank line is visible
+            session.DrawRectangle(brush, new Rect(ox + x0, oy + _lineTops[line], w, _lineHeights[line]));
         }
     }
 
@@ -1005,7 +1020,7 @@ public abstract class TextBoxBase : Control
             var x1 = line == endLine ? _caretX[end] : _caretX[last];
             if (x1 > x0)
             {
-                rects.Add(new Rect(x0, _textOy + line * _lineHeight, x1 - x0, _lineHeight));
+                rects.Add(new Rect(x0, _textOy + _lineTops[line], x1 - x0, _lineHeights[line]));
             }
         }
 

@@ -424,6 +424,8 @@ All packages share one version.
 
 ### Changed
 
+- The `TextBox` caret takes the whole height of its line, as the selection does, instead of the band from the
+  ascender line to the baseline.
 - Text no longer waits on the loop for font files: a `TextBlock` or `TextBox` whose face or fallback font is not
   loaded yet lays out with what is (the family's own face, an empty place for a character from a font still loading)
   while the file is read on a worker, and lays out again when it arrives. A render with no next frame waits as
@@ -524,6 +526,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBox` took every line as tall as a line of its own font, so on a line with taller text (emoji from a fallback
+  font) the selection, the caret and the click target sat off the glyphs. It takes each line's top and height from the
+  layout now.
 - An open popup - a slide panel, a flyout - vanished when its window moved to a monitor of another scale, and came back
   on the first one. Popups and adorners are baked at the window's scale, and a move keeps every position the same in
   DIPs, so nothing told their stages to bake again; their gate now asks about the scale too.

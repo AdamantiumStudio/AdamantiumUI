@@ -11,10 +11,12 @@ public partial class TextViewModel : TabPageViewModel
 {
     public TextViewModel() : base("Text") { }
 
-    [Bindable, Affects(nameof(MessageLength))] private string _message = "The quick brown fox jumps over the lazy dog";
+    // Emoji from the fallback font among the letters, so selecting across them can be checked from the start.
+    [Bindable, Affects(nameof(MessageLength))] private string _message = "The quick brown fox \U0001F98A jumps over the lazy dog \U0001F436 \U0001F600\U0001F389\U0001F44D";
 
-    // Multi-line editor content: hard newlines plus a long line to show soft wrapping.
-    [Bindable] private string _notes = "Multi-line editor.\nEnter inserts a newline; Up/Down move between lines.\nThis long line has no explicit breaks so it soft-wraps at the box width when TextWrapping is on, and you can select across several lines at once.";
+    // Multi-line editor content: hard newlines, a line of nothing but emoji (taller than the others), and a long line to
+    // show soft wrapping.
+    [Bindable] private string _notes = "Multi-line editor \U0001F4DD\n\U0001F600\U0001F389\U0001F44D\U0001F30D\U0001F680\nEnter inserts a newline; Up/Down move between lines.\nThis long line has no explicit breaks so it soft-wraps at the box width when TextWrapping is on, and you can select across several lines at once \U0001F3AF.";
 
     [Bindable] private double _fontSize = 22;
 
