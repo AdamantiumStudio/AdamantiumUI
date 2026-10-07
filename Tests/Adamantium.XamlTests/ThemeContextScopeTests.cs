@@ -58,6 +58,24 @@ public class ThemeContextScopeTests
     }
 
     [Test]
+    public void AVariantSwitch_IsAnnounced_OnceThePaletteIsInTheNewVariant()
+    {
+        var theme = TwoVariantTheme();
+        var announced = new System.Collections.Generic.List<(ThemeVariant Variant, Color Background)>();
+        theme.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Theme.CurrentVariantProperty)
+            {
+                announced.Add((theme.CurrentVariant, theme.Palette["Background"].Color));
+            }
+        };
+
+        theme.ApplyVariant(ThemeVariant.Dark);
+
+        Assert.That(announced, Is.EqualTo(new[] { (ThemeVariant.Dark, DarkBg) }));
+    }
+
+    [Test]
     public void AThemeSetOnAnElement_ReachesEverythingUnderIt()
     {
         var theme = TwoVariantTheme();
