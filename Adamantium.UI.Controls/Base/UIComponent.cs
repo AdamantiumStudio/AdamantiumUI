@@ -3,6 +3,7 @@ using Adamantium.Core.Collections;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
@@ -313,6 +314,41 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontSizeProperty, value);
     }
 
+    public static readonly AdamantiumProperty FontWeightProperty = AdamantiumProperty.Register(nameof(FontWeight),
+        typeof(FontWeight), typeof(UIComponent),
+        new PropertyMetadata(FontWeight.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How heavy the text is, 1 to 1000 (<c>FontWeight="SemiBold"</c>, <c>FontWeight="650"</c>): the family's
+    /// face nearest to it draws the text in this element and its descendants.</summary>
+    public FontWeight FontWeight
+    {
+        get => GetValue<FontWeight>(FontWeightProperty);
+        set => SetValue(FontWeightProperty, value);
+    }
+
+    public static readonly AdamantiumProperty FontStyleProperty = AdamantiumProperty.Register(nameof(FontStyle),
+        typeof(FontStyle), typeof(UIComponent),
+        new PropertyMetadata(FontStyle.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Upright, italic or oblique text in this element and its descendants.</summary>
+    public FontStyle FontStyle
+    {
+        get => GetValue<FontStyle>(FontStyleProperty);
+        set => SetValue(FontStyleProperty, value);
+    }
+
+    public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
+        typeof(FontStretch), typeof(UIComponent),
+        new PropertyMetadata(FontStretch.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How wide the text is (<c>FontStretch="Condensed"</c>, <c>FontStretch="87.5%"</c>), when the family has
+    /// faces of several widths.</summary>
+    public FontStretch FontStretch
+    {
+        get => GetValue<FontStretch>(FontStretchProperty);
+        set => SetValue(FontStretchProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -337,6 +373,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         get => GetValue<string>(LanguageProperty);
         set => SetValue(LanguageProperty, value);
     }
+
+    /// <summary>The face of <paramref name="family"/> this element's text is set in: the one nearest to its
+    /// <see cref="FontWeight"/>, <see cref="FontStyle"/> and <see cref="FontStretch"/>. A control that lays out text of
+    /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
+    public IFont ResolveFont(FontFamily family) => family.GetFont(FontWeight, FontStyle, FontStretch);
 
     /// <summary>What the text of this element is shaped with: the features <see cref="Typography"/> and
     /// <see cref="FontFeatures"/> ask for and the <see cref="Language"/> - the application's when unset - as attributes

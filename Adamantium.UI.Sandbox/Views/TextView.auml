@@ -91,6 +91,25 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Faces of one family picked by weight and slant, run by run within one line. -->
+        <TextBlock Text="{Localize TextStrings.WeightsTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock FontSize="20">
+            <TextBlock.Inlines>
+                <Run Text="Light "
+                     FontWeight="Light"/>
+                <Run Text="Regular "/>
+                <Run Text="SemiBold "
+                     FontWeight="SemiBold"/>
+                <Run Text="Bold "
+                     FontWeight="Bold"/>
+                <Run Text="Black "
+                     FontWeight="Black"/>
+                <Run Text="Italic"
+                     FontStyle="Italic"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- Typography by name and font features by tag, inherited by the text inside. -->
         <TextBlock Text="{Localize TextStrings.TypographyTitle}"
                    Margin="0,20,0,6"/>

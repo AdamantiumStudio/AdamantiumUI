@@ -1,3 +1,4 @@
+using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
@@ -30,6 +31,15 @@ public class Run : Inline
     public static readonly AdamantiumProperty TextDecorationsProperty = AdamantiumProperty.Register(
         nameof(TextDecorations), typeof(TextDecorations), typeof(Run),
         new PropertyMetadata(TextDecorations.None, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty FontWeightProperty = AdamantiumProperty.Register(nameof(FontWeight),
+        typeof(FontWeight?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty FontStyleProperty = AdamantiumProperty.Register(nameof(FontStyle),
+        typeof(FontStyle?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
+        typeof(FontStretch?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
@@ -69,6 +79,27 @@ public class Run : Inline
     {
         get => GetValue<TextDecorations>(TextDecorationsProperty);
         set => SetValue(TextDecorationsProperty, value);
+    }
+
+    /// <summary>How heavy this run is; null takes the TextBlock's weight.</summary>
+    public FontWeight? FontWeight
+    {
+        get => GetValue<FontWeight?>(FontWeightProperty);
+        set => SetValue(FontWeightProperty, value);
+    }
+
+    /// <summary>Upright, italic or oblique; null takes the TextBlock's.</summary>
+    public FontStyle? FontStyle
+    {
+        get => GetValue<FontStyle?>(FontStyleProperty);
+        set => SetValue(FontStyleProperty, value);
+    }
+
+    /// <summary>How wide this run is; null takes the TextBlock's.</summary>
+    public FontStretch? FontStretch
+    {
+        get => GetValue<FontStretch?>(FontStretchProperty);
+        set => SetValue(FontStretchProperty, value);
     }
 
     /// <summary>OpenType features for this run; null takes the TextBlock's.</summary>

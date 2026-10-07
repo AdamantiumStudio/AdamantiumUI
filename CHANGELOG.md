@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `FontWeight`, `FontStyle` and `FontStretch` on every element, inherited by the text inside: `FontWeight="SemiBold"`
+  or `"650"`, `FontStyle="Italic"`, `FontStretch="Condensed"` pick the family's nearest face, as CSS picks it, from the
+  system's fonts indexed by family. A `Run` takes its own (`<Run FontWeight="Bold"/>`) and is set in that face within
+  the block's line. `FontFamily.GetFont` gives the face for a weight, slant and width. A weight or width the parser
+  does not know fails the build and is underlined in the editor.
 - `FontFeatures` and `Language` on every element, inherited by the text inside: OpenType features as a
   `FontFeatureList` (`[FontFeature.Ligatures.Off, FontFeature.StylisticSet(1)]` in code, `FontFeatures="liga=0, ss01"`
   in markup) and a BCP 47 language that picks the font's local forms; text without a language is in the application's

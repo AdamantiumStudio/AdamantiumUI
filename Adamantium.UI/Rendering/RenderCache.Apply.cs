@@ -7,8 +7,8 @@ namespace Adamantium.UI.Rendering;
 
 public partial class RenderCache
 {
-    private readonly System.Text.StringBuilder _glyphWarmBuf = new();
-    private readonly HashSet<Adamantium.Graphics.Fonts.FontAtlas> _warmAtlases = new();  // WarmTextAtlases: one batched glyph rasterization per atlas
+    // WarmTextAtlases: one batched glyph rasterization per atlas.
+    private readonly Dictionary<Adamantium.Graphics.Fonts.FontAtlas, List<(Adamantium.Fonts.IFont Font, Adamantium.Fonts.Glyph Glyph)>> _warmGlyphs = new();
 
     private readonly List<ControlGroup> _pendingInserts = new();   // ApplyStructural: groups to place, merged into the order once
     private readonly HashSet<ControlGroup> _pendingSet = new();
@@ -50,30 +50,33 @@ public partial class RenderCache
     }
 
     // Warm every text block's atlas in ONE batch per atlas. Glyph rasterization is parallel MSDF work, but a text unit
-    // built one at a time can only hand it ITS block's characters, so a cold fill rasterized ~50 blocks' glyphs serially
-    // (1.1 s of a 1.9 s 4K fill). Pooling the whole packet's characters lets the generator spread them across cores.
-    // Still lazy - only glyphs the UI actually shows are rasterized.
+    // built one at a time can only hand it ITS block's glyphs, so a cold fill rasterized ~50 blocks' glyphs serially
+    // (1.1 s of a 1.9 s 4K fill). Pooling the whole packet's glyphs lets the generator spread them across cores.
+    // Still lazy - only glyphs the UI actually shows are rasterized, each with the font that draws it.
     private void WarmTextAtlases(RenderPacket packet)
     {
         var device = _renderUnitFactory.GraphicsDevice;
         if (device == null || packet.Draws.Count == 0) return;
 
-        _warmAtlases.Clear();
-        _glyphWarmBuf.Clear();
+        _warmGlyphs.Clear();
         foreach (var draw in packet.Draws)
         foreach (var command in draw.Commands)
         {
             if (command.Payload is not TextPayload { TextLayout: { } layout } || string.IsNullOrEmpty(layout.Text)) continue;
-            _warmAtlases.Add(layout.EnsureAtlas(device));
-            _glyphWarmBuf.Append(layout.Text);
-        }
-        if (_warmAtlases.Count == 0) return;
+            var atlas = layout.EnsureAtlas(device);
+            if (!_warmGlyphs.TryGetValue(atlas, out var glyphs))
+            {
+                glyphs = [];
+                _warmGlyphs[atlas] = glyphs;
+            }
 
-        var text = _glyphWarmBuf.ToString();
+            glyphs.AddRange(layout.GetGlyphs());
+        }
+
         // ASKED for, not waited on: the batch goes to a worker and this frame goes out with whatever the atlas
-        // already holds. Pooling the packet's characters still matters - the generator parallelizes across the glyphs it is
+        // already holds. Pooling the packet's glyphs still matters - the generator parallelizes across the glyphs it is
         // handed, so one batch keeps every core busy where fifty single-glyph requests would not.
-        foreach (var atlas in _warmAtlases) atlas.RequestAsync(text);
+        foreach (var pair in _warmGlyphs) pair.Key.RequestAsync(pair.Value);
     }
 
     // The glyph-arrival version this cache has adopted; per cache, since arrival is global and adoption is not.
