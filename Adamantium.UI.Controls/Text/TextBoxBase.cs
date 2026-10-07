@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
@@ -244,7 +245,8 @@ public abstract class TextBoxBase : Control
     // --- Text layout (mirrors TextBlock's cached shaping) --------------------------------------------------------
 
     private TextLayout _textLayout;
-    private FontFamily _layoutFont;
+    private IFont _layoutFont;
+    private IFont _placeholderFont;
     private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
     private double _baselineInLine;            // the two reference lines the glyph pipeline anchors ink to, measured
@@ -300,10 +302,10 @@ public abstract class TextBoxBase : Control
 
     private void EnsureLayout()
     {
-        var font = FontFamily ?? DefaultFontFamily;
+        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
         {
-            _textLayout = new TextLayout(font.Typeface, font.Fonts[0]) { EmitNewlineCarets = true };
+            _textLayout = new TextLayout(font.Typeface, font) { EmitNewlineCarets = true };
             _layoutFont = font;
             _lastShapedText = null;
         }
@@ -1012,8 +1014,14 @@ public abstract class TextBoxBase : Control
     private string _placeholderShaped;
     private void EnsurePlaceholderShaped(double fontSize)
     {
-        var font = FontFamily ?? DefaultFontFamily;
-        if (_placeholderLayout == null || !ReferenceEquals(_layoutFont, font)) _placeholderLayout = new TextLayout(font.Typeface, font.Fonts[0]);
+        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
+        if (_placeholderLayout == null || !ReferenceEquals(_placeholderFont, font))
+        {
+            _placeholderLayout = new TextLayout(font.Typeface, font);
+            _placeholderFont = font;
+            _placeholderShaped = null;
+        }
+
         var key = Placeholder + "|" + fontSize;
         if (_placeholderShaped == key) return;
         _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),

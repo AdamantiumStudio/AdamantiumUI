@@ -17,5 +17,6 @@
     <Phrase Key="Misspelt" Text="ашибка"/>
     <Phrase Key="Struck" Text="зачёркнуто"/>
     <Phrase Key="Large" Text="и крупно"/>
+    <Phrase Key="WeightsTitle" Text="Веса и наклоны одного семейства:"/>
     <Phrase Key="TypographyTitle" Text="Типографика (табличные цифры; ниже — без лигатур, дроби):"/>
 </Language>

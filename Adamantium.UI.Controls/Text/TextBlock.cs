@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
+using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
@@ -89,7 +90,7 @@ public class TextBlock : InputUIComponent
     // affects the layout changes.
     private Size _cachedSize;
     private bool _hasLayout;
-    private FontFamily _layoutFont;   // the font _textLayout was built for (typeface is fixed per TextLayout)
+    private IFont _layoutFont;   // the face _textLayout was built for (the font is fixed per TextLayout)
     private string _lastText;
     private double _lastFontSize, _lastWidth, _lastHeight;
     // The width/height the last measure was given (a wrapping block reflows to this when it has no explicit Width, so
@@ -120,10 +121,10 @@ public class TextBlock : InputUIComponent
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
         var eb0 = System.GC.GetAllocatedBytesForCurrentThread();
-        var font = FontFamily ?? DefaultFontFamily;
+        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
         {
-            _textLayout = new TextLayout(font.Typeface, font.Fonts[0]);
+            _textLayout = new TextLayout(font.Typeface, font);
             _layoutFont = font;
             _hasLayout = false;
             LayoutRebuilds++;
@@ -301,6 +302,7 @@ public class TextBlock : InputUIComponent
     private AttributedText InlineAttributedText(string text, TextAttributes shaping)
     {
         var attributed = new AttributedText(text, shaping);
+        var family = FontFamily ?? DefaultFontFamily;
         var start = 0;
         foreach (var inline in _inlines)
         {
@@ -312,6 +314,8 @@ public class TextBlock : InputUIComponent
             var length = (run.Text ?? string.Empty).Length;
             attributed.Apply(start, length, new TextAttributes
             {
+                Font = family.GetFont(run.FontWeight ?? FontWeight, run.FontStyle ?? FontStyle,
+                    run.FontStretch ?? FontStretch),
                 Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
                 Language = run.Language,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,

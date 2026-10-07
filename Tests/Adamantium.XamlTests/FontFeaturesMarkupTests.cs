@@ -31,6 +31,25 @@ public class FontFeaturesMarkupTests
     }
 
     [Test]
+    public void WeightSlantAndWidth_Compile()
+    {
+        var errors = AumlCodegenHarness.Compile(WindowWith(
+            "<TextBlock FontWeight=\"SemiBold\" FontStyle=\"Italic\" FontStretch=\"Condensed\">" +
+            "<TextBlock.Inlines><Run Text=\"heavy\" FontWeight=\"900\" FontStyle=\"Oblique\"/></TextBlock.Inlines>" +
+            "</TextBlock>"));
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    [Test]
+    public void AMisspelledWeight_FailsTheBuild()
+    {
+        AumlCodegenHarness.Generate(WindowWith("<TextBlock FontWeight=\"Semibld\"/>"), out var errors);
+
+        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains("'Semibld' is not a font weight"));
+    }
+
+    [Test]
     public void AMisspelledFeature_FailsTheBuild()
     {
         AumlCodegenHarness.Generate(WindowWith("<TextBlock Text=\"office\" FontFeatures=\"lgia=0\"/>"), out var errors);

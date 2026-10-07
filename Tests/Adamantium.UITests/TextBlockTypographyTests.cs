@@ -1,4 +1,5 @@
 using System.Linq;
+using Adamantium.Fonts;
 using Adamantium.Fonts.Shaping;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
@@ -115,6 +116,31 @@ public class TextBlockTypographyTests
         Assert.That(adornments.Single(a => a.Kind == TextAdornmentKind.Background).Color, Is.EqualTo(Colors.Red));
         Assert.That(adornments.Single(a => a.Kind == TextAdornmentKind.Underline).Rect.X,
             Is.EqualTo(layout.GetCaretStops()[6].X).Within(1e-4), "the line starts under the second run");
+    }
+
+    [Test]
+    public void AWeightOnAContainer_PicksTheFamilysBoldFace()
+    {
+        var host = new Border { FontWeight = FontWeight.Bold };
+        var text = Hosted(new TextBlock { Text = "bold" }, host);
+        var plain = Hosted(new TextBlock { Text = "plain" });
+
+        Assert.That(text.Layout.Font, Is.Not.SameAs(plain.Layout.Font), "another face of the family");
+        Assert.That(text.Layout.Font.FullName, Does.Contain("Bold"));
+    }
+
+    [Test]
+    public void ARunWithItsOwnWeight_IsSetInThatFace()
+    {
+        var text = new TextBlock();
+        text.Inlines.Add(new Run { Text = "plain " });
+        text.Inlines.Add(new Run { Text = "bold", FontWeight = FontWeight.Bold });
+        Hosted(text);
+
+        var glyphs = text.Layout.GetTextData();
+
+        Assert.That(glyphs.Where(g => g.PositionInString < 5).All(g => g.Font == text.Layout.Font));
+        Assert.That(glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.FullName.Contains("Bold")));
     }
 
     [Test]

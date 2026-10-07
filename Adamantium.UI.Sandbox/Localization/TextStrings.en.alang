@@ -17,5 +17,6 @@
     <Phrase Key="Misspelt" Text="mispelled"/>
     <Phrase Key="Struck" Text="struck out"/>
     <Phrase Key="Large" Text="and large"/>
+    <Phrase Key="WeightsTitle" Text="Weights and slants of one family:"/>
     <Phrase Key="TypographyTitle" Text="Typography (tabular figures; below: no ligatures, fractions):"/>
 </Language>

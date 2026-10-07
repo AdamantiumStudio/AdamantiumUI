@@ -1,3 +1,4 @@
+using Adamantium.Fonts;
 using Adamantium.Fonts.Shaping;
 
 namespace Adamantium.UI.Markup;
@@ -12,6 +13,8 @@ public static class MarkupValueChecks
     private static readonly Dictionary<string, Func<string, string>> Checks = new()
     {
         ["Adamantium.UI.Core.Media.FontFeatureList"] = FontFeatures,
+        ["Adamantium.Fonts.FontWeight"] = FontWeightValue,
+        ["Adamantium.Fonts.FontStretch"] = FontStretchValue,
     };
 
     /// <summary>What is wrong with <paramref name="value"/> for a property of the type named
@@ -29,5 +32,21 @@ public static class MarkupValueChecks
     private static string FontFeatures(string value)
     {
         return FontFeature.TryParseList(value, out _, out var error) ? null : error;
+    }
+
+    private static string FontWeightValue(string value)
+    {
+        return FontWeight.TryParse(value, out _)
+            ? null
+            : $"'{value}' is not a font weight: expected Thin, ExtraLight, Light, Normal, Medium, SemiBold, Bold, " +
+              "ExtraBold, Black or a number from 1 to 1000.";
+    }
+
+    private static string FontStretchValue(string value)
+    {
+        return FontStretch.TryParse(value, out _)
+            ? null
+            : $"'{value}' is not a font stretch: expected a name from UltraCondensed to UltraExpanded or a percentage " +
+              "such as 87.5%.";
     }
 }
