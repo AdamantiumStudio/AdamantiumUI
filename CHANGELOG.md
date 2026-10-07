@@ -21,6 +21,9 @@ All packages share one version.
 - `Run.Background`, `TextDecorations` (underline, strikethrough, squiggle), `FontFeatures` and `Language`. A
   `TextBlock`'s runs lay out as one text: they wrap and align together, a line is as tall as its largest run, and the
   block draws the runs' backgrounds and lines.
+- `UIComponent.TextShaping` and `UIComponent.ShapesLike` are public: a control that lays out text of its own - an
+  editor laying out a line at a time - shapes it with the element's `Typography`, `FontFeatures` and `Language` the way
+  `TextBlock` does, and knows when they changed.
 - `Theme.CurrentVariantProperty`: a switch of variant is announced as a property of the theme, once its palette and
   values are all in the new variant - for what has to know which variant is in force, not only its colors.
 - Input method editors on Windows (IMM32): the IME's composition and candidate windows open at the caret of a
