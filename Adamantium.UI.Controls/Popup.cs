@@ -292,7 +292,6 @@ public class Popup : MeasurableUIComponent, IContainer
         IUIComponent anchor = EffectiveTarget ?? this;
         _host = FindPopupHost(anchor) ?? FindPopupHost(this);
         if (_host == null) return;   // not in a window yet; OnAttachedToVisualTree retries
-        if (Child is UIComponent child) child.DataContext = DataContext;
         _focusReturn.Capture();   // where the keyboard was, so closing can put it back
         _host.PopupLayer.Add(this);
         _isShowing = true;

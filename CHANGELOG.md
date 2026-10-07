@@ -498,6 +498,11 @@ All packages share one version.
 
 ### Fixed
 
+- What an open popup shows took the popup's data context as it was at the moment of opening, as a value of its own,
+  and never followed it: a `SlidePanel` open through a theme swap reopened on its new template before the context
+  reached it, and its content lost the view-model until it was closed and opened again - picks in it did nothing. The
+  content now inherits the context from the popup. An open `SlidePanel` given a new template shows its drawer in place
+  rather than sliding it in again.
 - A property set in markup on an element of the project's own, declared through a `clr-namespace` without an
   assembly - a part of a control template, say - failed to build with "Type ... could not be found in any linked
   assembly": the property's type was looked up by the element's short name only, which never reaches the project's

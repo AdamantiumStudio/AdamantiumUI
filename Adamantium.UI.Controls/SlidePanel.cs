@@ -100,7 +100,7 @@ public class SlidePanel : ContentControl
         _closeButton = GetTemplateChild("PART_CloseButton") as Button;
         if (_closeButton != null) _closeButton.Click += OnCloseClick;
 
-        if (IsOpen) Open();
+        if (IsOpen) Open(animate: false);
     }
 
     /// <summary>Unhook what the template was hooked to. The parts go away with the template, so the handlers have to go
@@ -142,10 +142,13 @@ public class SlidePanel : ContentControl
 
     private UIComponent Drawer => _popup?.Child as UIComponent;
 
-    private void Open()
+    private void Open(bool animate = true)
     {
         _popup.IsOpen = true;                 // portal the drawer into the overlay layer (on top of everything)
-        AnimateSlide(toOpen: true);
+        if (animate)
+        {
+            AnimateSlide(toOpen: true);
+        }
     }
 
     private void Close()
