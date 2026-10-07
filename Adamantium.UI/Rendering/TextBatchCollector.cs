@@ -219,12 +219,13 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         for (var i = 0; i < run.Count; i++)
         {
             var d = glyphs[i].ArrangeRect;   // local x, y, w, h
+            var synthesis = glyphs[i].Synthesis;
             dst[i] = new GlyphItem
             {
                 LocalRect = new Vector4F((d.X + ax) * sx + tx, (d.Y + ay) * sy + ty, d.Z * sx, d.W * sy),
                 Source = glyphs[i].Source,
                 Params = new Vector4F(transformSlot, glyphs[i].Layer, glyphs[i].Depth, fadeSlot),
-                Clip = new Vector4F(clipSlot, 0, 0, 0),
+                Clip = new Vector4F(clipSlot, synthesis.X, synthesis.Y, synthesis.Z),
                 Color = GlyphColor(glyphs[i], color, opacity)
             };
         }

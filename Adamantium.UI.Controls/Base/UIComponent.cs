@@ -337,6 +337,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontStyleProperty, value);
     }
 
+    public static readonly AdamantiumProperty FontSynthesisProperty = AdamantiumProperty.Register(nameof(FontSynthesis),
+        typeof(FontSynthesis), typeof(UIComponent),
+        new PropertyMetadata(FontSynthesis.None, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>What may be drawn for a bold or italic face the family lacks (<c>FontSynthesis="Weight, Style"</c>): a
+    /// thickened or slanted face of the family's. None by default, so the nearest face is drawn as it is; a face the
+    /// family has always wins.</summary>
+    public FontSynthesis FontSynthesis
+    {
+        get => GetValue<FontSynthesis>(FontSynthesisProperty);
+        set => SetValue(FontSynthesisProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
         typeof(FontStretch), typeof(UIComponent),
         new PropertyMetadata(FontStretch.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -425,6 +438,18 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         }
 
         return new TextAttributes { Features = features, Language = language };
+    }
+
+    /// <summary>What text set in <paramref name="font"/>, the face <see cref="ResolveFont"/> found, is shaped with: the
+    /// <see cref="TextShaping()"/> of this element, and a bold or italic drawn for what the face lacks when
+    /// <see cref="FontSynthesis"/> allows it (<see cref="FontSynthesisRules"/>).</summary>
+    public TextAttributes TextShaping(IFont font)
+    {
+        var shaping = TextShaping();
+        var synthesis = FontSynthesisRules.Needed(font, FontWeight, FontStyle, FontSynthesis);
+        return synthesis == FontSynthesis.None
+            ? shaping
+            : (shaping ?? TextAttributes.Empty).With(new TextAttributes { Synthesis = synthesis });
     }
 
     /// <summary>Whether text laid out with <paramref name="left"/> and with <paramref name="right"/> - two answers of

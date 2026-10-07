@@ -18,6 +18,10 @@ All packages share one version.
 - A variable font takes any weight and width along its axes, not only its named faces: `FontWeight` and `FontStretch`
   set the 'wght' and 'wdth' of Bahnschrift, Segoe UI Variable or Sitka (`FontWeight="460"`), and of a family made from
   a variable font file. `FontFamily="Bahnschrift"` in markup (`FontFamily.Parse`).
+- `FontSynthesis` on every element and `Run`, inherited by the text inside: `FontSynthesis="Weight, Style"` draws a
+  bold or italic the family lacks by thickening or slanting the face it has, live as it changes; `None` (the default)
+  draws the nearest face as it is, and a face the family has always wins. `UIComponent.TextShaping(font)` gives what
+  text set in a face is drawn with, the synthesis included.
 - `FontFamily.TryGetFont` and `UIComponent.TryResolveFont`: a face without waiting for its file, the family's own face
   standing in while it loads; `WaitForFonts` and `OnFontsArrived` for a control that lays out text of its own.
 - The markup generator warns about a value of a type the type parser has no parser for, with the attribute and its

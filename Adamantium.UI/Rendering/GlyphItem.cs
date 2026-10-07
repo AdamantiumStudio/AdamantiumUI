@@ -20,7 +20,8 @@ public struct GlyphItem
     /// still folds the opacity chain into its color).</summary>
     public Vector4F Params;
 
-    /// <summary>.x = the clip slot this glyph is cut by, or -1 (0 is a valid slot); .yzw spare.</summary>
+    /// <summary>.x = the clip slot this glyph is cut by, or -1 (0 is a valid slot); .yzw = the glyph's synthesized bold
+    /// and italic, as <see cref="Adamantium.Graphics.Fonts.FontItem.Synthesis"/> holds them in its xyz.</summary>
     public Vector4F Clip;
 
     /// <summary>Straight (non-premultiplied) RGBA, element/brush opacity already folded into .w.</summary>

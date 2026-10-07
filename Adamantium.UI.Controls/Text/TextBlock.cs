@@ -145,7 +145,7 @@ public class TextBlock : InputUIComponent
             width = _lastConstraint.Width;
         var height = Height;
         var text = HasInlines ? InlineText() : Text;
-        var shaping = TextShaping();
+        var shaping = TextShaping(font);
 
         if (_hasLayout && !_inlinesDirty
             && _lastText == text && _lastFontSize.Equals(FontSize)
@@ -321,11 +321,13 @@ public class TextBlock : InputUIComponent
             }
 
             var length = (run.Text ?? string.Empty).Length;
-            _runFontsPending |= !TryResolveFont(family, run.FontWeight ?? FontWeight, run.FontStyle ?? FontStyle,
-                run.FontStretch ?? FontStretch, out var runFont);
+            var weight = run.FontWeight ?? FontWeight;
+            var style = run.FontStyle ?? FontStyle;
+            _runFontsPending |= !TryResolveFont(family, weight, style, run.FontStretch ?? FontStretch, out var runFont);
             attributed.Apply(start, length, new TextAttributes
             {
                 Font = runFont,
+                Synthesis = FontSynthesisRules.Needed(runFont, weight, style, run.FontSynthesis ?? FontSynthesis),
                 Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
                 Language = run.Language,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
