@@ -524,6 +524,9 @@ All packages share one version.
 
 ### Fixed
 
+- An open popup - a slide panel, a flyout - vanished when its window moved to a monitor of another scale, and came back
+  on the first one. Popups and adorners are baked at the window's scale, and a move keeps every position the same in
+  DIPs, so nothing told their stages to bake again; their gate now asks about the scale too.
 - `FontFamily="Name"` in markup built and then threw where the view was built, as `FontFamily` had no parser: the view
   came up empty with nothing said.
 - What an open popup shows took the popup's data context as it was at the moment of opening, as a value of its own,

@@ -18,9 +18,18 @@ internal sealed class OverlayRebuildGate
 
     private long _seenPaintMarks;
 
-    public bool HasChanged(IReadOnlyList<IUIComponent> flat, RenderDirtyScope scope)
+    private double _seenRenderScale;
+
+    public bool HasChanged(IReadOnlyList<IUIComponent> flat, RenderDirtyScope scope, double renderScale)
     {
         var changed = false;
+
+        // Baked at the window's scale: a move to a monitor of another DPI changes nothing else checked here.
+        if (renderScale != _seenRenderScale)
+        {
+            _seenRenderScale = renderScale;
+            changed = true;
+        }
 
         // Recolors (opacity, brush pulses) change nothing else checked here. A monotonic counter, since the loop thread
         // clears the mark sets before this render-thread build runs.
