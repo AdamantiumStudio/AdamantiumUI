@@ -3,7 +3,9 @@ using Adamantium.Core.Collections;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
@@ -309,6 +311,53 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get => GetValue<double>(FontSizeProperty);
         set => SetValue(FontSizeProperty, value);
+    }
+
+    public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
+        typeof(FontFeatureList), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>OpenType features for the text in this element and its descendants, after the ones
+    /// <see cref="Typography"/> asks for: <c>FontFeatures="liga=0, ss01"</c>.</summary>
+    public FontFeatureList FontFeatures
+    {
+        get => GetValue<FontFeatureList>(FontFeaturesProperty);
+        set => SetValue(FontFeaturesProperty, value);
+    }
+
+    public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
+        typeof(string), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>The language of the text in this element and its descendants, as a BCP 47 tag ("sr", "zh-Hant"): it picks
+    /// the font's local letter forms. Unset, text is in the application's language
+    /// (<see cref="Adamantium.UI.Core.Localization.Languages.Current"/>).</summary>
+    public string Language
+    {
+        get => GetValue<string>(LanguageProperty);
+        set => SetValue(LanguageProperty, value);
+    }
+
+    internal TextAttributes TextShaping()
+    {
+        var features = Typography.FeaturesOf(this, FontFeatures);
+        var language = Language ?? Languages.Current;
+        if (features == null && language == null)
+        {
+            return null;
+        }
+
+        return new TextAttributes { Features = features, Language = language };
+    }
+
+    internal static bool ShapesLike(TextAttributes left, TextAttributes right)
+    {
+        if (left == null || right == null)
+        {
+            return left == right;
+        }
+
+        return left.ShapesLike(right);
     }
 
     // Inherited, so a container's cursor reaches the template part the pointer enters; declared here so every node the

@@ -11,4 +11,11 @@
     <Phrase Key="BindableRuns" Text="Привязываемые Run:"/>
     <Phrase Key="YouTyped" Text="Вы набрали: "/>
     <Phrase Key="Chars" Count="count" One="  ({count} символ)" Few="  ({count} символа)" Many="  ({count} символов)" Other="  ({count} символа)"/>
+    <Phrase Key="StyledRuns" Text="Run с фоном, линиями и размером:"/>
+    <Phrase Key="Highlighted" Text="выделено"/>
+    <Phrase Key="Underlined" Text="подчёркнуто"/>
+    <Phrase Key="Misspelt" Text="ашибка"/>
+    <Phrase Key="Struck" Text="зачёркнуто"/>
+    <Phrase Key="Large" Text="и крупно"/>
+    <Phrase Key="TypographyTitle" Text="Типографика (табличные цифры; ниже — без лигатур, дроби):"/>
 </Language>

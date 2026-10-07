@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `FontFeatures` and `Language` on every element, inherited by the text inside: OpenType features as a
+  `FontFeatureList` (`[FontFeature.Ligatures.Off, FontFeature.StylisticSet(1)]` in code, `FontFeatures="liga=0, ss01"`
+  in markup) and a BCP 47 language that picks the font's local forms; text without a language is in the application's
+  (`Languages.Current`) and reshapes when it changes. `Typography.Ligatures`, `Capitals`, `NumeralStyle`,
+  `NumeralAlignment`, `Fraction` and `Variants` name the common features. A feature tag the OpenType registry does not
+  have fails the build and is underlined in the editor, with the tag it most likely meant.
+- `Run.Background`, `TextDecorations` (underline, strikethrough, squiggle), `FontFeatures` and `Language`. A
+  `TextBlock`'s runs lay out as one text: they wrap and align together, a line is as tall as its largest run, and the
+  block draws the runs' backgrounds and lines.
 - `Theme.CurrentVariantProperty`: a switch of variant is announced as a property of the theme, once its palette and
   values are all in the new variant - for what has to know which variant is in force, not only its colors.
 - Input method editors on Windows (IMM32): the IME's composition and candidate windows open at the caret of a
@@ -392,6 +401,11 @@ All packages share one version.
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
+
+- Text lines take the font's own height - ascent, descent and line gap - with the engine: a run's background and a
+  `TextBox` selection now cover the descenders, and lines of text set in Segoe UI are 1.33 of its size apart, as on
+  Windows, instead of 1.13. A `TextBox` no longer adds room under its last line for them. `FontFamily.BaseLine` is gone
+  with the engine metric it read.
 
 - Text is shaped with the font's OpenType rules (engine `TextShaper`): ligatures, contextual alternates, marks placed
   on their letters, and a visible box for a character the font lacks. `TextBox` takes its caret positions from the

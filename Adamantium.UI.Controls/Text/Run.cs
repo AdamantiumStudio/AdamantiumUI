@@ -1,3 +1,4 @@
+using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -5,7 +6,8 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls.Text;
 
 /// <summary>
-/// A run of text with its own optional color and size inside a <see cref="TextBlock"/>. Every property is a bindable
+/// A run of text with its own optional color, size, background, lines, features and language inside a
+/// <see cref="TextBlock"/>, whose runs lay out as one text and wrap across each other. Every property is a bindable
 /// <see cref="AdamantiumProperty"/> and the run inherits the TextBlock's DataContext, so <c>Text</c> / <c>Foreground</c>
 /// bind straight to the view-model (<c>&lt;Run Text="{Binding Name}" Foreground="{Binding Color}"/&gt;</c>). An unset
 /// <see cref="Foreground"/> / <see cref="FontSize"/> falls back to the owning TextBlock's.
@@ -21,6 +23,19 @@ public class Run : Inline
     // NaN = "inherit the TextBlock's FontSize".
     public static readonly AdamantiumProperty FontSizeProperty = AdamantiumProperty.Register(nameof(FontSize),
         typeof(double), typeof(Run), new PropertyMetadata(double.NaN, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty BackgroundProperty = AdamantiumProperty.Register(nameof(Background),
+        typeof(Brush), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty TextDecorationsProperty = AdamantiumProperty.Register(
+        nameof(TextDecorations), typeof(TextDecorations), typeof(Run),
+        new PropertyMetadata(TextDecorations.None, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
+        typeof(FontFeatureList), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
+    public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
+        typeof(string), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
     public string Text
     {
@@ -40,6 +55,34 @@ public class Run : Inline
     {
         get => GetValue<double>(FontSizeProperty);
         set => SetValue(FontSizeProperty, value);
+    }
+
+    /// <summary>A fill behind this run's text, as high as the line; null draws none.</summary>
+    public Brush Background
+    {
+        get => GetValue<Brush>(BackgroundProperty);
+        set => SetValue(BackgroundProperty, value);
+    }
+
+    /// <summary>Lines drawn with this run: <c>Underline</c>, <c>Strikethrough</c>, <c>Squiggle</c>, in its color.</summary>
+    public TextDecorations TextDecorations
+    {
+        get => GetValue<TextDecorations>(TextDecorationsProperty);
+        set => SetValue(TextDecorationsProperty, value);
+    }
+
+    /// <summary>OpenType features for this run; null takes the TextBlock's.</summary>
+    public FontFeatureList FontFeatures
+    {
+        get => GetValue<FontFeatureList>(FontFeaturesProperty);
+        set => SetValue(FontFeaturesProperty, value);
+    }
+
+    /// <summary>The language of this run (BCP 47); null takes the TextBlock's.</summary>
+    public string Language
+    {
+        get => GetValue<string>(LanguageProperty);
+        set => SetValue(LanguageProperty, value);
     }
 
     private static void OnRunPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
