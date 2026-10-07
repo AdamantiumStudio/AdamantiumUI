@@ -400,6 +400,11 @@ All packages share one version.
 
 ### Changed
 
+- Text lines take the font's own height - ascent, descent and line gap - with the engine: a run's background and a
+  `TextBox` selection now cover the descenders, and lines of text set in Segoe UI are 1.33 of its size apart, as on
+  Windows, instead of 1.13. A `TextBox` no longer adds room under its last line for them. `FontFamily.BaseLine` is gone
+  with the engine metric it read.
+
 - Text is shaped with the font's OpenType rules (engine `TextShaper`): ligatures, contextual alternates, marks placed
   on their letters, and a visible box for a character the font lacks. `TextBox` takes its caret positions from the
   layout instead of counting one glyph per character, so the caret, selection and clicks stay right inside a ligature,

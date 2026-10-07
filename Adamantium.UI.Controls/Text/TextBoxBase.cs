@@ -247,8 +247,6 @@ public abstract class TextBoxBase : Control
     private FontFamily _layoutFont;
     private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
-    private double _glyphLineHeight;           // real single-line ink extent (ascent+descent+gap) - reserves the LAST
-                                               // line's descent so hanging tails (g y p q j) aren't clipped by the control
     private double _baselineInLine;            // the two reference lines the glyph pipeline anchors ink to, measured
     private double _ascenderRise;              // from the line's top: the baseline, and how far the ascender sits above it
 
@@ -314,16 +312,11 @@ public abstract class TextBoxBase : Control
         // caret Y from a different guess (e.g. 1.4 * FontSize) made the caret drift off its line onto the next row.
         var iFont = _textLayout.Font;
         var lgScale = FontSize / iFont.UnitsPerEm;
-        _lineHeight = (iFont.LineGap == 0 ? FontSize : iFont.LineGap * lgScale) + FontSize;
-        // ProcessText places each line's baseline at Font.Baseline*scale from the line top (NOT ascent - this font's
-        // Baseline is ~the full line box) and lets descenders "hang below" without reserving space, so a single-line
-        // field's tails overflow _lineHeight and the control's clip cuts them. Reserve the TRUE bottom of the last line's
-        // ink - its baseline (Baseline*scale) plus the descent below it - never less than the line advance.
-        _glyphLineHeight = Math.Max(_lineHeight, (iFont.Baseline + Math.Abs(iFont.Descender)) * lgScale);
-        // The caret band: the baseline (Baseline*scale below the line top, NOT the ascent: this font's Baseline is ~the
-        // full line box), rounded to a whole pixel as CalculateGlyphPosition rounds it, up to the rounded ascender line -
-        // the same for every string, so the caret keeps its height whatever is typed.
-        _baselineInLine = iFont.Baseline * lgScale;
+        _lineHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * lgScale;
+        // The caret band: the baseline (half the gap plus the ascent below the line top, as ProcessText places it),
+        // rounded to a whole pixel as CalculateGlyphPosition rounds it, up to the rounded ascender line - the same for
+        // every string, so the caret keeps its height whatever is typed.
+        _baselineInLine = (iFont.LineGap / 2.0 + iFont.LineAscent) * lgScale;
         _ascenderRise = iFont.Ascender * lgScale;
 
         var text = Text ?? string.Empty;
@@ -394,9 +387,7 @@ public abstract class TextBoxBase : Control
     // --- Caret / selection geometry ------------------------------------------------------------------------------
 
     private int MaxLineIndex => _lineCount - 1;
-    // Lines advance by _lineHeight; the LAST line reserves its full ink height (ascent+descent) so hanging descenders
-    // aren't clipped by the control's bottom edge (the em-based advance can be shorter than ascent+descent).
-    private double ContentHeight => (_lineCount - 1) * _lineHeight + _glyphLineHeight;
+    private double ContentHeight => _lineCount * _lineHeight;
 
     // Text-local caret rect before character index: from the ascender line to the baseline, rounded as glyphs are, not
     // the font's ascent-descent band, which sits low.

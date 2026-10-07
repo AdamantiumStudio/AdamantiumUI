@@ -20,7 +20,5 @@ public class FontFamily
 
     public IReadOnlyList<IFont> Fonts => Typeface.Fonts;
 
-    public double BaseLine => Typeface.GetFont(0).Baseline;
-
     public double LineGap => Typeface.GetFont(0).LineGap;
 }
