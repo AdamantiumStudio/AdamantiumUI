@@ -15,6 +15,13 @@ All packages share one version.
   system's fonts indexed by family. A `Run` takes its own (`<Run FontWeight="Bold"/>`) and is set in that face within
   the block's line. `FontFamily.GetFont` gives the face for a weight, slant and width. A weight or width the parser
   does not know fails the build and is underlined in the editor.
+- A variable font takes any weight and width along its axes, not only its named faces: `FontWeight` and `FontStretch`
+  set the 'wght' and 'wdth' of Bahnschrift, Segoe UI Variable or Sitka (`FontWeight="460"`), and of a family made from
+  a variable font file. `FontFamily="Bahnschrift"` in markup (`FontFamily.Parse`).
+- `FontFamily.TryGetFont` and `UIComponent.TryResolveFont`: a face without waiting for its file, the family's own face
+  standing in while it loads; `WaitForFonts` and `OnFontsArrived` for a control that lays out text of its own.
+- The markup generator warns about a value of a type the type parser has no parser for, with the attribute and its
+  line: such a value builds and then throws where the view is built.
 - `FontFeatures` and `Language` on every element, inherited by the text inside: OpenType features as a
   `FontFeatureList` (`[FontFeature.Ligatures.Off, FontFeature.StylisticSet(1)]` in code, `FontFeatures="liga=0, ss01"`
   in markup) and a BCP 47 language that picks the font's local forms; text without a language is in the application's
@@ -413,6 +420,10 @@ All packages share one version.
 
 ### Changed
 
+- Text no longer waits on the loop for font files: a `TextBlock` or `TextBox` whose face or fallback font is not
+  loaded yet lays out with what is (the family's own face, an empty place for a character from a font still loading)
+  while the file is read on a worker, and lays out again when it arrives. A render with no next frame waits as
+  before. The sandbox's text page lays out in 0.66 s instead of 1.84.
 - Text lines take the font's own height - ascent, descent and line gap - with the engine: a run's background and a
   `TextBox` selection now cover the descenders, and lines of text set in Segoe UI are 1.33 of its size apart, as on
   Windows, instead of 1.13. A `TextBox` no longer adds room under its last line for them. `FontFamily.BaseLine` is gone
@@ -509,6 +520,8 @@ All packages share one version.
 
 ### Fixed
 
+- `FontFamily="Name"` in markup built and then threw where the view was built, as `FontFamily` had no parser: the view
+  came up empty with nothing said.
 - What an open popup shows took the popup's data context as it was at the moment of opening, as a value of its own,
   and never followed it: a `SlidePanel` open through a theme swap reopened on its new template before the context
   reached it, and its content lost the view-model until it was closed and opened again - picks in it did nothing. The

@@ -139,6 +139,7 @@ public class CodeGenerationContext
             }
             else if (!string.IsNullOrEmpty(valueText))
             {
+                ReportIfUnparsable(typeInfo, diagnostics, $"<{typeInfo.Name}>{valueText}</{typeInfo.Name}>");
                 TextGenerator.WriteLine($"{declaration} = {Metadata.DefaultTypeContainer.TypeParser.QualifiedName}.Parse<{typeInfo.QualifiedName}>({Quote(valueText)});");
             }
             else
@@ -667,7 +668,8 @@ public class CodeGenerationContext
                     // (e.g. {x:Static}) the regular way too.
                     var expr = prop.Values.Count == 1 && !prop.Values[0].IsTextNode()
                         ? ProcessNestedValue(prop.Values[0], diagnostics, isResource)
-                        : BuildValueExpression(prop.GetTextValue(), resolvedType);
+                        : BuildValueExpression(prop.GetTextValue(), resolvedType, diagnostics,
+                            $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})");
                     // The ROOT element has no parent variable - it IS the generated class, as the object-valued path
                     // below already knows. Writing CurrentParent unguarded emitted `SetX(, value)` for an attached
                     // property authored on the root (ResourceContext.Scope on a Theme).
@@ -720,13 +722,15 @@ public class CodeGenerationContext
                         && HasAdamantiumProperty(typeInfo, propRef.Name))
                     {
                         var target = isRoot ? "this" : CurrentParent;
-                        var expr = BuildValueExpression(prop.GetTextValue(), resolvedType);
+                        var expr = BuildValueExpression(prop.GetTextValue(), resolvedType, diagnostics,
+                            $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})");
                         TextGenerator.WriteLine(
                             $"{target}.SetValue(\"{propRef.Name}\", ({resolvedType.QualifiedName})({expr}), global::Adamantium.UI.Core.ValuePriority.Template);");
                     }
                     else
                     {
-                        GenerateSimpleAssignment(symbolName, prop.GetTextValue(), resolvedType);
+                        GenerateSimpleAssignment(symbolName, prop.GetTextValue(), resolvedType, diagnostics,
+                            $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})");
                     }
                 }
                 else
@@ -1074,9 +1078,20 @@ public class CodeGenerationContext
         }
     }
 
-    private void GenerateSimpleAssignment(string symbolName, string valueText, IResolvedType member)
+    private void GenerateSimpleAssignment(string symbolName, string valueText, IResolvedType member,
+        IDiagnosticSink diagnostics, string where)
     {
-        TextGenerator.WriteLine($"{symbolName} = {BuildValueExpression(valueText, member)};");
+        TextGenerator.WriteLine($"{symbolName} = {BuildValueExpression(valueText, member, diagnostics, where)};");
+    }
+
+    private void ReportIfUnparsable(IResolvedType type, IDiagnosticSink diagnostics, string where)
+    {
+        if (!TypeParserCheck.CanParse(type))
+        {
+            diagnostics.ReportWarning(Metadata.ClassName,
+                $"{where}: {type.FullName} has no type parser, so this value throws when the markup is built. Give the " +
+                "type a [TypeParser] or a public static Parse(string).");
+        }
     }
 
     // Enum flag lists split on ',' or '|', matching TypeCastFactory.ParseEnum; not gated on [Flags], so misuse reports a
@@ -1103,7 +1118,7 @@ public class CodeGenerationContext
 
     // The C# expression for a literal attribute value, typed as the property's type (so it can be assigned directly OR
     // boxed for a priority-aware SetValue without losing its type, e.g. Opacity="0" must be (double)0, not a boxed int).
-    private string BuildValueExpression(string valueText, IResolvedType member)
+    private string BuildValueExpression(string valueText, IResolvedType member, IDiagnosticSink diagnostics, string where)
     {
         if (member.TypeKind == ResolvedTypeKind.Enum)
             return BuildEnumExpression(valueText, member);
@@ -1145,6 +1160,7 @@ public class CodeGenerationContext
             case ResolvedSpecialType.System_Object:
                 return Quote(valueText);
             default:
+                ReportIfUnparsable(member, diagnostics, where);
                 return $"{Metadata.DefaultTypeContainer.TypeParser.QualifiedName}.Parse<{member.QualifiedName}>({Quote(valueText)})";
         }
     }
@@ -1226,7 +1242,8 @@ public class CodeGenerationContext
             var resolvedAssembly = Metadata.TypeResolver.ResolveAssembly(literal.TypeReference.Assembly);
             var type = resolvedAssembly.Types.First(x => x.Name == literal.TypeReference.Name);
             var name = GenerateNextElementName();
-            GenerateSimpleAssignment($"var {name}", literal.Text, type);
+            GenerateSimpleAssignment($"var {name}", literal.Text, type, diagnostics,
+                $"{literal.TypeReference.Name} \"{literal.Text}\"");
             return name;
         }
 
@@ -1256,7 +1273,8 @@ public class CodeGenerationContext
                 {
                     var resolvedMember = Metadata.TypeResolver.ResolveAssembly(arg.Value.TypeReference.Assembly).Types
                         .First(x => x.Name == arg.Value.TypeReference.Name);
-                    GenerateSimpleAssignment(target, arg.Value.GetTextValue(), resolvedMember);
+                    GenerateSimpleAssignment(target, arg.Value.GetTextValue(), resolvedMember, diagnostics,
+                        $"{extension.TypeReference.Name} {arg.Name}=\"{arg.Value.GetTextValue()}\"");
                 }
             }
 

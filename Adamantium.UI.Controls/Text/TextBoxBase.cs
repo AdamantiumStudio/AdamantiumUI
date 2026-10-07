@@ -293,6 +293,13 @@ public abstract class TextBoxBase : Control
     private bool _restoring;
     private const int UndoLimit = 500;
 
+    /// <summary>Lays the text and the placeholder out again in the fonts that arrived.</summary>
+    protected internal override void OnFontsArrived()
+    {
+        _placeholderShaped = null;
+        OnFontChanged();
+    }
+
     private void OnFontChanged()
     {
         _lastShapedText = null;
@@ -302,13 +309,16 @@ public abstract class TextBoxBase : Control
 
     private void EnsureLayout()
     {
-        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
+        var loadsSeen = TypefaceStore.LoadedCount;
+        var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, out var font);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
         {
             _textLayout = new TextLayout(font.Typeface, font) { EmitNewlineCarets = true };
             _layoutFont = font;
             _lastShapedText = null;
         }
+
+        _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
 
         // Match ProcessText's own line advance EXACTLY (it places each line this far below the previous). Deriving the
         // caret Y from a different guess (e.g. 1.4 * FontSize) made the caret drift off its line onto the next row.
@@ -358,6 +368,11 @@ public abstract class TextBoxBase : Control
                     HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
             _textWidth = size.Width;
             BuildCaretModel();
+        }
+
+        if (!fontReady || (text.Length > 0 && _textLayout.HasPendingFonts))
+        {
+            WaitForFonts(loadsSeen);
         }
 
         _lastShapedText = text;
@@ -1014,7 +1029,8 @@ public abstract class TextBoxBase : Control
     private string _placeholderShaped;
     private void EnsurePlaceholderShaped(double fontSize)
     {
-        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
+        var loadsSeen = TypefaceStore.LoadedCount;
+        var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, out var font);
         if (_placeholderLayout == null || !ReferenceEquals(_placeholderFont, font))
         {
             _placeholderLayout = new TextLayout(font.Typeface, font);
@@ -1022,11 +1038,16 @@ public abstract class TextBoxBase : Control
             _placeholderShaped = null;
         }
 
+        _placeholderLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         var key = Placeholder + "|" + fontSize;
         if (_placeholderShaped == key) return;
         _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),
             TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
         _placeholderShaped = key;
+        if (!fontReady || _placeholderLayout.HasPendingFonts)
+        {
+            WaitForFonts(loadsSeen);
+        }
     }
 
     private void RenderPlaceholder(IDrawingSession session, double oy, Size size)

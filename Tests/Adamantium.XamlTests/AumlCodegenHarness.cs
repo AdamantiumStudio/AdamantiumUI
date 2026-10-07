@@ -25,6 +25,7 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Core.Data.Binding),
         typeof(Adamantium.UI.Core.Data.MultiBinding),
         typeof(Adamantium.Core.TypeParsing.TypeParser),   // force-load Adamantium.Core so codegen resolves OUR TypeParser
+        typeof(Adamantium.Fonts.FontWeight),   // the font types text properties take, with the parsers they carry
         typeof(Adamantium.UI.Markup.Localization.PluralRules),   // what a counted phrase of a table calls
         typeof(Adamantium.UI.ApplicationModel.ApplicationBlueprint),   // the application and its blueprint
         typeof(Adamantium.UI.Themes.FluentTheme.Fluent),   // the themes a blueprint starts on

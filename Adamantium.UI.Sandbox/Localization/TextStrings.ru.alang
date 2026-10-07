@@ -18,6 +18,7 @@
     <Phrase Key="Struck" Text="зачёркнуто"/>
     <Phrase Key="Large" Text="и крупно"/>
     <Phrase Key="WeightsTitle" Text="Веса и наклоны одного семейства:"/>
+    <Phrase Key="VariableTitle" Text="Вариативный шрифт (Bahnschrift): веса между именованными и ширины:"/>
     <Phrase Key="FallbackTitle" Text="Подмена шрифтов (последнего символа нет ни в одном шрифте):"/>
     <Phrase Key="TypographyTitle" Text="Типографика (как есть; капитель со старостильными цифрами; дроби):"/>
 </Language>
