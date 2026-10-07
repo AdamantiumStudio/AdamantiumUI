@@ -335,7 +335,16 @@ public class Theme : AdamantiumComponent, ITheme
 
     public IReadOnlyDictionary<ThemeVariant, ThemeVariantDefinition> VariantsByKey => _variants;
 
-    public ThemeVariant CurrentVariant { get; private set; }
+    /// <summary>The variant in force; it changes - and says so, as a property of the theme - once the palette and the
+    /// theme's values are all in the new variant.</summary>
+    public static readonly AdamantiumProperty CurrentVariantProperty = AdamantiumProperty.Register(
+        nameof(CurrentVariant), typeof(ThemeVariant), typeof(Theme), new PropertyMetadata(default(ThemeVariant)));
+
+    public ThemeVariant CurrentVariant
+    {
+        get => GetValue<ThemeVariant>(CurrentVariantProperty);
+        private set => SetValue(CurrentVariantProperty, value);
+    }
 
     /// <summary>The variant used when nothing else is said - the first one declared.</summary>
     public ThemeVariant DefaultVariant { get; private set; }
@@ -430,8 +439,6 @@ public class Theme : AdamantiumComponent, ITheme
         if (variant.IsUnspecified) variant = DefaultVariant;
         if (variant.IsUnspecified || !_variants.TryGetValue(variant, out var definition)) return false;
 
-        CurrentVariant = variant;
-
         // Write colors into the existing brushes. Raw color entries are values nobody holds, so their change must be
         // announced.
         var rawChanged = false;
@@ -468,6 +475,7 @@ public class Theme : AdamantiumComponent, ITheme
             SetValue(property, entry.Value);
         }
 
+        CurrentVariant = variant;
         return true;
     }
 
