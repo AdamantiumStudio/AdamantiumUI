@@ -1,4 +1,5 @@
 using System;
+using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Input;
 using NUnit.Framework;
@@ -197,24 +198,21 @@ public class TextBoxTests
         Assert.That(tb.Text, Is.EqualTo(string.Empty));
     }
 
-    // The caret spans the pixel-rounded ascender line to baseline, where the glyphs sit, not the font's ascent..descent.
+    // The caret takes the whole height of its line, as the selection does, on whole pixels.
     [Test]
-    public void Caret_SpansTheGlyphBand_OnWholePixels()
+    public void Caret_SpansItsLine_OnWholePixels()
     {
-        var tb = new TextBox { Text = "Agy" };   // a cap, an ascender and a descender: the full ink extent
+        var tb = new TextBox { Text = "Agy" };
         var surface = tb.MeasureSurface(double.PositiveInfinity);
         var caret = tb.CaretRect(0);
+        var selection = tb.SurfaceRects(0, 3)[0];
 
         Assert.Multiple(() =>
         {
-            Assert.That(caret.Y, Is.EqualTo(Math.Round(caret.Y)),
-                "the caret's top must be the whole row the glyph pipeline rounds the ascender line to");
-            Assert.That(caret.Bottom, Is.EqualTo(Math.Round(caret.Bottom)),
-                "the caret's bottom must be the whole row the glyph pipeline rounds the baseline to");
-            Assert.That(caret.Y, Is.GreaterThan(0),
-                "the caret starts at the ascender line, which sits below the top of the line box");
-            Assert.That(caret.Bottom, Is.LessThan(surface.Height),
-                "the caret ends at the baseline; the surface reserves the descent BELOW it");
+            Assert.That(caret.Y, Is.EqualTo(0), "the caret starts at the top of its line");
+            Assert.That(caret.Bottom, Is.EqualTo(Math.Round(surface.Height)), "and ends at its bottom");
+            Assert.That(caret.Height, Is.EqualTo(selection.Height).Within(1),
+                "the caret and the selection cover the same line");
         });
     }
 
@@ -235,6 +233,38 @@ public class TextBoxTests
             Assert.That(empty.Y, Is.EqualTo(caps.Y).Within(0.01));
             Assert.That(empty.Height, Is.EqualTo(caps.Height).Within(0.01));
         });
+    }
+
+    /// <summary>A line of nothing but a fallback emoji keeps the line of the field's own font: it may grow for a taller
+    /// font, never shrink to it, so the caret and the selection stay where they are on every line.</summary>
+    [Test]
+    public void ALineOfFallbackGlyphs_KeepsTheLineOfTheFieldsFont()
+    {
+        if (!System.IO.File.Exists(@"C:\Windows\Fonts\seguiemj.ttf"))
+        {
+            Assert.Ignore("Segoe UI Emoji is not installed here.");
+        }
+
+        var wasSynchronous = FontAtlasStore.SynchronousFill;
+        FontAtlasStore.SynchronousFill = true;
+        try
+        {
+            var plain = new TextBox { Text = "Ab" };
+            var emoji = new TextBox { Text = "\U0001F600" };
+            plain.MeasureSurface(double.PositiveInfinity);
+            emoji.MeasureSurface(double.PositiveInfinity);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(emoji.CaretRect(0).Y, Is.EqualTo(plain.CaretRect(0).Y));
+                Assert.That(emoji.CaretRect(0).Height, Is.GreaterThanOrEqualTo(plain.CaretRect(0).Height));
+                Assert.That(emoji.SurfaceRects(0, 2)[0].Height, Is.GreaterThanOrEqualTo(plain.SurfaceRects(0, 2)[0].Height));
+            });
+        }
+        finally
+        {
+            FontAtlasStore.SynchronousFill = wasSynchronous;
+        }
     }
 
     /// <summary>What the clear button shows by: the box keeps it, typed or assigned.</summary>
