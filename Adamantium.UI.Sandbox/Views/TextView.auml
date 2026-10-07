@@ -110,18 +110,22 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Characters the theme's font lacks come from the system's fallback fonts; the last one is in no font. -->
+        <TextBlock Text="{Localize TextStrings.FallbackTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock Text="Latin 中文 日本語 한국어 😀 ☃ ∑ ͸"
+                   FontSize="20"/>
+
         <!-- Typography by name and font features by tag, inherited by the text inside. -->
         <TextBlock Text="{Localize TextStrings.TypographyTitle}"
                    Margin="0,20,0,6"/>
-        <StackPanel Typography.NumeralAlignment="Tabular"
+        <StackPanel FontSize="22"
                     Orientation="Vertical">
-            <TextBlock Text="Office affluent 0123456789"
-                       FontSize="22"/>
-            <TextBlock Text="Office affluent 0123456789"
-                       FontSize="22"
-                       FontFeatures="liga=0"/>
-            <TextBlock Text="1/2 3/4"
-                       FontSize="22"
+            <TextBlock Text="Small capitals 1/2 0123456789"/>
+            <TextBlock Text="Small capitals 1/2 0123456789"
+                       Typography.Capitals="SmallCaps"
+                       Typography.NumeralStyle="Oldstyle"/>
+            <TextBlock Text="1/2 3/4 7/8"
                        Typography.Fraction="Slashed"/>
         </StackPanel>
     </StackPanel>

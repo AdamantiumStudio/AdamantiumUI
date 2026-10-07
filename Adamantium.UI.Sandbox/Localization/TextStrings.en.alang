@@ -18,5 +18,6 @@
     <Phrase Key="Struck" Text="struck out"/>
     <Phrase Key="Large" Text="and large"/>
     <Phrase Key="WeightsTitle" Text="Weights and slants of one family:"/>
-    <Phrase Key="TypographyTitle" Text="Typography (tabular figures; below: no ligatures, fractions):"/>
+    <Phrase Key="FallbackTitle" Text="Fallback fonts (the last character is in no font):"/>
+    <Phrase Key="TypographyTitle" Text="Typography (as is; small capitals with oldstyle figures; fractions):"/>
 </Language>

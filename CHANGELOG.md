@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- Text draws characters its font lacks from the system's fallback fonts: Chinese, Japanese and Korean in the family of
+  the text's `Language`, emoji and symbols in Segoe UI Emoji and Symbol, each in the weight and slant of the text. A
+  character no font has shows the font's missing-glyph box.
 - `FontWeight`, `FontStyle` and `FontStretch` on every element, inherited by the text inside: `FontWeight="SemiBold"`
   or `"650"`, `FontStyle="Italic"`, `FontStretch="Condensed"` pick the family's nearest face, as CSS picks it, from the
   system's fonts indexed by family. A `Run` takes its own (`<Run FontWeight="Bold"/>`) and is set in that face within
