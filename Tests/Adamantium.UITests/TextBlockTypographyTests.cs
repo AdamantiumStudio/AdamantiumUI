@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Threading;
 using Adamantium.Fonts;
 using Adamantium.Fonts.Shaping;
 using Adamantium.Graphics.Fonts;
@@ -6,6 +8,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Extensions;
@@ -18,6 +21,28 @@ public class TextBlockTypographyTests
 {
     private static TextBlock Hosted(TextBlock text, Border host = null)
     {
+        Host(text, host);
+        return text;
+    }
+
+    // A face not loaded yet is read on a worker, the family's own face standing in; the text lays out again on the loop
+    // when it arrives. Runs the loop until it has, or ten seconds pass.
+    private static TextBlock HostedUntil(TextBlock text, Func<bool> arrived, Border host = null)
+    {
+        var window = Host(text, host);
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!arrived() && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(10);
+            LoopSignal.Drain();
+            WindowExtension.UpdateTree(window);
+        }
+
+        return text;
+    }
+
+    private static Window Host(TextBlock text, Border host)
+    {
         host ??= new Border();
         host.Child = text;
         var window = new Window { Width = 600, Height = 300, Content = host };
@@ -26,7 +51,7 @@ public class TextBlockTypographyTests
             WindowExtension.UpdateTree(window);
         }
 
-        return text;
+        return window;
     }
 
     private static string[] Features(TextBlock text) =>
@@ -122,7 +147,8 @@ public class TextBlockTypographyTests
     public void AWeightOnAContainer_PicksTheFamilysBoldFace()
     {
         var host = new Border { FontWeight = FontWeight.Bold };
-        var text = Hosted(new TextBlock { Text = "bold" }, host);
+        var text = new TextBlock { Text = "bold" };
+        HostedUntil(text, () => text.Layout?.Font.FullName.Contains("Bold") == true, host);
         var plain = Hosted(new TextBlock { Text = "plain" });
 
         Assert.That(text.Layout.Font, Is.Not.SameAs(plain.Layout.Font), "another face of the family");
@@ -135,7 +161,7 @@ public class TextBlockTypographyTests
         var text = new TextBlock();
         text.Inlines.Add(new Run { Text = "plain " });
         text.Inlines.Add(new Run { Text = "bold", FontWeight = FontWeight.Bold });
-        Hosted(text);
+        HostedUntil(text, () => text.Layout?.GetTextData().Any(g => g.Font.FullName.Contains("Bold")) == true);
 
         var glyphs = text.Layout.GetTextData();
 

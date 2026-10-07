@@ -105,6 +105,7 @@ public class TextBlock : InputUIComponent
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
+    private bool _runFontsPending;
 
     public TextBlock()
     {
@@ -121,7 +122,8 @@ public class TextBlock : InputUIComponent
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
         var eb0 = System.GC.GetAllocatedBytesForCurrentThread();
-        var font = ResolveFont(FontFamily ?? DefaultFontFamily);
+        var loadsSeen = TypefaceStore.LoadedCount;
+        var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, out var font);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
         {
             _textLayout = new TextLayout(font.Typeface, font);
@@ -129,6 +131,8 @@ public class TextBlock : InputUIComponent
             _hasLayout = false;
             LayoutRebuilds++;
         }
+
+        _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -157,6 +161,7 @@ public class TextBlock : InputUIComponent
         GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
 
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
+        _runFontsPending = false;
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
@@ -165,6 +170,10 @@ public class TextBlock : InputUIComponent
                 HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine)
             : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
                 HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
+        if (!fontReady || _runFontsPending || _textLayout.HasPendingFonts)
+        {
+            WaitForFonts(loadsSeen);
+        }
 
         // A NoWrap block took that width only so TRIMMING had an edge to work to - it must not then ASK for it. The
         // layout reports the text AREA once one is given, not the letters, so a short label in a wide slot claimed the
@@ -312,10 +321,11 @@ public class TextBlock : InputUIComponent
             }
 
             var length = (run.Text ?? string.Empty).Length;
+            _runFontsPending |= !TryResolveFont(family, run.FontWeight ?? FontWeight, run.FontStyle ?? FontStyle,
+                run.FontStretch ?? FontStretch, out var runFont);
             attributed.Apply(start, length, new TextAttributes
             {
-                Font = family.GetFont(run.FontWeight ?? FontWeight, run.FontStyle ?? FontStyle,
-                    run.FontStretch ?? FontStretch),
+                Font = runFont,
                 Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
                 Language = run.Language,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
@@ -392,6 +402,13 @@ public class TextBlock : InputUIComponent
     public static int LayoutRebuilds;
     public static int GuardHits;
     public static int ShapeCalls;
+
+    /// <summary>Lays the text out again in the fonts that arrived.</summary>
+    protected internal override void OnFontsArrived()
+    {
+        _hasLayout = false;
+        base.OnFontsArrived();
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {

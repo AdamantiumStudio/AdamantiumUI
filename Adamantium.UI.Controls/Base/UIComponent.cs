@@ -379,6 +379,38 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
     public IFont ResolveFont(FontFamily family) => family.GetFont(FontWeight, FontStyle, FontStretch);
 
+    /// <summary>The face <see cref="ResolveFont"/> gives, without waiting for its file to be parsed: false while it
+    /// loads, with the family's own face standing in (<see cref="FontFamily.TryGetFont"/>). A render with no next frame
+    /// (<see cref="FontAtlasStore.SynchronousFill"/>) waits instead. A control that got false asks to be told when fonts
+    /// arrive (<see cref="WaitForFonts"/>).</summary>
+    public bool TryResolveFont(FontFamily family, out IFont font) =>
+        TryResolveFont(family, FontWeight, FontStyle, FontStretch, out font);
+
+    /// <summary>The face of <paramref name="family"/> nearest to the weight, slant and width given (a run's own), as
+    /// <see cref="TryResolveFont(FontFamily, out IFont)"/> finds it.</summary>
+    public bool TryResolveFont(FontFamily family, FontWeight weight, FontStyle style, FontStretch stretch, out IFont font)
+    {
+        if (FontAtlasStore.SynchronousFill)
+        {
+            font = family.GetFont(weight, style, stretch);
+            return true;
+        }
+
+        return family.TryGetFont(weight, style, stretch, out font);
+    }
+
+    /// <summary>Asks to be told, on the loop, when a font file finishes loading: <see cref="OnFontsArrived"/>.
+    /// <paramref name="loadsSeen"/> is <see cref="TypefaceStore.LoadedCount"/> read before the fonts were asked for, so
+    /// one that arrived meanwhile is not missed.</summary>
+    protected void WaitForFonts(int loadsSeen) => FontArrivals.Wait(this, loadsSeen);
+
+    /// <summary>A font file this element waited for (<see cref="WaitForFonts"/>) has loaded: lay the text out again.
+    /// Measures again by default.</summary>
+    protected internal virtual void OnFontsArrived()
+    {
+        (this as IMeasurableComponent)?.InvalidateMeasure();
+    }
+
     /// <summary>What the text of this element is shaped with: the features <see cref="Typography"/> and
     /// <see cref="FontFeatures"/> ask for and the <see cref="Language"/> - the application's when unset - as attributes
     /// for a whole text; null when there are none. A control that lays out text of its own lays it out with these, as
