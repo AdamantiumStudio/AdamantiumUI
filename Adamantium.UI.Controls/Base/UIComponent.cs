@@ -338,7 +338,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LanguageProperty, value);
     }
 
-    internal TextAttributes TextShaping()
+    /// <summary>What the text of this element is shaped with: the features <see cref="Typography"/> and
+    /// <see cref="FontFeatures"/> ask for and the <see cref="Language"/> - the application's when unset - as attributes
+    /// for a whole text; null when there are none. A control that lays out text of its own lays it out with these, as
+    /// <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
+    public TextAttributes TextShaping()
     {
         var features = Typography.FeaturesOf(this, FontFeatures);
         var language = Language ?? Languages.Current;
@@ -350,7 +354,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         return new TextAttributes { Features = features, Language = language };
     }
 
-    internal static bool ShapesLike(TextAttributes left, TextAttributes right)
+    /// <summary>Whether text laid out with <paramref name="left"/> and with <paramref name="right"/> - two answers of
+    /// <see cref="TextShaping"/> - shapes alike, so a layout made with one still stands for the other.</summary>
+    public static bool ShapesLike(TextAttributes left, TextAttributes right)
     {
         if (left == null || right == null)
         {
