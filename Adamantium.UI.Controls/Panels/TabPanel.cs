@@ -202,7 +202,7 @@ public class TabPanel : VirtualizingPanel
         if (double.IsInfinity(mainViewport))
         {
             OnNoViewport();
-            effectiveViewport = _lastViewport > 0 ? _lastViewport : DefaultViewport;
+            effectiveViewport = UnboundedWindow(!horizontal, _lastViewport, DefaultViewport);
         }
         else
         {

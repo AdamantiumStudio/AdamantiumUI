@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Adamantium.Fonts;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Media;
 
@@ -41,7 +44,72 @@ public partial class TextViewModel : TabPageViewModel
     // Google's 'COLR' version 1 test glyphs: a font with three palettes, the second for dark backgrounds.
     public FontFamily PaletteFont { get; } = FromFile("test_glyphs-glyf_colr_1.ttf");
 
+    // Source Sans 3: dozens of character variants under names of their own, and 'aalt' offering several alternates.
+    public FontFamily FeatureFont { get; } = FromFile(Path.Combine("OTFFonts", "SourceSans3-Regular.otf"));
+
+    // The features of FeatureFont that turn a glyph into another, as a panel of OpenType features lists them.
+    public IReadOnlyList<FontFeatureItem> FontFeatureItems => _fontFeatureItems ??= ListFeatures(FeatureFont.Fonts[0]);
+
+    private IReadOnlyList<FontFeatureItem> _fontFeatureItems;
+
+    // The character a glyph panel shows the alternates of.
+    [Bindable, Affects(nameof(GlyphAlternates))] private string _alternateCharacter = "g";
+
+    public IReadOnlyList<GlyphAlternateItem> GlyphAlternates => ListAlternates(FeatureFont.Fonts[0], AlternateCharacter);
+
     public int MessageLength => Message?.Length ?? 0;
+
+    private static IReadOnlyList<FontFeatureItem> ListFeatures(IFont font)
+    {
+        var samples = new Dictionary<string, List<string>>();
+        for (var glyph = 0u; glyph < font.GlyphCount; glyph++)
+        {
+            var text = font.GetGlyphText(glyph).FirstOrDefault();
+            if (text == null)
+            {
+                continue;
+            }
+
+            foreach (var alternate in font.GetGlyphAlternates(glyph))
+            {
+                if (!samples.TryGetValue(alternate.Feature, out var list))
+                {
+                    samples[alternate.Feature] = list = [];
+                }
+
+                if (list.Count < 12 && !list.Contains(text))
+                {
+                    list.Add(text);
+                }
+            }
+        }
+
+        return font.FeatureCatalog.GSUBFeatures
+            .Where(feature => samples.ContainsKey(feature.Info.Tag))
+            .Select(feature => new FontFeatureItem(feature.Info.Tag, feature.Name, feature.ValueCount,
+                feature.SampleText ?? string.Concat(samples[feature.Info.Tag])))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<GlyphAlternateItem> ListAlternates(IFont font, string character)
+    {
+        if (string.IsNullOrEmpty(character) || (char.IsSurrogate(character[0]) && !char.IsSurrogatePair(character, 0)))
+        {
+            return [];
+        }
+
+        var codepoint = char.ConvertToUtf32(character, 0);
+        if (!font.TryGetGlyphIndex(codepoint, out var glyph))
+        {
+            return [];
+        }
+
+        var text = char.ConvertFromUtf32(codepoint);
+        return font.GetGlyphAlternates(glyph)
+            .Select(alternate => new GlyphAlternateItem(text, alternate.Feature, alternate.Value,
+                font.FeatureCatalog.GSUBFeatures.First(feature => feature.Info.Tag == alternate.Feature).Name))
+            .ToArray();
+    }
 
     private static FontFamily FromFile(string name)
     {

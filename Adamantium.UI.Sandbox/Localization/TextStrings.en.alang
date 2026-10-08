@@ -26,4 +26,7 @@
     <Phrase Key="SvgTitle" Text="SVG glyphs (Google's samples), then the same drawings as COLR v1:"/>
     <Phrase Key="PaletteTitle" Text="Color palettes of one font (ColorPalette 0, 1 for dark backgrounds, 2 for light):"/>
     <Phrase Key="TypographyTitle" Text="Typography (as is; small capitals with oldstyle figures; fractions):"/>
+    <Phrase Key="FeaturesTitle" Text="OpenType features of Source Sans 3 that change glyphs: tag and values, the font's own name, characters it changes with it on:"/>
+    <Phrase Key="AlternatesTitle" Text="Alternates of a character, each drawn with the feature and value that ask for it:"/>
+    <Phrase Key="AlternateCharacter" Text="Character"/>
 </Language>

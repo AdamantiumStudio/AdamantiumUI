@@ -293,7 +293,7 @@ public class StackPanel : VirtualizingPanel
       if (double.IsInfinity(mainViewport))
       {
          OnNoViewport();
-         effectiveViewport = _lastViewport > 0 ? _lastViewport : DefaultViewport;
+         effectiveViewport = UnboundedWindow(vertical, _lastViewport, DefaultViewport);
       }
       else
       {

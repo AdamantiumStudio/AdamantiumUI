@@ -26,4 +26,7 @@
     <Phrase Key="SvgTitle" Text="SVG-глифы (образцы Google), затем те же рисунки как COLR v1:"/>
     <Phrase Key="PaletteTitle" Text="Палитры одного цветного шрифта (ColorPalette 0, 1 для тёмного фона, 2 для светлого):"/>
     <Phrase Key="TypographyTitle" Text="Типографика (как есть; капитель со старостильными цифрами; дроби):"/>
+    <Phrase Key="FeaturesTitle" Text="Свойства OpenType шрифта Source Sans 3, меняющие глифы: тег и значения, имя от самого шрифта, символы с включённым свойством:"/>
+    <Phrase Key="AlternatesTitle" Text="Альтернативы символа, каждая нарисована тем свойством и значением, что её дают:"/>
+    <Phrase Key="AlternateCharacter" Text="Символ"/>
 </Language>

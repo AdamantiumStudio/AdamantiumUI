@@ -885,6 +885,58 @@ public class ItemsControlTests
         });
     }
 
+    // A virtualized list that wants its rows grows with them: rows added - a folder opened in a tree - are asked for, up
+    // to the slot. It kept the height of its old rows and the new ones scrolled under its edge.
+    [Test]
+    public void AVirtualizedList_GrowsWithItsRows_UpToTheSlot()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object>(Enumerable.Range(0, 5).Cast<object>());
+        var ic = new ItemsControl
+        {
+            ItemsSource = items,
+            ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 80, Height = 20 } })
+        };
+        ic.Template = ItemsPresenterTemplate();
+        var scp = new ScrollContentPresenter { CanContentScroll = true, Content = ic, MaxHeight = 300 };
+        var page = new StackPanel { Width = 400 };
+        page.Children.Add(scp);
+        WindowExtension.UpdateTree(page);
+
+        for (var i = 5; i < 10; i++)
+        {
+            items.Add(i);
+        }
+
+        for (var frame = 0; frame < 4; frame++)
+        {
+            WindowExtension.UpdateTree(page);
+        }
+
+        Assert.That(scp.DesiredSize.Height, Is.EqualTo(200).Within(0.5));
+    }
+
+    // A list on a scrolling page is measured unbounded and arranged at its whole height: nothing scrolls it, so it
+    // realizes every row. It realized a default screenful and left the rest of its height empty.
+    [Test]
+    public void AListNothingScrolls_RealizesEveryRow()
+    {
+        var ic = new ItemsControl
+        {
+            ItemsSource = Enumerable.Range(0, 200).Cast<object>().ToList(),
+            ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 80, Height = 20 } })
+        };
+        ic.Template = ItemsPresenterTemplate();
+        var page = new StackPanel { Width = 300 };
+        page.Children.Add(ic);
+
+        for (var frame = 0; frame < 4; frame++)
+        {
+            WindowExtension.UpdateTree(page);
+        }
+
+        Assert.That(ic.ItemContainerGenerator.RealizedIndices.Count(), Is.EqualTo(200));
+    }
+
     [Test]
     public void RealizesOneContainerPerItem()
     {

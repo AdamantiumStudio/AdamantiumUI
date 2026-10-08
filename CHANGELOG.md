@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- Sandbox text page: a panel of OpenType features (each feature of Source Sans 3 that changes glyphs, by the font's
+  own name, with characters it changes drawn with it on) and a glyph panel (every alternate of a character, drawn with
+  the feature and value that ask for it).
 - `ColorPalette` on every element, inherited by the text inside, and on a `Run`: the palette of a color font its color
   glyphs are drawn in, by its number in the font's 'CPAL' (`ColorPalette="1"`); 0, the font's first, by default.
 - Text set in a font whose color glyphs are PNG images ('CBDT' as Noto Color Emoji, 'sbix') or SVG
@@ -538,6 +541,11 @@ All packages share one version.
 
 ### Fixed
 
+- A virtualized list that wants its rows kept the height of the rows it had: a folder opened in a tree with a
+  `MaxHeight` scrolled its new rows under the tree's edge. It now grows with them, up to the slot.
+- A list nothing scrolls - an `ItemsControl` on a scrolling page, measured unbounded - realized a default screenful of
+  rows and left the rest of its height empty. A virtualizing panel arranged larger than the window it realized now
+  measures again with the size it was given, as `StackPanel`, `WrapPanel`, `UniformGrid` and `TabPanel` alike.
 - `VisualRenderer`'s first picture lost its rectangles - a panel's background, a border - when the window finished a
   frame while it was being drawn; the engine no longer rewinds its constants then.
 - A backdrop capture wrote its blur's descriptor while the copy was still a transfer destination, and a capture too
