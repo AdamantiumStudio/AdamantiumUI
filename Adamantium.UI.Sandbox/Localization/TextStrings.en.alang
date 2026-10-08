@@ -21,5 +21,6 @@
     <Phrase Key="VariableTitle" Text="A variable font (Bahnschrift): weights between the named ones, and widths:"/>
     <Phrase Key="SynthesisTitle" Text="A family with no bold or italic (Ink Free): as it is, then FontSynthesis=&quot;Weight, Style&quot;:"/>
     <Phrase Key="FallbackTitle" Text="Fallback fonts (the last character is in no font):"/>
+    <Phrase Key="EmojiTitle" Text="Emoji: text or emoji by variation selector; keycaps, skin tones, joined sequences, flags:"/>
     <Phrase Key="TypographyTitle" Text="Typography (as is; small capitals with oldstyle figures; fractions):"/>
 </Language>

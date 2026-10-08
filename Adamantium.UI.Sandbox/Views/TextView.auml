@@ -188,6 +188,16 @@
         <TextBlock Text="Latin 中文 日本語 한국어 😀 ☃ ∑ ͸"
                    FontSize="20"/>
 
+        <!-- A variation selector picks text or emoji; a sequence joined by ZWJ, a keycap, a skin tone or a flag is one
+             emoji. -->
+        <TextBlock Text="{Localize TextStrings.EmojiTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontSize="24"
+                    Orientation="Vertical">
+            <TextBlock Text="❤ ❤&#xFE0F;   ☺ ☺&#xFE0F;   ☕&#xFE0E; ☕"/>
+            <TextBlock Text="1&#xFE0F;&#x20E3; #&#xFE0F;&#x20E3; 👍🏽 👩🏾&#x200D;💻 👨&#x200D;👩&#x200D;👧 👩&#x200D;❤&#xFE0F;&#x200D;💋&#x200D;👨 🫱🏻&#x200D;🫲🏿 🏳&#xFE0F;&#x200D;🌈 🏳&#xFE0F;&#x200D;⚧&#xFE0F; 🇺🇦"/>
+        </StackPanel>
+
         <!-- Typography by name and font features by tag, inherited by the text inside. -->
         <TextBlock Text="{Localize TextStrings.TypographyTitle}"
                    Margin="0,20,0,6"/>
