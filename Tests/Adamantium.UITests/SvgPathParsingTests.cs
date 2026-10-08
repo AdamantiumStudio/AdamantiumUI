@@ -37,6 +37,20 @@ public class SvgPathParsingTests
         Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 15)));
     }
 
+    // AN ARC'S FLAGS ARE ONE DIGIT EACH, so a minifier writes them without a separator.
+    [Test]
+    public void AnArcsFlagsNeedNoSeparator()
+    {
+        var arc = (ArcSegment)Read("M 0 0 a5 5 0 11 10 0").Figures.Single().Segments.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(arc.IsLargeArc, Is.True);
+            Assert.That(arc.SweepDirection, Is.EqualTo(SweepDirection.Clockwise));
+            Assert.That(arc.Point, Is.EqualTo(new Vector2(10, 0)));
+        });
+    }
+
     // ONE COMMAND, AS MANY SETS AS IT WAS GIVEN.
     [Test]
     public void ACommandRepeatsForEveryArgumentSetItCarries()
@@ -85,6 +99,17 @@ public class SvgPathParsingTests
         var figure = Read("M 10 10 L 20 10 L 20 20 Z l 5 0").Figures[^1];
 
         Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 10)), "the relative move after Z did not start at the start");
+    }
+
+    // A STEP AFTER Z BEGINS A NEW FIGURE at the closed one's start; the closed figure stays as it was.
+    [Test]
+    public void AStepAfterClosing_BeginsANewFigure()
+    {
+        var figures = Read("M 10 10 L 20 10 L 20 20 Z l 5 0").Figures;
+
+        Assert.That(figures, Has.Count.EqualTo(2));
+        Assert.That(figures[0].IsClosed && figures[0].Segments.Count == 2, "the step was added to the closed figure");
+        Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2(10, 10)));
     }
 
     // NUMBERS RUN TOGETHER, which every minifier does.

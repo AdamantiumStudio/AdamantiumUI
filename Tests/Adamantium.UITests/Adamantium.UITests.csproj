@@ -26,6 +26,12 @@
       <ProjectReference Include="..\..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Include="Fonts\*.ttf;Fonts\*.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
     <!-- Graphics is needed by the [Category("Gpu")] integration tests to spin up a headless render device. -->
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />

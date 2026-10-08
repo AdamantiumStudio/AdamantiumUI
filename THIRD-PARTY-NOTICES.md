@@ -41,3 +41,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+---
+
+## Color test fonts
+
+Not code, but files shipped beside it, unchanged, each with its licence text in the same folder:
+
+- `Adamantium.UI.Sandbox/Fonts/` and `Tests/Adamantium.UITests/Fonts/` — `NotoColorEmoji.subset.ttf`, the subset of
+  Noto Color Emoji HarfBuzz's tests carry (https://github.com/harfbuzz/harfbuzz/tree/main/test/api/fonts), copyright
+  Google LLC, under the SIL Open Font License 1.1 (`LICENSE-NotoColorEmoji.txt`).
+- The same folders — `samples-sbix.ttf`, `samples-picosvg.ttf`, `samples-glyf_colr_1.ttf` and
+  `test_glyphs-glyf_colr_1.ttf`, from https://github.com/googlefonts/color-fonts, copyright Google LLC, under the
+  Apache License 2.0 (`LICENSE-color-fonts.txt`).

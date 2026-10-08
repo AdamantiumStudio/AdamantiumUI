@@ -112,7 +112,14 @@ internal sealed class BackdropCapture : IDisposable
         commandBuffer.BlitImage(source.GetImage(), ImageLayout.TransferSrcOptimal,
             _current.GetImage(), ImageLayout.TransferDstOptimal, 1, blit, Filter.Linear);
 
-        // Leaves EVERY level, level 0 included, in ShaderReadOnly - so nothing more is owed here.
+        gd.InsertImageMemoryBarrier(commandBuffer, _current,
+            AccessFlagBits2.TransferWriteBit, AccessFlagBits2.ShaderReadBit,
+            ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal,
+            PipelineStageFlagBits2.AllTransferBit, PipelineStageFlagBits2.FragmentShaderBit,
+            0, 1);
+        _current.ImageLayout = ImageLayout.ShaderReadOnlyOptimal;
+
+        // Leaves every other level in ShaderReadOnly too - so nothing more is owed here.
         BuildPyramid(gd, commandBuffer, _current, (int)w, (int)h);
 
         gd.InsertImageMemoryBarrier(commandBuffer, source,
@@ -121,7 +128,6 @@ internal sealed class BackdropCapture : IDisposable
             PipelineStageFlagBits2.AllTransferBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);
 
         source.ImageLayout = ImageLayout.ColorAttachmentOptimal;
-        _current.ImageLayout = ImageLayout.ShaderReadOnlyOptimal;
 
         gd.ResumeRendering();
         return true;
@@ -177,13 +183,6 @@ internal sealed class BackdropCapture : IDisposable
 
         var w = width;
         var h = height;
-
-        // Level 0 arrives as a transfer destination; it is about to be READ.
-        gd.InsertImageMemoryBarrier(commandBuffer, texture,
-            AccessFlagBits2.TransferWriteBit, AccessFlagBits2.ShaderReadBit,
-            ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal,
-            PipelineStageFlagBits2.AllTransferBit, PipelineStageFlagBits2.FragmentShaderBit,
-            0, 1);
 
         for (var level = 1u; level < levels; level++)
         {

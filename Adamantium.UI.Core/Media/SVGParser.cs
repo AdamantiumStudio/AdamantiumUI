@@ -1,16 +1,12 @@
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Adamantium.Mathematics;
+using Adamantium.Mathematics.Svg;
 
 namespace Adamantium.UI.Core.Media;
 
 public class SVGParser
 {
-    private string pattern = @"(?=[MZLHVCSQTAmzlhvcsqta])";
-
-    public List<SVGCommand> Commands { get; private set; }
-
     public StreamGeometry Parse(string svgString)
     {
         svgString = svgString?.TrimStart() ?? string.Empty;
@@ -24,16 +20,8 @@ public class SVGParser
             if (fillRule != null) svgString = svgString.Substring(2).TrimStart();
         }
 
-        var tokens = Regex.Split(svgString, pattern).Where(t => !string.IsNullOrEmpty(t));
-        Commands = new List<SVGCommand>();
-        foreach (var token in tokens)
-        {
-            Commands.Add(SVGCommand.Parse(token));
-        }
-
-        if (Commands.Count == 0) return new StreamGeometry();
-
-        var geometry = new SVGCommandInterpreter().InterpretCommands(Commands);
+        var geometry = new StreamGeometry();
+        SvgPathData.Walk(svgString, new StreamGeometrySink(geometry.Open()));
 
         if (fillRule != null) geometry.FillRule = fillRule.Value;
 
@@ -128,9 +116,4 @@ public class SVGParser
     private static string Pair(Vector2 point) => $"{Num(point.X)} {Num(point.Y)}";
 
     private static string Num(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
-
-    public override string ToString()
-    {
-        return $"Commands count: {Commands.Count} ";
-    }
 }

@@ -330,6 +330,7 @@ public class TextBlock : InputUIComponent
                 Synthesis = FontSynthesisRules.Needed(runFont, weight, style, run.FontSynthesis ?? FontSynthesis),
                 Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
                 Language = run.Language,
+                ColorPalette = run.ColorPalette,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
                 Foreground = (run.Foreground as SolidColorBrush)?.Color,
                 Background = (run.Background as SolidColorBrush)?.Color,

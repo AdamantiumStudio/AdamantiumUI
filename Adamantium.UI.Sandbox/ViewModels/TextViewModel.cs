@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Media;
 
@@ -26,5 +28,23 @@ public partial class TextViewModel : TabPageViewModel
     // Bound by a Run's Foreground - demonstrates that a Run's color is bindable too, not just its text.
     [Bindable] private Brush _accentBrush = new SolidColorBrush("#22D3EE");
 
+    // Fonts that draw their color glyphs as images: PNGs of Noto Color Emoji ('CBDT') and of Google's samples ('sbix').
+    public FontFamily EmbeddedBitmapFont { get; } = FromFile("NotoColorEmoji.subset.ttf");
+
+    public FontFamily StandardBitmapFont { get; } = FromFile("samples-sbix.ttf");
+
+    // Google's samples as SVG documents ('SVG ') and, built from the same drawings, as a 'COLR' version 1 paint graph.
+    public FontFamily SvgFont { get; } = FromFile("samples-picosvg.ttf");
+
+    public FontFamily PaintFont { get; } = FromFile("samples-glyf_colr_1.ttf");
+
+    // Google's 'COLR' version 1 test glyphs: a font with three palettes, the second for dark backgrounds.
+    public FontFamily PaletteFont { get; } = FromFile("test_glyphs-glyf_colr_1.ttf");
+
     public int MessageLength => Message?.Length ?? 0;
+
+    private static FontFamily FromFile(string name)
+    {
+        return new FontFamily(new Uri(Path.Combine(AppContext.BaseDirectory, "Fonts", name)));
+    }
 }

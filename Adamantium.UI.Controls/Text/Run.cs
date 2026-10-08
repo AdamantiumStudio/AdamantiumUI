@@ -50,6 +50,9 @@ public class Run : Inline
     public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
         typeof(string), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
+    public static readonly AdamantiumProperty ColorPaletteProperty = AdamantiumProperty.Register(nameof(ColorPalette),
+        typeof(int?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
     public string Text
     {
         get => GetValue<string>(TextProperty);
@@ -124,6 +127,13 @@ public class Run : Inline
     {
         get => GetValue<string>(LanguageProperty);
         set => SetValue(LanguageProperty, value);
+    }
+
+    /// <summary>The palette this run's color glyphs are drawn in; null takes the TextBlock's.</summary>
+    public int? ColorPalette
+    {
+        get => GetValue<int?>(ColorPaletteProperty);
+        set => SetValue(ColorPaletteProperty, value);
     }
 
     private static void OnRunPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

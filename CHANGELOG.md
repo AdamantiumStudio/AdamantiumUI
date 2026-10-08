@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `ColorPalette` on every element, inherited by the text inside, and on a `Run`: the palette of a color font its color
+  glyphs are drawn in, by its number in the font's 'CPAL' (`ColorPalette="1"`); 0, the font's first, by default.
+- Text set in a font whose color glyphs are PNG images ('CBDT' as Noto Color Emoji, 'sbix') or SVG
+  documents ('SVG ') draws them. The sandbox's Text tab shows each, SVG glyphs beside the same drawings in 'COLR', and
+  one color font in each of its palettes.
 - Text draws characters its font lacks from the system's fallback fonts: Chinese, Japanese and Korean in the family of
   the text's `Language`, emoji and symbols in Segoe UI Emoji and Symbol, each in the weight and slant of the text. A
   character no font has shows the font's missing-glyph box.
@@ -526,8 +531,24 @@ All packages share one version.
   `OpenWindowAsync` (`INavigationService.ArriveInWindowAsync`); it heard nothing before. A dialog or an overlay is
   shown once its open method has completed.
 
+### Removed
+
+- `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
+  `SvgPathData.Walk`, the same walk SVG glyphs take.
+
 ### Fixed
 
+- `VisualRenderer`'s first picture lost its rectangles - a panel's background, a border - when the window finished a
+  frame while it was being drawn; the engine no longer rewinds its constants then.
+- A backdrop capture wrote its blur's descriptor while the copy was still a transfer destination, and a capture too
+  small for a pyramid was sampled in that layout; the copy is now readable before anything reads it. The validation
+  layer reported both.
+- Path data reads through the engine's `SvgPathData`, one reader for geometry and SVG glyphs: an arc's flags written
+  without separators (`a1 1 0 11 5 5`, as minifiers write them) were read as the number 11 and the path went wrong.
+  Reading stops at the first error and keeps what came before, as SVG renders a path, and data that does not begin
+  with a move draws nothing; the commands before a later move were skipped and the rest drawn. A step after `Z` with
+  no move begins a new figure at the closed one's start; it was added to the closed figure. A smooth curve after `Z`
+  no longer reflects the control point of the curve before it.
 - A virtualized list - a `ListBox`, by default - in a slot that caps it, as a popup's `MaxHeight`, took the whole cap
   however few its rows; it now wants its rows, up to the cap, as a list that does not virtualize already did.
 - A `TextBlock` or `TextBox` showed no more than 4096 glyphs - with color emoji drawn a quad per layer, some 65 emoji -
