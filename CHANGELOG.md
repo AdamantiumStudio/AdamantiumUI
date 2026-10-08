@@ -26,6 +26,8 @@ All packages share one version.
   standing in while it loads; `WaitForFonts` and `OnFontsArrived` for a control that lays out text of its own.
 - The markup generator warns about a value of a type the type parser has no parser for, with the attribute and its
   line: such a value builds and then throws where the view is built.
+- Emoji from 'COLR' version 1 fonts draw with their gradients and shading - Segoe UI Emoji's as Edge draws them - in
+  the text batch beside the text around them (`GlyphItem.Paint`).
 - `FontFeatures` and `Language` on every element, inherited by the text inside: OpenType features as a
   `FontFeatureList` (`[FontFeature.Ligatures.Off, FontFeature.StylisticSet(1)]` in code, `FontFeatures="liga=0, ss01"`
   in markup) and a BCP 47 language that picks the font's local forms; text without a language is in the application's
@@ -526,6 +528,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBlock` or `TextBox` showed no more than 4096 glyphs - with color emoji drawn a quad per layer, some 65 emoji -
+  and dropped the rest without a word. The cap is gone; text drawn directly, not in the batch, gets a glyph buffer
+  as large as it needs.
 - A `TextBox` took every line as tall as a line of its own font, so on a line with taller text (emoji from a fallback
   font) the selection, the caret and the click target sat off the glyphs. It takes each line's top and height from the
   layout now.

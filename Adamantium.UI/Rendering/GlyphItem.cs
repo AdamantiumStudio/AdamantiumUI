@@ -26,4 +26,10 @@ public struct GlyphItem
 
     /// <summary>Straight (non-premultiplied) RGBA, element/brush opacity already folded into .w.</summary>
     public Vector4F Color;
+
+    /// <summary>.x = a 'COLR' version 1 layer's paint record plus one, or 0, as
+    /// <see cref="Adamantium.Graphics.Fonts.FontItem.Paint"/> holds it (<see cref="LocalRect"/> is then the pen and
+    /// baseline, and the pixels per font unit); .y = the element's opacity raised to 2.2, which the layer's own colors
+    /// take.</summary>
+    public Vector4F Paint;
 }
