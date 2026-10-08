@@ -101,6 +101,17 @@ public class SvgPathParsingTests
         Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 10)), "the relative move after Z did not start at the start");
     }
 
+    // A STEP AFTER Z BEGINS A NEW FIGURE at the closed one's start; the closed figure stays as it was.
+    [Test]
+    public void AStepAfterClosing_BeginsANewFigure()
+    {
+        var figures = Read("M 10 10 L 20 10 L 20 20 Z l 5 0").Figures;
+
+        Assert.That(figures, Has.Count.EqualTo(2));
+        Assert.That(figures[0].IsClosed && figures[0].Segments.Count == 2, "the step was added to the closed figure");
+        Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2(10, 10)));
+    }
+
     // NUMBERS RUN TOGETHER, which every minifier does.
     [Test]
     public void NumbersRunTogetherAreStillTwoNumbers()

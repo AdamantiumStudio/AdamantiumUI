@@ -531,11 +531,22 @@ All packages share one version.
   `OpenWindowAsync` (`INavigationService.ArriveInWindowAsync`); it heard nothing before. A dialog or an overlay is
   shown once its open method has completed.
 
+### Removed
+
+- `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
+  `SvgPathData.Walk`, the same walk SVG glyphs take.
+
 ### Fixed
 
+- A backdrop capture wrote its blur's descriptor while the copy was still a transfer destination, and a capture too
+  small for a pyramid was sampled in that layout; the copy is now readable before anything reads it. The validation
+  layer reported both.
 - Path data reads through the engine's `SvgPathData`, one reader for geometry and SVG glyphs: an arc's flags written
   without separators (`a1 1 0 11 5 5`, as minifiers write them) were read as the number 11 and the path went wrong.
-  Reading stops at the first error and keeps what came before, as SVG renders a path.
+  Reading stops at the first error and keeps what came before, as SVG renders a path, and data that does not begin
+  with a move draws nothing; the commands before a later move were skipped and the rest drawn. A step after `Z` with
+  no move begins a new figure at the closed one's start; it was added to the closed figure. A smooth curve after `Z`
+  no longer reflects the control point of the curve before it.
 - A `TextBlock` or `TextBox` showed no more than 4096 glyphs - with color emoji drawn a quad per layer, some 65 emoji -
   and dropped the rest without a word. The cap is gone; text drawn directly, not in the batch, gets a glyph buffer
   as large as it needs.
