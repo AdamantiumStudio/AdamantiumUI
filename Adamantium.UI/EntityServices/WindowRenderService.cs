@@ -260,9 +260,6 @@ public class WindowRenderService : UiRenderService
         GraphicsDevice.EndDraw();          // not this.EndDraw(): no swapchain blit
         GraphicsDevice.Submit();
         GraphicsDevice.DeviceWaitIdle();
-
-        // The designer runs no app loop, and without this the per-frame buffer pools are never reset and leak VRAM.
-        GraphicsDevice.MainDevice.OnFrameFinished();
         GraphicsDevice.FrameEnded();
         return true;
     }

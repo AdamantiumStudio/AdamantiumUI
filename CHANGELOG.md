@@ -538,6 +538,8 @@ All packages share one version.
 
 ### Fixed
 
+- `VisualRenderer`'s first picture lost its rectangles - a panel's background, a border - when the window finished a
+  frame while it was being drawn; the engine no longer rewinds its constants then.
 - A backdrop capture wrote its blur's descriptor while the copy was still a transfer destination, and a capture too
   small for a pyramid was sampled in that layout; the copy is now readable before anything reads it. The validation
   layer reported both.
