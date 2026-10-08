@@ -162,6 +162,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         var color = solid.Color.ToVector4();
         var opacity = (float)tc.RenderData.Opacity;
         color.W *= opacity;   // the same fold PackInto does - one color, computed one way
+        var ownFade = MathF.Pow(opacity, 2.2f);
 
         var span = Items.AsSpan(first, count);
         var run = tc.GlyphRun;
@@ -169,8 +170,9 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         for (var i = 0; i < span.Length; i++)
         {
             var target = i < run.Count ? GlyphColor(run.Glyphs[i], color, opacity) : color;
-            if (span[i].Color == target) continue;
+            if (span[i].Color == target && span[i].Paint.Y == ownFade) continue;
             span[i].Color = target;
+            span[i].Paint.Y = ownFade;
             changed = true;
         }
 
@@ -226,7 +228,8 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
                 Source = glyphs[i].Source,
                 Params = new Vector4F(transformSlot, glyphs[i].Layer, glyphs[i].Depth, fadeSlot),
                 Clip = new Vector4F(clipSlot, synthesis.X, synthesis.Y, synthesis.Z),
-                Color = GlyphColor(glyphs[i], color, opacity)
+                Color = GlyphColor(glyphs[i], color, opacity),
+                Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), 0, 0)
             };
         }
 

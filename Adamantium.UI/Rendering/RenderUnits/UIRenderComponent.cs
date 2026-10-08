@@ -449,16 +449,35 @@ public class TextRenderComponent : ImageRenderComponent
 
     // Per-block vertex buffer for the DIRECT/composite draw, uploaded from the FROZEN glyph run (never the live layout).
     // Lazily allocated (only if a block ever falls to the direct draw - batched text never touches it), reused + re-uploaded
-    // when the run changes. Mirrors the old TextLayout.EnsureVertexBuffer/VertexBuffer that the direct path used to read.
+    // when the run changes, and replaced by a larger one when the run outgrows it.
     private Buffer<FontItem> _glyphVtx;
     private bool _glyphVtxDirty;
 
     private Buffer<FontItem> EnsureGlyphVtx()
     {
-        _glyphVtx ??= ToDispose(Adamantium.Graphics.Buffer.Vertex.New<FontItem>(GraphicsDevice, 4096, Adamantium.Graphics.BufferMemoryUsage.UploadFromCpuToGpu));
+        var run = GlyphRun;
+        if (_glyphVtx == null || _glyphVtx.ElementCount < (ulong)run.Count)
+        {
+            var capacity = 64;
+            while (capacity < run.Count)
+            {
+                capacity *= 2;
+            }
+
+            if (_glyphVtx != null)
+            {
+                RemoveToDispose(_glyphVtx);
+                GraphicsDevice.AddToDeferDisposeQueue(_glyphVtx);
+            }
+
+            _glyphVtx = ToDispose(Adamantium.Graphics.Buffer.Vertex.New<FontItem>(GraphicsDevice, (uint)capacity,
+                Adamantium.Graphics.BufferMemoryUsage.UploadFromCpuToGpu));
+            _glyphVtxDirty = true;
+        }
+
         if (_glyphVtxDirty)
         {
-            _glyphVtx.SetData(GlyphRun.Glyphs, 0, (uint)GlyphRun.Count, 0);
+            _glyphVtx.SetData((ReadOnlySpan<FontItem>)run.Glyphs.AsSpan(0, run.Count));
             _glyphVtxDirty = false;
         }
         return _glyphVtx;
