@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `ColorPalette` on every element, inherited by the text inside, and on a `Run`: the palette of a color font its color
+  glyphs are drawn in, by its number in the font's 'CPAL' (`ColorPalette="1"`); 0, the font's first, by default.
+- Text set in a font whose color glyphs are PNG images ('CBDT' as Noto Color Emoji, 'sbix') or SVG
+  documents ('SVG ') draws them. The sandbox's Text tab shows each, SVG glyphs beside the same drawings in 'COLR', and
+  one color font in each of its palettes.
 - Text draws characters its font lacks from the system's fallback fonts: Chinese, Japanese and Korean in the family of
   the text's `Language`, emoji and symbols in Segoe UI Emoji and Symbol, each in the weight and slant of the text. A
   character no font has shows the font's missing-glyph box.
@@ -528,6 +533,9 @@ All packages share one version.
 
 ### Fixed
 
+- Path data reads through the engine's `SvgPathData`, one reader for geometry and SVG glyphs: an arc's flags written
+  without separators (`a1 1 0 11 5 5`, as minifiers write them) were read as the number 11 and the path went wrong.
+  Reading stops at the first error and keeps what came before, as SVG renders a path.
 - A `TextBlock` or `TextBox` showed no more than 4096 glyphs - with color emoji drawn a quad per layer, some 65 emoji -
   and dropped the rest without a word. The cap is gone; text drawn directly, not in the batch, gets a glyph buffer
   as large as it needs.

@@ -22,5 +22,8 @@
     <Phrase Key="SynthesisTitle" Text="A family with no bold or italic (Ink Free): as it is, then FontSynthesis=&quot;Weight, Style&quot;:"/>
     <Phrase Key="FallbackTitle" Text="Fallback fonts (the last character is in no font):"/>
     <Phrase Key="EmojiTitle" Text="Emoji: text or emoji by variation selector; keycaps, skin tones, joined sequences, flags:"/>
+    <Phrase Key="BitmapTitle" Text="Color glyphs from images: CBDT (Noto Color Emoji), sbix (Google's samples, a word to an image):"/>
+    <Phrase Key="SvgTitle" Text="SVG glyphs (Google's samples), then the same drawings as COLR v1:"/>
+    <Phrase Key="PaletteTitle" Text="Color palettes of one font (ColorPalette 0, 1 for dark backgrounds, 2 for light):"/>
     <Phrase Key="TypographyTitle" Text="Typography (as is; small capitals with oldstyle figures; fractions):"/>
 </Language>

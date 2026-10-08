@@ -37,6 +37,20 @@ public class SvgPathParsingTests
         Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 15)));
     }
 
+    // AN ARC'S FLAGS ARE ONE DIGIT EACH, so a minifier writes them without a separator.
+    [Test]
+    public void AnArcsFlagsNeedNoSeparator()
+    {
+        var arc = (ArcSegment)Read("M 0 0 a5 5 0 11 10 0").Figures.Single().Segments.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(arc.IsLargeArc, Is.True);
+            Assert.That(arc.SweepDirection, Is.EqualTo(SweepDirection.Clockwise));
+            Assert.That(arc.Point, Is.EqualTo(new Vector2(10, 0)));
+        });
+    }
+
     // ONE COMMAND, AS MANY SETS AS IT WAS GIVEN.
     [Test]
     public void ACommandRepeatsForEveryArgumentSetItCarries()

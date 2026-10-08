@@ -350,6 +350,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontSynthesisProperty, value);
     }
 
+    public static readonly AdamantiumProperty ColorPaletteProperty = AdamantiumProperty.Register(nameof(ColorPalette),
+        typeof(int), typeof(UIComponent),
+        new PropertyMetadata(0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>The palette of a color font its color glyphs are drawn in (<c>ColorPalette="1"</c>), by its number in the
+    /// font's 'CPAL' (<see cref="Adamantium.Fonts.IFont.ColorPalettes"/>); 0, the font's first, by default, and for a
+    /// number the font lacks.</summary>
+    public int ColorPalette
+    {
+        get => GetValue<int>(ColorPaletteProperty);
+        set => SetValue(ColorPaletteProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
         typeof(FontStretch), typeof(UIComponent),
         new PropertyMetadata(FontStretch.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -425,19 +438,20 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     /// <summary>What the text of this element is shaped with: the features <see cref="Typography"/> and
-    /// <see cref="FontFeatures"/> ask for and the <see cref="Language"/> - the application's when unset - as attributes
-    /// for a whole text; null when there are none. A control that lays out text of its own lays it out with these, as
+    /// <see cref="FontFeatures"/> ask for, the <see cref="Language"/> - the application's when unset - and the
+    /// <see cref="ColorPalette"/>, as attributes for a whole text; null when there are none. A control that lays out text of its own lays it out with these, as
     /// <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
     public TextAttributes TextShaping()
     {
         var features = Typography.FeaturesOf(this, FontFeatures);
         var language = Language ?? Languages.Current;
-        if (features == null && language == null)
+        int? palette = ColorPalette != 0 ? ColorPalette : null;
+        if (features == null && language == null && palette == null)
         {
             return null;
         }
 
-        return new TextAttributes { Features = features, Language = language };
+        return new TextAttributes { Features = features, Language = language, ColorPalette = palette };
     }
 
     /// <summary>What text set in <paramref name="font"/>, the face <see cref="ResolveFont"/> found, is shaped with: the

@@ -1,14 +1,12 @@
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Adamantium.Mathematics;
+using Adamantium.Mathematics.Svg;
 
 namespace Adamantium.UI.Core.Media;
 
 public class SVGParser
 {
-    private string pattern = @"(?=[MZLHVCSQTAmzlhvcsqta])";
-
     public List<SVGCommand> Commands { get; private set; }
 
     public StreamGeometry Parse(string svgString)
@@ -24,11 +22,10 @@ public class SVGParser
             if (fillRule != null) svgString = svgString.Substring(2).TrimStart();
         }
 
-        var tokens = Regex.Split(svgString, pattern).Where(t => !string.IsNullOrEmpty(t));
         Commands = new List<SVGCommand>();
-        foreach (var token in tokens)
+        foreach (var command in SvgPathData.Parse(svgString))
         {
-            Commands.Add(SVGCommand.Parse(token));
+            Commands.Add(new SVGCommand(command));
         }
 
         if (Commands.Count == 0) return new StreamGeometry();
