@@ -552,7 +552,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          if (double.IsInfinity(viewportScroll))
          {
             OnNoViewport();
-            effectiveViewport = _lastViewportScroll > 0 ? _lastViewportScroll : DefaultViewportScroll;
+            effectiveViewport = UnboundedWindow(horizontal, _lastViewportScroll, DefaultViewportScroll);
          }
          else
          {

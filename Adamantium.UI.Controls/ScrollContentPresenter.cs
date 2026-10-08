@@ -65,6 +65,10 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     private bool Delegating => CanContentScroll && _inner != null;
 
+    private Size _measuredSlot;
+    private Size _answered;
+    private bool _measuring;
+
     public ScrollContentPresenter()
     {
         // The whole point of the presenter: the overflowing content is scissored to this viewport (see the renderer's
@@ -259,7 +263,16 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         {
             // Measure the content at the VIEWPORT (not unbounded) so an inner virtualizing panel realizes only what's
             // visible; then delegate the scroll surface to it. base (ContentPresenter) builds + measures the content.
-            base.MeasureOverride(availableSize);
+            _measuring = true;
+            try
+            {
+                base.MeasureOverride(availableSize);
+            }
+            finally
+            {
+                _measuring = false;
+            }
+
             ResolveInner();
             if (_inner != null)
             {
@@ -272,9 +285,9 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
                 RaiseMetricsChanged();
                 // The content capped by the slot, as on the physical path below: a list shorter than its popup's
                 // MaxHeight shrinks to its rows instead of padding out to the cap.
-                return new Size(
-                    double.IsInfinity(availableSize.Width) ? _inner.Extent.Width : Math.Min(_inner.Extent.Width, availableSize.Width),
-                    double.IsInfinity(availableSize.Height) ? _inner.Extent.Height : Math.Min(_inner.Extent.Height, availableSize.Height));
+                _measuredSlot = availableSize;
+                _answered = ContentInSlot(availableSize);
+                return _answered;
             }
         }
 
@@ -357,8 +370,13 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         // Re-translate after the panel re-clamps its offset, but only on a real change: this also fires from the panel's
         // own arrange and would loop.
         if (Delegating && _inner.Offset != _lastTranslatedInnerOffset) InvalidateArrange();
+        if (Delegating && !_measuring && ContentInSlot(_measuredSlot) != _answered) InvalidateMeasure();
         RaiseMetricsChanged();
     }
+
+    private Size ContentInSlot(Size slot) => new(
+        double.IsInfinity(slot.Width) ? _inner.Extent.Width : Math.Min(_inner.Extent.Width, slot.Width),
+        double.IsInfinity(slot.Height) ? _inner.Extent.Height : Math.Min(_inner.Extent.Height, slot.Height));
 
     private void RaiseMetricsChanged() => ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
 

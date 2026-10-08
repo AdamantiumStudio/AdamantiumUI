@@ -30,6 +30,9 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     // are muted; otherwise every pass would measure the window twice.
     private bool _inLayout;
 
+    private Size _assumedWindow;
+    private Size _arrangedUnbounded;
+
     // As a virtualizing items host the desired size is the virtual extent, independent of tiles, so a tile re-measure
     // must not re-dirty this panel.
     public override bool IsMeasureBoundary => (IsItemsHost && IsVirtualizing) || base.IsMeasureBoundary;
@@ -251,6 +254,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
 
         Size desired;
         _inLayout = true;
+        _assumedWindow = default;
         try
         {
             _offset = ClampOffset(_offset, _extent, _viewport);
@@ -299,10 +303,39 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             var arrangeOffset = ClampOffset(_passOffset, _extent, finalSize);
             ArrangeVirtualized(finalSize, arrangeOffset);
             HideUnmappedContainers();
+            var grew = Arranged(_assumedWindow.Width, finalSize.Width, out var width)
+                       | Arranged(_assumedWindow.Height, finalSize.Height, out var height);
+            _arrangedUnbounded = new Size(width ?? _arrangedUnbounded.Width, height ?? _arrangedUnbounded.Height);
+            if (grew)
+            {
+                LayoutManager.For(this).InvalidateMeasureNextPass(this);
+            }
         }
         finally { _inLayout = false; }
         RaiseMetrics();
         return finalSize;
+    }
+
+    /// <summary>The window to realize on a scroll axis the measure left unbounded: the last real viewport, else the size
+    /// the panel was last arranged at - all of it, when nothing scrolls it, as a list on a scrolling page - else
+    /// <paramref name="fallback"/>. A panel arranged larger than the window it realized measures again.</summary>
+    protected double UnboundedWindow(bool vertical, double lastViewport, double fallback)
+    {
+        if (lastViewport > 0)
+        {
+            return lastViewport;
+        }
+
+        var arranged = vertical ? _arrangedUnbounded.Height : _arrangedUnbounded.Width;
+        var window = arranged > 0 ? arranged : fallback;
+        _assumedWindow = vertical ? new Size(_assumedWindow.Width, window) : new Size(window, _assumedWindow.Height);
+        return window;
+    }
+
+    private static bool Arranged(double assumed, double final, out double? arranged)
+    {
+        arranged = assumed > 0 && !double.IsInfinity(final) ? final : null;
+        return arranged > assumed + 0.5;
     }
 
     // Plain (non items-host) layout — the panel used as an ordinary container. Subclass = its existing measure/arrange.

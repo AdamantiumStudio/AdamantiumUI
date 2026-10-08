@@ -194,7 +194,7 @@ public class UniformGrid : VirtualizingPanel
       if (double.IsInfinity(availableSize.Height))
       {
          OnNoViewport();
-         viewportHeight = _lastViewportHeight > 0 ? _lastViewportHeight : DefaultViewportHeight;
+         viewportHeight = UnboundedWindow(true, _lastViewportHeight, DefaultViewportHeight);
       }
       else
       {
