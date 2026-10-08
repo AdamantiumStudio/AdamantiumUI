@@ -270,9 +270,11 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
                 if (!double.IsInfinity(availableSize.Width)) _viewport = new Size(availableSize.Width, _viewport.Height);
                 if (!double.IsInfinity(availableSize.Height)) _viewport = new Size(_viewport.Width, availableSize.Height);
                 RaiseMetricsChanged();
+                // The content capped by the slot, as on the physical path below: a list shorter than its popup's
+                // MaxHeight shrinks to its rows instead of padding out to the cap.
                 return new Size(
-                    double.IsInfinity(availableSize.Width) ? _inner.Extent.Width : availableSize.Width,
-                    double.IsInfinity(availableSize.Height) ? _inner.Extent.Height : availableSize.Height);
+                    double.IsInfinity(availableSize.Width) ? _inner.Extent.Width : Math.Min(_inner.Extent.Width, availableSize.Width),
+                    double.IsInfinity(availableSize.Height) ? _inner.Extent.Height : Math.Min(_inner.Extent.Height, availableSize.Height));
             }
         }
 

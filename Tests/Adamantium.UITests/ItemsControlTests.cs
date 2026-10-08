@@ -862,6 +862,29 @@ public class ItemsControlTests
         });
     }
 
+    // A virtualized list capped by its slot - a popup's MaxHeight - wants its rows, not the cap: five rows in a 300 high
+    // slot are 100 high. A list longer than the slot still wants all of it.
+    [TestCase(5, 100)]
+    [TestCase(100, 300)]
+    public void AVirtualizedList_WantsItsRows_UpToTheSlot(int count, double height)
+    {
+        var ic = new ItemsControl
+        {
+            ItemsSource = Enumerable.Range(0, count).Cast<object>().ToList(),
+            ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 80, Height = 20 } })
+        };
+        ic.Template = ItemsPresenterTemplate();
+        var scp = new ScrollContentPresenter { CanContentScroll = true, Content = ic };
+
+        scp.Measure(new Size(400, 300));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scp.DesiredSize.Height, Is.EqualTo(height).Within(0.5));
+            Assert.That(scp.DesiredSize.Width, Is.LessThanOrEqualTo(400));
+        });
+    }
+
     [Test]
     public void RealizesOneContainerPerItem()
     {

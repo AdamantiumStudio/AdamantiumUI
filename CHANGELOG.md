@@ -549,6 +549,8 @@ All packages share one version.
   with a move draws nothing; the commands before a later move were skipped and the rest drawn. A step after `Z` with
   no move begins a new figure at the closed one's start; it was added to the closed figure. A smooth curve after `Z`
   no longer reflects the control point of the curve before it.
+- A virtualized list - a `ListBox`, by default - in a slot that caps it, as a popup's `MaxHeight`, took the whole cap
+  however few its rows; it now wants its rows, up to the cap, as a list that does not virtualize already did.
 - A `TextBlock` or `TextBox` showed no more than 4096 glyphs - with color emoji drawn a quad per layer, some 65 emoji -
   and dropped the rest without a word. The cap is gone; text drawn directly, not in the batch, gets a glyph buffer
   as large as it needs.
