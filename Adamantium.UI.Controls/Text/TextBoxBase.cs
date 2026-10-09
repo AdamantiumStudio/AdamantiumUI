@@ -270,6 +270,7 @@ public abstract class TextBoxBase : Control
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
     private TextDirection _lastShapedDirection;
+    private Hyphens _lastShapedHyphens;
     private TextAttributes _lastShapedShaping;
     private double _wrapWidth = double.PositiveInfinity;   // live viewport width for soft wrap; set by measure/render
 
@@ -328,6 +329,7 @@ public abstract class TextBoxBase : Control
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.Direction = TextDirection;
+        _textLayout.Hyphens = Hyphens;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -344,7 +346,8 @@ public abstract class TextBoxBase : Control
         var shaping = TextShaping(font);
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
-            && _lastShapedDirection == TextDirection && ShapesLike(_lastShapedShaping, shaping))
+            && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
+            && ShapesLike(_lastShapedShaping, shaping))
         {
             return;
         }
@@ -386,6 +389,7 @@ public abstract class TextBoxBase : Control
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
+        _lastShapedHyphens = Hyphens;
     }
 
     private void BuildCaretModel()

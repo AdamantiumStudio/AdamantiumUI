@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- Hyphenation. `Hyphens` on every element (inherited; `Manual` by default, `Auto`, `None`): `TextBlock` and `TextBox`
+  wrapped by words break a word across lines at its soft hyphens, and under `Auto` by the hyphenation patterns of its
+  `Language` (Russian, English, German, French and Spanish built in), a hyphen ending the line. `TextTrimming` now
+  works with `WrapByWords` too: a word too wide for its line, and the last line the height allows, end in an ellipsis.
+  Sandbox text page: a Hyphenation topic, columns in five languages with the mode, the width and justification to
+  change, soft hyphens and an editor.
 - Arabic in `TextBlock` and `TextBox`: letters joined, lam-alef, vowel marks, Persian and Urdu, by the engine's Arabic
   shaping; the caret and selection go by the screen as for Hebrew. Sandbox text page: an Arabic paragraph and editor
   beside the Hebrew ones.
