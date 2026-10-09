@@ -130,6 +130,19 @@ public class AumlCodegenBindingTests
     }
 
     [Test]
+    public void TemplateBinding_OnAnAttachedProperty_BindsTheAttachedProperty()
+    {
+        // ToolTipService.ToolTip, not the part's own ToolTip: that one copies itself onto the attached property as a
+        // local value, which a trigger of the template can then not override.
+        var code = Generate(WindowHeader + "><Button><Button.Template><ControlTemplate TargetType=\"Button\">" +
+                            "<Border ToolTipService.ToolTip=\"{TemplateBinding Content}\"/>" +
+                            "</ControlTemplate></Button.Template></Button></Window>", out var errors);
+
+        Assert.That(errors, Is.Empty, Errors(errors));
+        Assert.That(code, Does.Contain("\"ToolTipService.ToolTip\""));
+    }
+
+    [Test]
     public void LogicalTriggerAnimation_GeneratedCodeCompiles()
     {
         // Triggers declared directly on a control (the logical layer) whose EnterActions run a keyframe Animation.

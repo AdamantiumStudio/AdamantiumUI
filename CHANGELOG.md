@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- Theme icons `LockIcon` (a padlock: what cannot be changed) and `CodeIcon` (angle brackets: the source of
+  something), in the Fluent icons the Fluent, macOS and Editor Pro themes share.
 - Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from
   its first strong letter): `TextBlock` and `TextBox` lay Hebrew right to left among Latin and numbers, and a
   right-to-left paragraph starts on the right. In such text the `TextBox` caret and selection go by the screen: the
@@ -607,6 +609,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `{TemplateBinding}` on an attached property in a template - `ToolTipService.ToolTip`, `AutomationProperties.Name` -
+  bound the part's own property of the same name instead: its `Name`, or its `ToolTip`, which no trigger of the
+  template could then override. It binds the attached property now, and the designer previews it.
 - `TextBox.MaxLength` with room for half of an emoji inserted a lone surrogate; it inserts none of the emoji now.
 - A virtualized list that wants its rows kept the height of the rows it had: a folder opened in a tree with a
   `MaxHeight` scrolled its new rows under the tree's edge. It now grows with them, up to the slot.

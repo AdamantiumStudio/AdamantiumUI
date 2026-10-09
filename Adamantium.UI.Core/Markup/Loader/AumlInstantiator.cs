@@ -395,6 +395,16 @@ internal sealed class AumlInstantiator
 
         foreach (var value in prop.Values)
         {
+            if (value is AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } tbNode)
+            {
+                if (CreateMarkupObject(tbNode) is TemplateBinding templateBinding && _templates.TryPeek(out var building) &&
+                    instance is IAdamantiumComponent part)
+                    building.AddTemplateBinding(part, $"{pref.OwnerType.Name}.{pref.Name}", templateBinding);
+                else
+                    _diagnostics.Add($"TemplateBinding on '{pref.OwnerType?.Name}.{pref.Name}' is only meaningful inside a ControlTemplate");
+                continue;
+            }
+
             if (instance is AdamantiumComponent bindable && TryBuildBindingBase(value, out var binding))
             {
                 if (owner.GetField(pref.Name + "Property", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) is AdamantiumProperty property)
