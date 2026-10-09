@@ -265,6 +265,39 @@
             </StackPanel>
         </WrapPanel>
 
+        <!-- Drop caps: the first letter across three lines in the text's own face, and a decorative initial across four. -->
+        <TextBlock Text="{Localize TextStrings.DropCapsTitle}"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="420"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="DropCapText"
+                           Text="{Binding ProseSample}"
+                           Language="en-US"
+                           DropCapLines="3"
+                           TextWrapping="WrapByWords"
+                           FontSize="18"
+                           HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+            </Border>
+            <Border Width="420"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="InitialText"
+                           Text="{Binding GospelSample}"
+                           Language="ru"
+                           DropCapLines="4"
+                           DropCapFontFamily="{Binding InitialsFont}"
+                           TextWrapping="WrapByWords"
+                           FontSize="18"
+                           HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+            </Border>
+        </WrapPanel>
+
         <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->
         <TextBlock Text="{Localize TextStrings.TabsTitle}"
                    Margin="0,8,0,8"/>
