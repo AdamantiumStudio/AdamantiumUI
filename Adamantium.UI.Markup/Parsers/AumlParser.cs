@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using Adamantium.Core;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.TypeReference;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup.Parsers;
 
@@ -27,12 +28,13 @@ public class AumlParser
 
         if (!rootNode.TypeReference.ContainsValidData())
         {
-            context.Logger.Error($"Xmlns declaration is missing for root element: {rootNode.TypeReference.Name}");
+            context.Error(MarkupMessages.XmlnsMissingOnRoot(rootNode.TypeReference.Name), rootNode);
 
             return new AumlDocument()
             {
                 Logger = context.Logger,
                 HasErrors = true,
+                Errors = context.Errors,
                 Root = rootNode, // keep the AST; consumers gate on HasErrors, tooling can still inspect it
                 NamespaceMappings = context.NamespaceMappings.ToArray(),
             };
@@ -42,6 +44,7 @@ public class AumlParser
         {
             Logger = context.Logger,
             HasErrors = context.HasErrors,
+            Errors = context.Errors,
             Root = rootNode,
             NamespaceMappings = context.NamespaceMappings.ToArray(),
         };
@@ -59,12 +62,22 @@ public class ParserContext
     public bool HasErrors => Logger.HasErrors;
     
     public List<NamespaceMapping> NamespaceMappings { get; }
-    
+
+    /// <summary>What makes the document unreadable, each where it is written.</summary>
+    public List<AumlParseError> Errors { get; } = [];
+
     public ParserContext(XElement root)
     {
         Logger = new Logger();
         rootElement = root;
         NamespaceMappings = [];
+    }
+
+    /// <summary>Records what makes the document unreadable, at <paramref name="at"/>.</summary>
+    public void Error(string message, IAumlLineInfo at)
+    {
+        Logger.Error(message);
+        Errors.Add(new AumlParseError(message, at));
     }
 
     /// <summary>The document's default xmlns - the one declared without a prefix, which is where an unqualified name
@@ -99,7 +112,11 @@ public class ParserContext
         {
             if (attribute.IsNamespaceDeclaration)
             {
-                if (!isRoot) throw new Exception("xmlns could be defined only at the root element");
+                if (!isRoot)
+                {
+                    Error(MarkupMessages.XmlnsOnlyAtRoot(), attribute.ToLineInfo());
+                    continue;
+                }
 
                 var mapping = attribute.GetNamespaceMapping();
                 NamespaceMappings.Add(mapping);
@@ -141,6 +158,11 @@ public class ParserContext
         {
             if (node is XElement elNode && elNode.Name.LocalName.Contains('.'))
             {
+                foreach (var stray in elNode.Attributes().Where(a => !a.IsNamespaceDeclaration))
+                {
+                    Error(MarkupMessages.PropertyElementAttribute(elNode.Name.LocalName, stray.Name.LocalName), stray.ToLineInfo());
+                }
+
                 var names = elNode.Name.LocalName.Split('.');
                 // A property-element whose owner prefix differs from the element's own type is an ATTACHED property in
                 // property-element position: <StackPanel><ResourceContext.Resources>... The attribute path already sets

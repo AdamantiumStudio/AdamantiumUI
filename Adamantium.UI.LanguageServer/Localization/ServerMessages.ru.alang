@@ -1,0 +1,45 @@
+<Language>
+    <!-- Problems the server finds itself. -->
+    <Phrase Key="PrefixXUndeclared" Text="Префикс пространства имён 'x' не объявлен (добавьте xmlns:x)"/>
+    <Phrase Key="ClrNamespaceNotFound" Text="Пространство имён CLR не найдено: '{uri}'"/>
+    <Phrase Key="UnknownElement" Text="Неизвестный элемент '{name}'"/>
+    <Phrase Key="ElementNotInScope" Text="'{name}' недоступен — его xmlns не объявлен"/>
+    <Phrase Key="UnknownProperty" Text="Неизвестное свойство '{property}' у '{element}'"/>
+    <Phrase Key="InvalidEnumValue" Text="'{value}' - недопустимое значение {type} (ожидается: {allowed})"/>
+    <Phrase Key="NoProject" Text="Файл не входит ни в один проект (выше него нет .csproj): автодополнению, проверкам и подсветке типов нужен проект."/>
+    <Phrase Key="NotBuilt" Text="{project} ещё не собран: автодополнение, проверки и подсветка типов заработают после сборки."/>
+    <Phrase Key="ResourceKeyShadowed" Text="'{key}' объявлен ещё и в {where}: один из двух никогда не находится - ключ темы идёт раньше ключа приложения. Дайте этому ключу собственное имя."/>
+
+    <!-- Quick fixes. -->
+    <Phrase Key="QualifyWith" Text="Уточнить как '{name}' (пространство имён уже подключено)"/>
+    <Phrase Key="ImportForPrefix" Text="Подключить '{uri}' под префиксом '{prefix}'"/>
+    <Phrase Key="DeclareDefaultXmlns" Text="Объявить xmlns по умолчанию '{uri}'"/>
+    <Phrase Key="ImportAs" Text="Подключить '{uri}' (как '{prefix}:')"/>
+    <Phrase Key="DeclareXmlns" Text="Объявить xmlns:{prefix}=&quot;{uri}&quot;"/>
+    <Phrase Key="AddString" Text="Добавить строку '{key}' из {table}"/>
+    <Phrase Key="AddStrings" Text="Добавить недостающие строки из {table} ({count})"/>
+
+    <!-- Rename. -->
+    <Phrase Key="RenameNeedsKey" Text="Переименование работает с ключом ресурса: x:Key или ключом {{ObservableResource}} либо {{ResourceReference}}."/>
+    <Phrase Key="KeyNotDeclaredHere" Text="'{key}' не объявлен ни в разметке этого проекта, ни в собираемых здесь из исходников, поэтому место его объявления переименовать нельзя."/>
+    <Phrase Key="KeyDeclaredInMany" Text="'{key}' объявлен в {files}: при переименовании не понять, к какому объявлению относится каждое использование. Сначала переименуйте одно из них вручную."/>
+    <Phrase Key="And" Text="{first} и {second}"/>
+    <Phrase Key="KeyNameInvalid" Text="'{name}' не может быть ключом ресурса: сначала буква или '_', дальше буквы, цифры, '_', '.' или '-'."/>
+
+    <!-- Hover and completion. -->
+    <Phrase Key="Element" Text="элемент"/>
+    <Phrase Key="Directive" Text="директива"/>
+    <Phrase Key="Inherits" Text="Наследует {type}"/>
+    <Phrase Key="On" Text="у {type}"/>
+    <Phrase Key="StringIn" Text="{key} в {table}:"/>
+    <Phrase Key="NoText" Text="(нет текста)"/>
+    <Phrase Key="LanguageTable" Text="языковая таблица"/>
+    <Phrase Key="Placeholder" Text="подстановка"/>
+    <Phrase Key="DashGlyph" Text="глиф штриха"/>
+    <Phrase Key="Folder" Text="папка"/>
+    <Phrase Key="File" Text="файл"/>
+    <Phrase Key="LanguageFileRoot" Text="корень языкового файла"/>
+    <Phrase Key="TablePhrase" Text="фраза таблицы"/>
+    <Phrase Key="LanguageFormat" Text="как этот язык записывает даты и числа"/>
+    <Phrase Key="OwnFormat" Text="как это записывает {language}"/>
+</Language>

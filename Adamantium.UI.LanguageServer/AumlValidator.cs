@@ -5,6 +5,7 @@ using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.Parsers;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.LanguageServer;
 
@@ -16,6 +17,31 @@ public sealed record AumlDiagnostic(int Line, int Character, int Length, string 
 /// including property-element values. Flags only what definitely does not exist.</summary>
 public static class AumlValidator
 {
+    /// <summary>What keeps the text from being read as AUML at all - XML that is not well-formed, an xmlns missing on the
+    /// root - each where it is written; for a file the build cannot be run on, having no project.</summary>
+    public static IReadOnlyList<AumlDiagnostic> ValidateReading(string text)
+    {
+        try
+        {
+            return AumlParser.Parse(text).Errors
+                .Select(error => new AumlDiagnostic(Math.Max(0, (error.At?.Line ?? 1) - 1), Math.Max(0, (error.At?.Position ?? 1) - 1), 1, error.Message))
+                .ToList();
+        }
+        catch (System.Xml.XmlException exception)
+        {
+            return [new AumlDiagnostic(Math.Max(0, exception.LineNumber - 1), Math.Max(0, exception.LinePosition - 1), 1, XmlProblem.MessageOf(exception))];
+        }
+    }
+
+    /// <summary>What the editor flags that the build itself does not: an xmlns declaration that names nothing, at the
+    /// declaration - the build fails only at an element that uses it.</summary>
+    public static IReadOnlyList<AumlDiagnostic> ValidateBeyondBuild(string text, AumlTypeModel model)
+    {
+        var diagnostics = new List<AumlDiagnostic>();
+        ValidateNamespaces(text, model, diagnostics);
+        return diagnostics;
+    }
+
     public static IReadOnlyList<AumlDiagnostic> Validate(string text, AumlTypeModel model)
     {
         var diagnostics = new List<AumlDiagnostic>();
@@ -34,7 +60,7 @@ public static class AumlValidator
         if (document.Root is AumlAstObjectNode root)
         {
             Walk(root, model, diagnostics, text, AumlNamespaces.Scan(text));
-            ValidateClrNamespaces(text, model, diagnostics);
+            ValidateNamespaces(text, model, diagnostics);
             ValidateTypeReferences(text, model, diagnostics);
         }
 
@@ -59,27 +85,30 @@ public static class AumlValidator
         foreach (Match match in KnownPrefixUsage.Matches(text))
         {
             var (line, character) = LineColAt(text, match.Index);
-            diagnostics.Add(new AumlDiagnostic(line, character, 1, "Namespace prefix 'x' is not declared (add xmlns:x)"));
+            diagnostics.Add(new AumlDiagnostic(line, character, 1, ServerMessages.PrefixXUndeclared()));
         }
     }
 
-    private static readonly Regex ClrXmlnsDeclaration = new(
-        @"xmlns(?::[\w.\-]+)?\s*=\s*""(?<uri>clr-namespace:[^""]*)""", RegexOptions.Compiled);
+    private static readonly Regex XmlnsDeclaration = new(
+        @"xmlns(?::[\w.\-]+)?\s*=\s*""(?<uri>[^""]*)""", RegexOptions.Compiled);
 
     /// <summary>
-    /// Flags <c>clr-namespace:</c> xmlns declarations whose CLR namespace (and optional assembly)
-    /// isn't found in the project's references — Rider's XML support can't validate these, so the
-    /// language server does (the matching highlight filter suppresses XML's "URI is not registered").
+    /// Flags xmlns declarations the build would not find: a <c>clr-namespace:</c> whose CLR namespace (and optional
+    /// assembly) isn't in the project's references, or a URI no referenced assembly declares with [XmlnsDefinition].
+    /// Rider's XML support can't validate these, so the language server does (the matching highlight filter suppresses
+    /// XML's "URI is not registered").
     /// </summary>
-    private static void ValidateClrNamespaces(string text, AumlTypeModel model, List<AumlDiagnostic> diagnostics)
+    private static void ValidateNamespaces(string text, AumlTypeModel model, List<AumlDiagnostic> diagnostics)
     {
-        foreach (Match match in ClrXmlnsDeclaration.Matches(text))
+        foreach (Match match in XmlnsDeclaration.Matches(text))
         {
             var uri = match.Groups["uri"];
-            if (model.GetElements(uri.Value).Count > 0) continue;     // resolves to a real CLR namespace
+            if (uri.Value == AumlXDirectives.Xmlns || model.IsKnownNamespace(uri.Value)) continue;
 
             var (line, character) = LineColAt(text, uri.Index);
-            diagnostics.Add(new AumlDiagnostic(line, character, uri.Length, $"CLR namespace not found: '{uri.Value}'"));
+            diagnostics.Add(new AumlDiagnostic(line, character, uri.Length, uri.Value.StartsWith("clr-namespace:", StringComparison.Ordinal)
+                ? ServerMessages.ClrNamespaceNotFound(uri.Value)
+                : MarkupMessages.XmlNamespaceNotFound(uri.Value)));
         }
     }
 
@@ -125,8 +154,8 @@ public static class AumlValidator
         var colon = typeText.IndexOf(':');
         var name = typeText[(colon + 1)..];
         return colon >= 0 && namespaces.TryGetValue(typeText[..colon], out var xmlns)
-            ? $"Type {name} could not be found in namespace {ClrNamespaceOf(xmlns)}"
-            : $"Type {name} could not be found in any linked assembly";
+            ? MarkupMessages.TypeNotInNamespace(name, ClrNamespaceOf(xmlns))
+            : MarkupMessages.TypeNotInAnyAssembly(name);
     }
 
     private static string StaticProblem(string body, IReadOnlyDictionary<string, string> namespaces, AumlTypeModel model)
@@ -134,7 +163,7 @@ public static class AumlValidator
         var lastDot = body.LastIndexOf('.');
         if (lastDot <= 0 || lastDot == body.Length - 1)
         {
-            return $"x:Static expects 'Type.Member', got '{body}'";
+            return MarkupMessages.StaticShape(body);
         }
 
         var typeText = body[..lastDot];
@@ -146,10 +175,10 @@ public static class AumlValidator
 
         if (type == null)
         {
-            return $"x:Static type '{typeText}' could not be resolved";
+            return MarkupMessages.StaticTypeNotResolved(typeText);
         }
 
-        return type.GetMemberByName(memberName) != null ? null : $"x:Static: '{type.FullName}' has no member '{memberName}'";
+        return type.GetMemberByName(memberName) != null ? null : MarkupMessages.StaticNoMember(type.FullName, memberName);
     }
 
     private static string ClrNamespaceOf(string xmlns)
@@ -186,13 +215,13 @@ public static class AumlValidator
         {
             element = model.GetElement(xmlns, name);
             if (element is null)
-                diagnostics.Add(At(node, name.Length, $"Unknown element '{name}'"));
+                diagnostics.Add(At(node, name.Length, ServerMessages.UnknownElement(name)));
         }
         else if (string.IsNullOrEmpty(xmlns) && model.FindElement(name) is not null)
         {
             // Unprefixed element whose xmlns isn't declared, but the type exists in a known namespace
             // (e.g. a deleted default xmlns) — the auto-import quick-fix offers to declare it.
-            diagnostics.Add(At(node, name.Length, $"'{name}' is not in scope — its xmlns is not declared"));
+            diagnostics.Add(At(node, name.Length, ServerMessages.ElementNotInScope(name)));
         }
 
         foreach (var property in node.GetProperties())
@@ -202,6 +231,13 @@ public static class AumlValidator
                 if (element is not null && !reference.IsAttachedProperty)
                 {
                     ValidateAttribute(reference, property, name, element, model, diagnostics);
+                }
+                else if (reference.IsAttachedProperty && reference.OwnerType is { } ownerType &&
+                         model.GetElement(ownerType.Namespace, ownerType.Name) is { } owner &&
+                         owner.GetMemberByName("Set" + reference.Name) is null)
+                {
+                    diagnostics.Add(At(reference, ownerType.Name.Length + 1 + reference.Name.Length,
+                        MarkupMessages.NotAttached(owner.Name, reference.Name, name)) with { Code = BuildCode });
                 }
 
                 ValidateTypeValues(reference, property, element, new TypeValueScan(model, text, namespaces, diagnostics));
@@ -338,7 +374,7 @@ public static class AumlValidator
         var propertyName = reference.Name;
         if (!model.IsKnownAttribute(element, propertyName))
         {
-            diagnostics.Add(At(reference, propertyName.Length, $"Unknown property '{propertyName}' on '{elementName}'"));
+            diagnostics.Add(At(reference, propertyName.Length, ServerMessages.UnknownProperty(propertyName, elementName)));
             return;
         }
 
@@ -360,7 +396,7 @@ public static class AumlValidator
                 var allowed = model.GetValueCompletions(propertyType);
                 if (!allowed.Contains(valueText))
                     diagnostics.Add(At(reference, propertyName.Length,
-                        $"'{valueText}' is not a valid {propertyType.Name} (expected: {string.Join(", ", allowed)})"));
+                        ServerMessages.InvalidEnumValue(valueText, propertyType.Name, string.Join(", ", allowed))));
             }
         }
     }

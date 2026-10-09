@@ -1,0 +1,162 @@
+<Language>
+    <!-- The x: directives, as completion and hover describe them. -->
+    <Phrase Key="DirectiveName" Text="Names this element so it is exposed as a field on the generated class."/>
+    <Phrase Key="DirectiveNamespace" Text="Full type name for the generated class (the WPF x:Class analog)."/>
+    <Phrase Key="DirectiveKey" Text="Key under which this entry is stored in a resource dictionary."/>
+    <Phrase Key="DirectiveType" Text="A reference to a CLR type."/>
+    <Phrase Key="DirectiveViewModel" Text="View-model type for this view (prefix:Type). At runtime the framework resolves an instance from the DI container and assigns it as DataContext; design-time tooling resolves {{Binding}} paths against this type."/>
+    <Phrase Key="DirectiveCreateInDesignTime" Text="Design-time only: &quot;True&quot; lets the designer build this view's x:ViewModel through the application's services, so {{Binding}}s show real data. Off by default: a preview otherwise runs the view-model's code - network, files, data. Services the designer must not run for real are replaced in UIApplication.RegisterDesignServices."/>
+    <Phrase Key="DirectiveNull" Text="An explicit null value: Background=&quot;{{x:Null}}&quot;."/>
+    <Phrase Key="DirectiveKeepAlive" Text="What this view asks of whoever navigates away from it: Disabled (default - rebuilt on every visit), Enabled (kept, but evictable) or Required (kept, never evicted). Metadata only - the view parks nothing itself."/>
+    <Phrase Key="DirectiveLoad" Text="When this element is built at all. &quot;False&quot; holds it back until something asks for it by name; a binding (x:Load=&quot;{{Binding IsAdvancedShown}}&quot;) builds it when the condition turns true and detaches it when it turns false. While unloaded NOTHING under it is constructed - it is not a hidden element, it is an absent one. Worth it for something HEAVY - a page, a list, a panel opened once a session; a small chunk costs more in slot than it saves in construction."/>
+    <Phrase Key="DirectiveDataType" Text="The type of the item a DataTemplate is written against (prefix:Type). Declared, not inferred: tooling resolves {{Binding}} paths inside the template against it, the way x:ViewModel does for a view. The type must exist - a name that does not resolve fails the build."/>
+    <Phrase Key="DirectiveStatic" Text="The value of a static field or property: Width=&quot;{{x:Static local:Metrics.RailWidth}}&quot;. Read at the point of use, so the declaration stays in one place instead of being restated as a resource."/>
+    <Phrase Key="DirectiveShared" Text="&quot;False&quot; builds this value PER TARGET instead of sharing one instance between every element the setter matches - what a ContextMenu, a Popup or a Transform needs, since each belongs to the element it sits on."/>
+
+    <!-- Parsing markup. -->
+    <Phrase Key="XmlnsMissingOnRoot" Text="Xmlns declaration is missing for root element: {element}"/>
+    <Phrase Key="XmlnsOnlyAtRoot" Text="xmlns could be defined only at the root element"/>
+    <Phrase Key="MarkupExtensionNotWrapped" Text="'{text}' is not closed: a markup extension ends with }}"/>
+    <Phrase Key="PropertyElementAttribute" Text="&lt;{element}&gt; sets a property and takes no attributes; '{attribute}' belongs on the element it sets"/>
+    <Phrase Key="PrefixNotDefined" Text="Prefix {prefix} is not defined in root element."/>
+
+    <!-- Types, properties and values. -->
+    <Phrase Key="AssemblyNotFound" Text="Assembly {assembly} could not be found"/>
+    <Phrase Key="AssemblyOfElementNotResolved" Text="Could not resolve assembly '{assembly}' for element '{element}' (namespace '{namespace}', resolved={resolved})."/>
+    <Phrase Key="XmlNamespaceNotFound" Text="Xml namespace {namespace} could not be found"/>
+    <Phrase Key="TypeNotInNamespace" Text="Type {type} could not be found in namespace {namespace}"/>
+    <Phrase Key="TypeNotInAnyAssembly" Text="Type {type} could not be found in any linked assembly"/>
+    <Phrase Key="TypeNotFoundCheckNamespace" Text="{type} could not be found. Please, check correctness of namespace"/>
+    <Phrase Key="PropertyNotFoundIn" Text="Property {property} could not be found in {type}"/>
+    <Phrase Key="UnknownPropertyOnType" Text="Unknown property {property} on type {type}"/>
+    <Phrase Key="NotCreatable" Text="{type} cannot be written as an element: it is abstract, static or an interface, or has no public constructor without parameters"/>
+    <Phrase Key="PropertySetTwice" Text="{property} is set twice on {element}: the second would replace the first"/>
+    <Phrase Key="ReadOnlyProperty" Text="{type}.{property} is read-only: markup cannot set it"/>
+    <Phrase Key="OneValue" Text="{property} takes one value: this one would replace the one before it"/>
+    <Phrase Key="WrongValueType" Text="{value} is not a {type}: {property} takes a {type}"/>
+    <Phrase Key="TemplateTakesOne" Text="{type} builds one element, its root: this one would be left out"/>
+    <Phrase Key="NoPlaceForChild" Text="{type} has no place for a child: it has no content property and is no container"/>
+    <Phrase Key="ContentSetTwice" Text="{type}.{property} is set already: a child would set it again"/>
+    <Phrase Key="NoPlaceForText" Text="{type} takes no text: only a value type, a number or a Thickness, is written as its text"/>
+    <Phrase Key="PartNotFound" Text="{template} has no part named '{name}'"/>
+    <Phrase Key="BindingPathNotFound" Text="{type} has no {member}, which the binding path '{path}' reads"/>
+    <Phrase Key="NameTwice" Text="x:Name '{name}' is given to another element already"/>
+    <Phrase Key="NameNotIdentifier" Text="x:Name '{name}' cannot be a name: a letter or '_' first, then letters, digits or '_', and no C# keyword"/>
+    <Phrase Key="KeyTwice" Text="x:Key '{key}' is in this dictionary already"/>
+    <Phrase Key="ContentTakesOne" Text="{type} holds one child, in {property}: this one would replace the one before it"/>
+    <Phrase Key="NotAttached" Text="{owner}.{property} is not an attached property: it is set on a {owner} only, not on {element}"/>
+    <Phrase Key="PropertyTypeNotFound" Text="Cannot find type {type} for property {property}"/>
+    <Phrase Key="TypeNotDerived" Text="{type} is not a {base}: {member} takes a type derived from {fullBase}"/>
+    <Phrase Key="NoTypeParser" Text="{where}: {type} has no type parser, so this value throws when the markup is built. Give the type a [TypeParser] or a public static Parse(string)."/>
+    <Phrase Key="InvalidLiteral" Text="'{text}' is not a valid {type} for {property} (expected: {expected}) (line {line}, position {position})."/>
+    <Phrase Key="ExpectedNumber" Text="a number"/>
+    <Phrase Key="ExpectedWholeNumber" Text="a whole number"/>
+    <Phrase Key="ExpectedNonNegativeWholeNumber" Text="a whole number, not negative"/>
+    <Phrase Key="FontWeightInvalid" Text="'{value}' is not a font weight: expected Thin, ExtraLight, Light, Normal, Medium, SemiBold, Bold, ExtraBold, Black or a number from 1 to 1000."/>
+    <Phrase Key="FontStretchInvalid" Text="'{value}' is not a font stretch: expected a name from UltraCondensed to UltraExpanded or a percentage such as 87.5%."/>
+    <Phrase Key="MarkupItemNoProperty" Text="[MarkupItem] on {type} names no reachable item property"/>
+
+    <!-- Resources and bindings. -->
+    <Phrase Key="InlineResourceNeedsKey" Text="An inline resource in {property} needs an x:Key."/>
+    <Phrase Key="ResourceWithoutKey" Text="{{{extension}}} on {property} names no key (line {line}, position {position})."/>
+    <Phrase Key="LiveResourceOnPlainProperty" Text="{{{extension} {key}}} cannot follow {type}.{property}: it is a plain property with nothing to keep live. {{ResourceReference {key}}} sets it once."/>
+    <Phrase Key="TemplateBindingOutsideTemplate" Text="TemplateBinding can only be used inside ControlTemplate."/>
+    <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: type '{type}' could not be resolved."/>
+    <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: Stop type '{type}' could not be resolved."/>
+    <Phrase Key="AncestorConverterInvalid" Text="Ancestor: Converter must be a resource or converter markup extension."/>
+    <Phrase Key="AncestorUnknownArgument" Text="Ancestor: unknown argument '{argument}'."/>
+    <Phrase Key="SelfConverterInvalid" Text="Self: Converter must be a resource or converter markup extension."/>
+    <Phrase Key="SelfUnknownArgument" Text="Self: unknown argument '{argument}'."/>
+    <Phrase Key="UnknownBindingProperty" Text="Unknown binding property '{name}'"/>
+
+    <!-- Directives. -->
+    <Phrase Key="DirectiveBelongsOnElement" Text="Directive 'x:{directive}' is written on the element, not in a value"/>
+    <Phrase Key="DirectiveBelongsInValue" Text="Directive 'x:{directive}' belongs in a value, not on the element"/>
+    <Phrase Key="UnknownDirective" Text="Unknown directive 'x:{directive}'"/>
+    <Phrase Key="DirectiveMissingValue" Text="Directive '{directive}' is missing a value"/>
+    <Phrase Key="StaticShape" Text="x:Static expects 'Type.Member', got '{body}'"/>
+    <Phrase Key="StaticTypeNotResolved" Text="x:Static type '{type}' could not be resolved"/>
+    <Phrase Key="StaticNoMember" Text="x:Static: '{type}' has no member '{member}'"/>
+    <Phrase Key="KeepAliveExpects" Text="x:KeepAlive expects {modes}, got '{mode}'"/>
+    <Phrase Key="LoadExpects" Text="x:Load takes True, False or a binding, got '{condition}'"/>
+    <Phrase Key="LoadTrueHoldsNothing" Text="x:Load=&quot;True&quot; holds nothing back - the element is built anyway. Remove it, or give it a condition to answer"/>
+    <Phrase Key="LoadInsideTemplate" Text="x:Load is not supported inside a template: a template is applied to many controls, and the element would be held by one slot shared between all of them"/>
+    <Phrase Key="LoadInsideContainer" Text="x:Load is not supported inside {container}: it must be an IContainer (so the element can go back at its place) and an IFundamentalUIComponent (so the condition has a DataContext)"/>
+    <Phrase Key="TargetNameHeldBack" Text="TargetName='{name}' points at an element held back by x:Load. It would resolve to nothing until that element is built, and silently do nothing until then"/>
+    <Phrase Key="DataTypeNotResolved" Text="x:DataType '{type}' could not be resolved"/>
+    <Phrase Key="ViewModelNotResolved" Text="x:ViewModel type '{type}' could not be resolved"/>
+    <Phrase Key="DataTemplateSetTwoDefaults" Text="A DataTemplateSet has more than one template without x:DataType; only one can take what no other fits"/>
+    <Phrase Key="DataTemplateSetTwoForType" Text="A DataTemplateSet has two templates for {type}; one type, one template"/>
+
+    <!-- {Localize}. -->
+    <Phrase Key="LocalizeShape" Text="{{Localize}} names a table and a string, {{Localize Strings.Close}}, or a table and where the key is read from, {{Localize Strings, Key={{Binding Kind}}}}; got '{text}'"/>
+    <Phrase Key="LocalizeNoString" Text="{table} has no string '{key}'"/>
+    <Phrase Key="LocalizeKeyFromBinding" Text="{{Localize {table}, {argument}=...}} reads the key from a binding; a key written out is {{Localize {table}.Close}}"/>
+    <Phrase Key="LocalizeTableTwice" Text="{{Localize}} names its table, {{Localize {table}, ...}}, or reads it from a binding, {{Localize {argument}={{Binding Phrases}}, ...}}; not both"/>
+    <Phrase Key="LocalizeBothFromBinding" Text="{{Localize {tableArgument}=..., {keyArgument}=...}} reads both the table and the key from a binding: {{Localize {tableArgument}={{Binding Phrases}}, {keyArgument}={{Binding Name}}}}"/>
+    <Phrase Key="LocalizeNoTable" Text="No language table '{name}': a table is a set of {table}.&lt;language&gt;.alang files, here or in a referenced assembly"/>
+    <Phrase Key="PlaceholdersNone" Text="it has no placeholders"/>
+    <Phrase Key="PlaceholdersFilled" Text="it fills {placeholders}"/>
+    <Phrase Key="PlaceholderUnknown" Text="{table}.{key} has no placeholder {names}: {fills}"/>
+    <Phrase Key="PlaceholderMissing" Text="{table}.{key} needs {names}: {fills}"/>
+
+    <!-- The project. -->
+    <Phrase Key="BlueprintTooMany" Text="An application has one blueprint, and this project holds {count}: {files}."/>
+    <Phrase Key="EntryPointHandWritten" Text="The entry point is built from the blueprint {file}: remove {type}.Main."/>
+    <Phrase Key="BlueprintNoApplication" Text="The blueprint {file} starts the application's class, and the project declares none: add a class deriving from MultiverseApplication."/>
+    <Phrase Key="BlueprintManyApplications" Text="The blueprint {file} starts one application, and the project declares {count}: {applications}."/>
+    <Phrase Key="NoRootNamespaceOption" Text="No RootNamespace Compiler option provided. Please add &lt;CompilerVisibleProperty Include=&quot;RootNamespace&quot; /&gt; to your csproj file."/>
+    <Phrase Key="QuickAccessMenuControls" Text="{file}({line},{position}): {command} states its menu as MenuItem CONTROLS. Taken into the quick-access bar it will drop an EMPTY menu - a ContextMenu is a logical child and cannot be in two places, so only the row DATA travels. State the rows as ItemsSource + ItemTemplate, or say Ribbon.CanAddToQuickAccess=&quot;False&quot; if this command is not for the bar."/>
+    <Phrase Key="NoAutomationId" Text="{file}({line},{position}): {type} has no AutomationProperties.AutomationId, so a test cannot find it by id."/>
+    <Phrase Key="GenerationFailed" Text="AUML generation failed for {file}: {error}"/>
+
+    <!-- Language files. -->
+    <Phrase Key="NoRootNamespace" Text="No RootNamespace: add &lt;CompilerVisibleProperty Include=&quot;RootNamespace&quot; /&gt; to the project"/>
+    <Phrase Key="LanguageFileUnnamed" Text="'{file}' does not name its language: a language file is &lt;Table&gt;.&lt;language&gt;{extension}, Strings.en{extension}"/>
+    <Phrase Key="LanguageTableNameInvalid" Text="'{table}' cannot name a table: it becomes a class name"/>
+    <Phrase Key="LanguageNameInvalid" Text="'{language}' is not a language name such as en, ru or pt-BR"/>
+    <Phrase Key="LanguageFileRoot" Text="A language file is &lt;{root}&gt; with &lt;{phrase} Key=&quot;...&quot;&gt; entries"/>
+    <Phrase Key="LanguageRootAttribute" Text="&lt;{root}&gt; takes no attributes; '{attribute}' is not one"/>
+    <Phrase Key="LanguageFormatTwice" Text="A language file has one &lt;{format}&gt;"/>
+    <Phrase Key="LanguageStrayElement" Text="&lt;{element}&gt; is not part of a language file: it holds &lt;{phrase}&gt; and one &lt;{format}&gt;"/>
+    <Phrase Key="PhraseNeedsKey" Text="&lt;{phrase}&gt; needs a Key"/>
+    <Phrase Key="PhraseKeyInvalid" Text="'{key}' cannot be a key: it becomes a property name"/>
+    <Phrase Key="PhraseKeyTwice" Text="'{key}' is already in this file"/>
+    <Phrase Key="PhraseHoldsElements" Text="'{key}' holds elements; a phrase is text"/>
+    <Phrase Key="PhraseTextTwice" Text="'{key}' gives its text twice: in {text} and inside the tag"/>
+    <Phrase Key="PhraseCasesNeedChooser" Text="'{key}' gives cases, so {count} or {select} names the placeholder whose value picks one: {count}=&quot;count&quot; for a number, {select}=&quot;state&quot; for any other value"/>
+    <Phrase Key="PhraseStrayAttribute" Text="&lt;{phrase}&gt; takes Key and {text}, or {count} or {select} and its cases; '{attribute}' is not one"/>
+    <Phrase Key="PhraseTextAndCases" Text="'{key}' gives a text and cases: a phrase that changes with a value says everything in its cases"/>
+    <Phrase Key="ChooserInvalid" Text="{chooser} names the placeholder whose value picks the case: {chooser}=&quot;{example}&quot;"/>
+    <Phrase Key="NotAPluralForm" Text="'{name}' is not a plural form; the forms are {forms}"/>
+    <Phrase Key="PhraseNeedsOther" Text="'{key}' needs an {other} form: the one for every number no other form takes"/>
+    <Phrase Key="LanguageHasNoForm" Text="{language} has no {form} form; its forms are {forms}"/>
+    <Phrase Key="PhraseLacksForm" Text="'{key}' lacks the {forms} form of {language}: {other} is said instead"/>
+    <Phrase Key="PhraseLacksForms" Text="'{key}' lacks the {forms} forms of {language}: {other} is said instead"/>
+    <Phrase Key="PluralRulesUnknown" Text="The plural rules of '{language}' are not known: {one} is said for 1 and {other} for every other number"/>
+    <Phrase Key="CaseNameInvalid" Text="'{name}' cannot name a case of '{key}': a case is named as the value it stands for, True, False or a member of an enum, and not as its phrase"/>
+    <Phrase Key="PhraseNoCases" Text="'{key}' is chosen by {{{chooser}}} but gives no cases: True=&quot;...&quot; False=&quot;...&quot;, or a case per member of an enum"/>
+    <Phrase Key="NotAFormat" Text="'{name}' is not a format; the formats are {formats}"/>
+    <Phrase Key="FirstDayOfWeekInvalid" Text="FirstDayOfWeek is a day such as Monday, not '{value}'"/>
+    <Phrase Key="LanguageInAnotherFile" Text="'{language}' of {table} is in another file already"/>
+    <Phrase Key="KeyIsTableMember" Text="'{key}' cannot be a key of {table}: the table class has a member of that name"/>
+    <Phrase Key="KeyNotInBase" Text="'{key}' is not in {file}: add it there first"/>
+    <Phrase Key="ChooserDiffers" Text="{key} is chosen by {{{chooser}}}, and by {{{other}}} elsewhere: one placeholder picks the case in every language"/>
+    <Phrase Key="KeyIsCaseName" Text="'{key}' cannot be the key of a phrase with a case of that name"/>
+    <Phrase Key="LacksCase" Text="{key} lacks the case {cases} the base text gives"/>
+    <Phrase Key="LacksCases" Text="{key} lacks the cases {cases} the base text gives"/>
+    <Phrase Key="TableNotFound" Text="{table} has no {file} here (the base language is {language}), and no referenced assembly has a table named {table}"/>
+    <Phrase Key="TableAmbiguous" Text="{table} names more than one table: {tables}"/>
+    <Phrase Key="TableHasNoKey" Text="{table} has no '{key}'"/>
+    <Phrase Key="FormatsInLibrary" Text="Only an application sets how a language writes dates and numbers; a library leaves it to the application"/>
+    <Phrase Key="FormatsTwice" Text="The formats of '{language}' are set in another file already: one file per language sets them"/>
+    <Phrase Key="PlaceholdersExtra" Text="has {names} the base text does not"/>
+    <Phrase Key="PlaceholdersLacking" Text="lacks {names}"/>
+    <Phrase Key="PlaceholderProblem" Text="{key} {problem}"/>
+    <Phrase Key="PlaceholderProblems" Text="{key} {first} and {second}"/>
+    <Phrase Key="LanguageLacksStrings" Text="{file} lacks {count} of {table}'s strings: {shown}. They are shown in {language}"/>
+    <Phrase Key="AndMore" Text="{shown} and {count} more"/>
+    <Phrase Key="BraceNotClosed" Text="'{{' has no closing '}}'; write '{{{{' for a brace"/>
+    <Phrase Key="PlaceholderNoName" Text="'{{{text}}}' does not start with a name: a placeholder is {{name}}, {{name:format}} or {{name,width}}"/>
+    <Phrase Key="BraceNotOpened" Text="'}}' has no opening '{{'; write '}}}}' for a brace"/>
+</Language>

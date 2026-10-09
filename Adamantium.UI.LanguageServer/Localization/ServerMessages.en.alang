@@ -1,0 +1,45 @@
+<Language>
+    <!-- Problems the server finds itself. -->
+    <Phrase Key="PrefixXUndeclared" Text="Namespace prefix 'x' is not declared (add xmlns:x)"/>
+    <Phrase Key="ClrNamespaceNotFound" Text="CLR namespace not found: '{uri}'"/>
+    <Phrase Key="UnknownElement" Text="Unknown element '{name}'"/>
+    <Phrase Key="ElementNotInScope" Text="'{name}' is not in scope — its xmlns is not declared"/>
+    <Phrase Key="UnknownProperty" Text="Unknown property '{property}' on '{element}'"/>
+    <Phrase Key="InvalidEnumValue" Text="'{value}' is not a valid {type} (expected: {allowed})"/>
+    <Phrase Key="NoProject" Text="This file belongs to no project (no .csproj above it): completion, checks and type colors need one."/>
+    <Phrase Key="NotBuilt" Text="{project} has not been built yet: completion, checks and type colors start once it has been built."/>
+    <Phrase Key="ResourceKeyShadowed" Text="'{key}' is declared in {where} too: one of the two is never found - a theme's key before the application's. Give this one a name of its own."/>
+
+    <!-- Quick fixes. -->
+    <Phrase Key="QualifyWith" Text="Qualify with '{name}' (namespace already imported)"/>
+    <Phrase Key="ImportForPrefix" Text="Import '{uri}' for prefix '{prefix}'"/>
+    <Phrase Key="DeclareDefaultXmlns" Text="Declare default xmlns '{uri}'"/>
+    <Phrase Key="ImportAs" Text="Import '{uri}' (as '{prefix}:')"/>
+    <Phrase Key="DeclareXmlns" Text="Declare xmlns:{prefix}=&quot;{uri}&quot;"/>
+    <Phrase Key="AddString" Text="Add the string '{key}' of {table}"/>
+    <Phrase Key="AddStrings" Text="Add the {count} strings of {table} this file lacks"/>
+
+    <!-- Rename. -->
+    <Phrase Key="RenameNeedsKey" Text="Rename works on a resource key: an x:Key, or the key of {{ObservableResource}} or {{ResourceReference}}."/>
+    <Phrase Key="KeyNotDeclaredHere" Text="'{key}' is not declared in markup of this project or of one built from source here, so where it is declared cannot be renamed."/>
+    <Phrase Key="KeyDeclaredInMany" Text="'{key}' is declared in {files}: a rename could not tell which one each use means. Rename one of them by hand first."/>
+    <Phrase Key="And" Text="{first} and {second}"/>
+    <Phrase Key="KeyNameInvalid" Text="'{name}' cannot be a resource key: a letter or '_' first, then letters, digits, '_', '.' or '-'."/>
+
+    <!-- Hover and completion. -->
+    <Phrase Key="Element" Text="element"/>
+    <Phrase Key="Directive" Text="directive"/>
+    <Phrase Key="Inherits" Text="Inherits {type}"/>
+    <Phrase Key="On" Text="on {type}"/>
+    <Phrase Key="StringIn" Text="{key} in {table}:"/>
+    <Phrase Key="NoText" Text="(no text)"/>
+    <Phrase Key="LanguageTable" Text="language table"/>
+    <Phrase Key="Placeholder" Text="placeholder"/>
+    <Phrase Key="DashGlyph" Text="dash glyph"/>
+    <Phrase Key="Folder" Text="folder"/>
+    <Phrase Key="File" Text="file"/>
+    <Phrase Key="LanguageFileRoot" Text="the language file's root"/>
+    <Phrase Key="TablePhrase" Text="a phrase of the table"/>
+    <Phrase Key="LanguageFormat" Text="how this language writes dates and numbers"/>
+    <Phrase Key="OwnFormat" Text="how {language} writes it"/>
+</Language>

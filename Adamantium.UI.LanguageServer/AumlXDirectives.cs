@@ -13,6 +13,6 @@ internal static class AumlXDirectives
 {
     public const string Xmlns = "http://adamantium/ui/xaml/extensions";
 
-    public static readonly IReadOnlyList<(string Name, string Detail)> All =
+    public static IReadOnlyList<(string Name, string Detail)> All =>
         AumlDirectives.All.Select(d => (d.Name, Detail: d.Description)).ToList();
 }

@@ -328,7 +328,7 @@ public sealed class CompletionEngine
         var dot = partial.LastIndexOf('.');
         if (dot < 0)
         {
-            return CompleteTypeNames(partial, namespaces);
+            return CompleteTypeNames(partial, namespaces, statics: true);
         }
 
         var (prefix, typeName) = SplitName(partial[..dot]);
@@ -405,7 +405,7 @@ public sealed class CompletionEngine
             ? []
             : target.Parameters
                 .Where(p => !given.Contains(p) && Matches(p, current))
-                .Select(p => new AumlCompletionItem(p, AumlCompletionItemKind.Property, "placeholder", InsertText: p + "=", ReplaceBack: current.Length))
+                .Select(p => new AumlCompletionItem(p, AumlCompletionItemKind.Property, ServerMessages.Placeholder(), InsertText: p + "=", ReplaceBack: current.Length))
                 .ToList();
     }
 
@@ -420,7 +420,7 @@ public sealed class CompletionEngine
                 .Select(t => t.Name)
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(n => n, StringComparer.Ordinal)
-                .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Element, "language table", ReplaceBack: name.Length))
+                .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Element, ServerMessages.LanguageTable(), ReplaceBack: name.Length))
                 .ToList();
         }
 
@@ -527,7 +527,8 @@ public sealed class CompletionEngine
                 .DistinctBy(p => p.Name)
                 .Where(p => Matches(p.Name, memberPartial))
                 .OrderBy(p => p.Name)
-                .Select(p => new AumlCompletionItem(ownerDot + p.Name, AumlCompletionItemKind.Property, p.Type?.Name))
+                .Select(p => new AumlCompletionItem(ownerDot + p.Name, AumlCompletionItemKind.Property, p.Type?.Name,
+                    ReplaceBack: partial.Length))
                 .ToList();
         }
 
@@ -559,7 +560,7 @@ public sealed class CompletionEngine
             return _model.GetAttachedProperties(owner)
                 .Where(p => Matches(p.Name, memberPartial) && !used.Contains(ownerDot + p.Name))
                 .OrderBy(p => p.Name)
-                .Select(p => AttrItem(ownerDot + p.Name, AumlCompletionItemKind.Property, p.Type?.Name))
+                .Select(p => AttrItem(ownerDot + p.Name, AumlCompletionItemKind.Property, p.Type?.Name, partial.Length))
                 .ToList();
         }
 
@@ -683,7 +684,7 @@ public sealed class CompletionEngine
 
         return names
             .Where(n => Matches(n, token))
-            .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Value, "dash glyph", ReplaceBack: token.Length))
+            .Select(n => new AumlCompletionItem(n, AumlCompletionItemKind.Value, ServerMessages.DashGlyph(), ReplaceBack: token.Length))
             .ToList();
     }
 
@@ -703,9 +704,12 @@ public sealed class CompletionEngine
     // Completes a type reference written as "[prefix:]Partial": offers the types of the prefix's xmlns (a
     // clr-namespace includes its view-models). Shared by {x:Type ...} and the plain type-valued x: directives.
     private IReadOnlyList<AumlCompletionItem> CompleteTypeNames(string prefixText, IReadOnlyDictionary<string, string> namespaces,
-        string typeBase = null)
+        string typeBase = null, bool statics = false)
     {
         var (prefix, partial) = SplitName(prefixText);
+        Func<Adamantium.UI.Markup.CodeGeneration.IResolvedType, bool> fits = statics
+            ? AumlTypeModel.HasStaticValues
+            : t => AumlTypeModel.CanBeReferenced(t) && Fits(t, typeBase);
 
         // Prefix already typed (e.g. "vm:Ma"): complete within that namespace, replacing only the name part.
         if (prefix.Length > 0)
@@ -713,7 +717,7 @@ public sealed class CompletionEngine
             var xmlns = ResolveXmlns(prefix, namespaces);
             if (xmlns.Length == 0) return [];
             return _model.GetElements(xmlns)
-                .Where(t => Matches(t.Name, partial) && Fits(t, typeBase))
+                .Where(t => Matches(t.Name, partial) && fits(t))
                 .OrderBy(t => t.Name)
                 .Select(t => new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length))
                 .ToList();
@@ -729,7 +733,7 @@ public sealed class CompletionEngine
         {
             foreach (var t in _model.GetElements(ns.Value))
             {
-                if (!MatchesStart(t.Name, partial) || !Fits(t, typeBase)) continue;
+                if (!MatchesStart(t.Name, partial) || !fits(t)) continue;
                 var insert = ns.Key.Length > 0 ? $"{ns.Key}:{t.Name}" : t.Name;
                 if (!seen.Add(t.FullName)) continue;
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element,
@@ -739,7 +743,7 @@ public sealed class CompletionEngine
 
         foreach (var t in _model.ProjectTypes)
         {
-            if (MatchesStart(t.Name, partial) && Fits(t, typeBase) && _model.ResolveShortName(t.Name)?.FullName == t.FullName
+            if (MatchesStart(t.Name, partial) && fits(t) && _model.ResolveShortName(t.Name)?.FullName == t.FullName
                 && seen.Add(t.FullName))
             {
                 items.Add(new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element, ReplaceBack: partial.Length));
@@ -818,7 +822,7 @@ public sealed class CompletionEngine
                 continue;
             }
 
-            items.Add(new AumlCompletionItem(name + "/", AumlCompletionItemKind.Value, "folder", ReplaceBack: replaceBack));
+            items.Add(new AumlCompletionItem(name + "/", AumlCompletionItemKind.Value, ServerMessages.Folder(), ReplaceBack: replaceBack));
         }
         foreach (var file in Directory.GetFiles(lookupDir).OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
@@ -828,7 +832,7 @@ public sealed class CompletionEngine
                 continue;
             }
 
-            items.Add(new AumlCompletionItem(name, AumlCompletionItemKind.Value, "file", ReplaceBack: replaceBack));
+            items.Add(new AumlCompletionItem(name, AumlCompletionItemKind.Value, ServerMessages.File(), ReplaceBack: replaceBack));
         }
         return items;
     }
@@ -877,8 +881,8 @@ public sealed class CompletionEngine
 
     // An attribute completion that auto-inserts ="" and drops the caret between the quotes (LSP snippet),
     // so picking a property doesn't leave the author to type =" " themselves.
-    private static AumlCompletionItem AttrItem(string label, AumlCompletionItemKind kind, string detail) =>
-        new(label, kind, detail, $"{label}=\"$0\"");
+    private static AumlCompletionItem AttrItem(string label, AumlCompletionItemKind kind, string detail, int? replaceBack = null) =>
+        new(label, kind, detail, $"{label}=\"$0\"", replaceBack);
 
     // Case-insensitive substring match for short scoped lists; large global catalogs use MatchesStart. The client
     // highlights matches.

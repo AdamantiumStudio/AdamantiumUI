@@ -9,8 +9,9 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>An element name is offered only for what markup can write as an element: a type the build can create, or the
-/// owner of attached properties a property element names. Automation peers, interfaces, enums, abstract and static
-/// classes, attributes, event data and exceptions are not elements.</summary>
+/// owner of attached properties - a static Get/Set pair - a property element names. Automation peers, interfaces, enums,
+/// abstract and static classes, attributes, event data and exceptions are not elements; nor is an abstract markup
+/// extension an extension.</summary>
 [TestFixture]
 public class AumlElementCompletionTests
 {
@@ -68,7 +69,17 @@ public class AumlElementCompletionTests
 
         Assert.That(labels, Is.SupersetOf(new[] { "Button", "Border", "ResourceContext", "AutomationProperties" }));
         Assert.That(labels, Has.None.AnyOf("ButtonAutomationPeer", "AutomationPeer", "IHitTestChildren", "AutomationControlType",
-            "HorizontalAlignment", "LayerProbe", "ContentAttribute", "RoutedEventArgs", "AdamantiumPropertyException"));
+            "HorizontalAlignment", "LayerProbe", "ContentAttribute", "RoutedEventArgs", "AdamantiumPropertyException",
+            "AdamantiumComponent", "IAdamantiumComponent", "Clipboard", "IClipboard"));
+    }
+
+    [Test]
+    public void TheMarkupExtensions_AreOffered_ButNotAnAbstractOne()
+    {
+        var labels = Labels("""<Border Tag="{|"/>""");
+
+        Assert.That(labels, Is.SupersetOf(new[] { "Binding", "MultiBinding", "Localize", "ResourceReference", "ThemeResource" }));
+        Assert.That(labels, Has.None.AnyOf("BindingBase", "MarkupExtension"));
     }
 
     [Test]

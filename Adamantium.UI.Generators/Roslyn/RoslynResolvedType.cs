@@ -32,6 +32,10 @@ public class RoslynResolvedType : IResolvedType
     public bool IsNamedType => _symbol is INamedTypeSymbol;
 
     public bool IsGenericType => _symbol is INamedTypeSymbol { IsGenericType: true };
+
+    public bool IsCreatable => _symbol is INamedTypeSymbol { IsAbstract: false, IsStatic: false } named &&
+                               (named.TypeKind == Microsoft.CodeAnalysis.TypeKind.Struct || (named.TypeKind == Microsoft.CodeAnalysis.TypeKind.Class &&
+                                   named.InstanceConstructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public)));
     
     public IEnumerable<IResolvedType> TypeArguments
     {

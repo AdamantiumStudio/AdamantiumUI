@@ -8,19 +8,18 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 
 /**
- * Suppresses "URI is not registered" on `clr-namespace:` xmlns declarations, matched by PSI structure rather than
- * message text; the language server validates them instead.
+ * Suppresses "URI is not registered" on every xmlns declaration - a `clr-namespace:` or a URI some assembly declares
+ * with [XmlnsDefinition] - matched by PSI structure rather than message text; the language server validates them
+ * against the project's references instead.
  */
 class AumlNamespaceHighlightFilter : HighlightInfoFilter {
     override fun accept(info: HighlightInfo, file: PsiFile?): Boolean {
-        if (file?.fileType != AumlFileType) return true
+        if (file?.viewProvider?.virtualFile?.fileType != AumlFileType) return true
         if (info.severity < HighlightSeverity.WEAK_WARNING) return true   // leave info/markers untouched
 
         val leaf = file.findElementAt(info.startOffset) ?: return true
         val attribute = PsiTreeUtil.getParentOfType(leaf, XmlAttribute::class.java) ?: return true
 
-        val isXmlns = attribute.name == "xmlns" || attribute.name.startsWith("xmlns:")
-        val value = attribute.value ?: return true
-        return !(isXmlns && value.startsWith("clr-namespace:"))
+        return !(attribute.name == "xmlns" || attribute.name.startsWith("xmlns:"))
     }
 }

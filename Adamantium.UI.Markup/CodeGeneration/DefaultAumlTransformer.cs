@@ -3,6 +3,7 @@ using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
 using Adamantium.UI.Markup.Exceptions;
+using Adamantium.UI.Markup.Localization;
 using Adamantium.UI.Markup.Parsers;
 
 namespace Adamantium.UI.Markup.CodeGeneration;
@@ -100,6 +101,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                         if (reference.IsAttachedProperty)
                         {
                             reference.TargetType = ProcessTypeReference(reference.TargetType, reference.GetLineInfo());
+                            ReportNotAttached(reference);
                         }
                         else
                         {
@@ -141,7 +143,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (resolvedAssembly == null)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"Assembly {markupExtension.TypeReference.Assembly} could not be found. {markupExtension.GetLineInfo()}");
+                    MarkupMessages.AssemblyNotFound(markupExtension.TypeReference.Assembly), markupExtension);
                 return;           
             }
             
@@ -169,7 +171,8 @@ public class DefaultAumlTransformer : IAumlTransformer
                 if (property == null)
                 {
                     diagnostics.ReportError(document.FileName,
-                        $"Property {argument.Name} could not be found in {markupExtension.TypeReference.GetFullTypeName()}. {markupExtension.GetLineInfo()}");
+                        MarkupMessages.PropertyNotFoundIn(argument.Name, markupExtension.TypeReference.GetFullTypeName()),
+                        argument as IAumlLineInfo ?? markupExtension);
                 }
                 else
                 {
@@ -221,7 +224,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
                 if (typeContainer == null)
                 {
-                    diagnostics.ReportError(document.FileName, $"Xml namespace {typeReference.Namespace} could not be found. {lineInfo}");
+                    diagnostics.ReportError(document.FileName, MarkupMessages.XmlNamespaceNotFound(typeReference.Namespace), lineInfo);
                     return typeReference;
                 }
 
@@ -235,7 +238,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     if (local != null)
                         return CreateResolved(local, lineInfo);
 
-                    diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
+                    diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInNamespace(typeReference.Name, typeReference.Namespace), lineInfo);
                     return typeReference;
                 }
 
@@ -262,7 +265,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 var typeInfo = clrTypeContainer.GetTypeByShortName(typeReference.Name);
                 if (typeInfo == null)
                 {
-                    diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
+                    diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInNamespace(typeReference.Name, typeReference.Namespace), lineInfo);
                     return typeReference;
                 }
                 return CreateResolved(typeInfo, lineInfo);
@@ -287,7 +290,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
                 if (typeContainer == null)
                 {
-                    diagnostics.ReportError(document.FileName, $"Xml namespace {typeReference.Namespace} could not be found. {lineInfo}");
+                    diagnostics.ReportError(document.FileName, MarkupMessages.XmlNamespaceNotFound(typeReference.Namespace), lineInfo);
                     return typeReference;
                 }
 
@@ -301,7 +304,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     typeInfo = typeResolver.ResolveByShortName(typeReference.Name);
                     if (typeInfo == null)
                     {
-                        diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
+                        diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInNamespace(typeReference.Name, typeReference.Namespace), lineInfo);
                         return typeReference;
                     }
                 }
@@ -310,7 +313,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
                 if (propertyInfo == null)
                 {
-                    diagnostics.ReportError(document.FileName, $"Property {propertyReference.Name} could not be found in {typeReference.Name}. {lineInfo}");
+                    diagnostics.ReportError(document.FileName, MarkupMessages.PropertyNotFoundIn(propertyReference.Name, typeReference.Name), lineInfo);
                     return typeReference;
                 }
 
@@ -326,14 +329,14 @@ public class DefaultAumlTransformer : IAumlTransformer
 
             if (typeInfo == null)
             {
-                diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in any linked assembly. {lineInfo}");
+                diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInAnyAssembly(typeReference.Name), lineInfo);
                 return typeReference;
             }
             
             var type = typeInfo.GetTypeByFullName(typeReference.GetFullTypeName());
             if (type == null)
             {
-                diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in namespace {typeReference.Namespace}. {lineInfo}");
+                diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInNamespace(typeReference.Name, typeReference.Namespace), lineInfo);
                 return typeReference;
             }
 
@@ -346,7 +349,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
             if (typeInfo == null)
             {
-                diagnostics.ReportError(document.FileName, $"Type {typeReference.Name} could not be found in any linked assembly. {lineInfo}");
+                diagnostics.ReportError(document.FileName, MarkupMessages.TypeNotInAnyAssembly(typeReference.Name), lineInfo);
                 return typeReference;
             }
 
@@ -390,8 +393,21 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (!hasKey)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"{{{marker.TypeReference.Name}}} on {propertyName} names no key (line {marker.Line}, position {marker.Position}).");
+                    MarkupMessages.ResourceWithoutKey(marker.TypeReference.Name, propertyName, marker.Line, marker.Position), marker);
             }
+        }
+
+        void ReportNotAttached(AumlAstPropertyReference reference)
+        {
+            if (!reference.OwnerType.IsResolved || typeResolver.Resolve(reference.OwnerType.GetFullTypeName()) is not { } owner ||
+                owner.Members.Any(m => m.Name == "Set" + reference.Name && m.MemberKind == ResolvedMemberKind.Method && m.IsStatic &&
+                                       m.ParameterNames.Count == 2))
+            {
+                return;
+            }
+
+            diagnostics.ReportError(document.FileName,
+                MarkupMessages.NotAttached(owner.Name, reference.Name, reference.ParentNode?.TypeReference?.Name), reference);
         }
 
         void ReportInvalidLiteral(IAumlAstValueNode value, AumlAstPropertyReference reference)
@@ -407,7 +423,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (expected != null)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"'{text}' is not a valid {type.Name} for {reference.Name} (expected: {expected}) (line {value.Line}, position {value.Position}).");
+                    MarkupMessages.InvalidLiteral(text, type.Name, reference.Name, expected, value.Line, value.Position), value);
             }
         }
 
@@ -421,7 +437,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             var type = typeResolver.Resolve(typeValue.TypeReference.GetFullTypeName());
             if (member.TypeOfProblem(type) is { } problem)
             {
-                diagnostics.ReportError(document.FileName, $"{problem} (line {value.Line}, position {value.Position}).");
+                diagnostics.ReportError(document.FileName, $"{problem} (line {value.Line}, position {value.Position}).", value);
             }
         }
 
@@ -480,8 +496,8 @@ public class DefaultAumlTransformer : IAumlTransformer
                     // A name the registry knows is not "unknown" - it is written in the wrong place, and saying so is
                     // the difference between "you invented this" and "this one goes on the element".
                     diagnostics.ReportError(document.FileName, AumlDirectives.Find(directive.Name) != null
-                        ? $"Directive 'x:{directive.Name}' is written on the element, not in a value. {directive.GetLineInfo()}"
-                        : $"Unknown directive 'x:{directive.Name}'. {directive.GetLineInfo()}");
+                        ? MarkupMessages.DirectiveBelongsOnElement(directive.Name)
+                        : MarkupMessages.UnknownDirective(directive.Name), directive);
                     return directive;
             }
         }
@@ -525,7 +541,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (dot <= 0 || dot == name.Length - 1)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"{{Localize}} names a table and a string, {{Localize Strings.Close}}, or a table and where the key is read from, {{Localize Strings, Key={{Binding Kind}}}}; got '{text}'. {localize.GetLineInfo()}");
+                    MarkupMessages.LocalizeShape(text), localize);
                 return localize;
             }
 
@@ -540,7 +556,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
             if (!TryPlaceholdersOf(tableFullName, key, out var placeholders))
             {
-                diagnostics.ReportError(document.FileName, $"{table} has no string '{key}'. {localize.GetLineInfo()}");
+                diagnostics.ReportError(document.FileName, MarkupMessages.LocalizeNoString(table, key), localize);
                 return localize;
             }
 
@@ -573,7 +589,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (!IsFollowed(keySource.Value))
             {
                 diagnostics.ReportError(document.FileName,
-                    $"{{Localize {table}, {KeyArgument}=...}} reads the key from a binding; a key written out is {{Localize {table}.Close}}. {localize.GetLineInfo()}");
+                    MarkupMessages.LocalizeKeyFromBinding(table, KeyArgument), localize);
                 return localize;
             }
 
@@ -595,14 +611,14 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (!string.IsNullOrEmpty(named))
             {
                 diagnostics.ReportError(document.FileName,
-                    $"{{Localize}} names its table, {{Localize {named}, ...}}, or reads it from a binding, {{Localize {TableArgument}={{Binding Phrases}}, ...}}; not both. {localize.GetLineInfo()}");
+                    MarkupMessages.LocalizeTableTwice(named, TableArgument), localize);
                 return localize;
             }
 
             if (!IsFollowed(tableSource.Value) || keySource == null || !IsFollowed(keySource.Value))
             {
                 diagnostics.ReportError(document.FileName,
-                    $"{{Localize {TableArgument}=..., {KeyArgument}=...}} reads both the table and the key from a binding: {{Localize {TableArgument}={{Binding Phrases}}, {KeyArgument}={{Binding Name}}}}. {localize.GetLineInfo()}");
+                    MarkupMessages.LocalizeBothFromBinding(TableArgument, KeyArgument), localize);
                 return localize;
             }
 
@@ -623,7 +639,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         void ReportNoTable(string prefix, string table, AumlAstMarkupExtensionNode localize) =>
             diagnostics.ReportError(document.FileName,
-                $"No language table '{(prefix.Length > 0 ? prefix + ":" : string.Empty)}{table}': a table is a set of {table}.<language>.alang files, here or in a referenced assembly. {localize.GetLineInfo()}");
+                MarkupMessages.LocalizeNoTable((prefix.Length > 0 ? prefix + ":" : string.Empty) + table, table), localize);
 
         string FindLanguageTable(string prefix, string table)
         {
@@ -688,11 +704,13 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return true;
             }
 
-            var fills = placeholders.Count == 0 ? "it has no placeholders" : $"it fills {string.Join(", ", placeholders)}";
+            var fills = placeholders.Count == 0
+                ? MarkupMessages.PlaceholdersNone()
+                : MarkupMessages.PlaceholdersFilled(string.Join(", ", placeholders));
             var problem = unknown.Count > 0
-                ? $"{table}.{key} has no placeholder {string.Join(", ", unknown.Select(n => $"'{n}'"))}: {fills}"
-                : $"{table}.{key} needs {string.Join(", ", missing)}: {fills}";
-            diagnostics.ReportError(document.FileName, $"{problem}. {localize.GetLineInfo()}");
+                ? MarkupMessages.PlaceholderUnknown(table, key, string.Join(", ", unknown.Select(n => $"'{n}'")), fills)
+                : MarkupMessages.PlaceholderMissing(table, key, string.Join(", ", missing), fills);
+            diagnostics.ReportError(document.FileName, problem, localize);
             return false;
         }
 
@@ -707,7 +725,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (lastDot <= 0 || lastDot == body.Length - 1)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"x:Static expects 'Type.Member', got '{body}'. {directive.GetLineInfo()}");
+                    MarkupMessages.StaticShape(body), directive);
                 return directive;
             }
 
@@ -720,7 +738,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (resolvedRef is not { IsResolved: true })
             {
                 diagnostics.ReportError(document.FileName,
-                    $"x:Static type '{typeText}' could not be resolved. {directive.GetLineInfo()}");
+                    MarkupMessages.StaticTypeNotResolved(typeText), directive);
                 return directive;
             }
 
@@ -728,7 +746,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (owner?.GetMemberByName(memberName) == null)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"x:Static: '{resolvedRef.GetFullTypeName()}' has no member '{memberName}'. {directive.GetLineInfo()}");
+                    MarkupMessages.StaticNoMember(resolvedRef.GetFullTypeName(), memberName), directive);
                 return directive;
             }
 
@@ -747,15 +765,15 @@ public class DefaultAumlTransformer : IAumlTransformer
             }
 
             diagnostics.ReportError(document.FileName, known != null
-                ? $"Directive 'x:{directive.Name}' belongs in a value, not on the element. {directive.GetLineInfo()}"
-                : $"Unknown directive 'x:{directive.Name}'. {directive.GetLineInfo()}");
+                ? MarkupMessages.DirectiveBelongsInValue(directive.Name)
+                : MarkupMessages.UnknownDirective(directive.Name), directive);
         }
 
         bool MissingValue(AumlAstDirective directive, string body)
         {
             if (!string.IsNullOrWhiteSpace(body)) return false;
 
-            diagnostics.ReportError(document.FileName, $"Directive '{directive.Name}' is missing a value. {directive.GetLineInfo()}");
+            diagnostics.ReportError(document.FileName, MarkupMessages.DirectiveMissingValue(directive.Name), directive);
             return true;
         }
 
@@ -782,7 +800,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (itemProperty == null)
             {
                 diagnostics.ReportError(document.FileName,
-                    $"[MarkupItem] on {reference.TargetType.GetFullTypeName()} names no reachable item property. {propertyNode.GetLineInfo()}");
+                    MarkupMessages.MarkupItemNoProperty(reference.TargetType.GetFullTypeName()), propertyNode);
                 return;
             }
 
@@ -821,7 +839,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         if (rootType == null)
         {
             diagnostics.ReportError(document.FileName,
-                $"{node.TypeReference.GetFullTypeName()} could not be found. Please, check correctness of namespace");
+                MarkupMessages.TypeNotFoundCheckNamespace(node.TypeReference.GetFullTypeName()), node);
             return container;
         }
                 
@@ -894,7 +912,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                         else
                         {
                             diagnostics.ReportError(document.FileName,
-                                $"x:KeepAlive expects {string.Join(", ", modes)}, got '{mode}'. {directive.GetLineInfo()}");
+                                MarkupMessages.KeepAliveExpects(string.Join(", ", modes), mode), directive);
                         }
                     }
                     else if (directive.Name == AumlDirectives.Load)
@@ -915,7 +933,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                             else
                             {
                                 diagnostics.ReportError(document.FileName,
-                                    $"x:Load takes True, False or a binding, got '{condition}'. {directive.GetLineInfo()}");
+                                    MarkupMessages.LoadExpects(condition), directive);
                             }
                         }
                         else if (condition == "True")
@@ -924,13 +942,12 @@ public class DefaultAumlTransformer : IAumlTransformer
                             // directive that reads as "I arranged something here" and arranges nothing is exactly what
                             // nobody notices - and it still costs a slot and turns the name into an accessor.
                             diagnostics.ReportWarning(document.FileName,
-                                $"x:Load=\"True\" holds nothing back - the element is built anyway. Remove it, or give " +
-                                $"it a condition to answer. {directive.GetLineInfo()}");
+                                MarkupMessages.LoadTrueHoldsNothing(), directive);
                         }
                         else if (condition != "False")
                         {
                             diagnostics.ReportError(document.FileName,
-                                $"x:Load takes True, False or a binding, got '{condition}'. {directive.GetLineInfo()}");
+                                MarkupMessages.LoadExpects(condition), directive);
                         }
                     }
                     else if (directive.Name == AumlDirectives.DataType)
@@ -949,7 +966,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                             else
                             {
                                 diagnostics.ReportError(document.FileName,
-                                    $"x:DataType '{dataTypeNode.Text}' could not be resolved. {directive.GetLineInfo()}");
+                                    MarkupMessages.DataTypeNotResolved(dataTypeNode.Text), directive);
                             }
                         }
                     }
@@ -978,7 +995,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                             }
                             else
                             {
-                                diagnostics.ReportError(document.FileName, $"x:ViewModel type '{vmNode.Text}' could not be resolved. {directive.GetLineInfo()}");
+                                diagnostics.ReportError(document.FileName, MarkupMessages.ViewModelNotResolved(vmNode.Text), directive);
                             }
                         }
                     }
@@ -1011,6 +1028,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         ReportTargetsIntoHeldBackElements(document, diagnostics);
         ReportTemplateSetConflicts(document, diagnostics);
+        new MarkupStructureCheck(typeResolver, diagnostics, document.FileName, container.RootViewModelTypeName).Run(document.Root);
 
         foreach (var kvp in usings)
         {
@@ -1028,7 +1046,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         return container;
     }
 
-    private static string ExpectedLiteral(IResolvedType type, string text)
+    internal static string ExpectedLiteral(IResolvedType type, string text)
     {
         if (type.TypeKind == ResolvedTypeKind.Enum)
         {
@@ -1050,17 +1068,17 @@ public class DefaultAumlTransformer : IAumlTransformer
             case ResolvedSpecialType.System_Decimal:
                 var special = type.SpecialType != ResolvedSpecialType.System_Decimal
                               && text is "Infinity" or "+Infinity" or "-Infinity" or "NaN" or "Auto";
-                return special || double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? null : "a number";
+                return special || double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? null : MarkupMessages.ExpectedNumber();
             case ResolvedSpecialType.System_SByte:
             case ResolvedSpecialType.System_Int16:
             case ResolvedSpecialType.System_Int32:
             case ResolvedSpecialType.System_Int64:
-                return long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number";
+                return long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : MarkupMessages.ExpectedWholeNumber();
             case ResolvedSpecialType.System_Byte:
             case ResolvedSpecialType.System_UInt16:
             case ResolvedSpecialType.System_UInt32:
             case ResolvedSpecialType.System_UInt64:
-                return ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : "a whole number, not negative";
+                return ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : MarkupMessages.ExpectedNonNegativeWholeNumber();
             default:
                 return null;
         }
@@ -1080,8 +1098,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             if (heldBack.Contains(target.Text.Trim()))
             {
                 diagnostics.ReportError(document.FileName,
-                    $"TargetName='{target.Text}' points at an element held back by x:Load. It would resolve to nothing " +
-                    $"until that element is built, and silently do nothing until then. {target.GetLineInfo()}");
+                    MarkupMessages.TargetNameHeldBack(target.Text), target);
             }
         }
 
@@ -1163,7 +1180,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     if (++fallbacks == 2)
                     {
                         diagnostics.ReportError(document.FileName,
-                            $"A DataTemplateSet has more than one template without x:DataType; only one can take what no other fits. {template.GetLineInfo()}");
+                            MarkupMessages.DataTemplateSetTwoDefaults(), template);
                     }
 
                     continue;
@@ -1172,7 +1189,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 if (dataType.Value is AumlAstTypeReferenceValueNode { TypeReference: { } type } && !seen.Add(type.GetFullTypeName()))
                 {
                     diagnostics.ReportError(document.FileName,
-                        $"A DataTemplateSet has two templates for {type.Name}; one type, one template. {template.GetLineInfo()}");
+                        MarkupMessages.DataTemplateSetTwoForType(type.Name), template);
                 }
             }
         }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.CodeGeneration;
+using Adamantium.UI.Markup.Localization;
 using Microsoft.CodeAnalysis;
 
 namespace Adamantium.UI.Generators;
@@ -34,8 +35,8 @@ public static class ApplicationEntryPoint
             .FirstOrDefault(method => method.IsStatic);
         if (handWritten != null)
         {
-            Report(context, "AUI021", $"The entry point is built from the blueprint {blueprint.File}: remove " +
-                $"{handWritten.ContainingType.ToDisplayString()}.Main.");
+            Report(context, "AUI021",
+                MarkupMessages.EntryPointHandWritten(blueprint.File, handWritten.ContainingType.ToDisplayString()));
             return;
         }
 
@@ -43,10 +44,9 @@ public static class ApplicationEntryPoint
         if (applications.Count != 1)
         {
             Report(context, "AUI022", applications.Count == 0
-                ? $"The blueprint {blueprint.File} starts the application's class, and the project declares none: add a " +
-                  "class deriving from MultiverseApplication."
-                : $"The blueprint {blueprint.File} starts one application, and the project declares {applications.Count}: " +
-                  $"{string.Join(", ", applications.Select(a => a.ToDisplayString()))}.");
+                ? MarkupMessages.BlueprintNoApplication(blueprint.File)
+                : MarkupMessages.BlueprintManyApplications(blueprint.File, applications.Count,
+                    string.Join(", ", applications.Select(a => a.ToDisplayString()))));
             return;
         }
 

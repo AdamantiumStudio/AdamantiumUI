@@ -2,6 +2,7 @@
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup.Parsers;
 
@@ -12,7 +13,10 @@ public class MarkupExtensionParser
         markup = markup.Trim();
         
         if (!markup.StartsWith("{") || !markup.EndsWith("}"))
-            throw new ArgumentException("Markup extension must be wrapped in { }");
+        {
+            context.Error(MarkupMessages.MarkupExtensionNotWrapped(markup), info);
+            return new AumlAstTextNode(info, markup);
+        }
         
         markup = markup.Substring(1, markup.Length - 2).Trim();
         
@@ -83,8 +87,7 @@ public class MarkupExtensionParser
             var mapping = namespaceMappings.FirstOrDefault(x => x.Prefix == prefix);
             if (mapping == null)
             {
-                context.Logger.Error($"Prefix {prefix} is not defined in root element.");
-                // Log diagnostic error here
+                context.Error(MarkupMessages.PrefixNotDefined(prefix), info);
                 return new AumlAstXmlTypeReference(info, string.Empty, typeName);
             }
 

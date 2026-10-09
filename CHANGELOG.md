@@ -22,6 +22,40 @@ All packages share one version.
   drawn as before. `FontVariationList.Between` gives the values on the way. `BeginAnimation` takes either animation
   (`PropertyAnimation`, which `DoubleAnimation` now derives from). Sandbox text page: a line of Roboto Flex that
   moves between light and heavy, wide.
+- `Adamantium.UI.LanguageServer` package: the AUML language server, framework-dependent, copied to `AumlServer` beside
+  the application that references it - for an application's own AUML editor, as the Rider plugin ships the same server
+  for Rider. In a folder of its own because it carries its own Roslyn, decompiler and UI assemblies.
+- The AUML build and the AUML language server speak Russian as well as English: their problems, the descriptions of
+  the `x:` directives, hovers, quick fixes and completion details. The build says them in the system's UI language;
+  the server in the language its client names when it starts it (`locale` of `initialize`), the system's when none.
+- AUML build errors point at the line and column of the `.auml` file they are about (`View.auml(12,9): error AUM001`),
+  not at the generated code. The language server runs the build's own generator over the open file, so the editor
+  shows exactly what the build would say, where it says it.
+- The build reports markup it used to accept in silence, or fail on in the generated C#: a second child of an element
+  that holds one (`<View><Grid/><PropertyGrid/></View>`), a property set twice, `Content` set and given a child, two
+  values for a property that takes one, a template with two roots, a child or text where there is no place for it, an
+  abstract or static type as an element, a read-only property given a value, a value of the wrong type, an `x:Name`
+  given twice or not an identifier, an `x:Key` given twice in one dictionary, attributes on a property element, an
+  unclosed `{`, and a `Setter` naming a property its style's type does not have or giving it a value it cannot take.
+- The build checks a `{Binding}` path where it knows what the path reads: from the view's `x:ViewModel`, a template's
+  `x:DataType`, or a `DataContext` bound to a path of one of them - with the properties and commands the MVVM generator
+  makes. Elsewhere a binding is still the runtime's to report.
+- The build checks triggers: a `TargetName` or `SourceName` the template has no part of, and a trigger, condition or
+  setter naming a property its element does not have or giving it a value it cannot take - in a style, in a
+  `ControlTemplate`'s triggers and in an element's own.
+- Themes: setters for properties their types do not have are gone - `TextBox.VerticalContentAlignment` in the data
+  grid styles, `RibbonApplicationMenuItem.ForegroundSelected` in macOS. They never applied.
+- A property of another type that is not an attached one - `<Grid><PropertyGrid.Bounds>`, `PropertyGrid.Bounds="..."`
+  on a `Border` - fails the build, and the language server flags it where it is written. It used to build into nothing,
+  or into a call the C# compiler rejected in the generated code.
+- The language server checks every xmlns: a URI no referenced assembly declares with `[XmlnsDefinition]` is an error,
+  as a `clr-namespace:` it does not find already was.
+- An attached property is a static `Get`/`Set` pair - `SetRow(element, value)`: `Clipboard.Text="..."` (a static
+  `SetText` of one argument) or `AdamantiumComponent.Value="..."` (an instance `SetValue`) fails the build as not an
+  attached property, where it used to fail in the generated C#. The language server's completion leaves out what
+  markup cannot write there: an abstract markup extension (`{BindingBase}`), a class whose methods only look like an
+  attached property's as an element, a static class as a referenced type (`{x:Type}`, `x:DataType`, `TargetType`), and
+  in `{x:Static}` a type with no static values.
 - `FontVariations` on every element, inherited by the text inside, and on a `Run`: axis values of a variable font over
   the ones its weight, width and style set (`FontVariations="GRAD=150, opsz=36"`; `opsz=auto`, like leaving it out,
   sets the optical size to the text's size). `FontStyle` sets a variable font's 'ital' or 'slnt' axis, as CSS does.
@@ -455,6 +489,8 @@ All packages share one version.
 
 ### Changed
 
+- `Adamantium.UI.FX` compiles the UI's shaders with `Adamantium.Vulkan.Slang` 1.0.12: the same Slang compiler, in the
+  package that also ships `slangd`.
 - The `TextBox` caret takes the whole height of its line, as the selection does, instead of the band from the
   ascender line to the baseline.
 - Text no longer waits on the loop for font files: a `TextBlock` or `TextBox` whose face or fallback font is not

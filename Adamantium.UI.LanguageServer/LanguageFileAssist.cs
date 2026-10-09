@@ -31,7 +31,7 @@ public static class LanguageFileAssist
             return null;
         }
 
-        return $"**{key}** in {file.BaseName}:\n\n{source.Text ?? "(no text)"}";
+        return $"{ServerMessages.StringIn($"**{key}**", file.BaseName)}\n\n{source.Text ?? ServerMessages.NoText()}";
     }
 
     public static IReadOnlyList<AumlCodeAction> Actions(LanguageFileContext file, string text)
@@ -74,8 +74,8 @@ public static class LanguageFileAssist
         var (line, character) = LineColumn(text, at);
 
         var title = missing.Count == 1
-            ? $"Add the string '{missing[0].Key}' of {file.BaseName}"
-            : $"Add the {missing.Count} strings of {file.BaseName} this file lacks";
+            ? ServerMessages.AddString(missing[0].Key, file.BaseName)
+            : ServerMessages.AddStrings(missing.Count, file.BaseName);
         return [new AumlCodeAction(title, [new AumlTextEdit(line, character, line, character, insert)])];
     }
 

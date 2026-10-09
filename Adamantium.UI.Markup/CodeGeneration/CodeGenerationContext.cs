@@ -1,6 +1,7 @@
 ﻿using Adamantium.Core;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup.CodeGeneration;
 
@@ -88,7 +89,8 @@ public class CodeGenerationContext
         var typeContainer = Metadata.TypeResolver.GetResolvedAssembly(element.TypeReference.Assembly);
         if (typeContainer == null)
         {
-            diagnostics.ReportError(Metadata.ClassName, $"Could not resolve assembly '{element.TypeReference.Assembly}' for element '{element.TypeReference.Name}' (namespace '{element.TypeReference.Namespace}', resolved={element.TypeReference.IsResolved}).");
+            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AssemblyOfElementNotResolved(element.TypeReference.Assembly,
+                element.TypeReference.Name, element.TypeReference.Namespace, element.TypeReference.IsResolved), element);
             return string.Empty;
         }
         var typeInfo = typeContainer.GetTypeByShortName(element.TypeReference.Name);
@@ -221,7 +223,7 @@ public class CodeGenerationContext
                 if (resolvedType == null)
                 {
                     diagnostics.ReportError(Metadata.ClassName,
-                        $"Unknown property {propRef.Name} on type {propertyType.FullName}");
+                        MarkupMessages.UnknownPropertyOnType(propRef.Name, propertyType.FullName), propRef);
                     continue;
                 }
 
@@ -234,7 +236,7 @@ public class CodeGenerationContext
                     && MarkupValueChecks.Problem(resolvedType.FullName, prop.GetTextValue()) is { } problem)
                 {
                     diagnostics.ReportError(Metadata.ClassName,
-                        $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line}): {problem}");
+                        $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line}): {problem}", propRef);
                     continue;
                 }
 
@@ -319,7 +321,7 @@ public class CodeGenerationContext
                             TextGenerator.WriteLine($@"{rdVar}.Add(""{entryKey}"", {entryName});");
                         else
                             diagnostics.ReportError(Metadata.ClassName,
-                                $"An inline resource in {propRef.Name} needs an x:Key.");
+                                MarkupMessages.InlineResourceNeedsKey(propRef.Name), propRef);
                     }
 
                     if (propRef.IsAttachedProperty)
@@ -482,7 +484,7 @@ public class CodeGenerationContext
                             else if (CurrentTemplate == null)
                             {
                                 diagnostics.ReportError(Metadata.ClassName,
-                                    "TemplateBinding can only be used inside ControlTemplate.");
+                                    MarkupMessages.TemplateBindingOutsideTemplate(), extension);
                             }
                             else
                             {
@@ -538,7 +540,7 @@ public class CodeGenerationContext
                                     {
                                         var resolved = ResolveTypeArgument(argument.Value);
                                         if (resolved == null)
-                                            diagnostics.ReportError(Metadata.ClassName, $"Ancestor: type '{text}' could not be resolved.");
+                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorTypeNotResolved(text), extension);
                                         else
                                             TextGenerator.WriteLine($"{acVar}.AncestorType = typeof({resolved.QualifiedName});");
                                     }
@@ -560,7 +562,7 @@ public class CodeGenerationContext
                                         {
                                             var st = ResolveTypeArgument(argument.Value);
                                             if (st == null)
-                                                diagnostics.ReportError(Metadata.ClassName, $"Ancestor: Stop type '{text}' could not be resolved.");
+                                                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorStopTypeNotResolved(text), extension);
                                             else
                                                 TextGenerator.WriteLine($"{acVar}.Stop = typeof({st.QualifiedName});");
                                             break;
@@ -571,7 +573,7 @@ public class CodeGenerationContext
                                         case "Converter":
                                             var acConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
                                             if (acConv != null) TextGenerator.WriteLine($"{acVar}.Converter = {acConv};");
-                                            else diagnostics.ReportError(Metadata.ClassName, "Ancestor: Converter must be a resource or converter markup extension.");
+                                            else diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
                                             break;
                                         case "ConverterParameter":
                                             TextGenerator.WriteLine($"{acVar}.ConverterParameter = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
@@ -583,7 +585,7 @@ public class CodeGenerationContext
                                             TextGenerator.WriteLine($"{acVar}.TargetNullValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
                                             break;
                                         default:
-                                            diagnostics.ReportError(Metadata.ClassName, $"Ancestor: unknown argument '{argument.Name}'.");
+                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
                                             break;
                                     }
                                 }
@@ -620,7 +622,7 @@ public class CodeGenerationContext
                                     case "Converter":
                                         var slfConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
                                         if (slfConv != null) TextGenerator.WriteLine($"{slfVar}.Converter = {slfConv};");
-                                        else diagnostics.ReportError(Metadata.ClassName, "Self: Converter must be a resource or converter markup extension.");
+                                        else diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
                                         break;
                                     case "ConverterParameter":
                                         TextGenerator.WriteLine($"{slfVar}.ConverterParameter = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
@@ -632,7 +634,7 @@ public class CodeGenerationContext
                                         TextGenerator.WriteLine($"{slfVar}.TargetNullValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
                                         break;
                                     default:
-                                        diagnostics.ReportError(Metadata.ClassName, $"Self: unknown argument '{argument.Name}'.");
+                                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
                                         break;
                                 }
                             }
@@ -709,7 +711,7 @@ public class CodeGenerationContext
                     var type = Metadata.TypeResolver.Resolve(prop.GetFullTypeValue());
                     if (type == null)
                     {
-                        diagnostics.ReportError(Metadata.ClassName, $"Cannot find type {prop.GetTextValue()} for property {propRef.Name}");
+                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.PropertyTypeNotFound(prop.GetTextValue(), propRef.Name), propRef);
                         continue;
                     }
                     TextGenerator.WriteLine($"{symbolName} = typeof({type.QualifiedName});");
@@ -884,16 +886,14 @@ public class CodeGenerationContext
         if (CurrentTemplate != null)
         {
             diagnostics.ReportError(Metadata.ClassName,
-                $"x:Load is not supported inside a template: a template is applied to many controls, and the element " +
-                $"would be held by one slot shared between all of them. {load.GetLineInfo()}");
+                MarkupMessages.LoadInsideTemplate(), load);
             return;
         }
 
         if (!containerType.ImplementsInterface("IContainer") || !containerType.ImplementsInterface("IFundamentalUIComponent"))
         {
             diagnostics.ReportError(Metadata.ClassName,
-                $"x:Load is not supported inside {containerType.Name}: it must be an IContainer (so the element can go " +
-                $"back at its place) and an IFundamentalUIComponent (so the condition has a DataContext). {load.GetLineInfo()}");
+                MarkupMessages.LoadInsideContainer(containerType.Name), load);
             return;
         }
 
@@ -1088,9 +1088,7 @@ public class CodeGenerationContext
     {
         if (!TypeParserCheck.CanParse(type))
         {
-            diagnostics.ReportWarning(Metadata.ClassName,
-                $"{where}: {type.FullName} has no type parser, so this value throws when the markup is built. Give the " +
-                "type a [TypeParser] or a public static Parse(string).");
+            diagnostics.ReportWarning(Metadata.ClassName, MarkupMessages.NoTypeParser(where, type.FullName));
         }
     }
 
@@ -1348,8 +1346,7 @@ public class CodeGenerationContext
     private void ReportLiveResourceOnPlainProperty(IDiagnosticSink diagnostics, string extension, string key,
         IResolvedType type, AumlAstPropertyReference propRef) =>
         diagnostics.ReportError(Metadata.ClassName,
-            $"{{{extension} {key}}} cannot follow {type.Name}.{propRef.Name}: it is a plain property with nothing to " +
-            $"keep live. {{ResourceReference {key}}} sets it once.");
+            MarkupMessages.LiveResourceOnPlainProperty(extension, key, type.Name, propRef.Name), propRef);
 
     private static bool HasAdamantiumProperty(IResolvedType type, string property)
     {
@@ -1412,16 +1409,16 @@ public class CodeGenerationContext
             _ when IsBindingNode(value) => EmitBinding(value, diagnostics, isResource),
             AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } templateBinding =>
                 CurrentTemplate == null && !isResource
-                    ? ReportOutsideTemplate(diagnostics)
+                    ? ReportOutsideTemplate(diagnostics, templateBinding)
                     : EmitTemplateBinding(templateBinding),
             AumlAstLocalizedStringNode phrase => EmitLocalizedBinding(phrase, diagnostics, isResource),
             _ => Quote(value.GetTextValue() ?? string.Empty),
         };
     }
 
-    private string ReportOutsideTemplate(IDiagnosticSink diagnostics)
+    private string ReportOutsideTemplate(IDiagnosticSink diagnostics, IAumlLineInfo at)
     {
-        diagnostics.ReportError(Metadata.ClassName, "TemplateBinding can only be used inside ControlTemplate.");
+        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.TemplateBindingOutsideTemplate(), at);
         return "null";
     }
 
@@ -1540,7 +1537,7 @@ public class CodeGenerationContext
                     TextGenerator.WriteLine($"{bindingVar}.ElementName = \"{elementName}\";");
                 break;
             default:
-                diagnostics.ReportWarning(Metadata.ClassName, $"Unknown binding property '{name}'");
+                diagnostics.ReportWarning(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
                 break;
         }
     }
@@ -1610,6 +1607,8 @@ public class CodeGenerationContext
         public string AssemblyName => "System";
         public bool IsNamedType => false;
         public bool IsGenericType => false;
+
+        public bool IsCreatable => true;
         public bool InheritsFrom(string baseTypeName) => false;
 
         public bool HasAttribute(string attributeName) => false;

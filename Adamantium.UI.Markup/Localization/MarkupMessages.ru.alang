@@ -1,0 +1,162 @@
+<Language>
+    <!-- The x: directives, as completion and hover describe them. -->
+    <Phrase Key="DirectiveName" Text="Даёт элементу имя, под которым он становится полем созданного класса."/>
+    <Phrase Key="DirectiveNamespace" Text="Полное имя типа для созданного класса (аналог x:Class из WPF)."/>
+    <Phrase Key="DirectiveKey" Text="Ключ, под которым запись хранится в словаре ресурсов."/>
+    <Phrase Key="DirectiveType" Text="Ссылка на тип CLR."/>
+    <Phrase Key="DirectiveViewModel" Text="Тип модели представления для этого вида (префикс:Тип). Во время работы фреймворк берёт её экземпляр из DI-контейнера и делает его DataContext; инструменты разработки разбирают пути {{Binding}} по этому типу."/>
+    <Phrase Key="DirectiveCreateInDesignTime" Text="Только для дизайнера: &quot;True&quot; разрешает дизайнеру создать x:ViewModel этого вида через службы приложения, чтобы {{Binding}} показывали настоящие данные. По умолчанию выключено: иначе предпросмотр выполняет код модели представления - сеть, файлы, данные. Службы, которые дизайнер не должен запускать по-настоящему, подменяются в UIApplication.RegisterDesignServices."/>
+    <Phrase Key="DirectiveNull" Text="Явное значение null: Background=&quot;{{x:Null}}&quot;."/>
+    <Phrase Key="DirectiveKeepAlive" Text="О чём этот вид просит того, кто уходит с него: Disabled (по умолчанию - строится заново при каждом посещении), Enabled (сохраняется, но может быть вытеснен) или Required (сохраняется и не вытесняется). Только метаданные - сам вид ничего не сохраняет."/>
+    <Phrase Key="DirectiveLoad" Text="Строится ли элемент вообще. &quot;False&quot; откладывает его, пока его не запросят по имени; привязка (x:Load=&quot;{{Binding IsAdvancedShown}}&quot;) строит его, когда условие становится истинным, и отсоединяет, когда ложным. Пока элемент не загружен, НИЧЕГО внутри него не создаётся - это не скрытый элемент, а отсутствующий. Имеет смысл для чего-то ТЯЖЁЛОГО - страницы, списка, панели, которую открывают раз за сеанс; маленький кусок обходится в слот дороже, чем экономит на создании."/>
+    <Phrase Key="DirectiveDataType" Text="Тип элемента, для которого написан DataTemplate (префикс:Тип). Объявляется, а не выводится: инструменты разбирают по нему пути {{Binding}} внутри шаблона, как x:ViewModel для вида. Тип должен существовать - имя, которое не находится, приводит к ошибке сборки."/>
+    <Phrase Key="DirectiveStatic" Text="Значение статического поля или свойства: Width=&quot;{{x:Static local:Metrics.RailWidth}}&quot;. Читается в месте использования, поэтому объявление остаётся в одном месте и не повторяется ресурсом."/>
+    <Phrase Key="DirectiveShared" Text="&quot;False&quot; строит это значение ДЛЯ КАЖДОЙ ЦЕЛИ отдельно, а не делит один экземпляр между всеми элементами, к которым подходит сеттер - так нужно ContextMenu, Popup или Transform, ведь каждый из них принадлежит своему элементу."/>
+
+    <!-- Parsing markup. -->
+    <Phrase Key="XmlnsMissingOnRoot" Text="У корневого элемента нет объявления xmlns: {element}"/>
+    <Phrase Key="XmlnsOnlyAtRoot" Text="xmlns можно объявлять только у корневого элемента"/>
+    <Phrase Key="MarkupExtensionNotWrapped" Text="'{text}' не закрыто: расширение разметки заканчивается на }}"/>
+    <Phrase Key="PropertyElementAttribute" Text="&lt;{element}&gt; задаёт свойство и не принимает атрибутов; '{attribute}' пишется на элементе, который оно задаёт"/>
+    <Phrase Key="PrefixNotDefined" Text="Префикс {prefix} не объявлен в корневом элементе."/>
+
+    <!-- Types, properties and values. -->
+    <Phrase Key="AssemblyNotFound" Text="Сборка {assembly} не найдена"/>
+    <Phrase Key="AssemblyOfElementNotResolved" Text="Не удалось найти сборку '{assembly}' для элемента '{element}' (пространство имён '{namespace}', найден={resolved})."/>
+    <Phrase Key="XmlNamespaceNotFound" Text="Пространство имён XML {namespace} не найдено"/>
+    <Phrase Key="TypeNotInNamespace" Text="Тип {type} не найден в пространстве имён {namespace}"/>
+    <Phrase Key="TypeNotInAnyAssembly" Text="Тип {type} не найден ни в одной подключённой сборке"/>
+    <Phrase Key="TypeNotFoundCheckNamespace" Text="{type} не найден. Проверьте пространство имён"/>
+    <Phrase Key="PropertyNotFoundIn" Text="Свойство {property} не найдено в {type}"/>
+    <Phrase Key="UnknownPropertyOnType" Text="Неизвестное свойство {property} у типа {type}"/>
+    <Phrase Key="NotCreatable" Text="{type} нельзя записать элементом: это абстрактный или статический тип либо интерфейс, или у него нет открытого конструктора без параметров"/>
+    <Phrase Key="PropertySetTwice" Text="{property} задано у {element} дважды: второе заменило бы первое"/>
+    <Phrase Key="ReadOnlyProperty" Text="{type}.{property} только для чтения: разметка не может его задать"/>
+    <Phrase Key="OneValue" Text="{property} принимает одно значение: это заменило бы предыдущее"/>
+    <Phrase Key="WrongValueType" Text="{value} - это не {type}: {property} принимает {type}"/>
+    <Phrase Key="TemplateTakesOne" Text="{type} строит один элемент, свой корень: этот был бы пропущен"/>
+    <Phrase Key="NoPlaceForChild" Text="В {type} некуда поместить дочерний элемент: у него нет свойства содержимого, и он не контейнер"/>
+    <Phrase Key="ContentSetTwice" Text="{type}.{property} уже задано: дочерний элемент задал бы его снова"/>
+    <Phrase Key="NoPlaceForText" Text="{type} не принимает текст: текстом записывается только значимый тип, например число или Thickness"/>
+    <Phrase Key="PartNotFound" Text="В {template} нет части с именем '{name}'"/>
+    <Phrase Key="BindingPathNotFound" Text="У {type} нет {member}, который читает путь привязки '{path}'"/>
+    <Phrase Key="NameTwice" Text="x:Name '{name}' уже дано другому элементу"/>
+    <Phrase Key="NameNotIdentifier" Text="x:Name '{name}' не может быть именем: сначала буква или '_', дальше буквы, цифры или '_', и не ключевое слово C#"/>
+    <Phrase Key="KeyTwice" Text="x:Key '{key}' уже есть в этом словаре"/>
+    <Phrase Key="ContentTakesOne" Text="В {type} помещается один дочерний элемент, в {property}: этот заменил бы предыдущий"/>
+    <Phrase Key="NotAttached" Text="{owner}.{property} - не присоединённое свойство: его задают только у {owner}, а не у {element}"/>
+    <Phrase Key="PropertyTypeNotFound" Text="Не найден тип {type} для свойства {property}"/>
+    <Phrase Key="TypeNotDerived" Text="{type} - это не {base}: {member} принимает тип, производный от {fullBase}"/>
+    <Phrase Key="NoTypeParser" Text="{where}: у {type} нет разборщика значений, поэтому при построении разметки это значение вызовет исключение. Дайте типу [TypeParser] или публичный статический Parse(string)."/>
+    <Phrase Key="InvalidLiteral" Text="'{text}' - недопустимое значение {type} для {property} (ожидается: {expected}) (строка {line}, позиция {position})."/>
+    <Phrase Key="ExpectedNumber" Text="число"/>
+    <Phrase Key="ExpectedWholeNumber" Text="целое число"/>
+    <Phrase Key="ExpectedNonNegativeWholeNumber" Text="целое неотрицательное число"/>
+    <Phrase Key="FontWeightInvalid" Text="'{value}' - не насыщенность шрифта: ожидается Thin, ExtraLight, Light, Normal, Medium, SemiBold, Bold, ExtraBold, Black или число от 1 до 1000."/>
+    <Phrase Key="FontStretchInvalid" Text="'{value}' - не ширина шрифта: ожидается имя от UltraCondensed до UltraExpanded или процент, например 87.5%."/>
+    <Phrase Key="MarkupItemNoProperty" Text="[MarkupItem] у {type} не называет доступного свойства для элементов"/>
+
+    <!-- Resources and bindings. -->
+    <Phrase Key="InlineResourceNeedsKey" Text="Встроенному ресурсу в {property} нужен x:Key."/>
+    <Phrase Key="ResourceWithoutKey" Text="{{{extension}}} у {property} не называет ключа (строка {line}, позиция {position})."/>
+    <Phrase Key="LiveResourceOnPlainProperty" Text="{{{extension} {key}}} не может следить за {type}.{property}: это обычное свойство, обновлять в нём нечего. {{ResourceReference {key}}} задаёт его один раз."/>
+    <Phrase Key="TemplateBindingOutsideTemplate" Text="TemplateBinding можно использовать только внутри ControlTemplate."/>
+    <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: тип '{type}' не найден."/>
+    <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: тип Stop '{type}' не найден."/>
+    <Phrase Key="AncestorConverterInvalid" Text="Ancestor: Converter должен быть ресурсом или расширением разметки конвертера."/>
+    <Phrase Key="AncestorUnknownArgument" Text="Ancestor: неизвестный аргумент '{argument}'."/>
+    <Phrase Key="SelfConverterInvalid" Text="Self: Converter должен быть ресурсом или расширением разметки конвертера."/>
+    <Phrase Key="SelfUnknownArgument" Text="Self: неизвестный аргумент '{argument}'."/>
+    <Phrase Key="UnknownBindingProperty" Text="Неизвестное свойство привязки '{name}'"/>
+
+    <!-- Directives. -->
+    <Phrase Key="DirectiveBelongsOnElement" Text="Директива 'x:{directive}' пишется на элементе, а не в значении"/>
+    <Phrase Key="DirectiveBelongsInValue" Text="Директива 'x:{directive}' пишется в значении, а не на элементе"/>
+    <Phrase Key="UnknownDirective" Text="Неизвестная директива 'x:{directive}'"/>
+    <Phrase Key="DirectiveMissingValue" Text="У директивы '{directive}' нет значения"/>
+    <Phrase Key="StaticShape" Text="x:Static ожидает 'Тип.Член', получено '{body}'"/>
+    <Phrase Key="StaticTypeNotResolved" Text="Тип '{type}' для x:Static не найден"/>
+    <Phrase Key="StaticNoMember" Text="x:Static: у '{type}' нет члена '{member}'"/>
+    <Phrase Key="KeepAliveExpects" Text="x:KeepAlive ожидает {modes}, получено '{mode}'"/>
+    <Phrase Key="LoadExpects" Text="x:Load принимает True, False или привязку, получено '{condition}'"/>
+    <Phrase Key="LoadTrueHoldsNothing" Text="x:Load=&quot;True&quot; ничего не откладывает - элемент всё равно строится. Уберите его или дайте ему условие"/>
+    <Phrase Key="LoadInsideTemplate" Text="x:Load не поддерживается внутри шаблона: шаблон применяется ко многим контролам, и элемент держал бы один слот на всех"/>
+    <Phrase Key="LoadInsideContainer" Text="x:Load не поддерживается внутри {container}: он должен быть IContainer (чтобы элемент мог вернуться на своё место) и IFundamentalUIComponent (чтобы у условия был DataContext)"/>
+    <Phrase Key="TargetNameHeldBack" Text="TargetName='{name}' указывает на элемент, отложенный x:Load. Пока элемент не построен, имя ни на что не указывает, и триггер молча ничего не делает"/>
+    <Phrase Key="DataTypeNotResolved" Text="Тип x:DataType '{type}' не найден"/>
+    <Phrase Key="ViewModelNotResolved" Text="Тип x:ViewModel '{type}' не найден"/>
+    <Phrase Key="DataTemplateSetTwoDefaults" Text="В DataTemplateSet больше одного шаблона без x:DataType; только один может брать то, к чему не подошёл ни один другой"/>
+    <Phrase Key="DataTemplateSetTwoForType" Text="В DataTemplateSet два шаблона для {type}; один тип - один шаблон"/>
+
+    <!-- {Localize}. -->
+    <Phrase Key="LocalizeShape" Text="{{Localize}} называет таблицу и строку, {{Localize Strings.Close}}, или таблицу и откуда берётся ключ, {{Localize Strings, Key={{Binding Kind}}}}; получено '{text}'"/>
+    <Phrase Key="LocalizeNoString" Text="В {table} нет строки '{key}'"/>
+    <Phrase Key="LocalizeKeyFromBinding" Text="{{Localize {table}, {argument}=...}} берёт ключ из привязки; записанный ключ выглядит как {{Localize {table}.Close}}"/>
+    <Phrase Key="LocalizeTableTwice" Text="{{Localize}} либо называет свою таблицу, {{Localize {table}, ...}}, либо берёт её из привязки, {{Localize {argument}={{Binding Phrases}}, ...}}; не то и другое сразу"/>
+    <Phrase Key="LocalizeBothFromBinding" Text="{{Localize {tableArgument}=..., {keyArgument}=...}} берёт из привязок и таблицу, и ключ: {{Localize {tableArgument}={{Binding Phrases}}, {keyArgument}={{Binding Name}}}}"/>
+    <Phrase Key="LocalizeNoTable" Text="Нет языковой таблицы '{name}': таблица - это набор файлов {table}.&lt;язык&gt;.alang здесь или в подключённой сборке"/>
+    <Phrase Key="PlaceholdersNone" Text="подстановок у неё нет"/>
+    <Phrase Key="PlaceholdersFilled" Text="она заполняет {placeholders}"/>
+    <Phrase Key="PlaceholderUnknown" Text="У {table}.{key} нет подстановки {names}: {fills}"/>
+    <Phrase Key="PlaceholderMissing" Text="{table}.{key} нужны {names}: {fills}"/>
+
+    <!-- The project. -->
+    <Phrase Key="BlueprintTooMany" Text="У приложения один чертёж, а в этом проекте их {count}: {files}."/>
+    <Phrase Key="EntryPointHandWritten" Text="Точка входа строится по чертежу {file}: удалите {type}.Main."/>
+    <Phrase Key="BlueprintNoApplication" Text="Чертёж {file} запускает класс приложения, а в проекте его нет: добавьте класс, производный от MultiverseApplication."/>
+    <Phrase Key="BlueprintManyApplications" Text="Чертёж {file} запускает одно приложение, а в проекте их {count}: {applications}."/>
+    <Phrase Key="NoRootNamespaceOption" Text="Не передан параметр компилятора RootNamespace. Добавьте &lt;CompilerVisibleProperty Include=&quot;RootNamespace&quot; /&gt; в файл csproj."/>
+    <Phrase Key="QuickAccessMenuControls" Text="{file}({line},{position}): {command} задаёт своё меню КОНТРОЛАМИ MenuItem. На панели быстрого доступа такое меню окажется ПУСТЫМ - ContextMenu является логическим потомком и не может быть в двух местах, поэтому переносятся только ДАННЫЕ строк. Задайте строки через ItemsSource + ItemTemplate или укажите Ribbon.CanAddToQuickAccess=&quot;False&quot;, если команда не для этой панели."/>
+    <Phrase Key="NoAutomationId" Text="{file}({line},{position}): у {type} нет AutomationProperties.AutomationId, поэтому тест не найдёт его по идентификатору."/>
+    <Phrase Key="GenerationFailed" Text="Не удалось построить код AUML для {file}: {error}"/>
+
+    <!-- Language files. -->
+    <Phrase Key="NoRootNamespace" Text="Нет RootNamespace: добавьте в проект &lt;CompilerVisibleProperty Include=&quot;RootNamespace&quot; /&gt;"/>
+    <Phrase Key="LanguageFileUnnamed" Text="'{file}' не называет свой язык: языковой файл называется &lt;Таблица&gt;.&lt;язык&gt;{extension}, например Strings.en{extension}"/>
+    <Phrase Key="LanguageTableNameInvalid" Text="'{table}' не может быть именем таблицы: из него получается имя класса"/>
+    <Phrase Key="LanguageNameInvalid" Text="'{language}' - не имя языка вроде en, ru или pt-BR"/>
+    <Phrase Key="LanguageFileRoot" Text="Языковой файл - это &lt;{root}&gt; с записями &lt;{phrase} Key=&quot;...&quot;&gt;"/>
+    <Phrase Key="LanguageRootAttribute" Text="У &lt;{root}&gt; нет атрибутов; '{attribute}' здесь не нужен"/>
+    <Phrase Key="LanguageFormatTwice" Text="В языковом файле один &lt;{format}&gt;"/>
+    <Phrase Key="LanguageStrayElement" Text="&lt;{element}&gt; не входит в языковой файл: в нём только &lt;{phrase}&gt; и один &lt;{format}&gt;"/>
+    <Phrase Key="PhraseNeedsKey" Text="&lt;{phrase}&gt; нужен Key"/>
+    <Phrase Key="PhraseKeyInvalid" Text="'{key}' не может быть ключом: из него получается имя свойства"/>
+    <Phrase Key="PhraseKeyTwice" Text="'{key}' уже есть в этом файле"/>
+    <Phrase Key="PhraseHoldsElements" Text="В '{key}' есть элементы; фраза - это текст"/>
+    <Phrase Key="PhraseTextTwice" Text="'{key}' задаёт текст дважды: в {text} и внутри тега"/>
+    <Phrase Key="PhraseCasesNeedChooser" Text="'{key}' задаёт варианты, поэтому {count} или {select} называет подстановку, по значению которой выбирается вариант: {count}=&quot;count&quot; для числа, {select}=&quot;state&quot; для любого другого значения"/>
+    <Phrase Key="PhraseStrayAttribute" Text="&lt;{phrase}&gt; принимает Key и {text} или {count}/{select} и варианты; '{attribute}' сюда не относится"/>
+    <Phrase Key="PhraseTextAndCases" Text="'{key}' задаёт и текст, и варианты: фраза, которая меняется со значением, всё говорит в вариантах"/>
+    <Phrase Key="ChooserInvalid" Text="{chooser} называет подстановку, по значению которой выбирается вариант: {chooser}=&quot;{example}&quot;"/>
+    <Phrase Key="NotAPluralForm" Text="'{name}' - не форма множественного числа; формы: {forms}"/>
+    <Phrase Key="PhraseNeedsOther" Text="'{key}' нужна форма {other}: для всех чисел, которые не берёт ни одна другая форма"/>
+    <Phrase Key="LanguageHasNoForm" Text="В языке {language} нет формы {form}; его формы: {forms}"/>
+    <Phrase Key="PhraseLacksForm" Text="У '{key}' нет формы {forms} языка {language}: вместо неё говорится {other}"/>
+    <Phrase Key="PhraseLacksForms" Text="У '{key}' нет форм {forms} языка {language}: вместо них говорится {other}"/>
+    <Phrase Key="PluralRulesUnknown" Text="Правила множественного числа для '{language}' неизвестны: для 1 говорится {one}, для остальных чисел - {other}"/>
+    <Phrase Key="CaseNameInvalid" Text="'{name}' не может быть именем варианта '{key}': вариант называется значением, которое он представляет - True, False или член перечисления, - а не своей фразой"/>
+    <Phrase Key="PhraseNoCases" Text="'{key}' выбирается по {{{chooser}}}, но не задаёт вариантов: True=&quot;...&quot; False=&quot;...&quot; или вариант на каждый член перечисления"/>
+    <Phrase Key="NotAFormat" Text="'{name}' - не формат; форматы: {formats}"/>
+    <Phrase Key="FirstDayOfWeekInvalid" Text="FirstDayOfWeek - это день вроде Monday, а не '{value}'"/>
+    <Phrase Key="LanguageInAnotherFile" Text="'{language}' для {table} уже есть в другом файле"/>
+    <Phrase Key="KeyIsTableMember" Text="'{key}' не может быть ключом {table}: у класса таблицы есть член с таким именем"/>
+    <Phrase Key="KeyNotInBase" Text="'{key}' нет в {file}: сначала добавьте его туда"/>
+    <Phrase Key="ChooserDiffers" Text="{key} выбирается по {{{chooser}}}, а в другом месте по {{{other}}}: вариант во всех языках выбирает одна подстановка"/>
+    <Phrase Key="KeyIsCaseName" Text="'{key}' не может быть ключом фразы с вариантом такого же имени"/>
+    <Phrase Key="LacksCase" Text="У {key} нет варианта {cases}, который есть в базовом тексте"/>
+    <Phrase Key="LacksCases" Text="У {key} нет вариантов {cases}, которые есть в базовом тексте"/>
+    <Phrase Key="TableNotFound" Text="Для {table} здесь нет {file} (базовый язык - {language}), и ни в одной подключённой сборке нет таблицы {table}"/>
+    <Phrase Key="TableAmbiguous" Text="Имя {table} подходит к нескольким таблицам: {tables}"/>
+    <Phrase Key="TableHasNoKey" Text="В {table} нет '{key}'"/>
+    <Phrase Key="FormatsInLibrary" Text="Как язык записывает даты и числа, задаёт только приложение; библиотека оставляет это приложению"/>
+    <Phrase Key="FormatsTwice" Text="Форматы '{language}' уже заданы в другом файле: их задаёт один файл на язык"/>
+    <Phrase Key="PlaceholdersExtra" Text="есть {names}, которых нет в базовом тексте"/>
+    <Phrase Key="PlaceholdersLacking" Text="нет {names}"/>
+    <Phrase Key="PlaceholderProblem" Text="{key}: {problem}"/>
+    <Phrase Key="PlaceholderProblems" Text="{key}: {first} и {second}"/>
+    <Phrase Key="LanguageLacksStrings" Text="В {file} нет {count} строк {table}: {shown}. Они показываются на языке {language}"/>
+    <Phrase Key="AndMore" Text="{shown} и ещё {count}"/>
+    <Phrase Key="BraceNotClosed" Text="У '{{' нет закрывающей '}}'; фигурная скобка пишется как '{{{{'"/>
+    <Phrase Key="PlaceholderNoName" Text="'{{{text}}}' не начинается с имени: подстановка - это {{name}}, {{name:format}} или {{name,width}}"/>
+    <Phrase Key="BraceNotOpened" Text="У '}}' нет открывающей '{{'; фигурная скобка пишется как '}}}}'"/>
+</Language>
