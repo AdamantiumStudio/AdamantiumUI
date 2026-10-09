@@ -33,4 +33,8 @@ public enum TextStand
     /// Cyrillic, and the initials of the liturgical books.</summary>
     [Display(Name = "Scripts")]
     Scripts,
+
+    /// <summary>Words broken across lines by the patterns of their language, or at soft hyphens.</summary>
+    [Display(Name = "Hyphenation")]
+    Hyphenation,
 }

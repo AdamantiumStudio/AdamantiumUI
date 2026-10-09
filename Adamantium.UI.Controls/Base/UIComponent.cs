@@ -388,6 +388,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(TextDirectionProperty, value);
     }
 
+    public static readonly AdamantiumProperty HyphensProperty = AdamantiumProperty.Register(nameof(Hyphens),
+        typeof(Hyphens), typeof(UIComponent),
+        new PropertyMetadata(Hyphens.Manual, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where words of the text in this element and its descendants, wrapped by words, may break across lines,
+    /// a hyphen ending the line: <c>Manual</c> (the default) only at soft hyphens (U+00AD), <c>Auto</c> also where the
+    /// hyphenation patterns of the text's <see cref="Language"/> allow, <c>None</c> nowhere.</summary>
+    public Hyphens Hyphens
+    {
+        get => GetValue<Hyphens>(HyphensProperty);
+        set => SetValue(HyphensProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

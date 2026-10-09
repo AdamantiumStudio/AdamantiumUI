@@ -7,6 +7,7 @@
     <Phrase Key="TopicOpenType" Text="OpenType"/>
     <Phrase Key="TopicVariable" Text="Вариативные шрифты"/>
     <Phrase Key="TopicScripts" Text="Письменности"/>
+    <Phrase Key="TopicHyphenation" Text="Переносы"/>
     <Phrase Key="FontSize" Text="Размер шрифта:"/>
     <Phrase Key="Trimmed" Text="Обрезано до одной строки:"/>
     <Phrase Key="FloatingWatermark" Text="Всплывающая подсказка"/>
@@ -48,4 +49,12 @@
     <Phrase Key="ChurchSlavonicTitle" Text="Церковнославянский (Ponomar): придыхания, ударения и титла над буквами, буквотитла:"/>
     <Phrase Key="OldCyrillicTitle" Text="Старая кириллица (Monomakh): буквы, которых нет в современной азбуке:"/>
     <Phrase Key="InitialsTitle" Text="Буквицы богослужебных книг (Vertograd) — для первой буквы абзаца:"/>
+    <Phrase Key="HyphenationTitle" Text="Переносы слов по шаблонам их языка (из TeX, алгоритмом Лианга) или по мягким переносам:"/>
+    <Phrase Key="HyphensNone" Text="Без переносов"/>
+    <Phrase Key="HyphensManual" Text="Только мягкие переносы"/>
+    <Phrase Key="HyphensAuto" Text="Автоматически"/>
+    <Phrase Key="ColumnWidth" Text="Ширина колонки"/>
+    <Phrase Key="Justify" Text="По ширине"/>
+    <Phrase Key="SoftHyphens" Text="Мягкие переносы (U+00AD)"/>
+    <Phrase Key="HyphenationEditor" Text="Редактор"/>
 </Language>

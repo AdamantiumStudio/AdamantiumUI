@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.Graphics.Fonts;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Core.Media;
@@ -119,6 +120,37 @@ public partial class TextViewModel : TabPageViewModel
     [Bindable, Affects(nameof(BidiDirection))] private bool _rightToLeft;
 
     public TextDirection BidiDirection => RightToLeft ? TextDirection.RightToLeft : TextDirection.LeftToRight;
+
+    // Where the columns of the hyphenation topic break their words, how wide they are, and whether they are justified.
+    [Bindable] private Hyphens _hyphens = Hyphens.Auto;
+
+    [Bindable] private double _columnWidth = 220;
+
+    [Bindable, Affects(nameof(ColumnAlignment))] private bool _justified;
+
+    public HorizontalTextAlignment ColumnAlignment => Justified ? HorizontalTextAlignment.Justify : HorizontalTextAlignment.Left;
+
+    public string RussianSample =>
+        "Достопримечательности высокопроизводительного сельскохозяйственного производства неизменно привлекают внимание любознательных путешественников.";
+
+    public string EnglishSample =>
+        "Internationalization of extraordinarily sophisticated typographical applications necessitates comprehensive hyphenation dictionaries.";
+
+    public string GermanSample =>
+        "Die Donaudampfschifffahrtsgesellschaft veröffentlichte ihre Rechtschreibempfehlungen für Lebensversicherungsunternehmen.";
+
+    public string FrenchSample =>
+        "L'internationalisation des applications typographiques extraordinairement sophistiquées nécessite des dictionnaires.";
+
+    public string SpanishSample =>
+        "La internacionalización de las aplicaciones tipográficas extraordinariamente sofisticadas necesita diccionarios.";
+
+    // A word with soft hyphens written into it breaks only at them, whatever the patterns say.
+    public string SoftHyphenSample =>
+        "Supercali­fragilistic­expiali­docious, even though the sound of it is something quite atro­cious.";
+
+    [Bindable] private string _hyphenationEditable =
+        "Высокопроизводительные текстовые редакторы переносят слова автоматически.";
 
     private IReadOnlyList<FontAxisItem> _axisItems;
 

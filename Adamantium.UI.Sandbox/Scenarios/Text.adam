@@ -25,6 +25,11 @@ select id=TextView/name="Variable fonts"
 wait id=Topic/id=VariableStandView
 select id=TextView/name=Scripts
 wait id=Topic/id=ScriptsStandView
+select id=TextView/name=Hyphenation
+wait id=Topic/id=HyphenationStandView
+set id=ColumnWidthSlider 160
+expect id=ColumnWidthSlider value=160
+set id=ColumnWidthSlider 220
 select id=TextView/name=Basics
 wait id=Topic/id=BasicsStandView
 set id=FontSizeSlider 24
