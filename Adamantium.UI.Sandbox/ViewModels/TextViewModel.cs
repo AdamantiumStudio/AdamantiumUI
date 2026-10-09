@@ -121,7 +121,10 @@ public partial class TextViewModel : TabPageViewModel
 
     public TextDirection BidiDirection => RightToLeft ? TextDirection.RightToLeft : TextDirection.LeftToRight;
 
-    // Where the columns of the hyphenation topic break their words, how wide they are, and whether they are justified.
+    // How the columns of the paragraph topic break into lines and their words, how wide they are, and whether they are
+    // justified.
+    [Bindable] private LineBreaking _lineBreaking = LineBreaking.Paragraph;
+
     [Bindable] private Hyphens _hyphens = Hyphens.Auto;
 
     [Bindable] private double _columnWidth = 220;
@@ -129,6 +132,14 @@ public partial class TextViewModel : TabPageViewModel
     [Bindable, Affects(nameof(ColumnAlignment))] private bool _justified;
 
     public HorizontalTextAlignment ColumnAlignment => Justified ? HorizontalTextAlignment.Justify : HorizontalTextAlignment.Left;
+
+    // The opening of the Brothers Grimm's "The Frog King", set both ways side by side.
+    public string ProseSample =>
+        "In olden times when wishing still helped one, there lived a king whose daughters were all beautiful, but the " +
+        "youngest was so beautiful that the sun itself, which has seen so much, was astonished whenever it shone in her " +
+        "face. Close by the king's castle lay a great dark forest, and under an old lime tree in the forest was a well, " +
+        "and when the day was very warm, the king's child went out into the forest and sat down by the side of the cool " +
+        "fountain.";
 
     public string RussianSample =>
         "Достопримечательности высокопроизводительного сельскохозяйственного производства неизменно привлекают внимание любознательных путешественников.";

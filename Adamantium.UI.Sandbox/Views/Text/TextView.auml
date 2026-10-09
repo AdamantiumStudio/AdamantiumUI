@@ -25,8 +25,11 @@
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Variable, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicScripts}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Scripts, Mode=TwoWay}"/>
-                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicHyphenation}" MarginRight="6" MarginBottom="6"
-                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Hyphenation, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             Content="{Localize TextStrings.TopicParagraph}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Paragraph, Mode=TwoWay}"/>
             </WrapPanel>
 
             <!-- The topic itself, navigated in by key: leaving a topic drops its markup, and what the topics share (the

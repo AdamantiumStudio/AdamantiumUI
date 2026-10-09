@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `LineBreaking` on every element (inherited; `Greedy` by default, `Paragraph`): `TextBlock` and `TextBox` wrapped by
+  words break a paragraph at a time, as TeX and InDesign do - evenly spaced lines, an even ragged edge, fewer hyphens.
+  The sandbox's Hyphenation topic is now Paragraph: the same text broken both ways side by side, and the columns of
+  five languages switched between them.
 - Hyphenation. `Hyphens` on every element (inherited; `Manual` by default, `Auto`, `None`): `TextBlock` and `TextBox`
   wrapped by words break a word across lines at its soft hyphens, and under `Auto` by the hyphenation patterns of its
   `Language` (Russian, English, German, French and Spanish built in), a hyphen ending the line. `TextTrimming` now
