@@ -127,6 +127,17 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private Hyphens _hyphens = Hyphens.Auto;
 
+    [Bindable] private bool _opticalMargins = true;
+
+    // Natsume Sōseki, "I Am a Cat": no line may start with a closing bracket, a small kana or a full stop.
+    public string JapaneseSample =>
+        "「吾輩は猫である。名前はまだ無い。」どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。";
+
+    // A table of contents, page numbers right-aligned behind dot leaders, and prices lined up on the decimal point.
+    public string ContentsSample => "Introduction\t1\nThe paragraph composer\t17\nHyphenation by patterns\t123";
+
+    public string PricesSample => "Tea\t3.50\nCoffee\t12.75\nA whole cake\t120.00";
+
     [Bindable] private double _columnWidth = 220;
 
     [Bindable, Affects(nameof(ColumnAlignment))] private bool _justified;

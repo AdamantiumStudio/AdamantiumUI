@@ -29,6 +29,8 @@ select id=TextView/name=Paragraph
 wait id=Topic/id=ParagraphStandView
 select id=GreedyRadio
 select id=ParagraphRadio
+toggle id=OpticalMarginsToggle
+toggle id=OpticalMarginsToggle
 set id=ColumnWidthSlider 160
 expect id=ColumnWidthSlider value=160
 set id=ColumnWidthSlider 220

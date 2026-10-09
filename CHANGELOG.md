@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `TabStops` and `OpticalMarginAlignment` on every element (inherited): tab stops left, centered, right or on a
+  decimal separator, with leaders (`TabStops="120, 300 Right Leader=., 400 Decimal AlignOn=','"`), and punctuation
+  and hyphens hanging partly past the margin. Sandbox Paragraph topic: optical margins switched on and off, a
+  Japanese column broken by the kinsoku rules, a table of contents with dot leaders and prices lined up on the
+  decimal point.
 - `LineBreaking` on every element (inherited; `Greedy` by default, `Paragraph`): `TextBlock` and `TextBox` wrapped by
   words break a paragraph at a time, as TeX and InDesign do - evenly spaced lines, an even ragged edge, fewer hyphens.
   The sandbox's Hyphenation topic is now Paragraph: the same text broken both ways side by side, and the columns of

@@ -414,6 +414,31 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LineBreakingProperty, value);
     }
 
+    public static readonly AdamantiumProperty TabStopsProperty = AdamantiumProperty.Register(nameof(TabStops),
+        typeof(TabStopList), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where tabs in the text of this element and its descendants stop, how the text after each lines up and
+    /// what fills the gap: <c>TabStops="120, 300 Right Leader=., 400 Decimal"</c>. Past the last stop, and unset, a tab
+    /// stops every four spaces.</summary>
+    public TabStopList TabStops
+    {
+        get => GetValue<TabStopList>(TabStopsProperty);
+        set => SetValue(TabStopsProperty, value);
+    }
+
+    public static readonly AdamantiumProperty OpticalMarginAlignmentProperty = AdamantiumProperty.Register(
+        nameof(OpticalMarginAlignment), typeof(bool), typeof(UIComponent),
+        new PropertyMetadata(false, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether punctuation and hyphens at the edges of lines of the text in this element and its descendants
+    /// hang partly past the margin, as InDesign's Optical Margin Alignment does, so the edge looks straight.</summary>
+    public bool OpticalMarginAlignment
+    {
+        get => GetValue<bool>(OpticalMarginAlignmentProperty);
+        set => SetValue(OpticalMarginAlignmentProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
