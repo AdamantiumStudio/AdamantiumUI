@@ -22,6 +22,9 @@ public class ReflectionResolvedType : IResolvedType
     public bool IsNamedType => true;
     public bool IsGenericType => _type.IsGenericType;
 
+    public bool IsCreatable => !_type.IsAbstract && !_type.IsInterface &&
+                               (_type.IsValueType || _type.GetConstructor(Type.EmptyTypes) != null);
+
     public IEnumerable<IResolvedType> TypeArguments =>
         _type.GetGenericArguments().Select(t => (IResolvedType)new ReflectionResolvedType(t));
 
@@ -70,7 +73,7 @@ public class ReflectionResolvedType : IResolvedType
             .Select(p => (IResolvedProperty)new ReflectionResolvedProperty(p)).ToList();
 
     public bool ImplementsInterface(string interfaceName) =>
-        _type.GetInterfaces().Any(i => i.Name == interfaceName);
+        _type.GetInterfaces().Any(i => i.Name == interfaceName || i.Name.StartsWith(interfaceName + "`", StringComparison.Ordinal));
 
     public bool IsCollection() => ImplementsInterface("ICollection") || ImplementsInterface("IList");
 

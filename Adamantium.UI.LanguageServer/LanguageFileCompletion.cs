@@ -49,19 +49,19 @@ public static class LanguageFileCompletion
         var before = text.Substring(0, tag);
         if (!before.Contains("<" + root, StringComparison.Ordinal))
         {
-            return [new AumlCompletionItem(root, AumlCompletionItemKind.Element, "the language file's root",
+            return [new AumlCompletionItem(root, AumlCompletionItemKind.Element, ServerMessages.LanguageFileRoot(),
                 $"{root}>\n    $0\n</{root}>", prefix.Length)];
         }
 
         var items = new List<AumlCompletionItem>
         {
-            new(phrase, AumlCompletionItemKind.Element, "a phrase of the table",
+            new(phrase, AumlCompletionItemKind.Element, ServerMessages.TablePhrase(),
                 $"{phrase} Key=\"$1\" {LanguageFileParser.TextAttribute}=\"$0\"/>", prefix.Length),
         };
         if (!text.Contains("<" + format, StringComparison.Ordinal) && file.Project?.OutputType is "Exe" or "WinExe")
         {
             items.Add(new AumlCompletionItem(format, AumlCompletionItemKind.Element,
-                "how this language writes dates and numbers", $"{format} $0/>", prefix.Length));
+                ServerMessages.LanguageFormat(), $"{format} $0/>", prefix.Length));
         }
 
         return items.Where(i => i.Label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -123,7 +123,7 @@ public static class LanguageFileCompletion
         var items = new List<AumlCompletionItem>();
         if (OwnFormat(file.File.Language, caret.AttributeName) is { } own)
         {
-            items.Add(new AumlCompletionItem(own, AumlCompletionItemKind.Value, $"how {file.File.Language} writes it"));
+            items.Add(new AumlCompletionItem(own, AumlCompletionItemKind.Value, ServerMessages.OwnFormat(file.File.Language)));
         }
 
         foreach (var choice in choices.Where(c => items.All(i => i.Label != c)))

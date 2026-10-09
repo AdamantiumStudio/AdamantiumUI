@@ -39,6 +39,10 @@ sync, then run the Gradle task **`buildPlugin`** (Gradle tool window → Tasks �
 
 Either way the result is: `build/distributions/adamantium-auml-<version>.zip`.
 
+**Tests:** `./gradlew testIdea`. They run in IntelliJ IDEA of the same version: Rider's test fixture needs a solution
+and its backend, and what they check - typing in `.auml` files, the highlighting filter - is the platform's XML, the
+same in both.
+
 ## 3. Install in Rider
 
 Settings → Plugins → ⚙ → **Install Plugin from Disk…** → select the zip → restart.

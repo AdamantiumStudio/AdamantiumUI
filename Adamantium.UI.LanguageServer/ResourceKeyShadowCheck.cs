@@ -29,7 +29,7 @@ public static class ResourceKeyShadowCheck
             var where = Path.GetRelativePath(Path.GetDirectoryName(ownRoot.TrimEnd(Path.DirectorySeparatorChar)) ?? ownRoot, elsewhere)
                 .Replace('\\', '/');
             warnings.Add(new AumlDiagnostic(line, character, key.Length,
-                $"'{key.Key}' is declared in {where} too: one of the two is never found - a theme's key before the application's. Give this one a name of its own.",
+                ServerMessages.ResourceKeyShadowed(key.Key, where),
                 IsWarning: true));
         }
 

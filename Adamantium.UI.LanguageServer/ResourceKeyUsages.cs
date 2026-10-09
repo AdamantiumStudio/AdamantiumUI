@@ -31,20 +31,22 @@ public sealed class ResourceKeyUsages
         var key = ResourceKeyOccurrences.At(text, offset);
         if (key == null)
         {
-            why = "Rename works on a resource key: an x:Key, or the key of {ObservableResource} or {ResourceReference}.";
+            why = ServerMessages.RenameNeedsKey();
             return null;
         }
 
         var declaredIn = _model.DeclarationsOf(key.Key).Select(k => k.File).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (!key.IsDeclaration && declaredIn.Count == 0)
         {
-            why = $"'{key.Key}' is not declared in markup of this project or of one built from source here, so where it is declared cannot be renamed.";
+            why = ServerMessages.KeyNotDeclaredHere(key.Key);
             return null;
         }
 
         if (declaredIn.Count > 1)
         {
-            why = $"'{key.Key}' is declared in {string.Join(" and ", declaredIn.Select(Path.GetFileName))}: a rename could not tell which one each use means. Rename one of them by hand first.";
+            var files = declaredIn.Select(Path.GetFileName).ToList();
+            why = ServerMessages.KeyDeclaredInMany(key.Key,
+                ServerMessages.And(string.Join(", ", files.Take(files.Count - 1)), files[^1]));
             return null;
         }
 

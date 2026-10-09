@@ -47,4 +47,18 @@ public class AumlPropertyElementCompletionTests
 
         Assert.That(labels, Is.SupersetOf(expected));
     }
+
+    // A client that does not take the dot for part of a word replaced only what followed it: <Grid.Grid.Classes.
+    [TestCase("<Grid><Grid.|", "Grid.RowDefinitions", "Grid.")]
+    [TestCase("<Grid><Grid.Ro|", "Grid.RowDefinitions", "Grid.Ro")]
+    [TestCase("<Grid><Border Grid.|", "Grid.Row", "Grid.")]
+    public void AnOwnersMember_ReplacesTheOwnerTyped_NotOnlyWhatFollowsTheDot(string body, string label, string typed)
+    {
+        var marked = Root + body;
+        var caret = marked.IndexOf('|');
+
+        var item = _engine.Complete(marked.Remove(caret, 1), caret).First(i => i.Label == label);
+
+        Assert.That(item.ReplaceBack, Is.EqualTo(typed.Length));
+    }
 }

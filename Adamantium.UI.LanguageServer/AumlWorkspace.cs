@@ -250,11 +250,11 @@ public sealed class AumlWorkspace : IDisposable
         var project = FindProjectFile(filePath);
         if (project is null)
         {
-            return "This file belongs to no project (no .csproj above it): completion, checks and type colors need one.";
+            return ServerMessages.NoProject();
         }
 
         return FindProjectBinDir(project) is null
-            ? $"{Path.GetFileNameWithoutExtension(project)} has not been built yet: completion, checks and type colors start once it has been built."
+            ? ServerMessages.NotBuilt(Path.GetFileNameWithoutExtension(project))
             : null;
     }
 

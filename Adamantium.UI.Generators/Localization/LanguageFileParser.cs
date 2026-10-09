@@ -68,7 +68,7 @@ public static class LanguageFileParser
         if (dot <= 0 || dot == name.Length - 1)
         {
             problems.Add(new LanguageProblem("AUL001",
-                $"'{System.IO.Path.GetFileName(relative)}' does not name its language: a language file is <Table>.<language>{Extension}, Strings.en{Extension}",
+                MarkupMessages.LanguageFileUnnamed(System.IO.Path.GetFileName(relative), Extension),
                 1, 1));
         }
         else
@@ -77,13 +77,13 @@ public static class LanguageFileParser
             language = name.Substring(dot + 1);
             if (!SyntaxFacts.IsValidIdentifier(table))
             {
-                problems.Add(new LanguageProblem("AUL003", $"'{table}' cannot name a table: it becomes a class name", 1, 1));
+                problems.Add(new LanguageProblem("AUL003", MarkupMessages.LanguageTableNameInvalid(table), 1, 1));
                 table = null;
             }
 
             if (!IsLanguage(language))
             {
-                problems.Add(new LanguageProblem("AUL002", $"'{language}' is not a language name such as en, ru or pt-BR", 1, 1));
+                problems.Add(new LanguageProblem("AUL002", MarkupMessages.LanguageNameInvalid(language), 1, 1));
                 language = null;
             }
         }
@@ -102,13 +102,13 @@ public static class LanguageFileParser
         var root = document.Root;
         if (root == null || root.Name.LocalName != RootElement)
         {
-            problems.Add(Problem("AUL004", $"A language file is <{RootElement}> with <{PhraseElement} Key=\"...\"> entries", root));
+            problems.Add(Problem("AUL004", MarkupMessages.LanguageFileRoot(RootElement, PhraseElement), root));
             return new LanguageFile(path, folder, table, language, entries, format, formatLine, problems);
         }
 
         foreach (var attribute in root.Attributes().Where(a => !a.IsNamespaceDeclaration))
         {
-            problems.Add(Problem("AUL004", $"<{RootElement}> takes no attributes; '{attribute.Name.LocalName}' is not one", attribute));
+            problems.Add(Problem("AUL004", MarkupMessages.LanguageRootAttribute(RootElement, attribute.Name.LocalName), attribute));
         }
 
         foreach (var element in root.Elements())
@@ -121,7 +121,7 @@ public static class LanguageFileParser
                 case FormatElement:
                     if (formatLine != 0)
                     {
-                        problems.Add(Problem("AUL009", $"A language file has one <{FormatElement}>", element));
+                        problems.Add(Problem("AUL009", MarkupMessages.LanguageFormatTwice(FormatElement), element));
                         break;
                     }
 
@@ -129,7 +129,7 @@ public static class LanguageFileParser
                     ReadFormat(element, format, problems);
                     break;
                 default:
-                    problems.Add(Problem("AUL004", $"<{element.Name.LocalName}> is not part of a language file: it holds <{PhraseElement}> and one <{FormatElement}>", element));
+                    problems.Add(Problem("AUL004", MarkupMessages.LanguageStrayElement(element.Name.LocalName, PhraseElement, FormatElement), element));
                     break;
             }
         }
@@ -174,25 +174,25 @@ public static class LanguageFileParser
         var key = element.Attribute("Key")?.Value;
         if (string.IsNullOrEmpty(key))
         {
-            problems.Add(Problem("AUL004", $"<{PhraseElement}> needs a Key", element));
+            problems.Add(Problem("AUL004", MarkupMessages.PhraseNeedsKey(PhraseElement), element));
             return;
         }
 
         if (!SyntaxFacts.IsValidIdentifier(key) || SyntaxFacts.GetKeywordKind(key) != SyntaxKind.None)
         {
-            problems.Add(Problem("AUL003", $"'{key}' cannot be a key: it becomes a property name", element));
+            problems.Add(Problem("AUL003", MarkupMessages.PhraseKeyInvalid(key), element));
             return;
         }
 
         if (entries.Any(e => e.Key == key))
         {
-            problems.Add(Problem("AUL004", $"'{key}' is already in this file", element));
+            problems.Add(Problem("AUL004", MarkupMessages.PhraseKeyTwice(key), element));
             return;
         }
 
         if (element.HasElements)
         {
-            problems.Add(Problem("AUL004", $"'{key}' holds elements; a phrase is text", element));
+            problems.Add(Problem("AUL004", MarkupMessages.PhraseHoldsElements(key), element));
             return;
         }
 
@@ -205,7 +205,7 @@ public static class LanguageFileParser
         var text = select == null ? element.Attribute(TextAttribute)?.Value : null;
         if (text != null && !string.IsNullOrWhiteSpace(element.Value))
         {
-            problems.Add(Problem("AUL004", $"'{key}' gives its text twice: in {TextAttribute} and inside the tag", element));
+            problems.Add(Problem("AUL004", MarkupMessages.PhraseTextTwice(key, TextAttribute), element));
             return;
         }
 
@@ -219,8 +219,9 @@ public static class LanguageFileParser
             foreach (var attribute in cases)
             {
                 problems.Add(Enum.TryParse<PluralForm>(attribute.Name.LocalName, out _)
-                    ? Problem("AUL010", $"'{key}' gives cases, so {CountAttribute} or {SelectAttribute} names the placeholder whose value picks one: {CountAttribute}=\"count\" for a number, {SelectAttribute}=\"state\" for any other value", attribute)
-                    : Problem("AUL004", $"<{PhraseElement}> takes Key and {TextAttribute}, or {CountAttribute} or {SelectAttribute} and its cases; '{attribute.Name.LocalName}' is not one", attribute));
+                    ? Problem("AUL010", MarkupMessages.PhraseCasesNeedChooser(key, CountAttribute, SelectAttribute), attribute)
+                    : Problem("AUL004", MarkupMessages.PhraseStrayAttribute(PhraseElement, TextAttribute, CountAttribute,
+                        SelectAttribute, attribute.Name.LocalName), attribute));
             }
 
             if (cases.Count == 0)
@@ -233,14 +234,14 @@ public static class LanguageFileParser
 
         if (text != null || !string.IsNullOrWhiteSpace(element.Value))
         {
-            problems.Add(Problem("AUL004", $"'{key}' gives a text and cases: a phrase that changes with a value says everything in its cases", element));
+            problems.Add(Problem("AUL004", MarkupMessages.PhraseTextAndCases(key), element));
             return;
         }
 
         var chooser = count ?? select;
         if (!SyntaxFacts.IsValidIdentifier(chooser.Value))
         {
-            problems.Add(Problem("AUL010", $"{chooser.Name.LocalName} names the placeholder whose value picks the case: {chooser.Name.LocalName}=\"{(count != null ? "count" : "state")}\"", chooser));
+            problems.Add(Problem("AUL010", MarkupMessages.ChooserInvalid(chooser.Name.LocalName, count != null ? "count" : "state"), chooser));
             return;
         }
 
@@ -252,7 +253,7 @@ public static class LanguageFileParser
 
         foreach (var stray in cases.Where(c => !Enum.TryParse<PluralForm>(c.Name.LocalName, out _)))
         {
-            problems.Add(Problem("AUL010", $"'{stray.Name.LocalName}' is not a plural form; the forms are {string.Join(", ", FormNames)}", stray));
+            problems.Add(Problem("AUL010", MarkupMessages.NotAPluralForm(stray.Name.LocalName, string.Join(", ", FormNames)), stray));
         }
 
         var forms = cases
@@ -266,7 +267,7 @@ public static class LanguageFileParser
         {
             if (given.All(f => f.Form != PluralForm.Other))
             {
-                problems.Add(Problem("AUL010", $"'{key}' needs an {nameof(PluralForm.Other)} form: the one for every number no other form takes", element));
+                problems.Add(Problem("AUL010", MarkupMessages.PhraseNeedsOther(key, nameof(PluralForm.Other)), element));
                 return;
             }
 
@@ -275,21 +276,22 @@ public static class LanguageFileParser
                 var spoken = PluralRules.FormsOf(language);
                 foreach (var stray in given.Where(f => !spoken.Contains(f.Form)))
                 {
-                    problems.Add(Problem("AUL010", $"{NameOf(language)} has no {stray.Form} form; its forms are {string.Join(", ", spoken)}", stray.Attribute));
+                    problems.Add(Problem("AUL010", MarkupMessages.LanguageHasNoForm(NameOf(language), stray.Form.ToString(), string.Join(", ", spoken)), stray.Attribute));
                 }
 
                 var lacking = spoken.Where(s => given.All(f => f.Form != s)).ToList();
                 if (lacking.Count > 0)
                 {
                     problems.Add(new LanguageProblem("AUL010",
-                        $"'{key}' lacks the {string.Join(", ", lacking)} form{(lacking.Count > 1 ? "s" : string.Empty)} of {NameOf(language)}: {nameof(PluralForm.Other)} is said instead",
+                        MarkupMessages.PhraseLacksForms(key, lacking.Select(form => form.ToString()).ToList(), NameOf(language),
+                            nameof(PluralForm.Other)),
                         Line(element), Column(element), false));
                 }
 
                 if (!PluralRules.Knows(language))
                 {
                     problems.Add(new LanguageProblem("AUL010",
-                        $"The plural rules of '{language}' are not known: {nameof(PluralForm.One)} is said for 1 and {nameof(PluralForm.Other)} for every other number",
+                        MarkupMessages.PluralRulesUnknown(language, nameof(PluralForm.One), nameof(PluralForm.Other)),
                         Line(element), Column(element), false));
                 }
             }
@@ -306,13 +308,13 @@ public static class LanguageFileParser
     {
         if (cases.FirstOrDefault(c => !SyntaxFacts.IsValidIdentifier(c.Name.LocalName) || c.Name.LocalName == key) is { } bad)
         {
-            problems.Add(Problem("AUL010", $"'{bad.Name.LocalName}' cannot name a case of '{key}': a case is named as the value it stands for, True, False or a member of an enum, and not as its phrase", bad));
+            problems.Add(Problem("AUL010", MarkupMessages.CaseNameInvalid(bad.Name.LocalName, key), bad));
             return;
         }
 
         if (cases.Count == 0)
         {
-            problems.Add(Problem("AUL010", $"'{key}' is chosen by {{{chooser}}} but gives no cases: True=\"...\" False=\"...\", or a case per member of an enum", element));
+            problems.Add(Problem("AUL010", MarkupMessages.PhraseNoCases(key, chooser), element));
             return;
         }
 
@@ -341,13 +343,13 @@ public static class LanguageFileParser
             var name = attribute.Name.LocalName;
             if (!FormatNames.Contains(name))
             {
-                problems.Add(Problem("AUL009", $"'{name}' is not a format; the formats are {string.Join(", ", FormatNames)}", attribute));
+                problems.Add(Problem("AUL009", MarkupMessages.NotAFormat(name, string.Join(", ", FormatNames)), attribute));
                 continue;
             }
 
             if (name == "FirstDayOfWeek" && !Enum.TryParse<DayOfWeek>(attribute.Value, out _))
             {
-                problems.Add(Problem("AUL009", $"FirstDayOfWeek is a day such as Monday, not '{attribute.Value}'", attribute));
+                problems.Add(Problem("AUL009", MarkupMessages.FirstDayOfWeekInvalid(attribute.Value), attribute));
                 continue;
             }
 

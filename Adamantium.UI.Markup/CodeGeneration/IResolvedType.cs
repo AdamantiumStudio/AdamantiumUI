@@ -15,6 +15,10 @@ public interface IResolvedType
     bool IsNamedType { get; }
     
     bool IsGenericType { get; }
+
+    /// <summary>Whether markup can build it as an element: neither abstract, static nor an interface, and with a public
+    /// constructor that takes nothing.</summary>
+    bool IsCreatable { get; }
     bool InheritsFrom(string baseTypeName);
     
     bool HasAttribute(string attributeName);

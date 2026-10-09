@@ -22,6 +22,8 @@ public class MetadataResolvedType : IResolvedType
 
     public bool IsNamedType => true;
     public bool IsGenericType => false;
+
+    public bool IsCreatable => true;
     public IEnumerable<IResolvedType> TypeArguments => [];
 
     public IResolvedType BaseType

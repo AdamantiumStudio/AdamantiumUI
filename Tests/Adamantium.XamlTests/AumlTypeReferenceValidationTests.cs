@@ -73,6 +73,22 @@ public class AumlTypeReferenceValidationTests
         Assert.That(errors[0].Length, Is.EqualTo(written.Length));
     }
 
+    [Test]
+    public void AnXmlnsTheBuildWouldNotFind_IsFlaggedOnIt_AndADeclaredOneIsNot()
+    {
+        const string text = """<Window xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions" xmlns:nope="http://nowhere/controls" xmlns:gone="clr-namespace:Gone.Away"></Window>""";
+
+        var diagnostics = AumlValidator.Validate(text, _model);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostics.Select(d => d.Message), Has.Some.EqualTo("Xml namespace http://nowhere/controls could not be found"));
+            Assert.That(diagnostics.Select(d => d.Message), Has.Some.EqualTo("CLR namespace not found: 'clr-namespace:Gone.Away'"));
+            Assert.That(diagnostics.Select(d => d.Character), Has.Some.EqualTo(text.IndexOf("http://nowhere", StringComparison.Ordinal)));
+            Assert.That(diagnostics.Select(d => d.Message), Has.None.Contains("adamantium"));
+        });
+    }
+
     [TestCase("""<Border Tag="{x:Type local:Missing}"/>""", "Missing", SemanticTokensEngine.Unknown)]
     [TestCase("""<Border Tag="{x:Type local:ProbeRails}"/>""", "ProbeRails", SemanticTokensEngine.Type)]
     [TestCase("""<Border Width="{x:Static ProbeRails.Gap}"/>""", "ProbeRails", SemanticTokensEngine.Type)]

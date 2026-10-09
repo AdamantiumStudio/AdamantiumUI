@@ -1,6 +1,8 @@
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.bundling.Zip
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     id("java")
@@ -9,7 +11,7 @@ plugins {
 }
 
 group = "com.adamantium"
-version = "1.9.1"
+version = "1.9.2"
 
 repositories {
     mavenCentral()
@@ -26,7 +28,11 @@ dependencies {
 
         // The LSP4IJ plugin provides the LanguageServerFactory / connection-provider API.
         plugin(providers.gradleProperty("lsp4ijPlugin"))
+
+        testFramework(TestFrameworkType.Platform)
     }
+
+    testImplementation("junit:junit:4.13.2")
 }
 
 intellijPlatform {
@@ -46,6 +52,26 @@ intellijPlatform {
 
 kotlin {
     jvmToolchain(21)
+}
+
+// Rider's light test fixture needs a solution and its backend; the editor behavior under test is the platform's XML,
+// the same in IntelliJ IDEA of the same version, so the tests run there.
+val testIdea by intellijPlatformTesting.testIde.registering {
+    type = IntelliJPlatformType.IntellijIdea
+    version = providers.gradleProperty("platformVersion")
+    task {
+        useJUnit()
+    }
+}
+
+dependencies {
+    intellijPlatform {
+        testFramework(TestFrameworkType.Platform, configurationName = "intellijPlatformTestDependencies_testIdea")
+    }
+}
+
+tasks.test {
+    enabled = false
 }
 
 // --- Bundle the AUML language server inside the plugin -----------------------------------------

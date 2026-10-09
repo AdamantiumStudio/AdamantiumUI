@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The AUML language server for applications that edit AUML - a TextEditor asks it for completion, hover,
+         definitions and problems. No code: packing publishes Adamantium.UI.LanguageServer and ships the result as
+         content, copied to AumlServer\ beside the consuming application. A folder of its own, because the server carries
+         its own Roslyn, decompiler and UI assemblies and runs on its own deps.json - spread beside the application they
+         would meet the application's. Framework-dependent, as the Rider plugin ships it: the server reads the runtime's
+         reference assemblies from the runtime's folder, which a single-file build would hide. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>true</IsPackable>
+        <PackageId>Adamantium.UI.LanguageServer</PackageId>
+        <Description>The AUML language server, copied to AumlServer beside the application that references it: completion, hover, go to definition, problems, semantic tokens and quick fixes for Adamantium UI markup, from the types the markup's project builds. Speaks the Language Server Protocol over stdio.</Description>
+        <PackageTags>adamantium;ui;auml;markup;lsp;language-server</PackageTags>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <!-- NU5100: the server's assemblies are content, not references. NU5128: no lib folder, on purpose. -->
+        <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
+        <ServerProject>$(MSBuildThisFileDirectory)..\Adamantium.UI.LanguageServer\Adamantium.UI.LanguageServer.csproj</ServerProject>
+        <ServerPublishDir>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(BaseIntermediateOutputPath), 'server'))\</ServerPublishDir>
+    </PropertyGroup>
+
+    <Target Name="PublishServerIntoPackage" BeforeTargets="_GetPackageFiles">
+        <RemoveDir Directories="$(ServerPublishDir)" />
+        <MSBuild Projects="$(ServerProject)"
+                 Targets="Publish"
+                 Properties="Configuration=$(Configuration);PublishDir=$(ServerPublishDir);SelfContained=false;UseAppHost=true" />
+        <ItemGroup>
+            <ServerFile Include="$(ServerPublishDir)**\*" Exclude="$(ServerPublishDir)**\*.pdb" />
+            <Content Include="@(ServerFile)"
+                     Pack="true"
+                     PackagePath="contentFiles\any\any\AumlServer\%(RecursiveDir)"
+                     PackageCopyToOutput="true"
+                     BuildAction="None" />
+        </ItemGroup>
+    </Target>
+
+</Project>

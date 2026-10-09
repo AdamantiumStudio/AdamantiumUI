@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup.AST;
 
@@ -7,11 +8,10 @@ namespace Adamantium.UI.Markup.AST;
 /// <c>prefix:Type</c> form and inside <c>{x:Type ...}</c>). See <see cref="AumlDirectives.All"/>.</summary>
 public sealed class AumlDirectiveInfo
 {
-    public AumlDirectiveInfo(string name, string description, bool isTypeReference = false,
+    public AumlDirectiveInfo(string name, bool isTypeReference = false,
         AumlDirectiveUsage usage = AumlDirectiveUsage.Attribute, IReadOnlyList<string> values = null)
     {
         Name = name;
-        Description = description;
         IsTypeReference = isTypeReference;
         Usage = usage;
         Values = values ?? [];
@@ -19,7 +19,8 @@ public sealed class AumlDirectiveInfo
 
     public string Name { get; }
 
-    public string Description { get; }
+    /// <summary>What the directive does, in the language of the current UI culture.</summary>
+    public string Description => MarkupMessages.Directive(Name);
 
     public bool IsTypeReference { get; }
 

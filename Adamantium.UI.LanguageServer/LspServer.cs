@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -77,6 +78,7 @@ public sealed class LspServer
             case "initialize":
                 _refreshesSemanticTokens = msg["params"]?["capabilities"]?["workspace"]?["semanticTokens"]?["refreshSupport"]
                     ?.GetValue<bool>() == true;
+                SpeakLanguage(msg["params"]?["locale"]?.GetValue<string>());
                 Reply(id, InitializeResult());
                 break;
 
@@ -207,6 +209,24 @@ public sealed class LspServer
         }
 
         return false;
+    }
+
+    private static void SpeakLanguage(string locale)
+    {
+        if (string.IsNullOrEmpty(locale))
+        {
+            return;
+        }
+
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(locale);
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+        catch (CultureNotFoundException)
+        {
+        }
     }
 
     private static JsonNode InitializeResult() => new JsonObject
@@ -450,7 +470,7 @@ public sealed class LspServer
         var newName = @params["newName"]?.GetValue<string>()?.Trim();
         if (!ResourceKeyUsages.IsKeyName(newName))
         {
-            why = $"'{newName}' cannot be a resource key: a letter or '_' first, then letters, digits, '_', '.' or '-'.";
+            why = ServerMessages.KeyNameInvalid(newName);
             return null;
         }
 
@@ -714,7 +734,7 @@ public sealed class LspServer
         {
             var found = IsLanguageFile(uri)
                 ? LanguageFileValidator.Validate(UriToLocalPath(uri), text, OpenText, ResolveModel(uri))
-                : ResolveModel(uri) is { } model ? AumlValidator.Validate(text, model) : [];
+                : ResolveModel(uri) is { } model ? CheckMarkup(UriToLocalPath(uri), text, model) : AumlValidator.ValidateReading(text);
             foreach (var d in found)
                 diagnostics.Add(Diagnostic(d));
 
@@ -737,6 +757,23 @@ public sealed class LspServer
             }
         }
         Notify("textDocument/publishDiagnostics", new JsonObject { ["uri"] = uri, ["diagnostics"] = diagnostics });
+    }
+
+    private IReadOnlyList<AumlDiagnostic> CheckMarkup(string path, string text, AumlTypeModel model)
+    {
+        if (LanguageProject.Of(path) is { } project)
+        {
+            try
+            {
+                return [.. AumlBuildRun.Check(model.Compilation, project, path, text, OpenText), .. AumlValidator.ValidateBeyondBuild(text, model)];
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine($"[auml] the build's check of {path} failed: {exception.Message}");
+            }
+        }
+
+        return AumlValidator.ValidateReading(text) is { Count: > 0 } unread ? unread : AumlValidator.Validate(text, model);
     }
 
     private static JsonObject Diagnostic(AumlDiagnostic diagnostic)

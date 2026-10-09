@@ -26,6 +26,20 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>A slash typed before the end of an empty element's opening tag - &lt;Border |&gt;&lt;/Border&gt; - makes it
+        self-closing and takes its closing tag away, in markup and in language files; one undo puts it back.</p>
+        <p>A brace typed in an attribute value closes at once - Text="{|}" - and its closer is typed over; before a word it
+        is only typed.</p>
+        <p>Completion offers no abstract markup extension ({BindingBase}), no class whose Get and Set methods merely look
+        like an attached property's (Clipboard, AdamantiumComponent) as an element, no static class where a type is
+        referenced ({x:Type}, x:DataType, TargetType), and in {x:Static} only types with static values.</p>
+        <p>The problems shown in a markup file are the build's own, at the place the build reports them: the language
+        server runs the build's generator over the open file. Many mistakes the build used to let through are errors
+        now - see the UI changelog.</p>
+        <p>An xmlns a library declares for its controls is no longer underlined as an unregistered URI: the language
+        server checks every xmlns against the project's references, and one the build would not find is an error. The
+        language server speaks Russian as well as English: problems, hovers and fixes come in the language the IDE
+        names.</p>
         <p>New | AUML File offers a Data Template Set: templates picked by the type of the item, a file of their own placed
         by name wherever a template selector goes.</p>
         <p>Ctrl+click on a resource key - {ObservableResource SaveIcon} - goes to the markup that declares it; on a class
@@ -103,6 +117,10 @@
         <!-- Dynamic clr-namespace: xmlns URIs can't be pre-registered. Two complementary nets:
              the registrar resolves them upstream (mark ignored on open); the filter is an instant fallback. -->
         <daemon.highlightInfoFilter implementation="com.adamantium.auml.AumlNamespaceHighlightFilter"/>
+        <!-- A slash at the end of an empty element's opening tag takes its closing tag away. -->
+        <typedHandler implementation="com.adamantium.auml.AumlSelfClosingTypedHandler" order="first"/>
+        <!-- A brace typed in an attribute value closes at once; its closer is typed over. -->
+        <typedHandler implementation="com.adamantium.auml.AumlBraceTypedHandler" order="first"/>
 
         <!-- WPF-style split editor for .auml: XML text on the left, live engine-rendered preview on the right. -->
         <fileEditorProvider implementation="com.adamantium.auml.AumlPreviewFileEditorProvider"/>

@@ -12,6 +12,10 @@
         <PackageTags>adamantium;ui;auml;markup;xaml</PackageTags>
     </PropertyGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Include="Localization\*.alang" LogicalName="Localization/%(Filename)%(Extension)" WithCulture="false" />
+    </ItemGroup>
+
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
       <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" />

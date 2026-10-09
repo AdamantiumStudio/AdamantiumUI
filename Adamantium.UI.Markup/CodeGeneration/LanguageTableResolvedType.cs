@@ -30,6 +30,8 @@ internal sealed class LanguageTableResolvedType : IResolvedType
     public string AssemblyName { get; }
     public bool IsNamedType => true;
     public bool IsGenericType => false;
+
+    public bool IsCreatable => false;
     public EntityType EntityType => EntityType.Unknown;
     public IEnumerable<IResolvedType> TypeArguments => [];
     public IResolvedType BaseType => null;

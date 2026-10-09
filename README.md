@@ -357,6 +357,7 @@ Alpha: what is listed above works, and the API will change. Not there yet:
 | `Adamantium.UI.FX` | The UI's shaders |
 | `Adamantium.UI.Markup` | The AUML parser and document model |
 | `Adamantium.Navigation` | Navigation, regions and dialogs driven from view-models |
+| `Adamantium.UI.LanguageServer` | The AUML language server, copied to `AumlServer` beside an application that edits AUML |
 | `Adamantium.UI.Templates` | The `dotnet new` templates |
 
 All packages share one version and are released together.
