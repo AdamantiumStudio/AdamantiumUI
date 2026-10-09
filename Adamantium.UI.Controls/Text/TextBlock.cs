@@ -422,6 +422,11 @@ public class TextBlock : InputUIComponent
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         var size = EnsureLayout();
+        // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
+        // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
+        // against, short of the slot's edge.
+        if (UseSlotWidth(RenderSize.Width))
+            EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
         return size;
@@ -433,14 +438,22 @@ public class TextBlock : InputUIComponent
         // A trimmed block trims to the slot it actually GOT, which is not always the one it was measured against: a tab
         // header is measured unbounded and then capped by the tab's MaxWidth, so the boundary only exists here. Re-stated
         // before the layout call so the ellipsis lands at the real edge instead of at a width nobody will give it.
-        if (TextTrimming != TextTrimming.None && double.IsNaN(Width) && finalSize.Width > 0)
-            _lastConstraint = new Size(finalSize.Width, _lastConstraint.Height);
+        UseSlotWidth(finalSize.Width);
 
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
         return finalSize;
+    }
+
+    private bool UseSlotWidth(double slot)
+    {
+        if (TextTrimming == TextTrimming.None || !double.IsNaN(Width) || slot <= 0)
+            return false;
+
+        _lastConstraint = new Size(slot, _lastConstraint.Height);
+        return true;
     }
 
     TextRenderingParameters GetTextRenderingParameters()

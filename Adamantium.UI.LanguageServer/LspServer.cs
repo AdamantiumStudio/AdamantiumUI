@@ -196,6 +196,14 @@ public sealed class LspServer
                 Reply(id, FormattingResult(msg["params"]));
                 break;
 
+            case "textDocument/documentColor":
+                Reply(id, DocumentColorResult(msg["params"]));
+                break;
+
+            case "textDocument/colorPresentation":
+                Reply(id, ColorPresentationResult(msg["params"]));
+                break;
+
             case "shutdown":
                 Reply(id, null);
                 break;
@@ -246,6 +254,7 @@ public sealed class LspServer
             ["codeActionProvider"] = true,
             ["documentFormattingProvider"] = true,
             ["documentRangeFormattingProvider"] = true,
+            ["colorProvider"] = true,
             ["semanticTokensProvider"] = new JsonObject
             {
                 ["legend"] = new JsonObject
@@ -287,6 +296,12 @@ public sealed class LspServer
         {
             var node = new JsonObject { ["label"] = item.Label, ["kind"] = LspKind(item.Kind) };
             if (item.Detail is not null) node["detail"] = item.Detail;
+            if (item.Color is not null)
+            {
+                // Color kind, the color in the documentation: what editors read to draw a swatch beside the item.
+                node["kind"] = 16;
+                node["documentation"] = item.Color;
+            }
             if (item.ReplaceBack is { } back)
             {
                 // Explicit edit range over the last typed segment, so the client filters/replaces on it (not the
@@ -527,6 +542,43 @@ public sealed class LspServer
         ["start"] = new JsonObject { ["line"] = startLine, ["character"] = startCharacter },
         ["end"] = new JsonObject { ["line"] = endLine, ["character"] = endCharacter }
     };
+
+    private JsonNode DocumentColorResult(JsonNode @params)
+    {
+        var uri = @params["textDocument"]["uri"].GetValue<string>();
+        var result = new JsonArray();
+        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out var text) || ResolveModel(uri) is not { } model)
+        {
+            return result;
+        }
+
+        foreach (var found in new DocumentColorEngine(model).Find(text))
+        {
+            var (startLine, startCharacter) = TextPositions.LineAndCharacter(text, found.Start);
+            var (endLine, endCharacter) = TextPositions.LineAndCharacter(text, found.Start + found.Length);
+            result.Add(new JsonObject
+            {
+                ["range"] = RangeJson(startLine, startCharacter, endLine, endCharacter),
+                ["color"] = new JsonObject
+                {
+                    ["red"] = found.Color.R / 255.0, ["green"] = found.Color.G / 255.0, ["blue"] = found.Color.B / 255.0,
+                    ["alpha"] = found.Color.A / 255.0
+                }
+            });
+        }
+
+        return result;
+    }
+
+    // A color picked in the editor's picker, written back as markup writes a color.
+    private static JsonNode ColorPresentationResult(JsonNode @params)
+    {
+        var color = @params["color"];
+        static byte Channel(JsonNode value) => (byte)Math.Round(Math.Clamp(value.GetValue<double>(), 0, 1) * 255);
+        var picked = new Adamantium.Mathematics.Color(Channel(color["red"]), Channel(color["green"]), Channel(color["blue"]),
+            Channel(color["alpha"]));
+        return new JsonArray { new JsonObject { ["label"] = AumlColors.Hex(picked) } };
+    }
 
     private JsonNode DocumentSymbolResult(JsonNode @params)
     {

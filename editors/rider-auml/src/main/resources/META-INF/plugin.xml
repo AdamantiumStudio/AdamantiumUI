@@ -32,7 +32,11 @@
         is only typed.</p>
         <p>Completion offers no abstract markup extension ({BindingBase}), no class whose Get and Set methods merely look
         like an attached property's (Clipboard, AdamantiumComponent) as an element, no static class where a type is
-        referenced ({x:Type}, x:DataType, TargetType), and in {x:Static} only types with static values.</p>
+        referenced ({x:Type}, x:DataType, TargetType), and in {x:Static} only types with static values. In a property
+        element it offers what the property can hold: brushes in &lt;Border.Background&gt;, RowDefinition in
+        &lt;Grid.RowDefinitions&gt;.</p>
+        <p>Colors: a color in completion shows a swatch of itself, and every color a file writes - Background="Tomato",
+        Color="#FF8000", a setter's - gets one beside it, read as the framework reads it.</p>
         <p>The problems shown in a markup file are the build's own, at the place the build reports them: the language
         server runs the build's generator over the open file. Many mistakes the build used to let through are errors
         now - see the UI changelog.</p>

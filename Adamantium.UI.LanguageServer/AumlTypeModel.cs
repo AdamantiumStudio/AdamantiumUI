@@ -737,26 +737,52 @@ public sealed class AumlTypeModel
     /// abstract nor static nor generic, with a public parameterless constructor, and no attribute, event data or
     /// exception - or the owner of attached properties, which a property element names
     /// (<c>&lt;ResourceContext.Resources&gt;</c>).</summary>
-    public bool CanBeElement(IResolvedType type)
+    public bool CanBeElement(IResolvedType type) =>
+        CanBeCreated(type) || (type is RoslynResolvedType && GetAttachedProperties(type).Count > 0);
+
+    /// <summary>Whether the build can create the type as an element: a class or struct, neither abstract nor static nor
+    /// generic, with a public parameterless constructor, and no attribute, event data or exception.</summary>
+    public bool CanBeCreated(IResolvedType type)
     {
         if (type is MetadataResolvedType)
         {
             return true;
         }
 
-        if (type is not RoslynResolvedType { Symbol: INamedTypeSymbol symbol })
+        return type is RoslynResolvedType { Symbol: INamedTypeSymbol symbol }
+               && symbol.TypeKind is TypeKind.Class or TypeKind.Struct
+               && !symbol.IsAbstract
+               && !symbol.IsStatic
+               && !symbol.IsGenericType
+               && (symbol.TypeKind == TypeKind.Struct
+                   || symbol.InstanceConstructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public))
+               && !DerivesFrom(symbol, "System.Attribute", "System.EventArgs", "System.Exception");
+    }
+
+    /// <summary>The type of the items a collection takes: the ItemType of its [MarkupItem], or T of the
+    /// ICollection&lt;T&gt; it is; null for resources and dictionaries, and when neither says.</summary>
+    public IResolvedType ItemTypeOf(IResolvedType collection)
+    {
+        if (collection.ImplementsInterface("IResourceDictionary") || collection.ImplementsInterface("IResourceContainer") ||
+            collection.ImplementsInterface("IDictionary"))
         {
-            return false;
+            return null;
         }
 
-        var creatable = symbol.TypeKind is TypeKind.Class or TypeKind.Struct
-                        && !symbol.IsAbstract
-                        && !symbol.IsStatic
-                        && !symbol.IsGenericType
-                        && (symbol.TypeKind == TypeKind.Struct
-                            || symbol.InstanceConstructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public))
-                        && !DerivesFrom(symbol, "System.Attribute", "System.EventArgs", "System.Exception");
-        return creatable || GetAttachedProperties(type).Count > 0;
+        if (collection.GetAttribute(PropertyValues.MarkupItemAttribute) is { } item &&
+            item.NamedArguments.TryGetValue("ItemType", out var named) && named != null)
+        {
+            return _resolver.Resolve(named.ToString());
+        }
+
+        if (collection is not RoslynResolvedType { Symbol: var symbol })
+        {
+            return null;
+        }
+
+        var generic = symbol.AllInterfaces.FirstOrDefault(i =>
+            i.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.ICollection<T>");
+        return generic == null ? null : new RoslynResolvedType(generic.TypeArguments[0]);
     }
 
     /// <summary>Whether markup can write the type by name as a markup extension: a public class, neither abstract, static
@@ -823,7 +849,7 @@ public sealed class AumlTypeModel
         if (propertyType.SpecialType == ResolvedSpecialType.System_Boolean)
             return ["true", "false"];
 
-        if (propertyType.Name is "Brush" or "IBrush")
+        if (AumlColors.TakesColor(propertyType))
             return CommonColors;
 
         return [];

@@ -55,7 +55,16 @@ All packages share one version.
   attached property, where it used to fail in the generated C#. The language server's completion leaves out what
   markup cannot write there: an abstract markup extension (`{BindingBase}`), a class whose methods only look like an
   attached property's as an element, a static class as a referenced type (`{x:Type}`, `x:DataType`, `TargetType`), and
-  in `{x:Static}` a type with no static values.
+  in `{x:Static}` a type with no static values. In a property element it offers what the property can hold, by the
+  build's rule (`PropertyValues`): brushes and markup extensions in `<Border.Background>`, `RowDefinition` in
+  `<Grid.RowDefinitions>`, anything creatable in resources - no longer every element there is.
+- The language server knows colors as the framework reads them (`Colors`: a name in any case, `#` and hex): a color
+  in completion is a Color item with the color as its documentation, so an editor draws a swatch of it; and
+  `textDocument/documentColor` gives the colors a file writes - a brush or color property's value, attached ones, a
+  `Setter`'s on its style's type - with `colorPresentation` writing a picked color back as `#RRGGBB`.
+- A right-aligned, trimmed `TextBlock` stands at its slot's right edge after a measure with no arrange after it (its
+  size came out the same): it stood at the width it was measured against, short of the edge - the detail column of a
+  list whose rows are reused.
 - `FontVariations` on every element, inherited by the text inside, and on a `Run`: axis values of a variable font over
   the ones its weight, width and style set (`FontVariations="GRAD=150, opsz=36"`; `opsz=auto`, like leaving it out,
   sets the optical size to the text's size). `FontStyle` sets a variable font's 'ital' or 'slnt' axis, as CSS does.

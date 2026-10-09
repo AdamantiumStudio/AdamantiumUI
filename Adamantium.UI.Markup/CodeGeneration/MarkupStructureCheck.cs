@@ -11,7 +11,6 @@ namespace Adamantium.UI.Markup.CodeGeneration;
 /// unique in their scope - a template is one of its own - and keys unique in their dictionary.</summary>
 internal sealed class MarkupStructureCheck
 {
-    private const string MarkupItemAttribute = "Adamantium.UI.Core.MarkupItemAttribute";
     private const string ContentAttribute = "Adamantium.UI.Core.ContentAttribute";
     private const string UiTemplate = "Adamantium.UI.Core.Templates.UiTemplate";
     private const string BindingBase = "Adamantium.UI.Core.Data.BindingBase";
@@ -131,8 +130,7 @@ internal sealed class MarkupStructureCheck
             return;
         }
 
-        var many = propertyType.IsCollection() || propertyType.HasAttribute(MarkupItemAttribute) ||
-                   propertyType.ImplementsInterface("IResourceDictionary") || propertyType.ImplementsInterface("IResourceContainer");
+        var many = PropertyValues.TakesMany(propertyType);
         if (!isRoot && !reference.IsAttachedProperty && member.MemberKind == ResolvedMemberKind.Property && !member.HasSetter() && !many &&
             !property.Values.Any(IsExtension))
         {
@@ -152,7 +150,7 @@ internal sealed class MarkupStructureCheck
             return;
         }
 
-        if (property.Values.Count == 1 && TypeOf(values[0]) is { } valueType && !Fits(valueType, propertyType))
+        if (property.Values.Count == 1 && TypeOf(values[0]) is { } valueType && !PropertyValues.Fits(valueType, propertyType))
         {
             Report(MarkupMessages.WrongValueType(valueType.Name, propertyType.Name, reference.Name), values[0]);
         }
@@ -570,7 +568,7 @@ internal sealed class MarkupStructureCheck
 
         foreach (var property in parent.GetAllProperties())
         {
-            if (property.PropertyType?.GetAttribute(MarkupItemAttribute) is { } item &&
+            if (property.PropertyType?.GetAttribute(PropertyValues.MarkupItemAttribute) is { } item &&
                 item.NamedArguments.TryGetValue("ItemType", out var itemType) && itemType != null &&
                 childType.IsAssignableTo(itemType.ToString()))
             {
@@ -580,13 +578,6 @@ internal sealed class MarkupStructureCheck
 
         return null;
     }
-
-    private static bool Fits(IResolvedType value, IResolvedType property) =>
-        property.SpecialType == ResolvedSpecialType.System_Object || property.IsGenericType || value is MetadataResolvedType ||
-        value.IsAssignableTo(property.FullName) ||
-        (property.TypeKind == ResolvedTypeKind.Interface && value.ImplementsInterface(property.Name)) ||
-        (value.TypeKind == ResolvedTypeKind.Struct && property.TypeKind == ResolvedTypeKind.Struct) ||
-        value.InheritsFromMarkupExtension(AumlParser.MarupExtensionClassFullName);
 
     private bool IsExtension(IAumlAstValueNode value) => value is IAumlAstMarkupExtensionNode ||
         (value is AumlAstObjectNode element && TypeOf(element)?.InheritsFromMarkupExtension(AumlParser.MarupExtensionClassFullName) == true);
