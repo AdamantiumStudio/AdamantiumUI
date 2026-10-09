@@ -40,6 +40,18 @@ public class TextBlock : InputUIComponent
         typeof(bool), typeof(TextBlock),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender, TextParametersChangedCallback));
 
+    public static readonly AdamantiumProperty ColumnsProperty = AdamantiumProperty.Register(nameof(Columns),
+        typeof(int), typeof(TextBlock),
+        new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty ColumnGapProperty = AdamantiumProperty.Register(nameof(ColumnGap),
+        typeof(double), typeof(TextBlock),
+        new PropertyMetadata(16.0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty ExclusionsProperty = AdamantiumProperty.Register(nameof(Exclusions),
+        typeof(ExclusionList), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
     public static readonly AdamantiumProperty DropCapLinesProperty = AdamantiumProperty.Register(nameof(DropCapLines),
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
@@ -119,6 +131,11 @@ public class TextBlock : InputUIComponent
     private TabStopList _lastTabStops;
     private bool _lastOpticalMargins;
     private DropCap _lastDropCap;
+    private int _lastColumns = 1;
+    private double _lastColumnGap;
+    private ExclusionList _lastExclusions;
+    private const float Unbounded = 1e7f;
+    private const int MostColumnGrowth = 200;
     private TextAttributes _lastShaping;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
@@ -180,6 +197,7 @@ public class TextBlock : InputUIComponent
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
             && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
+            && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
             && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
@@ -193,11 +211,16 @@ public class TextBlock : InputUIComponent
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
-        _cachedSize = attributed == null
-            ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine)
-            : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
+        _textLayout.Exclusions = Exclusions;
+        _textLayout.Frames = FramesOf(width, height, Lay, out var growth);
+        _cachedSize = Lay();
+        for (var grown = 0; growth > 0 && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
+        {
+            _textLayout.Frames = _textLayout.Frames
+                .Select(frame => new RectangleF(frame.X, frame.Y, frame.Width, frame.Height + growth))
+                .ToArray();
+            _cachedSize = Lay();
+        }
         if (!fontReady || _runFontsPending || _textLayout.HasPendingFonts)
         {
             WaitForFonts(loadsSeen);
@@ -228,7 +251,47 @@ public class TextBlock : InputUIComponent
         _lastTabStops = TabStops;
         _lastOpticalMargins = OpticalMarginAlignment;
         _lastDropCap = dropCap;
+        _lastColumns = Columns;
+        _lastColumnGap = ColumnGap;
+        _lastExclusions = Exclusions;
         return _cachedSize;
+
+        Size Lay() => attributed == null
+            ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine)
+            : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
+    }
+
+    private RectangleF[] FramesOf(double width, double height, Func<Size> lay, out float growth)
+    {
+        growth = 0;
+        var columns = Math.Max(1, Columns);
+        if (TextWrapping != TextWrapping.WrapByWords || double.IsNaN(width) || double.IsInfinity(width)
+            || (columns == 1 && (Exclusions == null || Exclusions.Count == 0)))
+        {
+            return null;
+        }
+
+        var gap = Math.Max(0, ColumnGap);
+        var columnWidth = (float)Math.Max(1, (width - gap * (columns - 1)) / columns);
+        var columnHeight = (float)height;
+        if (double.IsNaN(height) || double.IsInfinity(height))
+        {
+            columnHeight = Unbounded;
+            if (columns > 1)
+            {
+                _textLayout.Frames = [new RectangleF(0, 0, columnWidth, Unbounded)];
+                lay();
+                var lineHeight = Enumerable.Range(0, _textLayout.LineCount).Min(line => _textLayout.GetLine(line).Height);
+                growth = (float)lineHeight;
+                columnHeight = (float)(Math.Ceiling(_textLayout.LineCount / (double)columns) * lineHeight + 1);
+            }
+        }
+
+        return Enumerable.Range(0, columns)
+            .Select(column => new RectangleF((float)(column * (columnWidth + gap)), 0, columnWidth, columnHeight))
+            .ToArray();
     }
 
     private DropCap DropCapOf(ref bool fontReady)
@@ -288,6 +351,32 @@ public class TextBlock : InputUIComponent
         get => GetValue<bool>(JustifyLastLineProperty);
         set => SetValue(JustifyLastLineProperty, value);
     }
+
+    /// <summary>How many columns text wrapped by words flows through, side by side, the next taking up where the last
+    /// ends; 1 by default. Without a <see cref="Height"/> the columns are as tall as the text split evenly needs.</summary>
+    public int Columns
+    {
+        get => GetValue<int>(ColumnsProperty);
+        set => SetValue(ColumnsProperty, value);
+    }
+
+    /// <summary>The space between <see cref="Columns"/>; 16 by default.</summary>
+    public double ColumnGap
+    {
+        get => GetValue<double>(ColumnGapProperty);
+        set => SetValue(ColumnGapProperty, value);
+    }
+
+    /// <summary>Areas of the block, as a picture placed over it takes, that text wrapped by words flows around:
+    /// <c>Exclusions="0,0,120,90; 240,200,100,100"</c> - left, top, width and height of each.</summary>
+    public ExclusionList Exclusions
+    {
+        get => GetValue<ExclusionList>(ExclusionsProperty);
+        set => SetValue(ExclusionsProperty, value);
+    }
+
+    /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/>, so that the rest is not shown.</summary>
+    public bool IsOverset => _textLayout != null && _textLayout.Frames != null && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
     /// 2 or more; 0 (the default) for none. Text wrapped by words only.</summary>

@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- Columns and exclusions on `TextBlock`: `Columns` and `ColumnGap` flow text wrapped by words through columns side by
+  side - as tall as the text split evenly needs when the block has no height - and `Exclusions`
+  (`"0,0,120,90; 240,200,100,100"`, an `ExclusionList`) are areas it flows around, as a picture placed over it takes;
+  `IsOverset` tells that the text did not all fit. Sandbox Paragraph topic: three balanced columns, and text flowing
+  around a picture.
 - Drop caps on `TextBlock`: `DropCapLines` (2 or more; 0, the default, for none), `DropCapCharacters` and
   `DropCapFontFamily` for a decorative face of initials. Sandbox Paragraph topic: a drop cap across three lines, and
   an initial of the liturgical books (Vertograd) across four.
