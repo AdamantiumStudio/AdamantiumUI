@@ -47,6 +47,9 @@ public class Run : Inline
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
+    public static readonly AdamantiumProperty FontVariationsProperty = AdamantiumProperty.Register(nameof(FontVariations),
+        typeof(FontVariationList), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
     public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
         typeof(string), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
@@ -120,6 +123,13 @@ public class Run : Inline
     {
         get => GetValue<FontFeatureList>(FontFeaturesProperty);
         set => SetValue(FontFeaturesProperty, value);
+    }
+
+    /// <summary>Axis values of a variable font for this run; null takes the TextBlock's.</summary>
+    public FontVariationList FontVariations
+    {
+        get => GetValue<FontVariationList>(FontVariationsProperty);
+        set => SetValue(FontVariationsProperty, value);
     }
 
     /// <summary>The language of this run (BCP 47); null takes the TextBlock's.</summary>

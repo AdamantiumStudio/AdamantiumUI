@@ -387,6 +387,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontFeaturesProperty, value);
     }
 
+    public static readonly AdamantiumProperty FontVariationsProperty = AdamantiumProperty.Register(nameof(FontVariations),
+        typeof(FontVariationList), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Axis values of a variable font for the text in this element and its descendants, over the ones
+    /// <see cref="FontWeight"/>, <see cref="FontStretch"/> and <see cref="FontStyle"/> set:
+    /// <c>FontVariations="GRAD=150, opsz=36"</c>.</summary>
+    public FontVariationList FontVariations
+    {
+        get => GetValue<FontVariationList>(FontVariationsProperty);
+        set => SetValue(FontVariationsProperty, value);
+    }
+
     public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
         typeof(string), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -403,26 +416,42 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <summary>The face of <paramref name="family"/> this element's text is set in: the one nearest to its
     /// <see cref="FontWeight"/>, <see cref="FontStyle"/> and <see cref="FontStretch"/>. A control that lays out text of
     /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
-    public IFont ResolveFont(FontFamily family) => family.GetFont(FontWeight, FontStyle, FontStretch);
+    public IFont ResolveFont(FontFamily family)
+    {
+        var font = family.GetFont(FontWeight, FontStyle, FontStretch);
+        return FontVariations?.Apply(font) ?? font;
+    }
 
     /// <summary>The face <see cref="ResolveFont"/> gives, without waiting for its file to be parsed: false while it
     /// loads, with the family's own face standing in (<see cref="FontFamily.TryGetFont"/>). A render with no next frame
     /// (<see cref="FontAtlasStore.SynchronousFill"/>) waits instead. A control that got false asks to be told when fonts
     /// arrive (<see cref="WaitForFonts"/>).</summary>
     public bool TryResolveFont(FontFamily family, out IFont font) =>
-        TryResolveFont(family, FontWeight, FontStyle, FontStretch, out font);
+        TryResolveFont(family, FontWeight, FontStyle, FontStretch, FontVariations, out font);
 
     /// <summary>The face of <paramref name="family"/> nearest to the weight, slant and width given (a run's own), as
     /// <see cref="TryResolveFont(FontFamily, out IFont)"/> finds it.</summary>
-    public bool TryResolveFont(FontFamily family, FontWeight weight, FontStyle style, FontStretch stretch, out IFont font)
+    public bool TryResolveFont(FontFamily family, FontWeight weight, FontStyle style, FontStretch stretch, out IFont font) =>
+        TryResolveFont(family, weight, style, stretch, null, out font);
+
+    /// <summary>The face <see cref="TryResolveFont(FontFamily, FontWeight, FontStyle, FontStretch, out IFont)"/> finds,
+    /// with <paramref name="variations"/> over its axis values.</summary>
+    public bool TryResolveFont(FontFamily family, FontWeight weight, FontStyle style, FontStretch stretch,
+        FontVariationList variations, out IFont font)
     {
+        bool ready;
         if (FontAtlasStore.SynchronousFill)
         {
             font = family.GetFont(weight, style, stretch);
-            return true;
+            ready = true;
+        }
+        else
+        {
+            ready = family.TryGetFont(weight, style, stretch, out font);
         }
 
-        return family.TryGetFont(weight, style, stretch, out font);
+        font = variations?.Apply(font) ?? font;
+        return ready;
     }
 
     /// <summary>Asks to be told, on the loop, when a font file finishes loading: <see cref="OnFontsArrived"/>.

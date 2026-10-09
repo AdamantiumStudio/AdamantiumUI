@@ -175,6 +175,12 @@
 		<Content Include="Fonts\NotoColorEmoji.subset.ttf;Fonts\samples-sbix.ttf;Fonts\test_glyphs-glyf_colr_1.ttf;Fonts\samples-picosvg.ttf;Fonts\samples-glyf_colr_1.ttf;Fonts\LICENSE-NotoColorEmoji.txt;Fonts\LICENSE-color-fonts.txt">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Include="..\Tests\Adamantium.UITests\Fonts\RobotoFlex-Variable.ttf" Link="Fonts\RobotoFlex-Variable.ttf">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\Tests\Adamantium.UITests\Fonts\LICENSE-RobotoFlex.txt" Link="Fonts\LICENSE-RobotoFlex.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<Content Update="Effects\structs.hlsl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
