@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from
+  its first strong letter): `TextBlock` and `TextBox` lay Hebrew right to left among Latin and numbers, and a
+  right-to-left paragraph starts on the right. In such text the `TextBox` caret and selection go by the screen: the
+  caret stands where the click was and after the letter just typed, the arrows move it a letter left or right on
+  screen, Home and End to the line's edges, and a drag selects what lies between the press and the pointer, even
+  where those letters lie apart in the text (copy takes them in reading order, typing replaces them all; undo brings
+  the text back without the selection). The placeholder of an empty right-to-left box stands on the right. Text in one
+  direction behaves as before. Sandbox text page: a paragraph and an editor with a switch between the directions.
+
 - `FontVariations` can move: `FontVariationListAnimation` (From, To) and `FontVariationListTransition`, CSS's
   transition of `font-variation-settings`. Each frame is laid out at its own axis values and drawn between the font's
   key instances on the way, so a weight animation does not fill the glyph atlas a frame at a time; at rest the text is
@@ -589,6 +598,7 @@ All packages share one version.
 
 ### Fixed
 
+- `TextBox.MaxLength` with room for half of an emoji inserted a lone surrogate; it inserts none of the emoji now.
 - A virtualized list that wants its rows kept the height of the rows it had: a folder opened in a tree with a
   `MaxHeight` scrolled its new rows under the tree's edge. It now grows with them, up to the slot.
 - A list nothing scrolls - an `ItemsControl` on a scrolling page, measured unbounded - realized a default screenful of

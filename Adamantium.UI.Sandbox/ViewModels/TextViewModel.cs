@@ -71,6 +71,16 @@ public partial class TextViewModel : TabPageViewModel
 
     public FontVariationList MovingVariations => Heavy ? HeavyVariations : LightVariations;
 
+    // Hebrew among Latin, with a number and brackets: each piece runs its own way.
+    public string BidiSample => "Shalom is שָׁלוֹם (peace), 2026 times: שלום עולם 123!";
+
+    [Bindable] private string _bidiEditable = "שלום world, עולם 42";
+
+    // Turns the bidi sample and its editor from left to right to right to left.
+    [Bindable, Affects(nameof(BidiDirection))] private bool _rightToLeft;
+
+    public TextDirection BidiDirection => RightToLeft ? TextDirection.RightToLeft : TextDirection.LeftToRight;
+
     private IReadOnlyList<FontAxisItem> _axisItems;
 
     public int MessageLength => Message?.Length ?? 0;

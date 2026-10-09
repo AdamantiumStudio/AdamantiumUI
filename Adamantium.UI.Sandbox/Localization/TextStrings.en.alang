@@ -34,4 +34,6 @@
     <Phrase Key="VariationsTitle" Text="FontVariations over the weight (heavy $ ¢ ₴ ₦ swap their glyphs, as the font varies its features):"/>
     <Phrase Key="MovingTitle" Text="FontVariations in motion: a transition takes weight and width from one setting to the other:"/>
     <Phrase Key="Heavy" Text="Heavy and wide"/>
+    <Phrase Key="BidiTitle" Text="Both directions: Hebrew among Latin, in a paragraph and an editor:"/>
+    <Phrase Key="RightToLeft" Text="Right to left"/>
 </Language>
