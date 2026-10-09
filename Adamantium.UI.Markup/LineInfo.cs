@@ -10,6 +10,12 @@ public class LineInfo : IAumlLineInfo
         Line = info.LineNumber;
         Position = info.LinePosition;
     }
+
+    public LineInfo(int line, int position)
+    {
+        Line = line;
+        Position = position;
+    }
     public int Line { get; set; }
     public int Position { get; set; }
 

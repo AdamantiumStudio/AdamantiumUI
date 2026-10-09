@@ -8,7 +8,10 @@ public class AumlDocument
     public Logger Logger { get; set; }
     
     public bool HasErrors { get; set; }
-    
+
+    /// <summary>What makes the document unreadable, each where it is written; empty when nothing does.</summary>
+    public IReadOnlyList<AumlParseError> Errors { get; set; } = [];
+
     public NamespaceMapping[]  NamespaceMappings { get; set; }
     
     public Dictionary<string, string> NamespaceAliases { get; set; } = new ();
@@ -32,6 +35,7 @@ public class AumlDocument
         {
             Logger = Logger,
             HasErrors = HasErrors,
+            Errors = Errors,
             NamespaceMappings = NamespaceMappings,
             NamespaceAliases = new Dictionary<string, string>(NamespaceAliases),
             Root = (AumlAstObjectNode)Root?.Clone(null),

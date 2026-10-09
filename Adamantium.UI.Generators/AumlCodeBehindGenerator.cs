@@ -7,6 +7,7 @@ using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Generators.Localization;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
+using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Generators
 {
@@ -22,8 +23,10 @@ namespace Adamantium.UI.Generators
                 options.GlobalOptions.TryGetValue("build_property.projectdir", out var projectDir);
                 options.GlobalOptions.TryGetValue("build_property.NeutralLanguage", out var neutralLanguage);
                 options.GlobalOptions.TryGetValue("build_property.AdamantiumRequireAutomationId", out var requireAutomationId);
+                options.GlobalOptions.TryGetValue("build_property." + CheckFileProperty, out var checkFile);
                 return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage,
-                    RequireAutomationId: string.Equals(requireAutomationId, "true", System.StringComparison.OrdinalIgnoreCase));
+                    RequireAutomationId: string.Equals(requireAutomationId, "true", System.StringComparison.OrdinalIgnoreCase),
+                    CheckFile: string.IsNullOrEmpty(checkFile) ? null : checkFile);
             });
 
             // Parsing is its own PER-FILE step, so Roslyn caches each document: it used to sit inside the output below,
@@ -57,7 +60,7 @@ namespace Adamantium.UI.Generators
 
                 if (string.IsNullOrEmpty(properties.RootNamespace))
                 {
-                    spc.ReportDiagnostic(Diagnostic.Create("AUI001", "Build", "No RootNamespace Compiler option provided. Please add <CompilerVisibleProperty Include=\"RootNamespace\" /> to your csproj file.", DiagnosticSeverity.Error, DiagnosticSeverity.Error, true, 0));
+                    spc.ReportDiagnostic(Diagnostic.Create("AUI001", "Build", MarkupMessages.NoRootNamespaceOption(), DiagnosticSeverity.Error, DiagnosticSeverity.Error, true, 0));
                     return;
                 }
 
@@ -73,27 +76,41 @@ namespace Adamantium.UI.Generators
                 // Report what parsing found, and work on a COPY: the parsed document belongs to the cache.
                 foreach (var file in parsed)
                 {
-                    var diagnostics = new RoslynDiagnosticSink(spc);
+                    var diagnostics = new RoslynDiagnosticSink(spc, file.Path);
+                    var judged = IsChecked(file.Path, properties.CheckFile);
+
+                    if (file.Document.HasErrors && !judged)
+                    {
+                        continue;
+                    }
 
                     if (file.Document.HasErrors)
                     {
-                        foreach (var message in file.Document.Logger.Messages)
+                        if (file.Document.Errors.Count > 0)
                         {
-                            diagnostics.ReportLogMessage(file.Path, message);
+                            foreach (var error in file.Document.Errors)
+                            {
+                                diagnostics.ReportError(System.IO.Path.GetFileNameWithoutExtension(file.Path), error.Message, error.At);
+                            }
                         }
+                        else
+                        {
+                            foreach (var message in file.Document.Logger.Messages)
+                            {
+                                diagnostics.ReportLogMessage(file.Path, message);
+                            }
+                        }
+
                         continue;
                     }
 
                     var aumlDoc = file.Document.Clone();
                     var relativePath = aumlDoc.RelativeFilePath;
 
-                    foreach (var finding in QuickAccessMenuCheck.Run(aumlDoc))
+                    foreach (var finding in judged ? QuickAccessMenuCheck.Run(aumlDoc) : [])
                     {
                         spc.ReportDiagnostic(Diagnostic.Create("AUI010", "Ribbon",
-                            $"{relativePath}({finding.Line},{finding.Position}): {finding.Command} states its menu as MenuItem CONTROLS. " +
-                            "Taken into the quick-access bar it will drop an EMPTY menu - a ContextMenu is a logical child and " +
-                            "cannot be in two places, so only the row DATA travels. State the rows as ItemsSource + ItemTemplate, " +
-                            "or say Ribbon.CanAddToQuickAccess=\"False\" if this command is not for the bar.",
+                            MarkupMessages.QuickAccessMenuControls(relativePath, finding.Line, finding.Position, finding.Command),
                             DiagnosticSeverity.Warning, DiagnosticSeverity.Warning, true, 1));
                     }
 
@@ -122,7 +139,12 @@ namespace Adamantium.UI.Generators
 
                 foreach (var aumlDoc in sortedMetadata)
                 {
-                    var diagnostics = new RoslynDiagnosticSink(spc);
+                    if (!IsChecked(aumlDoc.SourceFilePath, properties.CheckFile))
+                    {
+                        continue;
+                    }
+
+                    var diagnostics = new RoslynDiagnosticSink(spc, aumlDoc.SourceFilePath);
 
                     try
                     {
@@ -154,8 +176,7 @@ namespace Adamantium.UI.Generators
                             foreach (var finding in AutomationIdCheck.Run(aumlDoc, compilation))
                             {
                                 spc.ReportDiagnostic(Diagnostic.Create("AUI011", "Automation",
-                                    $"{aumlDoc.RelativeFilePath}({finding.Line},{finding.Position}): {finding.Type} has no " +
-                                    "AutomationProperties.AutomationId, so a test cannot find it by id.",
+                                    MarkupMessages.NoAutomationId(aumlDoc.RelativeFilePath, finding.Line, finding.Position, finding.Type),
                                     DiagnosticSeverity.Warning, DiagnosticSeverity.Warning, true, 1));
                             }
                         }
@@ -177,8 +198,13 @@ namespace Adamantium.UI.Generators
                     {
                         // Don't let one bad document silently abort generation (CS8785); surface where it broke.
                         var flat = ex.ToString().Replace("\r", "").Replace("\n", " | ");
-                        spc.ReportDiagnostic(Diagnostic.Create("AUI900", "Build", $"AUML generation failed for {aumlDoc.RelativeFilePath}: {flat}", DiagnosticSeverity.Error, DiagnosticSeverity.Error, true, 0));
+                        spc.ReportDiagnostic(Diagnostic.Create("AUI900", "Build", MarkupMessages.GenerationFailed(aumlDoc.RelativeFilePath, flat), DiagnosticSeverity.Error, DiagnosticSeverity.Error, true, 0));
                     }
+                }
+
+                if (properties.CheckFile != null)
+                {
+                    return;
                 }
 
                 if (resourceDictionaries.Any())
@@ -191,6 +217,14 @@ namespace Adamantium.UI.Generators
             });
         }
         
+        /// <summary>The build property naming the one markup file to judge - an editor's open file: every file is read so
+        /// it can refer to the others, only that one is transformed and generated, and nothing the project as a whole
+        /// would get - the resource map, the entry point - is made.</summary>
+        public const string CheckFileProperty = "AdamantiumCheckFile";
+
+        private static bool IsChecked(string path, string checkFile) =>
+            checkFile == null || string.Equals(path, checkFile, System.StringComparison.OrdinalIgnoreCase);
+
         /// <summary>What the parse step is tracked under, so a test can see whether it came from cache - which a
         /// build cannot show, every csc run building a fresh driver.</summary>
         internal const string ParseStepName = "AumlParse";
@@ -208,7 +242,12 @@ namespace Adamantium.UI.Generators
             {
                 var logger = new Adamantium.Core.Logger();
                 logger.Error(e.Message);
-                document = new AumlDocument { Logger = logger, HasErrors = true };
+                document = new AumlDocument
+                {
+                    Logger = logger,
+                    HasErrors = true,
+                    Errors = [new AumlParseError(XmlProblem.MessageOf(e), new LineInfo(e.LineNumber, e.LinePosition))]
+                };
             }
 
             var relativePath = path.Replace(projectDir ?? string.Empty, string.Empty).Replace("\\", "/");

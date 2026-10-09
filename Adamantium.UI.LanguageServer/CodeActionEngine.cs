@@ -52,7 +52,7 @@ public static class CodeActionEngine
                 if (declaredPrefix == elementPrefix) continue;       // nothing would change
                 var newName = declaredPrefix.Length == 0 ? local : $"{declaredPrefix}:{local}";
                 actions.Add(new AumlCodeAction(
-                    $"Qualify with '{newName}' (namespace already imported)",
+                    ServerMessages.QualifyWith(newName),
                     new[] { Replace(text, nameStart, nameEnd, newName) }));
                 continue;
             }
@@ -66,13 +66,13 @@ public static class CodeActionEngine
             {
                 // Keep the prefix the author already typed (e.g. <controls:Border> -> declare 'controls').
                 edits.Add(InsertRootAttribute(text, insertAt, $"xmlns:{elementPrefix}=\"{uri}\""));
-                actions.Add(new AumlCodeAction($"Import '{uri}' for prefix '{elementPrefix}'", edits));
+                actions.Add(new AumlCodeAction(ServerMessages.ImportForPrefix(uri, elementPrefix), edits));
             }
             else if (elementPrefix.Length == 0 && !namespaces.ContainsKey(""))
             {
                 // Unprefixed element with no default xmlns — declare it (resolves all unprefixed elements at once).
                 edits.Add(InsertRootAttribute(text, insertAt, $"xmlns=\"{uri}\""));
-                actions.Add(new AumlCodeAction($"Declare default xmlns '{uri}'", edits));
+                actions.Add(new AumlCodeAction(ServerMessages.DeclareDefaultXmlns(uri), edits));
             }
             else
             {
@@ -80,7 +80,7 @@ public static class CodeActionEngine
                 var prefix = UniquePrefix(SuggestPrefix(uri), namespaces);
                 edits.Add(InsertRootAttribute(text, insertAt, $"xmlns:{prefix}=\"{uri}\""));
                 edits.Add(Replace(text, nameStart, nameEnd, $"{prefix}:{local}"));
-                actions.Add(new AumlCodeAction($"Import '{uri}' (as '{prefix}:')", edits));
+                actions.Add(new AumlCodeAction(ServerMessages.ImportAs(uri, prefix), edits));
             }
         }
 
@@ -104,7 +104,7 @@ public static class CodeActionEngine
         if (insertAt < 0) return null;
 
         return new AumlCodeAction(
-            $"Declare xmlns:{prefix}=\"{uri}\"",
+            ServerMessages.DeclareXmlns(prefix, uri),
             new[] { InsertRootAttribute(text, insertAt, $"xmlns:{prefix}=\"{uri}\"") });
     }
 

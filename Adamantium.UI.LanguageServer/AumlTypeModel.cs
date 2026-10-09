@@ -600,50 +600,15 @@ public sealed class AumlTypeModel
             if (member is not { MemberKind: ResolvedMemberKind.Property }) continue;
             result.Add(new AumlPropertyInfo(property.Name, property.PropertyType));
         }
-        AddGeneratedMvvmMembers(type, result, seen);
+        foreach (var (name, memberType) in ViewModelMembers.Generated(type))
+        {
+            if (seen.Add(name))
+            {
+                result.Add(new AumlPropertyInfo(name, memberType));
+            }
+        }
+
         return result;
-    }
-
-    // The no-build type model doesn't run source generators, so members the Adamantium.MVVM generator would emit
-    // aren't real symbols. Synthesize them from the attributes the author wrote (matching the generator's naming) so
-    // {Binding} still completes them: [Command] method M -> "MCommand"; [Bindable] field _x -> property "X".
-    private static void AddGeneratedMvvmMembers(IResolvedType type, List<AumlPropertyInfo> result, HashSet<string> seen)
-    {
-        const string commandAttr = "Adamantium.MVVM.CommandAttribute";
-        const string bindableAttr = "Adamantium.MVVM.BindableAttribute";
-        for (var declaring = type; declaring != null; declaring = declaring.BaseType)
-        {
-            AddGeneratedMvvmMembersOf(declaring, commandAttr, bindableAttr, result, seen);
-        }
-    }
-
-    private static void AddGeneratedMvvmMembersOf(IResolvedType type, string commandAttr, string bindableAttr,
-        List<AumlPropertyInfo> result, HashSet<string> seen)
-    {
-        foreach (var member in type.Members ?? Enumerable.Empty<IResolvedMember>())
-        {
-            if (member.MemberKind == ResolvedMemberKind.Method && member.HasAttribute(commandAttr))
-            {
-                var name = member.Name + "Command";
-                if (seen.Add(name)) result.Add(new AumlPropertyInfo(name, null));
-            }
-            else if (member.MemberKind == ResolvedMemberKind.Field && member.HasAttribute(bindableAttr))
-            {
-                var name = MvvmPropertyName(member.Name);
-                if (name is not null && seen.Add(name)) result.Add(new AumlPropertyInfo(name, member.MemberType));
-            }
-        }
-    }
-
-    // Field-name -> generated property name, as the MVVM generator does it: drop a leading "_" or "m_", upper-case the
-    // first letter. "_title"/"m_title"/"title" -> "Title".
-    private static string MvvmPropertyName(string fieldName)
-    {
-        var n = fieldName;
-        if (n.StartsWith("m_", StringComparison.Ordinal)) n = n[2..];
-        else if (n.StartsWith("_", StringComparison.Ordinal)) n = n[1..];
-        if (n.Length == 0) return null;
-        return char.ToUpperInvariant(n[0]) + n[1..];
     }
 
     /// <summary>First element type with this simple name across all registered xmlns namespaces — used
@@ -750,9 +715,9 @@ public sealed class AumlTypeModel
     /// </summary>
     public IReadOnlyList<AumlPropertyInfo> GetAttachedProperties(IResolvedType owner)
     {
-        var members = owner.Members.Where(m => m.MemberKind == ResolvedMemberKind.Method).ToList();
+        var members = owner.Members.Where(m => m.MemberKind == ResolvedMemberKind.Method && m.IsStatic && m.IsPublic).ToList();
         var setters = new HashSet<string>(
-            members.Where(m => m.Name.StartsWith("Set", StringComparison.Ordinal) && m.Name.Length > 3)
+            members.Where(m => m.Name.StartsWith("Set", StringComparison.Ordinal) && m.Name.Length > 3 && m.ParameterNames.Count == 2)
                    .Select(m => m.Name[3..]),
             StringComparer.Ordinal);
 
@@ -760,7 +725,7 @@ public sealed class AumlTypeModel
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var getter in members)
         {
-            if (!getter.Name.StartsWith("Get", StringComparison.Ordinal) || getter.Name.Length <= 3) continue;
+            if (!getter.Name.StartsWith("Get", StringComparison.Ordinal) || getter.Name.Length <= 3 || getter.ParameterNames.Count != 1) continue;
             var name = getter.Name[3..];
             if (!setters.Contains(name) || !seen.Add(name)) continue;
             result.Add(new AumlPropertyInfo(name, getter.MemberType));   // getter return type = the property's value type
@@ -792,6 +757,38 @@ public sealed class AumlTypeModel
                             || symbol.InstanceConstructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public))
                         && !DerivesFrom(symbol, "System.Attribute", "System.EventArgs", "System.Exception");
         return creatable || GetAttachedProperties(type).Count > 0;
+    }
+
+    /// <summary>Whether markup can write the type by name as a markup extension: a public class, neither abstract, static
+    /// nor generic, with a public constructor.</summary>
+    public static bool CanBeExtension(IResolvedType type) =>
+        type is not RoslynResolvedType { Symbol: INamedTypeSymbol symbol } ||
+        symbol is { TypeKind: TypeKind.Class, IsAbstract: false, IsStatic: false, IsGenericType: false, DeclaredAccessibility: Accessibility.Public } &&
+        symbol.InstanceConstructors.Any(c => c.DeclaredAccessibility == Accessibility.Public);
+
+    /// <summary>Whether a type reference - {x:Type}, x:DataType, TargetType - can name the type: not a static class, nor
+    /// a generic one markup has no way to give arguments to.</summary>
+    public static bool CanBeReferenced(IResolvedType type) =>
+        type is not RoslynResolvedType { Symbol: INamedTypeSymbol symbol } || symbol is { IsStatic: false, IsGenericType: false };
+
+    /// <summary>Whether {x:Static} can read something of the type: an enum, or a type with a public static field or
+    /// property.</summary>
+    public static bool HasStaticValues(IResolvedType type)
+    {
+        if (type.TypeKind == ResolvedTypeKind.Enum)
+        {
+            return true;
+        }
+
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            if (current.Members.Any(m => m.IsStatic && m.IsPublic && m.MemberKind is ResolvedMemberKind.Field or ResolvedMemberKind.Property))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool DerivesFrom(INamedTypeSymbol symbol, params string[] baseNames)
@@ -841,7 +838,7 @@ public sealed class AumlTypeModel
         foreach (var assembly in _resolver.ResolvedAssemblies)
             foreach (var type in assembly.Types)
             {
-                if (type.Name == "MarkupExtension" || !type.InheritsFromMarkupExtension(baseFqn)) continue;
+                if (!type.InheritsFromMarkupExtension(baseFqn) || !CanBeExtension(type)) continue;
                 var name = type.Name;
                 if (name.EndsWith("Extension") && name.Length > "Extension".Length) name = name[..^"Extension".Length];
                 names.Add(name);

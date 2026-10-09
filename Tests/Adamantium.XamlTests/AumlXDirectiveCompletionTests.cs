@@ -78,9 +78,15 @@ public class AumlXDirectiveCompletionTests
 
     [TestCase("""<Border Width="{x:Static local:|}"/>""", "Metrics", "Panelish", "Speed")]
     [TestCase("""<Border Width="{x:Static |}"/>""", "Metrics", "Panelish", "Speed")]
-    [TestCase("""<Border Width="{x:Type local:|}"/>""", "Metrics", "Panelish", "Speed")]
+    [TestCase("""<Border Width="{x:Type local:|}"/>""", "Panelish", "Speed")]
     public void InATypePosition_TheTypesAreOffered(string body, params string[] expected) =>
         Assert.That(Labels(body), Is.SupersetOf(expected));
+
+    [TestCase("""<Border Width="{x:Type local:|}"/>""")]
+    [TestCase("""<Border x:ViewModel="local:|"/>""")]
+    [TestCase("""<Border x:DataType="local:|"/>""")]
+    public void AStaticClass_IsNoTypeToReference(string body) =>
+        Assert.That(Labels(body), Does.Not.Contain("Metrics"));
 
     [TestCase("""<Border Width="{x:Static local:Metrics.|}"/>""", "Gap", "RailWidth", "Title")]
     [TestCase("""<Border Width="{x:Static local:Metrics.Ra|}"/>""", "RailWidth")]
@@ -96,8 +102,8 @@ public class AumlXDirectiveCompletionTests
     public void AnAttributeDirective_OffersItsValues(string body, params string[] expected) =>
         Assert.That(Labels(body), Is.EquivalentTo(expected));
 
-    [TestCase("""<Border x:ViewModel="local:|"/>""", "Metrics")]
-    [TestCase("""<Border x:DataType="local:|"/>""", "Metrics")]
+    [TestCase("""<Border x:ViewModel="local:|"/>""", "Panelish")]
+    [TestCase("""<Border x:DataType="local:|"/>""", "Panelish")]
     public void ATypeDirective_OffersTypes(string body, params string[] expected) =>
         Assert.That(Labels(body), Is.SupersetOf(expected));
 

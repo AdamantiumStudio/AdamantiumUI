@@ -459,7 +459,6 @@
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <!-- The list keeps its own padding - see Fluent's set. -->

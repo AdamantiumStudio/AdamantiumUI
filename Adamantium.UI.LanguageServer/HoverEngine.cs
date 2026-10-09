@@ -37,9 +37,9 @@ public sealed class HoverEngine
         var element = ResolveElement(qualifiedName, namespaces);
         if (element is null) return null;
 
-        var hover = $"**{element.Name}** — element\n\n`{element.FullName}`";
+        var hover = $"**{element.Name}** — {ServerMessages.Element()}\n\n`{element.FullName}`";
         if (element.BaseType is { } baseType)
-            hover += $"\n\nInherits `{baseType.FullName}`";
+            hover += $"\n\n{ServerMessages.Inherits($"`{baseType.FullName}`")}";
         return hover;
     }
 
@@ -51,7 +51,7 @@ public sealed class HoverEngine
         if (attrPrefix.Length > 0 && namespaces.TryGetValue(attrPrefix, out var ns) && ns == AumlXDirectives.Xmlns)
         {
             var directive = AumlXDirectives.All.FirstOrDefault(d => d.Name == local);
-            return directive.Name is null ? null : $"**{attrPrefix}:{directive.Name}** — directive\n\n{directive.Detail}";
+            return directive.Name is null ? null : $"**{attrPrefix}:{directive.Name}** — {ServerMessages.Directive()}\n\n{directive.Detail}";
         }
 
         var element = ResolveElement(ctx.ElementName, namespaces);
@@ -59,10 +59,10 @@ public sealed class HoverEngine
 
         var type = _model.GetPropertyType(element, local);
         if (type is not null)
-            return $"**{local}** : `{type.Name}`\n\non `{element.FullName}`";
+            return $"**{local}** : `{type.Name}`\n\n{ServerMessages.On($"`{element.FullName}`")}";
 
         // Known member that isn't a settable property (event, read-only, …).
-        return _model.IsKnownAttribute(element, local) ? $"**{local}**\n\non `{element.FullName}`" : null;
+        return _model.IsKnownAttribute(element, local) ? $"**{local}**\n\n{ServerMessages.On($"`{element.FullName}`")}" : null;
     }
 
     private IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)

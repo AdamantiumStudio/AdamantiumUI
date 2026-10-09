@@ -1,3 +1,5 @@
+using Adamantium.UI.Markup.Localization;
+
 namespace Adamantium.UI.Markup.CodeGeneration;
 
 /// <summary>Reads the framework attributes that say what a markup value may name: <c>[TypeOf]</c> on a
@@ -37,7 +39,7 @@ public static class MarkupValueAttributes
         }
 
         var baseShortName = baseName.Substring(baseName.LastIndexOf('.') + 1);
-        return $"{type.Name} is not a {baseShortName}: {member.DeclaringType?.Name}.{member.Name} takes a type derived from {baseName}";
+        return MarkupMessages.TypeNotDerived(type.Name, baseShortName, $"{member.DeclaringType?.Name}.{member.Name}", baseName);
     }
 
     /// <summary>The extensions of the files the member's value is written as, declared on the member or on its type; null

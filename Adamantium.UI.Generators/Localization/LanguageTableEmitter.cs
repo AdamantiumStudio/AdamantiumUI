@@ -37,7 +37,7 @@ internal static class LanguageTableEmitter
         if (string.IsNullOrEmpty(settings.RootNamespace))
         {
             output.ReportDiagnostic(Create("AUL000",
-                "No RootNamespace: add <CompilerVisibleProperty Include=\"RootNamespace\" /> to the project", Location.None, true));
+                MarkupMessages.NoRootNamespace(), Location.None, true));
             return;
         }
 
@@ -61,7 +61,7 @@ internal static class LanguageTableEmitter
             {
                 if (languages.Any(l => string.Equals(l.Language, file.Language, StringComparison.OrdinalIgnoreCase)))
                 {
-                    output.ReportDiagnostic(Create("AUL001", $"'{file.Language}' of {file.Table} is in another file already", At(file.Path, 1, 1), true));
+                    output.ReportDiagnostic(Create("AUL001", MarkupMessages.LanguageInAnotherFile(file.Language, file.Table),At(file.Path, 1, 1), true));
                     continue;
                 }
 
@@ -99,7 +99,7 @@ internal static class LanguageTableEmitter
             if (Reserved.Contains(entry.Key) || entry.Key == table || classes.Contains(entry.Key) ||
                 entry.Key.StartsWith("__", StringComparison.Ordinal))
             {
-                output.ReportDiagnostic(Create("AUL003", $"'{entry.Key}' cannot be a key of {table}: the table class has a member of that name", At(baseFile.Path, entry.Line, entry.Column), true));
+                output.ReportDiagnostic(Create("AUL003", MarkupMessages.KeyIsTableMember(entry.Key, table),At(baseFile.Path, entry.Line, entry.Column), true));
                 continue;
             }
 
@@ -136,7 +136,7 @@ internal static class LanguageTableEmitter
                 var index = keys.FindIndex(k => k.Key == entry.Key);
                 if (index < 0)
                 {
-                    output.ReportDiagnostic(Create("AUL005", $"'{entry.Key}' is not in {table}.{baseFile.Language}{LanguageFileParser.Extension}: add it there first", At(translation.Path, entry.Line, entry.Column), true));
+                    output.ReportDiagnostic(Create("AUL005", MarkupMessages.KeyNotInBase(entry.Key, $"{table}.{baseFile.Language}{LanguageFileParser.Extension}"),At(translation.Path, entry.Line, entry.Column), true));
                     continue;
                 }
 
@@ -147,7 +147,7 @@ internal static class LanguageTableEmitter
 
                 if (entry.HasCases && choosers.TryGetValue(entry.Key, out var chooser) && chooser != entry.Chooser)
                 {
-                    output.ReportDiagnostic(Create("AUL010", $"{entry.Key} is chosen by {{{entry.Chooser}}}, and by {{{chooser}}} elsewhere: one placeholder picks the case in every language", At(translation.Path, entry.Line, entry.Column), true));
+                    output.ReportDiagnostic(Create("AUL010", MarkupMessages.ChooserDiffers(entry.Key, entry.Chooser, chooser),At(translation.Path, entry.Line, entry.Column), true));
                     continue;
                 }
 
@@ -361,7 +361,7 @@ internal static class LanguageTableEmitter
             return true;
         }
 
-        output.ReportDiagnostic(Create("AUL003", $"'{entry.Key}' cannot be the key of a phrase with a case of that name", At(path, entry.Line, entry.Column), true));
+        output.ReportDiagnostic(Create("AUL003", MarkupMessages.KeyIsCaseName(entry.Key),At(path, entry.Line, entry.Column), true));
         return false;
     }
 
@@ -376,7 +376,7 @@ internal static class LanguageTableEmitter
         var lacking = baseEntry.Cases.Select(c => c.Case).Where(name => entry.Cases.All(c => c.Case != name)).ToList();
         if (lacking.Count > 0)
         {
-            output.ReportDiagnostic(Create("AUL010", $"{entry.Key} lacks the case{(lacking.Count > 1 ? "s" : string.Empty)} {string.Join(", ", lacking)} the base text gives", At(path, entry.Line, entry.Column), false));
+            output.ReportDiagnostic(Create("AUL010", MarkupMessages.LacksCases(entry.Key, lacking),At(path, entry.Line, entry.Column), false));
         }
     }
 
@@ -419,8 +419,9 @@ internal static class LanguageTableEmitter
         if (candidates.Count != 1)
         {
             var message = candidates.Count == 0
-                ? $"{table} has no {table}.{settings.NeutralLanguage}{LanguageFileParser.Extension} here (the base language is {settings.NeutralLanguage}), and no referenced assembly has a table named {table}"
-                : $"{table} names more than one table: {string.Join(", ", candidates.Select(c => c.ToDisplayString()))}";
+                ? MarkupMessages.TableNotFound(table, $"{table}.{settings.NeutralLanguage}{LanguageFileParser.Extension}",
+                    settings.NeutralLanguage)
+                : MarkupMessages.TableAmbiguous(table, string.Join(", ", candidates.Select(c => c.ToDisplayString())));
             foreach (var file in files)
             {
                 output.ReportDiagnostic(Create("AUL008", message, At(file.Path, 1, 1), true));
@@ -459,7 +460,7 @@ internal static class LanguageTableEmitter
             {
                 if (!members.TryGetValue(entry.Key, out var order))
                 {
-                    output.ReportDiagnostic(Create("AUL005", $"{type.ToDisplayString()} has no '{entry.Key}'", At(file.Path, entry.Line, entry.Column), true));
+                    output.ReportDiagnostic(Create("AUL005", MarkupMessages.TableHasNoKey(type.ToDisplayString(), entry.Key),At(file.Path, entry.Line, entry.Column), true));
                     continue;
                 }
 
@@ -503,13 +504,13 @@ internal static class LanguageTableEmitter
             var at = At(file.Path, file.FormatLine, 1);
             if (!settings.IsApplication)
             {
-                output.ReportDiagnostic(Create("AUL009", "Only an application sets how a language writes dates and numbers; a library leaves it to the application", at, true));
+                output.ReportDiagnostic(Create("AUL009", MarkupMessages.FormatsInLibrary(), at, true));
                 continue;
             }
 
             if (!set.Add(file.Language))
             {
-                output.ReportDiagnostic(Create("AUL009", $"The formats of '{file.Language}' are set in another file already: one file per language sets them", at, true));
+                output.ReportDiagnostic(Create("AUL009", MarkupMessages.FormatsTwice(file.Language), at, true));
                 continue;
             }
 
@@ -566,15 +567,15 @@ internal static class LanguageTableEmitter
         var problems = new List<string>();
         if (extra.Count > 0)
         {
-            problems.Add("has " + string.Join(", ", extra.Select(n => "{" + n + "}")) + " the base text does not");
+            problems.Add(MarkupMessages.PlaceholdersExtra(string.Join(", ", extra.Select(n => "{" + n + "}"))));
         }
 
         if (lacking.Count > 0)
         {
-            problems.Add("lacks " + string.Join(", ", lacking.Select(n => "{" + n + "}")));
+            problems.Add(MarkupMessages.PlaceholdersLacking(string.Join(", ", lacking.Select(n => "{" + n + "}"))));
         }
 
-        output.ReportDiagnostic(Create("AUL006", $"{entry.Key} {string.Join(" and ", problems)}", At(path, entry.Line, entry.Column), true));
+        output.ReportDiagnostic(Create("AUL006", MarkupMessages.PlaceholderProblems(entry.Key, problems), At(path, entry.Line, entry.Column), true));
         return false;
     }
 
@@ -586,9 +587,15 @@ internal static class LanguageTableEmitter
             return;
         }
 
-        var shown = string.Join(", ", missing.Take(5)) + (missing.Count > 5 ? $" and {missing.Count - 5} more" : string.Empty);
+        var shown = string.Join(", ", missing.Take(5));
+        if (missing.Count > 5)
+        {
+            shown = MarkupMessages.AndMore(shown, missing.Count - 5);
+        }
+
         output.ReportDiagnostic(Create("AUL007",
-            $"{table}.{file.Language}{LanguageFileParser.Extension} lacks {missing.Count} of {table}'s strings: {shown}. They are shown in {baseLanguage}",
+            MarkupMessages.LanguageLacksStrings($"{table}.{file.Language}{LanguageFileParser.Extension}", missing.Count, table, shown,
+                baseLanguage),
             At(file.Path, 1, 1), false));
     }
 

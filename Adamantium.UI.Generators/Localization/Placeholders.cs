@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Adamantium.UI.Markup.Localization;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace Adamantium.UI.Generators.Localization;
@@ -53,14 +54,14 @@ internal static class Placeholders
                 var end = text.IndexOf('}', i + 1);
                 if (end < 0)
                 {
-                    error = "'{' has no closing '}'; write '{{' for a brace";
+                    error = MarkupMessages.BraceNotClosed();
                     return false;
                 }
 
                 var name = NameOf(text.Substring(i + 1, end - i - 1));
                 if (!SyntaxFacts.IsValidIdentifier(name))
                 {
-                    error = $"'{{{text.Substring(i + 1, end - i - 1)}}}' does not start with a name: a placeholder is {{name}}, {{name:format}} or {{name,width}}";
+                    error = MarkupMessages.PlaceholderNoName(text.Substring(i + 1, end - i - 1));
                     return false;
                 }
 
@@ -79,7 +80,7 @@ internal static class Placeholders
                     continue;
                 }
 
-                error = "'}' has no opening '{'; write '}}' for a brace";
+                error = MarkupMessages.BraceNotOpened();
                 return false;
             }
         }
