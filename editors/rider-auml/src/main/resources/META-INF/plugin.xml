@@ -26,6 +26,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>A {TemplateBinding} on an attached property in a template - ToolTipService.ToolTip, AutomationProperties.Name
+        - binds that attached property, in the build and in the preview, instead of the part's own property of the same
+        name.</p>
         <p>A slash typed before the end of an empty element's opening tag - &lt;Border |&gt;&lt;/Border&gt; - makes it
         self-closing and takes its closing tag away, in markup and in language files; one undo puts it back.</p>
         <p>A brace typed in an attribute value closes at once - Text="{|}" - and its closer is typed over; before a word it

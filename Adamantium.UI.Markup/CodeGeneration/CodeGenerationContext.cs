@@ -489,7 +489,7 @@ public class CodeGenerationContext
                             else
                             {
                                 TextGenerator.WriteLine(
-                                    $"{CurrentTemplate}.AddTemplateBinding({CurrentParent}, \"{propRef.Name}\", {tbVar});");
+                                    $"{CurrentTemplate}.AddTemplateBinding({CurrentParent}, \"{PropertyPath(propRef)}\", {tbVar});");
                             }
 
                             break;
