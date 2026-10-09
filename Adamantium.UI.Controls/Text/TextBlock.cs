@@ -101,6 +101,7 @@ public class TextBlock : InputUIComponent
     private HorizontalTextAlignment _lastHAlign;
     private VerticalTextAlignment _lastVAlign;
     private bool _lastJustify;
+    private TextDirection _lastDirection;
     private TextAttributes _lastShaping;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
@@ -133,6 +134,7 @@ public class TextBlock : InputUIComponent
         }
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
+        _textLayout.Direction = TextDirection;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -152,7 +154,7 @@ public class TextBlock : InputUIComponent
             && _lastWidth.Equals(width) && _lastHeight.Equals(height)
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
-            && _lastJustify == JustifyLastLine && ShapesLike(_lastShaping, shaping))
+            && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -194,6 +196,7 @@ public class TextBlock : InputUIComponent
         _lastText = text; _lastFontSize = FontSize; _lastWidth = width; _lastHeight = height;
         _lastWrapping = TextWrapping; _lastTrimming = TextTrimming;
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
+        _lastDirection = TextDirection;
         return _cachedSize;
     }
 

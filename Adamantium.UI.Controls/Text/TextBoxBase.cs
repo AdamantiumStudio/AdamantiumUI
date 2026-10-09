@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
@@ -257,12 +258,18 @@ public abstract class TextBoxBase : Control
     private double[] _caretX = [0];
     private int[] _caretLine = [0];
     private double[] _caretWidth = [0];
+    private int _caretHeldAt = -1;
+    private bool _bidi;
+    private CaretPosition _selectionAnchor;
+    private IReadOnlyList<(int Start, int End)> _visualRanges;
+    private (string Text, int Start, int Length) _visualFor;
     private int _lineCount = 1;
 
     private string _lastShapedText;
     private double _lastShapedFontSize = -1;
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
+    private TextDirection _lastShapedDirection;
     private TextAttributes _lastShapedShaping;
     private double _wrapWidth = double.PositiveInfinity;   // live viewport width for soft wrap; set by measure/render
 
@@ -275,6 +282,7 @@ public abstract class TextBoxBase : Control
     private bool _blinking;
     private double _blinkAccum;
     private double _textOy;                     // vertical offset of the text within the surface (float strip + single-line centering)
+    private double _textOx;                     // horizontal offset: a right-to-left paragraph starts on the right edge
     private double? _desiredColumnX;            // sticky X for Up/Down navigation (WPF behavior); cleared by any horizontal move
 
     private double _floatProgress;             // floating placeholder: 0 = resting (in text), 1 = floated (small, top strip)
@@ -319,6 +327,7 @@ public abstract class TextBoxBase : Control
         }
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
+        _textLayout.Direction = TextDirection;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -335,7 +344,7 @@ public abstract class TextBoxBase : Control
         var shaping = TextShaping(font);
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
-            && ShapesLike(_lastShapedShaping, shaping))
+            && _lastShapedDirection == TextDirection && ShapesLike(_lastShapedShaping, shaping))
         {
             return;
         }
@@ -346,6 +355,7 @@ public abstract class TextBoxBase : Control
             _caretX = [0];
             _caretLine = [0];
             _caretWidth = [0];
+            _bidi = false;
             _lineCount = 1;
             _lineTops = [0];
             _lineHeights = [_lineHeight];
@@ -375,6 +385,7 @@ public abstract class TextBoxBase : Control
         _lastShapedWrapping = wrapping;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
+        _lastShapedDirection = TextDirection;
     }
 
     private void BuildCaretModel()
@@ -385,11 +396,13 @@ public abstract class TextBoxBase : Control
         _caretWidth = new double[stops.Length];
 
         var maxLine = 0;
+        _bidi = false;
         for (var i = 0; i < stops.Length; i++)
         {
             _caretX[i] = stops[i].X;
             _caretLine[i] = stops[i].LineIndex;
             _caretWidth[i] = stops[i].Width;
+            _bidi |= stops[i].IsRightToLeft;
             maxLine = Math.Max(maxLine, stops[i].LineIndex);
         }
 
@@ -401,6 +414,7 @@ public abstract class TextBoxBase : Control
             var metrics = _textLayout.GetLine(line);
             _lineTops[line] = metrics.Top;
             _lineHeights[line] = metrics.Height;
+            _bidi |= _textLayout.IsRightToLeftParagraph(metrics.Start);
         }
     }
 
@@ -427,17 +441,19 @@ public abstract class TextBoxBase : Control
     internal Rect CaretRect(int index)
     {
         EnsureLayout();
-        index = Math.Clamp(index, 0, _caretX.Length - 1);
-
-        var line = _caretLine[index];
+        var (x, line) = CaretPoint(Math.Clamp(index, 0, _caretX.Length - 1));
         var top = Math.Round(_lineTops[line]);
-        return new Rect(_caretX[index], top, CaretWidth, Math.Round(_lineTops[line] + _lineHeights[line]) - top);
+        return new Rect(x, top, CaretWidth, Math.Round(_lineTops[line] + _lineHeights[line]) - top);
     }
+
+    private (double X, int Line) CaretPoint(int index) => _bidi
+        ? _textLayout.GetCaretPoint(new CaretPosition(index, index == _caretHeldAt))
+        : (_caretX[index], _caretLine[index]);
 
     private int CaretLineOf(int index)
     {
         EnsureLayout();
-        return _caretLine[Math.Clamp(index, 0, _caretLine.Length - 1)];
+        return CaretPoint(Math.Clamp(index, 0, _caretLine.Length - 1)).Line;
     }
 
     // First / last caret slot index on a given visual line (slots for a line are a contiguous run, text order).
@@ -455,23 +471,16 @@ public abstract class TextBoxBase : Control
 
     // Nearest caret index to a text-local point: pick the visual line by Y, then the slot on it nearest X (splitting on
     // glyph mid-points like a text cursor). Empty lines are handled because their single caret slot carries the line.
-    private int IndexFromPoint(double x, double y) => SnapToCaretStop(SlotFromPoint(x, y));
+    private int IndexFromPoint(double x, double y) => HitFromPoint(x, y).Index;
 
-    private int SlotFromPoint(double x, double y)
+    private (int Index, bool After) HitFromPoint(double x, double y)
     {
         EnsureLayout();
-        if (_caretX.Length == 1) return 0;
+        if (_caretX.Length == 1) return (0, false);
 
-        var text = _lastShapedText ?? string.Empty;
-        var line = LineAt(y);
-        var (first, last) = LineSlotRange(line);
-        for (var i = first; i <= last; i++)
-        {
-            if (i >= text.Length) return i;                 // end-of-text slot on this line
-            if (text[i] == '\n') return i;                  // click past the visible end -> before the line's newline
-            if (x < _caretX[i] + _caretWidth[i] / 2.0) return i;
-        }
-        return last;
+        var hit = _textLayout.HitTest(x, y);
+        var index = SnapToCaretStop(Clamp(hit.CaretIndex));
+        return (index, hit.IsTrailing && index == hit.CaretIndex);
     }
 
     private int TextLength => (Text ?? string.Empty).Length;
@@ -489,21 +498,28 @@ public abstract class TextBoxBase : Control
 
     // --- Editing operations --------------------------------------------------------------------------------------
 
-    private void MoveCaretTo(int newIndex, bool extend, bool keepColumn = false)
+    private void MoveCaretTo(int newIndex, bool extend, bool keepColumn = false, bool afterPrevious = false)
     {
         newIndex = Clamp(newIndex);
+        var focus = new CaretPosition(newIndex, afterPrevious);
         if (!keepColumn) _desiredColumnX = null;   // any non-vertical move drops the sticky Up/Down column
         _typingRun = false;                        // a caret move ends the current typing run (its own undo step)
-        if (extend)
+        if (extend && _bidi)
+        {
+            SelectVisually(focus);
+        }
+        else if (extend)
         {
             var anchor = SelectionLength == 0 ? CaretIndex : SelectionAnchor();
             SetSelection(anchor, newIndex);
         }
         else
         {
+            _visualRanges = null;
             SelectionStart = newIndex;
             SelectionLength = 0;
         }
+        _caretHeldAt = afterPrevious ? newIndex : -1;
         CaretIndex = newIndex;
         ResetBlink();
         ScrollCaretIntoView();
@@ -519,8 +535,8 @@ public abstract class TextBoxBase : Control
         if (target > MaxLineIndex) { MoveCaretTo(TextLength, extend); return; }
 
         var col = _desiredColumnX ?? CaretRect(CaretIndex).X;
-        var idx = IndexFromPoint(col, _lineTops[target] + _lineHeights[target] / 2.0);
-        MoveCaretTo(idx, extend, keepColumn: true);
+        var (idx, after) = HitFromPoint(col, _lineTops[target] + _lineHeights[target] / 2.0);
+        MoveCaretTo(idx, extend, keepColumn: true, afterPrevious: after);
         _desiredColumnX = col;
     }
 
@@ -540,8 +556,47 @@ public abstract class TextBoxBase : Control
         SelectionLength = Math.Abs(caret - anchor);
     }
 
+    private void SelectVisually(CaretPosition focus)
+    {
+        EnsureLayout();
+        var anchor = VisualSelectionIsCurrent() ? _selectionAnchor
+            : SelectionLength == 0 ? new CaretPosition(CaretIndex, _caretHeldAt == CaretIndex)
+            : new CaretPosition(SelectionAnchor());
+        var ranges = _textLayout.GetVisualRanges(anchor, focus);
+        var start = ranges.Count > 0 ? ranges[0].Start : focus.Index;
+        var length = ranges.Count > 0 ? ranges[^1].End - start : 0;
+        _selectionAnchor = anchor;
+        _visualRanges = ranges;
+        _visualFor = (Text, start, length);
+        SelectionStart = start;
+        SelectionLength = length;
+    }
+
+    private bool VisualSelectionIsCurrent() =>
+        _visualRanges != null && _visualFor.Text == Text
+        && _visualFor.Start == SelectionStart && _visualFor.Length == SelectionLength;
+
+    private IReadOnlyList<(int Start, int End)> SelectedRanges() =>
+        HasSelection && VisualSelectionIsCurrent() ? _visualRanges : [SelectionRange()];
+
+    private void MoveVisually(bool toRight, bool extend)
+    {
+        EnsureLayout();
+        var to = _textLayout.MoveVisually(new CaretPosition(CaretIndex, _caretHeldAt == CaretIndex), toRight);
+        MoveCaretTo(to.Index, extend, afterPrevious: to.AfterPrevious);
+    }
+
+    private void MoveToLineEdge(int line, bool start, bool extend)
+    {
+        EnsureLayout();
+        var to = start ? _textLayout.GetLineStart(line) : _textLayout.GetLineEnd(line);
+        MoveCaretTo(to.Index, extend, afterPrevious: to.AfterPrevious);
+    }
+
     public void SelectAll()
     {
+        _visualRanges = null;
+        _caretHeldAt = -1;
         SelectionStart = 0;
         SelectionLength = TextLength;
         CaretIndex = TextLength;
@@ -555,19 +610,36 @@ public abstract class TextBoxBase : Control
         insert ??= string.Empty;
 
         var text = Text ?? string.Empty;
-        var (start, end) = HasSelection ? SelectionRange() : (Clamp(CaretIndex), Clamp(CaretIndex));
+        var ranges = HasSelection ? SelectedRanges() : [(Clamp(CaretIndex), Clamp(CaretIndex))];
+        var start = ranges[0].Start;
+        var removed = ranges.Sum(r => r.End - r.Start);
 
         if (MaxLength > 0)
         {
-            var room = MaxLength - (text.Length - (end - start));
+            var room = MaxLength - (text.Length - removed);
             if (room <= 0 && insert.Length > 0) insert = string.Empty;
-            else if (insert.Length > room) insert = insert.Substring(0, Math.Max(0, room));
+            else if (insert.Length > room)
+            {
+                var keep = Math.Max(0, room);
+                if (keep > 0 && char.IsHighSurrogate(insert[keep - 1])) keep--;
+                insert = insert.Substring(0, keep);
+            }
         }
 
-        var newText = text.Substring(0, start) + insert + text.Substring(end);
+        var built = new StringBuilder(text.Length - removed + insert.Length);
+        var at = 0;
+        for (var k = 0; k < ranges.Count; k++)
+        {
+            built.Append(text, at, ranges[k].Start - at);
+            if (k == 0) built.Append(insert);
+            at = ranges[k].End;
+        }
+        built.Append(text, at, text.Length - at);
+        var newText = built.ToString();
         if (newText == text) return;   // nothing actually changed -> no edit, no undo entry
 
         RecordUndo(isTyping);
+        _visualRanges = null;
 
         // SetCurrentValue, NOT `Text = ` (which is a Local-priority set): an edit must write in the BINDING's own slot so a
         // two-way {Binding}/{Ancestor} fires its write-back AND later source->target updates still apply. A plain Local set
@@ -575,6 +647,7 @@ public abstract class TextBoxBase : Control
         // stuck after you typed in it). Mirrors Slider.SetValueFromInput.
         SetCurrentValue(TextProperty, newText);
         var newCaret = start + insert.Length;
+        _caretHeldAt = insert.Length > 0 ? newCaret : -1;
         SelectionStart = newCaret;
         SelectionLength = 0;
         CaretIndex = newCaret;
@@ -584,7 +657,9 @@ public abstract class TextBoxBase : Control
 
     // --- Undo / redo ---------------------------------------------------------------------------------------------
 
-    private TextState Snapshot() => new(Text ?? string.Empty, CaretIndex, SelectionStart, SelectionLength);
+    private TextState Snapshot() => SelectedRanges().Count > 1
+        ? new(Text ?? string.Empty, CaretIndex, CaretIndex, 0)
+        : new(Text ?? string.Empty, CaretIndex, SelectionStart, SelectionLength);
 
     // Capture the PRE-edit state. A typing run keeps only its first snapshot (so undo removes the whole run at once);
     // any non-typing edit, or the first char after a caret move, starts a fresh entry. Every edit clears the redo stack.
@@ -620,6 +695,8 @@ public abstract class TextBoxBase : Control
     {
         _restoring = true;
         _typingRun = false;
+        _caretHeldAt = -1;
+        _visualRanges = null;
         SetCurrentValue(TextProperty, s.Text);   // binding-slot write (see ReplaceSelection), so undo doesn't mask a two-way binding either
         var len = TextLength;
         SelectionStart = Math.Clamp(s.SelStart, 0, len);
@@ -634,9 +711,11 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         if (HasSelection) { ReplaceSelection(string.Empty); return; }
         if (CaretIndex <= 0) return;
+        _visualRanges = null;
         SelectionStart = PreviousCaretStop(CaretIndex);
         SelectionLength = CaretIndex - SelectionStart;
         ReplaceSelection(string.Empty);
+        _caretHeldAt = CaretIndex;
     }
 
     private void DeleteForward()
@@ -644,9 +723,12 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         if (HasSelection) { ReplaceSelection(string.Empty); return; }
         if (CaretIndex >= TextLength) return;
+        var held = _caretHeldAt;
+        _visualRanges = null;
         SelectionStart = CaretIndex;
         SelectionLength = NextCaretStop(CaretIndex) - CaretIndex;
         ReplaceSelection(string.Empty);
+        _caretHeldAt = held;
     }
 
     private int NextCaretStop(int index)
@@ -707,6 +789,14 @@ public abstract class TextBoxBase : Control
 
         switch (e.Key)
         {
+            case Key.LeftArrow when _bidi && !ctrl:
+                MoveVisually(toRight: false, shift);
+                e.Handled = true;
+                break;
+            case Key.RightArrow when _bidi && !ctrl:
+                MoveVisually(toRight: true, shift);
+                e.Handled = true;
+                break;
             case Key.LeftArrow:
                 MoveCaretTo(ctrl ? WordBoundary(CaretIndex, -1) : PreviousCaretStop(CaretIndex), shift);
                 e.Handled = true;
@@ -721,6 +811,14 @@ public abstract class TextBoxBase : Control
                 break;
             case Key.DownArrow:
                 MoveCaretVertical(+1, shift);
+                e.Handled = true;
+                break;
+            case Key.Home when _bidi:
+                MoveToLineEdge(ctrl ? 0 : CaretLineOf(CaretIndex), start: true, shift);
+                e.Handled = true;
+                break;
+            case Key.End when _bidi:
+                MoveToLineEdge(ctrl ? MaxLineIndex : CaretLineOf(CaretIndex), start: false, shift);
                 e.Handled = true;
                 break;
             case Key.Home:
@@ -806,8 +904,8 @@ public abstract class TextBoxBase : Control
 
     protected string SelectedText()
     {
-        var (s, e) = SelectionRange();
-        return (Text ?? string.Empty).Substring(s, e - s);
+        var text = Text ?? string.Empty;
+        return string.Concat(SelectedRanges().Select(r => text.Substring(r.Start, r.End - r.Start)));
     }
 
     // --- Surface callbacks (the TextPresenter measures / renders / hit-tests through these) -----------------------
@@ -827,18 +925,22 @@ public abstract class TextBoxBase : Control
     internal void SurfaceMouseDown(double localX, double localY, bool extend)
     {
         Focus();
-        MoveCaretTo(IndexFromPoint(localX, localY - _textOy), extend);
+        var (index, after) = HitFromPoint(localX - _textOx, localY - _textOy);
+        MoveCaretTo(index, extend, afterPrevious: after);
     }
 
     internal void SurfaceMouseMove(double localX, double localY)
-        => MoveCaretTo(IndexFromPoint(localX, localY - _textOy), extend: true);
+    {
+        var (index, after) = HitFromPoint(localX - _textOx, localY - _textOy);
+        MoveCaretTo(index, extend: true, afterPrevious: after);
+    }
 
     /// <summary>Double-click: take the word under the point (or the run of spaces, when the click lands between words -
     /// a gesture that selects nothing at all reads as a dead click).</summary>
     internal void SurfaceSelectWord(double localX, double localY)
     {
         Focus();
-        SelectWordAt(IndexFromPoint(localX, localY - _textOy));
+        SelectWordAt(IndexFromPoint(localX - _textOx, localY - _textOy));
     }
 
     /// <summary>Selects the word containing <paramref name="index"/> - what a double-click does, and what anything else
@@ -846,6 +948,8 @@ public abstract class TextBoxBase : Control
     public void SelectWordAt(int index)
     {
         var (start, end) = WordAt(index);
+        _visualRanges = null;
+        _caretHeldAt = -1;
         SelectionStart = start;
         SelectionLength = end - start;
         CaretIndex = end;
@@ -907,7 +1011,12 @@ public abstract class TextBoxBase : Control
         // the offset), so we render the FULL content at our own origin (ox = 0). Text sits below the floating-label strip
         // (zero when off); single-line content then centers vertically in the surface (which the ScrollContentPresenter
         // sizes to at least the viewport), multi-line is top-aligned. vOffset is 0 for the multi-line case.
-        const double ox = 0;
+        var rightToLeft = hasText ? _textLayout.IsRightToLeftParagraph(0) : TextDirection == TextDirection.RightToLeft;
+        var contentWidth = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(_wrapWidth)
+            ? size.Width
+            : _textWidth + CaretWidth;
+        var ox = rightToLeft ? Math.Floor(Math.Max(0, size.Width - contentWidth)) : 0;
+        _textOx = ox;
         var stripH = FloatStripHeight();
         var textAreaH = size.Height - stripH;
         var vOffset = !AcceptsNewLines && ContentHeight < textAreaH ? (textAreaH - ContentHeight) / 2 : 0;
@@ -945,18 +1054,12 @@ public abstract class TextBoxBase : Control
 
     private void DrawSelection(IDrawingSession session, double ox, double oy)
     {
-        var (s, en) = SelectionRange();
         var brush = SelectionBrush ?? DefaultSelectionBrush;
-        var startLine = CaretLineOf(s);
-        var endLine = CaretLineOf(en);
-        for (var line = startLine; line <= endLine; line++)
+        foreach (var piece in SelectedRanges().SelectMany(r => _textLayout.GetRangeRects(r.Start, r.End)))
         {
-            var (first, last) = LineSlotRange(line);
-            var x0 = line == startLine ? _caretX[s] : _caretX[first];
-            var x1 = line == endLine ? _caretX[en] : _caretX[last];
-            var w = Math.Max(0, x1 - x0);
-            if (line != endLine && w <= 0) w = _lineHeights[line] * 0.4;   // sliver so a selected empty/blank line is visible
-            session.DrawRectangle(brush, new Rect(ox + x0, oy + _lineTops[line], w, _lineHeights[line]));
+            // A sliver, so a selected empty or blank line is visible.
+            var w = piece.Width > 0 ? piece.Width : piece.Height * 0.4;
+            session.DrawRectangle(brush, new Rect(ox + piece.X, oy + piece.Y, w, piece.Height));
         }
     }
 
@@ -977,14 +1080,14 @@ public abstract class TextBoxBase : Control
         }
 
         var caret = CaretRect(CaretIndex);
-        InputMethod.SetCaretBounds(_presenter, new Rect(caret.X, caret.Y + _textOy, CaretWidth, caret.Height));
+        InputMethod.SetCaretBounds(_presenter, new Rect(caret.X + _textOx, caret.Y + _textOy, CaretWidth, caret.Height));
     }
 
     internal void ScrollIndexIntoView(int index)
     {
         if (_scrollViewer == null) return;
         var c = CaretRect(Clamp(index));
-        _scrollViewer.BringIntoView(new Rect(c.X, c.Y + _textOy, CaretWidth + CaretPadding, c.Height));
+        _scrollViewer.BringIntoView(new Rect(c.X + _textOx, c.Y + _textOy, CaretWidth + CaretPadding, c.Height));
     }
 
     internal UIComponent TextSurface => _presenter;
@@ -998,7 +1101,7 @@ public abstract class TextBoxBase : Control
         return (first, Math.Min(last + 1, TextLength));
     }
 
-    internal int IndexAtSurfacePoint(double x, double y) => IndexFromPoint(x, y - _textOy);
+    internal int IndexAtSurfacePoint(double x, double y) => IndexFromPoint(x - _textOx, y - _textOy);
 
     internal List<Rect> SurfaceRects(int start, int end)
     {
@@ -1007,20 +1110,15 @@ public abstract class TextBoxBase : Control
         if (start == end)
         {
             var caret = CaretRect(start);
-            return [new Rect(caret.X, caret.Y + _textOy, 0, caret.Height)];
+            return [new Rect(caret.X + _textOx, caret.Y + _textOy, 0, caret.Height)];
         }
 
         var rects = new List<Rect>();
-        var startLine = CaretLineOf(start);
-        var endLine = CaretLineOf(end);
-        for (var line = startLine; line <= endLine; line++)
+        foreach (var piece in _textLayout.GetRangeRects(start, end))
         {
-            var (first, last) = LineSlotRange(line);
-            var x0 = line == startLine ? _caretX[start] : _caretX[first];
-            var x1 = line == endLine ? _caretX[end] : _caretX[last];
-            if (x1 > x0)
+            if (piece.Width > 0)
             {
-                rects.Add(new Rect(x0, _textOy + _lineTops[line], x1 - x0, _lineHeights[line]));
+                rects.Add(new Rect(piece.X + _textOx, _textOy + piece.Y, piece.Width, piece.Height));
             }
         }
 
@@ -1054,7 +1152,8 @@ public abstract class TextBoxBase : Control
         }
 
         _placeholderLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
-        var key = Placeholder + "|" + fontSize;
+        _placeholderLayout.Direction = TextDirection;
+        var key = Placeholder + "|" + fontSize + "|" + TextDirection;
         if (_placeholderShaped == key) return;
         _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),
             TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
@@ -1068,8 +1167,12 @@ public abstract class TextBoxBase : Control
     private void RenderPlaceholder(IDrawingSession session, double oy, Size size)
     {
         EnsurePlaceholderShaped(FontSize);
-        session.DrawText(BuildTextParameters(PlaceholderForeground, 0, oy, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
+        session.DrawText(BuildTextParameters(PlaceholderForeground, PlaceholderX(size), oy, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
     }
+
+    private double PlaceholderX(Size size) => _placeholderLayout.IsRightToLeftParagraph(0)
+        ? Math.Floor(Math.Max(0, size.Width - _placeholderLayout.GetLine(0).Width))
+        : 0;
 
     // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.
@@ -1080,7 +1183,7 @@ public abstract class TextBoxBase : Control
         EnsurePlaceholderShaped(floatFs);
         var y = textOy + (0.0 - textOy) * t;   // rest (t=0): at the text; floated (t=1): at the top of the strip
         var brush = FloatLabelBrush(t);
-        session.DrawText(BuildTextParameters(brush, 0, y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
+        session.DrawText(BuildTextParameters(brush, PlaceholderX(size), y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
     }
 
     // Blend the label color from the resting placeholder color to the accent (FloatingPlaceholderForeground) as it
