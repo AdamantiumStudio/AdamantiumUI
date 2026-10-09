@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `FontVariations` can move: `FontVariationListAnimation` (From, To) and `FontVariationListTransition`, CSS's
+  transition of `font-variation-settings`. Each frame is laid out at its own axis values and drawn between the font's
+  key instances on the way, so a weight animation does not fill the glyph atlas a frame at a time; at rest the text is
+  drawn as before. `FontVariationList.Between` gives the values on the way. `BeginAnimation` takes either animation
+  (`PropertyAnimation`, which `DoubleAnimation` now derives from). Sandbox text page: a line of Roboto Flex that
+  moves between light and heavy, wide.
 - `FontVariations` on every element, inherited by the text inside, and on a `Run`: axis values of a variable font over
   the ones its weight, width and style set (`FontVariations="GRAD=150, opsz=36"`; `opsz=auto`, like leaving it out,
   sets the optical size to the text's size). `FontStyle` sets a variable font's 'ital' or 'slnt' axis, as CSS does.

@@ -360,6 +360,25 @@
             <TextBlock Text="wght=1000  $ ¢ ₴ ₦" FontVariations="wght=1000"/>
             <TextBlock Text="wght=100  $ ¢ ₴ ₦" FontVariations="wght=100"/>
         </StackPanel>
+
+        <!-- FontVariations in motion: each frame is laid out at its own values and drawn between key instances. -->
+        <TextBlock Text="{Localize TextStrings.MovingTitle}"
+                   Margin="0,20,0,6"/>
+        <ToggleSwitch AutomationProperties.AutomationId="HeavyToggle"
+                      Content="{Localize TextStrings.Heavy}"
+                      IsChecked="{Binding Heavy, Mode=TwoWay}"
+                      HorizontalAlignment="Left"/>
+        <TextBlock AutomationProperties.AutomationId="MovingText"
+                   Text="Hamburgefonstiv"
+                   FontFamily="{Binding VariableFont}"
+                   FontSize="72"
+                   FontVariations="{Binding MovingVariations}"
+                   Margin="0,8,0,0">
+            <TextBlock.Transitions>
+                <FontVariationListTransition Property="FontVariations"
+                                             Duration="0:0:1.5"/>
+            </TextBlock.Transitions>
+        </TextBlock>
     </StackPanel>
     </ScrollViewer>
 </View>

@@ -14,6 +14,9 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class TextViewModel : TabPageViewModel
 {
+    private static readonly FontVariationList LightVariations = FontVariationList.Parse("wght=100, wdth=100");
+    private static readonly FontVariationList HeavyVariations = FontVariationList.Parse("wght=1000, wdth=151");
+
     public TextViewModel() : base("Text") { }
 
     // Emoji from the fallback font among the letters, so selecting across them can be checked from the start.
@@ -62,6 +65,11 @@ public partial class TextViewModel : TabPageViewModel
 
     // The axes of VariableFont, as a style panel lists them.
     public IReadOnlyList<FontAxisItem> AxisItems => _axisItems ??= ListAxes(VariableFont.Fonts[0]);
+
+    // Takes the moving line from a light, normal setting of VariableFont to a heavy, wide one and back.
+    [Bindable, Affects(nameof(MovingVariations))] private bool _heavy;
+
+    public FontVariationList MovingVariations => Heavy ? HeavyVariations : LightVariations;
 
     private IReadOnlyList<FontAxisItem> _axisItems;
 

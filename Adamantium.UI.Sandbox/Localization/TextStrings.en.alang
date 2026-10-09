@@ -32,4 +32,6 @@
     <Phrase Key="AxesTitle" Text="Axes of Roboto Flex: tag, the font's name (* hidden from style panels), range, names of values:"/>
     <Phrase Key="OpticalSizeTitle" Text="Optical size follows the text's size; then 64 at opsz=8, at opsz=144, and italic by slant:"/>
     <Phrase Key="VariationsTitle" Text="FontVariations over the weight (heavy $ ¢ ₴ ₦ swap their glyphs, as the font varies its features):"/>
+    <Phrase Key="MovingTitle" Text="FontVariations in motion: a transition takes weight and width from one setting to the other:"/>
+    <Phrase Key="Heavy" Text="Heavy and wide"/>
 </Language>

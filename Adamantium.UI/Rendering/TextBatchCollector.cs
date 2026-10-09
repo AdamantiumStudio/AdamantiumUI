@@ -229,7 +229,9 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
                 Params = new Vector4F(transformSlot, glyphs[i].Layer, glyphs[i].Depth, fadeSlot),
                 Clip = new Vector4F(clipSlot, synthesis.X, synthesis.Y, synthesis.Z),
                 Color = GlyphColor(glyphs[i], color, opacity),
-                Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), 0, 0)
+                Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), 0, 0),
+                SecondSource = glyphs[i].SecondSource,
+                Second = new Vector4F(glyphs[i].Second.X, glyphs[i].Second.Y, 0, 0)
             };
         }
 
