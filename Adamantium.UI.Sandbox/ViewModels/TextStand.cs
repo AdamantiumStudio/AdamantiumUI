@@ -34,7 +34,8 @@ public enum TextStand
     [Display(Name = "Scripts")]
     Scripts,
 
-    /// <summary>Words broken across lines by the patterns of their language, or at soft hyphens.</summary>
-    [Display(Name = "Hyphenation")]
-    Hyphenation,
+    /// <summary>Paragraphs broken into lines a line or a paragraph at a time, words hyphenated by the patterns of their
+    /// language or at soft hyphens.</summary>
+    [Display(Name = "Paragraph")]
+    Paragraph,
 }

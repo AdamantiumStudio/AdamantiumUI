@@ -63,6 +63,6 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.TextViewModel, Views.Text.OpenTypeStandView>(nameof(ViewModels.TextStand.OpenType));
         views.RegisterView<ViewModels.TextViewModel, Views.Text.VariableStandView>(nameof(ViewModels.TextStand.Variable));
         views.RegisterView<ViewModels.TextViewModel, Views.Text.ScriptsStandView>(nameof(ViewModels.TextStand.Scripts));
-        views.RegisterView<ViewModels.TextViewModel, Views.Text.HyphenationStandView>(nameof(ViewModels.TextStand.Hyphenation));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.ParagraphStandView>(nameof(ViewModels.TextStand.Paragraph));
     }
 }

@@ -103,6 +103,7 @@ public class TextBlock : InputUIComponent
     private bool _lastJustify;
     private TextDirection _lastDirection;
     private Hyphens _lastHyphens;
+    private LineBreaking _lastLineBreaking;
     private TextAttributes _lastShaping;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
@@ -137,6 +138,7 @@ public class TextBlock : InputUIComponent
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
+        _textLayout.LineBreaking = LineBreaking;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -157,7 +159,7 @@ public class TextBlock : InputUIComponent
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
-            && ShapesLike(_lastShaping, shaping))
+            && _lastLineBreaking == LineBreaking && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -201,6 +203,7 @@ public class TextBlock : InputUIComponent
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
         _lastDirection = TextDirection;
         _lastHyphens = Hyphens;
+        _lastLineBreaking = LineBreaking;
         return _cachedSize;
     }
 

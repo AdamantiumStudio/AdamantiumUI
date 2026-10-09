@@ -1,0 +1,242 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- Navigated into the text tab's region under the key "Paragraph"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical"
+                Hyphens="{Binding Hyphens}">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="ColumnWidthLabel"
+                       Text="{Localize TextStrings.ColumnWidth}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ColumnWidthSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ColumnWidthLabel}"
+                    Width="240"
+                    Minimum="80"
+                    Maximum="480"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding ColumnWidth, Mode=TwoWay}"
+                    Margin="8,0,24,0"/>
+            <ToggleSwitch AutomationProperties.AutomationId="JustifyToggle"
+                          Content="{Localize TextStrings.Justify}"
+                          IsChecked="{Binding Justified, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <!-- The same paragraph broken a line at a time and as a whole. -->
+        <TextBlock Text="{Localize TextStrings.ParagraphTitle}"
+                   Margin="0,16,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.LineAtATime}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="GreedyColumn"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               LineBreaking="Greedy"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.WholeParagraph}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="ParagraphColumn"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               LineBreaking="Paragraph"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+        </WrapPanel>
+
+        <!-- Hyphenation: nowhere, at soft hyphens, or also by the patterns of the language; and how the columns below
+             break into lines. -->
+        <TextBlock Text="{Localize TextStrings.HyphenationTitle}"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <RadioButton Classes="Toggle"
+                         GroupName="Hyphens"
+                         Content="{Localize TextStrings.HyphensNone}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding Hyphens, Converter={conv:EnumToBoolConverter}, ConverterParameter=None, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle"
+                         GroupName="Hyphens"
+                         Content="{Localize TextStrings.HyphensManual}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding Hyphens, Converter={conv:EnumToBoolConverter}, ConverterParameter=Manual, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle"
+                         GroupName="Hyphens"
+                         Content="{Localize TextStrings.HyphensAuto}"
+                         MarginRight="24"
+                         MarginBottom="6"
+                         IsChecked="{Binding Hyphens, Converter={conv:EnumToBoolConverter}, ConverterParameter=Auto, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="GreedyRadio"
+                         Classes="Toggle"
+                         GroupName="LineBreaking"
+                         Content="{Localize TextStrings.LineAtATime}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding LineBreaking, Converter={conv:EnumToBoolConverter}, ConverterParameter=Greedy, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ParagraphRadio"
+                         Classes="Toggle"
+                         GroupName="LineBreaking"
+                         Content="{Localize TextStrings.WholeParagraph}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding LineBreaking, Converter={conv:EnumToBoolConverter}, ConverterParameter=Paragraph, Mode=TwoWay}"/>
+        </WrapPanel>
+
+        <!-- One column per built-in language: each text names its language, which picks the patterns. A word with
+             nowhere to break ends its line in an ellipsis instead of covering the next column. -->
+        <WrapPanel Orientation="Horizontal"
+                   Margin="0,12,0,0"
+                   LineBreaking="{Binding LineBreaking}">
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="Русский (ru)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="RussianColumn"
+                               Text="{Binding RussianSample}"
+                               Language="ru"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="English (en-US)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="EnglishColumn"
+                               Text="{Binding EnglishSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="Deutsch (de)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="GermanColumn"
+                               Text="{Binding GermanSample}"
+                               Language="de"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="Français (fr)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="FrenchColumn"
+                               Text="{Binding FrenchSample}"
+                               Language="fr"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="Español (es)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="SpanishColumn"
+                               Text="{Binding SpanishSample}"
+                               Language="es"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Soft hyphens written into words: such a word breaks only at them, the patterns break the others. -->
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.SoftHyphens}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="SoftHyphenColumn"
+                               Text="{Binding SoftHyphenSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+
+            <!-- An editor wraps and hyphenates as it is typed in. -->
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.HyphenationEditor}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <TextBox AutomationProperties.AutomationId="HyphenationEditor"
+                         Text="{Binding HyphenationEditable, Mode=TwoWay}"
+                         Language="ru"
+                         TextWrapping="WrapByWords"
+                         AcceptsReturn="True"
+                         FontSize="18"
+                         Width="{Binding ColumnWidth}"
+                         HorizontalAlignment="Left"/>
+            </StackPanel>
+        </WrapPanel>
+    </StackPanel>
+</View>

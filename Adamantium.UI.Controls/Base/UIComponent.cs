@@ -401,6 +401,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(HyphensProperty, value);
     }
 
+    public static readonly AdamantiumProperty LineBreakingProperty = AdamantiumProperty.Register(nameof(LineBreaking),
+        typeof(LineBreaking), typeof(UIComponent),
+        new PropertyMetadata(LineBreaking.Greedy, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How the text in this element and its descendants, wrapped by words, is broken into lines: <c>Greedy</c>
+    /// (the default) a line at a time, <c>Paragraph</c> a paragraph at a time, as TeX and InDesign set text - evenly
+    /// spaced lines, an even ragged edge, fewer hyphens.</summary>
+    public LineBreaking LineBreaking
+    {
+        get => GetValue<LineBreaking>(LineBreakingProperty);
+        set => SetValue(LineBreakingProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
