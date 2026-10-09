@@ -375,6 +375,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(FontStretchProperty, value);
     }
 
+    public static readonly AdamantiumProperty TextDirectionProperty = AdamantiumProperty.Register(nameof(TextDirection),
+        typeof(TextDirection), typeof(UIComponent),
+        new PropertyMetadata(TextDirection.Auto, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Which way the paragraphs of the text in this element and its descendants run: <c>LeftToRight</c>,
+    /// <c>RightToLeft</c>, or <c>Auto</c> (the default), each paragraph by its first strong character. Hebrew and
+    /// Arabic run right to left inside a paragraph either way.</summary>
+    public TextDirection TextDirection
+    {
+        get => GetValue<TextDirection>(TextDirectionProperty);
+        set => SetValue(TextDirectionProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
