@@ -175,6 +175,9 @@
 		<Content Include="Fonts\NotoColorEmoji.subset.ttf;Fonts\samples-sbix.ttf;Fonts\test_glyphs-glyf_colr_1.ttf;Fonts\samples-picosvg.ttf;Fonts\samples-glyf_colr_1.ttf;Fonts\LICENSE-NotoColorEmoji.txt;Fonts\LICENSE-color-fonts.txt">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Include="Fonts\PonomarUnicode.otf;Fonts\MonomakhUnicode.otf;Fonts\VertogradUnicode.otf;Fonts\LICENSE-ChurchSlavonic.txt;Fonts\NotoNastaliqUrdu-Regular.ttf;Fonts\LICENSE-NotoNastaliqUrdu.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<Content Include="..\Tests\Adamantium.UITests\Fonts\RobotoFlex-Variable.ttf" Link="Fonts\RobotoFlex-Variable.ttf">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>

@@ -33,7 +33,6 @@ public partial class GalleryViewModel
         new ShapesViewModel(),
         new LoadersViewModel(),
         new AnimationsViewModel(),
-        new TextViewModel(),
         new SlidePanelViewModel(),
         new ImageViewModel(),
         new VectorIconsViewModel(),
@@ -73,8 +72,9 @@ public partial class GalleryViewModel
         // Docking owns a navigation region too (its area IS a region), so it comes from DI as well - put back where it
         // stands in the list above, ahead of Tiles.
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is TilesViewModel)), resolver.Resolve<DockingViewModel>());
-        // Brushes owns a region too - its stands are separate views navigated into it - so it comes from DI, and back
-        // into the place it held in the list above, just ahead of Text.
+        // Text and Brushes own regions too - their topics are separate views navigated into them - so they come from DI,
+        // after Animations: Brushes, then Text, just ahead of the slide panel.
+        Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is SlidePanelViewModel)), resolver.Resolve<TextViewModel>());
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is TextViewModel)), resolver.Resolve<BrushesViewModel>());
         SelectedTab = Tabs[2];
     }

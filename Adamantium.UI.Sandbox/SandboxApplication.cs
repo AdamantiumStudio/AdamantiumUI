@@ -53,5 +53,15 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.BrushesViewModel, Views.Brushes.VisualStandView>(nameof(ViewModels.LiveStand.Visual));
         views.RegisterView<ViewModels.BrushesViewModel, Views.Brushes.MaterialStandView>(nameof(ViewModels.LiveStand.Material));
         views.RegisterView<ViewModels.BrushesViewModel, Views.Brushes.AuraStandView>(nameof(ViewModels.LiveStand.Aura));
+
+        // The text tab the same way: one view-model, a view per topic.
+        containerRegistry.RegisterSingleton<ViewModels.TextViewModel>();
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.BasicsStandView>(nameof(ViewModels.TextStand.Basics));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.EditingStandView>(nameof(ViewModels.TextStand.Editing));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.FacesStandView>(nameof(ViewModels.TextStand.Faces));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.ColorStandView>(nameof(ViewModels.TextStand.Color));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.OpenTypeStandView>(nameof(ViewModels.TextStand.OpenType));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.VariableStandView>(nameof(ViewModels.TextStand.Variable));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.ScriptsStandView>(nameof(ViewModels.TextStand.Scripts));
     }
 }

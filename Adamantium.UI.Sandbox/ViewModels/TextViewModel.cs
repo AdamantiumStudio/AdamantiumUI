@@ -4,20 +4,34 @@ using System.IO;
 using System.Linq;
 using Adamantium.Fonts;
 using Adamantium.MVVM;
+using Adamantium.Navigation;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Text tab: a message shown by TextBlocks (font size slider-driven), an editable TextBox two-way bound to the
-/// same <see cref="Message"/>, and a TextBlock built from bindable <c>Run</c>s - the accent run's Text binds to Message
-/// (so it live-updates while you type) and its Foreground binds to <see cref="AccentBrush"/>.</summary>
+/// <summary>Text tab: one topic at a time (<see cref="TextStand"/>), each a view of this same view-model navigated into
+/// the tab's region, so what the topics share - the message, its size - stays as it was across a switch.</summary>
 [ViewModel]
 public partial class TextViewModel : TabPageViewModel
 {
     private static readonly FontVariationList LightVariations = FontVariationList.Parse("wght=100, wdth=100");
     private static readonly FontVariationList HeavyVariations = FontVariationList.Parse("wght=1000, wdth=151");
 
-    public TextViewModel() : base("Text") { }
+    private readonly IRegionManager _regions;
+
+    public TextViewModel(IRegionManager regions) : base("Text")
+    {
+        _regions = regions;
+        ShowStand(_stand);
+    }
+
+    /// <summary>Which topic the tab is showing.</summary>
+    [Bindable] private TextStand _stand = TextStand.Basics;
+
+    partial void OnStandChanged(TextStand value) => ShowStand(value);
+
+    private void ShowStand(TextStand stand)
+        => _ = _regions.GetOrCreateRegion(RegionNames.TextStand).NavigateToInstanceAsync(this, stand.ToString());
 
     // Emoji from the fallback font among the letters, so selecting across them can be checked from the start.
     [Bindable, Affects(nameof(MessageLength))] private string _message = "The quick brown fox \U0001F98A jumps over the lazy dog \U0001F436 \U0001F600\U0001F389\U0001F44D";
@@ -75,6 +89,31 @@ public partial class TextViewModel : TabPageViewModel
     public string BidiSample => "Shalom is שָׁלוֹם (peace), 2026 times: שלום עולם 123!";
 
     [Bindable] private string _bidiEditable = "שלום world, עולם 42";
+
+    // Arabic letters take their joined forms, lam and alef their ligature, among Latin and Arabic-Indic digits.
+    public string ArabicSample => "Salaam is السلام عليكم (peace), عام ٢٠٢٦: مرحبا بالعالم 123!";
+
+    [Bindable] private string _arabicEditable = "مرحبا world، بالعالم 42";
+
+    // Urdu in Nastaliq: letters joined on a slant down to the baseline, by cursive attachment.
+    public FontFamily NastaliqFont { get; } = FromFile("NotoNastaliqUrdu-Regular.ttf");
+
+    public string UrduSample => "بچپن سے ہی مجھے کتابیں پڑھنے کا شوق تھا۔";
+
+    // Church Slavonic as the synodal books print it: breathings, accents and titla over the letters, letter-titla.
+    public FontFamily ChurchSlavonicFont { get; } = FromFile("PonomarUnicode.otf");
+
+    public string ChurchSlavonicSample =>
+        "Ѻ҆́ч҃е на́шъ, и҆́же є҆сѝ на нб҃сѣ́хъ, да ст҃и́тсѧ и҆́мѧ твоѐ. " +
+        "Гдⷭ҇ь бг҃ъ і҆и҃съ хрⷭ҇то́съ, ҂аѱ҃і.";
+
+    // Old Cyrillic in ustav and poluustav: the letters the modern alphabet dropped.
+    public FontFamily OldCyrillicFont { get; } = FromFile("MonomakhUnicode.otf");
+
+    public string OldCyrillicSample => "Аꙁъ ѥсмь ꙗко ꙑ ѫ ѭ ѧ ѩ ѣ ѳ ѵ ѯ ѱ ѡ ѿ ҁ ꙇ";
+
+    // Decorative capitals of the liturgical books, the initials a chapter opens with.
+    public FontFamily InitialsFont { get; } = FromFile("VertogradUnicode.otf");
 
     // Turns the bidi sample and its editor from left to right to right to left.
     [Bindable, Affects(nameof(BidiDirection))] private bool _rightToLeft;

@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- Arabic in `TextBlock` and `TextBox`: letters joined, lam-alef, vowel marks, Persian and Urdu, by the engine's Arabic
+  shaping; the caret and selection go by the screen as for Hebrew. Sandbox text page: an Arabic paragraph and editor
+  beside the Hebrew ones.
+- Sandbox text page split into topics, switched by radio buttons as the brushes page is: Basics, Editing, Faces, Color
+  and emoji, OpenType, Variable fonts, Scripts — each a view of the same view-model, so the message and its size stay as
+  they were across a switch. Scripts adds Urdu in Nastaliq, Church Slavonic (Ponomar), Old Cyrillic (Monomakh) and the
+  initials of the liturgical books (Vertograd).
 - Theme icons `LockIcon` (a padlock: what cannot be changed) and `CodeIcon` (angle brackets: the source of
   something), in the Fluent icons the Fluent, macOS and Editor Pro themes share.
 - Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from

@@ -1,4 +1,12 @@
 <Language>
+    <Phrase Key="Title" Text="Текст — по одной теме"/>
+    <Phrase Key="TopicBasics" Text="Основы"/>
+    <Phrase Key="TopicEditing" Text="Редактирование"/>
+    <Phrase Key="TopicFaces" Text="Начертания"/>
+    <Phrase Key="TopicColor" Text="Цвет и эмодзи"/>
+    <Phrase Key="TopicOpenType" Text="OpenType"/>
+    <Phrase Key="TopicVariable" Text="Вариативные шрифты"/>
+    <Phrase Key="TopicScripts" Text="Письменности"/>
     <Phrase Key="FontSize" Text="Размер шрифта:"/>
     <Phrase Key="Trimmed" Text="Обрезано до одной строки:"/>
     <Phrase Key="FloatingWatermark" Text="Всплывающая подсказка"/>
@@ -34,6 +42,10 @@
     <Phrase Key="VariationsTitle" Text="FontVariations поверх веса (у жирных $ ¢ ₴ ₦ шрифт подменяет глифы по осям):"/>
     <Phrase Key="MovingTitle" Text="FontVariations в движении: переход ведёт вес и ширину от одного набора к другому:"/>
     <Phrase Key="Heavy" Text="Жирный и широкий"/>
-    <Phrase Key="BidiTitle" Text="Оба направления: иврит среди латиницы, в абзаце и в редакторе:"/>
+    <Phrase Key="BidiTitle" Text="Оба направления: иврит и арабский среди латиницы, в абзацах и редакторах:"/>
     <Phrase Key="RightToLeft" Text="Справа налево"/>
+    <Phrase Key="NastaliqTitle" Text="Урду насталиком: буквы соединены курсивным присоединением, каждое слово спускается к строке лесенкой:"/>
+    <Phrase Key="ChurchSlavonicTitle" Text="Церковнославянский (Ponomar): придыхания, ударения и титла над буквами, буквотитла:"/>
+    <Phrase Key="OldCyrillicTitle" Text="Старая кириллица (Monomakh): буквы, которых нет в современной азбуке:"/>
+    <Phrase Key="InitialsTitle" Text="Буквицы богослужебных книг (Vertograd) — для первой буквы абзаца:"/>
 </Language>

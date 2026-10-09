@@ -1,0 +1,68 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Basics"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="FontSizeLabel" Text="{Localize TextStrings.FontSize}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="FontSizeSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=FontSizeLabel}"
+                    Width="240"
+                    Minimum="6"
+                    Maximum="72"
+                    TickFrequency="0.1"
+                    IsSnapToTickEnabled="True"
+                    Value="{Binding FontSize, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock Text="{Binding FontSize}" VerticalAlignment="Center" FontSize="16" Margin="12,0,0,0"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding Message}"
+                   FontSize="{Binding FontSize}"
+                   TextWrapping="WrapByWords"
+                   Width="520"
+                   HorizontalAlignment="Left"
+                   Margin="0,20,0,0"/>
+
+        <TextBlock Text="{Localize TextStrings.Trimmed}" Margin="0,20,0,6"/>
+        <Border Width="280" HorizontalAlignment="Left">
+            <TextBlock Text="{Binding Message}" TextTrimming="CharEllipses"/>
+        </Border>
+
+        <!-- Bindable Runs: a single TextBlock built from Run inlines. The middle run's Text binds to Message (typed on the
+             editing page) and its Foreground binds to a VM brush - both bindable, unlike WPF. -->
+        <TextBlock Text="{Localize TextStrings.BindableRuns}" Margin="0,20,0,6"/>
+        <TextBlock FontSize="16">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.YouTyped}" Foreground="#94A3B8"/>
+                <Run Text="{Binding Message}" Foreground="{Binding AccentBrush}"/>
+                <Run Text="{Localize TextStrings.Chars, count={Binding MessageLength}}" Foreground="#64748B"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Runs lay out as one text: each carries its own background, lines and size, and they wrap together. -->
+        <TextBlock Text="{Localize TextStrings.StyledRuns}"
+                   Margin="0,20,0,6"/>
+        <TextBlock FontSize="18"
+                   TextWrapping="WrapByWords"
+                   Width="520"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.Highlighted}"
+                     Background="#7C3AED"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Underlined}"
+                     TextDecorations="Underline"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Misspelt}"
+                     TextDecorations="Squiggle"
+                     Foreground="#F87171"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Struck}"
+                     TextDecorations="Strikethrough"/>
+                <Run Text=" "/>
+                <Run Text="{Localize TextStrings.Large}"
+                     FontSize="32"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+    </StackPanel>
+</View>

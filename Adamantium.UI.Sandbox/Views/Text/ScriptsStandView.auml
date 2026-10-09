@@ -1,0 +1,73 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Scripts"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <!-- Text of both directions: Hebrew and Arabic run right to left inside a left-to-right paragraph, and a
+             paragraph asked to run right to left keeps its Latin and numbers in their order. The switch turns the
+             paragraphs and the editors below it. -->
+        <TextBlock Text="{Localize TextStrings.BidiTitle}"
+                   Margin="0,0,0,6"/>
+        <ToggleSwitch AutomationProperties.AutomationId="RightToLeftToggle"
+                      Content="{Localize TextStrings.RightToLeft}"
+                      IsChecked="{Binding RightToLeft, Mode=TwoWay}"
+                      HorizontalAlignment="Left"/>
+        <StackPanel TextDirection="{Binding BidiDirection}"
+                    Margin="0,8,0,0">
+            <TextBlock AutomationProperties.AutomationId="BidiText"
+                       Text="{Binding BidiSample}"
+                       TextWrapping="WrapByWords"
+                       FontSize="24"/>
+            <TextBlock AutomationProperties.AutomationId="ArabicText"
+                       Text="{Binding ArabicSample}"
+                       TextWrapping="WrapByWords"
+                       FontSize="24"
+                       Margin="0,8,0,0"/>
+            <TextBox AutomationProperties.AutomationId="BidiEditor"
+                     Text="{Binding BidiEditable, Mode=TwoWay}"
+                     FontSize="20"
+                     Width="520"
+                     HorizontalAlignment="Left"
+                     Margin="0,8,0,0"/>
+            <TextBox AutomationProperties.AutomationId="ArabicEditor"
+                     Text="{Binding ArabicEditable, Mode=TwoWay}"
+                     FontSize="20"
+                     Width="520"
+                     HorizontalAlignment="Left"
+                     Margin="0,8,0,0"/>
+        </StackPanel>
+
+        <!-- Urdu in Nastaliq: each word steps down to the baseline, its letters joined by cursive attachment. -->
+        <TextBlock Text="{Localize TextStrings.NastaliqTitle}"
+                   Margin="0,24,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="UrduText"
+                   Text="{Binding UrduSample}"
+                   FontFamily="{Binding NastaliqFont}"
+                   FontSize="32"/>
+
+        <!-- Church Slavonic: marks stacked over the letters by the font's mark-to-mark positioning. -->
+        <TextBlock Text="{Localize TextStrings.ChurchSlavonicTitle}"
+                   Margin="0,24,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="ChurchSlavonicText"
+                   Text="{Binding ChurchSlavonicSample}"
+                   FontFamily="{Binding ChurchSlavonicFont}"
+                   Language="cu"
+                   TextWrapping="WrapByWords"
+                   FontSize="30"/>
+
+        <TextBlock Text="{Localize TextStrings.OldCyrillicTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="OldCyrillicText"
+                   Text="{Binding OldCyrillicSample}"
+                   FontFamily="{Binding OldCyrillicFont}"
+                   Language="cu"
+                   FontSize="30"/>
+
+        <!-- The decorative capitals a chapter of a liturgical book opens with; set as a drop cap once paragraphs have them. -->
+        <TextBlock Text="{Localize TextStrings.InitialsTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="InitialsText"
+                   Text="А Б В Г Д Е Ж З"
+                   FontFamily="{Binding InitialsFont}"
+                   FontSize="72"/>
+    </StackPanel>
+</View>
