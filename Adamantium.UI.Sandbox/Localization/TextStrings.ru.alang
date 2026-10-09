@@ -34,6 +34,6 @@
     <Phrase Key="VariationsTitle" Text="FontVariations поверх веса (у жирных $ ¢ ₴ ₦ шрифт подменяет глифы по осям):"/>
     <Phrase Key="MovingTitle" Text="FontVariations в движении: переход ведёт вес и ширину от одного набора к другому:"/>
     <Phrase Key="Heavy" Text="Жирный и широкий"/>
-    <Phrase Key="BidiTitle" Text="Оба направления: иврит среди латиницы, в абзаце и в редакторе:"/>
+    <Phrase Key="BidiTitle" Text="Оба направления: иврит и арабский среди латиницы, в абзацах и редакторах:"/>
     <Phrase Key="RightToLeft" Text="Справа налево"/>
 </Language>

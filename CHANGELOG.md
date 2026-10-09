@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- Arabic in `TextBlock` and `TextBox`: letters joined, lam-alef, vowel marks, Persian and Urdu, by the engine's Arabic
+  shaping; the caret and selection go by the screen as for Hebrew. Sandbox text page: an Arabic paragraph and editor
+  beside the Hebrew ones.
+
 - Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from
   its first strong letter): `TextBlock` and `TextBox` lay Hebrew right to left among Latin and numbers, and a
   right-to-left paragraph starts on the right. In such text the `TextBox` caret and selection go by the screen: the

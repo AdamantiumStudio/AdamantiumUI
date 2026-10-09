@@ -76,6 +76,11 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private string _bidiEditable = "שלום world, עולם 42";
 
+    // Arabic letters take their joined forms, lam and alef their ligature, among Latin and Arabic-Indic digits.
+    public string ArabicSample => "Salaam is السلام عليكم (peace), عام ٢٠٢٦: مرحبا بالعالم 123!";
+
+    [Bindable] private string _arabicEditable = "مرحبا world، بالعالم 42";
+
     // Turns the bidi sample and its editor from left to right to right to left.
     [Bindable, Affects(nameof(BidiDirection))] private bool _rightToLeft;
 

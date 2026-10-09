@@ -380,9 +380,9 @@
             </TextBlock.Transitions>
         </TextBlock>
 
-        <!-- Text of both directions: Hebrew runs right to left inside a left-to-right paragraph, and a paragraph asked
-             to run right to left keeps its Latin and numbers in their order. The switch turns the text and the
-             editor below it. -->
+        <!-- Text of both directions: Hebrew and Arabic run right to left inside a left-to-right paragraph, and a
+             paragraph asked to run right to left keeps its Latin and numbers in their order. The switch turns the
+             paragraphs and the editors below it. -->
         <TextBlock Text="{Localize TextStrings.BidiTitle}"
                    Margin="0,20,0,6"/>
         <ToggleSwitch AutomationProperties.AutomationId="RightToLeftToggle"
@@ -395,8 +395,19 @@
                        Text="{Binding BidiSample}"
                        TextWrapping="WrapByWords"
                        FontSize="24"/>
+            <TextBlock AutomationProperties.AutomationId="ArabicText"
+                       Text="{Binding ArabicSample}"
+                       TextWrapping="WrapByWords"
+                       FontSize="24"
+                       Margin="0,8,0,0"/>
             <TextBox AutomationProperties.AutomationId="BidiEditor"
                      Text="{Binding BidiEditable, Mode=TwoWay}"
+                     FontSize="20"
+                     Width="520"
+                     HorizontalAlignment="Left"
+                     Margin="0,8,0,0"/>
+            <TextBox AutomationProperties.AutomationId="ArabicEditor"
+                     Text="{Binding ArabicEditable, Mode=TwoWay}"
                      FontSize="20"
                      Width="520"
                      HorizontalAlignment="Left"
