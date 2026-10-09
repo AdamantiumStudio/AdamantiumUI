@@ -104,6 +104,8 @@ public class TextBlock : InputUIComponent
     private TextDirection _lastDirection;
     private Hyphens _lastHyphens;
     private LineBreaking _lastLineBreaking;
+    private TabStopList _lastTabStops;
+    private bool _lastOpticalMargins;
     private TextAttributes _lastShaping;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
@@ -139,6 +141,8 @@ public class TextBlock : InputUIComponent
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
         _textLayout.LineBreaking = LineBreaking;
+        _textLayout.TabStops = TabStops;
+        _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -159,7 +163,8 @@ public class TextBlock : InputUIComponent
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
-            && _lastLineBreaking == LineBreaking && ShapesLike(_lastShaping, shaping))
+            && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
+            && _lastOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -204,6 +209,8 @@ public class TextBlock : InputUIComponent
         _lastDirection = TextDirection;
         _lastHyphens = Hyphens;
         _lastLineBreaking = LineBreaking;
+        _lastTabStops = TabStops;
+        _lastOpticalMargins = OpticalMarginAlignment;
         return _cachedSize;
     }
 

@@ -50,6 +50,8 @@
     <Phrase Key="OldCyrillicTitle" Text="Old Cyrillic (Monomakh): the letters the modern alphabet dropped:"/>
     <Phrase Key="InitialsTitle" Text="Initials of the liturgical books (Vertograd), for drop caps:"/>
     <Phrase Key="ParagraphTitle" Text="The same paragraph broken a line at a time, as browsers do, and as a whole, as TeX and InDesign's Paragraph Composer do:"/>
+    <Phrase Key="OpticalMargins" Text="Optical margins"/>
+    <Phrase Key="TabsTitle" Text="Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point:"/>
     <Phrase Key="LineAtATime" Text="Line at a time"/>
     <Phrase Key="WholeParagraph" Text="Whole paragraph"/>
     <Phrase Key="HyphenationTitle" Text="Words broken across lines by the hyphenation patterns of their language (TeX's, by Liang's algorithm), or at soft hyphens:"/>

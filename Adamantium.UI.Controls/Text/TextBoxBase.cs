@@ -272,6 +272,8 @@ public abstract class TextBoxBase : Control
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
+    private TabStopList _lastShapedTabStops;
+    private bool _lastShapedOpticalMargins;
     private TextAttributes _lastShapedShaping;
     private double _wrapWidth = double.PositiveInfinity;   // live viewport width for soft wrap; set by measure/render
 
@@ -332,6 +334,8 @@ public abstract class TextBoxBase : Control
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
         _textLayout.LineBreaking = LineBreaking;
+        _textLayout.TabStops = TabStops;
+        _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -349,7 +353,8 @@ public abstract class TextBoxBase : Control
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
-            && _lastShapedLineBreaking == LineBreaking && ShapesLike(_lastShapedShaping, shaping))
+            && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
+            && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
         {
             return;
         }
@@ -393,6 +398,8 @@ public abstract class TextBoxBase : Control
         _lastShapedDirection = TextDirection;
         _lastShapedHyphens = Hyphens;
         _lastShapedLineBreaking = LineBreaking;
+        _lastShapedTabStops = TabStops;
+        _lastShapedOpticalMargins = OpticalMarginAlignment;
     }
 
     private void BuildCaretModel()

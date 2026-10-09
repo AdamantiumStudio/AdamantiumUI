@@ -50,6 +50,8 @@
     <Phrase Key="OldCyrillicTitle" Text="Старая кириллица (Monomakh): буквы, которых нет в современной азбуке:"/>
     <Phrase Key="InitialsTitle" Text="Буквицы богослужебных книг (Vertograd) — для первой буквы абзаца:"/>
     <Phrase Key="ParagraphTitle" Text="Один и тот же абзац, разбитый на строки построчно, как в браузере, и целиком, как в TeX и в Paragraph Composer у InDesign:"/>
+    <Phrase Key="OpticalMargins" Text="Висячая пунктуация"/>
+    <Phrase Key="TabsTitle" Text="Табуляция: номера страниц по правому краю за точками-заполнителями, цены по десятичной точке:"/>
     <Phrase Key="LineAtATime" Text="Построчно"/>
     <Phrase Key="WholeParagraph" Text="Весь абзац"/>
     <Phrase Key="HyphenationTitle" Text="Переносы слов по шаблонам их языка (из TeX, алгоритмом Лианга) или по мягким переносам:"/>

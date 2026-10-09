@@ -3,7 +3,8 @@
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the text tab's region under the key "Paragraph"; the DataContext is the tab's own view-model. -->
     <StackPanel Orientation="Vertical"
-                Hyphens="{Binding Hyphens}">
+                Hyphens="{Binding Hyphens}"
+                OpticalMarginAlignment="{Binding OpticalMargins}">
         <StackPanel Orientation="Horizontal">
             <TextBlock x:Name="ColumnWidthLabel"
                        Text="{Localize TextStrings.ColumnWidth}"
@@ -21,6 +22,10 @@
             <ToggleSwitch AutomationProperties.AutomationId="JustifyToggle"
                           Content="{Localize TextStrings.Justify}"
                           IsChecked="{Binding Justified, Mode=TwoWay}"/>
+            <ToggleSwitch AutomationProperties.AutomationId="OpticalMarginsToggle"
+                          Content="{Localize TextStrings.OpticalMargins}"
+                          IsChecked="{Binding OpticalMargins, Mode=TwoWay}"
+                          Margin="24,0,0,0"/>
         </StackPanel>
 
         <!-- The same paragraph broken a line at a time and as a whole. -->
@@ -202,6 +207,27 @@
                 </Border>
             </StackPanel>
 
+            <!-- Japanese breaks between any two characters but by the kinsoku rules: no line starts with a closing
+                 bracket, a small kana or a full stop, and none ends with an opening bracket. -->
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="日本語 (ja)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="JapaneseColumn"
+                               Text="{Binding JapaneseSample}"
+                               Language="ja"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+
             <!-- Soft hyphens written into words: such a word breaks only at them, the patterns break the others. -->
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
@@ -237,6 +263,32 @@
                          Width="{Binding ColumnWidth}"
                          HorizontalAlignment="Left"/>
             </StackPanel>
+        </WrapPanel>
+
+        <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->
+        <TextBlock Text="{Localize TextStrings.TabsTitle}"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="360"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="ContentsTabs"
+                           Text="{Binding ContentsSample}"
+                           TabStops="340 Right Leader=."
+                           FontSize="18"/>
+            </Border>
+            <Border Width="260"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="PriceTabs"
+                           Text="{Binding PricesSample}"
+                           TabStops="200 Decimal"
+                           FontSize="18"/>
+            </Border>
         </WrapPanel>
     </StackPanel>
 </View>
