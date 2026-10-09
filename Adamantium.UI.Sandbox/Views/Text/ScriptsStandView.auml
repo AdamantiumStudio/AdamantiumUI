@@ -62,7 +62,7 @@
                    Language="cu"
                    FontSize="30"/>
 
-        <!-- The decorative capitals a chapter of a liturgical book opens with; set as a drop cap once paragraphs have them. -->
+        <!-- The decorative capitals a chapter of a liturgical book opens with; the Paragraph topic sets one as a drop cap. -->
         <TextBlock Text="{Localize TextStrings.InitialsTitle}"
                    Margin="0,20,0,6"/>
         <TextBlock AutomationProperties.AutomationId="InitialsText"

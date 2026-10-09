@@ -51,6 +51,7 @@
     <Phrase Key="InitialsTitle" Text="Буквицы богослужебных книг (Vertograd) — для первой буквы абзаца:"/>
     <Phrase Key="ParagraphTitle" Text="Один и тот же абзац, разбитый на строки построчно, как в браузере, и целиком, как в TeX и в Paragraph Composer у InDesign:"/>
     <Phrase Key="OpticalMargins" Text="Висячая пунктуация"/>
+    <Phrase Key="DropCapsTitle" Text="Буквица: первая буква на три строки тем же шрифтом и буквица богослужебных книг (Vertograd) на четыре:"/>
     <Phrase Key="TabsTitle" Text="Табуляция: номера страниц по правому краю за точками-заполнителями, цены по десятичной точке:"/>
     <Phrase Key="LineAtATime" Text="Построчно"/>
     <Phrase Key="WholeParagraph" Text="Весь абзац"/>

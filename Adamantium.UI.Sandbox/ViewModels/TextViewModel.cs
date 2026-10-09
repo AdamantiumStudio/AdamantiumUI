@@ -133,6 +133,11 @@ public partial class TextViewModel : TabPageViewModel
     public string JapaneseSample =>
         "「吾輩は猫である。名前はまだ無い。」どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。";
 
+    // The opening of the Gospel of John in the Synodal translation, its first letter a decorative initial.
+    public string GospelSample =>
+        "В начале было Слово, и Слово было у Бога, и Слово было Бог. Оно было в начале у Бога. Всё чрез Него начало " +
+        "быть, и без Него ничто не начало быть, что начало быть. В Нем была жизнь, и жизнь была свет человеков.";
+
     // A table of contents, page numbers right-aligned behind dot leaders, and prices lined up on the decimal point.
     public string ContentsSample => "Introduction\t1\nThe paragraph composer\t17\nHyphenation by patterns\t123";
 

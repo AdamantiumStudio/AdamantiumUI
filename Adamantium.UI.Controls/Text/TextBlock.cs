@@ -39,6 +39,18 @@ public class TextBlock : InputUIComponent
     public static readonly AdamantiumProperty JustifyLastLineProperty = AdamantiumProperty.Register(nameof(JustifyLastLine),
         typeof(bool), typeof(TextBlock),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty DropCapLinesProperty = AdamantiumProperty.Register(nameof(DropCapLines),
+        typeof(int), typeof(TextBlock),
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty DropCapCharactersProperty = AdamantiumProperty.Register(nameof(DropCapCharacters),
+        typeof(int), typeof(TextBlock),
+        new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty DropCapFontFamilyProperty = AdamantiumProperty.Register(nameof(DropCapFontFamily),
+        typeof(FontFamily), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
     
     // FontFamily is declared (inherited) on UIComponent. On a TextBlock a font change must re-shape the text, so override
     // the metadata with a callback that re-measures - this fires on BOTH a direct set and an inherited change cascaded
@@ -106,6 +118,7 @@ public class TextBlock : InputUIComponent
     private LineBreaking _lastLineBreaking;
     private TabStopList _lastTabStops;
     private bool _lastOpticalMargins;
+    private DropCap _lastDropCap;
     private TextAttributes _lastShaping;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
@@ -143,6 +156,8 @@ public class TextBlock : InputUIComponent
         _textLayout.LineBreaking = LineBreaking;
         _textLayout.TabStops = TabStops;
         _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
+        var dropCap = DropCapOf(ref fontReady);
+        _textLayout.DropCap = dropCap;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -164,7 +179,8 @@ public class TextBlock : InputUIComponent
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
             && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
-            && _lastOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShaping, shaping))
+            && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
+            && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -211,7 +227,24 @@ public class TextBlock : InputUIComponent
         _lastLineBreaking = LineBreaking;
         _lastTabStops = TabStops;
         _lastOpticalMargins = OpticalMarginAlignment;
+        _lastDropCap = dropCap;
         return _cachedSize;
+    }
+
+    private DropCap DropCapOf(ref bool fontReady)
+    {
+        if (DropCapLines < 2 || DropCapCharacters < 1)
+        {
+            return null;
+        }
+
+        IFont font = null;
+        if (DropCapFontFamily != null)
+        {
+            fontReady &= TryResolveFont(DropCapFontFamily, out font);
+        }
+
+        return new DropCap(DropCapLines, DropCapCharacters, font);
     }
 
     public string Text
@@ -254,6 +287,28 @@ public class TextBlock : InputUIComponent
     {
         get => GetValue<bool>(JustifyLastLineProperty);
         set => SetValue(JustifyLastLineProperty, value);
+    }
+
+    /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
+    /// 2 or more; 0 (the default) for none. Text wrapped by words only.</summary>
+    public int DropCapLines
+    {
+        get => GetValue<int>(DropCapLinesProperty);
+        set => SetValue(DropCapLinesProperty, value);
+    }
+
+    /// <summary>How many characters the drop cap takes; 1 by default.</summary>
+    public int DropCapCharacters
+    {
+        get => GetValue<int>(DropCapCharactersProperty);
+        set => SetValue(DropCapCharactersProperty, value);
+    }
+
+    /// <summary>The family the drop cap is set in, as a decorative face of initials; unset, the text's own.</summary>
+    public FontFamily DropCapFontFamily
+    {
+        get => GetValue<FontFamily>(DropCapFontFamilyProperty);
+        set => SetValue(DropCapFontFamilyProperty, value);
     }
 
     public Brush Background

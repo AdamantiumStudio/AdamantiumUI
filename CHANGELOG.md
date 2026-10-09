@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- Drop caps on `TextBlock`: `DropCapLines` (2 or more; 0, the default, for none), `DropCapCharacters` and
+  `DropCapFontFamily` for a decorative face of initials. Sandbox Paragraph topic: a drop cap across three lines, and
+  an initial of the liturgical books (Vertograd) across four.
 - `TabStops` and `OpticalMarginAlignment` on every element (inherited): tab stops left, centered, right or on a
   decimal separator, with leaders (`TabStops="120, 300 Right Leader=., 400 Decimal AlignOn=','"`), and punctuation
   and hyphens hanging partly past the margin. Sandbox Paragraph topic: optical margins switched on and off, a
