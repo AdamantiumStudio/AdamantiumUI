@@ -119,6 +119,17 @@ public class AumlRuntimeLoaderPreviewTests
     }
 
     [Test]
+    public void AControlTemplate_FollowsTheControl_OnAnAttachedProperty()
+    {
+        var result = AumlLoader.Load(
+            $"<ControlTemplate {Namespaces} TargetType=\"Button\"><Border ToolTipService.ToolTip=\"{{TemplateBinding Content}}\"/></ControlTemplate>");
+
+        var template = (ControlTemplate)result.Root;
+        var border = (Border)template.Build(new Button { Content = "Run" }).RootComponent;
+        Assert.That(ToolTipService.GetToolTip(border), Is.EqualTo("Run"), string.Join(" | ", result.Diagnostics));
+    }
+
+    [Test]
     public void AGenericCollectionProperty_IsFilled_NotAssigned()
     {
         var result = AumlLoader.Load(

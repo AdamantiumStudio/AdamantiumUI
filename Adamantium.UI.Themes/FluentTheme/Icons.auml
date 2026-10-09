@@ -8,6 +8,20 @@
                          StrokeThickness="1"/>
     </DrawingImage>
 
+    <!-- Locked: a padlock - a text or a value that cannot be changed. -->
+    <DrawingImage x:Key="LockIcon">
+        <GeometryDrawing Geometry="M1.5,4.5 L8.5,4.5 L8.5,9.5 L1.5,9.5 Z M3,4.5 L3,2.75 C3,0.25 7,0.25 7,2.75 L7,4.5"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
+    <!-- Code: angle brackets around a slash - the source of something. -->
+    <DrawingImage x:Key="CodeIcon">
+        <GeometryDrawing Geometry="M3,2 L0.5,5 L3,8 M7,2 L9.5,5 L7,8 M6,1 L4,9"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
     <!-- Chevrons: a filled triangle, one shape rotated by where it points. Kept as geometry rather than the SDF
          RegularPolygon they used to be, so the whole set is one kind of thing. -->
     <DrawingImage x:Key="ChevronDownIcon">
