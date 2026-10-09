@@ -6,11 +6,12 @@ namespace Adamantium.UI.Core;
 public interface IAnimatableUIComponent
 {
     /// <summary>
-    /// Starts a <see cref="Media.Animation.DoubleAnimation"/> on a double property. The animation writes at
+    /// Starts an animation on a property of its type: a <see cref="Media.Animation.DoubleAnimation"/> on a double, a
+    /// <see cref="Media.Animation.FontVariationListAnimation"/> on <c>FontVariations</c>. The animation writes at
     /// <see cref="ValuePriority.Animation"/> (so it overrides Local/Binding while it runs) and holds its final value;
     /// <paramref name="completed"/> fires when it finishes. Re-calling for the same property restarts the animation.
     /// </summary>
-    void BeginAnimation(AdamantiumProperty property, Media.Animation.DoubleAnimation animation, Action completed = null);
+    void BeginAnimation(AdamantiumProperty property, Media.Animation.PropertyAnimation animation, Action completed = null);
 
     /// <summary>
     /// Stops the animation on <paramref name="property"/> (whether running or holding its final value) and releases the
@@ -52,7 +53,7 @@ public class AnimatableUIComponent : AdamantiumComponent, IAnimatableUIComponent
     }
 
     /// <inheritdoc />
-    public void BeginAnimation(AdamantiumProperty property, Media.Animation.DoubleAnimation animation, Action completed = null)
+    public void BeginAnimation(AdamantiumProperty property, Media.Animation.PropertyAnimation animation, Action completed = null)
     {
         ArgumentNullException.ThrowIfNull(property);
         ArgumentNullException.ThrowIfNull(animation);

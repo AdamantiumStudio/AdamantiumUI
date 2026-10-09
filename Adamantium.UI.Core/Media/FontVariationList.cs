@@ -16,10 +16,44 @@ namespace Adamantium.UI.Core.Media;
 public sealed class FontVariationList : IReadOnlyList<FontVariation>, IEquatable<FontVariationList>
 {
     private readonly FontVariation[] _variations;
+    private readonly FontVariationList _from;
+    private readonly FontVariationList _to;
+    private readonly float _progress;
 
     public FontVariationList(IEnumerable<FontVariation> variations)
     {
         _variations = variations?.ToArray() ?? [];
+    }
+
+    private FontVariationList(FontVariation[] variations, FontVariationList from, FontVariationList to, float progress)
+    {
+        _variations = variations;
+        _from = from;
+        _to = to;
+        _progress = progress;
+    }
+
+    /// <summary>The values at <paramref name="progress"/> of the way from <paramref name="from"/> to
+    /// <paramref name="to"/>, as an animation passes them: an axis in both moves between its two values, an axis in one
+    /// moves from or to what the font has. Text in them is laid out at exactly these values and drawn between the font's
+    /// key instances on the way (<see cref="IFont.GetInstance(IReadOnlyList{FontVariation}, IReadOnlyList{FontVariation}, float)"/>).
+    /// At either end it is that list itself, and the text is drawn as it is at rest.</summary>
+    public static FontVariationList Between(FontVariationList from, FontVariationList to, double progress)
+    {
+        from ??= Empty;
+        to ??= Empty;
+        if (progress is <= 0 or >= 1)
+        {
+            return progress <= 0 ? from : to;
+        }
+
+        var at = (float)progress;
+        var variations = from.Where(v => to.All(other => other.Tag != v.Tag))
+            .Concat(to.Select(v => from.FirstOrDefault(other => other.Tag == v.Tag) is { Tag: not null } start
+                ? new FontVariation(v.Tag, start.Value + (v.Value - start.Value) * at)
+                : v))
+            .ToArray();
+        return new FontVariationList(variations, from, to, at);
     }
 
     public static FontVariationList Empty { get; } = new([]);
@@ -61,17 +95,24 @@ public sealed class FontVariationList : IReadOnlyList<FontVariation>, IEquatable
     /// <summary><paramref name="font"/> with these values over the ones it has; the font itself when there are none.</summary>
     public IFont Apply(IFont font)
     {
-        if (_variations.Length == 0 || font.Axes.Count == 0)
+        if (font.Axes.Count == 0)
         {
             return font;
         }
 
-        var values = font.Variations
+        if (_from != null)
+        {
+            return font.GetInstance(_from.Over(font), _to.Over(font), _progress);
+        }
+
+        return _variations.Length == 0 ? font : font.GetInstance(Over(font));
+    }
+
+    private FontVariation[] Over(IFont font) =>
+        font.Variations
             .Where(v => v.Tag != "opsz" && _variations.All(own => own.Tag != v.Tag))
             .Concat(_variations)
             .ToArray();
-        return font.GetInstance(values);
-    }
 
     public int Count => _variations.Length;
 
@@ -81,7 +122,9 @@ public sealed class FontVariationList : IReadOnlyList<FontVariation>, IEquatable
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public bool Equals(FontVariationList other) => other != null && _variations.SequenceEqual(other._variations);
+    public bool Equals(FontVariationList other) =>
+        other != null && _variations.SequenceEqual(other._variations) && Equals(_from, other._from) &&
+        Equals(_to, other._to) && _progress.Equals(other._progress);
 
     public override bool Equals(object obj) => obj is FontVariationList other && Equals(other);
 

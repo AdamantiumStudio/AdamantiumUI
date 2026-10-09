@@ -32,4 +32,6 @@
     <Phrase Key="AxesTitle" Text="Оси Roboto Flex: тег, имя от шрифта (* — скрыта от панелей стилей), диапазон, имена значений:"/>
     <Phrase Key="OpticalSizeTitle" Text="Оптический размер следует за кеглем; затем 64 при opsz=8, при opsz=144 и курсив наклоном:"/>
     <Phrase Key="VariationsTitle" Text="FontVariations поверх веса (у жирных $ ¢ ₴ ₦ шрифт подменяет глифы по осям):"/>
+    <Phrase Key="MovingTitle" Text="FontVariations в движении: переход ведёт вес и ширину от одного набора к другому:"/>
+    <Phrase Key="Heavy" Text="Жирный и широкий"/>
 </Language>

@@ -32,4 +32,13 @@ public struct GlyphItem
     /// baseline, and the pixels per font unit); .y = the element's opacity raised to 2.2, which the layer's own colors
     /// take.</summary>
     public Vector4F Paint;
+
+    /// <summary>A glyph of a font on the way between two key instances, as
+    /// <see cref="Adamantium.Graphics.Fonts.FontItem.SecondSource"/> holds it: the second key's cell over the same
+    /// quad; zero for a glyph drawn from one field.</summary>
+    public Vector4F SecondSource;
+
+    /// <summary>.x = the atlas layer of <see cref="SecondSource"/>; .y = how far the glyph is from the first key to the
+    /// second, as <see cref="Adamantium.Graphics.Fonts.FontItem.Second"/> holds them.</summary>
+    public Vector4F Second;
 }

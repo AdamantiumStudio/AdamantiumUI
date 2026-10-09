@@ -164,7 +164,7 @@ public static class AnimationManager
         foreach (var start in starts) start();
     }
 
-    internal static void Begin(AdamantiumComponent target, AdamantiumProperty property, DoubleAnimation animation, Action completed)
+    internal static void Begin(AdamantiumComponent target, AdamantiumProperty property, PropertyAnimation animation, Action completed)
     {
         if (DeferIfOutOfTree(target, target, () => Begin(target, property, animation, completed))) return;
 
