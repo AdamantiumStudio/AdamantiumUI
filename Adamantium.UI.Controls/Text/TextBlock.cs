@@ -323,7 +323,8 @@ public class TextBlock : InputUIComponent
             var length = (run.Text ?? string.Empty).Length;
             var weight = run.FontWeight ?? FontWeight;
             var style = run.FontStyle ?? FontStyle;
-            _runFontsPending |= !TryResolveFont(family, weight, style, run.FontStretch ?? FontStretch, out var runFont);
+            _runFontsPending |= !TryResolveFont(family, weight, style, run.FontStretch ?? FontStretch,
+                run.FontVariations ?? FontVariations, out var runFont);
             attributed.Apply(start, length, new TextAttributes
             {
                 Font = runFont,

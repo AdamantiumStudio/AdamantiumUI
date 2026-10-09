@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `FontVariations` on every element, inherited by the text inside, and on a `Run`: axis values of a variable font over
+  the ones its weight, width and style set (`FontVariations="GRAD=150, opsz=36"`; `opsz=auto`, like leaving it out,
+  sets the optical size to the text's size). `FontStyle` sets a variable font's 'ital' or 'slnt' axis, as CSS does.
+  Sandbox text page: Roboto Flex's axes by the font's own names and the names of their values, text at its own optical
+  size, and axis values by `FontVariations`.
+
 - Sandbox text page: a panel of OpenType features (each feature of Source Sans 3 that changes glyphs, by the font's
   own name, with characters it changes drawn with it on) and a glyph panel (every alternate of a character, drawn with
   the feature and value that ask for it).

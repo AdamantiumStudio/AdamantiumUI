@@ -42,6 +42,17 @@ public class FontFeaturesMarkupTests
     }
 
     [Test]
+    public void AxisValues_Compile()
+    {
+        var errors = AumlCodegenHarness.Compile(WindowWith(
+            "<TextBlock FontVariations=\"wght=650, GRAD=150, opsz=auto\">" +
+            "<TextBlock.Inlines><Run Text=\"large\" FontVariations=\"opsz=144\"/></TextBlock.Inlines>" +
+            "</TextBlock>"));
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    [Test]
     public void AMisspelledWeight_FailsTheBuild()
     {
         AumlCodegenHarness.Generate(WindowWith("<TextBlock FontWeight=\"Semibld\"/>"), out var errors);

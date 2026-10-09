@@ -57,7 +57,27 @@ public partial class TextViewModel : TabPageViewModel
 
     public IReadOnlyList<GlyphAlternateItem> GlyphAlternates => ListAlternates(FeatureFont.Fonts[0], AlternateCharacter);
 
+    // Roboto Flex: optical size, slant, width and nine parametric axes, its values named by 'STAT'.
+    public FontFamily VariableFont { get; } = FromFile("RobotoFlex-Variable.ttf");
+
+    // The axes of VariableFont, as a style panel lists them.
+    public IReadOnlyList<FontAxisItem> AxisItems => _axisItems ??= ListAxes(VariableFont.Fonts[0]);
+
+    private IReadOnlyList<FontAxisItem> _axisItems;
+
     public int MessageLength => Message?.Length ?? 0;
+
+    private static IReadOnlyList<FontAxisItem> ListAxes(IFont font)
+    {
+        return font.Axes
+            .Select(axis => new FontAxisItem(axis.Tag, axis.IsHidden ? $"{axis.Name} *" : axis.Name,
+                FormattableString.Invariant($"{axis.MinValue}…{axis.DefaultValue}…{axis.MaxValue}"),
+                string.Join(", ", font.AxisValues
+                    .Where(value => value.Values.Count == 1 && value.Values[0].Tag == axis.Tag)
+                    .Select(value => value.Name)
+                    .Distinct())))
+            .ToArray();
+    }
 
     private static IReadOnlyList<FontFeatureItem> ListFeatures(IFont font)
     {

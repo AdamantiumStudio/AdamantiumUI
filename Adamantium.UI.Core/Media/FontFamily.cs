@@ -37,8 +37,8 @@ public class FontFamily
 
     /// <summary>The face of the family nearest to the weight, slant and width asked for, picked as CSS picks it (the
     /// width first, then the slant, then the weight): with no bold face, a bold request gets the heaviest there is; a
-    /// variable face is set to the weight and width asked for. A family made from a file answers with its one font, at
-    /// the weight and width asked for when the font is variable.</summary>
+    /// variable face is set to the weight, width and slant asked for. A family made from a file answers with its one
+    /// font, at the weight, width and slant asked for when the font is variable.</summary>
     public IFont GetFont(FontWeight weight, FontStyle style, FontStretch stretch)
     {
         Find(weight, style, stretch, true, out var font);
@@ -65,7 +65,7 @@ public class FontFamily
 
         if (_name == null)
         {
-            font = Fonts[0].GetInstance(FontVariation.For(weight, stretch));
+            font = Fonts[0].GetInstance(FontVariation.For(weight, stretch, style, Fonts[0]));
         }
         else
         {
@@ -76,9 +76,9 @@ public class FontFamily
             }
             else if (wait)
             {
-                font = FontCollection.Load(face, weight, stretch);
+                font = FontCollection.Load(face, weight, stretch, style);
             }
-            else if (!FontCollection.TryLoad(face, weight, stretch, out font))
+            else if (!FontCollection.TryLoad(face, weight, stretch, style, out font))
             {
                 font = Fonts[0];
                 return false;

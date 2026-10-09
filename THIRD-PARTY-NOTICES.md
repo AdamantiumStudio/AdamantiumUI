@@ -54,3 +54,6 @@ Not code, but files shipped beside it, unchanged, each with its licence text in 
 - The same folders — `samples-sbix.ttf`, `samples-picosvg.ttf`, `samples-glyf_colr_1.ttf` and
   `test_glyphs-glyf_colr_1.ttf`, from https://github.com/googlefonts/color-fonts, copyright Google LLC, under the
   Apache License 2.0 (`LICENSE-color-fonts.txt`).
+- `Tests/Adamantium.UITests/Fonts/RobotoFlex-Variable.ttf`, also copied into the sandbox's `Fonts/` at build, the
+  variable font from https://github.com/google/fonts/tree/main/ofl/robotoflex, copyright 2017 The Roboto Flex Project
+  Authors, under the SIL Open Font License 1.1 (`LICENSE-RobotoFlex.txt`).

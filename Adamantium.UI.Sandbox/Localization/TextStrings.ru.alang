@@ -29,4 +29,7 @@
     <Phrase Key="FeaturesTitle" Text="Свойства OpenType шрифта Source Sans 3, меняющие глифы: тег и значения, имя от самого шрифта, символы с включённым свойством:"/>
     <Phrase Key="AlternatesTitle" Text="Альтернативы символа, каждая нарисована тем свойством и значением, что её дают:"/>
     <Phrase Key="AlternateCharacter" Text="Символ"/>
+    <Phrase Key="AxesTitle" Text="Оси Roboto Flex: тег, имя от шрифта (* — скрыта от панелей стилей), диапазон, имена значений:"/>
+    <Phrase Key="OpticalSizeTitle" Text="Оптический размер следует за кеглем; затем 64 при opsz=8, при opsz=144 и курсив наклоном:"/>
+    <Phrase Key="VariationsTitle" Text="FontVariations поверх веса (у жирных $ ¢ ₴ ₦ шрифт подменяет глифы по осям):"/>
 </Language>

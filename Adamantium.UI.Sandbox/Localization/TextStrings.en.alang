@@ -29,4 +29,7 @@
     <Phrase Key="FeaturesTitle" Text="OpenType features of Source Sans 3 that change glyphs: tag and values, the font's own name, characters it changes with it on:"/>
     <Phrase Key="AlternatesTitle" Text="Alternates of a character, each drawn with the feature and value that ask for it:"/>
     <Phrase Key="AlternateCharacter" Text="Character"/>
+    <Phrase Key="AxesTitle" Text="Axes of Roboto Flex: tag, the font's name (* hidden from style panels), range, names of values:"/>
+    <Phrase Key="OpticalSizeTitle" Text="Optical size follows the text's size; then 64 at opsz=8, at opsz=144, and italic by slant:"/>
+    <Phrase Key="VariationsTitle" Text="FontVariations over the weight (heavy $ ¢ ₴ ₦ swap their glyphs, as the font varies its features):"/>
 </Language>
