@@ -74,6 +74,32 @@ public class AumlElementCompletionTests
     }
 
     [Test]
+    public void InAPropertyElement_OnlyWhatThePropertyCanHold_IsOffered()
+    {
+        var brush = Labels("<Border><Border.Background><|");
+        var rows = Labels("<Grid><Grid.RowDefinitions><|");
+        var resources = Labels("<StackPanel><ResourceContext.Resources><|");
+        var content = Labels("<Button><Button.Content><|");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(brush, Does.Contain("SolidColorBrush"));
+            Assert.That(brush, Has.None.AnyOf("Button", "Grid", "RowDefinition", "AutomationProperties"));
+            Assert.That(rows, Does.Contain("RowDefinition"));
+            Assert.That(rows, Has.None.AnyOf("Button", "ColumnDefinition", "SolidColorBrush", "AutomationProperties"));
+            Assert.That(resources, Is.SupersetOf(new[] { "SolidColorBrush", "Style", "Button" }));
+            Assert.That(resources, Has.None.EqualTo("AutomationProperties"), "an owner of attached properties is no value");
+            Assert.That(content, Is.SupersetOf(new[] { "Button", "Grid", "TextBlock" }));
+            Assert.That(content, Has.None.EqualTo("AutomationProperties"));
+        });
+    }
+
+    [Test]
+    public void OutsideAPropertyElement_TheOwnersOfAttachedProperties_StayOffered() =>
+        Assert.That(Labels("<Border><Border.Background><SolidColorBrush/></Border.Background></Border><|"),
+            Is.SupersetOf(new[] { "Button", "AutomationProperties" }));
+
+    [Test]
     public void TheMarkupExtensions_AreOffered_ButNotAnAbstractOne()
     {
         var labels = Labels("""<Border Tag="{|"/>""");

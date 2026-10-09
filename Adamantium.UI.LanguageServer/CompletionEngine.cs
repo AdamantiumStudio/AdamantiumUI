@@ -12,7 +12,9 @@ public enum AumlCompletionItemKind { Element, Property, Value, Directive }
 /// explicit edit range) instead of letting the client guess the word boundary. Needed for path segments: after
 /// <c>Textures/</c> the client would otherwise filter bare file names against the whole "Textures/" prefix and
 /// hide them — here only the segment after the last '/' is the prefix/replacement.</param>
-public sealed record AumlCompletionItem(string Label, AumlCompletionItemKind Kind, string Detail = null, string InsertText = null, int? ReplaceBack = null);
+/// <param name="Color">The color the item stands for, "#RRGGBB" or "#AARRGGBB"; null when it is not one.</param>
+public sealed record AumlCompletionItem(string Label, AumlCompletionItemKind Kind, string Detail = null, string InsertText = null,
+    int? ReplaceBack = null, string Color = null);
 
 /// <summary>
 /// Produces AUML completions at a caret position: element names, an element's settable
@@ -34,7 +36,7 @@ public sealed class CompletionEngine
         var namespaces = AumlNamespaces.Scan(text);
         return ctx.Kind switch
         {
-            AumlCompletionKind.ElementName => CompleteElements(ctx, namespaces),
+            AumlCompletionKind.ElementName => CompleteElements(ctx, namespaces, text, offset),
             AumlCompletionKind.AttributeName => CompleteAttributes(ctx, namespaces, text, offset),
             AumlCompletionKind.AttributeValue => CompleteValues(ctx, namespaces, text, offset, documentPath),
             AumlCompletionKind.MarkupExtensionName => CompleteMarkupExtensionName(ctx, namespaces, text, offset),
@@ -319,9 +321,13 @@ public sealed class CompletionEngine
         if (values.Count == 0) return [];
         return values
             .Where(v => Matches(v, partial))
-            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propType.Name, ReplaceBack: partial.Length))
+            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propType.Name, ReplaceBack: partial.Length,
+                Color: ColorOf(propType, v)))
             .ToList();
     }
+
+    private static string ColorOf(Adamantium.UI.Markup.CodeGeneration.IResolvedType type, string value) =>
+        AumlColors.TakesColor(type) && AumlColors.TryRead(value, out var color) ? AumlColors.Hex(color) : null;
 
     private IReadOnlyList<AumlCompletionItem> CompleteStaticMembers(string partial, IReadOnlyDictionary<string, string> namespaces)
     {
@@ -510,7 +516,8 @@ public sealed class CompletionEngine
             .ToList();
     }
 
-    private IReadOnlyList<AumlCompletionItem> CompleteElements(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces)
+    private IReadOnlyList<AumlCompletionItem> CompleteElements(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces,
+        string text, int offset)
     {
         var (prefix, partial) = SplitName(ctx.Prefix);
 
@@ -535,11 +542,140 @@ public sealed class CompletionEngine
         var xmlns = ResolveXmlns(prefix, namespaces);
         if (xmlns.Length == 0) return [];
 
+        var fits = ValueFilter(text, offset, namespaces) ?? _model.CanBeElement;
         return _model.GetElements(xmlns)
-            .Where(t => MatchesStart(t.Name, partial) && _model.CanBeElement(t))
+            .Where(t => MatchesStart(t.Name, partial) && fits(t))
             .OrderBy(t => t.Name)
             .Select(t => new AumlCompletionItem(t.Name, AumlCompletionItemKind.Element))
             .ToList();
+    }
+
+    // In a property element - <Border.Background> - only what the property can hold, by the build's own rule: an element
+    // its one value can be, or one of its items' type; null outside a property element or when its type is unknown.
+    private Func<Adamantium.UI.Markup.CodeGeneration.IResolvedType, bool> ValueFilter(string text, int offset,
+        IReadOnlyDictionary<string, string> namespaces)
+    {
+        var lt = text.LastIndexOf('<', Math.Max(0, Math.Min(offset, text.Length) - 1));
+        if (lt < 0 || ParentElement(text, lt) is not { } parent)
+        {
+            return null;
+        }
+
+        var (prefix, name) = SplitName(parent);
+        var dot = name.IndexOf('.');
+        if (dot < 0 || ResolveType(prefix, name[..dot], namespaces) is not { } owner)
+        {
+            return null;
+        }
+
+        var property = name[(dot + 1)..];
+        var type = _model.GetProperties(owner, includeReadOnlyCollections: true).FirstOrDefault(p => p.Name == property)?.Type
+                   ?? _model.GetAttachedProperties(owner).FirstOrDefault(p => p.Name == property)?.Type;
+        if (type == null)
+        {
+            return null;
+        }
+
+        var many = PropertyValues.TakesMany(type);
+        var value = many ? _model.ItemTypeOf(type) : type;
+        if (value == null)
+        {
+            return _model.CanBeCreated;
+        }
+
+        // A class made from markup is judged by the class it derives from: the build lets it be anything it cannot see.
+        return t => _model.CanBeCreated(t) && (t is MetadataResolvedType { BaseType: { } based } ? based : t) is var probe &&
+                    PropertyValues.Fits(probe, value) &&
+                    (!many || value.SpecialType == ResolvedSpecialType.System_Object ||
+                     !probe.InheritsFromMarkupExtension(Adamantium.UI.Markup.Parsers.AumlParser.MarupExtensionClassFullName));
+    }
+
+    // The element whose content a tag starting at lt is in: the innermost one opened before it and not closed.
+    private static string ParentElement(string text, int lt)
+    {
+        var open = new Stack<string>();
+        var at = 0;
+        while (at < lt)
+        {
+            var start = text.IndexOf('<', at);
+            if (start < 0 || start >= lt)
+            {
+                break;
+            }
+
+            if (string.CompareOrdinal(text, start, "<!--", 0, 4) == 0)
+            {
+                at = After(text, start, "-->");
+                continue;
+            }
+
+            if (string.CompareOrdinal(text, start, "<![CDATA[", 0, 9) == 0)
+            {
+                at = After(text, start, "]]>");
+                continue;
+            }
+
+            if (start + 1 < text.Length && text[start + 1] is '?' or '!')
+            {
+                at = After(text, start, ">");
+                continue;
+            }
+
+            var closing = start + 1 < text.Length && text[start + 1] == '/';
+            var nameStart = start + (closing ? 2 : 1);
+            var nameEnd = nameStart;
+            while (nameEnd < text.Length && (char.IsLetterOrDigit(text[nameEnd]) || text[nameEnd] is '_' or '-' or '.' or ':'))
+            {
+                nameEnd++;
+            }
+
+            var end = TagEnd(text, nameEnd);
+            if (end < 0 || end >= lt)
+            {
+                break;
+            }
+
+            if (closing)
+            {
+                open.TryPop(out _);
+            }
+            else if (text[end - 1] != '/')
+            {
+                open.Push(text[nameStart..nameEnd]);
+            }
+
+            at = end + 1;
+        }
+
+        return open.TryPeek(out var parent) ? parent : null;
+    }
+
+    private static int After(string text, int from, string marker)
+    {
+        var at = text.IndexOf(marker, from, StringComparison.Ordinal);
+        return at < 0 ? text.Length : at + marker.Length;
+    }
+
+    private static int TagEnd(string text, int from)
+    {
+        var quote = '\0';
+        for (var i = from; i < text.Length; i++)
+        {
+            if (quote != '\0')
+            {
+                quote = text[i] == quote ? '\0' : quote;
+            }
+            else if (text[i] is '"' or '\'')
+            {
+                quote = text[i];
+            }
+            else if (text[i] == '>')
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private IReadOnlyList<AumlCompletionItem> CompleteAttributes(AumlCompletionContext ctx, IReadOnlyDictionary<string, string> namespaces, string text, int offset)
@@ -657,7 +793,7 @@ public sealed class CompletionEngine
 
         return _model.GetValueCompletions(propertyType)
             .Where(v => Matches(v, ctx.Prefix))
-            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propertyType.Name))
+            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propertyType.Name, Color: ColorOf(propertyType, v)))
             .ToList();
     }
 
@@ -852,7 +988,7 @@ public sealed class CompletionEngine
         return null;
     }
 
-    private Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
+    internal Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveElement(string qualifiedName, IReadOnlyDictionary<string, string> namespaces)
     {
         var (prefix, local) = SplitName(qualifiedName ?? "");
         var xmlns = ResolveXmlns(prefix, namespaces);
@@ -860,7 +996,7 @@ public sealed class CompletionEngine
     }
 
     /// <summary>Resolves a (possibly xmlns-prefixed) type name; an unprefixed name may live in any registered namespace.</summary>
-    private Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveType(string xmlnsPrefix, string typeName, IReadOnlyDictionary<string, string> namespaces)
+    internal Adamantium.UI.Markup.CodeGeneration.IResolvedType ResolveType(string xmlnsPrefix, string typeName, IReadOnlyDictionary<string, string> namespaces)
     {
         var xmlns = ResolveXmlns(xmlnsPrefix, namespaces);
         if (xmlns.Length > 0 && _model.GetElement(xmlns, typeName) is { } resolved) return resolved;
@@ -873,7 +1009,7 @@ public sealed class CompletionEngine
         return prefix.Length == 0 ? FallbackXmlns : "";   // unknown prefix -> no namespace
     }
 
-    private static (string Prefix, string Local) SplitName(string name)
+    internal static (string Prefix, string Local) SplitName(string name)
     {
         int colon = name.IndexOf(':');
         return colon < 0 ? ("", name) : (name[..colon], name[(colon + 1)..]);
