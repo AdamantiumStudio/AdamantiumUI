@@ -1,0 +1,37 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
+      xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
+      xmlns:local="clr-namespace:Adamantium.UI.Sandbox">
+    <!-- DataContext is the TextViewModel. This file is the tab's frame: a title, the topic selector and the region the
+         topics are navigated into. Each topic lives in its own view beside this one, over the same view-model. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical" Margin="24">
+            <TextBlock Text="{Localize TextStrings.Title}" FontSize="20" MarginBottom="10"/>
+
+            <!-- Radio buttons styled as toggles, one per topic, all bound to one property via EnumToBoolConverter. -->
+            <WrapPanel Orientation="Horizontal" MarginBottom="10">
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicBasics}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Basics, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicEditing}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Editing, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicFaces}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Faces, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicColor}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Color, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicOpenType}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=OpenType, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicVariable}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Variable, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicScripts}" MarginRight="6" MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Scripts, Mode=TwoWay}"/>
+            </WrapPanel>
+
+            <!-- The topic itself, navigated in by key: leaving a topic drops its markup, and what the topics share (the
+                 message, the size) survives the switch because the view-model behind them never changed. -->
+            <ContentControl AutomationProperties.AutomationId="Topic"
+                            nav:RegionManager.RegionName="{x:Static local:RegionNames.TextStand}"
+                            ContentTransition="SlideLeft"/>
+        </StackPanel>
+    </ScrollViewer>
+</View>

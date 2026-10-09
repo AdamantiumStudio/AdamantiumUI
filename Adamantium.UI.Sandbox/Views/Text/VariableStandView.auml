@@ -1,0 +1,81 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Variable"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <!-- A variable font's axes by the font's own names, with the names its style attributes give their values. -->
+        <TextBlock Text="{Localize TextStrings.AxesTitle}"
+                   Margin="0,0,0,6"/>
+        <ItemsControl ItemsSource="{Binding AxisItems}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,2,0,2">
+                        <TextBlock Text="{Binding Tag}"
+                                   Width="70"
+                                   FontSize="15"/>
+                        <TextBlock Text="{Binding Name}"
+                                   Width="260"
+                                   FontSize="15"/>
+                        <TextBlock Text="{Binding Range}"
+                                   Width="180"
+                                   FontSize="15"/>
+                        <TextBlock Text="{Binding Values}"
+                                   FontSize="15"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- The optical size follows the text's size; the same size drawn at the smallest and largest optical sizes. -->
+        <TextBlock Text="{Localize TextStrings.OpticalSizeTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="{Binding VariableFont}"
+                    Orientation="Horizontal">
+            <TextBlock Text="Rag 8" FontSize="10" VerticalAlignment="Bottom"/>
+            <TextBlock Text="Rag" FontSize="24" Margin="16,0,0,0" VerticalAlignment="Bottom"/>
+            <TextBlock Text="Rag" FontSize="48" Margin="16,0,0,0" VerticalAlignment="Bottom"/>
+            <TextBlock Text="Rag" FontSize="96" Margin="16,0,0,0" VerticalAlignment="Bottom"/>
+        </StackPanel>
+        <StackPanel FontFamily="{Binding VariableFont}"
+                    FontSize="64"
+                    Orientation="Horizontal">
+            <TextBlock Text="Rag" FontVariations="opsz=8"/>
+            <TextBlock Text="Rag" FontVariations="opsz=144" Margin="24,0,0,0"/>
+            <TextBlock Text="Rag" FontStyle="Italic" Margin="24,0,0,0"/>
+        </StackPanel>
+
+        <!-- FontVariations over the weight: grade, width and parametric axes, by value. -->
+        <TextBlock Text="{Localize TextStrings.VariationsTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="{Binding VariableFont}"
+                    FontSize="28"
+                    Orientation="Vertical">
+            <TextBlock Text="GRAD=-200  Hamburgefonstiv" FontVariations="GRAD=-200"/>
+            <TextBlock Text="GRAD=150  Hamburgefonstiv" FontVariations="GRAD=150"/>
+            <TextBlock Text="wdth=25  Hamburgefonstiv" FontVariations="wdth=25"/>
+            <TextBlock Text="wdth=151, wght=900  Hamburgefonstiv" FontVariations="wdth=151, wght=900"/>
+            <TextBlock Text="XTRA=323, YTUC=760  Hamburgefonstiv" FontVariations="XTRA=323, YTUC=760"/>
+            <TextBlock Text="wght=1000  $ ¢ ₴ ₦" FontVariations="wght=1000"/>
+            <TextBlock Text="wght=100  $ ¢ ₴ ₦" FontVariations="wght=100"/>
+        </StackPanel>
+
+        <!-- FontVariations in motion: each frame is laid out at its own values and drawn between key instances. -->
+        <TextBlock Text="{Localize TextStrings.MovingTitle}"
+                   Margin="0,20,0,6"/>
+        <ToggleSwitch AutomationProperties.AutomationId="HeavyToggle"
+                      Content="{Localize TextStrings.Heavy}"
+                      IsChecked="{Binding Heavy, Mode=TwoWay}"
+                      HorizontalAlignment="Left"/>
+        <TextBlock AutomationProperties.AutomationId="MovingText"
+                   Text="Hamburgefonstiv"
+                   FontFamily="{Binding VariableFont}"
+                   FontSize="72"
+                   FontVariations="{Binding MovingVariations}"
+                   Margin="0,8,0,0">
+            <TextBlock.Transitions>
+                <FontVariationListTransition Property="FontVariations"
+                                             Duration="0:0:1.5"/>
+            </TextBlock.Transitions>
+        </TextBlock>
+    </StackPanel>
+</View>

@@ -1,0 +1,74 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "OpenType"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <!-- Typography by name and font features by tag, inherited by the text inside. -->
+        <TextBlock Text="{Localize TextStrings.TypographyTitle}"
+                   Margin="0,0,0,6"/>
+        <StackPanel FontSize="22"
+                    Orientation="Vertical">
+            <TextBlock Text="Small capitals 1/2 0123456789"/>
+            <TextBlock Text="Small capitals 1/2 0123456789"
+                       Typography.Capitals="SmallCaps"
+                       Typography.NumeralStyle="Oldstyle"/>
+            <TextBlock Text="1/2 3/4 7/8"
+                       Typography.Fraction="Slashed"/>
+        </StackPanel>
+
+        <!-- A panel of OpenType features: each feature that turns a glyph into another, named by the font itself when it
+             names it, and characters it changes drawn with it on. -->
+        <TextBlock Text="{Localize TextStrings.FeaturesTitle}"
+                   Margin="0,20,0,6"/>
+        <ItemsControl ItemsSource="{Binding FontFeatureItems}"
+                      FontFamily="{Binding FeatureFont}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,2,0,2">
+                        <TextBlock Text="{Binding Tag}"
+                                   Width="110"
+                                   FontSize="16"/>
+                        <TextBlock Text="{Binding Name}"
+                                   Width="420"
+                                   FontSize="16"/>
+                        <TextBlock Text="{Binding Sample}"
+                                   FontFeatures="{Binding Settings}"
+                                   FontSize="22"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- A glyph panel: every alternate of one character, with the feature and value that ask for it. -->
+        <TextBlock Text="{Localize TextStrings.AlternatesTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBox AutomationProperties.AutomationId="AlternateCharacter"
+                 Text="{Binding AlternateCharacter, Mode=TwoWay}"
+                 Placeholder="{Localize TextStrings.AlternateCharacter}"
+                 Width="120"
+                 HorizontalAlignment="Left"/>
+        <ItemsControl ItemsSource="{Binding GlyphAlternates}"
+                      FontFamily="{Binding FeatureFont}"
+                      Margin="0,8,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Vertical"
+                                Margin="0,0,16,8">
+                        <TextBlock Text="{Binding Text}"
+                                   FontFeatures="{Binding Settings}"
+                                   FontSize="48"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding Label}"
+                                   FontSize="13"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</View>

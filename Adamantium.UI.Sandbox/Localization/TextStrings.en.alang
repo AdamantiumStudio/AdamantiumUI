@@ -1,4 +1,12 @@
 <Language>
+    <Phrase Key="Title" Text="Text — one topic at a time"/>
+    <Phrase Key="TopicBasics" Text="Basics"/>
+    <Phrase Key="TopicEditing" Text="Editing"/>
+    <Phrase Key="TopicFaces" Text="Faces"/>
+    <Phrase Key="TopicColor" Text="Color and emoji"/>
+    <Phrase Key="TopicOpenType" Text="OpenType"/>
+    <Phrase Key="TopicVariable" Text="Variable fonts"/>
+    <Phrase Key="TopicScripts" Text="Scripts"/>
     <Phrase Key="FontSize" Text="Font size:"/>
     <Phrase Key="Trimmed" Text="Trimmed to one line:"/>
     <Phrase Key="FloatingWatermark" Text="Floating watermark"/>
@@ -36,4 +44,8 @@
     <Phrase Key="Heavy" Text="Heavy and wide"/>
     <Phrase Key="BidiTitle" Text="Both directions: Hebrew and Arabic among Latin, in paragraphs and editors:"/>
     <Phrase Key="RightToLeft" Text="Right to left"/>
+    <Phrase Key="NastaliqTitle" Text="Urdu in Nastaliq: letters joined by cursive attachment, each word stepping down to the baseline:"/>
+    <Phrase Key="ChurchSlavonicTitle" Text="Church Slavonic (Ponomar): breathings, accents and titla stacked over the letters, letter-titla:"/>
+    <Phrase Key="OldCyrillicTitle" Text="Old Cyrillic (Monomakh): the letters the modern alphabet dropped:"/>
+    <Phrase Key="InitialsTitle" Text="Initials of the liturgical books (Vertograd), for drop caps:"/>
 </Language>

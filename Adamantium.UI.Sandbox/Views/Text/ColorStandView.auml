@@ -1,0 +1,52 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Color"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <!-- A variation selector picks text or emoji; a sequence joined by ZWJ, a keycap, a skin tone or a flag is one
+             emoji. -->
+        <TextBlock Text="{Localize TextStrings.EmojiTitle}"
+                   Margin="0,0,0,6"/>
+        <StackPanel FontSize="24"
+                    Orientation="Vertical">
+            <TextBlock Text="❤ ❤&#xFE0F;   ☺ ☺&#xFE0F;   ☕&#xFE0E; ☕"/>
+            <TextBlock Text="1&#xFE0F;&#x20E3; #&#xFE0F;&#x20E3; 👍🏽 👩🏾&#x200D;💻 👨&#x200D;👩&#x200D;👧 👩&#x200D;❤&#xFE0F;&#x200D;💋&#x200D;👨 🫱🏻&#x200D;🫲🏿 🏳&#xFE0F;&#x200D;🌈 🏳&#xFE0F;&#x200D;⚧&#xFE0F; 🇺🇦"/>
+        </StackPanel>
+
+        <!-- Color glyphs drawn from images: a subset of Noto Color Emoji ('CBDT') and Google's samples ('sbix'). -->
+        <TextBlock Text="{Localize TextStrings.BitmapTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontSize="40"
+                    Orientation="Vertical">
+            <TextBlock FontFamily="{Binding EmbeddedBitmapFont}"
+                       Text="8 9 ® ⁉"/>
+            <TextBlock FontFamily="{Binding StandardBitmapFont}"
+                       Text="simple_linear simple_radial linear_repeat radial_reflect gradient_stop_opacity"/>
+        </StackPanel>
+
+        <!-- The same drawings as SVG documents and as a 'COLR' version 1 paint graph: they should look alike. -->
+        <TextBlock Text="{Localize TextStrings.SvgTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontSize="40"
+                    Orientation="Vertical">
+            <TextBlock FontFamily="{Binding SvgFont}"
+                       Text="simple_linear simple_radial linear_repeat radial_reflect linear_transform gradient_stop_opacity"/>
+            <TextBlock FontFamily="{Binding PaintFont}"
+                       Text="simple_linear simple_radial linear_repeat radial_reflect linear_transform gradient_stop_opacity"/>
+        </StackPanel>
+
+        <!-- One text in each palette of a color font: ColorPalette picks the font's 'CPAL' palette by its number. -->
+        <TextBlock Text="{Localize TextStrings.PaletteTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="{Binding PaletteFont}"
+                    FontSize="40"
+                    Orientation="Horizontal">
+            <TextBlock Text="&#xF0100;&#xF0101;&#xF0200;&#xF0203;"/>
+            <TextBlock ColorPalette="1"
+                       Margin="24,0,0,0"
+                       Text="&#xF0100;&#xF0101;&#xF0200;&#xF0203;"/>
+            <TextBlock ColorPalette="2"
+                       Margin="24,0,0,0"
+                       Text="&#xF0100;&#xF0101;&#xF0200;&#xF0203;"/>
+        </StackPanel>
+    </StackPanel>
+</View>

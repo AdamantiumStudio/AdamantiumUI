@@ -1,0 +1,95 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Faces"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <!-- Faces of one family picked by weight and slant, run by run within one line. -->
+        <TextBlock Text="{Localize TextStrings.WeightsTitle}"
+                   Margin="0,0,0,6"/>
+        <TextBlock FontSize="20">
+            <TextBlock.Inlines>
+                <Run Text="Light "
+                     FontWeight="Light"/>
+                <Run Text="Regular "/>
+                <Run Text="SemiBold "
+                     FontWeight="SemiBold"/>
+                <Run Text="Bold "
+                     FontWeight="Bold"/>
+                <Run Text="Black "
+                     FontWeight="Black"/>
+                <Run Text="Italic"
+                     FontStyle="Italic"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- A variable font takes any weight along its axis, not only the named faces, and its widths. -->
+        <TextBlock Text="{Localize TextStrings.VariableTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="Bahnschrift"
+                    FontSize="22"
+                    Orientation="Vertical">
+            <TextBlock>
+                <TextBlock.Inlines>
+                    <Run Text="300 "
+                         FontWeight="300"/>
+                    <Run Text="380 "
+                         FontWeight="380"/>
+                    <Run Text="460 "
+                         FontWeight="460"/>
+                    <Run Text="540 "
+                         FontWeight="540"/>
+                    <Run Text="620 "
+                         FontWeight="620"/>
+                    <Run Text="700"
+                         FontWeight="700"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+            <TextBlock>
+                <TextBlock.Inlines>
+                    <Run Text="Condensed "
+                         FontStretch="Condensed"/>
+                    <Run Text="SemiCondensed "
+                         FontStretch="SemiCondensed"/>
+                    <Run Text="Normal"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- A family with one face: bold and italic draw that face as it is, unless synthesis is allowed. -->
+        <TextBlock Text="{Localize TextStrings.SynthesisTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel FontFamily="Ink Free"
+                    FontSize="22"
+                    Orientation="Vertical">
+            <TextBlock>
+                <TextBlock.Inlines>
+                    <Run Text="Regular "/>
+                    <Run Text="Bold "
+                         FontWeight="Bold"/>
+                    <Run Text="Italic "
+                         FontStyle="Italic"/>
+                    <Run Text="Bold Italic"
+                         FontWeight="Bold"
+                         FontStyle="Italic"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+            <TextBlock FontSynthesis="Weight, Style">
+                <TextBlock.Inlines>
+                    <Run Text="Regular "/>
+                    <Run Text="Bold "
+                         FontWeight="Bold"/>
+                    <Run Text="Italic "
+                         FontStyle="Italic"/>
+                    <Run Text="Bold Italic"
+                         FontWeight="Bold"
+                         FontStyle="Italic"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- Characters the theme's font lacks come from the system's fallback fonts; the last one is in no font. -->
+        <TextBlock Text="{Localize TextStrings.FallbackTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock Text="Latin 中文 日本語 한국어 😀 ☃ ∑ ͸"
+                   FontSize="20"/>
+    </StackPanel>
+</View>
