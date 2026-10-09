@@ -298,6 +298,46 @@
             </Border>
         </WrapPanel>
 
+        <!-- Frames: the text in three columns, balanced when the block has no height, and flowing around a picture. -->
+        <TextBlock Text="{Localize TextStrings.FramesTitle}"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="660"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="ColumnsText"
+                           Text="{Binding ProseSample}"
+                           Language="en-US"
+                           Columns="3"
+                           ColumnGap="20"
+                           TextWrapping="WrapByWords"
+                           FontSize="16"
+                           HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+            </Border>
+            <Border Width="420"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <Grid>
+                    <TextBlock AutomationProperties.AutomationId="WrapText"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               Exclusions="0,0,200,162"
+                               TextWrapping="WrapByWords"
+                               FontSize="16"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                    <Image Source="Textures/luxfon.tga"
+                           Width="188"
+                           Height="150"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"/>
+                </Grid>
+            </Border>
+        </WrapPanel>
+
         <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->
         <TextBlock Text="{Localize TextStrings.TabsTitle}"
                    Margin="0,8,0,8"/>
