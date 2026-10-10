@@ -10,7 +10,7 @@ using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Sandbox.ModuleLoading;
 using Adamantium.UI.Sandbox.Resources;
 using Adamantium.UI.Sandbox.Views;
-using Adamantium.UI.Themes.EditorProTheme;
+using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.MacOsTheme;
 using NUnit.Framework;
@@ -30,7 +30,7 @@ public class SandboxViewsPropertyTraceTests
         var app = name switch
         {
             "Fluent" => HeadlessApplication.Start<Fluent>(),
-            "EditorPro" => HeadlessApplication.Start<EditorPro>(),
+            "Graphite" => HeadlessApplication.Start<Graphite>(),
             _ => HeadlessApplication.Start<MacOs>()
         };
         app.ThemeManager.AddStyleSet<RibbonShellStyleSet>();
@@ -68,7 +68,7 @@ public class SandboxViewsPropertyTraceTests
     }
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void NoViewUnderTheTheme_SetsAPropertyItDoesNotHave(string theme)
     {

@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's slider: an upright bar handle that does not dictate the row height, on a square rail. -->
+    <!-- Graphite's slider: an upright bar handle that does not dictate the row height, on a square rail. -->
 
     <Style Selector="Slider">
         <Setter Property="MinHeight" Value="{ResourceReference ControlHeightCompact}"/>

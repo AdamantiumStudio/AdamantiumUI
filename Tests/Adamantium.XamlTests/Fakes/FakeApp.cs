@@ -17,7 +17,7 @@ internal sealed class FakeApp(IDependencyResolver resolver) : IUIApplication
     public IUIContext UIContext { get; } = new FakeContext(resolver);
     public IWindow MainWindow { get; set; }
     public IWindow ActiveWindow => null;
-    public IReadOnlyList<IWindow> Windows => Array.Empty<IWindow>();
+    public IReadOnlyList<IWindow> Windows { get; set; } = Array.Empty<IWindow>();
     public INavigationService Navigation => null;
     public IResourceManager ResourceManager { get; set; }
     // Settable: a theme's PALETTE is reached through the current theme, so a test about resources resolving cannot use

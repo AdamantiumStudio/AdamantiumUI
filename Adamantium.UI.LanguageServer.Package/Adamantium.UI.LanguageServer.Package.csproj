@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <!-- The AUML language server for applications that edit AUML - a TextEditor asks it for completion, hover,
+    <!-- The AUML language server for applications that edit AUML - a CodeEditor asks it for completion, hover,
          definitions and problems. No code: packing publishes Adamantium.UI.LanguageServer and ships the result as
          content, copied to AumlServer\ beside the consuming application. A folder of its own, because the server carries
          its own Roslyn, decompiler and UI assemblies and runs on its own deps.json - spread beside the application they

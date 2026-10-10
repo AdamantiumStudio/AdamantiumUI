@@ -171,14 +171,14 @@ An Office-style ribbon:
 - **Templates:** control templates, data templates, hierarchical templates and template selectors.
 - **Resources,** with theme resources that follow a theme switch.
 - **Behaviors** attached in markup.
-- **Themes:** Fluent, Editor Pro and macOS, each with light and dark variants, switched live. A control library brings
+- **Themes:** Fluent, Graphite and macOS, each with light and dark variants, switched live. A control library brings
   its controls' look into every theme with one call.
 
 The same data grid in the three themes:
 
-| Fluent | Editor Pro | macOS |
+| Fluent | Graphite | macOS |
 |---|---|---|
-| ![The data grid in Fluent](.github/images/theme-fluent.png) | ![The data grid in Editor Pro](.github/images/theme-editor-pro.png) | ![The data grid in macOS](.github/images/theme-macos.png) |
+| ![The data grid in Fluent](.github/images/theme-fluent.png) | ![The data grid in Graphite](.github/images/theme-graphite.png) | ![The data grid in macOS](.github/images/theme-macos.png) |
 
 ## Data binding and MVVM
 
@@ -269,7 +269,7 @@ dotnet run
 
 | Template | Creates |
 |---|---|
-| `adamantium-app` | An application: a window bound to its view-model. `--theme` picks `Fluent`, `EditorPro` or `macOS`. |
+| `adamantium-app` | An application: a window bound to its view-model. `--theme` picks `Fluent`, `Graphite` or `macOS`. |
 | `adamantium-viewlib` | A library of views, each with its view-model, for an application to place or navigate to. |
 | `adamantium-controllib` | A library of templated controls that bring their look into every theme. |
 
@@ -353,7 +353,7 @@ Alpha: what is listed above works, and the API will change. Not there yet:
 | `Adamantium.UI` | The one to reference: the controls, the themes, the AUML code generator and the designer host, with MVVM |
 | `Adamantium.UI.Core` | The element tree, layout, input, styles, bindings, resources and the AUML runtime loader |
 | `Adamantium.UI.Controls` | The controls and panels |
-| `Adamantium.UI.Themes` | Fluent, Editor Pro and macOS |
+| `Adamantium.UI.Themes` | Fluent, Graphite and macOS |
 | `Adamantium.UI.FX` | The UI's shaders |
 | `Adamantium.UI.Markup` | The AUML parser and document model |
 | `Adamantium.Navigation` | Navigation, regions and dialogs driven from view-models |

@@ -46,12 +46,12 @@ public class CanvasIconTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryToolPictureIsThere(string theme)
     {
@@ -76,7 +76,7 @@ public class CanvasIconTests
     };
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryActionPictureIsThere(string theme)
     {

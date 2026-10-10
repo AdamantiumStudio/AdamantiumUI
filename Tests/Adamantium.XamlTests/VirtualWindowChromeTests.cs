@@ -37,7 +37,7 @@ public class VirtualWindowChromeTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
@@ -59,7 +59,7 @@ public class VirtualWindowChromeTests
 
     [TestCase("Fluent")]
     [TestCase("MacOs")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     public void AWindowWithNoOsWindow_WearsTheWindowCaption(string theme)
     {
         var window = Attached(theme, customChrome: true);

@@ -75,6 +75,14 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         UIAppContext.Current?.ThemeManager?.AddStyleSet<T>();
     }
 
+    /// <summary>Adds a style set per theme (see <see cref="IThemeManager.AddStyleSet{T}(IReadOnlyDictionary{Type, Type})"/>):
+    /// the set <paramref name="byTheme"/> gives for each theme it names by type, <typeparamref name="T"/> for every
+    /// other.</summary>
+    protected static void AddStyleSetToThemes<T>(IReadOnlyDictionary<Type, Type> byTheme) where T : StyleSet, new()
+    {
+        UIAppContext.Current?.ThemeManager?.AddStyleSet<T>(byTheme);
+    }
+
     // Created lazily. The getters materialize, since generated markup calls element.Behaviors.Add(x); engine code that
     // only checks presence uses the Has* members or the field.
 

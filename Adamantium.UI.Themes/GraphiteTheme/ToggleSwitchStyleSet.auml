@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's switch: an empty outlined track with a muted thumb when off, accent track and on-accent thumb when on.
+    <!-- Graphite's switch: an empty outlined track with a muted thumb when off, accent track and on-accent thumb when on.
          No BasedOn; it states its own brushes. -->
 
     <Style Selector="ToggleSwitch">

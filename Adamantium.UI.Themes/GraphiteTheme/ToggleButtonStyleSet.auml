@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's toggle: a hairline outline at rest like the button; checked keeps its text color and adds a subtle
+    <!-- Graphite's toggle: a hairline outline at rest like the button; checked keeps its text color and adds a subtle
          fill plus a bottom accent rule, like the tab strip. -->
 
     <Style Selector="ToggleButton">

@@ -49,6 +49,9 @@ public static class Program
                                                               documents, out into a window; beside a pane's panel
           window <selector> minimize | maximize | restore | close
           set <selector> <value>                              write a value: text, or a number
+          caret <selector> <line>[:<col>] [--to <line>[:<col>]]
+                                                              put the caret in a text, or select up to --to; lines
+                                                              and columns from 1
           type <text> [--into <selector>]                     type into the focused element, or into <selector>
           key <keys>... [--into <selector>]                   press keys: Alt, Ctrl+S, Shift+Tab, F, Enter... in the
                                                               focused window, or in <selector>'s (focusing it if it can)

@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tree: 22 px square rows; selection is a left-edge bar plus a faint wash, keeping text colors.
+    <!-- Graphite's tree: 22 px square rows; selection is a left-edge bar plus a faint wash, keeping text colors.
          Triggers are restated, since Fluent's paint from a theme resource directly. -->
 
     <Style Selector="TreeViewItem" BasedOn="ItemsControl">

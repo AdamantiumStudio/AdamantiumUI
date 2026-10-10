@@ -36,7 +36,7 @@ public class ThemeResourceTypeTests
         ["StrokeThickness"] = ["Double"],
     };
 
-    [TestCase("EditorProTheme")]
+    [TestCase("GraphiteTheme")]
     [TestCase("FluentTheme")]
     public void EveryResourceReferenceFitsTheSlotItIsPutIn(string themeFolder)
     {

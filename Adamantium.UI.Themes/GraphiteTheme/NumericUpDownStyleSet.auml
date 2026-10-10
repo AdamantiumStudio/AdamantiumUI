@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's spin box, matching its text field (a rule under the value). Part names and the five-seat grid match
+    <!-- Graphite's spin box, matching its text field (a rule under the value). Part names and the five-seat grid match
          Fluent's so the placement triggers work unchanged. -->
 
     <Style Selector="NumericUpDown">

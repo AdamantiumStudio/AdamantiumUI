@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tab control: a strip on its own ground with a hairline rule (which hides with ShowTabStrip) over a
+    <!-- Graphite's tab control: a strip on its own ground with a hairline rule (which hides with ShowTabStrip) over a
          frameless page. Structure and part names follow Fluent's to keep its behavior. -->
 
     <Style Selector="TabControl" BasedOn="ItemsControl">

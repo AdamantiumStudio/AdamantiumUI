@@ -107,6 +107,7 @@ public partial class RenderCache
         public IUIComponent Clip;
         public IRenderUnit Unit;  // Unit
         public byte Batch;        // Segment: which collector (0 rect, 1 ellipse, 2 text, 3 gradient-rect, 4 gradient-ellipse, 5 pattern, 6 fractal, 7 textured)
+                                  // InstancedFlush: InstancedFillCollector.ArenaBatchId, so a patch finds the flush it edits
         // Segment: the collector's STABLE segment id (see BatchCollector.Segment.Id) - never an index, so a split that
         // inserts a segment in the middle of the draw order leaves every recorded op naming exactly what it named before.
         // InstancedFlush: that collector's flush index (its list is append-only within a frame, so there is nothing to shift).
@@ -3031,6 +3032,10 @@ public partial class RenderCache
                 return false;
         }
 
+        // A re-issued group draws no overlay (an instanced key refuses one), so whatever ink its old units left in a
+        // flush record is stale now and would go on drawing over the new run.
+        arena.DropOverlayOf(patch.Component);
+
         // The layer may have moved, and everything after the edit shifted by the size difference. Re-index every group
         // that draws in it - runs and unit slots both, or a later patch would address freed space.
         // The layer now covers what this patch put into it, and the next placement has to see that.
@@ -3038,6 +3043,9 @@ public partial class RenderCache
         var (newFirst, _) = arena.SegmentRange(layer);
         var delta = patch.StageCount - replaced;
         var editEnd = first + at + replaced;
+        // An instanced key is ONE array behind every flush record that draws it: the edit shifted what follows it in the
+        // later records too, not just inside this one.
+        var sharedArray = arena is Retained.InstancedKeyArena;
         foreach (var g in _groups)
         {
             if (g.WalkVersion != _walkVersion || ReferenceEquals(g, group)) continue;
@@ -3050,7 +3058,14 @@ public partial class RenderCache
             for (var r = 0; r < g.Runs.Count; r++)
             {
                 var run = g.Runs[r];
-                if (run.First < first || run.First >= first + count) continue;
+                if (run.First < first || run.First >= first + count)
+                {
+                    if (!sharedArray || run.First < editEnd) continue;
+                    g.Runs[r] = (run.First + delta, run.Count);
+                    touched = true;
+                    continue;
+                }
+
                 g.Runs[r] = (run.First - first + newFirst + (run.First >= editEnd ? delta : 0), run.Count);
                 touched = true;
             }
@@ -3232,18 +3247,29 @@ public partial class RenderCache
             return;
         }
 
-        // Everything else keeps its slots in _sdfSlotByUnit, written by the walk; the map below is the RECT one.
-        if (group.Arena != null && !ReferenceEquals(group.Arena, _rectBatch)) return;
+        // Everything else keeps its slots in _sdfSlotByUnit, written by the walk; the maps below are the RECT one and the
+        // instanced FILL one.
+        var fill = group.Arena as Retained.InstancedKeyArena;
+        if (group.Arena != null && !ReferenceEquals(group.Arena, _rectBatch) && fill == null) return;
 
         var total = 0;
         foreach (var run in group.Runs) total += run.Count;
         if (total != group.Units.Count || group.Runs.Count != 1)
         {
-            foreach (var u in group.Units) _rectSlotByUnit.Remove(u);
+            foreach (var u in group.Units)
+            {
+                if (fill != null) _fillSlotByUnit.Remove(u);
+                else _rectSlotByUnit.Remove(u);
+            }
+
             return;
         }
 
         var i = group.Runs[0].First;
-        foreach (var u in group.Units) _rectSlotByUnit[u] = i++;
+        foreach (var u in group.Units)
+        {
+            if (fill != null) _fillSlotByUnit[u] = (fill, i++);
+            else _rectSlotByUnit[u] = i++;
+        }
     }
 }

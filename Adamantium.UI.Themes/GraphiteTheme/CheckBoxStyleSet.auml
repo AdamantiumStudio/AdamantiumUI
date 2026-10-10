@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's checkbox: a small square box, accent-filled when checked; indeterminate is a bar, not a nested
+    <!-- Graphite's checkbox: a small square box, accent-filled when checked; indeterminate is a bar, not a nested
          square. Properties, template, triggers. -->
 
     <Style Selector="CheckBox">

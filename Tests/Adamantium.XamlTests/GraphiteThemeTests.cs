@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
-using Adamantium.UI.Themes.EditorProTheme;
+using Adamantium.UI.Themes.GraphiteTheme;
 using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
@@ -14,7 +14,7 @@ namespace Adamantium.XamlTests;
 /// complete, self-consistent theme rather than a palette.
 /// </summary>
 [TestFixture]
-public class EditorProThemeTests
+public class GraphiteThemeTests
 {
     private FakeApp _app;
 
@@ -28,7 +28,7 @@ public class EditorProThemeTests
     [Test]
     public void ItDeclaresBothVariants()
     {
-        var theme = new EditorPro();
+        var theme = new Graphite();
 
         Assert.That(theme.VariantsByKey.Keys, Is.EquivalentTo(new[] { ThemeVariant.Dark, ThemeVariant.Light }));
     }
@@ -38,7 +38,7 @@ public class EditorProThemeTests
     [Test]
     public void BothVariantsAnswerTheSameKeys()
     {
-        var theme = new EditorPro();
+        var theme = new Graphite();
 
         Assert.That(theme.ValidateVariants(), Is.Empty, string.Join(" | ", theme.ValidateVariants()));
     }
@@ -47,7 +47,7 @@ public class EditorProThemeTests
     [Test]
     public void ItOpensOnTheDarkVariant()
     {
-        var theme = new EditorPro();
+        var theme = new Graphite();
 
         Assert.That(theme.DefaultVariant, Is.EqualTo(ThemeVariant.Dark));
     }
@@ -57,7 +57,7 @@ public class EditorProThemeTests
     [Test]
     public void ItSaysWhichOfItsVariantsIsLightAndWhichIsDark()
     {
-        var theme = new EditorPro();
+        var theme = new Graphite();
 
         Assert.Multiple(() =>
         {
@@ -72,13 +72,13 @@ public class EditorProThemeTests
     [Test]
     public void ItCoversEveryControlFluentCovers()
     {
-        var editorPro = new EditorPro();
+        var graphite = new Graphite();
         var fluent = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        editorPro.Initialize();
+        graphite.Initialize();
         fluent.Initialize();
 
         var covered = new HashSet<string>();
-        foreach (var style in editorPro.MergedStyles.Styles)
+        foreach (var style in graphite.MergedStyles.Styles)
             foreach (var type in style.Selector.Types)
                 covered.Add(type.FullName);
 
@@ -95,9 +95,9 @@ public class EditorProThemeTests
     [Test]
     public void ItCoversEveryCLASSFluentStyles()
     {
-        var editorPro = new EditorPro();
+        var graphite = new Graphite();
         var fluent = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        editorPro.Initialize();
+        graphite.Initialize();
         fluent.Initialize();
 
         static IEnumerable<string> Signatures(IEnumerable<Adamantium.UI.Core.Resources.Style> styles)
@@ -115,7 +115,7 @@ public class EditorProThemeTests
             }
         }
 
-        var covered = new HashSet<string>(Signatures(editorPro.MergedStyles.Styles));
+        var covered = new HashSet<string>(Signatures(graphite.MergedStyles.Styles));
         var missing = new List<string>();
         foreach (var signature in Signatures(fluent.MergedStyles.Styles))
             if (!covered.Contains(signature))
@@ -128,9 +128,9 @@ public class EditorProThemeTests
     [Test]
     public void ItGivesATemplateToEveryControlFluentTemplates()
     {
-        var editorPro = new EditorPro();
+        var graphite = new Graphite();
         var fluent = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        editorPro.Initialize();
+        graphite.Initialize();
         fluent.Initialize();
 
         // TYPE + CLASSES, not the type alone. A class-scoped template ("ListBox.TabOverflowList") is a template for
@@ -152,7 +152,7 @@ public class EditorProThemeTests
             return signatures;
         }
 
-        var covered = Templated(editorPro);
+        var covered = Templated(graphite);
         var missing = Templated(fluent).Where(t => !covered.Contains(t)).OrderBy(t => t).ToList();
 
         Assert.That(missing, Is.Empty, "controls left with NO TEMPLATE - they draw nothing: " + string.Join(", ", missing));
@@ -162,9 +162,9 @@ public class EditorProThemeTests
     [Test]
     public void ItReactsToEveryStateFluentReactsTo()
     {
-        var editorPro = new EditorPro();
+        var graphite = new Graphite();
         var fluent = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        editorPro.Initialize();
+        graphite.Initialize();
         fluent.Initialize();
 
         // "TabItem watches IsMouseOver" - the type, its classes, and one property the theme reacts to. A MultiTrigger
@@ -203,13 +203,13 @@ public class EditorProThemeTests
         // for. Keep the reason with the entry.
         var byDesign = new HashSet<string>
         {
-            // Fluent fades its scrollbars in on hover. Editor Pro's are ALWAYS visible - in a dense editor a bar that
+            // Fluent fades its scrollbars in on hover. Graphite's are ALWAYS visible - in a dense editor a bar that
             // appears only once you are already pointing at it cannot be used to see where you are in a long file - so
             // there is no hover state to have.
             "Adamantium.UI.Controls.ScrollViewer -> IsMouseOver",
         };
 
-        var covered = WatchedStates(editorPro);
+        var covered = WatchedStates(graphite);
         var missing = WatchedStates(fluent)
             .Where(s => !covered.Contains(s) && !byDesign.Contains(s))
             .OrderBy(s => s)

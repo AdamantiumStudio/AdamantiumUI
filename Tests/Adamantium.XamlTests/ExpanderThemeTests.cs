@@ -51,7 +51,7 @@ public class ExpanderThemeTests
 
     private static Theme Fluent() => new Adamantium.UI.Themes.FluentTheme.Fluent();
 
-    private static Theme EditorPro() => new Adamantium.UI.Themes.EditorProTheme.EditorPro();
+    private static Theme Graphite() => new Adamantium.UI.Themes.GraphiteTheme.Graphite();
 
     [Test]
     public void ItKeepsItsPartsUnderMacOs() => Parts(MacOs());
@@ -60,7 +60,7 @@ public class ExpanderThemeTests
     public void ItKeepsItsPartsUnderFluent() => Parts(Fluent());
 
     [Test]
-    public void ItKeepsItsPartsUnderEditorPro() => Parts(EditorPro());
+    public void ItKeepsItsPartsUnderGraphite() => Parts(Graphite());
 
     private void Parts(Theme theme)
     {
@@ -82,7 +82,7 @@ public class ExpanderThemeTests
     public void AFoldedSectionCostsNothingUnderFluent() => FoldedCostsNothing(Fluent());
 
     [Test]
-    public void AFoldedSectionCostsNothingUnderEditorPro() => FoldedCostsNothing(EditorPro());
+    public void AFoldedSectionCostsNothingUnderGraphite() => FoldedCostsNothing(Graphite());
 
     private void FoldedCostsNothing(Theme theme)
     {

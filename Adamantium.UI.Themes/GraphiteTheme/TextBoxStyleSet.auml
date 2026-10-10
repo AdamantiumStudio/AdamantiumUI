@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's field: a rule under the text (its own element, so it thickens without moving the text) that takes
+    <!-- Graphite's field: a rule under the text (its own element, so it thickens without moving the text) that takes
          the accent on focus, when the ground lifts a step. -->
 
     <Style Selector="TextBox">

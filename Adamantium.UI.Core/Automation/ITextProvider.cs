@@ -10,7 +10,8 @@ public interface ITextProvider
 
     int SelectionLength { get; }
 
-    /// <summary>Selects <paramref name="length"/> characters from <paramref name="start"/>; a length of 0 puts the caret there.</summary>
+    /// <summary>Selects <paramref name="length"/> characters from <paramref name="start"/>, backwards when it is negative,
+    /// the caret at <paramref name="start"/> + <paramref name="length"/>; a length of 0 puts the caret there.</summary>
     void Select(int start, int length);
 
     /// <summary>The laid-out line the character at <paramref name="index"/> is on, from 0.</summary>

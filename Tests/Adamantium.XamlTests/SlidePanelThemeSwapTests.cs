@@ -3,12 +3,14 @@ using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
-using Adamantium.UI.Themes.EditorProTheme;
+using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.FluentTheme;
+using Adamantium.UI.Themes.MacOsTheme;
 using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
@@ -32,6 +34,8 @@ public class SlidePanelThemeSwapTests
     public void Fresh()
     {
         _app.ResourceManager = new ResourceManager();
+        _app.Windows = [];
+        Adamantium.UI.Core.Media.Animation.AnimationManager.Reset();
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         _themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = _themes;
@@ -39,8 +43,10 @@ public class SlidePanelThemeSwapTests
 
         var fluent = new Fluent();
         _themes.AddTheme(fluent.Name, fluent);
-        var editorPro = new EditorPro();
-        _themes.AddTheme(editorPro.Name, editorPro);
+        var graphite = new Graphite();
+        _themes.AddTheme(graphite.Name, graphite);
+        var macOs = new MacOs();
+        _themes.AddTheme(macOs.Name, macOs);
         _themes.SetTheme(fluent);
     }
 
@@ -80,10 +86,50 @@ public class SlidePanelThemeSwapTests
         panel.IsOpen = true;
         await session.WaitForIdleAsync();
 
-        _themes.SetTheme(_themes["EditorPro"]);
+        _themes.SetTheme(_themes["Graphite"]);
         await session.WaitForIdleAsync();
 
         Assert.That(deep.DataContext, Is.SameAs(model));
         Assert.That(Regex.Matches(await session.StateAsync(), "popup: Border #PART_Drawer").Count, Is.EqualTo(1));
+    }
+
+    [TestCase(true, TestName = "AnOpenPanelsContent_TakesTheNewThemesTemplates_InASwap")]
+    [TestCase(false, TestName = "AClosedPanelsContent_TakesTheNewThemesTemplates_WhenItOpensAfterASwap")]
+    public async Task APanelsContent_WearsTheThemeTheWindowWears(bool openDuringSwap)
+    {
+        var inPanel = new Button();
+        var inWindow = new Button();
+        var content = new StackPanel();
+        content.Children.Add(inPanel);
+        var panel = new SlidePanel { Placement = Dock.Right, Width = 200, Content = content };
+        var root = new Grid();
+        root.Children.Add(inWindow);
+        root.Children.Add(panel);
+        var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
+        _app.Windows = [window];
+        var session = AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
+        panel.IsOpen = true;
+        await session.WaitForIdleAsync();
+        panel.IsOpen = openDuringSwap;
+        await session.WaitForIdleAsync();
+        var fluentTemplate = inWindow.Template;
+        Assert.That(inPanel.Template, Is.SameAs(fluentTemplate));
+
+        _themes.SetTheme(_themes["macOS"]);
+        for (var frame = 0; frame < 100 && _themes.IsThemeChanging; frame++)
+        {
+            Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.05);
+            await session.WaitForIdleAsync();
+        }
+
+        panel.IsOpen = true;
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inWindow.Template, Is.Not.SameAs(fluentTemplate), "the window's button took the new theme's template");
+            Assert.That(inPanel.Template, Is.SameAs(inWindow.Template), "the panel's button did too");
+        });
     }
 }

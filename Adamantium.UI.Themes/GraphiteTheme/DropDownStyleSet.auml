@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's drop-down matches its text field (a rule under the value); the floating list card keeps a
+    <!-- Graphite's drop-down matches its text field (a rule under the value); the floating list card keeps a
          border. -->
 
     <Style Selector="DropDown" BasedOn="ItemsControl">

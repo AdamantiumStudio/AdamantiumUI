@@ -7,7 +7,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
-using Adamantium.UI.Themes.EditorProTheme;
+using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.MacOsTheme;
 using NUnit.Framework;
@@ -42,7 +42,7 @@ public class ContextMenuCardForegroundThemeTests
         Theme theme = name switch
         {
             "Fluent" => new Fluent(),
-            "EditorPro" => new EditorPro(),
+            "Graphite" => new Graphite(),
             _ => new MacOs()
         };
         themes.AddTheme(theme.Name, theme);
@@ -81,7 +81,7 @@ public class ContextMenuCardForegroundThemeTests
     }
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ARowTakesItsCardsColor_NotItsOwners(string theme)
     {

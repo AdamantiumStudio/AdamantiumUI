@@ -2,7 +2,7 @@
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns="http://adamantium/ui">
 
-    <!-- All of Editor Pro's numbers as named keys; its style sets state no sizes inline. Colors live in the variants,
+    <!-- All of Graphite's numbers as named keys; its style sets state no sizes inline. Colors live in the variants,
          shapes in Icons. -->
 
     <!-- ── Density ─────────────────────────────────────────────────────────────────────────────────────────────────

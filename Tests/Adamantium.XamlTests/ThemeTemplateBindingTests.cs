@@ -19,7 +19,7 @@ public class ThemeTemplateBindingTests
     private static readonly Regex TemplateClose = new(@"</ControlTemplate>", RegexOptions.Compiled);
     private static readonly Regex Binding = new(@"\{TemplateBinding\s+([A-Za-z0-9_.]+)\s*\}", RegexOptions.Compiled);
 
-    [TestCase("EditorProTheme")]
+    [TestCase("GraphiteTheme")]
     [TestCase("FluentTheme")]
     [TestCase("MacOsTheme")]
     public void EveryTemplateBindingNamesARealProperty(string themeFolder)

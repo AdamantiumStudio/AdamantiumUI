@@ -86,7 +86,7 @@ public sealed class LayoutManager
                 }
             }
 
-            return (nodes, live, DeferredMeasure.Count + DeferredArrange.Count);
+            return (nodes, live, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
         }
     }
 
@@ -126,6 +126,7 @@ public sealed class LayoutManager
             }
         }
 
+        while (DeferredStyle.TryDequeue(out _)) { }
         while (DeferredMeasure.TryDequeue(out _)) { }
         while (DeferredArrange.TryDequeue(out _)) { }
     }
@@ -134,7 +135,7 @@ public sealed class LayoutManager
     // its root, so a node enqueued and never drained is retained for the life of the window.
     public (int Style, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
         => (_toStyle?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
-            _toMeasureNextPass?.Count ?? 0, DeferredMeasure.Count + DeferredArrange.Count);
+            _toMeasureNextPass?.Count ?? 0, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
 
     /// <summary>Resolves the manager responsible for <paramref name="node"/> via its top-most visual ancestor.</summary>
     public static LayoutManager For(IUIComponent node)
@@ -164,8 +165,9 @@ public sealed class LayoutManager
     // this the loop only woke on its 250 ms safety timeout and a tab's content crawled in at ~4 passes/sec. See LoopSignal.
     public void InvalidateStyle(IUIComponent node)
     {
-        ToStyle.Enqueue(node);
         LoopSignal.Request();
+        if (_deferInvalidations || OffPassThread) { DeferredStyle.Enqueue(node); return; }
+        ToStyle.Enqueue(node);
     }
 
     public void InvalidateMeasure(IUIComponent node)
@@ -197,6 +199,7 @@ public sealed class LayoutManager
     // DirtyQueue enqueue above; route those into these lock-free queues instead and replay on the coordinating thread once
     // the parallel pass joins. Static: the flag toggles around a Parallel.ForEach (fork/join barrier), so one switch suffices.
     private static volatile bool _deferInvalidations;
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredStyle = new();
     private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredMeasure = new();
     private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredArrange = new();
 
@@ -205,6 +208,7 @@ public sealed class LayoutManager
     public static void EndDeferredInvalidation()
     {
         _deferInvalidations = false;
+        while (DeferredStyle.TryDequeue(out var n)) For(n).InvalidateStyle(n);
         while (DeferredMeasure.TryDequeue(out var n)) For(n).InvalidateMeasure(n);
         while (DeferredArrange.TryDequeue(out var n)) For(n).InvalidateArrange(n);
     }
@@ -245,6 +249,7 @@ public sealed class LayoutManager
 
         // ...and take in whatever arrived from another thread since the last pass. Same replay as the parallel-rebind
         // window uses; the only difference is what put the nodes there.
+        while (DeferredStyle.TryDequeue(out var deferred)) For(deferred).InvalidateStyle(deferred);
         while (DeferredMeasure.TryDequeue(out var deferred)) For(deferred).InvalidateMeasure(deferred);
         while (DeferredArrange.TryDequeue(out var deferred)) For(deferred).InvalidateArrange(deferred);
 
@@ -314,6 +319,35 @@ public sealed class LayoutManager
         UIAppContext.Current?.ResourceManager?.FlushResourceChanges();
     }
 
+    internal static bool HasCollapsedAncestor(IUIComponent node)
+    {
+        for (var parent = node.VisualParent; parent != null; parent = parent.VisualParent)
+        {
+            if (parent.Visibility == Visibility.Collapsed) return true;
+        }
+
+        return false;
+    }
+
+    internal void SettleOverlay()
+    {
+        for (var i = 0; i < MaxPassIterations && _toStyle is { IsEmpty: false }; i++)
+            DrainPhase(ToStyle, ApplyTheme);
+
+        if (_toMeasureNextPass is { Count: > 0 })
+        {
+            PromoteBuffer.Clear();
+            foreach (var node in _toMeasureNextPass) PromoteBuffer.Add(node);
+            _toMeasureNextPass.Clear();
+            foreach (var node in PromoteBuffer)
+                if (node is IMeasurableComponent measurable) measurable.InvalidateMeasure();
+            PromoteBuffer.Clear();
+        }
+
+        _toMeasure?.Clear();
+        _toArrange?.Clear();
+    }
+
     // Drains one queue FULLY as a snapshot (work re-dirtied during the phase waits for the next iteration), ancestors-first.
     private void DrainPhase(DirtyQueue queue, Action<IUIComponent> process)
     {
@@ -342,6 +376,12 @@ public sealed class LayoutManager
     {
         var control = (IMeasurableComponent)node;
         if (control.IsMeasureValid) return;   // already measured this pass via an ancestor's cascade
+
+        if (HasCollapsedAncestor(node))
+        {
+            control.InvalidateMeasure();
+            return;
+        }
 
         if (LayoutTrace.Enabled)
         {
@@ -384,6 +424,12 @@ public sealed class LayoutManager
         if (control.IsArrangeValid) return;
 
         if (node.Visibility == Visibility.Collapsed) return;
+
+        if (HasCollapsedAncestor(node))
+        {
+            control.InvalidateArrange();
+            return;
+        }
 
         if (!control.IsMeasureValid)
         {
@@ -444,6 +490,14 @@ public sealed class LayoutManager
         public bool Contains(IUIComponent node) => _members.Contains(node);
 
         internal int Count => _members.Count;
+
+        public void Clear()
+        {
+            if (_members.Count == 0) return;
+            System.Threading.Interlocked.Add(ref QueuedNow, -_members.Count);
+            _members.Clear();
+            _heap.Clear();
+        }
 
         public void Enqueue(IUIComponent node)
         {

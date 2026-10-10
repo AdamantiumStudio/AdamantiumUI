@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's ribbon: no accent-filled File tab or backstage (an accent rule marks the open row), a quick-access bar
+    <!-- Graphite's ribbon: no accent-filled File tab or backstage (an accent rule marks the open row), a quick-access bar
          that lightens on hover, square and dense. Part names and triggers are Fluent's, keeping its behavior. -->
 
     <Style Selector="Ribbon">

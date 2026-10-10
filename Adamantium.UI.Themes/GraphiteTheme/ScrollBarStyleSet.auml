@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's scrollbar: thin, square, in a recessed channel that shows the extent the thumb is read against.
+    <!-- Graphite's scrollbar: thin, square, in a recessed channel that shows the extent the thumb is read against.
          Thickness is set via ScrollBar.BarThickness, not Width. -->
 
     <Style Selector="ScrollBar">

@@ -58,7 +58,7 @@ public class TextBoxClearButtonThemeTests
 
     private static Theme Fluent() => new Adamantium.UI.Themes.FluentTheme.Fluent();
 
-    private static Theme EditorPro() => new Adamantium.UI.Themes.EditorProTheme.EditorPro();
+    private static Theme Graphite() => new Adamantium.UI.Themes.GraphiteTheme.Graphite();
 
     [Test]
     public void ItShowsWhileThereIsTextUnderMacOs() => ShowsWhileThereIsText(MacOs());
@@ -67,7 +67,7 @@ public class TextBoxClearButtonThemeTests
     public void ItShowsWhileThereIsTextUnderFluent() => ShowsWhileThereIsText(Fluent());
 
     [Test]
-    public void ItShowsWhileThereIsTextUnderEditorPro() => ShowsWhileThereIsText(EditorPro());
+    public void ItShowsWhileThereIsTextUnderGraphite() => ShowsWhileThereIsText(Graphite());
 
     private void ShowsWhileThereIsText(Theme theme)
     {
@@ -93,7 +93,7 @@ public class TextBoxClearButtonThemeTests
     public void ItStaysAwayUnlessAskedForUnderFluent() => StaysAwayUnlessAskedFor(Fluent());
 
     [Test]
-    public void ItStaysAwayUnlessAskedForUnderEditorPro() => StaysAwayUnlessAskedFor(EditorPro());
+    public void ItStaysAwayUnlessAskedForUnderGraphite() => StaysAwayUnlessAskedFor(Graphite());
 
     private void StaysAwayUnlessAskedFor(Theme theme)
     {
@@ -116,7 +116,7 @@ public class TextBoxClearButtonThemeTests
     public void ItSaysWhatTheBoxIsToldUnderFluent() => SaysWhatTheBoxIsTold(Fluent());
 
     [Test]
-    public void ItSaysWhatTheBoxIsToldUnderEditorPro() => SaysWhatTheBoxIsTold(EditorPro());
+    public void ItSaysWhatTheBoxIsToldUnderGraphite() => SaysWhatTheBoxIsTold(Graphite());
 
     // The theme's general word, until the box is told what clearing it means here.
     private void SaysWhatTheBoxIsTold(Theme theme)
@@ -139,7 +139,7 @@ public class TextBoxClearButtonThemeTests
     public void OnePressEmptiesTheBoxUnderFluent() => OnePressEmptiesTheBox(Fluent());
 
     [Test]
-    public void OnePressEmptiesTheBoxUnderEditorPro() => OnePressEmptiesTheBox(EditorPro());
+    public void OnePressEmptiesTheBoxUnderGraphite() => OnePressEmptiesTheBox(Graphite());
 
     private void OnePressEmptiesTheBox(Theme theme)
     {

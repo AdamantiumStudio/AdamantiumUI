@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `adam-auto caret <selector> <line>[:<col>] [--to <line>[:<col>]]` and `AutomationElement.PlaceCaretAsync` /
+  `SelectTextAsync`: the caret straight to a line and column of a text, or a selection between two, through its text
+  pattern; lines and columns from 1, as the element numbers them.
+
+- `IThemeManager.AddStyleSet<T>(byTheme)` and `AddStyleSetToThemes<T>(byTheme)` for a control's static constructor:
+  a style set made for each theme a library knows, by the theme's type (one deriving from it included), and `T` for
+  every other theme.
+
+- Theme icons `MatchCaseIcon`, `WholeWordIcon`, `RegularExpressionIcon` and `FindInSelectionIcon` for search
+  options; `BreakpointIcon` and `BookmarkIcon` for an editor's margin.
+
 - Decoration lines on inlines, as WPF's text decorations: `TextDecorations="Overline"`, and `DecorationLines` - each
   `TextDecoration` with its own `Location` (under, over, through the text or on the baseline), `Brush`, `Thickness`,
   `DashArray` and `Offset`; a span's lines add to its inlines'. Sandbox Text tab, Basics topic: an overline, a dashed
@@ -123,7 +134,7 @@ All packages share one version.
   they were across a switch. Scripts adds Urdu in Nastaliq, Church Slavonic (Ponomar), Old Cyrillic (Monomakh) and the
   initials of the liturgical books (Vertograd).
 - Theme icons `LockIcon` (a padlock: what cannot be changed) and `CodeIcon` (angle brackets: the source of
-  something), in the Fluent icons the Fluent, macOS and Editor Pro themes share.
+  something), in the Fluent icons the Fluent, macOS and Graphite themes share.
 - Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from
   its first strong letter): `TextBlock` and `TextBox` lay Hebrew right to left among Latin and numbers, and a
   right-to-left paragraph starts on the right. In such text the `TextBox` caret and selection go by the screen: the
@@ -334,7 +345,7 @@ All packages share one version.
 - A window shows its application's icon - the project's `ApplicationIcon` - on the taskbar and in Alt+Tab; it showed
   the system's blank one. The sandbox has an icon of its own, in the title bar too.
 - `Window.TitleAlignment`: `Center` puts the title in the middle of the whole window, however wide the commands and
-  buttons on either side are (`TitleBar.TitleCentering`), in Fluent and Editor Pro as macOS already did.
+  buttons on either side are (`TitleBar.TitleCentering`), in Fluent and Graphite as macOS already did.
 - `Window.StartupLocation`, as in WPF: `CenterOwner` by default - over the window that was active when it opened, else
   `CenterScreen`, the middle of the screen the pointer is on - or `Manual`, at `Left` and `Top`. Windows used to open in
   the top-left corner of the primary screen.
@@ -365,7 +376,7 @@ All packages share one version.
   `DocumentGroups` and `ToolGroups`, the put-away panels included.
 - A file whose root is `<Pane Header="Inspector" Kind="Tool" Zone="Right">` is a class of its own, as a `<View>` file
   is, with its own `x:ViewModel` or none: `<local:InspectorPane/>` puts it in a `DockingArea`.
-- `Pane.IsDirty`: the tab of a pane with unsaved work wears a mark in Fluent, Editor Pro and macOS. Closing such panes -
+- `Pane.IsDirty`: the tab of a pane with unsaved work wears a mark in Fluent, Graphite and macOS. Closing such panes -
   by a tab, a "close all" or the main window - asks ONE question for all of them, `UnsavedQuestion` (save, don't save,
   cancel) in an overlay window, worded by the theme (`PaneStrings`, `DockingArea.UnsavedTitle`).
   `DockingArea.AsksBeforeClosingUnsaved` (on by default) turns it off, `UnsavedClosing` answers in the user's place,
@@ -481,7 +492,7 @@ All packages share one version.
   alike - and an image only the pictures of the project and the folders holding them; a type the build would reject is
   underlined as it is typed. A `Type`-valued attribute is completed in its value too, not only in `{x:Type}`.
 - `ApplicationBlueprint`: what an application starts with, written in markup - `<ApplicationBlueprint StartupWindow=
-  "MainWindow" StartupTheme="EditorPro" StartupThemeVariant="Light">` with its `Resources` and `StyleIncludes`. The
+  "MainWindow" StartupTheme="Graphite" StartupThemeVariant="Light">` with its `Resources` and `StyleIncludes`. The
   build makes it a class, names it to the assembly and writes the entry point, so a project has no `Program.cs`; the
   application reads it through `IApplicationBlueprint` while it initializes, the theme and its variant before the
   first frame, and what its own code sets wins over it. A project holds one blueprint and one application class: a
@@ -615,6 +626,10 @@ All packages share one version.
 
 ### Changed
 
+- The Editor Pro theme is called Graphite now, so its name no longer reads as the paid controls': the class is
+  `Adamantium.UI.Themes.GraphiteTheme.Graphite`, its variants `GraphiteDark` and `GraphiteLight`, its name
+  (`StartupTheme`, `IThemeManager`) `"Graphite"`, and the templates' `--theme Graphite`. Nothing else changed in it.
+
 - `Adamantium.UI.FX` compiles the UI's shaders with `Adamantium.Vulkan.Slang` 1.0.12: the same Slang compiler, in the
   package that also ships `slangd`.
 - The `TextBox` caret takes the whole height of its line, as the selection does, instead of the band from the
@@ -723,6 +738,20 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- A control that drew one more vector icon (a `DrawingImage`) kept its old icons drawn too, and showed a stray copy,
+  until something redrew the window: the patch could not find the instanced batch's recorded draw and left the old run
+  in place. It replaces the run now.
+
+- Controls in a `SlidePanel` or another popup kept the previous theme's templates and styles after a theme switch;
+  only their colors changed. Content a new template re-homes takes the new theme, open or closed.
+
+- An element under a collapsed one was measured and arranged on its own when it changed, at the size it asked for,
+  so a hidden control behaved as if it were on screen. Its layout now waits until the collapsed element is shown.
+
+- An open popup's content kept every element it had asked to be measured or arranged - removed ones too - for as
+  long as the popup lived: its layout queues were never drained. A measure a list in a popup put off to the next
+  frame, to finish filling, never ran either; it runs on the next frame now.
 
 - An inherited value (font size, color, font) changed on an element stopped at a node the property is not registered
   on - an inline between a text block and a control set into its line - so the control kept the old value; and taking

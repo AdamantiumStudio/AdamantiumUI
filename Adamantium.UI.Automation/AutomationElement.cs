@@ -123,6 +123,16 @@ public sealed class AutomationElement
     /// <summary>Writes its text, or its number in the invariant culture.</summary>
     public Task SetValueAsync(string value) => RunAsync(AutomationCommand.SetValue, value);
 
+    /// <summary>Puts the caret in its text at <paramref name="line"/> and <paramref name="column"/>, both from 1, and
+    /// scrolls it there.</summary>
+    public Task PlaceCaretAsync(int line, int column = 1) =>
+        RunAsync(AutomationCommand.SelectText, string.Create(CultureInfo.InvariantCulture, $"{line}:{column}"));
+
+    /// <summary>Selects its text from one line and column to another, all from 1.</summary>
+    public Task SelectTextAsync(int fromLine, int fromColumn, int toLine, int toColumn) =>
+        RunAsync(AutomationCommand.SelectText,
+            string.Create(CultureInfo.InvariantCulture, $"{fromLine}:{fromColumn}-{toLine}:{toColumn}"));
+
     /// <summary>Scrolls it to the given percents; null leaves an axis where it is.</summary>
     public Task ScrollToAsync(double? horizontal, double? vertical) =>
         RunAsync(AutomationCommand.Scroll, $"{Percent(horizontal)},{Percent(vertical)}");

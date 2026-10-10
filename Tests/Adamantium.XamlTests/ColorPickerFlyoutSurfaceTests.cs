@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-// A color picker opened as a flyout wears the theme's flyout material (Editor Pro has no materials, so it is excluded).
+// A color picker opened as a flyout wears the theme's flyout material (Graphite has no materials, so it is excluded).
 [TestFixture]
 public class ColorPickerFlyoutSurfaceTests
 {

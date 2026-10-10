@@ -25,7 +25,7 @@ public class ApplicationBlueprintTests
 
     private const string Blueprint =
         "<ApplicationBlueprint " + Namespaces +
-        " StartupWindow=\"MainWindow\" StartupTheme=\"EditorPro\" StartupThemeVariant=\"Light\" StartupLanguage=\"en\"" +
+        " StartupWindow=\"MainWindow\" StartupTheme=\"Graphite\" StartupThemeVariant=\"Light\" StartupLanguage=\"en\"" +
         " ShutDownMode=\"OnLastWindowClosed\">" +
         "<ApplicationBlueprint.Resources><ResourceLink Source=\"Icons\"/></ApplicationBlueprint.Resources>" +
         "<ApplicationBlueprint.StyleIncludes><StyleInclude Source=\"Buttons\"/></ApplicationBlueprint.StyleIncludes>" +
@@ -70,7 +70,7 @@ public class ApplicationBlueprintTests
         Assert.Multiple(() =>
         {
             Assert.That(blueprint.StartupWindow, Is.EqualTo(assembly.GetType("Test.App.MainWindow")));
-            Assert.That(blueprint.StartupTheme, Is.EqualTo(typeof(Adamantium.UI.Themes.EditorProTheme.EditorPro)));
+            Assert.That(blueprint.StartupTheme, Is.EqualTo(typeof(Adamantium.UI.Themes.GraphiteTheme.Graphite)));
             Assert.That(blueprint.StartupThemeVariant, Is.EqualTo(ThemeVariant.Light));
             Assert.That(blueprint.StartupLanguage, Is.EqualTo("en"));
             Assert.That(blueprint.ShutDownMode, Is.EqualTo(ShutDownMode.OnLastWindowClosed));
