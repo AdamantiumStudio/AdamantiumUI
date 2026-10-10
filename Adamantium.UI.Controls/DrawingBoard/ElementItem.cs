@@ -325,6 +325,19 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
                world.Y >= World.Y - tolerance && world.Y <= World.Y + World.Height + tolerance;
     }
 
+    /// <summary>Whether a world rectangle touches the control as it is turned, not its upright box.</summary>
+    public bool Touches(Rect world)
+    {
+        var quad = CanvasTouch.Corners(world);
+        if (_transform.IsSomething)
+        {
+            var middle = Middle;
+            for (var i = 0; i < quad.Length; i++) quad[i] = _transform.Undo(quad[i], middle);
+        }
+
+        return CanvasTouch.ConvexOverlap(quad, CanvasTouch.Corners(World));
+    }
+
     /// <summary>Nothing: a control draws ITSELF, from its own template, as a child of the canvas. Everything else on the
     /// plane is data and has to be painted here; this one is the case that is not.</summary>
     public void Render(IDrawingSession session, InfiniteCanvas canvas)

@@ -434,6 +434,23 @@ public class StrokeItem : ICanvasItem
         return false;
     }
 
+    /// <summary>Whether a world rectangle touches the ink itself - a loop drawn round other things touches nothing
+    /// inside it.</summary>
+    public bool Touches(Rect world)
+    {
+        if (_points.Count == 0) return false;
+
+        var grown = world.Inflate(Math.Max(Thickness, 0) / 2);
+        if (_points.Count == 1) return grown.Contains(World(0));
+
+        for (var i = 1; i < _points.Count; i++)
+        {
+            if (CanvasTouch.SegmentMeets(World(i - 1), World(i), grown)) return true;
+        }
+
+        return false;
+    }
+
     public void Render(IDrawingSession session, InfiniteCanvas canvas)
     {
         if (_points.Count == 0 || Brush == null || canvas == null) return;

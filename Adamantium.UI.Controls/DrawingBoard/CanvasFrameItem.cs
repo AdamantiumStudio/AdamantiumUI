@@ -74,6 +74,19 @@ public class CanvasFrameItem : ICanvasItem
         return World.Contains(world) && !inner.Contains(world);
     }
 
+    /// <summary>Whether a world rectangle touches the title strip or the outline - a band drawn round things standing on
+    /// the frame takes them, not the frame.</summary>
+    public bool Touches(Rect world)
+    {
+        if (!CanvasTouch.Meets(World, world)) return false;
+
+        var edge = Math.Max(Thickness, 0);
+        var body = new Rect(World.X + edge, World.Y + TitleHeight,
+            Math.Max(0, World.Width - edge * 2), Math.Max(0, World.Height - TitleHeight - edge));
+
+        return !CanvasTouch.AllInside(CanvasTouch.Corners(world), body);
+    }
+
     public ICanvasItem Copy() => new CanvasFrameItem(World, Title, Stroke?.Copy(), Fill?.Copy())
     {
         Thickness = Thickness,

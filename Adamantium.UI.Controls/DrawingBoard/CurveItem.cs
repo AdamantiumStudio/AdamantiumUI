@@ -155,6 +155,9 @@ public class CurveItem : ICanvasItem, ICanvasPoints
         return false;
     }
 
+    /// <summary>Whether a world rectangle touches the line itself, not the box round it.</summary>
+    public bool Touches(Rect world) => CanvasTouch.RunTouches(Walk(), Math.Max(Thickness, 0) / 2, world);
+
     public void Render(IDrawingSession session, InfiniteCanvas canvas) => Render(session, canvas, null);
 
     /// <summary>Draws the curve with ONE MORE point on the end that the item does not hold - where the pointer is,

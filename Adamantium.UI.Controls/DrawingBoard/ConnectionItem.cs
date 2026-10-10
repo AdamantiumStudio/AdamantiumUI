@@ -127,6 +127,27 @@ public class ConnectionItem : ICanvasItem
         return false;
     }
 
+    /// <summary>Whether a world rectangle touches the wire itself, not the box round its bend.</summary>
+    public bool Touches(Rect world)
+    {
+        if (!Ends(out var from, out var to)) return false;
+
+        Taken(from, to, out var first, out var second);
+
+        var grown = world.Inflate(Math.Max(Thickness, 0) / 2);
+        var previous = from;
+
+        for (var step = 1; step <= 16; step++)
+        {
+            var at = Along(from, first, second, to, step / 16.0);
+            if (CanvasTouch.SegmentMeets(previous, at, grown)) return true;
+
+            previous = at;
+        }
+
+        return false;
+    }
+
     /// <summary>Nothing. A wire is where its sockets are; moving it would mean moving them, and they belong to their
     /// nodes.</summary>
     public void Move(Vector2 worldDelta)
