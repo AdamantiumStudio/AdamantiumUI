@@ -262,6 +262,7 @@ public abstract class TextBoxBase : Control
     private IFont _placeholderFont;
     private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
+    private double _lineLeading;
     private double[] _lineTops = [0];
     private double[] _lineHeights = [0];
 
@@ -290,6 +291,9 @@ public abstract class TextBoxBase : Control
     private HorizontalTextAlignment _lastShapedLastLine;
     private HorizontalTextAlignment _lastShapedSingleWord;
     private bool _lastShapedKashidas;
+    private double _lastShapedLineHeight = double.NaN;
+    private LineStackingStrategy _lastShapedLineStacking;
+    private double _lastShapedLineSpacing;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -365,10 +369,15 @@ public abstract class TextBoxBase : Control
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
         _textLayout.Kashidas = Kashidas;
+        _textLayout.LineHeight = LineHeight;
+        _textLayout.LineStacking = LineStackingStrategy;
+        _textLayout.LineSpacing = LineSpacing;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
-        _lineHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * (FontSize / iFont.UnitsPerEm);
+        var naturalHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * (FontSize / iFont.UnitsPerEm);
+        _lineHeight = LineHeight > 0 && double.IsFinite(LineHeight) ? LineHeight : naturalHeight;
+        _lineLeading = (_lineHeight - naturalHeight) / 2;
 
         var text = Text ?? string.Empty;
         var wrapping = TextWrapping;
@@ -385,7 +394,8 @@ public abstract class TextBoxBase : Control
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
             && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
             && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
-            && _lastShapedKashidas == Kashidas
+            && _lastShapedKashidas == Kashidas && _lastShapedLineHeight.Equals(LineHeight)
+            && _lastShapedLineStacking == LineStackingStrategy && _lastShapedLineSpacing.Equals(LineSpacing)
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -436,6 +446,9 @@ public abstract class TextBoxBase : Control
         _lastShapedLastLine = LastLineAlignment;
         _lastShapedSingleWord = SingleWordJustification;
         _lastShapedKashidas = Kashidas;
+        _lastShapedLineHeight = LineHeight;
+        _lastShapedLineStacking = LineStackingStrategy;
+        _lastShapedLineSpacing = LineSpacing;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
@@ -1224,7 +1237,7 @@ public abstract class TextBoxBase : Control
     private void RenderPlaceholder(IDrawingSession session, double oy, Size size)
     {
         EnsurePlaceholderShaped(FontSize);
-        session.DrawText(BuildTextParameters(PlaceholderForeground, PlaceholderX(size), oy, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
+        session.DrawText(BuildTextParameters(PlaceholderForeground, PlaceholderX(size), oy + _lineLeading, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
     }
 
     private double PlaceholderX(Size size) => Math.Floor(AlignedStart(
@@ -1248,7 +1261,8 @@ public abstract class TextBoxBase : Control
         var t = _floatProgress;
         var floatFs = FontSize + (FontSize * FloatScale - FontSize) * t;
         EnsurePlaceholderShaped(floatFs);
-        var y = textOy + (0.0 - textOy) * t;   // rest (t=0): at the text; floated (t=1): at the top of the strip
+        var rest = textOy + _lineLeading;
+        var y = rest + (0.0 - rest) * t;   // rest (t=0): at the text; floated (t=1): at the top of the strip
         var brush = FloatLabelBrush(t);
         session.DrawText(BuildTextParameters(brush, PlaceholderX(size), y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
     }

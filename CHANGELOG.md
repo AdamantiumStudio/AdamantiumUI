@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- Line height, line stacking and line spacing on text, inherited as WPF's `LineHeight`: `LineHeight` sets the distance
+  between baselines, its extra room split above and below the text; `LineStackingStrategy` says whether a line holding
+  text of a larger size or a taller control still grows (`MaxHeight`, the default) or every line is exactly that high
+  (`BlockLineHeight`); `LineSpacing` adds space between lines. Text blocks and text boxes follow them (an empty box's
+  one line too). `TextBlock.MaxLines`, as Avalonia's: that many lines, the rest not shown (`IsOverset`), or the last
+  ending in an ellipsis with `TextTrimming`. Sandbox Text tab, Basics topic: sliders for the three on a paragraph with
+  a larger run.
+
 - `InlineUIContainer` among a `TextBlock`'s inlines, as WPF's: a control set into the line. It takes the room its size
   asks for, stands on the baseline (a `BaselineShift` raises it), raises a line it is taller than, wraps and aligns as a
   word does and follows its own size. The control is the block's visual child and its container's logical one, so it

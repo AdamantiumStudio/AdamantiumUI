@@ -96,6 +96,13 @@
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
+    <Phrase Key="LinesTitle" Text="Строки: расстояние между базовыми линиями, промежуток между строками и наибольшее число строк (0 — все); крупный участок раздвигает свою строку:"/>
+    <Phrase Key="LinesHeight" Text="Высота строки:"/>
+    <Phrase Key="LinesSpacing" Text="Промежуток:"/>
+    <Phrase Key="LinesMost" Text="Строк не больше:"/>
+    <Phrase Key="LinesBefore" Text="Текст с собственной высотой строки держит ровный ритм по всей странице, а "/>
+    <Phrase Key="LinesLarge" Text="крупный участок"/>
+    <Phrase Key="LinesAfter" Text=" освобождает себе место. Промежуток раздвигает строки, а блок, которому позволено показать лишь несколько строк, заканчивает последнюю многоточием, если читать есть ещё что."/>
     <Phrase Key="RunShiftAfter" Text=", остальное на месте."/>
     <Phrase Key="Kashidas" Text="Кашиды"/>
     <Phrase Key="SingleWord" Text="Одно слово:"/>

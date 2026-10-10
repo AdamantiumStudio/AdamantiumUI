@@ -249,5 +249,75 @@
                      TextDecorations="Underline"/>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Lines: the distance between baselines, the space between lines and the most lines; the larger run grows
+             its line, the last line shown ends in an ellipsis. -->
+        <TextBlock Text="{Localize TextStrings.LinesTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal"
+                    Margin="0,0,0,6">
+            <TextBlock x:Name="LineHeightLabel"
+                       Text="{Localize TextStrings.LinesHeight}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="LineHeightSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LineHeightLabel}"
+                    Width="160"
+                    Minimum="16"
+                    Maximum="48"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleLineHeight, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock x:Name="LineSpacingLabel"
+                       Text="{Localize TextStrings.LinesSpacing}"
+                       VerticalAlignment="Center"
+                       Margin="24,0,0,0"/>
+            <Slider AutomationProperties.AutomationId="LineSpacingSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LineSpacingLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="16"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleLineSpacing, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock x:Name="MaxLinesLabel"
+                       Text="{Localize TextStrings.LinesMost}"
+                       VerticalAlignment="Center"
+                       Margin="24,0,0,0"/>
+            <Slider AutomationProperties.AutomationId="MaxLinesSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=MaxLinesLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="8"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleMaxLines, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+        </StackPanel>
+        <Border Width="420"
+                Padding="6"
+                HorizontalAlignment="Left"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="LinesSample"
+                       FontSize="18"
+                       TextWrapping="WrapByWords"
+                       TextTrimming="CharEllipses"
+                       VerticalTextAlignment="Top"
+                       LineHeight="{Binding SampleLineHeight}"
+                       LineSpacing="{Binding SampleLineSpacing}"
+                       MaxLines="{Binding SampleMaxLines}">
+                <TextBlock.Inlines>
+                    <Run Text="{Localize TextStrings.LinesBefore}"/>
+                    <Run Text="{Localize TextStrings.LinesLarge}"
+                         FontSize="30"/>
+                    <Run Text="{Localize TextStrings.LinesAfter}"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+        </Border>
     </StackPanel>
 </View>
