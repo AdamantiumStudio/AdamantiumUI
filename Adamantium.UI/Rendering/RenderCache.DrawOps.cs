@@ -7,6 +7,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.Vulkan.Core;
 using Adamantium.UI.Rendering.RenderUnits;
+using Adamantium.UI.Rendering.Retained;
 
 namespace Adamantium.UI.Rendering;
 
@@ -275,7 +276,11 @@ public partial class RenderCache
             var fi = _instancedFill.Flush(fullScissor, _projectionMatrix);
             if (_recording && fi >= 0)
             {
-                RecordOp(new RenderOp { Kind = RenderOpKind.InstancedFlush, SegId = fi, Clip = _batchClip, Order = _recordOrder });
+                RecordOp(new RenderOp
+                {
+                    Kind = RenderOpKind.InstancedFlush, Batch = InstancedFillCollector.ArenaBatchId, SegId = fi,
+                    Clip = _batchClip, Order = _recordOrder
+                });
             }
         }
 

@@ -1424,7 +1424,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     public int LastSlot { get; private set; }
 
     /// <summary>Which RenderOp.Batch an instanced flush is recorded under.</summary>
-    public const byte ArenaBatchId = 13;
+    public const byte ArenaBatchId = 17;
 
     private readonly Dictionary<GeometryKey, InstancedKeyArena> _arenas = new();
 
@@ -1589,6 +1589,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         if (key is not KeySegment seg || stageCount <= 0) return -1;
 
+        foreach (var u in stagedUnits)
+        {
+            if (u is GeometryRenderUnit { HasPerUnitOverlay: true }) return -1;
+        }
+
         // A key that has never drawn has no instance buffer yet - the walk builds it lazily on the first add, and a patch
         // that places the FIRST shape of a mesh is exactly that case. Same lazy build, same reason (a whole ring, not one
         // buffer, or this key spends its life writing a copy the frames in flight are still reading).
@@ -1607,9 +1612,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         rec.Scissor = scissor;
         rec.StencilRef = Math.Min(++_groupRef, CoverageMarkBits);
         rec.Keys.Add((seg, (uint)first, (uint)stageCount));
-        // ...and the ink. A cross is a STROKED path: its shape rides the instance buffer, everything visible about it is
-        // the deferred overlay, and a record without these units draws the shape and none of it.
-        foreach (var u in stagedUnits) rec.Units.Add(u);
         return _flushCount - 1;
     }
 

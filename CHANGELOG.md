@@ -680,6 +680,10 @@ All packages share one version.
 
 ### Fixed
 
+- A control that drew one more vector icon (a `DrawingImage`) kept its old icons drawn too, and showed a stray copy,
+  until something redrew the window: the patch could not find the instanced batch's recorded draw and left the old run
+  in place. It replaces the run now.
+
 - Controls in a `SlidePanel` or another popup kept the previous theme's templates and styles after a theme switch;
   only their colors changed. Content a new template re-homes takes the new theme, open or closed.
 

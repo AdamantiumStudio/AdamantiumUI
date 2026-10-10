@@ -3,6 +3,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering.Retained;
@@ -80,6 +81,11 @@ internal sealed class InstancedKeyArena : BatchArena
     public override bool TryStage(IRenderUnit unit, Matrix4x4F world, int transformSlot, int ownerTag, int clipSlot = -1)
     {
         if (!_collector.TryStageSolid(_key, unit, world, transformSlot, _stage, clipSlot)) return false;
+
+        if (unit is GeometryRenderUnit geometry)
+        {
+            geometry.FillInstanced = true;
+        }
 
         _stagedUnits.Add(unit);
         return true;
