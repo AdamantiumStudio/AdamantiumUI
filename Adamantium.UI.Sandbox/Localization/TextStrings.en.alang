@@ -78,6 +78,11 @@
     <Phrase Key="SpansColored" Text="A blue span with "/>
     <Phrase Key="SpansUnderlined" Text="an underlined part"/>
     <Phrase Key="SpansOwnColor" Text=" and a red run of its own"/>
+    <Phrase Key="LinksTitle" Text="Links: one opens its address in the browser, one runs a command; Tab walks them, Enter activates:"/>
+    <Phrase Key="LinksBefore" Text="Read about "/>
+    <Phrase Key="LinksSite" Text="Adamantium on GitHub"/>
+    <Phrase Key="LinksMiddle" Text=", or count a click: "/>
+    <Phrase Key="LinksCount" Text="click me"/>
     <Phrase Key="LineBreakTitle" Text="LineBreak ends the line, not the paragraph: after it the Latin line stays in the Hebrew paragraph and starts on the right; after a newline it is a paragraph of its own:"/>
     <Phrase Key="WithLineBreak" Text="With LineBreak"/>
     <Phrase Key="WithNewline" Text="With a newline"/>

@@ -9,7 +9,8 @@ namespace Adamantium.UI.Controls.Text;
 /// <summary>A link inside a <see cref="TextBlock"/>'s inlines, as WPF's: a <see cref="Span"/>, underlined unless it says
 /// otherwise, that a click, Enter or Space activates while it has the keyboard. Activated, it raises
 /// <see cref="Click"/>, runs its <see cref="Command"/>, and asks to go to its <see cref="NavigateUri"/>: unless a
-/// <see cref="RequestNavigate"/> handler takes that on, an absolute address opens in the system's own handler.</summary>
+/// <see cref="RequestNavigate"/> handler takes that on, a web or mail address opens in the system's own handler; any
+/// other scheme (a file, a custom protocol) goes nowhere without a handler.</summary>
 public class Hyperlink : Span
 {
     public static readonly AdamantiumProperty NavigateUriProperty = AdamantiumProperty.Register(nameof(NavigateUri),
@@ -71,15 +72,17 @@ public class Hyperlink : Span
 
         var navigate = new HyperlinkNavigateEventArgs(uri);
         RequestNavigate?.Invoke(this, navigate);
-        if (!navigate.Handled && uri.IsAbsoluteUri)
+        if (navigate.Handled || !uri.IsAbsoluteUri || uri.Scheme is not ("http" or "https" or "mailto"))
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
-            }
-            catch (Win32Exception)
-            {
-            }
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Win32Exception)
+        {
         }
     }
 }

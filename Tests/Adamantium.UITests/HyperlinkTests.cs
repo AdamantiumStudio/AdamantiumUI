@@ -129,6 +129,53 @@ public class HyperlinkTests
     }
 
     [Test]
+    public void ABlockTheAuthorKeptOutOfTheKeyboard_StaysOut()
+    {
+        var text = new TextBlock { Focusable = false };
+        var link = new Hyperlink();
+        link.Inlines.Add(new Run { Text = "link" });
+        text.Inlines.Add(link);
+        var window = new Window { Width = 600, Height = 300, Content = text };
+        WindowExtension.UpdateTree(window);
+
+        Assert.That(text.Focusable, Is.False);
+    }
+
+    [Test]
+    public void ThePressOnPlainText_LeavesTheFocusToTheButtonAround()
+    {
+        var (text, _, _) = Block();
+        var button = new Adamantium.UI.Controls.Buttons.Button();
+        ((Border)text.VisualParent).Child = null;
+        button.Content = text;
+        var window = new Window { Width = 600, Height = 300, Content = button };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        ((IObservableComponent)text).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
+            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = Mouse.PreviewMouseDownEvent });
+
+        Assert.That(text.IsKeyboardFocused, Is.False);
+        Assert.That(button.IsKeyboardFocused, Is.True);
+    }
+
+    [Test]
+    public void TheFocusRing_GoesRoundTheLinkWithTheKeyboard()
+    {
+        var (text, _, _) = Block();
+        text.Focus();
+        var first = text.FocusBounds;
+
+        Press(text, Key.Tab);
+
+        Assert.That(first, Is.Not.Null);
+        Assert.That(text.FocusBounds, Is.Not.Null);
+        Assert.That(text.FocusBounds.Value.X, Is.GreaterThan(first.Value.X + first.Value.Width), "the second link is right of the first");
+    }
+
+    [Test]
     public void Automation_SeesEachLink_NamedByItsText_AndInvokesIt()
     {
         var (text, first, _) = Block();

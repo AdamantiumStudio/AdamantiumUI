@@ -60,13 +60,14 @@ public class FocusAdorner : Adorner
     // A square corner stays square; a rounded one grows by exactly what the ring stands off by.
     private double Grow(double radius) => radius <= 0 ? 0 : radius + Outset;
 
-    /// <summary>The ring's box: the control's painted bounds pushed out by <see cref="Outset"/>. The stage lays the
-    /// template out to this, so the template itself is a plain box that fills what it is given.</summary>
+    /// <summary>The ring's box: the control's painted bounds, or the part of it the keyboard is on
+    /// (<see cref="InputUIComponent.FocusBounds"/>), pushed out by <see cref="Outset"/>. The stage lays the template out
+    /// to this, so the template itself is a plain box that fills what it is given.</summary>
     public override Rect AdornedBounds
     {
         get
         {
-            var bounds = base.AdornedBounds;
+            var bounds = AdornedElement is InputUIComponent { FocusBounds: { } part } ? part : base.AdornedBounds;
             return new Rect(bounds.X - Outset, bounds.Y - Outset,
                 bounds.Width + Outset * 2, bounds.Height + Outset * 2);
         }

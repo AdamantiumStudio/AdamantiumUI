@@ -13,4 +13,9 @@
         <Setter Property="VerticalTextAlignment" Value="Center"/>
     </Style>
 
+    <!-- A link stands out in the accent color, on top of its underline. -->
+    <Style Selector="Hyperlink">
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
 </StyleSet>

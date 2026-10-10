@@ -257,6 +257,10 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     public static readonly AdamantiumProperty FocusVisualStyleProperty = AdamantiumProperty.Register(
         nameof(FocusVisualStyle), typeof(Style), typeof(InputUIComponent), new PropertyMetadata(null));
 
+    /// <summary>The part of this element the keyboard is on, in its own units, for the focus ring to go round - a link
+    /// in a TextBlock; null rings the whole element.</summary>
+    public virtual Rect? FocusBounds => null;
+
     public Style FocusVisualStyle
     {
         get => GetValue<Style>(FocusVisualStyleProperty);
