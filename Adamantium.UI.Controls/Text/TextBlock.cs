@@ -741,6 +741,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         int? palette = null;
         double? tracking = null;
         double? shift = null;
+        BaselineAlignment? alignment = null;
         foreach (var inline in chain)
         {
             if (!double.IsNaN(inline.FontSize))
@@ -761,6 +762,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             palette = inline.ColorPalette ?? palette;
             tracking = inline.Tracking ?? tracking;
             shift = inline.BaselineShift ?? shift;
+            alignment = inline.BaselineAlignment ?? alignment;
         }
 
         var resolvedWeight = weight ?? FontWeight;
@@ -776,6 +778,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             ColorPalette = palette,
             Tracking = tracking,
             BaselineShift = shift,
+            BaselineAlignment = alignment,
             ObjectSize = objectSize,
             FontSize = double.IsNaN(fontSize) ? null : fontSize,
             Foreground = (foreground as SolidColorBrush)?.Color,

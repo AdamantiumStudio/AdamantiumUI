@@ -250,6 +250,43 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Baseline alignment, as WPF's: superscript and subscript where the font sets them, and small runs at the
+             top, middle and bottom of a line a large letter makes tall. -->
+        <TextBlock Text="{Localize TextStrings.BaselineAlignmentTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="BaselineAlignmentSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="x"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineAlignment="Superscript"/>
+                <Run Text=" + log"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineAlignment="Subscript"/>
+                <Run Text="   "/>
+                <Run Text="W"
+                     FontSize="48"/>
+                <Run Text=" top"
+                     FontSize="13"
+                     BaselineAlignment="Top"/>
+                <Run Text=" center"
+                     FontSize="13"
+                     BaselineAlignment="Center"/>
+                <Run Text=" bottom"
+                     FontSize="13"
+                     BaselineAlignment="Bottom"/>
+                <Run Text=" text top"
+                     FontSize="13"
+                     BaselineAlignment="TextTop"/>
+                <Run Text=" text bottom"
+                     FontSize="13"
+                     BaselineAlignment="TextBottom"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- Lines: the distance between baselines, the space between lines and the most lines; the larger run grows
              its line, the last line shown ends in an ellipsis. -->
         <TextBlock Text="{Localize TextStrings.LinesTitle}"

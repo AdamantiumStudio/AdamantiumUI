@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `BaselineAlignment` on inlines, as WPF's: `Superscript` and `Subscript` where the font sets them, `TextTop` and
+  `TextBottom` at the block font's ascender and descender, `Top`, `Center` and `Bottom` of the line; a span gives it to
+  its inlines, `BaselineShift` adds to it, underlines follow it. Sandbox Text tab, Basics topic: indices and small runs
+  at each place beside a large letter.
+
 - Line height, line stacking and line spacing on text, inherited as WPF's `LineHeight`: `LineHeight` sets the distance
   between baselines, its extra room split above and below the text; `LineStackingStrategy` says whether a line holding
   text of a larger size or a taller control still grows (`MaxHeight`, the default) or every line is exactly that high
