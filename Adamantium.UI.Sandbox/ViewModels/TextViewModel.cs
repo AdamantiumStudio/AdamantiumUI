@@ -184,6 +184,10 @@ public partial class TextViewModel : TabPageViewModel
     public string SpanishSample =>
         "La internacionalización de las aplicaciones tipográficas extraordinariamente sofisticadas necesita diccionarios.";
 
+    // Genesis 1:1-2, unpointed.
+    public string HebrewSample =>
+        "בראשית ברא אלהים את השמים ואת הארץ. והארץ היתה תהו ובהו וחשך על פני תהום ורוח אלהים מרחפת על פני המים.";
+
     // A word with soft hyphens written into it breaks only at them, whatever the patterns say.
     public string SoftHyphenSample =>
         "Supercali­fragilistic­expiali­docious, even though the sound of it is something quite atro­cious.";

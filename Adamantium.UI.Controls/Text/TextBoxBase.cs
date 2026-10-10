@@ -48,6 +48,10 @@ public abstract class TextBoxBase : Control
         typeof(TextWrapping), typeof(TextBoxBase),
         new PropertyMetadata(TextWrapping.NoWrap, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
 
+    public static readonly AdamantiumProperty HorizontalTextAlignmentProperty = AdamantiumProperty.Register(
+        nameof(HorizontalTextAlignment), typeof(HorizontalTextAlignment), typeof(TextBoxBase),
+        new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
+
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(TextBoxBase), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
@@ -147,6 +151,14 @@ public abstract class TextBoxBase : Control
     {
         get => GetValue<TextWrapping>(TextWrappingProperty);
         set => SetValue(TextWrappingProperty, value);
+    }
+
+    /// <summary>How wrapped lines stand in the field: at their start (the default), centered, right or justified.
+    /// Text that does not wrap stays at its start.</summary>
+    public HorizontalTextAlignment HorizontalTextAlignment
+    {
+        get => GetValue<HorizontalTextAlignment>(HorizontalTextAlignmentProperty);
+        set => SetValue(HorizontalTextAlignmentProperty, value);
     }
 
     /// <summary>Scroll-bar policy on the horizontal axis (the shared <see cref="ScrollViewer.HorizontalScrollBarVisibilityProperty"/>
@@ -269,6 +281,7 @@ public abstract class TextBoxBase : Control
     private double _lastShapedFontSize = -1;
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
+    private HorizontalTextAlignment _lastShapedAlignment;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -352,6 +365,7 @@ public abstract class TextBoxBase : Control
         var shaping = TextShaping(font);
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
+            && _lastShapedAlignment == HorizontalTextAlignment
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -362,7 +376,7 @@ public abstract class TextBoxBase : Control
         if (text.Length == 0)
         {
             _textWidth = 0;
-            _caretX = [0];
+            _caretX = [AlignedStart(double.IsNaN(width) ? 0 : width, TextDirection == TextDirection.RightToLeft)];
             _caretLine = [0];
             _caretWidth = [0];
             _bidi = false;
@@ -376,11 +390,11 @@ public abstract class TextBoxBase : Control
                 ? _textLayout.ProcessText(text, FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
-                    HorizontalTextAlignment.Left, VerticalTextAlignment.Top)
+                    LaidOutAlignment, VerticalTextAlignment.Top)
                 : _textLayout.ProcessText(new AttributedText(text, shaping), FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
-                    HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
+                    LaidOutAlignment, VerticalTextAlignment.Top);
             _textWidth = size.Width;
             BuildCaretModel();
         }
@@ -393,6 +407,7 @@ public abstract class TextBoxBase : Control
         _lastShapedText = text;
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
+        _lastShapedAlignment = HorizontalTextAlignment;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
@@ -1184,9 +1199,18 @@ public abstract class TextBoxBase : Control
         session.DrawText(BuildTextParameters(PlaceholderForeground, PlaceholderX(size), oy, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
     }
 
-    private double PlaceholderX(Size size) => _placeholderLayout.IsRightToLeftParagraph(0)
-        ? Math.Floor(Math.Max(0, size.Width - _placeholderLayout.GetLine(0).Width))
-        : 0;
+    private double PlaceholderX(Size size) => Math.Floor(AlignedStart(
+        Math.Max(0, size.Width - _placeholderLayout.GetLine(0).Width), _placeholderLayout.IsRightToLeftParagraph(0)));
+
+    private HorizontalTextAlignment LaidOutAlignment =>
+        TextWrapping == TextWrapping.NoWrap ? HorizontalTextAlignment.Left : HorizontalTextAlignment;
+
+    private double AlignedStart(double room, bool rightToLeft) => LaidOutAlignment switch
+    {
+        HorizontalTextAlignment.Center => room / 2,
+        HorizontalTextAlignment.Right => rightToLeft ? 0 : room,
+        _ => rightToLeft ? room : 0,
+    };
 
     // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.
