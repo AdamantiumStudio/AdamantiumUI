@@ -77,17 +77,10 @@
              where the last line stands; where a line of one word stands; and kashidas stretching Arabic words. -->
         <TextBlock Text="{Localize TextStrings.JustificationTitle}"
                    Margin="0,8,0,8"/>
-        <WrapPanel Orientation="Horizontal"
-                   WordSpacing="{Binding WordSpacing}"
-                   LetterSpacing="{Binding LetterSpacing}"
-                   GlyphScaling="{Binding GlyphScaling}"
-                   LastLineAlignment="{Binding LastLineAlignment}"
-                   SingleWordJustification="{Binding SingleWordJustification}"
-                   Tracking="{Binding Tracking}">
+        <WrapPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical"
-                        Width="420"
-                        Margin="0,0,16,16">
-                <Grid ColumnDefinitions="Auto,*"
+                        Margin="0,0,24,16">
+                <Grid ColumnDefinitions="Auto,Auto"
                       RowDefinitions="Auto,Auto,Auto,Auto"
                       Margin="0,0,0,6">
                     <TextBlock x:Name="WordSpacingLabel"
@@ -160,8 +153,8 @@
                             Value="{Binding Tracking, Mode=TwoWay}"
                             Margin="8,4,0,4"/>
                 </Grid>
-                <WrapPanel Orientation="Horizontal"
-                           Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,0,6">
                     <TextBlock Text="{Localize TextStrings.LastLine}"
                                VerticalAlignment="Center"
                                MarginRight="8"/>
@@ -188,8 +181,11 @@
                                  GroupName="LastLine"
                                  Content="{Localize TextStrings.Justify}"
                                  IsChecked="{Binding LastLineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Justify, Mode=TwoWay}"/>
-                </WrapPanel>
-                <Border Padding="6"
+                </StackPanel>
+                <!-- The settings go on the sample only, so the controls above keep their own spacing. -->
+                <Border Width="420"
+                        HorizontalAlignment="Left"
+                        Padding="6"
                         BorderThickness="1"
                         BorderBrush="{ResourceReference ControlStrokeColorDefault}">
                     <TextBlock AutomationProperties.AutomationId="JustifiedColumn"
@@ -197,49 +193,50 @@
                                Language="en-US"
                                TextWrapping="WrapByWords"
                                FontSize="18"
+                               WordSpacing="{Binding WordSpacing}"
+                               LetterSpacing="{Binding LetterSpacing}"
+                               GlyphScaling="{Binding GlyphScaling}"
+                               Tracking="{Binding Tracking}"
+                               LastLineAlignment="{Binding LastLineAlignment}"
                                HorizontalTextAlignment="Justify"/>
                 </Border>
             </StackPanel>
 
             <!-- A line holding one word: where it stands, or its letters spread across the line. -->
             <StackPanel Orientation="Vertical"
-                        Width="300"
-                        Margin="0,0,16,16">
-                <WrapPanel Orientation="Horizontal"
-                           Margin="0,0,0,6">
+                        Margin="0,0,24,16">
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,0,6">
                     <TextBlock Text="{Localize TextStrings.SingleWord}"
                                VerticalAlignment="Center"
-                               MarginRight="8"
-                               MarginBottom="6"/>
+                               MarginRight="8"/>
                     <RadioButton AutomationProperties.AutomationId="SingleWordStartRadio"
                                  Classes="Toggle"
                                  GroupName="SingleWord"
                                  Content="{Localize TextStrings.AlignStart}"
                                  MarginRight="6"
-                                 MarginBottom="6"
                                  IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Left, Mode=TwoWay}"/>
                     <RadioButton AutomationProperties.AutomationId="SingleWordCenterRadio"
                                  Classes="Toggle"
                                  GroupName="SingleWord"
                                  Content="{Localize TextStrings.AlignCenter}"
                                  MarginRight="6"
-                                 MarginBottom="6"
                                  IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
                     <RadioButton AutomationProperties.AutomationId="SingleWordEndRadio"
                                  Classes="Toggle"
                                  GroupName="SingleWord"
                                  Content="{Localize TextStrings.AlignEnd}"
                                  MarginRight="6"
-                                 MarginBottom="6"
                                  IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Right, Mode=TwoWay}"/>
                     <RadioButton AutomationProperties.AutomationId="SingleWordJustifyRadio"
                                  Classes="Toggle"
                                  GroupName="SingleWord"
                                  Content="{Localize TextStrings.Justify}"
-                                 MarginBottom="6"
                                  IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Justify, Mode=TwoWay}"/>
-                </WrapPanel>
-                <Border Padding="6"
+                </StackPanel>
+                <Border Width="300"
+                        HorizontalAlignment="Left"
+                        Padding="6"
                         BorderThickness="1"
                         BorderBrush="{ResourceReference ControlStrokeColorDefault}">
                     <TextBlock AutomationProperties.AutomationId="SingleWordColumn"
@@ -248,19 +245,21 @@
                                Hyphens="None"
                                TextWrapping="WrapByWords"
                                FontSize="18"
+                               SingleWordJustification="{Binding SingleWordJustification}"
                                HorizontalTextAlignment="Justify"/>
                 </Border>
             </StackPanel>
 
             <!-- Arabic justified: once its spaces are at their maximum, a word stretches with a kashida. -->
             <StackPanel Orientation="Vertical"
-                        Width="300"
-                        Margin="0,0,16,16">
+                        Margin="0,0,24,16">
                 <ToggleSwitch AutomationProperties.AutomationId="KashidasToggle"
                               Content="{Localize TextStrings.Kashidas}"
                               IsChecked="{Binding Kashidas, Mode=TwoWay}"
                               Margin="0,0,0,6"/>
-                <Border Padding="6"
+                <Border Width="300"
+                        HorizontalAlignment="Left"
+                        Padding="6"
                         BorderThickness="1"
                         BorderBrush="{ResourceReference ControlStrokeColorDefault}">
                     <TextBlock AutomationProperties.AutomationId="ArabicColumn"
