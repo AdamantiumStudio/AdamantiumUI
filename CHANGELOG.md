@@ -9,7 +9,7 @@ All packages share one version.
 
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
-  E = mc², H₂O, xⁿ⁺¹ and an underlined footnote mark.
+  E = mc², H₂O, xⁿ⁺¹, an underlined footnote mark, and a slider moving an underlined, highlighted run.
 
 - `Kashidas` on every element (inherited, on by default), taken by `TextBlock` and `TextBox`: justified Arabic
   stretches its words with kashidas once its spaces are at their maximum. Sandbox Paragraph topic, Justification
@@ -669,6 +669,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBlock` laid out again with the same text and size - a new last-line alignment, single-word justification,
+  kashidas switched off, a run's baseline shift - kept its old glyphs on screen: the renderer told text apart only by
+  its string and size. It compares the layout's revision too now.
 - A text line thinner than a pixel - the strikethrough of 12 px Segoe UI, the underline of a small footnote mark - could
   fall between pixel rows and not be drawn. `TextBlock` draws underlines and strikethroughs on whole device pixels, at
   least one thick.

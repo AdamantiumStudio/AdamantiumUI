@@ -223,6 +223,9 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private bool _kashidas = true;
 
+    // How far the run of the basics topic's baseline shift sample is raised; negative lowers it.
+    [Bindable] private double _runShift = 6;
+
     // Genesis 1:1-2, unpointed.
     public string HebrewSample =>
         "בראשית ברא אלהים את השמים ואת הארץ. והארץ היתה תהו ובהו וחשך על פני תהום ורוח אלהים מרחפת על פני המים.";

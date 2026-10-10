@@ -266,7 +266,7 @@
                                Text="{Binding ArabicParagraphSample}"
                                Language="ar"
                                TextWrapping="WrapByWords"
-                               FontSize="18"
+                               FontSize="26"
                                Kashidas="{Binding Kashidas}"
                                HorizontalTextAlignment="Justify"/>
                 </Border>

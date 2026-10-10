@@ -58,5 +58,8 @@ select id=TextView/name=Basics
 wait id=Topic/id=BasicsStandView
 set id=FontSizeSlider 24
 expect id=FontSizeSlider value=24
+set id=RunShiftSlider -6
+expect id=RunShiftSlider value=-6
 # Back as the page opens.
+set id=RunShiftSlider 6
 set id=FontSizeSlider 22
