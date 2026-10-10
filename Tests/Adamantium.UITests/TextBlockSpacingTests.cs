@@ -56,6 +56,26 @@ public class TextBlockSpacingTests
     }
 
     [Test]
+    public void TheLastJustifiedLine_FollowsTheInheritedLastLineAlignment()
+    {
+        var text = new TextBlock
+        {
+            Text = Prose, FontSize = 20, Width = 300, TextWrapping = TextWrapping.WrapByWords,
+            HorizontalTextAlignment = HorizontalTextAlignment.Justify,
+        };
+        var border = new Border { Child = text, LastLineAlignment = HorizontalTextAlignment.Right };
+        var window = new Window { Width = 900, Height = 600, Content = border };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        var last = text.Layout.LineCount - 1;
+        Assert.That(text.Layout.GetTextData().Where(glyph => glyph.LineIndex == last && glyph.Symbol != ' ')
+            .Max(glyph => glyph.Rect.Right), Is.EqualTo(300).Within(1));
+    }
+
+    [Test]
     public void ARunsTracking_TakesPrecedence()
     {
         var text = new TextBlock { FontSize = 20 };

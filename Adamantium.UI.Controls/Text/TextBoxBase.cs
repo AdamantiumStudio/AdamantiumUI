@@ -287,6 +287,8 @@ public abstract class TextBoxBase : Control
     private double _lastShapedTracking;
     private SpacingRange _lastShapedGlyphScaling;
     private bool _lastShapedAlternates;
+    private HorizontalTextAlignment _lastShapedLastLine;
+    private HorizontalTextAlignment _lastShapedSingleWord;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -359,6 +361,8 @@ public abstract class TextBoxBase : Control
         _textLayout.Tracking = Tracking;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
+        _textLayout.LastLineAlignment = LastLineAlignment;
+        _textLayout.SingleWordJustification = SingleWordJustification;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -378,6 +382,7 @@ public abstract class TextBoxBase : Control
             && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
             && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
+            && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -425,6 +430,8 @@ public abstract class TextBoxBase : Control
         _lastShapedTracking = Tracking;
         _lastShapedGlyphScaling = GlyphScaling;
         _lastShapedAlternates = JustificationAlternates;
+        _lastShapedLastLine = LastLineAlignment;
+        _lastShapedSingleWord = SingleWordJustification;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
@@ -1222,12 +1229,13 @@ public abstract class TextBoxBase : Control
     private HorizontalTextAlignment LaidOutAlignment =>
         TextWrapping == TextWrapping.NoWrap ? HorizontalTextAlignment.Left : HorizontalTextAlignment;
 
-    private double AlignedStart(double room, bool rightToLeft) => LaidOutAlignment switch
-    {
-        HorizontalTextAlignment.Center => room / 2,
-        HorizontalTextAlignment.Right => rightToLeft ? 0 : room,
-        _ => rightToLeft ? room : 0,
-    };
+    private double AlignedStart(double room, bool rightToLeft) =>
+        (LaidOutAlignment == HorizontalTextAlignment.Justify ? LastLineAlignment : LaidOutAlignment) switch
+        {
+            HorizontalTextAlignment.Center => room / 2,
+            HorizontalTextAlignment.Right => rightToLeft ? 0 : room,
+            _ => rightToLeft ? room : 0,
+        };
 
     // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.

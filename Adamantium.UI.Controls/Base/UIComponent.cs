@@ -491,6 +491,30 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(JustificationAlternatesProperty, value);
     }
 
+    public static readonly AdamantiumProperty LastLineAlignmentProperty = AdamantiumProperty.Register(
+        nameof(LastLineAlignment), typeof(HorizontalTextAlignment), typeof(UIComponent),
+        new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where the last line of a justified paragraph in this element and its descendants stands: at its start
+    /// (the default), centered, at its end, or justified too.</summary>
+    public HorizontalTextAlignment LastLineAlignment
+    {
+        get => GetValue<HorizontalTextAlignment>(LastLineAlignmentProperty);
+        set => SetValue(LastLineAlignmentProperty, value);
+    }
+
+    public static readonly AdamantiumProperty SingleWordJustificationProperty = AdamantiumProperty.Register(
+        nameof(SingleWordJustification), typeof(HorizontalTextAlignment), typeof(UIComponent),
+        new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where a justified line holding a single word stands: at its start (the default), centered, at its end,
+    /// or justified, its letters spread across the line.</summary>
+    public HorizontalTextAlignment SingleWordJustification
+    {
+        get => GetValue<HorizontalTextAlignment>(SingleWordJustificationProperty);
+        set => SetValue(SingleWordJustificationProperty, value);
+    }
+
     public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
         typeof(double), typeof(UIComponent),
         new PropertyMetadata(0.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
