@@ -509,7 +509,7 @@ public partial class RenderCache
                 // so a return is a refill, not a re-insert.
                 if (!draw.WasGeometryValid && _groupById.TryGetValue(draw.Component.RenderId, out var emptied))
                 {
-                    foreach (var unit in emptied.Units) unit?.DeferDispose();
+                    foreach (var unit in emptied.Units) Retire(unit);
                     emptied.ClearUnits();
                 }
                 continue;

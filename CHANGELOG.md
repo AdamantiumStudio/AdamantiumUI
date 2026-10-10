@@ -742,6 +742,17 @@ All packages share one version.
 
 ### Fixed
 
+- Render clones (the loading skeleton cards): outside a scrolling area every copy was drawn at the last copy's place,
+  a repaint without a full redraw - the skeleton's pulse among them - reached one copy of a child and no copy of the
+  card itself, and a child that began drawing more shapes lost its other copies. Each copy is drawn at its own place,
+  and a change to cloned content redraws the frame.
+
+- A control that stopped drawing one of its vector shapes could get it back on the next recolor of its brush, drawn
+  over the record of the control after it, which went missing.
+
+- A frame where a control with a stroked vector shape changed its shape count patched the other controls first and
+  only then fell back to a full redraw; it falls back before patching anything.
+
 - A selection band drawn round something inside a larger hollow outline - a shape with no fill, a freehand loop, a
   comment frame - took the outline too: the band was matched against each item's box. It is matched against what the
   item draws now (`ICanvasItem.Touches`, the box by default), the way a press already was; a band still takes whatever

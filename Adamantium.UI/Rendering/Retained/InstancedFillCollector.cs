@@ -1528,17 +1528,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// <summary>Replace [at, at+replaced) of this key's run in that flush with a staged range: the tail of the key's own
     /// array shifts, and every LATER run of the same key moves with it. Nothing else in the collector is touched, and the
     /// op that draws the flush stays exactly where it stands - so paint order holds by construction.</summary>
-    internal bool ReplaceInKey(object key, int flush, int at, int replaced, List<GeometryInstance> stage, int stageFirst, int stageCount,
-        List<IRenderUnit> stagedUnits)
+    internal bool ReplaceInKey(object key, int flush, int at, int replaced, List<GeometryInstance> stage, int stageFirst, int stageCount)
     {
-        // A record draws its key runs AND the deferred fringe/stroke of the units collected with them, in ONE list shared
-        // by every group in that flush. Re-issuing a run cannot say which entries of that list were this group's, so a
-        // group that draws an overlay is refused here rather than repaired into a record whose ink no longer matches it.
-        foreach (var u in stagedUnits)
-        {
-            if (u is GeometryRenderUnit { HasPerUnitOverlay: true }) return false;
-        }
-
         if (key is not KeySegment seg || flush < 0 || flush >= _flushCount) return false;
         if (seg.Gpu == null) return false;
 
@@ -1584,15 +1575,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// <summary>Give a staged run a flush of its OWN - a control that drew no vector fill until now. A new record rather
     /// than a new entry in an existing one: a record carries ONE coverage mark and one clip, and joining a stranger's
     /// group would put this shape's fringe under a mark that is not its own.</summary>
-    internal int AllocateFlushForKey(object key, Rect2D scissor, List<GeometryInstance> stage, int stageFirst, int stageCount,
-        List<IRenderUnit> stagedUnits)
+    internal int AllocateFlushForKey(object key, Rect2D scissor, List<GeometryInstance> stage, int stageFirst, int stageCount)
     {
         if (key is not KeySegment seg || stageCount <= 0) return -1;
-
-        foreach (var u in stagedUnits)
-        {
-            if (u is GeometryRenderUnit { HasPerUnitOverlay: true }) return -1;
-        }
 
         // A key that has never drawn has no instance buffer yet - the walk builds it lazily on the first add, and a patch
         // that places the FIRST shape of a mesh is exactly that case. Same lazy build, same reason (a whole ring, not one

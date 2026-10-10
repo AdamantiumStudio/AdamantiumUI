@@ -78,6 +78,25 @@ internal sealed class InstancedKeyArena : BatchArena
 
     public override int StagedCount => _stage.Count;
 
+    /// <summary>A record draws its key runs AND the deferred fringe/stroke of the units collected with them, in ONE list
+    /// shared by every group in that flush. Re-issuing a run cannot say which entries of that list were this group's, so a
+    /// stage holding a unit with an overlay is refused rather than repaired into a record whose ink no longer matches.</summary>
+    public override bool StageRefusesReissue
+    {
+        get
+        {
+            foreach (var unit in _stagedUnits)
+            {
+                if (unit is GeometryRenderUnit { HasPerUnitOverlay: true })
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     public override bool TryStage(IRenderUnit unit, Matrix4x4F world, int transformSlot, int ownerTag, int clipSlot = -1)
     {
         if (!_collector.TryStageSolid(_key, unit, world, transformSlot, _stage, clipSlot)) return false;
@@ -92,7 +111,7 @@ internal sealed class InstancedKeyArena : BatchArena
     }
 
     public override bool ReplaceStagedInSegment(IGraphicsDevice device, int id, int at, int replaced, int stageFirst, int stageCount)
-        => _collector.ReplaceInKey(_key, id, at, replaced, _stage, stageFirst, stageCount, _stagedUnits);
+        => _collector.ReplaceInKey(_key, id, at, replaced, _stage, stageFirst, stageCount);
 
     /// <summary>Relocation has no meaning here: a key's array is its own, nothing else is packed after it, so an edit
     /// that does not fit in place is an edit the arena has no room for at all.</summary>
@@ -100,7 +119,7 @@ internal sealed class InstancedKeyArena : BatchArena
         Rect2D scissor, int stageFirst, int stageCount) => false;
 
     public override int AllocateSegmentFromStage(IGraphicsDevice device, Rect2D scissor, int stageFirst, int stageCount)
-        => _collector.AllocateFlushForKey(_key, scissor, _stage, stageFirst, stageCount, _stagedUnits);
+        => _collector.AllocateFlushForKey(_key, scissor, _stage, stageFirst, stageCount);
 
     public override void UpdateSlotFromStage(IGraphicsDevice device, int slot, int stageIndex)
         => _collector.UpdateKeySlot(_key, slot, _stage[stageIndex]);
