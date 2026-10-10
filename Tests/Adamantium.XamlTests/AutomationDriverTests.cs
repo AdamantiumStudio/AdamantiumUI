@@ -112,6 +112,48 @@ public class AutomationDriverTests
     }
 
     [Test]
+    public async Task TheCaret_GoesToALineAndColumn_AndASelection_SpansTwoOfThem()
+    {
+        var box = new TextBox { Name = "Lines", Width = 200, AcceptsReturn = true, Text = "one\ntwo\nthree" };
+        await using var session = await Driving(box);
+        var element = session.Find(By.Id("Lines"));
+
+        await element.PlaceCaretAsync(2, 3);
+        var caret = (box.SelectionStart, box.SelectionLength);
+        await element.SelectTextAsync(1, 2, 3, 3);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(caret, Is.EqualTo((6, 0)), "line 2, column 3: before the 'o' of two");
+            Assert.That((box.SelectionStart, box.SelectionLength), Is.EqualTo((1, 9)), "from the 'n' of one to before the 'r'");
+        });
+    }
+
+    [Test]
+    public async Task ASelectionMadeBackwards_LeavesTheCaretWhereItEnds()
+    {
+        var box = new TextBox { Name = "Lines", Width = 200, AcceptsReturn = true, Text = "one\ntwo\nthree" };
+        await using var session = await Driving(box);
+
+        await session.Find(By.Id("Lines")).SelectTextAsync(3, 3, 1, 2);
+
+        Assert.That((box.SelectionStart, box.SelectionLength, box.CaretIndex), Is.EqualTo((10, -9, 1)),
+            "anchored at 3:3, the caret at 1:2");
+    }
+
+    [TestCase(4, 1)]
+    [TestCase(2, 5)]
+    [TestCase(0, 1)]
+    [TestCase(1, 0)]
+    public async Task ACaretOutsideTheText_Fails(int line, int column)
+    {
+        var box = new TextBox { Name = "Lines", Width = 200, AcceptsReturn = true, Text = "one\ntwo\nthree" };
+        await using var session = await Driving(box);
+
+        Assert.ThrowsAsync<AutomationException>(() => session.Find(By.Id("Lines")).PlaceCaretAsync(line, column));
+    }
+
+    [Test]
     public async Task Keys_ArePressedAsTheSystemWould_ModifiersAroundTheKey_ALetterWithItsCharacter()
     {
         var box = new TextBox { Name = "Note", Width = 200 };

@@ -17,7 +17,7 @@ internal sealed class ScriptInterpreter
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
         "hover", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
-        "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
+        "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
     private static readonly TimeSpan DefaultWait = TimeSpan.FromSeconds(10);
@@ -128,6 +128,13 @@ internal sealed class ScriptInterpreter
                 Command = AutomationCommand.SetValue,
                 Target = arguments.At(0),
                 Value = arguments.At(1),
+                AllowErrors = allowErrors
+            }),
+            "caret" => SendAsync(new AutomationRequest
+            {
+                Command = AutomationCommand.SelectText,
+                Target = arguments.At(0),
+                Value = arguments.Option("to") is { } to ? $"{arguments.At(1)}-{to}" : arguments.At(1),
                 AllowErrors = allowErrors
             }),
             "type" => SendAsync(new AutomationRequest

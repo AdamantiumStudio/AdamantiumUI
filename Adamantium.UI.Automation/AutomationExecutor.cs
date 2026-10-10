@@ -24,6 +24,7 @@ public sealed class AutomationExecutor
     private static readonly TimeSpan WaitStep = TimeSpan.FromMilliseconds(20);
 
     private const int ClosestShown = 5;
+    private const char LineSeparator = (char)0x2028;
 
     private readonly IAutomationHost _host;
 
@@ -206,6 +207,9 @@ public sealed class AutomationExecutor
             case AutomationCommand.SetValue:
                 SetValue(peer, request.Value ?? string.Empty);
                 break;
+            case AutomationCommand.SelectText:
+                SelectText(Pattern<ITextProvider>(peer, PatternId.Text), request.Value ?? string.Empty);
+                break;
             case AutomationCommand.Scroll:
                 var (horizontal, vertical) = ScrollPercents(request.Value);
                 Pattern<IScrollProvider>(peer, PatternId.Scroll).SetScrollPercent(horizontal, vertical);
@@ -346,6 +350,53 @@ public sealed class AutomationExecutor
 
         return window;
     }
+
+    private static void SelectText(ITextProvider text, string value)
+    {
+        var ends = value.Split('-');
+        if (ends.Length > 2)
+        {
+            throw new FormatException($"'{value}' is not line[:column] or line[:column]-line[:column].");
+        }
+
+        var start = TextIndex(text, ends[0]);
+        var end = ends.Length == 2 ? TextIndex(text, ends[1]) : start;
+        text.Select(start, end - start);
+        text.ScrollIntoView(end);
+    }
+
+    private static int TextIndex(ITextProvider text, string position)
+    {
+        var parts = position.Trim().Split(':');
+        var column = 1;
+        if (parts.Length > 2 || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var line) ||
+            (parts.Length == 2 && !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out column)))
+        {
+            throw new FormatException($"'{position}' is not line[:column].");
+        }
+
+        var lines = text.LineOf(text.Text.Length) + 1;
+        if (line < 1 || line > lines)
+        {
+            throw new AutomationException($"'{position}': the text has lines 1 .. {lines}.");
+        }
+
+        var (start, end) = text.LineRange(line - 1);
+        var all = text.Text;
+        while (end > start && IsLineBreak(all[end - 1]))
+        {
+            end--;
+        }
+
+        if (column < 1 || column > end - start + 1)
+        {
+            throw new AutomationException($"'{position}': line {line} has columns 1 .. {end - start + 1}.");
+        }
+
+        return start + column - 1;
+    }
+
+    private static bool IsLineBreak(char character) => character is '\n' or '\r' or LineSeparator;
 
     private static void SetValue(AutomationPeer peer, string value)
     {

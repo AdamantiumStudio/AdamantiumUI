@@ -135,5 +135,10 @@ public enum AutomationCommand
     /// <summary>Carries the target onto the element <see cref="AutomationRequest.Value"/> selects and lets it go there,
     /// by a gesture made inside the application: over its middle, or before or after it when the first of
     /// <see cref="AutomationRequest.Properties"/> says so.</summary>
-    DropOnto
+    DropOnto,
+
+    /// <summary>Puts the caret in the target's text, or selects some of it: <see cref="AutomationRequest.Value"/> is
+    /// <c>line[:column]</c>, or <c>line[:column]-line[:column]</c> for a selection, both counted from 1 as the target
+    /// counts its lines.</summary>
+    SelectText
 }

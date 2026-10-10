@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `adam-auto caret <selector> <line>[:<col>] [--to <line>[:<col>]]` and `AutomationElement.PlaceCaretAsync` /
+  `SelectTextAsync`: the caret straight to a line and column of a text, or a selection between two, through its text
+  pattern; lines and columns from 1, as the element numbers them.
+
 - `IThemeManager.AddStyleSet<T>(byTheme)` and `AddStyleSetToThemes<T>(byTheme)` for a control's static constructor:
   a style set made for each theme a library knows, by the theme's type (one deriving from it included), and `T` for
   every other theme.
