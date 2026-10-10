@@ -964,10 +964,20 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private double HostedRaise(IMeasurableComponent child)
     {
+        if (Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is
+            { BaselineAlignment: { } alignment } && alignment != BaselineAlignment.Baseline)
+        {
+            return 0;
+        }
+
         var size = child.DesiredSize;
-        child.Arrange(new Rect(size));
-        return ContentBaseline(child) is { } baseline ? baseline - size.Height : 0;
+        var slot = child.PreviousArrangeSlot is { } previous && previous.Size == size ? previous : new Rect(size);
+        child.Arrange(slot);
+        return RaiseIn(child, slot);
     }
+
+    private static double RaiseIn(IMeasurableComponent child, Rect slot) =>
+        ContentBaseline(child) is { } baseline ? baseline - slot.Y - slot.Height : 0;
 
     private static double? ContentBaseline(IUIComponent element)
     {
@@ -976,7 +986,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             return null;
         }
 
-        if (element is TextBlock { Layout: { LineCount: > 0 } layout })
+        if (element is TextBlock { Layout: { LineCount: > 0 } layout, WritingMode: WritingMode.Horizontal } text
+            && !string.IsNullOrEmpty(text.ShownText))
         {
             return element.Bounds.Y + layout.GetLine(0).Baseline;
         }
@@ -1009,8 +1020,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             }
 
             var child = _objects[index].Child;
-            child.Arrange(new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height));
+            var slot = new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height);
+            child.Arrange(slot);
             placed.Add(child);
+            if (_hostedRaises.TryGetValue(child, out var raise) && raise != 0 && !RaiseIn(child, slot).Equals(raise))
+            {
+                InvalidateMeasure();
+            }
         }
 
         foreach (var child in _hosted.Where(child => !placed.Contains(child)))
