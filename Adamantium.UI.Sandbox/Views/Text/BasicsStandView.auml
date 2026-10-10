@@ -93,6 +93,50 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- A LineBreak ends the line, not the paragraph: the Latin line after it stays in the Hebrew paragraph and
+             starts on the right; after a newline it is a paragraph of its own and starts on the left. -->
+        <TextBlock Text="{Localize TextStrings.LineBreakTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,0">
+                <TextBlock Text="{Localize TextStrings.WithLineBreak}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="LineBreakSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם"/>
+                            <LineBreak/>
+                            <Run Text="Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Localize TextStrings.WithNewline}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="NewlineSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם&#10;Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
         <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
              underlined footnote mark carries its line up with it. -->
         <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"

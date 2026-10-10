@@ -78,6 +78,9 @@
     <Phrase Key="SpansColored" Text="Голубой участок с "/>
     <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
     <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="LineBreakTitle" Text="LineBreak кончает строку, а не абзац: после него латинская строка остаётся в абзаце на иврите и начинается справа; после перевода строки это отдельный абзац:"/>
+    <Phrase Key="WithLineBreak" Text="С LineBreak"/>
+    <Phrase Key="WithNewline" Text="С переводом строки"/>
     <Phrase Key="BaselineShiftTitle" Text="Смещение базовой линии: участки подняты и опущены, высота строки та же:"/>
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>
