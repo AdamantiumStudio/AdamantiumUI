@@ -15,23 +15,27 @@ internal static class FrameReport
 
     public static void Write(string folder, RecordSummary summary, RenderCache live, RenderCache reference,
         FrameComparison comparison, byte[] livePixels, byte[] walkPixels, byte[] previous, int previousWidth,
-        int previousHeight, SurfaceFormat format, bool blueFirst, double scale, MSAALevel msaa, IReadOnlyList<Rect> masks)
+        int previousHeight, SurfaceFormat format, bool blueFirst, double scale, MSAALevel msaa, IReadOnlyList<Rect> masks,
+        bool images)
     {
         Directory.CreateDirectory(folder);
 
         var width = comparison.Width;
         var height = comparison.Height;
-        var diff = FrameImages.Diff(livePixels, comparison, blueFirst);
-        FrameImages.Save(livePixels, width, height, blueFirst, Path.Combine(folder, "live.png"));
-        FrameImages.Save(walkPixels, width, height, blueFirst, Path.Combine(folder, "walk.png"));
-        FrameImages.Save(diff, width, height, blueFirst, Path.Combine(folder, "diff.png"));
-
-        var zoom = FrameImages.Zoom(livePixels, walkPixels, diff, comparison, out var zoomWidth, out var zoomHeight);
-        FrameImages.Save(zoom, zoomWidth, zoomHeight, blueFirst, Path.Combine(folder, "zoom.png"));
-
-        if (previous != null && previousWidth == width && previousHeight == height)
+        if (images)
         {
-            FrameImages.Save(previous, width, height, blueFirst, Path.Combine(folder, "prev.png"));
+            var diff = FrameImages.Diff(livePixels, comparison, blueFirst);
+            FrameImages.Save(livePixels, width, height, blueFirst, Path.Combine(folder, "live.png"));
+            FrameImages.Save(walkPixels, width, height, blueFirst, Path.Combine(folder, "walk.png"));
+            FrameImages.Save(diff, width, height, blueFirst, Path.Combine(folder, "diff.png"));
+
+            var zoom = FrameImages.Zoom(livePixels, walkPixels, diff, comparison, out var zoomWidth, out var zoomHeight);
+            FrameImages.Save(zoom, zoomWidth, zoomHeight, blueFirst, Path.Combine(folder, "zoom.png"));
+
+            if (previous != null && previousWidth == width && previousHeight == height)
+            {
+                FrameImages.Save(previous, width, height, blueFirst, Path.Combine(folder, "prev.png"));
+            }
         }
 
         var liveGroups = live.DescribeGroups();
@@ -88,12 +92,13 @@ internal static class FrameReport
 
         text.AppendLine();
         text.AppendLine("DIFFERENCES BETWEEN THE TWO CACHES THERE");
-        AppendDifferences(text, liveHits, referenceHits);
+        AppendDifferences(text, live, reference, liveHits, referenceHits);
 
         File.WriteAllText(Path.Combine(folder, "report.txt"), text.ToString());
     }
 
-    private static void AppendDifferences(StringBuilder text, List<GroupView> live, List<GroupView> reference)
+    private static void AppendDifferences(StringBuilder text, RenderCache liveCache, RenderCache referenceCache,
+        List<GroupView> live, List<GroupView> reference)
     {
         var byComponent = reference.GroupBy(g => g.Component).ToDictionary(g => g.Key, g => g.First());
         var found = false;
@@ -139,6 +144,13 @@ internal static class FrameReport
                 text.AppendLine($"  {ComponentText.Of(group.Component)}: {string.Join("; ", notes)}");
                 found = true;
             }
+
+            if (!Same(group.World, twin.World) || group.Clip.HasValue != twin.Clip.HasValue ||
+                group.Clip.HasValue && !Same(group.Clip.Value, twin.Clip.Value))
+            {
+                text.AppendLine("    live chain:" + Chain(liveCache.DescribeChain(group.Component)));
+                text.AppendLine("    walk chain:" + Chain(referenceCache.DescribeChain(group.Component)));
+            }
         }
 
         foreach (var twin in byComponent.Values)
@@ -167,6 +179,22 @@ internal static class FrameReport
     private static string Describe(GroupView group) =>
         $"{ComponentText.Of(group.Component)} {ComponentText.Box(group.World)} clip {Clip(group.Clip)} op {group.Opacity:0.##} " +
         $"units {group.Units} slots {group.Slots}{(group.Current ? string.Empty : " STALE")}";
+
+    private static string Chain(IReadOnlyList<ChainLink> links)
+    {
+        var text = new StringBuilder();
+        foreach (var link in links)
+        {
+            text.Append(link.Frozen
+                ? $"{Environment.NewLine}      {ComponentText.Of(link.Component)} at {link.X:0.#},{link.Y:0.#} " +
+                  $"{link.Size.Width:0.#}x{link.Size.Height:0.#}{(link.Clips ? " CLIPS" : string.Empty)}" +
+                  $"{(link.ReadLive ? " READ LIVE (no packet carried it)" : string.Empty)}"
+                : $"{Environment.NewLine}      {ComponentText.Of(link.Component)} NOT FROZEN - live parent " +
+                  ComponentText.Of(link.Component.RenderParent));
+        }
+
+        return text.ToString();
+    }
 
     private static string Clip(Rect? clip) => clip.HasValue ? ComponentText.Box(clip.Value) : "none";
 

@@ -2704,7 +2704,7 @@ public partial class RenderCache
             // The same refusal the paint order makes on the way in: a splice re-appends a group's content into the arena
             // and re-stamps its WalkVersion, so a departed subtree that reaches here is put BACK, frame after frame,
             // however faithfully the sweep blanks it. Two entrances into the arena, one rule about who may use them.
-            if (LeftTheTree(group)) return SpliceRefused("departed");
+            if (Departed(group)) return SpliceRefused("departed");
 
             // ...or still in the tree but out of the paint order: skipped (not refused), or it would be re-baked back in.
             if (!group.InOrder) continue;

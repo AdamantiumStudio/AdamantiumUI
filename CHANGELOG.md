@@ -8,11 +8,13 @@ All packages share one version.
 ### Added
 
 - The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`), every frame a window
-  records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on a device of
-  its own. Each frame that differs is written to a session folder: the live and reference pictures, their difference,
-  a close-up, the frame before, and a report of how the frame was drawn, what it changed (motion nodes included) and
-  which groups of the two caches meet the difference and how they differ. Counts of verified, differing and skipped
-  frames; off, it costs one read per frame. Sandbox: "Verify frames" in the diagnostics panel, counts on the plate.
+  records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on the window's
+  device once the window has presented. A frame that differs gets a report in a session folder - how the frame was
+  drawn, what it changed (motion nodes included), which groups of the two caches meet the difference and how they
+  differ, and the frozen ancestor chain of a group whose place differs (a link read live rather than carried by a packet
+  is marked) - up to `MaxReports`, and the live and reference pictures, their difference, a close-up and the frame
+  before, up to `MaxDumps`. Counts of verified, differing and skipped frames; off, it costs one read per frame.
+  Sandbox: "Verify frames" in the diagnostics panel, counts on the plate.
 
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
@@ -748,6 +750,11 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- Zooming an infinite canvas no longer makes its shapes jump and fly past the canvas's edge for a frame or two (or for
+  good). Which controls left the tree is now decided where the frame is recorded and carried on its packet; the render
+  thread used to ask the live tree while the canvas was moving its controls from one layer to the next, dropped their
+  layout, and froze them on a layer that had no parent yet.
 
 - The designer preview: a value-type element with its value as text (`<Color x:Key="Accent">#FF0000FF</Color>`,
   `<Thickness>1,2,3,4</Thickness>`) is the value its text says - `Color` no longer resolves to a nested type of the

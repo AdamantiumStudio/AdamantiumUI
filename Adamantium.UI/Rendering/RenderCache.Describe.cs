@@ -31,4 +31,25 @@ public partial class RenderCache
 
         return views;
     }
+
+    /// <summary>The frozen chain from a component up to its root, nearest first, as the draw composes it; it stops at a link
+    /// the replica holds no snapshot of.</summary>
+    internal IReadOnlyList<ChainLink> DescribeChain(IUIComponent component)
+    {
+        var links = new List<ChainLink>();
+        for (var c = component; c != null && links.Count < 64;)
+        {
+            if (!_applySnap.TryGetValue(c, out var snap))
+            {
+                links.Add(new ChainLink(c, false, 0, 0, default, false, false));
+                break;
+            }
+
+            links.Add(new ChainLink(c, true, snap.LocalTransform.M41, snap.LocalTransform.M42, snap.RenderSize,
+                snap.ClipToBounds, _readLive.Contains(c)));
+            c = snap.RenderParent;
+        }
+
+        return links;
+    }
 }

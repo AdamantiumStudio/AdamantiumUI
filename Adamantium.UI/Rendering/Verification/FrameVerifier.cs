@@ -25,7 +25,6 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
     private readonly FrameVerification _settings;
     private readonly IRootVisualComponent _root;
     private readonly IGraphicsDevice _device;
-    private readonly IResourceFactory _resourceFactory;
     private readonly RenderUnitFactory _factory;
     private readonly RenderCache _reference;
     private readonly List<IUIComponent> _flat = [];
@@ -45,12 +44,12 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
     private int _previousWidth;
     private int _previousHeight;
 
+    /// <summary>Draws the reference on the window's own device, once the window has presented.</summary>
     public FrameVerifier(FrameVerification settings, IRootVisualComponent root, IGraphicsDevice windowDevice, IResourceFactory resourceFactory)
     {
         _settings = settings;
         _root = root;
-        _resourceFactory = resourceFactory;
-        _device = windowDevice.MainDevice.CreateRenderDevice();
+        _device = windowDevice;
         _factory = new RenderUnitFactory(_device, resourceFactory);
         _reference = new RenderCache(new DrawingContext(), _factory);
     }
@@ -100,7 +99,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
         }
     }
 
-    public void FrameEnded(RenderCache live, GraphicsPresenter presenter, IRenderTarget drawn, IGraphicsDevice windowDevice,
+    public void FramePresented(RenderCache live, GraphicsPresenter presenter, IRenderTarget drawn, IGraphicsDevice windowDevice,
         double scale)
     {
         var state = Volatile.Read(ref _state);
@@ -146,8 +145,6 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
         _target?.Dispose();
         _target = null;
         _factory.Dispose();
-        _resourceFactory.ReleaseDevice(_device);
-        _device.MainDevice.RemoveDevice(_device);
     }
 
     private void Verify(RenderCache live, GraphicsPresenter presenter, IRenderTarget drawn, IGraphicsDevice windowDevice,
@@ -173,11 +170,12 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
             _settings.CountMismatched();
             var line = $"frame {_summary.Frame}: {comparison.Different} px differ ({comparison.Extra} extra, {comparison.Missing} missing) " +
                        $"in [{comparison.Left},{comparison.Top}..{comparison.Right},{comparison.Bottom}] - {_summary.Kind}, drawn by {live.LastDrawPath}";
-            if (_settings.TakeDump())
+            if (_settings.TakeReport())
             {
                 var folder = Path.Combine(_settings.SessionFolder, $"{_summary.Frame:D6}");
                 FrameReport.Write(folder, _summary, live, _reference, comparison, livePixels, walkPixels, _previous,
-                    _previousWidth, _previousHeight, format, blueFirst, scale, presenter.MSAALevel, _maskSnapshot);
+                    _previousWidth, _previousHeight, format, blueFirst, scale, presenter.MSAALevel, _maskSnapshot,
+                    _settings.TakeDump());
                 line += $" -> {folder}";
             }
 

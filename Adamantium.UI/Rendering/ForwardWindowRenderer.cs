@@ -224,10 +224,10 @@ public class ForwardWindowRenderer : WindowRendererBase
         _verifier = null;
     }
 
-    public override void OnFrameEnded()
+    public override void Present()
     {
-        base.OnFrameEnded();
-        _verifier?.FrameEnded(_renderCache, Presenter, _drawnTarget, GraphicsDevice, RenderScale);
+        base.Present();
+        _verifier?.FramePresented(_renderCache, Presenter, _drawnTarget, GraphicsDevice, RenderScale);
         while (_retiredVerifiers.TryDequeue(out var retired))
         {
             retired.Dispose();

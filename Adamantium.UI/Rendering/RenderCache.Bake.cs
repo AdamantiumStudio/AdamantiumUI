@@ -135,7 +135,12 @@ public partial class RenderCache
                     component.RenderReadOnly(_drawingContext); 
                 else 
                     component.Render(_drawingContext);
-                ProcessRenderCommands(component, _drawingContextInternal.GetDrawCommands(), projectionMatrix, !readOnly && wasGeometryValid, order, component.RenderClones);
+                if (!LeftTheTree(component))
+                {
+                    ProcessRenderCommands(component, _drawingContextInternal.GetDrawCommands(), projectionMatrix,
+                        !readOnly && wasGeometryValid, order, component.RenderClones);
+                }
+
                 order += OrderGap;   // the flat list IS the paint order
             }
         }
@@ -153,6 +158,7 @@ public partial class RenderCache
         CaptureSnapshot();
 
         _applySnap.Clear();
+        _readLive.Clear();
         foreach (var entry in _packet.SnapDelta) _applySnap[entry.Key] = entry.Value;
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
@@ -272,14 +278,18 @@ public partial class RenderCache
         _nodeCache.Clear();
 
         _applySnap.Clear();
+        _readLive.Clear();
         foreach (var entry in packet.SnapDelta) _applySnap[entry.Key] = entry.Value;
 
         var present = new HashSet<Guid>();
         foreach (var draw in packet.Draws)
         {
             present.Add(draw.Component.RenderId);
-            ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid, draw.Order,
-                draw.Clones);
+            if (!LeftTheTree(draw.Component))
+            {
+                ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid,
+                    draw.Order, draw.Clones);
+            }
         }
 
         List<Guid> stale = null;
@@ -357,7 +367,9 @@ public partial class RenderCache
         _recordedUnits.Clear();   // the recorder's mirror of the above
         // The designer builds a new tree per render (fresh RenderIds), so the old frozen layout would grow unboundedly.
         _snap.Clear();
+        _knownToApplier.Clear();
         _applySnap.Clear();
+        _readLive.Clear();
         // Nothing is built any more: left set, the next record read "no marks" as a clean frame and replayed the op stream
         // of the scene these units drew.
         _built = false;
@@ -433,8 +445,11 @@ public partial class RenderCache
         if (c is Core.FundamentalUIComponent { IsDiscarded: true }) return s;
 
         _applySnap[c] = s;
+        _readLive.Add(c);
         return s;
     }
+
+    private readonly HashSet<IUIComponent> _readLive = [];
 
     // Freezes the layout of everything the draw will read at the end of the record, so the applier never touches a live
     // component. Incremental: only this frame's changes are re-frozen; a Full packet re-freezes all.

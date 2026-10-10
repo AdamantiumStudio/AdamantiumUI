@@ -49,7 +49,7 @@ public class FrameVerifierTests
     {
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
         RenderDirty.Clear();
-        verifier?.FrameEnded(renderer.Cache, renderer.Presenter, renderer.RenderTarget, GpuTestDevice.Device, 1.0);
+        verifier?.FramePresented(renderer.Cache, renderer.Presenter, renderer.RenderTarget, GpuTestDevice.Device, 1.0);
     }
 
     [Test]

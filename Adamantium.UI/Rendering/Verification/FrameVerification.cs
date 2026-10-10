@@ -16,6 +16,7 @@ public sealed class FrameVerification
     private int _mismatched;
     private int _skipped;
     private int _dumps;
+    private int _reports;
 
     internal static FrameVerification Active => active;
 
@@ -46,8 +47,11 @@ public sealed class FrameVerification
     /// <summary>Where sessions are written; a session is a subfolder named by the time it started.</summary>
     public string Folder { get; set; } = Path.Combine(AppContext.BaseDirectory, "verify");
 
-    /// <summary>How many differing frames a session writes out in full; later ones are counted and logged.</summary>
+    /// <summary>How many differing frames a session writes pictures of.</summary>
     public int MaxDumps { get; set; } = 20;
+
+    /// <summary>How many differing frames a session writes a report of; later ones are counted and logged.</summary>
+    public int MaxReports { get; set; } = 500;
 
     /// <summary>The folder of the current session.</summary>
     public string SessionFolder { get; private set; }
@@ -68,6 +72,8 @@ public sealed class FrameVerification
     internal void CountSkipped() => Interlocked.Increment(ref _skipped);
 
     internal bool TakeDump() => Interlocked.Increment(ref _dumps) <= MaxDumps;
+
+    internal bool TakeReport() => Interlocked.Increment(ref _reports) <= MaxReports;
 
     internal void Log(string line)
     {
@@ -93,6 +99,7 @@ public sealed class FrameVerification
         Interlocked.Exchange(ref _mismatched, 0);
         Interlocked.Exchange(ref _skipped, 0);
         Interlocked.Exchange(ref _dumps, 0);
+        Interlocked.Exchange(ref _reports, 0);
         SessionFolder = Path.Combine(Folder, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
     }
 }
