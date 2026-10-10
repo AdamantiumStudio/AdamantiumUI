@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `InlineUIContainer` among a `TextBlock`'s inlines, as WPF's: a control set into the line. It takes the room its size
+  asks for, stands on the baseline (a `BaselineShift` raises it), raises a line it is taller than, wraps and aligns as a
+  word does and follows its own size. The control is the block's visual child and its container's logical one, so it
+  takes input, focus, its DataContext and the theme as any control; automation finds it under the block, and the
+  block's name leaves it out. In markup it is written inside an explicit `<InlineUIContainer>`. Horizontal text only.
+  Sandbox Text tab, Basics topic: a check box, a button and a tall swatch in a wrapping line.
+
 - `Hyperlink` among a `TextBlock`'s inlines, as WPF's: a span, underlined and in the theme's accent color, that a
   click, Enter or Space activates - `Click`, then `Command` with `CommandParameter`, then `RequestNavigate`; an absolute
   web or mail `NavigateUri` nobody handles opens in the system's handler (other schemes need a `RequestNavigate`
@@ -696,6 +703,10 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- An inherited value (font size, color, font) changed on an element stopped at a node the property is not registered
+  on - an inline between a text block and a control set into its line - so the control kept the old value; and taking
+  a child away from such a node threw. Such a node now passes the change on.
 
 - A canvas node on screen could not be scrolled into view by automation - only its off-screen stand-in could - so
   `adam-auto scroll` on a node failed whenever the camera already showed it, and the InfiniteCanvas scenario stopped at

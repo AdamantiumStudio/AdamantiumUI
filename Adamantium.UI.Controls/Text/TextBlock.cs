@@ -151,9 +151,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
+    private const char ObjectReplacement = (char)0xFFFC;
     private TextAttributes _lastShaping;
 
     private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
+    private readonly List<(int Index, IMeasurableComponent Child)> _objects = [];
+    private readonly List<IMeasurableComponent> _hosted = [];
+    private readonly List<Size> _hostedSizes = [];
     private Hyperlink _pressedLink;
     private int _focusedLink = -1;
     private bool _overLink;
@@ -251,6 +255,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
         _runFontsPending = false;
         _links.Clear();
+        _objects.Clear();
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
@@ -531,7 +536,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private bool HasInlines => _inlines is { Count: > 0 };
 
-    internal string ShownText => HasInlines ? InlineText().Replace(LineSeparator, '\n') : Text;
+    internal string ShownText => HasInlines
+        ? InlineText().Replace(LineSeparator, '\n').Replace(ObjectReplacement.ToString(), string.Empty)
+        : Text;
+
+    internal IReadOnlyList<IMeasurableComponent> HostedChildren => _hosted;
 
     private void OnInlinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
@@ -540,13 +549,67 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         if (e.NewItems != null)
             foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; }
         _inlinesDirty = true;
+        HostChildren();
         InvalidateMeasure();
     }
 
     private void OnInlineChanged(object sender, System.EventArgs e)
     {
         _inlinesDirty = true;
+        HostChildren();
         InvalidateMeasure();
+    }
+
+    private void HostChildren()
+    {
+        List<IMeasurableComponent> children = [];
+        foreach (var container in Containers(_inlines))
+        {
+            if (container.Child != null)
+            {
+                children.Add(container.Child);
+            }
+        }
+
+        foreach (var gone in _hosted.Where(child => !children.Contains(child)).ToList())
+        {
+            _hosted.Remove(gone);
+            RemoveVisualChild(gone);
+        }
+
+        foreach (var added in children.Where(child => !_hosted.Contains(child)))
+        {
+            _hosted.Add(added);
+            AddVisualChild(added);
+        }
+    }
+
+    private static IEnumerable<InlineUIContainer> Containers(InlineCollection inlines)
+    {
+        foreach (var inline in inlines ?? [])
+        {
+            if (inline is InlineUIContainer container)
+            {
+                yield return container;
+            }
+            else if (inline is Span span)
+            {
+                foreach (var nested in Containers(span.Inlines))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+    protected internal override void DisownVisualChild(IUIComponent child)
+    {
+        foreach (var container in Containers(_inlines).Where(container => ReferenceEquals(container.Child, child)).ToList())
+        {
+            container.Child = null;
+        }
+
+        base.DisownVisualChild(child);
     }
 
     private string InlineText()
@@ -572,6 +635,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                     break;
                 case LineBreak:
                     text.Append(LineSeparator);
+                    break;
+                case InlineUIContainer { Child: not null }:
+                    text.Append(ObjectReplacement);
                     break;
                 case Span span:
                     AppendInlineText(span.Inlines, text);
@@ -604,6 +670,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                     attributed.Apply(start, 1, InlineAttributes(chain));
                     start++;
                     break;
+                case InlineUIContainer { Child: { } child }:
+                    attributed.Apply(start, 1, InlineAttributes(chain, child.DesiredSize));
+                    _objects.Add((start, child));
+                    start++;
+                    break;
                 case Span span:
                     var spanStart = start;
                     ApplyInlines(span.Inlines, chain, attributed, ref start);
@@ -621,7 +692,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
     // and the lines add up.
-    private TextAttributes InlineAttributes(List<Inline> chain)
+    private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null)
     {
         var fontSize = double.NaN;
         Brush foreground = null;
@@ -672,6 +743,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             ColorPalette = palette,
             Tracking = tracking,
             BaselineShift = shift,
+            ObjectSize = objectSize,
             FontSize = double.IsNaN(fontSize) ? null : fontSize,
             Foreground = (foreground as SolidColorBrush)?.Color,
             Background = (background as SolidColorBrush)?.Color,
@@ -777,6 +849,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override Size MeasureOverride(Size availableSize)
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
+        MeasureHosted();
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
@@ -801,7 +874,68 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
+        ArrangeHosted();
         return finalSize;
+    }
+
+    public override bool IsMeasureBoundary => base.IsMeasureBoundary && _hosted.Count == 0;
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (_hosted.Count > 0 && e.Property.GetDefaultMetadata(GetType())?.AffectsRender == true)
+        {
+            InvalidateArrange();
+        }
+    }
+
+    private void MeasureHosted()
+    {
+        if (_hosted.Count == 0 && _hostedSizes.Count == 0)
+        {
+            return;
+        }
+
+        var sizes = new List<Size>(_hosted.Count);
+        foreach (var child in _hosted)
+        {
+            child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            sizes.Add(child.DesiredSize);
+        }
+
+        if (!sizes.SequenceEqual(_hostedSizes))
+        {
+            _hostedSizes.Clear();
+            _hostedSizes.AddRange(sizes);
+            _inlinesDirty = true;
+        }
+    }
+
+    private void ArrangeHosted()
+    {
+        if (_hosted.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<IMeasurableComponent> placed = [];
+        foreach (var item in _textLayout.GetInlineObjects())
+        {
+            var index = _objects.FindIndex(entry => entry.Index == item.Index);
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var child = _objects[index].Child;
+            child.Arrange(new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height));
+            placed.Add(child);
+        }
+
+        foreach (var child in _hosted.Where(child => !placed.Contains(child)))
+        {
+            child.Arrange(new Rect(0, 0, 0, 0));
+        }
     }
 
     private bool UseSlot(Size slot)
@@ -919,7 +1053,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         {
             if (ReferenceEquals(candidate, link) && _lastText is { } text && end <= text.Length)
             {
-                return text.Substring(start, end - start).Replace(LineSeparator, ' ');
+                return text.Substring(start, end - start).Replace(LineSeparator, ' ')
+                    .Replace(ObjectReplacement.ToString(), string.Empty);
             }
         }
 
@@ -1005,7 +1140,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnGotFocus(RoutedEventArgs e)
     {
         base.OnGotFocus(e);
-        if (_links.Count > 0)
+        if (_links.Count > 0 && ReferenceEquals(e.OriginalSource, this))
         {
             var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
             _focusedLink = backwards ? _links.Count - 1 : 0;
@@ -1016,6 +1151,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnLostFocus(RoutedEventArgs e)
     {
         base.OnLostFocus(e);
+        if (!ReferenceEquals(e.OriginalSource, this))
+        {
+            return;
+        }
+
         _focusedLink = -1;
         InvalidateRender(false);
     }
@@ -1023,7 +1163,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled)
+        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled || !ReferenceEquals(e.OriginalSource, this))
         {
             return;
         }
