@@ -139,12 +139,12 @@ public class GridAutoTrackTests
     private sealed class WrappingProbe : Border
     {
         private const double Ink = 1200;
-        private const double LineHeight = 20;
+        private const double RowHeight = 20;
 
         protected override Size MeasureOverride(Size availableSize)
         {
             var width = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0 ? 1 : availableSize.Width;
-            return new Size(Math.Min(Ink, width), Math.Ceiling(Ink / width) * LineHeight);
+            return new Size(Math.Min(Ink, width), Math.Ceiling(Ink / width) * RowHeight);
         }
     }
 

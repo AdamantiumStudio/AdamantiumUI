@@ -18,6 +18,54 @@ All packages share one version.
 - Theme icons `MatchCaseIcon`, `WholeWordIcon`, `RegularExpressionIcon` and `FindInSelectionIcon` for search
   options; `BreakpointIcon` and `BookmarkIcon` for an editor's margin.
 
+- `BaselineAlignment` on inlines, as WPF's: `Superscript` and `Subscript` where the font sets them, `TextTop` and
+  `TextBottom` at the block font's ascender and descender, `Top`, `Center` and `Bottom` of the line; a span gives it to
+  its inlines, `BaselineShift` adds to it, underlines follow it. Sandbox Text tab, Basics topic: indices and small runs
+  at each place beside a large letter.
+
+- Line height, line stacking and line spacing on text, inherited as WPF's `LineHeight`: `LineHeight` sets the distance
+  between baselines, its extra room split above and below the text; `LineStackingStrategy` says whether a line holding
+  text of a larger size or a taller control still grows (`MaxHeight`, the default) or every line is exactly that high
+  (`BlockLineHeight`); `LineSpacing` adds space between lines. Text blocks and text boxes follow them (an empty box's
+  one line too). `TextBlock.MaxLines`, as Avalonia's: that many lines, the rest not shown (`IsOverset`), or the last
+  ending in an ellipsis with `TextTrimming`. Sandbox Text tab, Basics topic: sliders for the three on a paragraph with
+  a larger run.
+
+- `InlineUIContainer` among a `TextBlock`'s inlines, as WPF's: a control set into the line. It takes the room its size
+  asks for, stands on the baseline (a `BaselineShift` raises it), raises a line it is taller than, wraps and aligns as a
+  word does and follows its own size. The control is the block's visual child and its container's logical one, so it
+  takes input, focus, its DataContext and the theme as any control; automation finds it under the block, and the
+  block's name leaves it out. In markup it is written inside an explicit `<InlineUIContainer>`. Horizontal text only.
+  Sandbox Text tab, Basics topic: a check box, a button and a tall swatch in a wrapping line.
+
+- `Hyperlink` among a `TextBlock`'s inlines, as WPF's: a span, underlined and in the theme's accent color, that a
+  click, Enter or Space activates - `Click`, then `Command` with `CommandParameter`, then `RequestNavigate`; an absolute
+  web or mail `NavigateUri` nobody handles opens in the system's handler (other schemes need a `RequestNavigate`
+  handler). Over a link the pointer is a hand. A block with links takes the keyboard unless its author said otherwise:
+  Tab and Shift+Tab walk its links and the theme's focus ring goes round the one with the keyboard
+  (`InputUIComponent.FocusBounds`); a press on its plain text leaves the focus to the control around it
+  (`IFocusableInParts`). Automation sees each link as a Hyperlink child of its block, named by its text, with Invoke and
+  focus; `adam-auto click` and `hover` reach a link by its middle (`IElementPartPeer`). Inlines - a link's theme color -
+  follow a theme swap. Sandbox Text tab, Basics topic: a link to an address and a link counting its clicks.
+
+- Spans in a `TextBlock`'s `Inlines`, as WPF's and Avalonia's: `Span` groups inlines and gives them what it sets
+  (color, size, background, weight, style, features, language, tracking, baseline shift...), the nearer setting winning
+  and lines adding up; `Bold`, `Italic` and `Underline` are spans with one thing set; `LineBreak` ends the line within
+  the paragraph (U+2028), which keeps its direction. The formatting properties moved from `Run` to `Inline`, so every
+  inline has them (source-compatible; code compiled against the old `Run.*Property` fields has to be rebuilt). A
+  `Typography.*` value set on an inline lays the text out again. A `TextBlock` of inlines is named by their text for
+  automation. Clearing `Inlines` lets go of every inline it held. Sandbox Text tab, Basics topic: nested
+  bold and italic, a line break, a colored span with an underlined part and a run of its own color.
+
+- Text written straight into markup among inlines, as WPF's: `<TextBlock>Hello <Bold>world</Bold></TextBlock>`
+  holds runs, `<Run>text</Run>` is its text. White space collapses to one space, the ends of the content are trimmed,
+  and none is kept around a `LineBreak`. The build, the designer's loader and the language server read it alike
+  (`[Content]` on `TextBlock.Inlines` and `Run.Text`; `ContentWrapperAttribute` names the type text is wrapped in,
+  `TrimSurroundingWhitespaceAttribute` the elements white space is dropped around).
+
+- Markup reports an element of the wrong type in a collection where it stands - `<Bold><Button/></Bold>` - instead of
+  failing in the generated code.
+
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
   E = mc², H₂O, xⁿ⁺¹, an underlined footnote mark, and a slider moving an underlined, highlighted run.
@@ -694,6 +742,16 @@ All packages share one version.
   long as the popup lived: its layout queues were never drained. A measure a list in a popup put off to the next
   frame, to finish filling, never ran either; it runs on the next frame now.
 
+- An inherited value (font size, color, font) changed on an element stopped at a node the property is not registered
+  on - an inline between a text block and a control set into its line - so the control kept the old value; and taking
+  a child away from such a node threw. Such a node now passes the change on.
+
+- A canvas node on screen could not be scrolled into view by automation - only its off-screen stand-in could - so
+  `adam-auto scroll` on a node failed whenever the camera already showed it, and the InfiniteCanvas scenario stopped at
+  its first step. The node's own peer brings it into view too now.
+- A designer edit inside a collection the element owns (`<TextBlock.Inlines>`, `RowDefinitions`) added the edited items
+  to the ones already there, so the preview showed them twice; children written into a `[Content]` list were not
+  updated at all. Both are rebuilt now.
 - A `TextBlock` laid out again with the same text and size - a new last-line alignment, single-word justification,
   kashidas switched off, a run's baseline shift - kept its old glyphs on screen: the renderer told text apart only by
   its string and size. It compares the layout's revision too now.

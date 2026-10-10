@@ -329,8 +329,15 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     private void InheritedValueChanged(AdamantiumPropertyChangedEventArgs e, object pushValue)
     {
         var metadata = e.Property.GetDefaultMetadata(GetType());
+        // Not this type's property (an inline between a text block and the control set into its line): pass it on.
+        if (metadata == null)
+        {
+            NotifyInheritanceChildren(e, pushValue);
+            return;
+        }
+
         // An explicit value of its own outranks the inherited one - this element and everything under it keep theirs.
-        if (metadata is not { Inherits: true } || HasExplicitValue(e.Property)) return;
+        if (!metadata.Inherits || HasExplicitValue(e.Property)) return;
 
         // A callback on the PROPERTY is not the question "does this ELEMENT need telling" - DataContext carries one for
         // everybody, and three quarters of them have no binding to re-resolve. An element whose LOOK depends on the
@@ -415,7 +422,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
                     continue;
                 }
 
-                var oldValue = before != null ? before[i] : oldParent?.GetValue(property) ?? metadata.DefaultValue;
+                var oldValue = before != null ? before[i]
+                    : oldParent?.PassedDown(property, metadata.DefaultValue) ?? metadata.DefaultValue;
 
                 // What the read path inherits (see ResolveInherited): an ancestor's EXPLICIT value, or nothing - never an
                 // ancestor's mere default, which written into this slot stands above this element's own theme value. A
@@ -567,6 +575,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     }
 
     // The nearest ancestor's EXPLICIT value, or UnsetValue when no ancestor states one.
+    private object PassedDown(AdamantiumProperty property, object defaultValue)
+    {
+        if (property.GetDefaultMetadata(GetType()) != null)
+        {
+            return GetValue(property);
+        }
+
+        var inherited = InheritedFromAncestors(property);
+        return inherited == AdamantiumProperty.UnsetValue ? defaultValue : inherited;
+    }
+
     private object InheritedFromAncestors(AdamantiumProperty property)
     {
         for (var ancestor = inheritanceParent; ancestor != null; ancestor = ancestor.inheritanceParent)

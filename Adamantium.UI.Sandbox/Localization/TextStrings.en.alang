@@ -71,11 +71,40 @@
     <Phrase Key="GlyphScaling" Text="Glyph scaling, min and max %"/>
     <Phrase Key="LastLine" Text="Last line:"/>
     <Phrase Key="JustificationTitle" Text="Justification: each setting over the text it changes:"/>
+    <Phrase Key="SpansTitle" Text="Spans: Bold, Italic and Underline nest, a span's color and size go to its runs, a run's own win, LineBreak ends the line:"/>
+    <Phrase Key="SpansPlain" Text="Plain, then "/>
+    <Phrase Key="SpansBold" Text="bold, "/>
+    <Phrase Key="SpansBoldItalic" Text="bold italic"/>
+    <Phrase Key="SpansColored" Text="A blue span with "/>
+    <Phrase Key="SpansUnderlined" Text="an underlined part"/>
+    <Phrase Key="SpansOwnColor" Text=" and a red run of its own"/>
+    <Phrase Key="LinksTitle" Text="Links: one opens its address in the browser, one runs a command; Tab walks them, Enter activates:"/>
+    <Phrase Key="LinksBefore" Text="Read about "/>
+    <Phrase Key="LinksSite" Text="Adamantium on GitHub"/>
+    <Phrase Key="LinksMiddle" Text=", or count a click: "/>
+    <Phrase Key="LinksCount" Text="click me"/>
+    <Phrase Key="InlineControlsTitle" Text="Controls in a line: they stand on the baseline, a tall one raises its line, and they wrap as words do:"/>
+    <Phrase Key="InlineControlsAgree" Text="Tick "/>
+    <Phrase Key="InlineControlsPress" Text=" to agree, then press "/>
+    <Phrase Key="InlineControlsSwatch" Text=" - or look at this swatch "/>
+    <Phrase Key="InlineControlsEnd" Text=", which is taller than the text and raises its line."/>
+    <Phrase Key="InlineControlsButton" Text="OK"/>
+    <Phrase Key="LineBreakTitle" Text="LineBreak ends the line, not the paragraph: after it the Latin line stays in the Hebrew paragraph and starts on the right; after a newline it is a paragraph of its own:"/>
+    <Phrase Key="WithLineBreak" Text="With LineBreak"/>
+    <Phrase Key="WithNewline" Text="With a newline"/>
     <Phrase Key="BaselineShiftTitle" Text="Baseline shift: runs raised and lowered off the baseline, the line's height unchanged:"/>
     <Phrase Key="RunShift" Text="Shift of the marked run:"/>
     <Phrase Key="RunShiftBefore" Text="The line holds "/>
     <Phrase Key="RunShiftRun" Text="a shifted run"/>
     <Phrase Key="RunShiftAfter" Text=" in its middle."/>
+    <Phrase Key="BaselineAlignmentTitle" Text="Baseline alignment: superscript and subscript where the font sets them; small runs at the top, middle and bottom of the line, and at the text's top and bottom:"/>
+    <Phrase Key="LinesTitle" Text="Lines: the distance between baselines, the space between lines and the most lines shown (0 for all); a larger run grows its line:"/>
+    <Phrase Key="LinesHeight" Text="Line height:"/>
+    <Phrase Key="LinesSpacing" Text="Spacing:"/>
+    <Phrase Key="LinesMost" Text="Most lines:"/>
+    <Phrase Key="LinesBefore" Text="Text set with a line height of its own keeps an even rhythm down the page, while "/>
+    <Phrase Key="LinesLarge" Text="a larger run"/>
+    <Phrase Key="LinesAfter" Text=" makes room for itself. Spacing opens the lines up, and a block that may show only a few lines ends the last of them in an ellipsis when there is more to read than it holds."/>
     <Phrase Key="Kashidas" Text="Kashidas"/>
     <Phrase Key="SingleWord" Text="Single word:"/>
     <Phrase Key="AlignStart" Text="Start"/>

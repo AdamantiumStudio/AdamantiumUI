@@ -716,6 +716,10 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         {
             LayoutManager.For(component).InvalidateStyle(component);
         }
+        else
+        {
+            ApplyCurrentTheme();
+        }
 
         foreach (var child in LogicalChildrenCollection)
         {

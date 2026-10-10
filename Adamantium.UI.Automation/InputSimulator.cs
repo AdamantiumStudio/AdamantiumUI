@@ -11,10 +11,14 @@ namespace Adamantium.UI.Automation;
 
 internal static class InputSimulator
 {
-    public static void Click(UIComponent element, string label, MouseButtons button)
+    public static void Click(UIComponent element, string label, MouseButtons button) =>
+        Click(element, label, button, Middle(element));
+
+    /// <summary>A click at <paramref name="local"/>, a point in the element's own units.</summary>
+    public static void Click(UIComponent element, string label, MouseButtons button, Vector2 local)
     {
         using var pointer = SimulatedPointer.Install();
-        var (window, point) = HoverAt(element, label, Middle(element));
+        var (window, point) = HoverAt(element, label, local);
         var (down, up, held) = button == MouseButtons.Right
             ? (RawMouseEventType.RightButtonDown, RawMouseEventType.RightButtonUp, InputModifiers.RightMouseButton)
             : (RawMouseEventType.LeftButtonDown, RawMouseEventType.LeftButtonUp, InputModifiers.LeftMouseButton);
@@ -23,10 +27,13 @@ internal static class InputSimulator
         Send(up, window, point, InputModifiers.None);
     }
 
-    public static void Hover(UIComponent element, string label)
+    public static void Hover(UIComponent element, string label) => Hover(element, label, Middle(element));
+
+    /// <summary>The pointer brought over <paramref name="local"/>, a point in the element's own units.</summary>
+    public static void Hover(UIComponent element, string label, Vector2 local)
     {
         using var pointer = SimulatedPointer.Install();
-        HoverAt(element, label, Middle(element));
+        HoverAt(element, label, local);
     }
 
     public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)

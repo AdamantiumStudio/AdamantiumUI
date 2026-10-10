@@ -539,6 +539,44 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(TrackingProperty, value);
     }
 
+    public static readonly AdamantiumProperty LineHeightProperty = AdamantiumProperty.Register(nameof(LineHeight),
+        typeof(double), typeof(UIComponent),
+        new PropertyMetadata(double.NaN, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How far apart the baselines of lines of the text in this element and its descendants are, as WPF's
+    /// line height: the extra room over the font's own (or what it lacks) is split above and below the text. NaN (the
+    /// default) takes the font's.</summary>
+    public double LineHeight
+    {
+        get => GetValue<double>(LineHeightProperty);
+        set => SetValue(LineHeightProperty, value);
+    }
+
+    public static readonly AdamantiumProperty LineStackingStrategyProperty = AdamantiumProperty.Register(
+        nameof(LineStackingStrategy), typeof(LineStackingStrategy), typeof(UIComponent),
+        new PropertyMetadata(LineStackingStrategy.MaxHeight,
+            PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether a line of the text in this element and its descendants grows to hold larger text or a taller
+    /// control (the default), or every line is exactly <see cref="LineHeight"/> high.</summary>
+    public LineStackingStrategy LineStackingStrategy
+    {
+        get => GetValue<LineStackingStrategy>(LineStackingStrategyProperty);
+        set => SetValue(LineStackingStrategyProperty, value);
+    }
+
+    public static readonly AdamantiumProperty LineSpacingProperty = AdamantiumProperty.Register(nameof(LineSpacing),
+        typeof(double), typeof(UIComponent),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Space added between lines of the text in this element and its descendants, below every line but the
+    /// last; 0 by default.</summary>
+    public double LineSpacing
+    {
+        get => GetValue<double>(LineSpacingProperty);
+        set => SetValue(LineSpacingProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

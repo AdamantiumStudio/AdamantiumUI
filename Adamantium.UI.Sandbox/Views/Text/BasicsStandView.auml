@@ -65,6 +65,130 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Spans: what a span sets goes to the runs in it that do not set their own; Bold, Italic and Underline are
+             spans with one thing set, they nest, and a LineBreak ends the line. -->
+        <TextBlock Text="{Localize TextStrings.SpansTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="SpansSample"
+                   FontSize="18"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.SpansPlain}"/>
+                <Bold>
+                    <Run Text="{Localize TextStrings.SpansBold}"/>
+                    <Italic>
+                        <Run Text="{Localize TextStrings.SpansBoldItalic}"/>
+                    </Italic>
+                </Bold>
+                <LineBreak/>
+                <Span Foreground="#38BDF8"
+                      FontSize="22">
+                    <Run Text="{Localize TextStrings.SpansColored}"/>
+                    <Underline>
+                        <Run Text="{Localize TextStrings.SpansUnderlined}"/>
+                    </Underline>
+                    <Run Text="{Localize TextStrings.SpansOwnColor}"
+                         Foreground="#F87171"/>
+                </Span>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Links: one opens an address in the system's browser, one runs a command; Tab walks them, Enter activates. -->
+        <TextBlock Text="{Localize TextStrings.LinksTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="LinksSample"
+                   FontSize="18"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.LinksBefore}"/>
+                <Hyperlink AutomationProperties.AutomationId="SiteLink"
+                           NavigateUri="https://github.com/AdamantiumStudio">
+                    <Run Text="{Localize TextStrings.LinksSite}"/>
+                </Hyperlink>
+                <Run Text="{Localize TextStrings.LinksMiddle}"/>
+                <Hyperlink AutomationProperties.AutomationId="CountLink"
+                           Command="{Binding CountLinkCommand}">
+                    <Run Text="{Localize TextStrings.LinksCount}"/>
+                </Hyperlink>
+                <Run Text="{Binding LinkClicksText}"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Controls in a line: a check box and a button stand on the baseline and take input as anywhere else; the
+             tall swatch raises its line; the narrow block wraps them as words. -->
+        <TextBlock Text="{Localize TextStrings.InlineControlsTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="InlineControlsSample"
+                   FontSize="18"
+                   Width="420"
+                   TextWrapping="WrapByWords"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.InlineControlsAgree}"/>
+                <InlineUIContainer>
+                    <CheckBox AutomationProperties.AutomationId="InlineCheckBox"/>
+                </InlineUIContainer>
+                <Run Text="{Localize TextStrings.InlineControlsPress}"/>
+                <InlineUIContainer>
+                    <Button AutomationProperties.AutomationId="InlineButton"
+                            Content="{Localize TextStrings.InlineControlsButton}"
+                            Command="{Binding CountLinkCommand}"/>
+                </InlineUIContainer>
+                <Run Text="{Localize TextStrings.InlineControlsSwatch}"/>
+                <InlineUIContainer>
+                    <Border Width="28"
+                            Height="44"
+                            CornerRadius="4"
+                            Background="#38BDF8"/>
+                </InlineUIContainer>
+                <Run Text="{Localize TextStrings.InlineControlsEnd}"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- A LineBreak ends the line, not the paragraph: the Latin line after it stays in the Hebrew paragraph and
+             starts on the right; after a newline it is a paragraph of its own and starts on the left. -->
+        <TextBlock Text="{Localize TextStrings.LineBreakTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,0">
+                <TextBlock Text="{Localize TextStrings.WithLineBreak}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="LineBreakSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם"/>
+                            <LineBreak/>
+                            <Run Text="Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Localize TextStrings.WithNewline}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="NewlineSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם&#10;Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
         <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
              underlined footnote mark carries its line up with it. -->
         <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"
@@ -125,5 +249,112 @@
                      TextDecorations="Underline"/>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Baseline alignment, as WPF's: superscript and subscript where the font sets them, and small runs at the
+             top, middle and bottom of a line a large letter makes tall. -->
+        <TextBlock Text="{Localize TextStrings.BaselineAlignmentTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="BaselineAlignmentSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="x"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineAlignment="Superscript"/>
+                <Run Text=" + log"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineAlignment="Subscript"/>
+                <Run Text="   "/>
+                <Run Text="W"
+                     FontSize="48"/>
+                <Run Text=" top"
+                     FontSize="13"
+                     BaselineAlignment="Top"/>
+                <Run Text=" center"
+                     FontSize="13"
+                     BaselineAlignment="Center"/>
+                <Run Text=" bottom"
+                     FontSize="13"
+                     BaselineAlignment="Bottom"/>
+                <Run Text=" text top"
+                     FontSize="13"
+                     BaselineAlignment="TextTop"/>
+                <Run Text=" text bottom"
+                     FontSize="13"
+                     BaselineAlignment="TextBottom"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Lines: the distance between baselines, the space between lines and the most lines; the larger run grows
+             its line, the last line shown ends in an ellipsis. -->
+        <TextBlock Text="{Localize TextStrings.LinesTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal"
+                    Margin="0,0,0,6">
+            <TextBlock x:Name="LineHeightLabel"
+                       Text="{Localize TextStrings.LinesHeight}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="LineHeightSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LineHeightLabel}"
+                    Width="160"
+                    Minimum="16"
+                    Maximum="48"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleLineHeight, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock x:Name="LineSpacingLabel"
+                       Text="{Localize TextStrings.LinesSpacing}"
+                       VerticalAlignment="Center"
+                       Margin="24,0,0,0"/>
+            <Slider AutomationProperties.AutomationId="LineSpacingSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LineSpacingLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="16"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleLineSpacing, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock x:Name="MaxLinesLabel"
+                       Text="{Localize TextStrings.LinesMost}"
+                       VerticalAlignment="Center"
+                       Margin="24,0,0,0"/>
+            <Slider AutomationProperties.AutomationId="MaxLinesSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=MaxLinesLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="8"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding SampleMaxLines, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+        </StackPanel>
+        <Border Width="420"
+                Padding="6"
+                HorizontalAlignment="Left"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="LinesSample"
+                       FontSize="18"
+                       TextWrapping="WrapByWords"
+                       TextTrimming="CharEllipses"
+                       VerticalTextAlignment="Top"
+                       LineHeight="{Binding SampleLineHeight}"
+                       LineSpacing="{Binding SampleLineSpacing}"
+                       MaxLines="{Binding SampleMaxLines}">
+                <TextBlock.Inlines>
+                    <Run Text="{Localize TextStrings.LinesBefore}"/>
+                    <Run Text="{Localize TextStrings.LinesLarge}"
+                         FontSize="30"/>
+                    <Run Text="{Localize TextStrings.LinesAfter}"/>
+                </TextBlock.Inlines>
+            </TextBlock>
+        </Border>
     </StackPanel>
 </View>

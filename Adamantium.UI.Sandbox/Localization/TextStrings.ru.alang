@@ -71,10 +71,39 @@
     <Phrase Key="GlyphScaling" Text="Масштаб глифов, мин. и макс. %"/>
     <Phrase Key="LastLine" Text="Последняя строка:"/>
     <Phrase Key="JustificationTitle" Text="Выключка по ширине: каждая настройка над текстом, который она меняет:"/>
+    <Phrase Key="SpansTitle" Text="Участки: Bold, Italic и Underline вкладываются, цвет и кегль участка достаются его отрезкам, свои у отрезка важнее, LineBreak кончает строку:"/>
+    <Phrase Key="SpansPlain" Text="Обычный, затем "/>
+    <Phrase Key="SpansBold" Text="жирный, "/>
+    <Phrase Key="SpansBoldItalic" Text="жирный курсив"/>
+    <Phrase Key="SpansColored" Text="Голубой участок с "/>
+    <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
+    <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="LinksTitle" Text="Ссылки: одна открывает адрес в браузере, другая выполняет команду; Tab ходит по ним, Enter нажимает:"/>
+    <Phrase Key="LinksBefore" Text="Почитайте про "/>
+    <Phrase Key="LinksSite" Text="Adamantium на GitHub"/>
+    <Phrase Key="LinksMiddle" Text=" или посчитайте нажатия: "/>
+    <Phrase Key="LinksCount" Text="нажми меня"/>
+    <Phrase Key="InlineControlsTitle" Text="Контролы в строке: стоят на базовой линии, высокий поднимает свою строку, переносятся как слова:"/>
+    <Phrase Key="InlineControlsAgree" Text="Отметьте "/>
+    <Phrase Key="InlineControlsPress" Text=" в знак согласия и нажмите "/>
+    <Phrase Key="InlineControlsSwatch" Text=" - или посмотрите на образец "/>
+    <Phrase Key="InlineControlsEnd" Text=": он выше текста и поднимает свою строку."/>
+    <Phrase Key="InlineControlsButton" Text="ОК"/>
+    <Phrase Key="LineBreakTitle" Text="LineBreak кончает строку, а не абзац: после него латинская строка остаётся в абзаце на иврите и начинается справа; после перевода строки это отдельный абзац:"/>
+    <Phrase Key="WithLineBreak" Text="С LineBreak"/>
+    <Phrase Key="WithNewline" Text="С переводом строки"/>
     <Phrase Key="BaselineShiftTitle" Text="Смещение базовой линии: участки подняты и опущены, высота строки та же:"/>
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
+    <Phrase Key="BaselineAlignmentTitle" Text="Положение по базовой линии: верхний и нижний индекс там, где их ставит шрифт; мелкие участки у верха, середины и низа строки и у верха и низа текста:"/>
+    <Phrase Key="LinesTitle" Text="Строки: расстояние между базовыми линиями, промежуток между строками и наибольшее число строк (0 — все); крупный участок раздвигает свою строку:"/>
+    <Phrase Key="LinesHeight" Text="Высота строки:"/>
+    <Phrase Key="LinesSpacing" Text="Промежуток:"/>
+    <Phrase Key="LinesMost" Text="Строк не больше:"/>
+    <Phrase Key="LinesBefore" Text="Текст с собственной высотой строки держит ровный ритм по всей странице, а "/>
+    <Phrase Key="LinesLarge" Text="крупный участок"/>
+    <Phrase Key="LinesAfter" Text=" освобождает себе место. Промежуток раздвигает строки, а блок, которому позволено показать лишь несколько строк, заканчивает последнюю многоточием, если читать есть ещё что."/>
     <Phrase Key="RunShiftAfter" Text=", остальное на месте."/>
     <Phrase Key="Kashidas" Text="Кашиды"/>
     <Phrase Key="SingleWord" Text="Одно слово:"/>

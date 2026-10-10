@@ -8,12 +8,13 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-public class TextBlock : InputUIComponent
+public class TextBlock : InputUIComponent, IFocusableInParts
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
         typeof(string), typeof(TextBlock),
@@ -63,6 +64,10 @@ public class TextBlock : InputUIComponent
     public static readonly AdamantiumProperty DropCapFontFamilyProperty = AdamantiumProperty.Register(nameof(DropCapFontFamily),
         typeof(FontFamily), typeof(TextBlock),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty MaxLinesProperty = AdamantiumProperty.Register(nameof(MaxLines),
+        typeof(int), typeof(TextBlock),
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
@@ -147,9 +152,24 @@ public class TextBlock : InputUIComponent
     private HorizontalTextAlignment _lastLastLineAlignment;
     private HorizontalTextAlignment _lastSingleWord;
     private bool _lastKashidas;
+    private double _lastLineHeight = double.NaN;
+    private LineStackingStrategy _lastLineStacking;
+    private double _lastLineSpacing;
+    private int _lastMaxLines;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
+    private const char LineSeparator = (char)0x2028;
+    private const char ObjectReplacement = (char)0xFFFC;
     private TextAttributes _lastShaping;
+
+    private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
+    private readonly List<(int Index, IMeasurableComponent Child)> _objects = [];
+    private readonly List<IMeasurableComponent> _hosted = [];
+    private readonly List<Size> _hostedSizes = [];
+    private Hyperlink _pressedLink;
+    private int _focusedLink = -1;
+    private bool _overLink;
+    private bool _madeFocusable;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -198,6 +218,10 @@ public class TextBlock : InputUIComponent
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
         _textLayout.Kashidas = Kashidas;
+        _textLayout.LineHeight = LineHeight;
+        _textLayout.LineStacking = LineStackingStrategy;
+        _textLayout.LineSpacing = LineSpacing;
+        _textLayout.MaxLines = MaxLines;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -231,7 +255,9 @@ public class TextBlock : InputUIComponent
             && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
-            && _lastKashidas == Kashidas
+            && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
+            && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
+            && _lastMaxLines == MaxLines
             && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
@@ -242,13 +268,31 @@ public class TextBlock : InputUIComponent
 
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
         _runFontsPending = false;
+        _links.Clear();
+        _objects.Clear();
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
+        if (_links.Count > 0 && !Focusable && GetValueSource(FocusableProperty) == ValuePriority.Default)
+        {
+            SetCurrentValue(FocusableProperty, true);
+            _madeFocusable = true;
+        }
+        else if (_links.Count == 0 && _madeFocusable)
+        {
+            SetCurrentValue(FocusableProperty, false);
+            _madeFocusable = false;
+        }
+
+        if (_focusedLink >= _links.Count)
+        {
+            _focusedLink = _links.Count - 1;
+        }
         _textLayout.Exclusions = Exclusions;
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _cachedSize = Lay();
-        for (var grown = 0; growth > 0 && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
+        for (var grown = 0; growth > 0 && (MaxLines <= 0 || _textLayout.LineCount < MaxLines)
+                            && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
         {
             _textLayout.Frames = _textLayout.Frames
                 .Select(frame => vertical
@@ -306,6 +350,10 @@ public class TextBlock : InputUIComponent
         _lastLastLineAlignment = LastLineAlignment;
         _lastSingleWord = SingleWordJustification;
         _lastKashidas = Kashidas;
+        _lastLineHeight = LineHeight;
+        _lastLineStacking = LineStackingStrategy;
+        _lastLineSpacing = LineSpacing;
+        _lastMaxLines = MaxLines;
         return _cachedSize;
 
         Size Lay() => attributed == null
@@ -336,8 +384,12 @@ public class TextBlock : InputUIComponent
                 _textLayout.Frames = [Frame(0, Unbounded)];
                 lay();
                 var lineHeight = Enumerable.Range(0, _textLayout.LineCount).Min(line => _textLayout.GetLine(line).Height);
-                growth = (float)lineHeight;
-                columnAcross = (float)(Math.Ceiling(_textLayout.LineCount / (double)columns) * lineHeight + 1);
+                var spacing = _textLayout.LineCount > 1
+                    ? Math.Max(0, _textLayout.GetLine(1).Top - _textLayout.GetLine(0).Top - _textLayout.GetLine(0).Height)
+                    : 0;
+                growth = (float)(lineHeight + spacing);
+                var rows = Math.Ceiling(_textLayout.LineCount / (double)columns);
+                columnAcross = (float)(rows * (lineHeight + spacing) - spacing + 1);
             }
         }
 
@@ -431,8 +483,18 @@ public class TextBlock : InputUIComponent
         set => SetValue(ExclusionsProperty, value);
     }
 
-    /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/>, so that the rest is not shown.</summary>
-    public bool IsOverset => _textLayout != null && _textLayout.Frames != null && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
+    /// <summary>The most lines shown, as Avalonia's; 0 (the default) for any number. The rest is not shown, or, with
+    /// <see cref="TextTrimming"/>, the last line ends in an ellipsis.</summary>
+    public int MaxLines
+    {
+        get => GetValue<int>(MaxLinesProperty);
+        set => SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/> or <see cref="MaxLines"/>, so
+    /// that the rest is not shown; trimmed text says so with its ellipsis instead.</summary>
+    public bool IsOverset => _textLayout != null && (_textLayout.Frames != null || _textLayout.MaxLines > 0)
+                                                 && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
     /// 2 or more; 0 (the default) for none. Text wrapped by words only.</summary>
@@ -482,11 +544,16 @@ public class TextBlock : InputUIComponent
 
     // --- Bindable inline runs -----------------------------------------------------------------------------------------
     // When Inlines has content it REPLACES Text: the runs lay out as one attributed text, so they shape, wrap and align
-    // together. Each Run is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and this
-    // block listens to every Run's Changed to re-shape when a bound value updates.
+    // together. Each inline is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and
+    // this block listens to every inline's Changed - a span passes on its own inlines' - to re-shape when a bound value
+    // updates.
 
     /// <summary>Bindable inline content. When non-empty it is rendered instead of <see cref="Text"/>: each <see cref="Run"/>
-    /// carries its own bound text, color, size, background, lines, features and language.</summary>
+    /// carries its own bound text, color, size, background, lines, features and language, a <see cref="Span"/> (or
+    /// <see cref="Bold"/>, <see cref="Italic"/>, <see cref="Underline"/>) gives them to the inlines in it, and a
+    /// <see cref="LineBreak"/> ends the line. In markup the inlines and text can be written straight inside the block:
+    /// <c>&lt;TextBlock&gt;Hello &lt;Bold&gt;world&lt;/Bold&gt;&lt;/TextBlock&gt;</c>.</summary>
+    [Content]
     public InlineCollection Inlines
     {
         get
@@ -502,6 +569,12 @@ public class TextBlock : InputUIComponent
 
     private bool HasInlines => _inlines is { Count: > 0 };
 
+    internal string ShownText => HasInlines
+        ? InlineText().Replace(LineSeparator, '\n').Replace(ObjectReplacement.ToString(), string.Empty)
+        : Text;
+
+    internal IReadOnlyList<IMeasurableComponent> HostedChildren => _hosted;
+
     private void OnInlinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.OldItems != null)
@@ -509,13 +582,67 @@ public class TextBlock : InputUIComponent
         if (e.NewItems != null)
             foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; }
         _inlinesDirty = true;
+        HostChildren();
         InvalidateMeasure();
     }
 
     private void OnInlineChanged(object sender, System.EventArgs e)
     {
         _inlinesDirty = true;
+        HostChildren();
         InvalidateMeasure();
+    }
+
+    private void HostChildren()
+    {
+        List<IMeasurableComponent> children = [];
+        foreach (var container in Containers(_inlines))
+        {
+            if (container.Child != null)
+            {
+                children.Add(container.Child);
+            }
+        }
+
+        foreach (var gone in _hosted.Where(child => !children.Contains(child)).ToList())
+        {
+            _hosted.Remove(gone);
+            RemoveVisualChild(gone);
+        }
+
+        foreach (var added in children.Where(child => !_hosted.Contains(child)))
+        {
+            _hosted.Add(added);
+            AddVisualChild(added);
+        }
+    }
+
+    private static IEnumerable<InlineUIContainer> Containers(InlineCollection inlines)
+    {
+        foreach (var inline in inlines ?? [])
+        {
+            if (inline is InlineUIContainer container)
+            {
+                yield return container;
+            }
+            else if (inline is Span span)
+            {
+                foreach (var nested in Containers(span.Inlines))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+    protected internal override void DisownVisualChild(IUIComponent child)
+    {
+        foreach (var container in Containers(_inlines).Where(container => ReferenceEquals(container.Child, child)).ToList())
+        {
+            container.Child = null;
+        }
+
+        base.DisownVisualChild(child);
     }
 
     private string InlineText()
@@ -523,55 +650,141 @@ public class TextBlock : InputUIComponent
         if (_inlinesDirty || _inlineText == null)
         {
             var text = new StringBuilder();
-            foreach (var inline in _inlines)
-            {
-                if (inline is Run run)
-                {
-                    text.Append(run.Text);
-                }
-            }
-
+            AppendInlineText(_inlines, text);
             _inlineText = text.ToString();
         }
 
         return _inlineText;
     }
 
+    private static void AppendInlineText(InlineCollection inlines, StringBuilder text)
+    {
+        foreach (var inline in inlines)
+        {
+            switch (inline)
+            {
+                case Run run:
+                    text.Append(run.Text);
+                    break;
+                case LineBreak:
+                    text.Append(LineSeparator);
+                    break;
+                case InlineUIContainer { Child: not null }:
+                    text.Append(ObjectReplacement);
+                    break;
+                case Span span:
+                    AppendInlineText(span.Inlines, text);
+                    break;
+            }
+        }
+    }
+
     private AttributedText InlineAttributedText(string text, TextAttributes shaping)
     {
         var attributed = new AttributedText(text, shaping);
-        var family = FontFamily ?? DefaultFontFamily;
         var start = 0;
-        foreach (var inline in _inlines)
+        ApplyInlines(_inlines, [], attributed, ref start);
+        return attributed;
+    }
+
+    private void ApplyInlines(InlineCollection inlines, List<Inline> chain, AttributedText attributed, ref int start)
+    {
+        foreach (var inline in inlines)
         {
-            if (inline is not Run run)
+            chain.Add(inline);
+            switch (inline)
             {
-                continue;
+                case Run run:
+                    var length = (run.Text ?? string.Empty).Length;
+                    attributed.Apply(start, length, InlineAttributes(chain));
+                    start += length;
+                    break;
+                case LineBreak:
+                    attributed.Apply(start, 1, InlineAttributes(chain));
+                    start++;
+                    break;
+                case InlineUIContainer { Child: { } child }:
+                    attributed.Apply(start, 1, InlineAttributes(chain, child.DesiredSize));
+                    _objects.Add((start, child));
+                    start++;
+                    break;
+                case Span span:
+                    var spanStart = start;
+                    ApplyInlines(span.Inlines, chain, attributed, ref start);
+                    if (span is Hyperlink link)
+                    {
+                        _links.Add((spanStart, start, link));
+                    }
+
+                    break;
             }
 
-            var length = (run.Text ?? string.Empty).Length;
-            var weight = run.FontWeight ?? FontWeight;
-            var style = run.FontStyle ?? FontStyle;
-            _runFontsPending |= !TryResolveFont(family, weight, style, run.FontStretch ?? FontStretch,
-                run.FontVariations ?? FontVariations, out var runFont);
-            attributed.Apply(start, length, new TextAttributes
+            chain.RemoveAt(chain.Count - 1);
+        }
+    }
+
+    // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
+    // and the lines add up.
+    private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null)
+    {
+        var fontSize = double.NaN;
+        Brush foreground = null;
+        Brush background = null;
+        var decorations = TextDecorations.None;
+        FontWeight? weight = null;
+        FontStyle? style = null;
+        FontStretch? stretch = null;
+        FontSynthesis? synthesis = null;
+        FontFeatureList features = null;
+        FontVariationList variations = null;
+        string language = null;
+        int? palette = null;
+        double? tracking = null;
+        double? shift = null;
+        BaselineAlignment? alignment = null;
+        foreach (var inline in chain)
+        {
+            if (!double.IsNaN(inline.FontSize))
             {
-                Font = runFont,
-                Synthesis = FontSynthesisRules.Needed(runFont, weight, style, run.FontSynthesis ?? FontSynthesis),
-                Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
-                Language = run.Language,
-                ColorPalette = run.ColorPalette,
-                Tracking = run.Tracking,
-                BaselineShift = run.BaselineShift,
-                FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
-                Foreground = (run.Foreground as SolidColorBrush)?.Color,
-                Background = (run.Background as SolidColorBrush)?.Color,
-                Decorations = run.TextDecorations == TextDecorations.None ? null : run.TextDecorations,
-            });
-            start += length;
+                fontSize = inline.FontSize;
+            }
+
+            foreground = inline.Foreground ?? foreground;
+            background = inline.Background ?? background;
+            decorations |= inline.TextDecorations;
+            weight = inline.FontWeight ?? weight;
+            style = inline.FontStyle ?? style;
+            stretch = inline.FontStretch ?? stretch;
+            synthesis = inline.FontSynthesis ?? synthesis;
+            features = inline.FontFeatures ?? features;
+            variations = inline.FontVariations ?? variations;
+            language = inline.Language ?? language;
+            palette = inline.ColorPalette ?? palette;
+            tracking = inline.Tracking ?? tracking;
+            shift = inline.BaselineShift ?? shift;
+            alignment = inline.BaselineAlignment ?? alignment;
         }
 
-        return attributed;
+        var resolvedWeight = weight ?? FontWeight;
+        var resolvedStyle = style ?? FontStyle;
+        _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
+            stretch ?? FontStretch, variations ?? FontVariations, out var font);
+        return new TextAttributes
+        {
+            Font = font,
+            Synthesis = FontSynthesisRules.Needed(font, resolvedWeight, resolvedStyle, synthesis ?? FontSynthesis),
+            Features = Typography.FeaturesOf(chain[^1], features ?? FontFeatures),
+            Language = language,
+            ColorPalette = palette,
+            Tracking = tracking,
+            BaselineShift = shift,
+            BaselineAlignment = alignment,
+            ObjectSize = objectSize,
+            FontSize = double.IsNaN(fontSize) ? null : fontSize,
+            Foreground = (foreground as SolidColorBrush)?.Color,
+            Background = (background as SolidColorBrush)?.Color,
+            Decorations = decorations == TextDecorations.None ? null : decorations,
+        };
     }
 
     private void DrawAdornments(IDrawingSession session, bool backgrounds)
@@ -672,6 +885,7 @@ public class TextBlock : InputUIComponent
     protected override Size MeasureOverride(Size availableSize)
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
+        MeasureHosted();
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
@@ -696,7 +910,68 @@ public class TextBlock : InputUIComponent
         EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
+        ArrangeHosted();
         return finalSize;
+    }
+
+    public override bool IsMeasureBoundary => base.IsMeasureBoundary && _hosted.Count == 0;
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (_hosted.Count > 0 && e.Property.GetDefaultMetadata(GetType())?.AffectsRender == true)
+        {
+            InvalidateArrange();
+        }
+    }
+
+    private void MeasureHosted()
+    {
+        if (_hosted.Count == 0 && _hostedSizes.Count == 0)
+        {
+            return;
+        }
+
+        var sizes = new List<Size>(_hosted.Count);
+        foreach (var child in _hosted)
+        {
+            child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            sizes.Add(child.DesiredSize);
+        }
+
+        if (!sizes.SequenceEqual(_hostedSizes))
+        {
+            _hostedSizes.Clear();
+            _hostedSizes.AddRange(sizes);
+            _inlinesDirty = true;
+        }
+    }
+
+    private void ArrangeHosted()
+    {
+        if (_hosted.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<IMeasurableComponent> placed = [];
+        foreach (var item in _textLayout.GetInlineObjects())
+        {
+            var index = _objects.FindIndex(entry => entry.Index == item.Index);
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var child = _objects[index].Child;
+            child.Arrange(new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height));
+            placed.Add(child);
+        }
+
+        foreach (var child in _hosted.Where(child => !placed.Contains(child)))
+        {
+            child.Arrange(new Rect(0, 0, 0, 0));
+        }
     }
 
     private bool UseSlot(Size slot)
@@ -753,6 +1028,208 @@ public class TextBlock : InputUIComponent
         DrawAdornments(session, backgrounds: true);
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
         DrawAdornments(session, backgrounds: false);
+    }
+
+    public override Rect? FocusBounds
+    {
+        get
+        {
+            if (_focusedLink < 0 || _focusedLink >= _links.Count)
+            {
+                return null;
+            }
+
+            var rects = LinkRects(_links[_focusedLink].Link);
+            if (rects.Count == 0)
+            {
+                return null;
+            }
+
+            var left = rects.Min(rect => rect.X);
+            var top = rects.Min(rect => rect.Y);
+            return new Rect(left, top, rects.Max(rect => rect.X + rect.Width) - left,
+                rects.Max(rect => rect.Y + rect.Height) - top);
+        }
+    }
+
+    internal IReadOnlyList<Hyperlink> Links => _links.ConvertAll(link => link.Link);
+
+    internal Hyperlink FocusedLink => _focusedLink >= 0 && _focusedLink < _links.Count ? _links[_focusedLink].Link : null;
+
+    internal void FocusLink(Hyperlink link)
+    {
+        var index = _links.FindIndex(candidate => ReferenceEquals(candidate.Link, link));
+        if (index < 0 || !Focus())
+        {
+            return;
+        }
+
+        _focusedLink = index;
+        InvalidateRender(false);
+    }
+
+    internal IReadOnlyList<Rect> LinkRects(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link))
+            {
+                return _textLayout.GetRangeRects(start, end)
+                    .Select(rect => new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height))
+                    .ToList();
+            }
+        }
+
+        return [];
+    }
+
+    internal string LinkText(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link) && _lastText is { } text && end <= text.Length)
+            {
+                return text.Substring(start, end - start).Replace(LineSeparator, ' ')
+                    .Replace(ObjectReplacement.ToString(), string.Empty);
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private Hyperlink LinkAt(MouseEventArgs e)
+    {
+        if (_links.Count == 0)
+        {
+            return null;
+        }
+
+        var point = e.GetPosition(this);
+        var hit = _textLayout.HitTest(point.X - LinesShift(), point.Y);
+        if (!hit.IsInside)
+        {
+            return null;
+        }
+
+        foreach (var (start, end, link) in _links)
+        {
+            if (hit.Index >= start && hit.Index < end)
+            {
+                return link;
+            }
+        }
+
+        return null;
+    }
+
+    bool IFocusableInParts.TakesFocusAt(MouseButtonEventArgs e) => LinkAt(e) != null;
+
+    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        base.OnMouseMove(sender, e);
+        var overLink = LinkAt(e) != null;
+        if (overLink != _overLink)
+        {
+            _overLink = overLink;
+            Mouse.Cursor = overLink ? Cursors.Of(CursorType.Hand) : Cursor;
+        }
+    }
+
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _overLink = false;
+        _pressedLink = null;
+    }
+
+    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(sender, e);
+        _pressedLink = LinkAt(e);
+        if (_pressedLink == null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var index = _links.FindIndex(candidate => ReferenceEquals(candidate.Link, _pressedLink));
+        if (IsKeyboardFocused && index != _focusedLink)
+        {
+            _focusedLink = index;
+            InvalidateRender(false);
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(sender, e);
+        var link = LinkAt(e);
+        var pressed = _pressedLink;
+        _pressedLink = null;
+        if (link != null && ReferenceEquals(link, pressed))
+        {
+            e.Handled = true;
+            link.Activate();
+        }
+    }
+
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (_links.Count > 0 && ReferenceEquals(e.OriginalSource, this))
+        {
+            var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+            _focusedLink = backwards ? _links.Count - 1 : 0;
+            InvalidateRender(false);
+        }
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        if (!ReferenceEquals(e.OriginalSource, this))
+        {
+            return;
+        }
+
+        _focusedLink = -1;
+        InvalidateRender(false);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled || !ReferenceEquals(e.OriginalSource, this))
+        {
+            return;
+        }
+
+        const InputModifiers shift = InputModifiers.LeftShift | InputModifiers.RightShift;
+        const InputModifiers others = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftAlt |
+                                      InputModifiers.RightAlt;
+        var modifiers = Keyboard.Modifiers;
+        if ((modifiers & others) != 0)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Tab:
+                var step = (modifiers & shift) != 0 ? -1 : 1;
+                if (_focusedLink + step >= 0 && _focusedLink + step < _links.Count)
+                {
+                    _focusedLink += step;
+                    InvalidateRender(false);
+                    e.Handled = true;
+                }
+
+                break;
+            case Key.Enter or Key.Space when !e.IsRepeated && (modifiers & shift) == 0:
+                e.Handled = true;
+                _links[_focusedLink].Link.Activate();
+                break;
+        }
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new TextBlockAutomationPeer(this);
