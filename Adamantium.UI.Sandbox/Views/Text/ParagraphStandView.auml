@@ -26,6 +26,10 @@
                           Content="{Localize TextStrings.OpticalMargins}"
                           IsChecked="{Binding OpticalMargins, Mode=TwoWay}"
                           Margin="24,0,0,0"/>
+            <ToggleSwitch AutomationProperties.AutomationId="KashidasToggle"
+                          Content="{Localize TextStrings.Kashidas}"
+                          IsChecked="{Binding Kashidas, Mode=TwoWay}"
+                          Margin="24,0,0,0"/>
         </StackPanel>
 
         <!-- InDesign's justification: how far justified lines may squeeze and stretch their spaces, then their letters,
@@ -381,6 +385,27 @@
                                TextWrapping="WrapByWords"
                                TextTrimming="CharEllipses"
                                FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Arabic justified: once its spaces are at their maximum, a word stretches with a kashida. -->
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="العربية (ar)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="ArabicColumn"
+                               Text="{Binding ArabicParagraphSample}"
+                               Language="ar"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               Kashidas="{Binding Kashidas}"
                                HorizontalTextAlignment="{Binding ColumnAlignment}"/>
                 </Border>
             </StackPanel>

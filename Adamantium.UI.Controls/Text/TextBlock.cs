@@ -146,6 +146,7 @@ public class TextBlock : InputUIComponent
     private bool _lastJustificationAlternates;
     private HorizontalTextAlignment _lastLastLineAlignment;
     private HorizontalTextAlignment _lastSingleWord;
+    private bool _lastKashidas;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private TextAttributes _lastShaping;
@@ -196,6 +197,7 @@ public class TextBlock : InputUIComponent
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
+        _textLayout.Kashidas = Kashidas;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -229,6 +231,7 @@ public class TextBlock : InputUIComponent
             && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
+            && _lastKashidas == Kashidas
             && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
@@ -302,6 +305,7 @@ public class TextBlock : InputUIComponent
         _lastJustificationAlternates = JustificationAlternates;
         _lastLastLineAlignment = LastLineAlignment;
         _lastSingleWord = SingleWordJustification;
+        _lastKashidas = Kashidas;
         return _cachedSize;
 
         Size Lay() => attributed == null

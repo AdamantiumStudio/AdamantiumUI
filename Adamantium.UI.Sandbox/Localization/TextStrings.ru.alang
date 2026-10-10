@@ -70,6 +70,7 @@
     <Phrase Key="Tracking" Text="Трекинг"/>
     <Phrase Key="GlyphScaling" Text="Масштаб глифов, мин. и макс. %"/>
     <Phrase Key="LastLine" Text="Последняя строка:"/>
+    <Phrase Key="Kashidas" Text="Кашиды"/>
     <Phrase Key="SingleWord" Text="Одно слово:"/>
     <Phrase Key="AlignStart" Text="В начале"/>
     <Phrase Key="AlignCenter" Text="По центру"/>

@@ -289,6 +289,7 @@ public abstract class TextBoxBase : Control
     private bool _lastShapedAlternates;
     private HorizontalTextAlignment _lastShapedLastLine;
     private HorizontalTextAlignment _lastShapedSingleWord;
+    private bool _lastShapedKashidas;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -363,6 +364,7 @@ public abstract class TextBoxBase : Control
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
+        _textLayout.Kashidas = Kashidas;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -383,6 +385,7 @@ public abstract class TextBoxBase : Control
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
             && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
             && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
+            && _lastShapedKashidas == Kashidas
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -432,6 +435,7 @@ public abstract class TextBoxBase : Control
         _lastShapedAlternates = JustificationAlternates;
         _lastShapedLastLine = LastLineAlignment;
         _lastShapedSingleWord = SingleWordJustification;
+        _lastShapedKashidas = Kashidas;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;

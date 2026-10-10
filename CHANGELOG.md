@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `Kashidas` on every element (inherited, on by default), taken by `TextBlock` and `TextBox`: justified Arabic
+  stretches its words with kashidas once its spaces are at their maximum. Sandbox Paragraph topic: a justified Arabic
+  column and a switch for kashidas.
+
 - `LastLineAlignment` and `SingleWordJustification` on every element (inherited), taken by `TextBlock` and `TextBox`:
   where a justified paragraph's last line and a line of a single word stand. Sandbox Paragraph topic: buttons for
   both.
