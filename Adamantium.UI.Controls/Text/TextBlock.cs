@@ -142,6 +142,8 @@ public class TextBlock : InputUIComponent
     private SpacingRange _lastWordSpacing;
     private SpacingRange _lastLetterSpacing;
     private double _lastTracking;
+    private SpacingRange _lastGlyphScaling;
+    private bool _lastJustificationAlternates;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private TextAttributes _lastShaping;
@@ -188,6 +190,8 @@ public class TextBlock : InputUIComponent
         _textLayout.WordSpacing = WordSpacing;
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
+        _textLayout.GlyphScaling = GlyphScaling;
+        _textLayout.JustificationAlternates = JustificationAlternates;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -219,6 +223,7 @@ public class TextBlock : InputUIComponent
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
             && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
             && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
+            && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
@@ -288,6 +293,8 @@ public class TextBlock : InputUIComponent
         _lastWordSpacing = WordSpacing;
         _lastLetterSpacing = LetterSpacing;
         _lastTracking = Tracking;
+        _lastGlyphScaling = GlyphScaling;
+        _lastJustificationAlternates = JustificationAlternates;
         return _cachedSize;
 
         Size Lay() => attributed == null

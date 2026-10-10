@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `GlyphScaling` (`"97% 100% 103%"`) and `JustificationAlternates` on every element (inherited), taken by
+  `TextBlock` and `TextBox`. Sandbox Paragraph topic: sliders for the glyph scaling limits.
+
 - `WordSpacing`, `LetterSpacing` and `Tracking` on every element (inherited), as InDesign's justification and
   tracking have them: `WordSpacing="80% 100% 133%"` (the default), `LetterSpacing="-5% 0% 10%"`, `Tracking="50"`
   (thousandths of an em); `Run.Tracking` for a run of its own. `TextBlock` and `TextBox` take them. Sandbox Paragraph

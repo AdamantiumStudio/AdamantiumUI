@@ -465,6 +465,32 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LetterSpacingProperty, value);
     }
 
+    public static readonly AdamantiumProperty GlyphScalingProperty = AdamantiumProperty.Register(nameof(GlyphScaling),
+        typeof(SpacingRange), typeof(UIComponent),
+        new PropertyMetadata(new SpacingRange(1, 1, 1), PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How wide glyphs of the text in this element and its descendants are drawn, as shares of their own
+    /// width, and how far justified lines may narrow and widen them once their spacing is at its limits:
+    /// <c>GlyphScaling="97% 100% 103%"</c>; 100% throughout by default.</summary>
+    public SpacingRange GlyphScaling
+    {
+        get => GetValue<SpacingRange>(GlyphScalingProperty);
+        set => SetValue(GlyphScalingProperty, value);
+    }
+
+    public static readonly AdamantiumProperty JustificationAlternatesProperty = AdamantiumProperty.Register(
+        nameof(JustificationAlternates), typeof(bool), typeof(UIComponent),
+        new PropertyMetadata(true, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether justified lines of the text in this element and its descendants may take the wider glyphs
+    /// their font offers for justification ('jalt', as Hebrew's wide letters) before scaling glyphs. True by
+    /// default.</summary>
+    public bool JustificationAlternates
+    {
+        get => GetValue<bool>(JustificationAlternatesProperty);
+        set => SetValue(JustificationAlternatesProperty, value);
+    }
+
     public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
         typeof(double), typeof(UIComponent),
         new PropertyMetadata(0.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

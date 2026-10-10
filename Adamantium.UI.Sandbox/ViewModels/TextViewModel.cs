@@ -194,6 +194,12 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private double _tracking;
 
+    [Bindable, Affects(nameof(GlyphScaling))] private double _glyphMinimum = 100;
+
+    [Bindable, Affects(nameof(GlyphScaling))] private double _glyphMaximum = 100;
+
+    public SpacingRange GlyphScaling => new(Math.Min(GlyphMinimum, 100) / 100, 1, Math.Max(GlyphMaximum, 100) / 100);
+
     // InDesign's justification settings of the paragraph topic, in percents of the space.
     public SpacingRange WordSpacing => new(Math.Min(WordMinimum, 100) / 100, 1, Math.Max(WordMaximum, 100) / 100);
 

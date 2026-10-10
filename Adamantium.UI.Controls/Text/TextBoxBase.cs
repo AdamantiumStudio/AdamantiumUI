@@ -285,6 +285,8 @@ public abstract class TextBoxBase : Control
     private SpacingRange _lastShapedWordSpacing;
     private SpacingRange _lastShapedLetterSpacing;
     private double _lastShapedTracking;
+    private SpacingRange _lastShapedGlyphScaling;
+    private bool _lastShapedAlternates;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -355,6 +357,8 @@ public abstract class TextBoxBase : Control
         _textLayout.WordSpacing = WordSpacing;
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
+        _textLayout.GlyphScaling = GlyphScaling;
+        _textLayout.JustificationAlternates = JustificationAlternates;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -373,6 +377,7 @@ public abstract class TextBoxBase : Control
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
             && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
+            && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -418,6 +423,8 @@ public abstract class TextBoxBase : Control
         _lastShapedWordSpacing = WordSpacing;
         _lastShapedLetterSpacing = LetterSpacing;
         _lastShapedTracking = Tracking;
+        _lastShapedGlyphScaling = GlyphScaling;
+        _lastShapedAlternates = JustificationAlternates;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
