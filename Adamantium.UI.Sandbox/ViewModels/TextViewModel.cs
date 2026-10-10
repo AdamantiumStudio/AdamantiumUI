@@ -209,6 +209,13 @@ public partial class TextViewModel : TabPageViewModel
 
     public SpacingRange LetterSpacing => new(Math.Min(LetterMinimum, 0) / 100, 0, Math.Max(LetterMaximum, 0) / 100);
 
+    // The Universal Declaration of Human Rights, article 1: justified with kashidas.
+    public string ArabicParagraphSample =>
+        "يولد جميع الناس أحرارًا متساوين في الكرامة والحقوق. وقد وهبوا عقلاً وضميرًا وعليهم أن يعامل بعضهم بعضًا " +
+        "بروح الإخاء.";
+
+    [Bindable] private bool _kashidas = true;
+
     // Genesis 1:1-2, unpointed.
     public string HebrewSample =>
         "בראשית ברא אלהים את השמים ואת הארץ. והארץ היתה תהו ובהו וחשך על פני תהום ורוח אלהים מרחפת על פני המים.";

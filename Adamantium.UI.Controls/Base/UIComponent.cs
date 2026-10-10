@@ -491,6 +491,18 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(JustificationAlternatesProperty, value);
     }
 
+    public static readonly AdamantiumProperty KashidasProperty = AdamantiumProperty.Register(nameof(Kashidas),
+        typeof(bool), typeof(UIComponent),
+        new PropertyMetadata(true, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether justified lines of Arabic and other joined scripts in this element and its descendants stretch
+    /// their words with kashidas once their spaces are at their maximum. True by default.</summary>
+    public bool Kashidas
+    {
+        get => GetValue<bool>(KashidasProperty);
+        set => SetValue(KashidasProperty, value);
+    }
+
     public static readonly AdamantiumProperty LastLineAlignmentProperty = AdamantiumProperty.Register(
         nameof(LastLineAlignment), typeof(HorizontalTextAlignment), typeof(UIComponent),
         new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

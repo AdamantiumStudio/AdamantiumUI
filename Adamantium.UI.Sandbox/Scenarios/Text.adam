@@ -38,6 +38,8 @@ select id=LastLineCenterRadio
 select id=SingleWordJustifyRadio
 select id=SingleWordStartRadio
 select id=LastLineStartRadio
+toggle id=KashidasToggle
+toggle id=KashidasToggle
 select id=TextView/name=Vertical
 wait id=Topic/id=VerticalStandView
 set id=LineLengthSlider 200

@@ -70,6 +70,7 @@
     <Phrase Key="Tracking" Text="Tracking"/>
     <Phrase Key="GlyphScaling" Text="Glyph scaling, min and max %"/>
     <Phrase Key="LastLine" Text="Last line:"/>
+    <Phrase Key="Kashidas" Text="Kashidas"/>
     <Phrase Key="SingleWord" Text="Single word:"/>
     <Phrase Key="AlignStart" Text="Start"/>
     <Phrase Key="AlignCenter" Text="Center"/>
