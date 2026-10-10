@@ -19,7 +19,7 @@ public class CanvasScene : ICanvasScene
     {
         foreach (var item in _items)
         {
-            if (Meets(item.Bounds, world)) yield return item;
+            if (CanvasTouch.Meets(item.Bounds, world)) yield return item;
         }
     }
 
@@ -186,10 +186,4 @@ public class CanvasScene : ICanvasScene
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
-
-    // Touching counts: a stroke exactly on the edge of the viewport is visible, and an item with no thickness in one
-    // direction (a horizontal line) has a zero-height box that must still meet the world it lies in.
-    private static bool Meets(Rect item, Rect world) =>
-        item.X <= world.X + world.Width && item.X + item.Width >= world.X &&
-        item.Y <= world.Y + world.Height && item.Y + item.Height >= world.Y;
 }

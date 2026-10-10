@@ -59,6 +59,10 @@ public interface ICanvasItem
     /// screen one - what counts as a hit has to be the same distance under the cursor at any zoom.</summary>
     bool HitTest(Vector2 world, double tolerance);
 
+    /// <summary>Whether a world rectangle touches what this item draws - what a selection band asks. The box by default;
+    /// an item whose box is mostly empty (an outline, a stroke, a frame) answers by what it draws, as its hit test does.</summary>
+    bool Touches(Rect world) => CanvasTouch.Meets(Bounds, world);
+
     /// <summary>Draw it. The points are handed over already in SCREEN coordinates by the canvas, which is what keeps the
     /// numbers reaching the GPU small however far from the origin the item is.</summary>
     void Render(IDrawingSession session, InfiniteCanvas canvas);

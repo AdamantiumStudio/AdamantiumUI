@@ -171,6 +171,17 @@ public class GroupItem : ICanvasItem
         return false;
     }
 
+    /// <summary>Whether a world rectangle touches any child - not the group's mostly empty box.</summary>
+    public bool Touches(Rect world)
+    {
+        foreach (var child in _children)
+        {
+            if (child.Touches(world)) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>The child under a point, or null. What "entering" a group means: a second click goes past the group to
     /// the thing inside it. Topmost first, because that is what the eye picked.</summary>
     public ICanvasItem Pick(Vector2 world, double tolerance)

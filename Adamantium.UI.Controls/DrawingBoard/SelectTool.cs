@@ -295,6 +295,9 @@ public class SelectTool : ICanvasTool
     {
         if (canvas.Scene == null) yield break;
 
-        foreach (var item in canvas.ItemsHere(band)) yield return item;
+        foreach (var item in canvas.ItemsHere(band))
+        {
+            if (item.Touches(band)) yield return item;
+        }
     }
 }

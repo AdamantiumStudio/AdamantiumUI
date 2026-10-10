@@ -429,6 +429,94 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         }
     }
 
+    /// <summary>Whether a world rectangle touches the shape's ink: its fill, or for a hollow shape the outline - a band
+    /// lying inside the hole of a large outline touches nothing of it.</summary>
+    public bool Touches(Rect world)
+    {
+        var quad = CanvasTouch.Corners(world);
+        if (Transform.IsSomething)
+        {
+            var middle = Middle;
+            for (var i = 0; i < quad.Length; i++) quad[i] = Transform.Undo(quad[i], middle);
+        }
+
+        var thickness = Math.Max(Thickness, 0);
+
+        switch (Shape)
+        {
+            case CanvasShape.Line:
+            case CanvasShape.Arrow:
+            {
+                Ends(out var from, out var to);
+                if (CanvasTouch.ConvexOverlap(quad, CanvasTouch.Thick(from, to, thickness / 2))) return true;
+
+                return Shape == CanvasShape.Arrow &&
+                       (HeadTouches(quad, to, from, EndHead) || HeadTouches(quad, from, to, StartHead));
+            }
+
+            case CanvasShape.Ellipse:
+            {
+                var rx = World.Width / 2;
+                var ry = World.Height / 2;
+                if (rx <= 0 || ry <= 0) return false;
+
+                var cx = World.X + rx;
+                var cy = World.Y + ry;
+                var unit = new Vector2[quad.Length];
+                for (var i = 0; i < quad.Length; i++) unit[i] = new Vector2((quad[i].X - cx) / rx, (quad[i].Y - cy) / ry);
+
+                if (!CanvasTouch.CircleOverlap(unit, Vector2.Zero, 1)) return false;
+                if (Fill != null || rx <= thickness || ry <= thickness) return true;
+
+                foreach (var corner in quad)
+                {
+                    var ix = (corner.X - cx) / (rx - thickness);
+                    var iy = (corner.Y - cy) / (ry - thickness);
+                    if (ix * ix + iy * iy >= 1) return true;
+                }
+
+                return false;
+            }
+
+            case CanvasShape.Polygon:
+            {
+                var outline = Outline;
+                if (!CanvasTouch.ConvexOverlap(quad, outline)) return false;
+                if (Fill != null) return true;
+
+                foreach (var corner in quad)
+                {
+                    if (!CanvasTouch.ConvexContains(outline, corner)) return true;
+
+                    for (var i = 0; i < outline.Count; i++)
+                    {
+                        if (Distance(corner, outline[i], outline[(i + 1) % outline.Count]) <= thickness) return true;
+                    }
+                }
+
+                return false;
+            }
+
+            default:
+            {
+                if (!CanvasTouch.ConvexOverlap(quad, CanvasTouch.Corners(World))) return false;
+                if (Fill != null) return true;
+
+                var inner = new Rect(World.X + thickness, World.Y + thickness,
+                    Math.Max(0, World.Width - thickness * 2), Math.Max(0, World.Height - thickness * 2));
+                return !CanvasTouch.AllInside(quad, inner);
+            }
+        }
+    }
+
+    private bool HeadTouches(Vector2[] quad, Vector2 tip, Vector2 from, CanvasArrowHead kind)
+    {
+        if (kind == CanvasArrowHead.None) return false;
+        if (!ArrowHead.Points(from, tip, Math.Max(Thickness, 1e-6), HeadLength, HeadWidth, out var left, out var right)) return false;
+
+        return CanvasTouch.ConvexOverlap(quad, [tip, left, right]);
+    }
+
     public void Render(IDrawingSession session, InfiniteCanvas canvas)
     {
         if (canvas == null) return;

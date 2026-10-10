@@ -739,6 +739,11 @@ All packages share one version.
 
 ### Fixed
 
+- A selection band drawn round something inside a larger hollow outline - a shape with no fill, a freehand loop, a
+  comment frame - took the outline too: the band was matched against each item's box. It is matched against what the
+  item draws now (`ICanvasItem.Touches`, the box by default), the way a press already was; a band still takes whatever
+  it touches, so a long stroke is taken by a band round part of it.
+
 - A control that drew one more vector icon (a `DrawingImage`) kept its old icons drawn too, and showed a stray copy,
   until something redrew the window: the patch could not find the instanced batch's recorded draw and left the old run
   in place. It replaces the run now.
