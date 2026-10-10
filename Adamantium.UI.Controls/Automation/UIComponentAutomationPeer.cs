@@ -141,7 +141,7 @@ public class UIComponentAutomationPeer : AutomationPeer
                 continue;
             }
 
-            if (child is TextBlock { Text: { Length: > 0 } text })
+            if (child is TextBlock block && block.ShownText is { Length: > 0 } text)
             {
                 return text;
             }

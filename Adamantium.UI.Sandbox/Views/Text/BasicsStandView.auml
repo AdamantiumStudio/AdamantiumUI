@@ -65,6 +65,34 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Spans: what a span sets goes to the runs in it that do not set their own; Bold, Italic and Underline are
+             spans with one thing set, they nest, and a LineBreak ends the line. -->
+        <TextBlock Text="{Localize TextStrings.SpansTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="SpansSample"
+                   FontSize="18"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.SpansPlain}"/>
+                <Bold>
+                    <Run Text="{Localize TextStrings.SpansBold}"/>
+                    <Italic>
+                        <Run Text="{Localize TextStrings.SpansBoldItalic}"/>
+                    </Italic>
+                </Bold>
+                <LineBreak/>
+                <Span Foreground="#38BDF8"
+                      FontSize="22">
+                    <Run Text="{Localize TextStrings.SpansColored}"/>
+                    <Underline>
+                        <Run Text="{Localize TextStrings.SpansUnderlined}"/>
+                    </Underline>
+                    <Run Text="{Localize TextStrings.SpansOwnColor}"
+                         Foreground="#F87171"/>
+                </Span>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
              underlined footnote mark carries its line up with it. -->
         <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"

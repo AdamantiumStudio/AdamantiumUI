@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- Spans in a `TextBlock`'s `Inlines`, as WPF's and Avalonia's: `Span` groups inlines and gives them what it sets
+  (color, size, background, weight, style, features, language, tracking, baseline shift...), the nearer setting winning
+  and lines adding up; `Bold`, `Italic` and `Underline` are spans with one thing set; `LineBreak` ends the line. The
+  formatting properties moved from `Run` to `Inline`, so every inline has them (source-compatible; code compiled against
+  the old `Run.*Property` fields has to be rebuilt). A `TextBlock` of inlines is named by their text for automation.
+  Clearing `Inlines` lets go of every inline it held. Sandbox Text tab, Basics topic: nested
+  bold and italic, a line break, a colored span with an underlined part and a run of its own color.
+
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
   E = mc², H₂O, xⁿ⁺¹, an underlined footnote mark, and a slider moving an underlined, highlighted run.

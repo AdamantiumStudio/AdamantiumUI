@@ -13,7 +13,7 @@ public class TextBlockAutomationPeer : UIComponentAutomationPeer
 
     public override AutomationControlType ControlType => AutomationControlType.Text;
 
-    protected override string NameCore() => ((TextBlock)Owner).Text;
+    protected override string NameCore() => ((TextBlock)Owner).ShownText;
 
     protected override IReadOnlyList<AutomationPeer> ChildrenCore() => [];
 }

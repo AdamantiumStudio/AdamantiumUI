@@ -57,7 +57,7 @@ internal static class ElementInspector
         void Write(IUIComponent element, int level)
         {
             text.Append(' ', level * 2).Append(Describe(element)).Append("  ").Append(Layout(element));
-            if (element is TextBlock { Text: { Length: > 0 } words })
+            if (element is TextBlock block && block.ShownText is { Length: > 0 } words)
             {
                 text.Append("  \"").Append(words).Append('"');
             }

@@ -27,6 +27,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Adamantium.UI" />
+        <InternalsVisibleTo Include="Adamantium.UI.Automation" />
         <InternalsVisibleTo Include="Adamantium.UITests" />
     </ItemGroup>
 
