@@ -140,5 +140,9 @@ public enum AutomationCommand
     /// <summary>Puts the caret in the target's text, or selects some of it: <see cref="AutomationRequest.Value"/> is
     /// <c>line[:column]</c>, or <c>line[:column]-line[:column]</c> for a selection, both counted from 1 as the target
     /// counts its lines.</summary>
-    SelectText
+    SelectText,
+
+    /// <summary>Turns the mouse wheel over the target's middle by <see cref="AutomationRequest.Value"/> notches, inside
+    /// the application: positive away from the user, scrolling up, as the system counts it.</summary>
+    Wheel
 }

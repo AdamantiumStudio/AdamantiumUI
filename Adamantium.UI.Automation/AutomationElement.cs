@@ -183,6 +183,11 @@ public sealed class AutomationElement
     /// <summary>Drags what it - a view of a plane, a canvas - shows by an offset of its own units, without input.</summary>
     public Task PanAsync(double dx, double dy) => RunAsync(AutomationCommand.Pan, FormattableString.Invariant($"{dx},{dy}"));
 
+    /// <summary>Turns the mouse wheel over its middle by <paramref name="notches"/>, inside the application: positive away
+    /// from the user, scrolling up.</summary>
+    public Task WheelAsync(int notches) =>
+        RunAsync(AutomationCommand.Wheel, notches.ToString(CultureInfo.InvariantCulture));
+
     /// <summary>Opens its context menu - its own, or the nearest one above it - as the menu key would, without the mouse.</summary>
     public Task ShowContextMenuAsync() => RunAsync(AutomationCommand.ShowContextMenu);
 

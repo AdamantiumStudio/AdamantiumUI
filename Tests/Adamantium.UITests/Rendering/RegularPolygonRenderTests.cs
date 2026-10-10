@@ -24,7 +24,7 @@ public class RegularPolygonRenderTests
     private const int Dim = 64;
     private const int Half = Dim / 2;
 
-    private static byte[] Render(int corners, bool batched = true, double ringThickness = 0, Pen pen = null, Brush fill = null, double startAngle = 0, Rect? rect = null)
+    private static byte[] Render(int corners, bool batched = true, double ringThickness = 0, Pen pen = null, Brush fill = null, double startAngle = 0, Rect? rect = null, Transform turn = null)
     {
         var wasEnabled = RegularPolygonCollector.Enabled;
         RegularPolygonCollector.Enabled = batched;
@@ -34,7 +34,10 @@ public class RegularPolygonRenderTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var stage = new TestControl
+            {
+                Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), RenderTransform = turn,
+            };
             var box = rect ?? new Rect(0, 0, Dim, Dim);
             stage.RenderAction = s => s.DrawRegularPolygon(fill ?? Brushes.White, box, corners, pen, ringThickness, startAngle);
 
@@ -241,6 +244,26 @@ public class RegularPolygonRenderTests
                      { ("gradient", Gradient()), ("noise", Noise()), ("pattern", Pattern()) })
             {
                 Assert.That(CoveredPixels(Render(6, fill: brush)), Is.EqualTo(solid).Within(120), $"{name} fill");
+            }
+        });
+    }
+
+    // ...and the same in a turned or skewed world: the brush batches take those too, so the polygon never falls back to
+    // its own unit, which has no form for these brushes.
+    [TestCase(30.0, 0.0)]
+    [TestCase(0.0, 20.0)]
+    public void EveryBrushPaintsTheSameShape_TurnedOrSkewed(double angle, double skew)
+    {
+        Transform Turn() => new() { RotationAngle = angle, SkewX = skew, RotationCenterX = Half, RotationCenterY = Half };
+        var solid = CoveredPixels(Render(6, turn: Turn()));
+
+        Assert.Multiple(() =>
+        {
+            foreach (var (name, brush) in new (string, Brush)[]
+                     { ("gradient", Gradient()), ("noise", Noise()), ("pattern", Pattern()) })
+            {
+                Assert.That(CoveredPixels(Render(6, fill: brush, turn: Turn())), Is.EqualTo(solid).Within(120),
+                    $"{name} fill");
             }
         });
     }
