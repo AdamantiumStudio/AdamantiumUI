@@ -9,7 +9,7 @@ public class ReflectionResolvedAssembly : IResolvedAssembly
     public ReflectionResolvedAssembly(Assembly assembly)
     {
         Name = assembly.GetName().Name;
-        _types = SafeGetTypes(assembly).Select(t => (IResolvedType)new ReflectionResolvedType(t)).ToList();
+        _types = SafeGetTypes(assembly).Where(t => !t.IsNested).Select(t => (IResolvedType)new ReflectionResolvedType(t)).ToList();
     }
 
     public string Name { get; }

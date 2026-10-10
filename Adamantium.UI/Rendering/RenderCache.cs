@@ -306,6 +306,9 @@ public partial class RenderCache
     /// nothing, so the per-unit transform re-bake (proc) is redundant and skipped.</summary>
     public bool LastBuildTransformDirty { get; private set; }
 
+    /// <summary>Told what each frame recorded and how it was drawn; null unless a tool such as the frame verifier watches.</summary>
+    internal IRenderCacheObserver Observer { get; set; }
+
     private bool _built;
 
     /// <summary>Brings the retained render scene up to date, doing only as much work as changed: clean -> re-draw last
@@ -332,6 +335,7 @@ public partial class RenderCache
         Core.Diagnostics.RuntimeStats.LastRecordSnapMs = System.Diagnostics.Stopwatch.GetElapsedTime(snapStart).TotalMilliseconds;
         Core.Diagnostics.RuntimeStats.LastSnapBytes = System.GC.GetAllocatedBytesForCurrentThread() - snapBytes0;
         DropRecordScratch();
+        Observer?.Recorded(_packet);
         _published.Enqueue(_packet);   // hand it over; the applier drains the queue (see ApplyFrame)
         _packet = null;
 

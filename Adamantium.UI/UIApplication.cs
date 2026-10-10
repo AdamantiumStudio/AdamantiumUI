@@ -202,6 +202,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public Graphics.Core.Presentation.PresentPolicy PresentPolicy { get; set; } =
         Graphics.Core.Presentation.PresentPolicy.Adaptive;
 
+    /// <summary>The frame verifier: off by default, switched on at run time to hunt a rendering bug.</summary>
+    public Rendering.Verification.FrameVerification FrameVerification { get; } = new();
+
     public IWindow MainWindow
     {
         get => mainWindow;

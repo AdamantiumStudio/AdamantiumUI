@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`), every frame a window
+  records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on a device of
+  its own. Each frame that differs is written to a session folder: the live and reference pictures, their difference,
+  a close-up, the frame before, and a report of how the frame was drawn, what it changed (motion nodes included) and
+  which groups of the two caches meet the difference and how they differ. Counts of verified, differing and skipped
+  frames; off, it costs one read per frame. Sandbox: "Verify frames" in the diagnostics panel, counts on the plate.
+
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
 
@@ -741,6 +748,10 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- The designer preview: a value-type element with its value as text (`<Color x:Key="Accent">#FF0000FF</Color>`,
+  `<Thickness>1,2,3,4</Thickness>`) is the value its text says - `Color` no longer resolves to a nested type of the
+  same name in a referenced assembly, and the text is parsed as the generator parses it.
 
 - Render clones (the loading skeleton cards): outside a scrolling area every copy was drawn at the last copy's place,
   a repaint without a full redraw - the skeleton's pulse among them - reached one copy of a child and no copy of the

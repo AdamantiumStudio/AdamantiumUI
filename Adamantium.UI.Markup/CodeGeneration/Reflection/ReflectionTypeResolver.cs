@@ -61,7 +61,7 @@ public class ReflectionTypeResolver : ITypeResolver
 
         foreach (var asm in _assemblies)
         {
-            var type = ReflectionResolvedAssembly.SafeGetTypes(asm).FirstOrDefault(t => t.Name == metadataName);
+            var type = ReflectionResolvedAssembly.SafeGetTypes(asm).FirstOrDefault(t => !t.IsNested && t.Name == metadataName);
             if (type != null) return new ReflectionResolvedType(type);
         }
         return null;

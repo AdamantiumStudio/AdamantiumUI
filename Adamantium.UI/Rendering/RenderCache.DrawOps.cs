@@ -571,7 +571,7 @@ public partial class RenderCache
     // Push a component's children so the stack pops them in PAINT order (drawn first = underneath). Fast path (the norm):
     // no explicit ZIndex -> document order (push reversed). Otherwise composite by ZIndex then document order - the same
     // precedence the hit-test's ZSort uses - so a raised child (e.g. a tab mid-drag) draws over its siblings.
-    private static void PushChildrenInPaintOrder(Stack<(IUIComponent Node, bool Hidden)> stack, IReadOnlyCollection<IUIComponent> children, bool hidden)
+    internal static void PushChildrenInPaintOrder(Stack<(IUIComponent Node, bool Hidden)> stack, IReadOnlyCollection<IUIComponent> children, bool hidden)
     {
         var anyZ = false;
         foreach (var child in children)

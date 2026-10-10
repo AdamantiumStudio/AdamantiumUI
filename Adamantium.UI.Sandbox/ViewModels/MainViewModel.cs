@@ -77,6 +77,24 @@ public partial class MainViewModel
     // of an edge artifact possible at all.
     [Bindable] private bool _analyticAa = true;
 
+    /// <summary>The application's frame verifier: while on, every fast-path frame is checked against a full walk and each
+    /// one that differs is written under the application's <c>verify</c> folder.</summary>
+    public bool VerifyFrames
+    {
+        get => UIApplication.Current?.FrameVerification.IsEnabled ?? false;
+        set
+        {
+            var verification = UIApplication.Current?.FrameVerification;
+            if (verification == null || verification.IsEnabled == value)
+            {
+                return;
+            }
+
+            verification.IsEnabled = value;
+            RaisePropertyChanged(nameof(VerifyFrames));
+        }
+    }
+
     // How frames reach the screen, bound to the window's PresentPolicy. Sits next to Analytic AA for the same reason:
     // it is a COMPARISON switch. Immediate takes the presentation back-pressure off the frame loop entirely (measured
     // here: AcquireNextImage 0.6-0.8 ms a frame under Adaptive, 0.01 ms under Immediate), and the plate above shows the

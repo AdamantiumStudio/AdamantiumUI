@@ -1,4 +1,5 @@
 using System.Linq;
+using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
@@ -88,6 +89,35 @@ public class AumlRuntimeLoaderPreviewTests
         Assert.That(resources, Is.Not.Null, string.Join(" | ", result.Diagnostics));
         Assert.That(resources["Accent"], Is.InstanceOf<SolidColorBrush>());
         Assert.That(resources["Ink"], Is.InstanceOf<SolidColorBrush>());
+    }
+
+    // By its short name, as the generator finds it: System.Console holds a private nested Interop+Kernel32+Color, and
+    // the loader used to take that one and fail on its missing namespace.
+    [Test]
+    public void AColorElement_IsTheEnginesColor_NotANestedTypeOfTheSameName()
+    {
+        var result = AumlLoader.Load(
+            $"<View x:Namespace=\"Test.App\" {Namespaces}><ResourceContext.Resources>" +
+            "<Color x:Key=\"Accent\">#FF0000FF</Color>" +
+            "</ResourceContext.Resources></View>");
+
+        Assert.That(result.Diagnostics, Has.None.Contains("Resolve error"));
+        Assert.That(result.Diagnostics, Has.None.Contains("Color"));
+        var resources = ResourceContext.GetResources((Adamantium.UI.Core.AdamantiumComponent)result.Root);
+        Assert.That(resources["Accent"], Is.EqualTo(TypeParser.Parse<Adamantium.Mathematics.Color>("#FF0000FF")),
+            "parsed from its text, not left at its default");
+    }
+
+    [Test]
+    public void AValueTypeElement_IsParsedFromItsText()
+    {
+        var result = AumlLoader.Load(
+            $"<View x:Namespace=\"Test.App\" {Namespaces}><ResourceContext.Resources>" +
+            "<Thickness x:Key=\"Gap\">1 2 3 4</Thickness>" +
+            "</ResourceContext.Resources></View>");
+
+        var resources = ResourceContext.GetResources((Adamantium.UI.Core.AdamantiumComponent)result.Root);
+        Assert.That(resources["Gap"], Is.EqualTo(new Adamantium.Mathematics.Thickness(1, 2, 3, 4)), string.Join(" | ", result.Diagnostics));
     }
 
     [Test]
