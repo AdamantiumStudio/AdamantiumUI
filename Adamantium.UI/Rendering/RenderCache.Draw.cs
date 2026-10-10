@@ -756,6 +756,7 @@ public partial class RenderCache
             _walkVersion++;
             _nodeAllAware.Clear();
             _culledWhenRecorded.Clear();
+            _clonedWhenRecorded.Clear();
             _nodeStragglers.Clear();   // recorded per walk, exactly like the answers above it
             _movedNodesBuf.Clear();   // a full walk re-bakes fresh node matrices - pending node moves are subsumed
             _movedOwnersBuf.Clear();  // ...and every mover's subtree along with them
@@ -849,6 +850,10 @@ public partial class RenderCache
                 _cloneMatrix = clones[0];
                 // Clone runs are recorded but not patchable: patches map one slot per unit, a cloned unit owns many.
                 group.NotBatchable("clones");
+                if (_recording)
+                {
+                    _clonedWhenRecorded.Add(group);
+                }
             }
 
             foreach (var unit in group.Units)
@@ -867,6 +872,11 @@ public partial class RenderCache
                 group.PatchableBatchedOnly = true;
                 group.NotBatchableBecause = null;   // a fresh walk describes this group from scratch
                 group.WalkVersion = _walkVersion;
+            }
+
+            if (_recording && _cloneMatrix.HasValue)
+            {
+                _clonedWhenRecorded.Add(group);
             }
 
             // Text bakes from its component's brush snapshot, so refresh it once here for every bake path below.
@@ -1965,7 +1975,12 @@ public partial class RenderCache
 
         foreach (var u in units)
         {
-            if (!IsSlotPatchable(u)) continue;   // a unit whose bytes moved off the slot map (rare) - the next walk fixes it
+            if (!IsSlotPatchable(u))   // a unit the patch cannot reach - the walk this frame repaints it
+            {
+                WalkForUnpatched(u);
+                continue;
+            }
+
             var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
             PatchSlot(device, u, bakeWorld, slot);
         }
@@ -2067,9 +2082,13 @@ public partial class RenderCache
 
             foreach (var u in units)
             {
-                // A unit the patch cannot reach is repainted by the next walk, exactly as the composited paint path
-                // treats one - refusing here would cost every OTHER unit of this brush its repaint.
-                if (!IsSlotPatchable(u)) continue;
+                // A unit the patch cannot reach is repainted by the walk, exactly as the composited paint path treats
+                // one - refusing here would cost every OTHER unit of this brush its repaint.
+                if (!IsSlotPatchable(u))
+                {
+                    WalkForUnpatched(u);
+                    continue;
+                }
 
                 u.SetFadeSlot(OpacitySlotOf(device, u.Component));
                 u.SetEffectiveOpacity(EffectiveOpacity(u.Component));
@@ -2077,6 +2096,14 @@ public partial class RenderCache
                 var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
                 PatchSlot(device, u, bakeWorld, slot);
             }
+        }
+    }
+
+    private void WalkForUnpatched(IRenderUnit u)
+    {
+        if (Drawing(u) && HoldsInstances(u))
+        {
+            StreamStaleBecause("unpatchedRepaint");
         }
     }
 
@@ -2243,7 +2270,11 @@ public partial class RenderCache
         if (!Drawing(u)) return !HoldsInstances(u);
 
         // Cloned units own a slot per clone, but the maps remember only one, so the next walk repaints them.
-        if (u.Component?.RenderClones is { Count: > 0 }) return false;
+        if (u.Component != null && _groupById.TryGetValue(u.Component.RenderId, out var cloned)
+            && _clonedWhenRecorded.Contains(cloned))
+        {
+            return false;
+        }
 
         // A band that APPEARED or went dark is a change of record count in the halo arena, and a patch can only rewrite
         // records that are already there. Its own family may well still be patchable - the shape would repaint and the
@@ -2673,6 +2704,11 @@ public partial class RenderCache
             // ...or still in the tree but out of the paint order: skipped (not refused), or it would be re-baked back in.
             if (!group.InOrder) continue;
 
+            if (_clonedWhenRecorded.Contains(group))
+            {
+                return SpliceRefused("clones");
+            }
+
             // Runs are valid only for the last walk's arena; a group that walk skipped drops its runs (they may name other
             // groups' slots now) and re-appends.
             var walked = group.WalkVersion == _walkVersion;
@@ -2737,6 +2773,14 @@ public partial class RenderCache
                 Group = group, Arena = arena, StageFirst = stageFirst, StageCount = staged, Component = comp,
                 Scissor = scissor, InPlace = inPlace, Blank = blank, Bounds = bounds
             });
+        }
+
+        foreach (var p in _patchBuf)
+        {
+            if (!p.InPlace && !p.Blank && p.Arena.StageRefusesReissue)
+            {
+                return SpliceRefused("overlay");
+            }
         }
 
         // ---- Which LAYER does each surgery group belong to (no mutation) ----

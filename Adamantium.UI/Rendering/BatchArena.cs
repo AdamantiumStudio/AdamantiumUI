@@ -74,6 +74,10 @@ internal abstract class BatchArena
     /// <summary>Where the next staged item lands, so a group can name the range it is about to append.</summary>
     public abstract int StagedCount { get; }
 
+    /// <summary>Whether what is staged cannot be re-issued into a segment at all - asked while validating, so a patch
+    /// refuses before it has changed anything.</summary>
+    public virtual bool StageRefusesReissue => false;
+
     /// <summary>Bakes one unit into the stage; false when this family cannot hold it and the patch must refuse.
     /// <paramref name="ownerTag"/> and <paramref name="clipSlot"/> are stamped exactly as the walk stamps them.</summary>
     public abstract bool TryStage(IRenderUnit unit, Matrix4x4F world, int transformSlot, int ownerTag, int clipSlot = -1);

@@ -637,7 +637,7 @@ public partial class RenderCache
                 else
                 {
                     Core.Diagnostics.RuntimeStats.UnitsCreated++;
-                    unit.DeferDispose();
+                    Retire(unit);
                     units[i] = _renderUnitFactory.CreateRenderUnitFromCommand(command);
                 }
             }
@@ -646,7 +646,7 @@ public partial class RenderCache
         if (units.Count > drawCommands.Count)
         {
             for (int i = drawCommands.Count; i < units.Count; i++)
-                units[i].DeferDispose();
+                Retire(units[i]);
             units.RemoveRange(drawCommands.Count, units.Count - drawCommands.Count);
         }
 
@@ -654,6 +654,23 @@ public partial class RenderCache
         // from them (the pre-render sweep) has to know, and this is the one place that mutates them.
         ControlGroup.BumpMembership();
         return group;
+    }
+
+    private void Retire(IRenderUnit unit)
+    {
+        if (unit == null)
+        {
+            return;
+        }
+
+        _rectSlotByUnit.Remove(unit);
+        _sdfSlotByUnit.Remove(unit);
+        _textRunByUnit.Remove(unit);
+        _texRunByUnit.Remove(unit);
+        _fractalKindByUnit.Remove(unit);
+        _fillSlotByUnit.Remove(unit);
+        _haloRunsByUnit.Remove(unit);
+        unit.DeferDispose();
     }
 
     private void ProcessRenderCommands(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, Matrix4x4F projectionMatrix, bool wasGeometryValid, long order, IReadOnlyList<Matrix4x4F> clones = null)
@@ -842,7 +859,7 @@ public partial class RenderCache
         if (group.Tag != 0 && !_leftTheOrder.Contains(group)) _leftTheOrder.Add(group);
 
         foreach (var unit in group.Units)
-            unit?.DeferDispose();
+            Retire(unit);
         RemoveFromOrder(group, "disposed");
 
         // ...and the tag map, after _leftTheOrder (which reads the tag to blank instances).

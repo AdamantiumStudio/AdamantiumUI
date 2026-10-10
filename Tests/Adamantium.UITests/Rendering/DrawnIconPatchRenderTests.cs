@@ -8,6 +8,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Drawings;
@@ -216,6 +217,34 @@ public class DrawnIconPatchRenderTests
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "an outline-free group is spliced, not walked");
 
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the outline the control no longer draws must not stay on the frame");
+    }
+
+    // A stroked shape cannot be re-issued into its flush (the ink list is shared), so the frame walks - but the splice has
+    // to say so while validating, before it has blanked or re-issued anything for the other groups.
+    [Test]
+    public void AStrokedControlThatGrows_IsRefusedBeforeTheFrameIsTouched()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        var shapes = new Shapes { Count = 2, Outline = new Pen(new SolidColorBrush(Colors.Red), 3) };
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(shapes);
+        using var scene = new Scene
+        {
+            Renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black },
+            Root = new VisualRoot(row, Dim, Dim)
+        };
+        FrameTrace.Enabled = true;
+        scene.Draw();
+
+        shapes.Count = 3;
+        shapes.InvalidateRender(false);
+        FrameTrace.Refuser = null;
+        scene.Draw();
+
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.False, "a stroked group is walked, not spliced");
+        Assert.That(FrameTrace.Refuser, Is.EqualTo("overlay"), "refused while validating, not halfway through the surgery");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the walk draws the third shape and its outline");
     }
 
     private sealed class StubResourceFactory : IResourceFactory
