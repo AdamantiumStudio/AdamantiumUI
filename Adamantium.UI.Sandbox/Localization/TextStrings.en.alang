@@ -8,6 +8,7 @@
     <Phrase Key="TopicVariable" Text="Variable fonts"/>
     <Phrase Key="TopicScripts" Text="Scripts"/>
     <Phrase Key="TopicParagraph" Text="Paragraph"/>
+    <Phrase Key="TopicVertical" Text="Vertical"/>
     <Phrase Key="FontSize" Text="Font size:"/>
     <Phrase Key="Trimmed" Text="Trimmed to one line:"/>
     <Phrase Key="FloatingWatermark" Text="Floating watermark"/>
@@ -64,4 +65,10 @@
     <Phrase Key="Justify" Text="Justify"/>
     <Phrase Key="SoftHyphens" Text="Soft hyphens (U+00AD)"/>
     <Phrase Key="HyphenationEditor" Text="Editor"/>
+    <Phrase Key="LineLength" Text="Line length"/>
+    <Phrase Key="Tiers" Text="Tiers"/>
+    <Phrase Key="LineTop" Text="Top"/>
+    <Phrase Key="LineMiddle" Text="Middle"/>
+    <Phrase Key="LineBottom" Text="Bottom"/>
+    <Phrase Key="VerticalTitle" Text="Japanese set vertically: lines run down and stack from the right, kana stand upright in their vertical forms, Latin and the year lie turned, and short numbers stand upright across the line:"/>
 </Language>

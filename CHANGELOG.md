@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- Vertical text on `TextBlock`: `WritingMode="VerticalRightToLeft"` runs its lines down, as long as the block is high
+  (its `Height`, else the height it is given), and stacks them from its right edge, however wide the slot; the block
+  asks to be as wide as they take, and `Columns` stack one under another. Glyphs turned on their side draw turned in the glyph batch (`GlyphItem.Second.z`),
+  and a squiggle runs down beside vertical text. Sandbox Text tab, new Vertical topic: "I Am a Cat" set vertically,
+  with the line length, the tiers and the alignment along the lines to change.
 - Columns and exclusions on `TextBlock`: `Columns` and `ColumnGap` flow text wrapped by words through columns side by
   side - as tall as the text split evenly needs when the block has no height - and `Exclusions`
   (`"0,0,120,90; 240,200,100,100"`, an `ExclusionList`) are areas it flows around, as a picture placed over it takes;

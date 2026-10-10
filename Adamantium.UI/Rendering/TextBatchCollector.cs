@@ -218,6 +218,14 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         float sx = relWorld.M11, sy = relWorld.M22, tx = relWorld.M41, ty = relWorld.M42;
         float ax = (float)area.X, ay = (float)area.Y;
         var glyphs = run.Glyphs;
+        for (var i = 0; i < run.Count && Math.Abs(sx - sy) > eps; i++)
+        {
+            if (glyphs[i].Rotation != 0)
+            {
+                return false;
+            }
+        }
+
         for (var i = 0; i < run.Count; i++)
         {
             var d = glyphs[i].ArrangeRect;   // local x, y, w, h
@@ -231,7 +239,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
                 Color = GlyphColor(glyphs[i], color, opacity),
                 Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), 0, 0),
                 SecondSource = glyphs[i].SecondSource,
-                Second = new Vector4F(glyphs[i].Second.X, glyphs[i].Second.Y, 0, 0)
+                Second = new Vector4F(glyphs[i].Second.X, glyphs[i].Second.Y, glyphs[i].Rotation, 0)
             };
         }
 

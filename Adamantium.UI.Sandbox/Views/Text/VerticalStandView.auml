@@ -1,0 +1,80 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- Navigated into the text tab's region under the key "Vertical"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="LineLengthLabel"
+                       Text="{Localize TextStrings.LineLength}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="LineLengthSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LineLengthLabel}"
+                    Width="240"
+                    Minimum="120"
+                    Maximum="600"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding VerticalLength, Mode=TwoWay}"
+                    Margin="8,0,24,0"/>
+            <TextBlock x:Name="TiersLabel"
+                       Text="{Localize TextStrings.Tiers}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="TiersSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=TiersLabel}"
+                    Width="120"
+                    Minimum="1"
+                    Maximum="3"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding Tiers, Mode=TwoWay}"
+                    Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <!-- Where the text stands along each line: from its top, in its middle, or down to its bottom. -->
+        <WrapPanel Orientation="Horizontal"
+                   Margin="0,12,0,0">
+            <RadioButton AutomationProperties.AutomationId="LineTopRadio"
+                         Classes="Toggle"
+                         GroupName="LineAlignment"
+                         Content="{Localize TextStrings.LineTop}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding LineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Left, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="LineMiddleRadio"
+                         Classes="Toggle"
+                         GroupName="LineAlignment"
+                         Content="{Localize TextStrings.LineMiddle}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding LineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="LineBottomRadio"
+                         Classes="Toggle"
+                         GroupName="LineAlignment"
+                         Content="{Localize TextStrings.LineBottom}"
+                         MarginRight="6"
+                         MarginBottom="6"
+                         IsChecked="{Binding LineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Right, Mode=TwoWay}"/>
+        </WrapPanel>
+
+        <!-- Lines run down and stack from the right; kana and ideographs stand upright in their vertical forms, the
+             Latin title and the year lie turned, and 38 and 1 stand upright across the line. -->
+        <TextBlock Text="{Localize TextStrings.VerticalTitle}"
+                   Margin="0,16,0,8"/>
+        <Border Padding="6"
+                HorizontalAlignment="Left"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="VerticalText"
+                       Text="{Binding VerticalSample}"
+                       Language="ja"
+                       WritingMode="VerticalRightToLeft"
+                       TextWrapping="WrapByWords"
+                       FontSize="22"
+                       Height="{Binding VerticalLength}"
+                       Columns="{Binding Tiers}"
+                       HorizontalTextAlignment="{Binding LineAlignment}"/>
+        </Border>
+    </StackPanel>
+</View>

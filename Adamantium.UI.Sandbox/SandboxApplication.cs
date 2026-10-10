@@ -64,5 +64,6 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.TextViewModel, Views.Text.VariableStandView>(nameof(ViewModels.TextStand.Variable));
         views.RegisterView<ViewModels.TextViewModel, Views.Text.ScriptsStandView>(nameof(ViewModels.TextStand.Scripts));
         views.RegisterView<ViewModels.TextViewModel, Views.Text.ParagraphStandView>(nameof(ViewModels.TextStand.Paragraph));
+        views.RegisterView<ViewModels.TextViewModel, Views.Text.VerticalStandView>(nameof(ViewModels.TextStand.Vertical));
     }
 }

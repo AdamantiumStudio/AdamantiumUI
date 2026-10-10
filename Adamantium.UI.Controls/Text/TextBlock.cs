@@ -63,6 +63,10 @@ public class TextBlock : InputUIComponent
     public static readonly AdamantiumProperty DropCapFontFamilyProperty = AdamantiumProperty.Register(nameof(DropCapFontFamily),
         typeof(FontFamily), typeof(TextBlock),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+
+    public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
+        typeof(WritingMode), typeof(TextBlock),
+        new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
     
     // FontFamily is declared (inherited) on UIComponent. On a TextBlock a font change must re-shape the text, so override
     // the metadata with a callback that re-measures - this fires on BOTH a direct set and an inherited change cascaded
@@ -134,6 +138,7 @@ public class TextBlock : InputUIComponent
     private int _lastColumns = 1;
     private double _lastColumnGap;
     private ExclusionList _lastExclusions;
+    private WritingMode _lastWritingMode;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private TextAttributes _lastShaping;
@@ -175,17 +180,25 @@ public class TextBlock : InputUIComponent
         _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
         var dropCap = DropCapOf(ref fontReady);
         _textLayout.DropCap = dropCap;
+        var vertical = WritingMode == WritingMode.VerticalRightToLeft;
+        _textLayout.WritingMode = WritingMode;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
         // Boundary: an explicit Width, else the available width for wrapping or trimming blocks; plain NoWrap labels stay
-        // unbounded. NaN means unbounded.
+        // unbounded. NaN means unbounded. Vertical lines run down, so there the height bounds them.
         var width = Width;
-        if (double.IsNaN(width)
-            && (TextWrapping != TextWrapping.NoWrap || TextTrimming != TextTrimming.None)
-            && !double.IsInfinity(_lastConstraint.Width))
-            width = _lastConstraint.Width;
         var height = Height;
+        var bounded = TextWrapping != TextWrapping.NoWrap || TextTrimming != TextTrimming.None;
+        if (!vertical && double.IsNaN(width) && bounded && !double.IsInfinity(_lastConstraint.Width))
+        {
+            width = _lastConstraint.Width;
+        }
+
+        if (vertical && double.IsNaN(height) && bounded && !double.IsInfinity(_lastConstraint.Height))
+        {
+            height = _lastConstraint.Height;
+        }
         var text = HasInlines ? InlineText() : Text;
         var shaping = TextShaping(font);
 
@@ -198,7 +211,7 @@ public class TextBlock : InputUIComponent
             && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
-            && ShapesLike(_lastShaping, shaping))
+            && _lastWritingMode == WritingMode && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -212,12 +225,14 @@ public class TextBlock : InputUIComponent
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
         _textLayout.Exclusions = Exclusions;
-        _textLayout.Frames = FramesOf(width, height, Lay, out var growth);
+        _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _cachedSize = Lay();
         for (var grown = 0; growth > 0 && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
         {
             _textLayout.Frames = _textLayout.Frames
-                .Select(frame => new RectangleF(frame.X, frame.Y, frame.Width, frame.Height + growth))
+                .Select(frame => vertical
+                    ? new RectangleF(frame.X, frame.Y, frame.Width + growth, frame.Height)
+                    : new RectangleF(frame.X, frame.Y, frame.Width, frame.Height + growth))
                 .ToArray();
             _cachedSize = Lay();
         }
@@ -231,10 +246,17 @@ public class TextBlock : InputUIComponent
         // whole slot and every tab stretched to fill it. Report the ink instead, capped by the area. A WRAPPING block is
         // untouched: there the area IS the answer, because that is the width the text was flowed into.
         if (TextTrimming != TextTrimming.None && TextWrapping == TextWrapping.NoWrap
-            && double.IsNaN(Width) && !double.IsNaN(width))
+            && double.IsNaN(Width) && !double.IsNaN(width) && !vertical)
         {
             var ink = System.Math.Ceiling(_textLayout.RealTextDimensions.Width);
             if (ink > 0) _cachedSize = new Size(Math.Min(_cachedSize.Width, ink), _cachedSize.Height);
+        }
+
+        if (TextTrimming != TextTrimming.None && TextWrapping == TextWrapping.NoWrap
+            && double.IsNaN(Height) && !double.IsNaN(height) && vertical)
+        {
+            var ink = System.Math.Ceiling(_textLayout.RealTextDimensions.Height);
+            if (ink > 0) _cachedSize = new Size(_cachedSize.Width, Math.Min(_cachedSize.Height, ink));
         }
         ShapeBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb2;
         ShapeCalls++;
@@ -254,44 +276,49 @@ public class TextBlock : InputUIComponent
         _lastColumns = Columns;
         _lastColumnGap = ColumnGap;
         _lastExclusions = Exclusions;
+        _lastWritingMode = WritingMode;
         return _cachedSize;
 
         Size Lay() => attributed == null
             ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine)
+                HorizontalTextAlignment, vertical ? VerticalTextAlignment.Top : VerticalTextAlignment, JustifyLastLine)
             : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, VerticalTextAlignment, JustifyLastLine);
+                HorizontalTextAlignment, vertical ? VerticalTextAlignment.Top : VerticalTextAlignment, JustifyLastLine);
     }
 
-    private RectangleF[] FramesOf(double width, double height, Func<Size> lay, out float growth)
+    private RectangleF[] FramesOf(double length, double across, bool vertical, Func<Size> lay, out float growth)
     {
         growth = 0;
         var columns = Math.Max(1, Columns);
-        if (TextWrapping != TextWrapping.WrapByWords || double.IsNaN(width) || double.IsInfinity(width)
+        if (TextWrapping != TextWrapping.WrapByWords || double.IsNaN(length) || double.IsInfinity(length)
             || (columns == 1 && (Exclusions == null || Exclusions.Count == 0)))
         {
             return null;
         }
 
         var gap = Math.Max(0, ColumnGap);
-        var columnWidth = (float)Math.Max(1, (width - gap * (columns - 1)) / columns);
-        var columnHeight = (float)height;
-        if (double.IsNaN(height) || double.IsInfinity(height))
+        var columnLength = (float)Math.Max(1, (length - gap * (columns - 1)) / columns);
+        var columnAcross = (float)across;
+        if (double.IsNaN(across) || double.IsInfinity(across))
         {
-            columnHeight = Unbounded;
-            if (columns > 1)
+            columnAcross = Unbounded;
+            if (columns > 1 || vertical)
             {
-                _textLayout.Frames = [new RectangleF(0, 0, columnWidth, Unbounded)];
+                _textLayout.Frames = [Frame(0, Unbounded)];
                 lay();
                 var lineHeight = Enumerable.Range(0, _textLayout.LineCount).Min(line => _textLayout.GetLine(line).Height);
                 growth = (float)lineHeight;
-                columnHeight = (float)(Math.Ceiling(_textLayout.LineCount / (double)columns) * lineHeight + 1);
+                columnAcross = (float)(Math.Ceiling(_textLayout.LineCount / (double)columns) * lineHeight + 1);
             }
         }
 
         return Enumerable.Range(0, columns)
-            .Select(column => new RectangleF((float)(column * (columnWidth + gap)), 0, columnWidth, columnHeight))
+            .Select(column => Frame((float)(column * (columnLength + gap)), columnAcross))
             .ToArray();
+
+        RectangleF Frame(float start, float extent) => vertical
+            ? new RectangleF(0, start, extent, columnLength)
+            : new RectangleF(start, 0, columnLength, extent);
     }
 
     private DropCap DropCapOf(ref bool fontReady)
@@ -398,6 +425,18 @@ public class TextBlock : InputUIComponent
     {
         get => GetValue<FontFamily>(DropCapFontFamilyProperty);
         set => SetValue(DropCapFontFamilyProperty, value);
+    }
+
+    /// <summary>Which way lines run: across (the default), or down and stacked from right to left, as Chinese and
+    /// Japanese are set vertically. A vertical line is as long as the block is high - its <see cref="Height"/>, else the
+    /// height it is given - the block asks to be as wide as its lines take, the first line stands at its right edge
+    /// (<see cref="VerticalTextAlignment"/> does not apply), <see cref="HorizontalTextAlignment"/> places text along
+    /// the lines (<see cref="HorizontalTextAlignment.Left"/> at their top), and <see cref="Columns"/> stack one under
+    /// another. Drop caps are for horizontal text only.</summary>
+    public WritingMode WritingMode
+    {
+        get => GetValue<WritingMode>(WritingModeProperty);
+        set => SetValue(WritingModeProperty, value);
     }
 
     public Brush Background
@@ -520,6 +559,7 @@ public class TextBlock : InputUIComponent
 
             var brush = adornment.Color is { } color ? new SolidColorBrush(color) : Foreground;
             var rect = adornment.Rect;
+            rect.X += LinesShift();
             if (adornment.Kind == TextAdornmentKind.Squiggle)
             {
                 DrawSquiggle(session, rect, brush);
@@ -531,22 +571,26 @@ public class TextBlock : InputUIComponent
         }
     }
 
-    private static void DrawSquiggle(IDrawingSession session, RectangleF band, Brush brush)
+    private void DrawSquiggle(IDrawingSession session, RectangleF band, Brush brush)
     {
-        var thickness = band.Height / 3;
+        var down = WritingMode == WritingMode.VerticalRightToLeft;
+        var depth = down ? band.Width : band.Height;
+        var thickness = depth / 3;
         var pen = new Pen(brush, thickness);
-        var step = band.Height;
-        var top = band.Y + thickness / 2;
-        var bottom = band.Y + band.Height - thickness / 2;
-        var x = (double)band.X;
+        var step = depth;
+        var top = (down ? band.X : band.Y) + thickness / 2;
+        var bottom = (down ? band.X : band.Y) + depth - thickness / 2;
+        var x = (double)(down ? band.Y : band.X);
+        var end = down ? band.Bottom : band.Right;
         var up = false;
-        while (x < band.Right)
+        while (x < end)
         {
-            var next = Math.Min(x + step, band.Right);
+            var next = Math.Min(x + step, end);
             var fraction = (next - x) / step;
             var from = up ? bottom : top;
             var to = from + (up ? top - bottom : bottom - top) * fraction;
-            session.DrawLine(new Vector2(x, from), new Vector2(next, to), pen);
+            session.DrawLine(down ? new Vector2(from, x) : new Vector2(x, from),
+                down ? new Vector2(to, next) : new Vector2(next, to), pen);
             x = next;
             up = !up;
         }
@@ -583,7 +627,7 @@ public class TextBlock : InputUIComponent
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
         // against, short of the slot's edge.
-        if (UseSlotWidth(RenderSize.Width))
+        if (UseSlot(RenderSize))
             EnsureLayout();
         OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
         OverrideCount++;
@@ -596,7 +640,7 @@ public class TextBlock : InputUIComponent
         // A trimmed block trims to the slot it actually GOT, which is not always the one it was measured against: a tab
         // header is measured unbounded and then capped by the tab's MaxWidth, so the boundary only exists here. Re-stated
         // before the layout call so the ellipsis lands at the real edge instead of at a width nobody will give it.
-        UseSlotWidth(finalSize.Width);
+        UseSlot(finalSize);
 
         var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         EnsureLayout();
@@ -605,18 +649,40 @@ public class TextBlock : InputUIComponent
         return finalSize;
     }
 
-    private bool UseSlotWidth(double slot)
+    private bool UseSlot(Size slot)
     {
-        if (TextTrimming == TextTrimming.None || !double.IsNaN(Width) || slot <= 0)
+        if (TextTrimming == TextTrimming.None)
+        {
             return false;
+        }
 
-        _lastConstraint = new Size(slot, _lastConstraint.Height);
+        if (WritingMode == WritingMode.VerticalRightToLeft)
+        {
+            if (!double.IsNaN(Height) || slot.Height <= 0)
+            {
+                return false;
+            }
+
+            _lastConstraint = new Size(_lastConstraint.Width, slot.Height);
+            return true;
+        }
+
+        if (!double.IsNaN(Width) || slot.Width <= 0)
+        {
+            return false;
+        }
+
+        _lastConstraint = new Size(slot.Width, _lastConstraint.Height);
         return true;
     }
 
+    internal float LinesShift() => WritingMode == WritingMode.VerticalRightToLeft && double.IsNaN(Width)
+        ? (float)Math.Round(RenderSize.Width - _textLayout.CalculatedLayoutSize.Width)
+        : 0;
+
     TextRenderingParameters GetTextRenderingParameters()
     {
-        var textPos = new Vector2F();
+        var textPos = new Vector2F(LinesShift(), 0);
 
         return new TextRenderingParameters()
         {

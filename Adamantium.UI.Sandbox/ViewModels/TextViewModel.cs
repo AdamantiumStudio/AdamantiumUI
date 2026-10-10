@@ -129,6 +129,18 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private bool _opticalMargins = true;
 
+    // "I Am a Cat" set vertically: kana and ideographs upright, Latin turned, the year sideways and short numbers upright
+    // across the line.
+    public string VerticalSample =>
+        "「吾輩は猫である。名前はまだ無い。」夏目漱石の長編小説で、明治38年（1905年）1月から雑誌『ホトトギス』に" +
+        "連載された。英語の題は I Am a Cat。";
+
+    [Bindable] private double _verticalLength = 300;
+
+    [Bindable] private int _tiers = 1;
+
+    [Bindable] private HorizontalTextAlignment _lineAlignment = HorizontalTextAlignment.Left;
+
     // Natsume Sōseki, "I Am a Cat": no line may start with a closing bracket, a small kana or a full stop.
     public string JapaneseSample =>
         "「吾輩は猫である。名前はまだ無い。」どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。";

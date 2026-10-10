@@ -38,4 +38,8 @@ public enum TextStand
     /// language or at soft hyphens.</summary>
     [Display(Name = "Paragraph")]
     Paragraph,
+
+    /// <summary>Japanese set vertically: lines running down and stacking from the right, kana upright, Latin turned.</summary>
+    [Display(Name = "Vertical")]
+    Vertical,
 }
