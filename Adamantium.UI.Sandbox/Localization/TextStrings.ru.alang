@@ -8,6 +8,7 @@
     <Phrase Key="TopicVariable" Text="Вариативные шрифты"/>
     <Phrase Key="TopicScripts" Text="Письменности"/>
     <Phrase Key="TopicParagraph" Text="Абзац"/>
+    <Phrase Key="TopicVertical" Text="Вертикальный"/>
     <Phrase Key="FontSize" Text="Размер шрифта:"/>
     <Phrase Key="Trimmed" Text="Обрезано до одной строки:"/>
     <Phrase Key="FloatingWatermark" Text="Всплывающая подсказка"/>
@@ -64,4 +65,10 @@
     <Phrase Key="Justify" Text="По ширине"/>
     <Phrase Key="SoftHyphens" Text="Мягкие переносы (U+00AD)"/>
     <Phrase Key="HyphenationEditor" Text="Редактор"/>
+    <Phrase Key="LineLength" Text="Длина строки"/>
+    <Phrase Key="Tiers" Text="Ярусы"/>
+    <Phrase Key="LineTop" Text="Сверху"/>
+    <Phrase Key="LineMiddle" Text="По центру"/>
+    <Phrase Key="LineBottom" Text="Снизу"/>
+    <Phrase Key="VerticalTitle" Text="Японский текст вертикально: строки идут сверху вниз и встают справа налево, каны стоят прямо в вертикальных формах, латиница и год лежат на боку, короткие числа стоят прямо поперёк строки:"/>
 </Language>

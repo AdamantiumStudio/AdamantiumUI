@@ -39,6 +39,8 @@ public struct GlyphItem
     public Vector4F SecondSource;
 
     /// <summary>.x = the atlas layer of <see cref="SecondSource"/>; .y = how far the glyph is from the first key to the
-    /// second, as <see cref="Adamantium.Graphics.Fonts.FontItem.Second"/> holds them.</summary>
+    /// second, as <see cref="Adamantium.Graphics.Fonts.FontItem.Second"/> holds them; .z = the glyph's turn in vertical
+    /// text, radians clockwise about <see cref="LocalRect"/>'s corner, as
+    /// <see cref="Adamantium.Graphics.Fonts.FontItem.Rotation"/> holds it.</summary>
     public Vector4F Second;
 }
