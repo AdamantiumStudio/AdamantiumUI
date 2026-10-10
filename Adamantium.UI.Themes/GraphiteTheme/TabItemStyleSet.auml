@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tab: no fill or corners, the current tab marked by the strip's accent rule. Part names match
+    <!-- Graphite's tab: no fill or corners, the current tab marked by the strip's accent rule. Part names match
          Fluent's. Properties, then the template, then the triggers. -->
 
     <Style Selector="TabItem">

@@ -41,8 +41,8 @@ public class TabForegroundFollowsSelectionTests
         _themes.SetTheme(theme);
     }
 
-    private static ITheme Build(string name) => name == "EditorPro"
-        ? new Adamantium.UI.Themes.EditorProTheme.EditorPro()
+    private static ITheme Build(string name) => name == "Graphite"
+        ? new Adamantium.UI.Themes.GraphiteTheme.Graphite()
         : new Adamantium.UI.Themes.FluentTheme.Fluent();
 
     // A themed tab with its template built and its label generated - the generated TextBlock is made in the presenter's
@@ -77,7 +77,7 @@ public class TabForegroundFollowsSelectionTests
 
     /// <summary>The first link: the TRIGGER onto the part. If this one holds and the label still does not change, the
     /// defect is in the hand-off from the presenter to the text it generated, not in the theme.</summary>
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("Fluent")]
     public void SelectingATab_ChangesThePresentersForeground(string themeName)
     {
@@ -92,7 +92,7 @@ public class TabForegroundFollowsSelectionTests
             "the IsSelected trigger never reached PART_ContentPresenter");
     }
 
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("Fluent")]
     public void SelectingATab_ChangesItsLabelColor(string themeName)
     {
@@ -111,7 +111,7 @@ public class TabForegroundFollowsSelectionTests
             "the selected tab's label kept the resting color - the plate says 'current' and the text does not");
     }
 
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("Fluent")]
     public void DeselectingATab_PutsItsLabelColorBack(string themeName)
     {
@@ -188,7 +188,7 @@ public class TabForegroundFollowsSelectionTests
     /// <summary>The stand's actual shape: a tab whose header comes from a template, so the label is an AUTHORED
     /// TextBlock reached by inheritance - and the color is written by a TRIGGER rather than by hand. Each half of that
     /// works on its own; this is the pair.</summary>
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("Fluent")]
     public void SelectingATab_ChangesATEMPLATEDLabelsColor(string themeName)
     {
@@ -220,7 +220,7 @@ public class TabForegroundFollowsSelectionTests
         tab.IsSelected = true;
         Frame(tab);
 
-        Use(Build("EditorPro"));
+        Use(Build("Graphite"));
         tab.ApplyCurrentTheme();
         Frame(tab);
 

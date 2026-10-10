@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Theme xmlns="http://adamantium/ui"
        xmlns:x="http://adamantium/ui/xaml/extensions"
-       xmlns:editor="clr-namespace:Adamantium.UI.Themes.EditorProTheme"
+       xmlns:editor="clr-namespace:Adamantium.UI.Themes.GraphiteTheme"
        xmlns:fluent="clr-namespace:Adamantium.UI.Themes.FluentTheme"
        xmlns:shared="clr-namespace:Adamantium.UI.Themes.Shared"
-       Name="EditorPro"
+       Name="Graphite"
        SystemLightVariant="Light"
        SystemDarkVariant="Dark"
        ResourceContext.Scope="Theme">
@@ -16,7 +16,7 @@
 
   <ResourceContext.Resources>
     <!-- Its own numbers, and - for now - Fluent's SHAPES. An icon is geometry; its color comes from the palette by
-         key, and this theme answers the same key names. Editor Pro will want sharper, smaller icons of its own, and
+         key, and this theme answers the same key names. Graphite will want sharper, smaller icons of its own, and
          that is a separate piece of work from the skin. -->
     <ResourceLink Source="{x:Type editor:Metrics}"/>
     <!-- FIRST - see Fluent's. The canvas's pictures belong to no theme. -->
@@ -27,8 +27,8 @@
   </ResourceContext.Resources>
 
   <Theme.Variants>
-    <editor:EditorProDark/>
-    <editor:EditorProLight/>
+    <editor:GraphiteDark/>
+    <editor:GraphiteLight/>
   </Theme.Variants>
 
   <!-- A theme answers for EVERY control in the application: styles come only from the current theme, and a control

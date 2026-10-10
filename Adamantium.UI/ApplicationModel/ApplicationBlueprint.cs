@@ -36,7 +36,7 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
         set => SetValue(StartupWindowProperty, value);
     }
 
-    /// <summary>The theme the application opens on: Fluent (when unset), EditorPro, MacOs or one of the project's own.</summary>
+    /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the project's own.</summary>
     [TypeOf(typeof(Theme))]
     public Type StartupTheme
     {

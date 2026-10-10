@@ -311,7 +311,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         set => SetValue(StartupTypeProperty, value);
     }
 
-    /// <summary>The theme the application opens on: Fluent (when unset), EditorPro, MacOs or one of the application's
+    /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the application's
     /// own, which is added to the themes. The application's blueprint states it; a value set in code wins over the
     /// blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
     public Type StartupTheme
@@ -567,8 +567,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         ThemeManager.AddTheme(fluent.Name, fluent);
 
         // A second theme proves the first is a theme and not the framework's own look.
-        var editorPro = new Themes.EditorProTheme.EditorPro();
-        ThemeManager.AddTheme(editorPro.Name, editorPro);
+        var graphite = new Themes.GraphiteTheme.Graphite();
+        ThemeManager.AddTheme(graphite.Name, graphite);
 
         // Owns the window and the caption so far and borrows the rest from Fluent.
         var macOs = new Themes.MacOsTheme.MacOs();

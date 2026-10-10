@@ -39,7 +39,7 @@ public class SeparatorThemeTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
@@ -59,7 +59,7 @@ public class SeparatorThemeTests
 
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ItLiesAcrossTheRowsByDefault(string theme)
     {
@@ -75,7 +75,7 @@ public class SeparatorThemeTests
     // horizontal one put in a row has neither - it is a hairline stretched across nothing, and nobody sees it.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ItStandsOnEndWhenAsked(string theme)
     {

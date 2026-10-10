@@ -42,7 +42,7 @@ public class ScrollPolicyFromOutsideTests
         return built.GetComponentByName("PART_ScrollHost") as ScrollViewer;
     }
 
-    [TestCase(typeof(Adamantium.UI.Themes.EditorProTheme.EditorPro))]
+    [TestCase(typeof(Adamantium.UI.Themes.GraphiteTheme.Graphite))]
     [TestCase(typeof(Adamantium.UI.Themes.FluentTheme.Fluent))]
     public void WhatIsSetOnTheListReachesTheViewerInsideIt(System.Type themeType)
     {
@@ -54,7 +54,7 @@ public class ScrollPolicyFromOutsideTests
 
     /// <summary>Saying nothing must leave the sensible default rather than a zero: the defaults live on the attached
     /// properties, so a list that never mentions scrolling still scrolls down and not across.</summary>
-    [TestCase(typeof(Adamantium.UI.Themes.EditorProTheme.EditorPro))]
+    [TestCase(typeof(Adamantium.UI.Themes.GraphiteTheme.Graphite))]
     [TestCase(typeof(Adamantium.UI.Themes.FluentTheme.Fluent))]
     public void SayingNothingLeavesTheDefaultPolicy(System.Type themeType)
     {
@@ -72,7 +72,7 @@ public class ScrollPolicyFromOutsideTests
     [Test]
     public void ChangingItLaterMovesTheViewerToo()
     {
-        var viewer = ViewerOf(new Adamantium.UI.Themes.EditorProTheme.EditorPro(), ScrollBarVisibility.Hidden, out var list);
+        var viewer = ViewerOf(new Adamantium.UI.Themes.GraphiteTheme.Graphite(), ScrollBarVisibility.Hidden, out var list);
 
         ScrollViewer.SetVerticalScrollBarVisibility(list, ScrollBarVisibility.Visible);
 

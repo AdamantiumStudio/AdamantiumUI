@@ -43,7 +43,7 @@ public class CanvasConnectionTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
@@ -81,7 +81,7 @@ public class CanvasConnectionTests
     // A wire is held by what it JOINS. Its ends are where those two sockets are, in world units - not a pair of points
     // it was given and remembers.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AWireEndsOnTheTwoSocketsItJoins(string theme)
     {
@@ -107,7 +107,7 @@ public class CanvasConnectionTests
     // ...so moving a node moves the wire, and nobody has to tell it. This is the whole reason it holds sockets rather
     // than points: a wire that remembered where it was would have to be found and corrected on every drag.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void MovingANodeMovesTheWireWithoutTellingIt(string theme)
     {

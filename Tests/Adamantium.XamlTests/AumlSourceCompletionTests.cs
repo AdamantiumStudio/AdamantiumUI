@@ -138,7 +138,7 @@ public class AumlSourceCompletionTests
     {
         var labels = Labels("""<ApplicationBlueprint StartupTheme="|"/>""", BareRoot);
 
-        Assert.That(labels, Is.SupersetOf(new[] { "Fluent", "EditorPro", "MacOs" }));
+        Assert.That(labels, Is.SupersetOf(new[] { "Fluent", "Graphite", "MacOs" }));
         Assert.That(labels, Has.None.AnyOf("Border", "ProbeButtons", "Theme"));
     }
 

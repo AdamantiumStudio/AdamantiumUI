@@ -43,7 +43,7 @@ public class CanvasPaneSizerTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
@@ -66,7 +66,7 @@ public class CanvasPaneSizerTests
 
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryThemeCarriesBothEdges(string theme)
     {
@@ -83,7 +83,7 @@ public class CanvasPaneSizerTests
     // COLLAPSED and not hidden: a hidden strip still takes its width, and a rail is exactly as wide as its buttons.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void APaneThatDoesNotResizeHasNoEdgeToCatch(string theme)
     {
@@ -102,7 +102,7 @@ public class CanvasPaneSizerTests
     // other is a control whose direction has to be learned - and learned again for every side it is docked to.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AFloatingPaneOffersAnEdgeOnEitherSide(string theme)
     {
@@ -171,7 +171,7 @@ public class CanvasPaneSizerTests
     // stands the handles seven pixels to the side of the plate they belong to.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheEdgeIsTakenFromTheWholePaneAndNotOnlyFromItsBody(string theme)
     {
@@ -195,7 +195,7 @@ public class CanvasPaneSizerTests
     // no edge to take hold of, which is the same as not having one.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheEdgeIsVisibleAndNotJustReachable(string theme)
     {
@@ -232,7 +232,7 @@ public class CanvasPaneSizerTests
     // does not resize anything, however visible it is.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void APressOnTheInspectorsEdgeLandsOnIt(string theme)
     {
@@ -303,7 +303,7 @@ public class CanvasPaneSizerTests
     // the mouse. What is staged is what the drag does - it writes a width - and what has to follow from it.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheInspectorInACanvasKeepsAWidthItWasGiven(string theme)
     {

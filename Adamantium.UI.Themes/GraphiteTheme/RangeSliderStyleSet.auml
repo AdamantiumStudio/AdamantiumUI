@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's range slider: bar handles like the plain slider, butting against the selected band so it reads as
+    <!-- Graphite's range slider: bar handles like the plain slider, butting against the selected band so it reads as
          one object. -->
 
     <Style Selector="RangeSlider">

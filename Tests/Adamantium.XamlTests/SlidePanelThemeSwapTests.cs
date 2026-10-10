@@ -8,7 +8,7 @@ using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
-using Adamantium.UI.Themes.EditorProTheme;
+using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.MacOsTheme;
 using NUnit.Framework;
@@ -43,8 +43,8 @@ public class SlidePanelThemeSwapTests
 
         var fluent = new Fluent();
         _themes.AddTheme(fluent.Name, fluent);
-        var editorPro = new EditorPro();
-        _themes.AddTheme(editorPro.Name, editorPro);
+        var graphite = new Graphite();
+        _themes.AddTheme(graphite.Name, graphite);
         var macOs = new MacOs();
         _themes.AddTheme(macOs.Name, macOs);
         _themes.SetTheme(fluent);
@@ -86,7 +86,7 @@ public class SlidePanelThemeSwapTests
         panel.IsOpen = true;
         await session.WaitForIdleAsync();
 
-        _themes.SetTheme(_themes["EditorPro"]);
+        _themes.SetTheme(_themes["Graphite"]);
         await session.WaitForIdleAsync();
 
         Assert.That(deep.DataContext, Is.SameAs(model));

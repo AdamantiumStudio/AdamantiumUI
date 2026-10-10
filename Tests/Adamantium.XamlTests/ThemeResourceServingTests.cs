@@ -24,7 +24,7 @@ public class ThemeResourceServingTests
         new(@"\b(?:Background|Foreground|BorderBrush|Fill|Stroke|OverlayBrush|IndicatorBrush|IndicatorStroke|ActiveBrush|PreviewBrush|SelectionIndicatorBrush)\s*=\s*""\{\s*(?:ObservableResource|ResourceReference)\s+([A-Za-z0-9_]+)\s*\}""",
             RegexOptions.Compiled);
 
-    [TestCase("EditorProTheme")]
+    [TestCase("GraphiteTheme")]
     [TestCase("FluentTheme")]
     [TestCase("MacOsTheme")]
     public void AKeyIsUsedInTheSlotItIsServedFor(string themeFolder)

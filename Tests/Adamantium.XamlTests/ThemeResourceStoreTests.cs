@@ -22,7 +22,7 @@ public class ThemeResourceStoreTests
     private static readonly Regex FromThemeProperties =
         new(@"\{\s*ThemeResource\s+([A-Za-z0-9_]+)\s*\}", RegexOptions.Compiled);
 
-    [TestCase("EditorProTheme")]
+    [TestCase("GraphiteTheme")]
     [TestCase("FluentTheme")]
     [TestCase("MacOsTheme")]
     public void AKeyIsAskedFromTheStoreThatHoldsIt(string themeFolder)

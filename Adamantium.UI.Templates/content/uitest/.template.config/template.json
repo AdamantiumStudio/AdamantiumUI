@@ -30,7 +30,7 @@
       "description": "The theme the application starts on, for the windows built headless.",
       "choices": [
         { "choice": "Fluent", "displayName": "Fluent", "description": "Fluent design, light and dark" },
-        { "choice": "EditorPro", "displayName": "Editor Pro", "description": "An editor's dense look: small type, tight radii, dark and light" },
+        { "choice": "Graphite", "displayName": "Graphite", "description": "An editor's dense look: small type, tight radii, dark and light" },
         { "choice": "MacOs", "displayName": "macOS", "description": "The macOS look, light and dark" }
       ],
       "defaultValue": "Fluent",

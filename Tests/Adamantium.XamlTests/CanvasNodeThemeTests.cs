@@ -62,19 +62,19 @@ public class CanvasNodeThemeTests
 
     private static Theme Fluent() => new Adamantium.UI.Themes.FluentTheme.Fluent();
 
-    private static Theme EditorPro() => new Adamantium.UI.Themes.EditorProTheme.EditorPro();
+    private static Theme Graphite() => new Adamantium.UI.Themes.GraphiteTheme.Graphite();
 
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => MacOs(),
-        "EditorPro" => EditorPro(),
+        "Graphite" => Graphite(),
         _ => Fluent()
     };
 
     // A node with no template draws NOTHING, and nothing is exactly what a blank plane looks like - so this is the
     // first thing to ask of it under every theme.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ANodeIsTemplatedAndHasASize(string theme)
     {
@@ -93,7 +93,7 @@ public class CanvasNodeThemeTests
     // The strip takes the THEME's accent. An editor that painted it a color of its own would look like a different
     // application inside the application.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheTitleStripWearsTheThemesAccent(string theme)
     {
@@ -106,7 +106,7 @@ public class CanvasNodeThemeTests
 
     // More pins is a taller node: the sockets are real rows and not a picture of some.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void MorePinsMakeATallerNode(string theme)
     {
@@ -122,7 +122,7 @@ public class CanvasNodeThemeTests
     // the body's own edge ran straight through them and the row read as a line with faint bumps in it. A socket has to
     // come out of the theme with a color whether or not the application says anything.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EverySocketHasAColor(string theme)
     {
@@ -141,7 +141,7 @@ public class CanvasNodeThemeTests
     // Coloring a socket is how a graph editor says what may be joined to what, so a color put on one pin outranks the
     // theme's default - including a pin that was there before the theme arrived.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void APinsOwnColorSurvivesTheTheme(string theme)
     {
@@ -164,7 +164,7 @@ public class CanvasNodeThemeTests
     // that answers "which ends are still loose" without reading a single label. The template paints the middle with
     // Fill and nothing else decides it, so an empty socket has to have no Fill at all.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AnEmptySocketIsHollowAndATakenOneIsSolid(string theme)
     {
@@ -188,7 +188,7 @@ public class CanvasNodeThemeTests
     // handed anything else it quietly keeps whatever it was showing before, which reads as a row that lies rather than
     // as a row that cannot answer.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheNodesColorsAreSolidSoASwatchCanShowThem(string theme)
     {
@@ -208,7 +208,7 @@ public class CanvasNodeThemeTests
     // strip turned every accent in the application that color, and the node's two color lines - both starting at the
     // accent - were one object being shown twice.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ThoseColorsAreTheThemesAndSayThatTheyAre(string theme)
     {
@@ -226,7 +226,7 @@ public class CanvasNodeThemeTests
     // ...and the inspector has to be able to READ them through the item that carries the node, which is what it is
     // actually pointed at. A color that only the template can see is a row that shows nothing.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheInspectorReadsThoseColorsThroughTheItem(string theme)
     {
@@ -249,7 +249,7 @@ public class CanvasNodeThemeTests
     // in has to follow. It did not - the box was measured at its own height, a measure cannot answer with more than it
     // was offered, so a node given a fourth input drew four sockets in the room for two.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AskingForMoreSocketsMakesTheBoxOnThePlaneTaller(string theme)
     {
@@ -280,7 +280,7 @@ public class CanvasNodeThemeTests
     // three it drops the third and leaves the second where it was - and everything said about the sockets that stay has
     // to stay with them.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void OneSocketCanBeTakenOutOfTheMiddle(string theme)
     {
@@ -303,7 +303,7 @@ public class CanvasNodeThemeTests
 
     // ...and a socket asked for afterwards is not given a name one of the others already has, which counting would do.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ASocketAddedAfterOneWasRemovedGetsAFreeName(string theme)
     {
@@ -320,7 +320,7 @@ public class CanvasNodeThemeTests
     // The template puts a SOCKET per pin, and it is a socket rather than an anonymous border - which is what makes it
     // findable at all. Asked first, because everything below depends on it and answers "null" if it is not so.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryPinGetsASocketInTheTree(string theme)
     {
@@ -375,7 +375,7 @@ public class CanvasNodeThemeTests
     // WHERE a socket is, which a connection cannot work out for itself: which side it is on, how far down and how far
     // it hangs over the edge are facts about the TEMPLATE, and each theme answers them differently.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ANodeSaysWhereItsSocketsAre(string theme)
     {
@@ -408,7 +408,7 @@ public class CanvasNodeThemeTests
 
     // ...and WHICH socket is under a point, which is how a connection is started by aiming at one.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ANodeSaysWhichSocketIsUnderAPoint(string theme)
     {
@@ -434,7 +434,7 @@ public class CanvasNodeThemeTests
 
     // The middle follows the color too: recoloring a docked pin has to repaint what is in it, not just its ring.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void RecoloringADockedPinRepaintsItsMiddle(string theme)
     {
@@ -452,7 +452,7 @@ public class CanvasNodeThemeTests
     // WHAT IS IN A NODE. A node is a control because what it is FOR is the editable things inside it - a field, a
     // switch, a picture - and the strip and the sockets are the frame around them.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ANodeShowsWhatIsPutInIt(string theme)
     {
@@ -472,7 +472,7 @@ public class CanvasNodeThemeTests
     // ...and it goes BETWEEN the socket columns, which is the only place a body can be without standing between a
     // socket and the wire reaching for it.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheBodySitsBetweenTheSockets(string theme)
     {
@@ -499,7 +499,7 @@ public class CanvasNodeThemeTests
     // EVERY SOCKET ROW CARRIES A GRIP, because moving a socket has to have a target of its own: the disc is where a
     // wire is pulled from, and one press cannot mean both. One per row and not one per node - the row is what moves.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EverySocketRowCarriesAGrip(string theme)
     {
@@ -524,7 +524,7 @@ public class CanvasNodeThemeTests
     // ...and a press on one BELONGS TO THE NODE. The canvas drags a node by a press on it, so a press the grip keeps
     // has to be a press the canvas never sees - which is the difference between moving a socket and moving the node.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void APressOnTheGripIsTakenByTheNode(string theme)
     {
@@ -558,7 +558,7 @@ public class CanvasNodeThemeTests
     // elsewhere - nothing about the node changes - and the move is said ONCE, when the rows have settled. Said in the
     // middle of it, the socket would be taken out of a list everything else reads by position.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void DraggingAGripSaysTheSocketMovedOnceAtTheEnd(string theme)
     {
@@ -664,7 +664,7 @@ public class CanvasNodeThemeTests
     // list, and a node whose contents cannot be clicked is a picture of a node. The strip is the handle; everything the
     // application put inside is live.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheStripIsTheHandleAndTheBodyIsNot(string theme)
     {
@@ -690,7 +690,7 @@ public class CanvasNodeThemeTests
     // Content and ContentTemplate; forgetting the SELECTOR alongside them leaves it set on the node and never asked,
     // and the node grows to hold a body that draws nothing at all.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheNodeHandsItsTemplateSelectorToWhatDrawsTheContent(string theme)
     {
@@ -714,7 +714,7 @@ public class CanvasNodeThemeTests
     // THE FOLD GOES BOTH WAYS. A switch that only ever folds is a node nobody can open again - and the strip is all
     // that is left of one, so there is nowhere else to reach for.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheFoldOpensTheNodeAgain(string theme)
     {
@@ -734,7 +734,7 @@ public class CanvasNodeThemeTests
 
     // Clicked, not written: a click goes through SetCurrentValue and has to survive the round trip through the binding.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheFoldKeepsAnsweringWhenItIsClicked(string theme)
     {
@@ -757,7 +757,7 @@ public class CanvasNodeThemeTests
 
     // Somebody else writing the same property - the inspector row bound to it - must not mask the switch for good.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheFoldStillAnswersAfterSomethingElseWroteTheProperty(string theme)
     {
@@ -781,7 +781,7 @@ public class CanvasNodeThemeTests
 
     // And using the switch must not promote the property to a stronger slot, or it kills whatever else drives it.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheFoldLeavesThePropertyWhereItWasDrivenFrom(string theme)
     {
@@ -833,7 +833,7 @@ public class CanvasNodeThemeTests
 
     // ...and the switch FOLLOWS the node, so folding it from the inspector shows on the strip too.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheFoldShowsWhatTheNodeIs(string theme)
     {
@@ -851,7 +851,7 @@ public class CanvasNodeThemeTests
 
     // FOLDING a node down to its strip is how a big graph is read: what is finished gets out of the way.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AFoldedNodeIsOnlyItsStrip(string theme)
     {
@@ -867,7 +867,7 @@ public class CanvasNodeThemeTests
     // AND ITS WIRES STILL LAND SOMEWHERE - all of one side's on one stub. A socket that answered nothing would drop the
     // wire, and a disc per socket turns a folded node back into a caterpillar as wide as its socket count.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AFoldedNodeBringsEachSidesWiresToOneStub(string theme)
     {
@@ -916,7 +916,7 @@ public class CanvasNodeThemeTests
 
     // A side with NO sockets shows no stub: an anchor for wires that cannot exist is a lie about the node.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AFoldedNodeShowsNoStubOnASideWithNoSockets(string theme)
     {
@@ -998,7 +998,7 @@ public class CanvasNodeThemeTests
     // A node with nothing in it costs nothing: a presenter with no content measures to nothing, and the node stays
     // exactly as wide as its sockets.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AnEmptyNodeIsNoWiderThanItWas(string theme)
     {
@@ -1014,7 +1014,7 @@ public class CanvasNodeThemeTests
     // wears the THEME's accent - which is not the node's: a green node grew a blue pill in its own strip. The checked
     // look is a brush the toggle carries now, so a toggle standing on somebody else's color can say "not painted".
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AFoldedNodesButtonDoesNotWearTheThemesAccent(string theme)
     {
@@ -1047,7 +1047,7 @@ public class CanvasNodeThemeTests
     // The measure is in WORLD units now and the camera is a transform on the drawing, so this is a fact about the
     // layer rather than a number to be re-tuned - which is exactly why it is worth a test.
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ANodeIsMeasuredTheSameAtEveryZoom(string theme)
     {

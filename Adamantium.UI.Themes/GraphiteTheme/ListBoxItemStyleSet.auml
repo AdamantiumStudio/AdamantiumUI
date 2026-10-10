@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's row: a minimum height (padding is minimal) and a flat selection plate, keeping the accent for what is
+    <!-- Graphite's row: a minimum height (padding is minimal) and a flat selection plate, keeping the accent for what is
          current. Properties, then the template, then the triggers. -->
 
     <Style Selector="ListBoxItem">

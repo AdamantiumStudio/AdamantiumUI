@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's table: flat, no frame, rows at RowHeight; a header bar with sort chevron and funnel; selection is a
+    <!-- Graphite's table: flat, no frame, rows at RowHeight; a header bar with sort chevron and funnel; selection is a
          wash (see ListBoxItemStyleSet). -->
 
     <Style Selector="TreeDataGrid">

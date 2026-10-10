@@ -144,8 +144,8 @@ public class CanvasPaletteTests
         SearchClears(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
     [Test]
-    public void TheSearchClearsByTheFieldsOwnButtonUnderEditorPro() =>
-        SearchClears(new Adamantium.UI.Themes.EditorProTheme.EditorPro());
+    public void TheSearchClearsByTheFieldsOwnButtonUnderGraphite() =>
+        SearchClears(new Adamantium.UI.Themes.GraphiteTheme.Graphite());
 
     private void SearchClears(Theme theme)
     {

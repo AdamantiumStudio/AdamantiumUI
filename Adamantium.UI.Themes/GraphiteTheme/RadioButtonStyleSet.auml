@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's radio: an empty ring with an accent dot, unlike the filled checkbox. -->
+    <!-- Graphite's radio: an empty ring with an accent dot, unlike the filled checkbox. -->
 
     <Style Selector="RadioButton">
         <Setter Property="Background" Value="Transparent"/>

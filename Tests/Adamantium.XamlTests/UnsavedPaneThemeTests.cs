@@ -26,7 +26,7 @@ public class UnsavedPaneThemeTests
         Theme theme = name switch
         {
             "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-            "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+            "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
             _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
         };
 
@@ -48,7 +48,7 @@ public class UnsavedPaneThemeTests
     }
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AChangedPane_WearsTheMark_UntilItIsSaved(string theme)
     {
@@ -75,7 +75,7 @@ public class UnsavedPaneThemeTests
     }
 
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheQuestion_HasEveryAnswer(string theme)
     {

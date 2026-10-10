@@ -127,7 +127,7 @@ All packages share one version.
   they were across a switch. Scripts adds Urdu in Nastaliq, Church Slavonic (Ponomar), Old Cyrillic (Monomakh) and the
   initials of the liturgical books (Vertograd).
 - Theme icons `LockIcon` (a padlock: what cannot be changed) and `CodeIcon` (angle brackets: the source of
-  something), in the Fluent icons the Fluent, macOS and Editor Pro themes share.
+  something), in the Fluent icons the Fluent, macOS and Graphite themes share.
 - Text in both directions. `TextDirection` on every element (inherited; `Auto` takes each paragraph's direction from
   its first strong letter): `TextBlock` and `TextBox` lay Hebrew right to left among Latin and numbers, and a
   right-to-left paragraph starts on the right. In such text the `TextBox` caret and selection go by the screen: the
@@ -338,7 +338,7 @@ All packages share one version.
 - A window shows its application's icon - the project's `ApplicationIcon` - on the taskbar and in Alt+Tab; it showed
   the system's blank one. The sandbox has an icon of its own, in the title bar too.
 - `Window.TitleAlignment`: `Center` puts the title in the middle of the whole window, however wide the commands and
-  buttons on either side are (`TitleBar.TitleCentering`), in Fluent and Editor Pro as macOS already did.
+  buttons on either side are (`TitleBar.TitleCentering`), in Fluent and Graphite as macOS already did.
 - `Window.StartupLocation`, as in WPF: `CenterOwner` by default - over the window that was active when it opened, else
   `CenterScreen`, the middle of the screen the pointer is on - or `Manual`, at `Left` and `Top`. Windows used to open in
   the top-left corner of the primary screen.
@@ -369,7 +369,7 @@ All packages share one version.
   `DocumentGroups` and `ToolGroups`, the put-away panels included.
 - A file whose root is `<Pane Header="Inspector" Kind="Tool" Zone="Right">` is a class of its own, as a `<View>` file
   is, with its own `x:ViewModel` or none: `<local:InspectorPane/>` puts it in a `DockingArea`.
-- `Pane.IsDirty`: the tab of a pane with unsaved work wears a mark in Fluent, Editor Pro and macOS. Closing such panes -
+- `Pane.IsDirty`: the tab of a pane with unsaved work wears a mark in Fluent, Graphite and macOS. Closing such panes -
   by a tab, a "close all" or the main window - asks ONE question for all of them, `UnsavedQuestion` (save, don't save,
   cancel) in an overlay window, worded by the theme (`PaneStrings`, `DockingArea.UnsavedTitle`).
   `DockingArea.AsksBeforeClosingUnsaved` (on by default) turns it off, `UnsavedClosing` answers in the user's place,
@@ -485,7 +485,7 @@ All packages share one version.
   alike - and an image only the pictures of the project and the folders holding them; a type the build would reject is
   underlined as it is typed. A `Type`-valued attribute is completed in its value too, not only in `{x:Type}`.
 - `ApplicationBlueprint`: what an application starts with, written in markup - `<ApplicationBlueprint StartupWindow=
-  "MainWindow" StartupTheme="EditorPro" StartupThemeVariant="Light">` with its `Resources` and `StyleIncludes`. The
+  "MainWindow" StartupTheme="Graphite" StartupThemeVariant="Light">` with its `Resources` and `StyleIncludes`. The
   build makes it a class, names it to the assembly and writes the entry point, so a project has no `Program.cs`; the
   application reads it through `IApplicationBlueprint` while it initializes, the theme and its variant before the
   first frame, and what its own code sets wins over it. A project holds one blueprint and one application class: a
@@ -618,6 +618,10 @@ All packages share one version.
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
+
+- The Editor Pro theme is called Graphite now, so its name no longer reads as the paid controls': the class is
+  `Adamantium.UI.Themes.GraphiteTheme.Graphite`, its variants `GraphiteDark` and `GraphiteLight`, its name
+  (`StartupTheme`, `IThemeManager`) `"Graphite"`, and the templates' `--theme Graphite`. Nothing else changed in it.
 
 - `Adamantium.UI.FX` compiles the UI's shaders with `Adamantium.Vulkan.Slang` 1.0.12: the same Slang compiler, in the
   package that also ships `slangd`.

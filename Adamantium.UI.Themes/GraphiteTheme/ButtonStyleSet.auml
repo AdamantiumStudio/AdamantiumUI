@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's button: a hairline outline at rest, filled only under the pointer; the flat form is Button.Toolbar.
+    <!-- Graphite's button: a hairline outline at rest, filled only under the pointer; the flat form is Button.Toolbar.
          Properties, then the template, then the triggers. -->
 
     <Style Selector="Button">

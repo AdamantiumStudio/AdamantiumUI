@@ -49,7 +49,7 @@ public class PropertyGridThemeTests
 
     private static Theme Fluent() => new Adamantium.UI.Themes.FluentTheme.Fluent();
 
-    private static Theme EditorPro() => new Adamantium.UI.Themes.EditorProTheme.EditorPro();
+    private static Theme Graphite() => new Adamantium.UI.Themes.GraphiteTheme.Graphite();
 
     private static PropertyGrid Built(bool withEmptyChoice = false)
     {
@@ -97,7 +97,7 @@ public class PropertyGridThemeTests
     public void ItKeepsItsPartsUnderFluent() => Parts(Fluent());
 
     [Test]
-    public void ItKeepsItsPartsUnderEditorPro() => Parts(EditorPro());
+    public void ItKeepsItsPartsUnderGraphite() => Parts(Graphite());
 
     private void Parts(Theme theme)
     {
@@ -129,7 +129,7 @@ public class PropertyGridThemeTests
     public void ItsSearchClearsByTheFieldsOwnButtonUnderFluent() => SearchClears(Fluent());
 
     [Test]
-    public void ItsSearchClearsByTheFieldsOwnButtonUnderEditorPro() => SearchClears(EditorPro());
+    public void ItsSearchClearsByTheFieldsOwnButtonUnderGraphite() => SearchClears(Graphite());
 
     private void SearchClears(Theme theme)
     {
@@ -158,7 +158,7 @@ public class PropertyGridThemeTests
     public void EveryRowIsLiveUnderFluent() => LiveEditors(Fluent());
 
     [Test]
-    public void EveryRowIsLiveUnderEditorPro() => LiveEditors(EditorPro());
+    public void EveryRowIsLiveUnderGraphite() => LiveEditors(Graphite());
 
     // An inspector is a FORM: every editable row carries its editor from the first frame. Nothing here should have to
     // be double-clicked to become editable - that would charge a gesture for every value on the page.
@@ -195,7 +195,7 @@ public class PropertyGridThemeTests
     public void EveryEditorIsTheSameHeightUnderFluent() => OneHeight(Fluent());
 
     [Test]
-    public void EveryEditorIsTheSameHeightUnderEditorPro() => OneHeight(EditorPro());
+    public void EveryEditorIsTheSameHeightUnderGraphite() => OneHeight(Graphite());
 
     // A form has ONE row height. Every editor that FILLS its half - a field, a spinner, a list - stands at that height,
     // including a list nobody filled: a control that shrank because it happens to be empty is what makes an inspector
@@ -246,7 +246,7 @@ public class PropertyGridThemeTests
     public void EveryRowUsesTheOneWidthUnderFluent() => OneWidth(Fluent());
 
     [Test]
-    public void EveryRowUsesTheOneWidthUnderEditorPro() => OneWidth(EditorPro());
+    public void EveryRowUsesTheOneWidthUnderGraphite() => OneWidth(Graphite());
 
     // Drag the grip on ONE row and every row follows: a per-row width would turn the inspector into a staircase.
     // Asked of the ARRANGED name half, not of the number that was written into the column - a width nothing re-measured
@@ -288,10 +288,10 @@ public class PropertyGridThemeTests
     // column of them reads as a form that has slipped.
     [TestCase("MacOs")]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     public void ADropDownPutsItsTextInTheMiddle(string named)
     {
-        Use(named switch { "MacOs" => MacOs(), "Fluent" => Fluent(), _ => EditorPro() });
+        Use(named switch { "MacOs" => MacOs(), "Fluent" => Fluent(), _ => Graphite() });
 
         var drop = new DropDown { Width = 140, Height = 26, MinHeight = 0, MinWidth = 0 };
         drop.Items.Add("Add");
@@ -323,10 +323,10 @@ public class PropertyGridThemeTests
     // there, and a list that centers its words when it is 26 pixels tall need not when it is told to fill.
     [TestCase("MacOs")]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     public void ADropDownInARowPutsItsTextInTheMiddle(string named)
     {
-        Use(named switch { "MacOs" => MacOs(), "Fluent" => Fluent(), _ => EditorPro() });
+        Use(named switch { "MacOs" => MacOs(), "Fluent" => Fluent(), _ => Graphite() });
 
         var target = new Target();
         var choice = new ChoiceProperty

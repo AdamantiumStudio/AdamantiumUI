@@ -41,7 +41,7 @@ public class CanvasChromeThemeTests
     private static Theme ThemeNamed(string name) => name switch
     {
         "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
-        "EditorPro" => new Adamantium.UI.Themes.EditorProTheme.EditorPro(),
+        "Graphite" => new Adamantium.UI.Themes.GraphiteTheme.Graphite(),
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
@@ -76,7 +76,7 @@ public class CanvasChromeThemeTests
 
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ACanvasArrivesWearingItsOwnPanels(string theme)
     {
@@ -92,7 +92,7 @@ public class CanvasChromeThemeTests
 
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EachPanelHoldsTheControlItIsFor(string theme)
     {
@@ -117,7 +117,7 @@ public class CanvasChromeThemeTests
     // Each piece is pointed at the canvas by the pane it rides in, so nothing in a page has to wire them up.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryPieceKnowsWhichCanvasItIsFor(string theme)
     {
@@ -143,7 +143,7 @@ public class CanvasChromeThemeTests
     // nothing else.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryPanelIsGivenRoomOnTheGlass(string theme)
     {
@@ -176,7 +176,7 @@ public class CanvasChromeThemeTests
     // canvas's own, so a page binds nothing - and a button bound to a command that is not there does nothing at all.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheInspectorCarriesTheSameActions(string theme)
     {
@@ -293,7 +293,7 @@ public class CanvasChromeThemeTests
     // and a panel that offers the buttons on a node's row and not on a shape's is two panels in one place.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheNumberRowsFollowTheCanvassSwitch(string theme)
     {
@@ -348,7 +348,7 @@ public class CanvasChromeThemeTests
     // out from under the hand between one press and the next.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheNumberRowsFollowTheCanvassSideForTheirButtons(string theme)
     {
@@ -401,7 +401,7 @@ public class CanvasChromeThemeTests
     // of the canvas rather than settled in a theme.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheInspectorsGridsFollowTheCanvassResetButton(string theme)
     {
@@ -448,7 +448,7 @@ public class CanvasChromeThemeTests
     // and one theme that carried it while another did not would be a canvas that changed what it could do when dressed.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryThemeOffersTheLayerNumber(string theme)
     {
@@ -490,7 +490,7 @@ public class CanvasChromeThemeTests
     // asking what is selected - see CanvasKindConverter - so a panel never has to learn the kinds.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ThePictureLineIsShownForAPictureAndNotForAButton(string theme)
     {
@@ -733,7 +733,7 @@ public class CanvasChromeThemeTests
     // pair or the other, never both.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void ThePanelOffersTheDrawingsFileButtonsInADrawing(string theme)
     {
@@ -783,7 +783,7 @@ public class CanvasChromeThemeTests
     // in place and nothing on the plane could be reordered past a control.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void EveryThemeLeavesTheStackToTheCanvas(string theme)
     {
@@ -886,7 +886,7 @@ public class CanvasChromeThemeTests
     // saying the plane had lost them, and nothing but breaking the group open would bring them back.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheStructureOpensAGroupToWhatIsInIt(string theme)
     {
@@ -931,7 +931,7 @@ public class CanvasChromeThemeTests
     // fraction of its size. Themed on purpose: the floors come from the theme, so headless there is nothing to refuse.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AControlTooSmallForItselfWidensTheItemToMatch(string theme)
     {
@@ -959,7 +959,7 @@ public class CanvasChromeThemeTests
     // a thin control adrift in a large frame.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AControlFillsTheBoxItWasDrawnIn(string theme)
     {
@@ -985,7 +985,7 @@ public class CanvasChromeThemeTests
     // any other.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheCanvasPageOffersTheZoomAndItsLimits(string theme)
     {
@@ -1030,7 +1030,7 @@ public class CanvasChromeThemeTests
     // and on a shape nothing moved at all.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AColorPickedForAShapeLandsOnIt(string theme)
     {
@@ -1077,7 +1077,7 @@ public class CanvasChromeThemeTests
     // color could be picked for any of them. Controls hid it: theirs agree, so theirs had a swatch.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AColorCanBePickedForShapesThatDisagreeAboutIt(string theme)
     {
@@ -1127,7 +1127,7 @@ public class CanvasChromeThemeTests
     // arrived with nowhere to say what color it is.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AnImportedDrawingOffersItsColors(string theme)
     {
@@ -1207,7 +1207,7 @@ public class CanvasChromeThemeTests
     // is being looked at, and a drawing left somewhere out in the empty part of it is found by putting the camera back.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheCanvasPageOffersWhereTheCameraIs(string theme)
     {
@@ -1265,7 +1265,7 @@ public class CanvasChromeThemeTests
     // finding it by hand and keeping that.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheHomeItGoesBackToCanBePutBack(string theme)
     {
@@ -1347,7 +1347,7 @@ public class CanvasChromeThemeTests
     // too fat to see anything through.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void AThicknessIsNudgedByTheSameAmountOnScreenAtAnyZoom(string theme)
     {
@@ -1405,7 +1405,7 @@ public class CanvasChromeThemeTests
     // window's own corner is what "a piece of the panel flew to the top left" looks like.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void NoSectionEscapesThePanelWhenTheSelectionChangesKind(string theme)
     {
@@ -1459,7 +1459,7 @@ public class CanvasChromeThemeTests
     // HOW MUCH IS ON THE PLANE, over the list of it.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheStructureSaysHowMuchIsOnThePlane(string theme)
     {
@@ -1488,7 +1488,7 @@ public class CanvasChromeThemeTests
     // WHAT EACH THING IS, in the list of the plane: the theme's word for its kind, then what it was called.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheStructureSaysWhatEachThingIs(string theme)
     {
@@ -1512,7 +1512,7 @@ public class CanvasChromeThemeTests
     // more, and the plane's own question with its own answer.
     [Test]
     [TestCase("Fluent")]
-    [TestCase("EditorPro")]
+    [TestCase("Graphite")]
     [TestCase("MacOs")]
     public void TheQuestionSaysWhatItTakesAway(string theme)
     {

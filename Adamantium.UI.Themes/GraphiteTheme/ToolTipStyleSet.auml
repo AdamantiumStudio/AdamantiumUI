@@ -2,7 +2,7 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Editor Pro's tooltip: a square hairline label on a darker-than-panel ground (no shadow), with top-left content so
+    <!-- Graphite's tooltip: a square hairline label on a darker-than-panel ground (no shadow), with top-left content so
          extra lines grow downward. -->
 
     <Style Selector="ToolTip">
