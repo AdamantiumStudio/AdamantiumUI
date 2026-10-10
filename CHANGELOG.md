@@ -21,8 +21,10 @@ All packages share one version.
   a larger run.
 
 - `InlineUIContainer` among a `TextBlock`'s inlines, as WPF's: a control set into the line. It takes the room its size
-  asks for, stands on the baseline (a `BaselineShift` raises it), raises a line it is taller than, wraps and aligns as a
-  word does and follows its own size. The control is the block's visual child and its container's logical one, so it
+  asks for, raises a line it is taller than, wraps and aligns as a word does and follows its own size. Its container's
+  `BaselineAlignment` places it across the line: on the baseline (the default) the control's own baseline - the first
+  line of text it shows, as a button's label, else its bottom - stands on the line's; `Center`, `Top`, `Bottom`,
+  `TextTop` and `TextBottom` place its box; a `BaselineShift` adds to it. The control is the block's visual child and its container's logical one, so it
   takes input, focus, its DataContext and the theme as any control; automation finds it under the block, and the
   block's name leaves it out. In markup it is written inside an explicit `<InlineUIContainer>`. Horizontal text only.
   Sandbox Text tab, Basics topic: a check box, a button and a tall swatch in a wrapping line.
