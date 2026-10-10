@@ -2,6 +2,7 @@
     <Phrase Key="WindowTitle" Text="Adamantium Sandbox"/>
     <Phrase Key="Diagnostics" Text="Diagnostics"/>
     <Phrase Key="AnalyticAa" Text="Analytic AA"/>
+    <Phrase Key="VerifyFrames" Text="Verify frames"/>
     <Phrase Key="Presentation" Text="Presentation"/>
     <Phrase Key="Language" Text="Language"/>
     <Phrase Key="Theme" Text="Theme"/>

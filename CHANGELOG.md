@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`), every frame a window
+  records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on a device of
+  its own. Each frame that differs is written to a session folder: the live and reference pictures, their difference,
+  a close-up, the frame before, and a report of how the frame was drawn, what it changed (motion nodes included) and
+  which groups of the two caches meet the difference and how they differ. Counts of verified, differing and skipped
+  frames; off, it costs one read per frame. Sandbox: "Verify frames" in the diagnostics panel, counts on the plate.
+
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
 

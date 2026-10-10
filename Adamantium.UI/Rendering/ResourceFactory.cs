@@ -53,4 +53,12 @@ public class ResourceFactory : IResourceFactory
 
         return renderer;
     }
+
+    public void ReleaseDevice(IGraphicsDevice graphicsDevice)
+    {
+        if (_fontRenderers.Remove(graphicsDevice, out var renderer))
+        {
+            renderer.Dispose();
+        }
+    }
 }

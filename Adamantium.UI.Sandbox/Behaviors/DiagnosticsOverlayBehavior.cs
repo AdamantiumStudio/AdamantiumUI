@@ -93,6 +93,14 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         }
     }
 
+    private static string VerificationLine()
+    {
+        var verification = Adamantium.UI.UIApplication.Current?.FrameVerification;
+        return verification is { IsEnabled: true }
+            ? $"\nverified {verification.VerifiedFrames}   DIFFER {verification.MismatchedFrames}   skipped {verification.SkippedFrames}"
+            : string.Empty;
+    }
+
     private string DumpChurn(out int total)
     {
         var text = new System.Text.StringBuilder();
@@ -222,7 +230,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             $"gpuWait {avgWait,5:F2}  present {avgPresent,5:F2}  gc {avgGc,5:F2} ms\n" +
             $"processors {avgProcs,4:F1}    other {other,4:F1} ms\n" +
             $"measure/arrange  {measure - _lastMeasure} / {arrange - _lastArrange}\n" +
-            $"bindings {bindings - _lastBindings}    anim {AnimationManager.ActiveCount}";
+            $"bindings {bindings - _lastBindings}    anim {AnimationManager.ActiveCount}" +
+            VerificationLine();
 
         // TEMP: dump the in-memory frame ring once a second (four refresh windows) - one file write, not one per frame.
         if (Dumps && ++_traceWindows >= 4)

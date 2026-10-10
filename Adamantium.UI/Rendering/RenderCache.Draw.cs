@@ -530,6 +530,7 @@ public partial class RenderCache
         var traceStart = Core.Diagnostics.FrameTrace.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         LastFrameReplayed = false;
         LastFrameWithheld = false;
+        LastDrawPath = DrawPath.Walk;
         DrawWalkMs = 0;
         _traceWhy = 0;
         try
@@ -595,6 +596,9 @@ public partial class RenderCache
     /// A walk is O(scene) and a replay is O(dirty). Tests assert it, so a regression to "one dirty element re-draws
     /// everything" is caught as a failure rather than as a slower frame nobody notices.</summary>
     public bool LastFrameReplayed { get; private set; }
+
+    /// <summary>Which way the last frame was drawn.</summary>
+    internal DrawPath LastDrawPath { get; private set; }
 
     /// <summary>Why the last frame WALKED instead of patching: 0 none, 1 nothing recorded, 2 stream unusable, 3 transform
     /// dirty, 4 layout changed since the record, 5 the splice refused, 6 the slot patch refused. A walk is O(scene) where a
@@ -691,6 +695,7 @@ public partial class RenderCache
             RefreshMovedScissors(fullScissor);    // the viewports they carried past are world-space rects - derive again
             AcceptPatchedTransforms();
             LastFrameReplayed = true;
+            LastDrawPath = DrawPath.Replay;
             DrawMovedMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
             phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
             ExecuteOps(device, fullScissor);
@@ -704,7 +709,7 @@ public partial class RenderCache
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && TryPartialReplay(device, fullScissor))
-        { LastFrameReplayed = true; return; }
+        { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
         // SPLICED partial patch: a dirty control's unit COUNT changed (hover background 0<->1, a live chart re-recording a
         // different number of segments). Its group re-rendered in place; here the retained BATCH is patched by segment
@@ -712,7 +717,7 @@ public partial class RenderCache
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && TrySplicedPatch(device, fullScissor))
-        { LastFrameReplayed = true; return; }
+        { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
         // TEMP trace: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
         // every one of these is a 43 ms frame among 0.12 ms ones.

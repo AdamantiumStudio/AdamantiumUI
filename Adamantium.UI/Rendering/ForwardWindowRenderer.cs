@@ -1,11 +1,13 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Rendering.Verification;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
@@ -13,6 +15,10 @@ namespace Adamantium.UI.Rendering;
 public class ForwardWindowRenderer : WindowRendererBase
 {
     private readonly RenderCache _renderCache;
+    private volatile FrameVerifier _verifier;
+    private readonly ConcurrentQueue<FrameVerifier> _retiredVerifiers = new();
+    private IRenderTarget _drawnTarget;
+
     public ForwardWindowRenderer(IGraphicsDevice device, IRenderUnitFactory renderUnitFactory) : base(device, renderUnitFactory)
     {
         _renderCache = new RenderCache(DrawingContext, renderUnitFactory);
@@ -92,6 +98,8 @@ public class ForwardWindowRenderer : WindowRendererBase
         base.Retarget(window);
         if (!another || window is not Controls.Base.UIComponent root) return;
 
+        RetireVerifier();
+
         Core.RenderDirtyRouter.Forget(_renderCache.Dirty);
         _renderCache.Dirty = Core.RenderDirtyRouter.NewScope();
         root.ClaimRenderScope(_renderCache.Dirty);
@@ -122,6 +130,7 @@ public class ForwardWindowRenderer : WindowRendererBase
 
         GraphicsDevice.SetViewports(Viewport);
         GraphicsDevice.SetScissors(Scissor);
+        _drawnTarget = Presenter.RenderTarget;
         var t0 = Stopwatch.GetTimestamp();
         _renderCache.Render(GraphicsDevice, Scissor);
         RuntimeStats.LastRenderDrawMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
@@ -157,6 +166,7 @@ public class ForwardWindowRenderer : WindowRendererBase
     public override void RecordData()
     {
         if (Window == null) return;
+        TrackVerification();
         var t0 = Stopwatch.GetTimestamp();
         _renderCache.RecordFrame(Window);
         _lastRecordMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
@@ -188,6 +198,42 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastRenderProcMs = Stopwatch.GetElapsedTime(t1).TotalMilliseconds;
     }
 
+    private void TrackVerification()
+    {
+        var settings = FrameVerification.Active;
+        if (settings != null && _verifier == null && _retiredVerifiers.IsEmpty)
+        {
+            _verifier = new FrameVerifier(settings, Window, GraphicsDevice, Window.UIContext.Resolve<IResourceFactory>());
+            _renderCache.Observer = _verifier;
+        }
+        else if (settings == null)
+        {
+            RetireVerifier();
+        }
+    }
+
+    private void RetireVerifier()
+    {
+        if (_verifier == null)
+        {
+            return;
+        }
+
+        _renderCache.Observer = null;
+        _retiredVerifiers.Enqueue(_verifier);
+        _verifier = null;
+    }
+
+    public override void OnFrameEnded()
+    {
+        base.OnFrameEnded();
+        _verifier?.FrameEnded(_renderCache, Presenter, _drawnTarget, GraphicsDevice, RenderScale);
+        while (_retiredVerifiers.TryDequeue(out var retired))
+        {
+            retired.Dispose();
+        }
+    }
+
     // Inline record+apply, unchanged externally: the headless designer's one-shot render and a single-threaded BeginDraw
     // both go through here. Otherwise RecordData runs at loop level and BeginDraw calls ApplyData only.
     public override void PrepareData()
@@ -204,6 +250,13 @@ public class ForwardWindowRenderer : WindowRendererBase
     // (swapchain) via the base. The owning render device is disposed by WindowRenderService.UnloadContent after this.
     public override void Dispose()
     {
+        _renderCache.Observer = null;
+        _verifier?.Dispose();
+        _verifier = null;
+        while (_retiredVerifiers.TryDequeue(out var retired))
+        {
+            retired.Dispose();
+        }
         _renderCache.DisposeUnits();
         _renderCache.DisposeDeviceResources();   // the batch rings + transform table: nothing else owns them
         Core.RenderDirtyRouter.Forget(_renderCache.Dirty);   // ...and this window's marks: nobody records from them now

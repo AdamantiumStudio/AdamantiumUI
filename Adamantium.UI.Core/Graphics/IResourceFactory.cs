@@ -23,4 +23,9 @@ public interface IResourceFactory
         ImageLayout desiredLayout);
     
     FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice);
+
+    /// <summary>Frees what was made for a device that is going away.</summary>
+    void ReleaseDevice(IGraphicsDevice graphicsDevice)
+    {
+    }
 }

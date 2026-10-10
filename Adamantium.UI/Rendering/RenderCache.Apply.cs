@@ -26,6 +26,7 @@ public partial class RenderCache
 
         while (_published.TryDequeue(out var packet))
         {
+            Observer?.Applied(packet);
             ApplyPacket(packet);
             packet.Reset(RenderBuildKind.Clean);
             _spare.Add(packet);   // back to the pool for the recorder

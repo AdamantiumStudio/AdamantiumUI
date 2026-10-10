@@ -86,6 +86,12 @@
                 <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
                               IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
+                <!-- The frame verifier: checks every fast-path frame against a full walk while a rendering bug is hunted;
+                     the plate shows its counts, the verify folder its reports. -->
+                <ToggleSwitch Content="{Localize MainStrings.VerifyFrames}"
+                              AutomationProperties.AutomationId="VerifyFrames"
+                              IsChecked="{Binding VerifyFrames, Mode=TwoWay}"
+                              Margin="0,0,0,12"/>
                 <!-- Present mode; changing it rebuilds the swapchain, so the picture blinks once. -->
                 <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"/>
                 <DropDown ItemsSource="{Binding PresentPolicies}"

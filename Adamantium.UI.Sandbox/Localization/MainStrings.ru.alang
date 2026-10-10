@@ -2,6 +2,7 @@
     <Phrase Key="WindowTitle" Text="Песочница Adamantium"/>
     <Phrase Key="Diagnostics" Text="Диагностика"/>
     <Phrase Key="AnalyticAa" Text="Аналитическое сглаживание"/>
+    <Phrase Key="VerifyFrames" Text="Сверка кадров"/>
     <Phrase Key="Presentation" Text="Вывод кадров"/>
     <Phrase Key="Language" Text="Язык"/>
     <Phrase Key="Theme" Text="Тема"/>
