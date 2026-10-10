@@ -282,6 +282,9 @@ public abstract class TextBoxBase : Control
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
     private HorizontalTextAlignment _lastShapedAlignment;
+    private SpacingRange _lastShapedWordSpacing;
+    private SpacingRange _lastShapedLetterSpacing;
+    private double _lastShapedTracking;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
     private LineBreaking _lastShapedLineBreaking;
@@ -349,6 +352,9 @@ public abstract class TextBoxBase : Control
         _textLayout.LineBreaking = LineBreaking;
         _textLayout.TabStops = TabStops;
         _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
+        _textLayout.WordSpacing = WordSpacing;
+        _textLayout.LetterSpacing = LetterSpacing;
+        _textLayout.Tracking = Tracking;
 
         // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
         var iFont = _textLayout.Font;
@@ -365,7 +371,8 @@ public abstract class TextBoxBase : Control
         var shaping = TextShaping(font);
         if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
-            && _lastShapedAlignment == HorizontalTextAlignment
+            && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
+            && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
@@ -408,6 +415,9 @@ public abstract class TextBoxBase : Control
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
         _lastShapedAlignment = HorizontalTextAlignment;
+        _lastShapedWordSpacing = WordSpacing;
+        _lastShapedLetterSpacing = LetterSpacing;
+        _lastShapedTracking = Tracking;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;

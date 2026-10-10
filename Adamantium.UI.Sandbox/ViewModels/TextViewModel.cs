@@ -184,6 +184,21 @@ public partial class TextViewModel : TabPageViewModel
     public string SpanishSample =>
         "La internacionalización de las aplicaciones tipográficas extraordinariamente sofisticadas necesita diccionarios.";
 
+    [Bindable, Affects(nameof(WordSpacing))] private double _wordMinimum = 80;
+
+    [Bindable, Affects(nameof(WordSpacing))] private double _wordMaximum = 133;
+
+    [Bindable, Affects(nameof(LetterSpacing))] private double _letterMinimum;
+
+    [Bindable, Affects(nameof(LetterSpacing))] private double _letterMaximum;
+
+    [Bindable] private double _tracking;
+
+    // InDesign's justification settings of the paragraph topic, in percents of the space.
+    public SpacingRange WordSpacing => new(Math.Min(WordMinimum, 100) / 100, 1, Math.Max(WordMaximum, 100) / 100);
+
+    public SpacingRange LetterSpacing => new(Math.Min(LetterMinimum, 0) / 100, 0, Math.Max(LetterMaximum, 0) / 100);
+
     // Genesis 1:1-2, unpointed.
     public string HebrewSample =>
         "בראשית ברא אלהים את השמים ואת הארץ. והארץ היתה תהו ובהו וחשך על פני תהום ורוח אלהים מרחפת על פני המים.";

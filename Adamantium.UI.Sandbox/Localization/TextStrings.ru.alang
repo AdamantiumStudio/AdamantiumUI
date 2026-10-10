@@ -65,6 +65,9 @@
     <Phrase Key="Justify" Text="По ширине"/>
     <Phrase Key="SoftHyphens" Text="Мягкие переносы (U+00AD)"/>
     <Phrase Key="HyphenationEditor" Text="Редактор"/>
+    <Phrase Key="WordSpacing" Text="Межсловные, мин. и макс. %"/>
+    <Phrase Key="LetterSpacing" Text="Межбуквенные, мин. и макс. %"/>
+    <Phrase Key="Tracking" Text="Трекинг"/>
     <Phrase Key="LineLength" Text="Длина строки"/>
     <Phrase Key="Tiers" Text="Ярусы"/>
     <Phrase Key="LineTop" Text="Сверху"/>

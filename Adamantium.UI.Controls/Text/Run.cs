@@ -56,6 +56,9 @@ public class Run : Inline
     public static readonly AdamantiumProperty ColorPaletteProperty = AdamantiumProperty.Register(nameof(ColorPalette),
         typeof(int?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
+    public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
+        typeof(double?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
     public string Text
     {
         get => GetValue<string>(TextProperty);
@@ -144,6 +147,14 @@ public class Run : Inline
     {
         get => GetValue<int?>(ColorPaletteProperty);
         set => SetValue(ColorPaletteProperty, value);
+    }
+
+    /// <summary>Space added after each character of this run, in thousandths of an em; null takes the TextBlock's
+    /// <c>Tracking</c>.</summary>
+    public double? Tracking
+    {
+        get => GetValue<double?>(TrackingProperty);
+        set => SetValue(TrackingProperty, value);
     }
 
     private static void OnRunPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

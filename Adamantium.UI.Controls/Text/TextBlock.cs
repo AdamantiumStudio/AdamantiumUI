@@ -139,6 +139,9 @@ public class TextBlock : InputUIComponent
     private double _lastColumnGap;
     private ExclusionList _lastExclusions;
     private WritingMode _lastWritingMode;
+    private SpacingRange _lastWordSpacing;
+    private SpacingRange _lastLetterSpacing;
+    private double _lastTracking;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private TextAttributes _lastShaping;
@@ -182,6 +185,9 @@ public class TextBlock : InputUIComponent
         _textLayout.DropCap = dropCap;
         var vertical = WritingMode == WritingMode.VerticalRightToLeft;
         _textLayout.WritingMode = WritingMode;
+        _textLayout.WordSpacing = WordSpacing;
+        _textLayout.LetterSpacing = LetterSpacing;
+        _textLayout.Tracking = Tracking;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -211,7 +217,9 @@ public class TextBlock : InputUIComponent
             && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
-            && _lastWritingMode == WritingMode && ShapesLike(_lastShaping, shaping))
+            && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
+            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
+            && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
             GuardHits++;
@@ -277,6 +285,9 @@ public class TextBlock : InputUIComponent
         _lastColumnGap = ColumnGap;
         _lastExclusions = Exclusions;
         _lastWritingMode = WritingMode;
+        _lastWordSpacing = WordSpacing;
+        _lastLetterSpacing = LetterSpacing;
+        _lastTracking = Tracking;
         return _cachedSize;
 
         Size Lay() => attributed == null
@@ -532,6 +543,7 @@ public class TextBlock : InputUIComponent
                 Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
                 Language = run.Language,
                 ColorPalette = run.ColorPalette,
+                Tracking = run.Tracking,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
                 Foreground = (run.Foreground as SolidColorBrush)?.Color,
                 Background = (run.Background as SolidColorBrush)?.Color,
