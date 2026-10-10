@@ -64,5 +64,33 @@
                      FontSize="32"/>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
+             underlined footnote mark carries its line up with it. -->
+        <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="BaselineShiftSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="E = mc"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineShift="9"/>
+                <Run Text="   H"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineShift="-4"/>
+                <Run Text="O   x"/>
+                <Run Text="n+1"
+                     FontSize="13"
+                     BaselineShift="9"/>
+                <Run Text="   footnote"/>
+                <Run Text="1"
+                     FontSize="13"
+                     BaselineShift="9"
+                     TextDecorations="Underline"/>
+            </TextBlock.Inlines>
+        </TextBlock>
     </StackPanel>
 </View>

@@ -70,6 +70,8 @@
     <Phrase Key="Tracking" Text="Tracking"/>
     <Phrase Key="GlyphScaling" Text="Glyph scaling, min and max %"/>
     <Phrase Key="LastLine" Text="Last line:"/>
+    <Phrase Key="JustificationTitle" Text="Justification: each setting over the text it changes:"/>
+    <Phrase Key="BaselineShiftTitle" Text="Baseline shift: runs raised and lowered off the baseline, the line's height unchanged:"/>
     <Phrase Key="Kashidas" Text="Kashidas"/>
     <Phrase Key="SingleWord" Text="Single word:"/>
     <Phrase Key="AlignStart" Text="Start"/>

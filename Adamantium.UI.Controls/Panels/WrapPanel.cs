@@ -464,7 +464,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
             var x = accumulatedY;
             var y = accumulated;
             var width = childSize.Width;
-            var height = childSize.Height;
+            var height = lineSize;
             control.Arrange(new Rect(x, y, width, height));
             accumulatedY += childSize.Width;
          }

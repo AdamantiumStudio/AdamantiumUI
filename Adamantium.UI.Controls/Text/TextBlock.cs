@@ -562,6 +562,7 @@ public class TextBlock : InputUIComponent
                 Language = run.Language,
                 ColorPalette = run.ColorPalette,
                 Tracking = run.Tracking,
+                BaselineShift = run.BaselineShift,
                 FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
                 Foreground = (run.Foreground as SolidColorBrush)?.Color,
                 Background = (run.Background as SolidColorBrush)?.Color,
@@ -594,11 +595,30 @@ public class TextBlock : InputUIComponent
             {
                 DrawSquiggle(session, rect, brush);
             }
-            else
+            else if (adornment.Kind == TextAdornmentKind.Background)
             {
                 session.DrawRectangle(brush, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
             }
+            else
+            {
+                session.DrawRectangle(brush, OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height)));
+            }
         }
+    }
+
+    private Rect OnPixels(Rect line)
+    {
+        var vertical = WritingMode == WritingMode.VerticalRightToLeft;
+        var thickness = vertical ? line.Width : line.Height;
+        var snapped = line;
+        if (!this.Snap(ref snapped, ref thickness))
+        {
+            return line;
+        }
+
+        return vertical
+            ? new Rect(snapped.X, snapped.Y, thickness, snapped.Height)
+            : new Rect(snapped.X, snapped.Y, snapped.Width, thickness);
     }
 
     private void DrawSquiggle(IDrawingSession session, RectangleF band, Brush brush)

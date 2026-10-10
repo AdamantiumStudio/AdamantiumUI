@@ -70,6 +70,8 @@
     <Phrase Key="Tracking" Text="Трекинг"/>
     <Phrase Key="GlyphScaling" Text="Масштаб глифов, мин. и макс. %"/>
     <Phrase Key="LastLine" Text="Последняя строка:"/>
+    <Phrase Key="JustificationTitle" Text="Выключка по ширине: каждая настройка над текстом, который она меняет:"/>
+    <Phrase Key="BaselineShiftTitle" Text="Смещение базовой линии: участки подняты и опущены, высота строки та же:"/>
     <Phrase Key="Kashidas" Text="Кашиды"/>
     <Phrase Key="SingleWord" Text="Одно слово:"/>
     <Phrase Key="AlignStart" Text="В начале"/>

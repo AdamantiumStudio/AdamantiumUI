@@ -59,6 +59,9 @@ public class Run : Inline
     public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
         typeof(double?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
 
+    public static readonly AdamantiumProperty BaselineShiftProperty = AdamantiumProperty.Register(nameof(BaselineShift),
+        typeof(double?), typeof(Run), new PropertyMetadata(null, OnRunPropertyChanged));
+
     public string Text
     {
         get => GetValue<string>(TextProperty);
@@ -155,6 +158,14 @@ public class Run : Inline
     {
         get => GetValue<double?>(TrackingProperty);
         set => SetValue(TrackingProperty, value);
+    }
+
+    /// <summary>How far this run is raised above the line's baseline, as InDesign's baseline shift; negative lowers
+    /// it. Its size and the line's height stay as they are. Null leaves it on the baseline.</summary>
+    public double? BaselineShift
+    {
+        get => GetValue<double?>(BaselineShiftProperty);
+        set => SetValue(BaselineShiftProperty, value);
     }
 
     private static void OnRunPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
