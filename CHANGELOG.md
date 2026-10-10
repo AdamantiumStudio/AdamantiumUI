@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `HorizontalTextAlignment` on `TextBox` (and every `TextBoxBase`): wrapped lines left, centered, right or justified,
+  the caret, clicks and selection following the stretched text. Sandbox Paragraph topic: the editor is justified with
+  the columns, and a Hebrew column shows justified right-to-left text, its last line on the right. The caret of an
+  empty right-to-left field that wraps stands on the right.
 - Vertical text on `TextBlock`: `WritingMode="VerticalRightToLeft"` runs its lines down, as long as the block is high
   (its `Height`, else the height it is given), and stacks them from its right edge, however wide the slot; the block
   asks to be as wide as they take, and `Columns` stack one under another. Glyphs turned on their side draw turned in the glyph batch (`GlyphItem.Second.z`),

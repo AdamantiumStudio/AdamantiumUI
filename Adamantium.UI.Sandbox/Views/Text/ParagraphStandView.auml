@@ -207,6 +207,26 @@
                 </Border>
             </StackPanel>
 
+            <!-- Right to left: lines start on the right, and justified, the last line stays there. -->
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,16">
+                <TextBlock Text="עברית (he)"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="{Binding ColumnWidth}"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="HebrewColumn"
+                               Text="{Binding HebrewSample}"
+                               Language="he"
+                               TextWrapping="WrapByWords"
+                               TextTrimming="CharEllipses"
+                               FontSize="18"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"/>
+                </Border>
+            </StackPanel>
+
             <!-- Japanese breaks between any two characters but by the kinsoku rules: no line starts with a closing
                  bracket, a small kana or a full stop, and none ends with an opening bracket. -->
             <StackPanel Orientation="Vertical"
@@ -261,7 +281,8 @@
                          AcceptsReturn="True"
                          FontSize="18"
                          Width="{Binding ColumnWidth}"
-                         HorizontalAlignment="Left"/>
+                         HorizontalAlignment="Left"
+                         HorizontalTextAlignment="{Binding ColumnAlignment}"/>
             </StackPanel>
         </WrapPanel>
 
