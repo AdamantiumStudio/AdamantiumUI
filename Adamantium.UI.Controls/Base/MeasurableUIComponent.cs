@@ -805,7 +805,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         // KEEP _previousMeasure (cached constraint) and _previousArrange (slot): the manager re-measures/re-arranges this
         // node into them. The IsMeasureValid/IsArrangeValid=false flags, not nulled caches, are what force the re-run.
 
-        if (_previousMeasure != null)
+        if (_previousMeasure != null && !LayoutManager.HasCollapsedAncestor(this))
         {
             // Already measured: re-measure THIS node with its cached constraint. The manager propagates up to the parent
             // ONLY if this re-measure actually CHANGES our DesiredSize (i.e. the parent's measure genuinely depends on
@@ -837,7 +837,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         InvalidateGeometryFromLayout();
         // _previousArrange is KEPT (the last correct slot) - see InvalidateMeasure. IsArrangeValid=false forces re-arrange.
 
-        if (_previousArrange != null)
+        if (_previousArrange != null && !LayoutManager.HasCollapsedAncestor(this))
         {
             // Re-arrange just this subtree into its own last slot, so nothing is parked at the origin.
             LayoutManager.For(this).InvalidateArrange(this);

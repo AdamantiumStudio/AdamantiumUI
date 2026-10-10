@@ -15,6 +15,34 @@
                          StrokeThickness="1"/>
     </DrawingImage>
 
+    <!-- Match case: a capital and a small letter drawn side by side - search telling the two apart. -->
+    <DrawingImage x:Key="MatchCaseIcon">
+        <GeometryDrawing Geometry="M0.5,9 L2.75,1.5 L5,9 M1.3,6.5 L4.2,6.5 M9.2,4.8 L9.2,9 M9.2,6.8 C9.2,5.4 8.4,4.8 7.6,4.8 C6.6,4.8 6,5.7 6,6.9 C6,8.1 6.6,9 7.6,9 C8.4,9 9.2,8.4 9.2,7"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
+    <!-- Whole word: a word over a bracket that closes on both its ends. -->
+    <DrawingImage x:Key="WholeWordIcon">
+        <GeometryDrawing Geometry="M4,2.5 L4,6.5 M4,4.4 C4,3.1 3.3,2.5 2.5,2.5 C1.6,2.5 1,3.3 1,4.5 C1,5.7 1.6,6.5 2.5,6.5 C3.3,6.5 4,5.9 4,4.6 M5.5,0.5 L5.5,6.5 M5.5,4.5 C5.5,3.1 6.3,2.5 7.1,2.5 C8.1,2.5 8.8,3.3 8.8,4.5 C8.8,5.7 8.1,6.5 7.1,6.5 C6.3,6.5 5.5,5.9 5.5,4.6 M0.5,8 L0.5,9.5 L9.5,9.5 L9.5,8"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
+    <!-- Regular expression: any character and a repeat - a dot and a star. -->
+    <DrawingImage x:Key="RegularExpressionIcon">
+        <GeometryDrawing Geometry="M1,7.5 L2.5,7.5 L2.5,9 L1,9 Z M7,1 L7,6 M4.8,2.2 L9.2,4.8 M4.8,4.8 L9.2,2.2"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
+    <!-- In selection: lines of text, the last one short - look only within what is selected. -->
+    <DrawingImage x:Key="FindInSelectionIcon">
+        <GeometryDrawing Geometry="M0,1.5 L10,1.5 M0,5 L10,5 M0,8.5 L6,8.5"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
     <!-- Code: angle brackets around a slash - the source of something. -->
     <DrawingImage x:Key="CodeIcon">
         <GeometryDrawing Geometry="M3,2 L0.5,5 L3,8 M7,2 L9.5,5 L7,8 M6,1 L4,9"

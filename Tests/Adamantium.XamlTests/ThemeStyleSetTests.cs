@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
@@ -88,6 +91,59 @@ public class ThemeStyleSetTests
         manager.AddStyleSet<LibraryStyleSet>();
 
         Assert.That(StylesOf(theme), Has.Length.EqualTo(1));
+    }
+
+    private sealed class DuskStyleSet : StyleSet
+    {
+        protected override void OnInitialize(ITheme theme)
+        {
+            Add(new Style { Selector = new StyleSelector { Types = { typeof(Border) } } });
+        }
+    }
+
+    private class Dusk() : Theme("dusk");
+
+    private sealed class Midnight : Dusk;
+
+    [Test]
+    public void ASetPerTheme_GoesToTheThemesItNames_AndTheirsDerived_TheOtherSetToTheRest()
+    {
+        var manager = new ThemeManager(new AdamantiumDependencyContainer());
+        var plain = new Theme("plain");
+        var dusk = new Dusk();
+        manager.AddTheme(plain.Name, plain);
+        manager.AddTheme(dusk.Name, dusk);
+
+        manager.AddStyleSet<LibraryStyleSet>(new Dictionary<Type, Type> { [typeof(Dusk)] = typeof(DuskStyleSet) });
+        var midnight = new Midnight();
+        manager.AddTheme("midnight", midnight);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.StyleSets.Select(set => set.GetType()), Is.EqualTo(new[] { typeof(LibraryStyleSet) }));
+            Assert.That(dusk.StyleSets.Select(set => set.GetType()), Is.EqualTo(new[] { typeof(DuskStyleSet) }));
+            Assert.That(midnight.StyleSets.Select(set => set.GetType()), Is.EqualTo(new[] { typeof(DuskStyleSet) }),
+                "a theme added later, of a type deriving from the one named");
+        });
+    }
+
+    [Test]
+    public void TheSameSetAddedWithOtherSetsPerTheme_Throws_AndWithTheSameOnes_AddsNothing()
+    {
+        var manager = new ThemeManager(new AdamantiumDependencyContainer());
+        var dusk = new Dusk();
+        manager.AddTheme(dusk.Name, dusk);
+        manager.AddStyleSet<LibraryStyleSet>(new Dictionary<Type, Type> { [typeof(Dusk)] = typeof(DuskStyleSet) });
+
+        manager.AddStyleSet<LibraryStyleSet>(new Dictionary<Type, Type> { [typeof(Dusk)] = typeof(DuskStyleSet) });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dusk.StyleSets, Has.Count.EqualTo(1));
+            Assert.Throws<InvalidOperationException>(() => manager.AddStyleSet<LibraryStyleSet>());
+            Assert.Throws<ArgumentException>(() =>
+                manager.AddStyleSet<DuskStyleSet>(new Dictionary<Type, Type> { [typeof(Dusk)] = typeof(Border) }));
+        });
     }
 
     [Test]

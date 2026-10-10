@@ -11,7 +11,7 @@ public class ThemeManager : IThemeManager
     private Dictionary<StyleSelector, IUIComponent> components;
     private TrackingCollection<ITheme> _themes;
     private IResourceManager _resourceManager;
-    private readonly List<Type> _styleSetsOfEveryTheme = [];
+    private readonly List<(Type Default, IReadOnlyDictionary<Type, Type> ByTheme)> _styleSetsOfEveryTheme = [];
 
     public IReadOnlyList<ITheme> Themes => _themes;
 
@@ -285,9 +285,9 @@ public class ThemeManager : IThemeManager
         theme.Initialize();
         lock (_styleSetsOfEveryTheme)
         {
-            foreach (var type in _styleSetsOfEveryTheme)
+            foreach (var (fallback, byTheme) in _styleSetsOfEveryTheme)
             {
-                theme.AddStyleSet((StyleSet)Activator.CreateInstance(type));
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(StyleSetFor(theme, fallback, byTheme)));
             }
         }
 
@@ -296,21 +296,63 @@ public class ThemeManager : IThemeManager
 
     public void AddStyleSet<T>() where T : StyleSet, new() => AddStyleSet(typeof(T));
 
-    public void AddStyleSet(Type styleSetType)
+    public void AddStyleSet(Type styleSetType) => AddStyleSet(styleSetType, null);
+
+    public void AddStyleSet<T>(IReadOnlyDictionary<Type, Type> byTheme) where T : StyleSet, new() =>
+        AddStyleSet(typeof(T), byTheme);
+
+    private void AddStyleSet(Type styleSetType, IReadOnlyDictionary<Type, Type> byTheme)
     {
+        foreach (var (theme, styleSet) in byTheme ?? new Dictionary<Type, Type>())
+        {
+            if (!typeof(StyleSet).IsAssignableFrom(styleSet) || styleSet.GetConstructor(Type.EmptyTypes) == null)
+            {
+                throw new ArgumentException(
+                    $"The style set for {theme.Name}, {styleSet.Name}, must be a StyleSet made without arguments.",
+                    nameof(byTheme));
+            }
+        }
+
         lock (_styleSetsOfEveryTheme)
         {
-            if (_styleSetsOfEveryTheme.Contains(styleSetType))
+            if (_styleSetsOfEveryTheme.FirstOrDefault(entry => entry.Default == styleSetType) is { Default: not null } added)
             {
+                if (!SameSets(added.ByTheme, byTheme))
+                {
+                    throw new InvalidOperationException(
+                        $"{styleSetType.Name} was added already, with other style sets for some themes.");
+                }
+
                 return;
             }
 
-            _styleSetsOfEveryTheme.Add(styleSetType);
+            _styleSetsOfEveryTheme.Add((styleSetType, byTheme));
             foreach (var theme in _themes)
             {
-                theme.AddStyleSet((StyleSet)Activator.CreateInstance(styleSetType));
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(StyleSetFor(theme, styleSetType, byTheme)));
             }
         }
+    }
+
+    private static bool SameSets(IReadOnlyDictionary<Type, Type> left, IReadOnlyDictionary<Type, Type> right) =>
+        (left?.Count ?? 0) == (right?.Count ?? 0) &&
+        (left ?? new Dictionary<Type, Type>()).All(pair =>
+            right != null && right.TryGetValue(pair.Key, out var other) && other == pair.Value);
+
+    private static Type StyleSetFor(ITheme theme, Type fallback, IReadOnlyDictionary<Type, Type> byTheme)
+    {
+        if (byTheme != null)
+        {
+            for (var type = theme.GetType(); type != null; type = type.BaseType)
+            {
+                if (byTheme.TryGetValue(type, out var styleSet))
+                {
+                    return styleSet;
+                }
+            }
+        }
+
+        return fallback;
     }
 
     public void RemoveTheme(string name)

@@ -41,6 +41,15 @@ public interface IThemeManager : IThemeEngine
     /// for a type known only at run time - an application blueprint's style includes.</summary>
     void AddStyleSet(Type styleSetType);
 
+    /// <summary>Adds a style set per theme, the themes added later included: for a theme <paramref name="byTheme"/>
+    /// names by its type - or a type it derives from - the style set given there, and <typeparamref name="T"/> for
+    /// every other. How a library gives its controls a look made for each theme it knows, and still one in a theme it
+    /// does not. Adding <typeparamref name="T"/> again with the same sets per theme adds nothing; with other ones it
+    /// throws.</summary>
+    /// <exception cref="ArgumentException">A set given is not a style set made without arguments.</exception>
+    /// <exception cref="InvalidOperationException"><typeparamref name="T"/> was added with other sets per theme.</exception>
+    void AddStyleSet<T>(System.Collections.Generic.IReadOnlyDictionary<Type, Type> byTheme) where T : StyleSet, new();
+
     void RemoveTheme(string name);
 
     void SetTheme(ITheme theme);

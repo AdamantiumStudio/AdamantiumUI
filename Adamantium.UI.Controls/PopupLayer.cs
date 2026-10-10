@@ -130,6 +130,7 @@ public class PopupLayer
             // fires for it. Anything that must wait for the content - a menu opened from the keyboard cannot step into
             // rows that do not exist yet - waits on this and retries until its condition holds.
             popup.NotifyLayerPass();
+            LayoutManager.For(child).SettleOverlay();
 
             // Full-window overlay (e.g. a modal dialog scrim): cover the whole window at the origin - no edge, no target.
             if (popup.FillWindow)

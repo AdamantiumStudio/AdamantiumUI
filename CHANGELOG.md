@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `IThemeManager.AddStyleSet<T>(byTheme)` and `AddStyleSetToThemes<T>(byTheme)` for a control's static constructor:
+  a style set made for each theme a library knows, by the theme's type (one deriving from it included), and `T` for
+  every other theme.
+
+- Theme icons `MatchCaseIcon`, `WholeWordIcon`, `RegularExpressionIcon` and `FindInSelectionIcon` for search
+  options.
+
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
   E = mc², H₂O, xⁿ⁺¹, an underlined footnote mark, and a slider moving an underlined, highlighted run.
@@ -668,6 +675,16 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- Controls in a `SlidePanel` or another popup kept the previous theme's templates and styles after a theme switch;
+  only their colors changed. Content a new template re-homes takes the new theme, open or closed.
+
+- An element under a collapsed one was measured and arranged on its own when it changed, at the size it asked for,
+  so a hidden control behaved as if it were on screen. Its layout now waits until the collapsed element is shown.
+
+- An open popup's content kept every element it had asked to be measured or arranged - removed ones too - for as
+  long as the popup lived: its layout queues were never drained. A measure a list in a popup put off to the next
+  frame, to finish filling, never ran either; it runs on the next frame now.
 
 - A `TextBlock` laid out again with the same text and size - a new last-line alignment, single-word justification,
   kashidas switched off, a run's baseline shift - kept its old glyphs on screen: the renderer told text apart only by
