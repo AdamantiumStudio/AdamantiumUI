@@ -116,6 +116,64 @@
                     Margin="8,0,0,0"/>
         </WrapPanel>
 
+        <!-- Where a justified paragraph's last line and a line of a single word stand. -->
+        <WrapPanel Orientation="Horizontal"
+                   Margin="0,12,0,0">
+            <TextBlock Text="{Localize TextStrings.LastLine}"
+                       VerticalAlignment="Center"
+                       MarginRight="8"/>
+            <RadioButton AutomationProperties.AutomationId="LastLineStartRadio"
+                         Classes="Toggle"
+                         GroupName="LastLine"
+                         Content="{Localize TextStrings.AlignStart}"
+                         MarginRight="6"
+                         IsChecked="{Binding LastLineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Left, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="LastLineCenterRadio"
+                         Classes="Toggle"
+                         GroupName="LastLine"
+                         Content="{Localize TextStrings.AlignCenter}"
+                         MarginRight="6"
+                         IsChecked="{Binding LastLineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="LastLineEndRadio"
+                         Classes="Toggle"
+                         GroupName="LastLine"
+                         Content="{Localize TextStrings.AlignEnd}"
+                         MarginRight="6"
+                         IsChecked="{Binding LastLineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Right, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="LastLineJustifyRadio"
+                         Classes="Toggle"
+                         GroupName="LastLine"
+                         Content="{Localize TextStrings.Justify}"
+                         MarginRight="24"
+                         IsChecked="{Binding LastLineAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Justify, Mode=TwoWay}"/>
+            <TextBlock Text="{Localize TextStrings.SingleWord}"
+                       VerticalAlignment="Center"
+                       MarginRight="8"/>
+            <RadioButton AutomationProperties.AutomationId="SingleWordStartRadio"
+                         Classes="Toggle"
+                         GroupName="SingleWord"
+                         Content="{Localize TextStrings.AlignStart}"
+                         MarginRight="6"
+                         IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Left, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="SingleWordCenterRadio"
+                         Classes="Toggle"
+                         GroupName="SingleWord"
+                         Content="{Localize TextStrings.AlignCenter}"
+                         MarginRight="6"
+                         IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="SingleWordEndRadio"
+                         Classes="Toggle"
+                         GroupName="SingleWord"
+                         Content="{Localize TextStrings.AlignEnd}"
+                         MarginRight="6"
+                         IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Right, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="SingleWordJustifyRadio"
+                         Classes="Toggle"
+                         GroupName="SingleWord"
+                         Content="{Localize TextStrings.Justify}"
+                         IsChecked="{Binding SingleWordJustification, Converter={conv:EnumToBoolConverter}, ConverterParameter=Justify, Mode=TwoWay}"/>
+        </WrapPanel>
+
         <!-- The same paragraph broken a line at a time and as a whole. -->
         <TextBlock Text="{Localize TextStrings.ParagraphTitle}"
                    Margin="0,16,0,8"/>
@@ -123,6 +181,8 @@
                    WordSpacing="{Binding WordSpacing}"
                    LetterSpacing="{Binding LetterSpacing}"
                    GlyphScaling="{Binding GlyphScaling}"
+                   LastLineAlignment="{Binding LastLineAlignment}"
+                   SingleWordJustification="{Binding SingleWordJustification}"
                    Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
@@ -211,6 +271,8 @@
                    WordSpacing="{Binding WordSpacing}"
                    LetterSpacing="{Binding LetterSpacing}"
                    GlyphScaling="{Binding GlyphScaling}"
+                   LastLineAlignment="{Binding LastLineAlignment}"
+                   SingleWordJustification="{Binding SingleWordJustification}"
                    Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">

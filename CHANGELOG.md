@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `LastLineAlignment` and `SingleWordJustification` on every element (inherited), taken by `TextBlock` and `TextBox`:
+  where a justified paragraph's last line and a line of a single word stand. Sandbox Paragraph topic: buttons for
+  both.
+
 - `GlyphScaling` (`"97% 100% 103%"`) and `JustificationAlternates` on every element (inherited), taken by
   `TextBlock` and `TextBox`. Sandbox Paragraph topic: sliders for the glyph scaling limits.
 

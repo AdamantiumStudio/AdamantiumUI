@@ -69,6 +69,11 @@
     <Phrase Key="LetterSpacing" Text="Межбуквенные, мин. и макс. %"/>
     <Phrase Key="Tracking" Text="Трекинг"/>
     <Phrase Key="GlyphScaling" Text="Масштаб глифов, мин. и макс. %"/>
+    <Phrase Key="LastLine" Text="Последняя строка:"/>
+    <Phrase Key="SingleWord" Text="Одно слово:"/>
+    <Phrase Key="AlignStart" Text="В начале"/>
+    <Phrase Key="AlignCenter" Text="По центру"/>
+    <Phrase Key="AlignEnd" Text="В конце"/>
     <Phrase Key="LineLength" Text="Длина строки"/>
     <Phrase Key="Tiers" Text="Ярусы"/>
     <Phrase Key="LineTop" Text="Сверху"/>

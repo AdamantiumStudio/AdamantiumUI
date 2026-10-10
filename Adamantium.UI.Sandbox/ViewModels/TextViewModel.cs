@@ -194,6 +194,10 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable] private double _tracking;
 
+    [Bindable] private HorizontalTextAlignment _lastLineAlignment = HorizontalTextAlignment.Left;
+
+    [Bindable] private HorizontalTextAlignment _singleWordJustification = HorizontalTextAlignment.Left;
+
     [Bindable, Affects(nameof(GlyphScaling))] private double _glyphMinimum = 100;
 
     [Bindable, Affects(nameof(GlyphScaling))] private double _glyphMaximum = 100;

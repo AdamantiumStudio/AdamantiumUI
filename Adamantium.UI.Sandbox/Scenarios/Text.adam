@@ -34,6 +34,10 @@ toggle id=OpticalMarginsToggle
 set id=ColumnWidthSlider 160
 expect id=ColumnWidthSlider value=160
 set id=ColumnWidthSlider 220
+select id=LastLineCenterRadio
+select id=SingleWordJustifyRadio
+select id=SingleWordStartRadio
+select id=LastLineStartRadio
 select id=TextView/name=Vertical
 wait id=Topic/id=VerticalStandView
 set id=LineLengthSlider 200
