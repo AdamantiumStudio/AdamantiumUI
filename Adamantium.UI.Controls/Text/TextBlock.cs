@@ -65,6 +65,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         typeof(FontFamily), typeof(TextBlock),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
 
+    public static readonly AdamantiumProperty MaxLinesProperty = AdamantiumProperty.Register(nameof(MaxLines),
+        typeof(int), typeof(TextBlock),
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
         new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
@@ -148,6 +152,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private HorizontalTextAlignment _lastLastLineAlignment;
     private HorizontalTextAlignment _lastSingleWord;
     private bool _lastKashidas;
+    private double _lastLineHeight = double.NaN;
+    private LineStackingStrategy _lastLineStacking;
+    private double _lastLineSpacing;
+    private int _lastMaxLines;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
@@ -210,6 +218,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
         _textLayout.Kashidas = Kashidas;
+        _textLayout.LineHeight = LineHeight;
+        _textLayout.LineStacking = LineStackingStrategy;
+        _textLayout.LineSpacing = LineSpacing;
+        _textLayout.MaxLines = MaxLines;
         var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
         FontResolveBytes += eb1 - eb0;
 
@@ -243,7 +255,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
-            && _lastKashidas == Kashidas
+            && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
+            && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
+            && _lastMaxLines == MaxLines
             && ShapesLike(_lastShaping, shaping))
         {
             GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
@@ -277,7 +291,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _textLayout.Exclusions = Exclusions;
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _cachedSize = Lay();
-        for (var grown = 0; growth > 0 && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
+        for (var grown = 0; growth > 0 && (MaxLines <= 0 || _textLayout.LineCount < MaxLines)
+                            && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
         {
             _textLayout.Frames = _textLayout.Frames
                 .Select(frame => vertical
@@ -335,6 +350,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _lastLastLineAlignment = LastLineAlignment;
         _lastSingleWord = SingleWordJustification;
         _lastKashidas = Kashidas;
+        _lastLineHeight = LineHeight;
+        _lastLineStacking = LineStackingStrategy;
+        _lastLineSpacing = LineSpacing;
+        _lastMaxLines = MaxLines;
         return _cachedSize;
 
         Size Lay() => attributed == null
@@ -365,8 +384,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                 _textLayout.Frames = [Frame(0, Unbounded)];
                 lay();
                 var lineHeight = Enumerable.Range(0, _textLayout.LineCount).Min(line => _textLayout.GetLine(line).Height);
-                growth = (float)lineHeight;
-                columnAcross = (float)(Math.Ceiling(_textLayout.LineCount / (double)columns) * lineHeight + 1);
+                var spacing = _textLayout.LineCount > 1
+                    ? Math.Max(0, _textLayout.GetLine(1).Top - _textLayout.GetLine(0).Top - _textLayout.GetLine(0).Height)
+                    : 0;
+                growth = (float)(lineHeight + spacing);
+                var rows = Math.Ceiling(_textLayout.LineCount / (double)columns);
+                columnAcross = (float)(rows * (lineHeight + spacing) - spacing + 1);
             }
         }
 
@@ -460,8 +483,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         set => SetValue(ExclusionsProperty, value);
     }
 
-    /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/>, so that the rest is not shown.</summary>
-    public bool IsOverset => _textLayout != null && _textLayout.Frames != null && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
+    /// <summary>The most lines shown, as Avalonia's; 0 (the default) for any number. The rest is not shown, or, with
+    /// <see cref="TextTrimming"/>, the last line ends in an ellipsis.</summary>
+    public int MaxLines
+    {
+        get => GetValue<int>(MaxLinesProperty);
+        set => SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/> or <see cref="MaxLines"/>, so
+    /// that the rest is not shown; trimmed text says so with its ellipsis instead.</summary>
+    public bool IsOverset => _textLayout != null && (_textLayout.Frames != null || _textLayout.MaxLines > 0)
+                                                 && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
     /// 2 or more; 0 (the default) for none. Text wrapped by words only.</summary>

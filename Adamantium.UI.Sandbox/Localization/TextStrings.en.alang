@@ -97,6 +97,13 @@
     <Phrase Key="RunShiftBefore" Text="The line holds "/>
     <Phrase Key="RunShiftRun" Text="a shifted run"/>
     <Phrase Key="RunShiftAfter" Text=" in its middle."/>
+    <Phrase Key="LinesTitle" Text="Lines: the distance between baselines, the space between lines and the most lines shown (0 for all); a larger run grows its line:"/>
+    <Phrase Key="LinesHeight" Text="Line height:"/>
+    <Phrase Key="LinesSpacing" Text="Spacing:"/>
+    <Phrase Key="LinesMost" Text="Most lines:"/>
+    <Phrase Key="LinesBefore" Text="Text set with a line height of its own keeps an even rhythm down the page, while "/>
+    <Phrase Key="LinesLarge" Text="a larger run"/>
+    <Phrase Key="LinesAfter" Text=" makes room for itself. Spacing opens the lines up, and a block that may show only a few lines ends the last of them in an ellipsis when there is more to read than it holds."/>
     <Phrase Key="Kashidas" Text="Kashidas"/>
     <Phrase Key="SingleWord" Text="Single word:"/>
     <Phrase Key="AlignStart" Text="Start"/>
