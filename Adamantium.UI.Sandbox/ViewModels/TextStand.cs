@@ -9,6 +9,10 @@ public enum TextStand
     [Display(Name = "Basics")]
     Basics,
 
+    /// <summary>Lines drawn with text: overlines, and lines with their own brush, thickness, dashes and offset.</summary>
+    [Display(Name = "Decorations & Effects")]
+    Decorations,
+
     /// <summary>Text boxes: one line, placeholder, read-only, several lines.</summary>
     [Display(Name = "Editing")]
     Editing,

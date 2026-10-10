@@ -13,6 +13,11 @@
             <WrapPanel Orientation="Horizontal" MarginBottom="10">
                 <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicBasics}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Basics, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             Content="{Localize TextStrings.TopicDecorations}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Decorations, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicEditing}" MarginRight="6" MarginBottom="6"
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Editing, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle" Content="{Localize TextStrings.TopicFaces}" MarginRight="6" MarginBottom="6"

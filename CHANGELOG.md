@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- Decoration lines on inlines, as WPF's text decorations: `TextDecorations="Overline"`, and `DecorationLines` - each
+  `TextDecoration` with its own `Location` (under, over, through the text or on the baseline), `Brush`, `Thickness`,
+  `DashArray` and `Offset`; a span's lines add to its inlines'. Sandbox Text tab, Basics topic: an overline, a dashed
+  red underline, a thick strikethrough, a doubled underline and a dotted baseline.
+
 - `BaselineAlignment` on inlines, as WPF's: `Superscript` and `Subscript` where the font sets them, `TextTop` and
   `TextBottom` at the block font's ascender and descender, `Top`, `Center` and `Bottom` of the line; a span gives it to
   its inlines, `BaselineShift` adds to it, underlines follow it. Sandbox Text tab, Basics topic: indices and small runs
