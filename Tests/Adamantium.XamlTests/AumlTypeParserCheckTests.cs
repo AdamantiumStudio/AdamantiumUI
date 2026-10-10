@@ -30,6 +30,7 @@ public class AumlTypeParserCheckTests
     [TestCase("<Border HorizontalAlignment=\"Left\"/>")]
     [TestCase("<TextBlock WordSpacing=\"80% 100% 133%\"/>")]
     [TestCase("<TextBlock LetterSpacing=\"-5% 0% 10%\" Tracking=\"50\"/>")]
+    [TestCase("<TextBlock GlyphScaling=\"97% 100% 103%\" JustificationAlternates=\"False\"/>")]
     public void TypesTheParserKnows_AreNotWarnedAbout(string element)
     {
         var warnings = AumlCodegenHarness.Warnings(WindowWith(element));

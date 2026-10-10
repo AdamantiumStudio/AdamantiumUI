@@ -42,6 +42,20 @@ public class TextBlockSpacingTests
     }
 
     [Test]
+    public void GlyphScaling_IsInheritedByTheText()
+    {
+        var text = new TextBlock { Text = "abc", FontSize = 20 };
+        var border = new Border { Child = text, GlyphScaling = new SpacingRange(1.1, 1.1, 1.1) };
+        var window = new Window { Width = 900, Height = 600, Content = border };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        Assert.That(text.Layout.GetTextData().Select(glyph => glyph.HorizontalScale), Is.All.EqualTo(1.1).Within(1e-9));
+    }
+
+    [Test]
     public void ARunsTracking_TakesPrecedence()
     {
         var text = new TextBlock { FontSize = 20 };

@@ -68,6 +68,7 @@
     <Phrase Key="WordSpacing" Text="Word spacing, min and max %"/>
     <Phrase Key="LetterSpacing" Text="Letter spacing, min and max %"/>
     <Phrase Key="Tracking" Text="Tracking"/>
+    <Phrase Key="GlyphScaling" Text="Glyph scaling, min and max %"/>
     <Phrase Key="LineLength" Text="Line length"/>
     <Phrase Key="Tiers" Text="Tiers"/>
     <Phrase Key="LineTop" Text="Top"/>

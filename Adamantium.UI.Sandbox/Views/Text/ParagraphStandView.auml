@@ -78,6 +78,29 @@
                     IsValueToolTipEnabled="True"
                     Value="{Binding LetterMaximum, Mode=TwoWay}"
                     Margin="0,0,24,0"/>
+            <TextBlock x:Name="GlyphScalingLabel"
+                       Text="{Localize TextStrings.GlyphScaling}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="GlyphMinimumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=GlyphScalingLabel}"
+                    Width="100"
+                    Minimum="90"
+                    Maximum="100"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding GlyphMinimum, Mode=TwoWay}"
+                    Margin="8,0,4,0"/>
+            <Slider AutomationProperties.AutomationId="GlyphMaximumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=GlyphScalingLabel}"
+                    Width="100"
+                    Minimum="100"
+                    Maximum="110"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding GlyphMaximum, Mode=TwoWay}"
+                    Margin="0,0,24,0"/>
             <TextBlock x:Name="TrackingLabel"
                        Text="{Localize TextStrings.Tracking}"
                        VerticalAlignment="Center"/>
@@ -99,6 +122,7 @@
         <WrapPanel Orientation="Horizontal"
                    WordSpacing="{Binding WordSpacing}"
                    LetterSpacing="{Binding LetterSpacing}"
+                   GlyphScaling="{Binding GlyphScaling}"
                    Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
@@ -186,6 +210,7 @@
                    LineBreaking="{Binding LineBreaking}"
                    WordSpacing="{Binding WordSpacing}"
                    LetterSpacing="{Binding LetterSpacing}"
+                   GlyphScaling="{Binding GlyphScaling}"
                    Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
