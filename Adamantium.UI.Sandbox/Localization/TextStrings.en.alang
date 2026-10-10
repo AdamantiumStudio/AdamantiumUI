@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Title" Text="Text — one topic at a time"/>
     <Phrase Key="TopicBasics" Text="Basics"/>
+    <Phrase Key="TopicDecorations" Text="Decorations &amp; Effects"/>
     <Phrase Key="TopicEditing" Text="Editing"/>
     <Phrase Key="TopicFaces" Text="Faces"/>
     <Phrase Key="TopicColor" Text="Color and emoji"/>
@@ -97,7 +98,8 @@
     <Phrase Key="RunShiftBefore" Text="The line holds "/>
     <Phrase Key="RunShiftRun" Text="a shifted run"/>
     <Phrase Key="RunShiftAfter" Text=" in its middle."/>
-    <Phrase Key="DecorationLinesTitle" Text="Decoration lines: an overline, and lines each with their own brush, thickness, dashes and offset:"/>
+    <Phrase Key="DecorationFlagsTitle" Text="Lines by name: under, through and over the text, and the wavy line of a spelling error:"/>
+    <Phrase Key="DecorationLinesTitle" Text="Decoration lines, each with its own brush, thickness, dashes and offset:"/>
     <Phrase Key="BaselineAlignmentTitle" Text="Baseline alignment: superscript and subscript where the font sets them; small runs at the top, middle and bottom of the line, and at the text's top and bottom:"/>
     <Phrase Key="LinesTitle" Text="Lines: the distance between baselines, the space between lines and the most lines shown (0 for all); a larger run grows its line:"/>
     <Phrase Key="LinesHeight" Text="Line height:"/>
