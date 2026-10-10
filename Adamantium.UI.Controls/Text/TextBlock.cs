@@ -8,6 +8,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -152,6 +153,10 @@ public class TextBlock : InputUIComponent
     private const char LineSeparator = (char)0x2028;
     private TextAttributes _lastShaping;
 
+    private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
+    private Hyperlink _pressedLink;
+    private int _focusedLink = -1;
+    private bool _overridingCursor;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -244,9 +249,19 @@ public class TextBlock : InputUIComponent
 
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
         _runFontsPending = false;
+        _links.Clear();
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
+        if (Focusable != _links.Count > 0)
+        {
+            SetCurrentValue(FocusableProperty, _links.Count > 0);
+        }
+
+        if (_focusedLink >= _links.Count)
+        {
+            _focusedLink = _links.Count - 1;
+        }
         _textLayout.Exclusions = Exclusions;
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _cachedSize = Lay();
@@ -562,6 +577,7 @@ public class TextBlock : InputUIComponent
     {
         var attributed = new AttributedText(text, shaping);
         var start = 0;
+        _links.Clear();
         ApplyInlines(_inlines, [], attributed, ref start);
         return attributed;
     }
@@ -583,7 +599,13 @@ public class TextBlock : InputUIComponent
                     start++;
                     break;
                 case Span span:
+                    var spanStart = start;
                     ApplyInlines(span.Inlines, chain, attributed, ref start);
+                    if (span is Hyperlink link)
+                    {
+                        _links.Add((spanStart, start, link));
+                    }
+
                     break;
             }
 
@@ -830,6 +852,171 @@ public class TextBlock : InputUIComponent
         DrawAdornments(session, backgrounds: true);
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
         DrawAdornments(session, backgrounds: false);
+        DrawFocusedLink(session);
+    }
+
+    private void DrawFocusedLink(IDrawingSession session)
+    {
+        if (_focusedLink < 0 || _focusedLink >= _links.Count)
+        {
+            return;
+        }
+
+        var (start, end, _) = _links[_focusedLink];
+        var pen = new Pen(Foreground, 1);
+        foreach (var rect in _textLayout.GetRangeRects(start, end))
+        {
+            session.DrawRectangle(Brushes.Transparent, new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height), pen);
+        }
+    }
+
+    internal IReadOnlyList<Hyperlink> Links => _links.ConvertAll(link => link.Link);
+
+    internal IReadOnlyList<Rect> LinkRects(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link))
+            {
+                return _textLayout.GetRangeRects(start, end)
+                    .Select(rect => new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height))
+                    .ToList();
+            }
+        }
+
+        return [];
+    }
+
+    internal string LinkText(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link))
+            {
+                return InlineText().Substring(start, end - start).Replace(LineSeparator, ' ');
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private Hyperlink LinkAt(Vector2 point)
+    {
+        if (_links.Count == 0)
+        {
+            return null;
+        }
+
+        var hit = _textLayout.HitTest(point.X - LinesShift(), point.Y);
+        if (!hit.IsInside)
+        {
+            return null;
+        }
+
+        foreach (var (start, end, link) in _links)
+        {
+            if (hit.Index >= start && hit.Index < end)
+            {
+                return link;
+            }
+        }
+
+        return null;
+    }
+
+    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        base.OnMouseMove(sender, e);
+        var overLink = LinkAt(e.GetPosition(this)) != null;
+        if (overLink && Mouse.OverrideCursor == null)
+        {
+            Mouse.OverrideCursor = Cursors.Of(CursorType.Hand);
+            _overridingCursor = true;
+        }
+        else if (!overLink && _overridingCursor)
+        {
+            Mouse.OverrideCursor = null;
+            _overridingCursor = false;
+        }
+    }
+
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (_overridingCursor)
+        {
+            Mouse.OverrideCursor = null;
+            _overridingCursor = false;
+        }
+    }
+
+    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(sender, e);
+        _pressedLink = LinkAt(e.GetPosition(this));
+        if (_pressedLink != null)
+        {
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(sender, e);
+        var link = LinkAt(e.GetPosition(this));
+        if (link != null && ReferenceEquals(link, _pressedLink))
+        {
+            e.Handled = true;
+            link.Activate();
+        }
+
+        _pressedLink = null;
+    }
+
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (_links.Count > 0)
+        {
+            var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+            _focusedLink = backwards ? _links.Count - 1 : 0;
+            InvalidateRender(false);
+        }
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        _focusedLink = -1;
+        InvalidateRender(false);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Tab:
+                var step = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0 ? -1 : 1;
+                if (_focusedLink + step >= 0 && _focusedLink + step < _links.Count)
+                {
+                    _focusedLink += step;
+                    InvalidateRender(false);
+                    e.Handled = true;
+                }
+
+                break;
+            case Key.Enter:
+            case Key.Space:
+                e.Handled = true;
+                _links[_focusedLink].Link.Activate();
+                break;
+        }
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new TextBlockAutomationPeer(this);
