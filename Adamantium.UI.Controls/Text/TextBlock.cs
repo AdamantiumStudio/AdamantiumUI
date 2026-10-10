@@ -149,7 +149,9 @@ public class TextBlock : InputUIComponent
     private bool _lastKashidas;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
+    private const char LineSeparator = (char)0x2028;
     private TextAttributes _lastShaping;
+
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -482,11 +484,16 @@ public class TextBlock : InputUIComponent
 
     // --- Bindable inline runs -----------------------------------------------------------------------------------------
     // When Inlines has content it REPLACES Text: the runs lay out as one attributed text, so they shape, wrap and align
-    // together. Each Run is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and this
-    // block listens to every Run's Changed to re-shape when a bound value updates.
+    // together. Each inline is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and
+    // this block listens to every inline's Changed - a span passes on its own inlines' - to re-shape when a bound value
+    // updates.
 
     /// <summary>Bindable inline content. When non-empty it is rendered instead of <see cref="Text"/>: each <see cref="Run"/>
-    /// carries its own bound text, color, size, background, lines, features and language.</summary>
+    /// carries its own bound text, color, size, background, lines, features and language, a <see cref="Span"/> (or
+    /// <see cref="Bold"/>, <see cref="Italic"/>, <see cref="Underline"/>) gives them to the inlines in it, and a
+    /// <see cref="LineBreak"/> ends the line. In markup the inlines and text can be written straight inside the block:
+    /// <c>&lt;TextBlock&gt;Hello &lt;Bold&gt;world&lt;/Bold&gt;&lt;/TextBlock&gt;</c>.</summary>
+    [Content]
     public InlineCollection Inlines
     {
         get
@@ -501,6 +508,8 @@ public class TextBlock : InputUIComponent
     }
 
     private bool HasInlines => _inlines is { Count: > 0 };
+
+    internal string ShownText => HasInlines ? InlineText().Replace(LineSeparator, '\n') : Text;
 
     private void OnInlinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
@@ -523,55 +532,123 @@ public class TextBlock : InputUIComponent
         if (_inlinesDirty || _inlineText == null)
         {
             var text = new StringBuilder();
-            foreach (var inline in _inlines)
-            {
-                if (inline is Run run)
-                {
-                    text.Append(run.Text);
-                }
-            }
-
+            AppendInlineText(_inlines, text);
             _inlineText = text.ToString();
         }
 
         return _inlineText;
     }
 
+    private static void AppendInlineText(InlineCollection inlines, StringBuilder text)
+    {
+        foreach (var inline in inlines)
+        {
+            switch (inline)
+            {
+                case Run run:
+                    text.Append(run.Text);
+                    break;
+                case LineBreak:
+                    text.Append(LineSeparator);
+                    break;
+                case Span span:
+                    AppendInlineText(span.Inlines, text);
+                    break;
+            }
+        }
+    }
+
     private AttributedText InlineAttributedText(string text, TextAttributes shaping)
     {
         var attributed = new AttributedText(text, shaping);
-        var family = FontFamily ?? DefaultFontFamily;
         var start = 0;
-        foreach (var inline in _inlines)
+        ApplyInlines(_inlines, [], attributed, ref start);
+        return attributed;
+    }
+
+    private void ApplyInlines(InlineCollection inlines, List<Inline> chain, AttributedText attributed, ref int start)
+    {
+        foreach (var inline in inlines)
         {
-            if (inline is not Run run)
+            chain.Add(inline);
+            switch (inline)
             {
-                continue;
+                case Run run:
+                    var length = (run.Text ?? string.Empty).Length;
+                    attributed.Apply(start, length, InlineAttributes(chain));
+                    start += length;
+                    break;
+                case LineBreak:
+                    attributed.Apply(start, 1, InlineAttributes(chain));
+                    start++;
+                    break;
+                case Span span:
+                    ApplyInlines(span.Inlines, chain, attributed, ref start);
+                    break;
             }
 
-            var length = (run.Text ?? string.Empty).Length;
-            var weight = run.FontWeight ?? FontWeight;
-            var style = run.FontStyle ?? FontStyle;
-            _runFontsPending |= !TryResolveFont(family, weight, style, run.FontStretch ?? FontStretch,
-                run.FontVariations ?? FontVariations, out var runFont);
-            attributed.Apply(start, length, new TextAttributes
+            chain.RemoveAt(chain.Count - 1);
+        }
+    }
+
+    // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
+    // and the lines add up.
+    private TextAttributes InlineAttributes(List<Inline> chain)
+    {
+        var fontSize = double.NaN;
+        Brush foreground = null;
+        Brush background = null;
+        var decorations = TextDecorations.None;
+        FontWeight? weight = null;
+        FontStyle? style = null;
+        FontStretch? stretch = null;
+        FontSynthesis? synthesis = null;
+        FontFeatureList features = null;
+        FontVariationList variations = null;
+        string language = null;
+        int? palette = null;
+        double? tracking = null;
+        double? shift = null;
+        foreach (var inline in chain)
+        {
+            if (!double.IsNaN(inline.FontSize))
             {
-                Font = runFont,
-                Synthesis = FontSynthesisRules.Needed(runFont, weight, style, run.FontSynthesis ?? FontSynthesis),
-                Features = Typography.FeaturesOf(run, run.FontFeatures ?? FontFeatures),
-                Language = run.Language,
-                ColorPalette = run.ColorPalette,
-                Tracking = run.Tracking,
-                BaselineShift = run.BaselineShift,
-                FontSize = double.IsNaN(run.FontSize) ? null : run.FontSize,
-                Foreground = (run.Foreground as SolidColorBrush)?.Color,
-                Background = (run.Background as SolidColorBrush)?.Color,
-                Decorations = run.TextDecorations == TextDecorations.None ? null : run.TextDecorations,
-            });
-            start += length;
+                fontSize = inline.FontSize;
+            }
+
+            foreground = inline.Foreground ?? foreground;
+            background = inline.Background ?? background;
+            decorations |= inline.TextDecorations;
+            weight = inline.FontWeight ?? weight;
+            style = inline.FontStyle ?? style;
+            stretch = inline.FontStretch ?? stretch;
+            synthesis = inline.FontSynthesis ?? synthesis;
+            features = inline.FontFeatures ?? features;
+            variations = inline.FontVariations ?? variations;
+            language = inline.Language ?? language;
+            palette = inline.ColorPalette ?? palette;
+            tracking = inline.Tracking ?? tracking;
+            shift = inline.BaselineShift ?? shift;
         }
 
-        return attributed;
+        var resolvedWeight = weight ?? FontWeight;
+        var resolvedStyle = style ?? FontStyle;
+        _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
+            stretch ?? FontStretch, variations ?? FontVariations, out var font);
+        return new TextAttributes
+        {
+            Font = font,
+            Synthesis = FontSynthesisRules.Needed(font, resolvedWeight, resolvedStyle, synthesis ?? FontSynthesis),
+            Features = Typography.FeaturesOf(chain[^1], features ?? FontFeatures),
+            Language = language,
+            ColorPalette = palette,
+            Tracking = tracking,
+            BaselineShift = shift,
+            FontSize = double.IsNaN(fontSize) ? null : fontSize,
+            Foreground = (foreground as SolidColorBrush)?.Color,
+            Background = (background as SolidColorBrush)?.Color,
+            Decorations = decorations == TextDecorations.None ? null : decorations,
+        };
     }
 
     private void DrawAdornments(IDrawingSession session, bool backgrounds)

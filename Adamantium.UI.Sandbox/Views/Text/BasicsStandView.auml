@@ -65,6 +65,78 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Spans: what a span sets goes to the runs in it that do not set their own; Bold, Italic and Underline are
+             spans with one thing set, they nest, and a LineBreak ends the line. -->
+        <TextBlock Text="{Localize TextStrings.SpansTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="SpansSample"
+                   FontSize="18"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.SpansPlain}"/>
+                <Bold>
+                    <Run Text="{Localize TextStrings.SpansBold}"/>
+                    <Italic>
+                        <Run Text="{Localize TextStrings.SpansBoldItalic}"/>
+                    </Italic>
+                </Bold>
+                <LineBreak/>
+                <Span Foreground="#38BDF8"
+                      FontSize="22">
+                    <Run Text="{Localize TextStrings.SpansColored}"/>
+                    <Underline>
+                        <Run Text="{Localize TextStrings.SpansUnderlined}"/>
+                    </Underline>
+                    <Run Text="{Localize TextStrings.SpansOwnColor}"
+                         Foreground="#F87171"/>
+                </Span>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- A LineBreak ends the line, not the paragraph: the Latin line after it stays in the Hebrew paragraph and
+             starts on the right; after a newline it is a paragraph of its own and starts on the left. -->
+        <TextBlock Text="{Localize TextStrings.LineBreakTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical"
+                        Margin="0,0,16,0">
+                <TextBlock Text="{Localize TextStrings.WithLineBreak}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="LineBreakSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם"/>
+                            <LineBreak/>
+                            <Run Text="Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Localize TextStrings.WithNewline}"
+                           Opacity="0.7"
+                           Margin="0,0,0,4"/>
+                <Border Width="240"
+                        Padding="6"
+                        BorderThickness="1"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                    <TextBlock AutomationProperties.AutomationId="NewlineSample"
+                               TextWrapping="WrapByWords"
+                               FontSize="18">
+                        <TextBlock.Inlines>
+                            <Run Text="שלום עולם&#10;Hello, world"/>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
         <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
              underlined footnote mark carries its line up with it. -->
         <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"

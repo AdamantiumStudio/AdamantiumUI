@@ -139,7 +139,17 @@ internal sealed class MarkupStructureCheck
         }
 
         var values = property.Values.OfType<AumlAstObjectNode>().ToList();
-        if (many || values.Count == 0)
+        if (many)
+        {
+            if (propertyType.IsCollection())
+            {
+                Items(values, propertyType, reference.Name);
+            }
+
+            return;
+        }
+
+        if (values.Count == 0)
         {
             return;
         }
@@ -187,8 +197,14 @@ internal sealed class MarkupStructureCheck
 
         if (type.FindPropertyWithAttribute(ContentAttribute, out var content))
         {
-            if (content.PropertyType == null || content.PropertyType.IsCollection())
+            if (content.PropertyType == null)
             {
+                return;
+            }
+
+            if (content.PropertyType.IsCollection())
+            {
+                Items(children, content.PropertyType, content.Name);
                 return;
             }
 
@@ -210,6 +226,36 @@ internal sealed class MarkupStructureCheck
         }
 
         Report(MarkupMessages.NoPlaceForChild(type.Name), children[0]);
+    }
+
+    private void Items(IEnumerable<AumlAstObjectNode> items, IResolvedType collection, string property)
+    {
+        if (ItemTypeOf(collection) is not { TypeKind: ResolvedTypeKind.Class or ResolvedTypeKind.Interface } item)
+        {
+            return;
+        }
+
+        foreach (var element in items)
+        {
+            if (TypeOf(element) is { } type && !PropertyValues.Fits(type, item))
+            {
+                Report(MarkupMessages.WrongValueType(type.Name, item.Name, property), element);
+            }
+        }
+    }
+
+    private static IResolvedType ItemTypeOf(IResolvedType collection)
+    {
+        for (var type = collection; type != null; type = type.BaseType)
+        {
+            var arguments = type.IsGenericType ? type.TypeArguments?.ToList() : null;
+            if (arguments is { Count: 1 })
+            {
+                return arguments[0];
+            }
+        }
+
+        return null;
     }
 
     private IResolvedType DataContextOf(AumlAstPropertyNode dataContext, IResolvedType context)

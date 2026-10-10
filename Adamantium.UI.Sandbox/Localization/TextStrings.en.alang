@@ -71,6 +71,16 @@
     <Phrase Key="GlyphScaling" Text="Glyph scaling, min and max %"/>
     <Phrase Key="LastLine" Text="Last line:"/>
     <Phrase Key="JustificationTitle" Text="Justification: each setting over the text it changes:"/>
+    <Phrase Key="SpansTitle" Text="Spans: Bold, Italic and Underline nest, a span's color and size go to its runs, a run's own win, LineBreak ends the line:"/>
+    <Phrase Key="SpansPlain" Text="Plain, then "/>
+    <Phrase Key="SpansBold" Text="bold, "/>
+    <Phrase Key="SpansBoldItalic" Text="bold italic"/>
+    <Phrase Key="SpansColored" Text="A blue span with "/>
+    <Phrase Key="SpansUnderlined" Text="an underlined part"/>
+    <Phrase Key="SpansOwnColor" Text=" and a red run of its own"/>
+    <Phrase Key="LineBreakTitle" Text="LineBreak ends the line, not the paragraph: after it the Latin line stays in the Hebrew paragraph and starts on the right; after a newline it is a paragraph of its own:"/>
+    <Phrase Key="WithLineBreak" Text="With LineBreak"/>
+    <Phrase Key="WithNewline" Text="With a newline"/>
     <Phrase Key="BaselineShiftTitle" Text="Baseline shift: runs raised and lowered off the baseline, the line's height unchanged:"/>
     <Phrase Key="RunShift" Text="Shift of the marked run:"/>
     <Phrase Key="RunShiftBefore" Text="The line holds "/>

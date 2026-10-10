@@ -954,7 +954,7 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         var text = Clipboard.GetText();
         if (string.IsNullOrEmpty(text)) return;
-        text = text.Replace("\r\n", "\n").Replace("\r", "\n");       // normalize line endings
+        text = text.Replace("\r\n", "\n").Replace("\r", "\n").Replace((char)0x2028, '\n');       // normalize line endings
         if (!AcceptsNewLines) text = text.Replace("\n", " ");        // single-line: newlines become spaces
         ReplaceSelection(text);
     }

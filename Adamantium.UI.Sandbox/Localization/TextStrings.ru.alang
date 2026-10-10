@@ -71,6 +71,16 @@
     <Phrase Key="GlyphScaling" Text="Масштаб глифов, мин. и макс. %"/>
     <Phrase Key="LastLine" Text="Последняя строка:"/>
     <Phrase Key="JustificationTitle" Text="Выключка по ширине: каждая настройка над текстом, который она меняет:"/>
+    <Phrase Key="SpansTitle" Text="Участки: Bold, Italic и Underline вкладываются, цвет и кегль участка достаются его отрезкам, свои у отрезка важнее, LineBreak кончает строку:"/>
+    <Phrase Key="SpansPlain" Text="Обычный, затем "/>
+    <Phrase Key="SpansBold" Text="жирный, "/>
+    <Phrase Key="SpansBoldItalic" Text="жирный курсив"/>
+    <Phrase Key="SpansColored" Text="Голубой участок с "/>
+    <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
+    <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="LineBreakTitle" Text="LineBreak кончает строку, а не абзац: после него латинская строка остаётся в абзаце на иврите и начинается справа; после перевода строки это отдельный абзац:"/>
+    <Phrase Key="WithLineBreak" Text="С LineBreak"/>
+    <Phrase Key="WithNewline" Text="С переводом строки"/>
     <Phrase Key="BaselineShiftTitle" Text="Смещение базовой линии: участки подняты и опущены, высота строки та же:"/>
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>

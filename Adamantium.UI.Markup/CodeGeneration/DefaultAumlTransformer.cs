@@ -16,6 +16,12 @@ public class DefaultAumlTransformer : IAumlTransformer
 
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
 
+    private const string ContentAttributeName = "Adamantium.UI.Core.ContentAttribute";
+
+    private const string ContentWrapperAttributeName = "Adamantium.UI.Core.ContentWrapperAttribute";
+
+    private const string TrimSurroundingWhitespaceAttributeName = "Adamantium.UI.Core.TrimSurroundingWhitespaceAttribute";
+
     private const string DataTemplateSetName = "DataTemplateSet";
 
     // {Localize Table, Key={Binding Kind}}: where a key known only at run time is read from.
@@ -23,6 +29,35 @@ public class DefaultAumlTransformer : IAumlTransformer
 
     // {Localize Table={Binding Phrases}, Key={Binding Name}}: where a table known only at run time is read from.
     private const string TableArgument = "Table";
+
+    private static string CollapsedSpaces(string text, bool trimStart, bool trimEnd)
+    {
+        var collapsed = new System.Text.StringBuilder(text.Length);
+        var space = false;
+        foreach (var c in text)
+        {
+            if (c is ' ' or '\t' or '\r' or '\n')
+            {
+                space = true;
+                continue;
+            }
+
+            if (space && (collapsed.Length > 0 || !trimStart))
+            {
+                collapsed.Append(' ');
+            }
+
+            space = false;
+            collapsed.Append(c);
+        }
+
+        if (space && !trimEnd && (collapsed.Length > 0 || !trimStart))
+        {
+            collapsed.Append(' ');
+        }
+
+        return collapsed.ToString();
+    }
 
     // Tokens of a shorthand collection: commas or spaces, but only outside a markup extension, whose own arguments are
     // separated the same way ("Auto, {Binding A, Mode=OneWay}, *").
@@ -828,6 +863,98 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
 
 
+        IResolvedType ResolvedTypeOf(IAumlAstTypeReference reference) =>
+            reference is { IsResolved: true } ? typeResolver.Resolve(reference.GetFullTypeName()) : null;
+
+        IResolvedType WrapperOf(IResolvedType collection) =>
+            collection?.GetAttribute(ContentWrapperAttributeName)?.NamedArguments is { } arguments &&
+            arguments.TryGetValue("WrapperType", out var wrapper) && wrapper != null
+                ? typeResolver.Resolve(wrapper.ToString())
+                : null;
+
+        List<T> WithoutSpaces<T>(List<T> nodes) where T : class, IAumlAstNode =>
+            nodes.Where(node => node is not AumlAstTextNode text || !ParserContext.IsXmlSpace(text.Text)).ToList();
+
+        bool IsContent(IAumlAstNode node) =>
+            node is AumlAstObjectNode || (node is AumlAstTextNode text && !ParserContext.IsXmlSpace(text.Text));
+
+        List<T> Wrapped<T>(List<T> nodes, IResolvedType wrapper) where T : class, IAumlAstNode
+        {
+            if (!wrapper.FindPropertyWithAttribute(ContentAttributeName, out var wrapperContent))
+            {
+                return WithoutSpaces(nodes);
+            }
+
+            var first = nodes.FindIndex(IsContent);
+            var last = nodes.FindLastIndex(IsContent);
+            var result = new List<T>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i] is not AumlAstTextNode text)
+                {
+                    result.Add(nodes[i]);
+                    continue;
+                }
+
+                var words = CollapsedSpaces(text.Text, first < 0 || i <= first || TrimsSpace(nodes, i - 1),
+                    i >= last || TrimsSpace(nodes, i + 1));
+                if (words.Length == 0)
+                {
+                    continue;
+                }
+
+                var info = text.GetLineInfo();
+                var wrapperReference = CreateResolved(wrapper, info);
+                var item = new AumlAstObjectNode(info, wrapperReference);
+                item.Children.Add(new AumlAstPropertyNode(info,
+                    new AumlAstPropertyReference(info, false, item, wrapperReference,
+                        CreateResolved(wrapperContent.PropertyType, info), wrapperContent.Name),
+                    new AumlAstTextNode(info, words)));
+                result.Add(item as T);
+            }
+
+            return result;
+        }
+
+        bool TrimsSpace<T>(List<T> nodes, int index) where T : class, IAumlAstNode =>
+            index >= 0 && index < nodes.Count && nodes[index] is AumlAstObjectNode { TypeReference: { } neighbor } &&
+            (neighbor.IsResolved ? ResolvedTypeOf(neighbor) : typeResolver.ResolveByShortName(neighbor.Name))?
+            .HasAttribute(TrimSurroundingWhitespaceAttributeName) == true;
+
+        void WrapText(AumlAstObjectNode objectNode)
+        {
+            if (!objectNode.Children.OfType<AumlAstTextNode>().Any())
+            {
+                return;
+            }
+
+            var content = ResolvedTypeOf(objectNode.TypeReference) is { } type &&
+                          type.FindPropertyWithAttribute(ContentAttributeName, out var found)
+                ? found
+                : null;
+            List<IAumlAstNode> children;
+            if (content?.PropertyType?.SpecialType == ResolvedSpecialType.System_String &&
+                objectNode.Children.Any(IsContent))
+            {
+                var texts = objectNode.Children.OfType<AumlAstTextNode>().ToList();
+                var info = texts[0].GetLineInfo();
+                children = objectNode.Children.Where(child => child is not AumlAstTextNode).ToList();
+                children.Add(new AumlAstPropertyNode(info,
+                    new AumlAstPropertyReference(info, false, objectNode, objectNode.TypeReference,
+                        CreateResolved(content.PropertyType, info), content.Name),
+                    new AumlAstTextNode(info, CollapsedSpaces(string.Concat(texts.Select(text => text.Text)), true, true))));
+            }
+            else
+            {
+                children = WrapperOf(content?.PropertyType) is { } wrapper
+                    ? Wrapped(objectNode.Children, wrapper)
+                    : WithoutSpaces(objectNode.Children);
+            }
+
+            objectNode.Children.Clear();
+            objectNode.Children.AddRange(children);
+        }
+
         var entityType = EntityType.Unknown;
         var usings = new Dictionary<string, string>();
 
@@ -858,6 +985,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             switch (element)
             {
                 case AumlAstObjectNode objectNode:
+                    WrapText(objectNode);
                     foreach (var child in objectNode.Children)
                     {
                         queue.Enqueue(child);
@@ -868,6 +996,19 @@ public class DefaultAumlTransformer : IAumlTransformer
                     ExpandShorthandCollection(propertyNode);
 
                     var reference = propertyNode.Property as AumlAstPropertyReference;
+                    if (propertyNode.Values.OfType<AumlAstTextNode>().Any())
+                    {
+                        if (reference is { IsAttachedProperty: false } &&
+                            WrapperOf(ResolvedTypeOf(reference.TargetType)) is { } wrapper)
+                        {
+                            propertyNode.Values = Wrapped(propertyNode.Values, wrapper);
+                        }
+                        else if (propertyNode.Values.Count > 1)
+                        {
+                            propertyNode.Values = WithoutSpaces(propertyNode.Values);
+                        }
+                    }
+
                     var takesType = reference is { IsAttachedProperty: false, TargetType.IsResolved: true }
                                     && reference.TargetType.GetFullTypeName() == "System.Type";
                     for (int i = 0; i < propertyNode.Values.Count; i++)
