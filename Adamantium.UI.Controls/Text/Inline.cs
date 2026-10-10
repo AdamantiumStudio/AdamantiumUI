@@ -18,48 +18,48 @@ namespace Adamantium.UI.Controls.Text;
 public abstract class Inline : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty ForegroundProperty = AdamantiumProperty.Register(nameof(Foreground),
-        typeof(Brush), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(Brush), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     // NaN = "inherit the enclosing span's or the TextBlock's FontSize".
     public static readonly AdamantiumProperty FontSizeProperty = AdamantiumProperty.Register(nameof(FontSize),
-        typeof(double), typeof(Inline), new PropertyMetadata(double.NaN, OnInlinePropertyChanged));
+        typeof(double), typeof(Inline), new PropertyMetadata(double.NaN, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty BackgroundProperty = AdamantiumProperty.Register(nameof(Background),
-        typeof(Brush), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(Brush), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty TextDecorationsProperty = AdamantiumProperty.Register(
         nameof(TextDecorations), typeof(TextDecorations), typeof(Inline),
-        new PropertyMetadata(TextDecorations.None, OnInlinePropertyChanged));
+        new PropertyMetadata(TextDecorations.None, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontWeightProperty = AdamantiumProperty.Register(nameof(FontWeight),
-        typeof(FontWeight?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontWeight?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontStyleProperty = AdamantiumProperty.Register(nameof(FontStyle),
-        typeof(FontStyle?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontStyle?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontStretchProperty = AdamantiumProperty.Register(nameof(FontStretch),
-        typeof(FontStretch?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontStretch?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontSynthesisProperty = AdamantiumProperty.Register(nameof(FontSynthesis),
-        typeof(FontSynthesis?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontSynthesis?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
-        typeof(FontFeatureList), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontFeatureList), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty FontVariationsProperty = AdamantiumProperty.Register(nameof(FontVariations),
-        typeof(FontVariationList), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(FontVariationList), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty LanguageProperty = AdamantiumProperty.Register(nameof(Language),
-        typeof(string), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(string), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty ColorPaletteProperty = AdamantiumProperty.Register(nameof(ColorPalette),
-        typeof(int?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(int?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
-        typeof(double?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(double?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty BaselineShiftProperty = AdamantiumProperty.Register(nameof(BaselineShift),
-        typeof(double?), typeof(Inline), new PropertyMetadata(null, OnInlinePropertyChanged));
+        typeof(double?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
@@ -170,6 +170,12 @@ public abstract class Inline : FundamentalUIComponent
 
     protected void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
 
-    private static void OnInlinePropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
-        => (a as Inline)?.RaiseChanged();
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)
+        {
+            RaiseChanged();
+        }
+    }
 }

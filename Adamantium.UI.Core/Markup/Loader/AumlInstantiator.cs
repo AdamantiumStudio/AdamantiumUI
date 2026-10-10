@@ -937,24 +937,44 @@ internal sealed class AumlInstantiator
 
         // Removed (present in the old markup, gone in the new): clear back to default.
         foreach (var name in oldProps.Keys)
-            if (!newProps.ContainsKey(name)) ResetProperty(live, name);
+        {
+            if (!newProps.ContainsKey(name))
+            {
+                ResetProperty(live, name);
+                ClearOwnedCollection(live, name);
+            }
+        }
 
         // Added / changed: re-apply ONLY when the value actually changed, so unchanged properties don't re-fire their
         // transitions (re-applying every property on each edit is exactly what made "the whole tree restart").
         foreach (var (name, newProp) in newProps)
         {
             if (oldProps.TryGetValue(name, out var oldProp) && NodeSignature(oldProp) == NodeSignature(newProp))
+            {
                 continue;
+            }
+
+            ClearOwnedCollection(live, name);
             ApplyPropertyNode(live, newProp);
         }
     }
 
     private void ReconcileChildren(object live, AumlAstObjectNode oldNode, AumlAstObjectNode newNode)
     {
-        if (live is not IContainer container) return;
-
         var oldKids = ObjectChildren(oldNode);
         var newKids = ObjectChildren(newNode);
+        if (live is not IContainer container)
+        {
+            var written = live.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(p => p.GetCustomAttribute<ContentAttribute>() != null)?.Name;
+            if (written == null || !PropertyNodes(newNode).ContainsKey(written))
+            {
+                RebuildContentList(live, oldKids, newKids);
+            }
+
+            return;
+        }
+
         // No child elements before or after: what the live container holds came from an attribute or a binding (a
         // Button's Content="Add", a list's ItemsSource), so there is nothing here to splice - rebuilding wiped it.
         if (oldKids.Count == 0 && newKids.Count == 0) return;
@@ -1019,6 +1039,29 @@ internal sealed class AumlInstantiator
         }
     }
 
+    private void RebuildContentList(object live, List<AumlAstObjectNode> oldKids, List<AumlAstObjectNode> newKids)
+    {
+        if (ContentListOf(live) is not { } list || (oldKids.Count == 0 && newKids.Count == 0))
+        {
+            return;
+        }
+
+        if (oldKids.Count == newKids.Count
+            && oldKids.Select(NodeSignature).SequenceEqual(newKids.Select(NodeSignature), StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        list.Clear();
+        foreach (var kid in newKids)
+        {
+            if (Instantiate(kid) is { } created)
+            {
+                list.Add(created);
+            }
+        }
+    }
+
     private void RebuildChildren(IContainer container, List<AumlAstObjectNode> newKids)
     {
         container.RemoveAllChildComponents();
@@ -1032,6 +1075,24 @@ internal sealed class AumlInstantiator
     private void ApplyPropertyNode(object instance, AumlAstPropertyNode prop)
     {
         if (prop.Property is AumlAstPropertyReference pref) ApplyProperty(instance, pref, prop);
+    }
+
+    private static void ClearOwnedCollection(object instance, string name)
+    {
+        var p = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+        if (p == null || p.CanWrite || !IsPopulatableCollection(p.PropertyType) || p.GetValue(instance) is not { } collection)
+        {
+            return;
+        }
+
+        if (collection is System.Collections.IList list)
+        {
+            list.Clear();
+        }
+        else
+        {
+            collection.GetType().GetMethod("Clear", Type.EmptyTypes)?.Invoke(collection, null);
+        }
     }
 
     private static void ResetProperty(object instance, string name)

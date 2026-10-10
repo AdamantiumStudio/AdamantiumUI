@@ -1,5 +1,4 @@
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
@@ -12,14 +11,13 @@ namespace Adamantium.UI.Controls.Text;
 public class Run : Inline
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
-        typeof(string), typeof(Run), new PropertyMetadata(string.Empty, OnTextChanged));
+        typeof(string), typeof(Run), new PropertyMetadata(string.Empty, PropertyMetadataOptions.AffectsMeasure));
 
+    /// <summary>The run's text; in markup it can be written as the element's content: <c>&lt;Run&gt;text&lt;/Run&gt;</c>.</summary>
+    [Content]
     public string Text
     {
         get => GetValue<string>(TextProperty);
         set => SetValue(TextProperty, value);
     }
-
-    private static void OnTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
-        => (a as Run)?.RaiseChanged();
 }

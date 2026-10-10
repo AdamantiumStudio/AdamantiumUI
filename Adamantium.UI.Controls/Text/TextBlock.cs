@@ -149,7 +149,9 @@ public class TextBlock : InputUIComponent
     private bool _lastKashidas;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
+    private const char LineSeparator = (char)0x2028;
     private TextAttributes _lastShaping;
+
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -489,7 +491,9 @@ public class TextBlock : InputUIComponent
     /// <summary>Bindable inline content. When non-empty it is rendered instead of <see cref="Text"/>: each <see cref="Run"/>
     /// carries its own bound text, color, size, background, lines, features and language, a <see cref="Span"/> (or
     /// <see cref="Bold"/>, <see cref="Italic"/>, <see cref="Underline"/>) gives them to the inlines in it, and a
-    /// <see cref="LineBreak"/> ends the line.</summary>
+    /// <see cref="LineBreak"/> ends the line. In markup the inlines and text can be written straight inside the block:
+    /// <c>&lt;TextBlock&gt;Hello &lt;Bold&gt;world&lt;/Bold&gt;&lt;/TextBlock&gt;</c>.</summary>
+    [Content]
     public InlineCollection Inlines
     {
         get
@@ -505,7 +509,7 @@ public class TextBlock : InputUIComponent
 
     private bool HasInlines => _inlines is { Count: > 0 };
 
-    internal string ShownText => HasInlines ? InlineText() : Text;
+    internal string ShownText => HasInlines ? InlineText().Replace(LineSeparator, '\n') : Text;
 
     private void OnInlinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
@@ -545,7 +549,7 @@ public class TextBlock : InputUIComponent
                     text.Append(run.Text);
                     break;
                 case LineBreak:
-                    text.Append('\n');
+                    text.Append(LineSeparator);
                     break;
                 case Span span:
                     AppendInlineText(span.Inlines, text);

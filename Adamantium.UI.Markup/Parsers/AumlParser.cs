@@ -21,7 +21,7 @@ public class AumlParser
     
     public static AumlDocument Parse(string aumlString)
     {
-        var root = XDocument.Parse(aumlString, LoadOptions.SetLineInfo).Root;
+        var root = XDocument.Parse(aumlString, LoadOptions.SetLineInfo | LoadOptions.PreserveWhitespace).Root;
 
         var context = new ParserContext(root);
         var rootNode = context.Parse();
@@ -201,10 +201,27 @@ public class ParserContext
         if (node is XElement xElement)
             return ParseAumlNode(xElement, false);
         if (node is XText xText)
+        {
+            if (IsXmlSpace(xText.Value) && !IsMixedContent(xText.Parent) && !SpacesTwoElementsOnALine(xText))
+            {
+                return null;
+            }
+
             return new AumlAstTextNode(node.ToLineInfo(), xText.Value);
+        }
 
         return null;
     }
+
+    /// <summary>Whether <paramref name="text"/> is only XML white space (space, tab, carriage return, line feed) - not
+    /// a no-break space, which is text.</summary>
+    public static bool IsXmlSpace(string text) => text.All(c => c is ' ' or '\t' or '\r' or '\n');
+
+    private static bool IsMixedContent(XElement element) =>
+        element != null && element.Elements().Any() && element.Nodes().OfType<XText>().Any(text => !IsXmlSpace(text.Value));
+
+    private static bool SpacesTwoElementsOnALine(XText text) =>
+        text.PreviousNode is XElement && text.NextNode is XElement && text.Value.IndexOfAny(['\r', '\n']) < 0;
 
     private List<IAumlAstValueNode> ParseValueNodes(XElement element)
     {

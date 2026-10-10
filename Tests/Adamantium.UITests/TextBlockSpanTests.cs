@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Adamantium.Fonts;
+using Adamantium.Fonts.Shaping;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -106,7 +107,7 @@ public class TextBlockSpanTests
         text.Inlines.Add(bold);
         Hosted(text, () => At(text, 4).Font.Weight == FontWeight.Bold);
 
-        Assert.That(text.Layout.Text, Is.EqualTo("one\ntwo"));
+        Assert.That(text.Layout.Text, Is.EqualTo("one" + (char)0x2028 + "two"), "a line separator, not a new paragraph");
         Assert.That(text.Layout.LineCount, Is.EqualTo(2));
         Assert.That(At(text, 4).Font.Weight, Is.EqualTo(FontWeight.Bold), "the runs after it keep their own spans");
     }
@@ -127,6 +128,21 @@ public class TextBlockSpanTests
         Hosted(text);
 
         Assert.That(text.Layout.Text, Is.EqualTo("a much longer text"));
+    }
+
+    [Test]
+    public void TypographyOnASpan_SetAfterLayout_LaysTheTextOutAgain()
+    {
+        var text = new TextBlock();
+        var span = new Span();
+        span.Inlines.Add(new Run { Text = "caps" });
+        text.Inlines.Add(span);
+        Hosted(text);
+
+        Typography.SetCapitals(span, FontCapitals.SmallCaps);
+        Hosted(text);
+
+        Assert.That(At(text, 0).Features, Has.Some.Matches<FontFeature>(feature => feature.ToString() == "smcp"));
     }
 
     [Test]

@@ -9,11 +9,21 @@ All packages share one version.
 
 - Spans in a `TextBlock`'s `Inlines`, as WPF's and Avalonia's: `Span` groups inlines and gives them what it sets
   (color, size, background, weight, style, features, language, tracking, baseline shift...), the nearer setting winning
-  and lines adding up; `Bold`, `Italic` and `Underline` are spans with one thing set; `LineBreak` ends the line. The
-  formatting properties moved from `Run` to `Inline`, so every inline has them (source-compatible; code compiled against
-  the old `Run.*Property` fields has to be rebuilt). A `TextBlock` of inlines is named by their text for automation.
-  Clearing `Inlines` lets go of every inline it held. Sandbox Text tab, Basics topic: nested
+  and lines adding up; `Bold`, `Italic` and `Underline` are spans with one thing set; `LineBreak` ends the line within
+  the paragraph (U+2028), which keeps its direction. The formatting properties moved from `Run` to `Inline`, so every
+  inline has them (source-compatible; code compiled against the old `Run.*Property` fields has to be rebuilt). A
+  `Typography.*` value set on an inline lays the text out again. A `TextBlock` of inlines is named by their text for
+  automation. Clearing `Inlines` lets go of every inline it held. Sandbox Text tab, Basics topic: nested
   bold and italic, a line break, a colored span with an underlined part and a run of its own color.
+
+- Text written straight into markup among inlines, as WPF's: `<TextBlock>Hello <Bold>world</Bold></TextBlock>`
+  holds runs, `<Run>text</Run>` is its text. White space collapses to one space, the ends of the content are trimmed,
+  and none is kept around a `LineBreak`. The build, the designer's loader and the language server read it alike
+  (`[Content]` on `TextBlock.Inlines` and `Run.Text`; `ContentWrapperAttribute` names the type text is wrapped in,
+  `TrimSurroundingWhitespaceAttribute` the elements white space is dropped around).
+
+- Markup reports an element of the wrong type in a collection where it stands - `<Bold><Button/></Bold>` - instead of
+  failing in the generated code.
 
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
@@ -677,6 +687,9 @@ All packages share one version.
 
 ### Fixed
 
+- A designer edit inside a collection the element owns (`<TextBlock.Inlines>`, `RowDefinitions`) added the edited items
+  to the ones already there, so the preview showed them twice; children written into a `[Content]` list were not
+  updated at all. Both are rebuilt now.
 - A `TextBlock` laid out again with the same text and size - a new last-line alignment, single-word justification,
   kashidas switched off, a run's baseline shift - kept its old glyphs on screen: the renderer told text apart only by
   its string and size. It compares the layout's revision too now.

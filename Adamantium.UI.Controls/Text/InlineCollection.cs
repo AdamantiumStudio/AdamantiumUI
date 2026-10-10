@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
+using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Text;
 
 /// <summary>The ordered inline content of a <see cref="TextBlock"/> or a <see cref="Span"/> (their <c>Inlines</c>). A
 /// typed <see cref="ObservableCollection{T}"/> so the owner re-lays-out when inlines are added or removed; clearing it
-/// reports each removed inline, so its owner lets go of every one.</summary>
+/// reports each removed inline, so its owner lets go of every one. Text written among the inlines in markup becomes a
+/// <see cref="Run"/>.</summary>
+[ContentWrapper(WrapperType = typeof(Run))]
 public class InlineCollection : ObservableCollection<Inline>
 {
     protected override void ClearItems()
