@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using Adamantium.Fonts;
 using Adamantium.Fonts.Shaping;
@@ -59,6 +60,40 @@ public class TextBlockSpanTests
         Assert.That(At(text, 1).Foreground, Is.EqualTo(Colors.Red));
         Assert.That(At(text, 3).FontSize, Is.EqualTo(10), "the run's own size wins");
         Assert.That(At(text, 3).Foreground, Is.EqualTo(Colors.Red), "what the run leaves unset comes from the span");
+    }
+
+    [Test]
+    public void DecorationLines_OfASpanAndItsRun_AddUp()
+    {
+        var text = new TextBlock();
+        var span = new Span();
+        span.DecorationLines.Add(new TextDecoration { Location = TextDecorationLocation.Overline, Thickness = 2 });
+        var run = new Run { Text = "ab" };
+        run.DecorationLines.Add(new TextDecoration
+        {
+            Brush = new SolidColorBrush(Colors.Red), Offset = 3, DashArray = [4, 2],
+        });
+        span.Inlines.Add(run);
+        text.Inlines.Add(span);
+        var window = new Window { Width = 600, Height = 300, Content = new Border { Child = text } };
+        WindowExtension.UpdateTree(window);
+
+        var lines = At(text, 0).DecorationLines;
+        Assert.That(lines.Select(line => line.Location),
+            Is.EqualTo(new[] { TextDecorationLocation.Overline, TextDecorationLocation.Underline }));
+        Assert.That(lines[0].Thickness, Is.EqualTo(2));
+        Assert.That(lines[1].Color, Is.EqualTo(Colors.Red));
+        Assert.That(lines[1].Offset, Is.EqualTo(3));
+        Assert.That(lines[1].Dashes, Is.EqualTo(new double[] { 4, 2 }));
+
+        run.DecorationLines[0].Offset = 5;
+        WindowExtension.UpdateTree(window);
+        Assert.That(At(text, 0).DecorationLines[1].Offset, Is.EqualTo(5), "a changed line lays the text out again");
+
+        run.DecorationLines[0].DashArray.Add(1);
+        WindowExtension.UpdateTree(window);
+        Assert.That(At(text, 0).DecorationLines[1].Dashes, Is.EqualTo(new double[] { 4, 2, 1 }), "so do its dashes");
+        Assert.Throws<ArgumentNullException>(() => run.DecorationLines.Add(null));
     }
 
     [Test]

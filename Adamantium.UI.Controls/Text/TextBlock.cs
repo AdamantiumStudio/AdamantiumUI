@@ -745,8 +745,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         double? tracking = null;
         double? shift = null;
         BaselineAlignment? alignment = null;
+        List<TextDecorationLine> lines = null;
         foreach (var inline in chain)
         {
+            if (inline.HasDecorationLines)
+            {
+                lines ??= [];
+                lines.AddRange(inline.DecorationLines.Select(line => line.ToLine()));
+            }
+
             if (!double.IsNaN(inline.FontSize))
             {
                 fontSize = inline.FontSize;
@@ -792,6 +799,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             Foreground = (foreground as SolidColorBrush)?.Color,
             Background = (background as SolidColorBrush)?.Color,
             Decorations = decorations == TextDecorations.None ? null : decorations,
+            DecorationLines = lines,
         };
     }
 
@@ -820,11 +828,27 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             {
                 session.DrawRectangle(brush, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
             }
+            else if (adornment.Dashes != null)
+            {
+                DrawDashedLine(session, OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height)), brush,
+                    adornment.Dashes);
+            }
             else
             {
                 session.DrawRectangle(brush, OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height)));
             }
         }
+    }
+
+    private void DrawDashedLine(IDrawingSession session, Rect band, Brush brush, IReadOnlyList<double> dashes)
+    {
+        var down = WritingMode == WritingMode.VerticalRightToLeft;
+        var thickness = down ? band.Width : band.Height;
+        var pen = new Pen(brush, thickness, dashStrokeArray: dashes, dashStartCap: PenLineCap.Flat,
+            dashEndCap: PenLineCap.Flat);
+        var middle = (down ? band.X : band.Y) + thickness / 2;
+        session.DrawLine(down ? new Vector2(middle, band.Y) : new Vector2(band.X, middle),
+            down ? new Vector2(middle, band.Y + band.Height) : new Vector2(band.X + band.Width, middle), pen);
     }
 
     private Rect OnPixels(Rect line)

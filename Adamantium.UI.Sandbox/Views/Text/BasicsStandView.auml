@@ -250,6 +250,52 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Decoration lines, as WPF's: an overline, and lines each with their own brush, thickness, dashes and
+             offset. -->
+        <TextBlock Text="{Localize TextStrings.DecorationLinesTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="DecorationLinesSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="overline"
+                     TextDecorations="Overline"/>
+                <Run Text="   "/>
+                <Run Text="dashed red">
+                    <Run.DecorationLines>
+                        <TextDecoration Location="Underline"
+                                        Brush="#F87171"
+                                        Thickness="2"
+                                        DashArray="6 3"/>
+                    </Run.DecorationLines>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="thick strike">
+                    <Run.DecorationLines>
+                        <TextDecoration Location="Strikethrough"
+                                        Brush="#38BDF8"
+                                        Thickness="4"/>
+                    </Run.DecorationLines>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="two lines">
+                    <Run.DecorationLines>
+                        <TextDecoration Location="Underline"/>
+                        <TextDecoration Location="Underline"
+                                        Offset="3"/>
+                    </Run.DecorationLines>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="baseline">
+                    <Run.DecorationLines>
+                        <TextDecoration Location="Baseline"
+                                        Brush="#A3E635"
+                                        DashArray="2 2"/>
+                    </Run.DecorationLines>
+                </Run>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- Baseline alignment, as WPF's: superscript and subscript where the font sets them, and small runs at the
              top, middle and bottom of a line a large letter makes tall. -->
         <TextBlock Text="{Localize TextStrings.BaselineAlignmentTitle}"

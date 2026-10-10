@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
@@ -64,6 +65,8 @@ public abstract class Inline : FundamentalUIComponent
     public static readonly AdamantiumProperty BaselineAlignmentProperty = AdamantiumProperty.Register(
         nameof(BaselineAlignment), typeof(BaselineAlignment?), typeof(Inline),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    private TextDecorationCollection _decorationLines;
 
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
@@ -182,7 +185,48 @@ public abstract class Inline : FundamentalUIComponent
         set => SetValue(BaselineAlignmentProperty, value);
     }
 
+    /// <summary>Lines drawn with this inline, each with its own place, brush, thickness, dashes and offset, as WPF's text
+    /// decorations; they add to the lines of the spans around it and to <see cref="TextDecorations"/>.</summary>
+    public TextDecorationCollection DecorationLines
+    {
+        get
+        {
+            if (_decorationLines == null)
+            {
+                _decorationLines = [];
+                _decorationLines.CollectionChanged += OnDecorationLinesChanged;
+            }
+
+            return _decorationLines;
+        }
+    }
+
+    internal bool HasDecorationLines => _decorationLines is { Count: > 0 };
+
     protected void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
+
+    private void OnDecorationLinesChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (TextDecoration line in e.OldItems)
+            {
+                line.Changed -= OnDecorationLineChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (TextDecoration line in e.NewItems)
+            {
+                line.Changed += OnDecorationLineChanged;
+            }
+        }
+
+        RaiseChanged();
+    }
+
+    private void OnDecorationLineChanged(object sender, EventArgs e) => RaiseChanged();
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
