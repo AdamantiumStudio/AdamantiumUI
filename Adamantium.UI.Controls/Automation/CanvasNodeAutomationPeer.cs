@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls.Automation;
 /// click selects it, folded and unfolded, moved and resized on the plane as one undoable step each. Its sockets are its
 /// children.</summary>
 public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransformProvider, ISelectionItemProvider,
-    IExpandCollapseProvider
+    IExpandCollapseProvider, IScrollItemProvider
 {
     public CanvasNodeAutomationPeer(CanvasNode owner) : base(owner)
     {
@@ -84,6 +84,16 @@ public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransform
     protected override string NameCore() => ((CanvasNode)Owner).Title as string ?? TextOf(Owner);
 
     /// <summary>The canvas the node stands on and the item that places it there; nulls for a node off any canvas.</summary>
+    /// <summary>Moves the camera so the node is in view, as its stand-in does while it is off screen - so bringing a node
+    /// into view works the same wherever the camera happens to be.</summary>
+    public void ScrollIntoView()
+    {
+        if (Placed() is ({ } canvas, { } item))
+        {
+            canvas.BringIntoView(item.World);
+        }
+    }
+
     internal (InfiniteCanvas Canvas, ElementItem Item) Placed()
     {
         IUIComponent child = Owner;

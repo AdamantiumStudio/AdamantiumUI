@@ -697,6 +697,9 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas node on screen could not be scrolled into view by automation - only its off-screen stand-in could - so
+  `adam-auto scroll` on a node failed whenever the camera already showed it, and the InfiniteCanvas scenario stopped at
+  its first step. The node's own peer brings it into view too now.
 - A designer edit inside a collection the element owns (`<TextBlock.Inlines>`, `RowDefinitions`) added the edited items
   to the ones already there, so the preview showed them twice; children written into a `[Content]` list were not
   updated at all. Both are rebuilt now.
