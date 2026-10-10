@@ -1123,8 +1123,12 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 Interlocked.Exchange(ref _framesInFlight, 0);   // the apply drains whatever was published
                 try
                 {
+                    var withheld = Rendering.RenderCache.WithheldFrames;
                     ExecuteDrawSequence(_renderAppTime);
-                    Volatile.Write(ref _presentedFrame, drawing);
+                    if (Rendering.RenderCache.WithheldFrames == withheld)
+                    {
+                        Volatile.Write(ref _presentedFrame, drawing);
+                    }
                     _drawFailing = false;
                     ReleaseIdleWaiters();
                 }

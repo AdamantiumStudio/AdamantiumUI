@@ -36,6 +36,23 @@ internal static class InputSimulator
         HoverAt(element, label, local);
     }
 
+    /// <summary>The wheel turned over the element's middle, a notch at a time with a layout pass between, as a hand's
+    /// notches come a frame or more apart: positive away from the user, as the system counts it.</summary>
+    public static void Wheel(UIComponent element, string label, int notches)
+    {
+        const int notch = 120;
+        using var pointer = SimulatedPointer.Install();
+        var (window, point) = HoverAt(element, label, Middle(element));
+        var layout = LayoutManager.GetOrCreate((IUIComponent)window);
+        var device = MouseDevice.CurrentDevice;
+        for (var i = 0; i < Math.Abs(notches); i++)
+        {
+            device.ProcessEvent(new RawMouseWheelEventArgs(Math.Sign(notches) * notch, RawMouseEventType.MouseWheel,
+                (IInputComponent)window, point, InputModifiers.None, device, Now()));
+            layout.ExecuteLayoutPass();
+        }
+    }
+
     public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)
     {
         using var pointer = SimulatedPointer.Install();

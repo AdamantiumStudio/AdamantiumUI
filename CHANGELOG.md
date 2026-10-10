@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
+  middle inside the application, a notch at a time - positive away from the user, scrolling up.
+
 - `adam-auto caret <selector> <line>[:<col>] [--to <line>[:<col>]]` and `AutomationElement.PlaceCaretAsync` /
   `SelectTextAsync`: the caret straight to a line and column of a text, or a selection between two, through its text
   pattern; lines and columns from 1, as the element numbers them.
@@ -743,6 +746,11 @@ All packages share one version.
   comment frame - took the outline too: the band was matched against each item's box. It is matched against what the
   item draws now (`ICanvasItem.Touches`, the box by default), the way a press already was; a band still takes whatever
   it touches, so a long stroke is taken by a band round part of it.
+
+- A frame whose batch buffer was too small dropped shapes filled with a gradient, a pattern, noise, a fractal or a
+  material for that frame - shapes already on screen blinked out - since only the batches paint those brushes. Such a
+  frame is now held back (`IGraphicsDevice.WithholdFrame`): the window keeps the frame before it, and the next one,
+  its buffers grown to hold everything, draws the scene whole.
 
 - A control that drew one more vector icon (a `DrawingImage`) kept its old icons drawn too, and showed a stray copy,
   until something redrew the window: the patch could not find the instanced batch's recorded draw and left the old run

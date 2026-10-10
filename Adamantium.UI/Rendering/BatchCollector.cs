@@ -20,6 +20,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
     protected TItem[] Items;
     protected int Count;               // items written this frame (across all segments, monotonic within a frame)
+    private int _deferredItems;
 
     /// <summary>How far the RETAINED content reaches - the end of the furthest slot the segments still issue.
     /// <para>Not <see cref="Count"/>: that is the write cursor of THIS frame and is reset by every
@@ -141,13 +142,28 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         Count = 0;
     }
 
+    /// <summary>Whether <paramref name="items"/> more fit this frame's buffer. What does not is counted, so the next
+    /// frame's buffer is grown to hold all of it at once.</summary>
+    public bool Admit(int items)
+    {
+        if (Count + items <= _gpuCapacity)
+        {
+            return true;
+        }
+
+        _deferredItems += items;
+        return false;
+    }
+
     public void BeginFrame(IGraphicsDevice device)
     {
         // HEADROOM for patches. Capacity can only change here (the GPU buffer must not be reallocated under frames in
         // flight), so a walk that fits the scene exactly would leave a later patch nowhere to put a layer that GREW by one
         // item, and every such frame would fall back to the walk - which resets capacity to exactly the scene again.
-        EnsureCpuCapacity(Count + Math.Max(64, Count / 8));
+        var needed = Count + _deferredItems;
+        EnsureCpuCapacity(needed + Math.Max(64, needed / 8));
 
+        _deferredItems = 0;
         Count = 0;
         _segmentStart = 0;
         _hasUnion = false;

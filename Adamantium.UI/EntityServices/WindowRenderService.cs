@@ -251,16 +251,25 @@ public class WindowRenderService : UiRenderService
 
         UpdateProcessors(time);
 
-        if (!BeginDraw())
-            throw new System.InvalidOperationException(
-                $"GraphicsDevice.BeginDraw failed: {GraphicsDevice.LastFrameError ?? "unknown device error"}");
-        windowRenderer.Render(time);
-        DrawProcessors(time);
+        // A frame held back for want of room is drawn again at once, its buffers grown: nobody asks for the next one here.
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            if (!BeginDraw())
+                throw new System.InvalidOperationException(
+                    $"GraphicsDevice.BeginDraw failed: {GraphicsDevice.LastFrameError ?? "unknown device error"}");
+            windowRenderer.Render(time);
+            DrawProcessors(time);
 
-        GraphicsDevice.EndDraw();          // not this.EndDraw(): no swapchain blit
-        GraphicsDevice.Submit();
-        GraphicsDevice.DeviceWaitIdle();
-        GraphicsDevice.FrameEnded();
+            GraphicsDevice.EndDraw();          // not this.EndDraw(): no swapchain blit
+            GraphicsDevice.Submit();
+            GraphicsDevice.DeviceWaitIdle();
+            GraphicsDevice.FrameEnded();
+            if (!GraphicsDevice.FrameWithheld)
+            {
+                break;
+            }
+        }
+
         return true;
     }
 

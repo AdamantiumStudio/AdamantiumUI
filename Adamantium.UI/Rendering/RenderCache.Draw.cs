@@ -529,6 +529,7 @@ public partial class RenderCache
         // TEMP trace: one array write per frame, dumped from memory by the overlay.
         var traceStart = Core.Diagnostics.FrameTrace.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         LastFrameReplayed = false;
+        LastFrameWithheld = false;
         DrawWalkMs = 0;
         _traceWhy = 0;
         try
@@ -735,6 +736,7 @@ public partial class RenderCache
         var scissorNarrowed = false;   // whether the active scissor is currently narrower than fullScissor
 
         _recording = device != null;   // a device walk records its op stream for a later clean-frame replay
+        _deferredForRoom = false;
         if (_recording)
         {
             _ops.Clear();
@@ -1057,6 +1059,7 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var gradBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Grad);
                 FadeBySlot(unit);
+                if (!Admitted(_gradientRectBatch)) continue;
                 if (_gradientRectBatch.TryAdd(grru.RectPayload, gradBakeWorld, grru.FillOpacity, scissor, gradRectBounds, slot4Grad, grru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1134,6 +1137,7 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var gradPolyBake = ResolveBake(device, unit.Component, wt, out var slot4GradPoly);
                 FadeBySlot(unit);
+                if (!Admitted(_gradientRectBatch)) continue;
                 if (_gradientRectBatch.TryAddPolygon(gpru.PolygonPayload, gradPolyBake, gpru.FillOpacity, scissor, gradPolyBounds, slot4GradPoly,
                         gpru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1161,6 +1165,7 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var patPolyBake = ResolveBake(device, unit.Component, wt, out var slot4PatPoly);
                 FadeBySlot(unit);   // the pattern passes read the chain from the slot now - keep it out of the colors
+                if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAddPolygon(ppru.PolygonPayload, patPolyBake, ppru.FillOpacity, scissor, patPolyBounds, slot4PatPoly, ppru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1220,6 +1225,7 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 var gradElBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4GradEl);
                 FadeBySlot(unit);
+                if (!Admitted(_gradientEllipseBatch)) continue;
                 if (_gradientEllipseBatch.TryAdd(geru.EllipsePayload, gradElBakeWorld, geru.FillOpacity, scissor, gradElBounds, slot4GradEl,
                         geru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1250,6 +1256,7 @@ public partial class RenderCache
                 }
                 var patElBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4PatEl);
                 FadeBySlot(unit);   // see the pattern rect branch
+                if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAddEllipse(peru.EllipsePayload, patElBakeWorld, peru.FillOpacity, scissor, patElBounds, slot4PatEl, peru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1268,6 +1275,7 @@ public partial class RenderCache
             }
             else if (device != null && unit is RectangleRenderUnit mru && MaterialRectCollector.WantsBatch(mru.RectPayload))
             {
+                if (!Admitted(_materialBatch)) continue;
                 var materialBounds = LogicalBounds(unit.Component, wt);
                 var matSource = mru.BrushTexture();   // null unless the brush names a picture of its own
                 if (OpenMaterialSegment(device, mru.RectPayload.Brush, matSource, materialBounds, unit.Component, scissor,
@@ -1293,6 +1301,7 @@ public partial class RenderCache
             else if (device != null && unit is EllipseRenderUnit meru
                      && MaterialRectCollector.WantsBatch(meru.EllipsePayload.Brush, meru.EllipsePayload.Pen))
             {
+                if (!Admitted(_materialBatch)) continue;
                 var bounds = LogicalBounds(unit.Component, wt);
                 var elSource = meru.BrushTexture();
                 if (OpenMaterialSegment(device, meru.EllipsePayload.Brush, elSource, bounds, unit.Component, scissor,
@@ -1315,6 +1324,7 @@ public partial class RenderCache
             else if (device != null && unit is RegularPolygonRenderUnit mpru
                      && MaterialRectCollector.WantsBatch(mpru.PolygonPayload.Brush, mpru.PolygonPayload.Pen))
             {
+                if (!Admitted(_materialBatch)) continue;
                 var bounds = LogicalBounds(unit.Component, wt);
                 var polySource = mpru.BrushTexture();
                 if (OpenMaterialSegment(device, mpru.PolygonPayload.Brush, polySource, bounds, unit.Component, scissor,
@@ -1348,6 +1358,7 @@ public partial class RenderCache
                 // The SDF pattern reads its alpha from the slot now (Anim.z), so the bake must not fold the chain into
                 // c1/c2 as well - that was the doubling this stand caught: 0.34 where every neighbor sat at 0.55.
                 FadeBySlot(unit);
+                if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAdd(pru.RectPayload, patBakeWorld, pru.FillOpacity, scissor, patternBounds, slot4Pat, pru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1381,6 +1392,7 @@ public partial class RenderCache
                 }
                 var fracBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Frac);
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the colors
+                if (!Admitted(_fractalBatch)) continue;
                 if (_fractalBatch.TryAdd(fru.RectPayload, fracBakeWorld, fru.FillOpacity, scissor, fractalBounds, slot4Frac,
                         RoundedClipSlot(unit.Component, fullScissor), fru.FadeSlot))
                 {
@@ -1726,11 +1738,40 @@ public partial class RenderCache
             _layoutChangedSinceRecord = false;
         }
 
+        LastFrameWithheld = _deferredForRoom;
+        if (_deferredForRoom)
+        {
+            _deferredForRoom = false;
+            System.Threading.Interlocked.Increment(ref _withheldFrames);
+            device?.WithholdFrame();
+            StreamStaleBecause("deferredForRoom");
+            Core.LoopSignal.Request();
+        }
+
         }
         finally
         {
             DrawWalkMs = System.Diagnostics.Stopwatch.GetElapsedTime(walk0).TotalMilliseconds;
         }
+    }
+
+    private bool _deferredForRoom;
+
+    private static int _withheldFrames;
+
+    /// <summary>How many frames any cache has held back so far: a draw that moved it showed nothing new.</summary>
+    public static int WithheldFrames => System.Threading.Volatile.Read(ref _withheldFrames);
+
+    /// <summary>Whether the last walk ran out of room in a batch whose fills have no other way to be drawn, and so held its
+    /// frame back: the screen keeps the frame before it, and the next walk, its buffers grown, draws the scene whole.</summary>
+    public bool LastFrameWithheld { get; private set; }
+
+    private bool Admitted<TItem>(BatchCollector<TItem> batch) where TItem : struct
+    {
+        if (!_recording || batch == null || batch.Admit(1)) return true;
+
+        _deferredForRoom = true;
+        return false;
     }
 
     // Batches flush bottom-up by layer, so a unit overlapping a pending higher-layer batch must flush it first to keep

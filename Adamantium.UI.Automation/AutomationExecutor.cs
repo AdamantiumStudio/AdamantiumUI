@@ -281,6 +281,9 @@ public sealed class AutomationExecutor
             case AutomationCommand.Zoom:
                 Zoom(peer, request.Value);
                 break;
+            case AutomationCommand.Wheel:
+                InputSimulator.Wheel(OwnerOf(peer), Label(peer), Notches(request.Value));
+                break;
             case AutomationCommand.Pan:
                 var offset = Point(request.Value);
                 Pattern<IPanProvider>(peer, PatternId.Pan).Pan(offset.X, offset.Y);
@@ -433,6 +436,11 @@ public sealed class AutomationExecutor
 
         return (Point(points[0]), Point(points[1]));
     }
+
+    private static int Notches(string text) =>
+        int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var notches) && notches != 0
+            ? notches
+            : throw new FormatException($"'{text}' is not a number of wheel notches, as -3 or 2.");
 
     private static Vector2 Point(string text)
     {

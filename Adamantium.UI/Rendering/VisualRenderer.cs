@@ -324,20 +324,28 @@ public sealed class VisualRenderer : IVisualRenderer
         var viewport = new Viewport { Width = width, Height = height, MinDepth = 0, MaxDepth = 1 };
         var scissor = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = width, Height = height } };
 
-        if (!_device.BeginDraw(beforeRenderPass: _ => cache.PreRender()))
+        // A frame held back for want of room is drawn again at once, its buffers grown.
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            cache.DisposeUnits();
-            return null;
-        }
+            if (!_device.BeginDraw(beforeRenderPass: _ => cache.PreRender()))
+            {
+                cache.DisposeUnits();
+                return null;
+            }
 
-        _device.SetViewports(viewport);
-        _device.SetScissors(scissor);
-        cache.Render(_device, scissor);
-        _device.EndDraw();
-        _device.Submit();
-        presenter.Present();      // no-op for the off-screen render-target presenter
-        _device.FrameEnded();
-        _device.DeviceWaitIdle(); // the frame is finished -> the texture is safe to read back
+            _device.SetViewports(viewport);
+            _device.SetScissors(scissor);
+            cache.Render(_device, scissor);
+            _device.EndDraw();
+            _device.Submit();
+            presenter.Present();      // no-op for the off-screen render-target presenter
+            _device.FrameEnded();
+            _device.DeviceWaitIdle(); // the frame is finished -> the texture is safe to read back
+            if (!_device.FrameWithheld)
+            {
+                break;
+            }
+        }
 
         var format = presenter.SurfaceFormat;
         using var hostImage = presenter.RenderTarget.ResolveTexture.ReadbackToImage();
