@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `WordSpacing`, `LetterSpacing` and `Tracking` on every element (inherited), as InDesign's justification and
+  tracking have them: `WordSpacing="80% 100% 133%"` (the default), `LetterSpacing="-5% 0% 10%"`, `Tracking="50"`
+  (thousandths of an em); `Run.Tracking` for a run of its own. `TextBlock` and `TextBox` take them. Sandbox Paragraph
+  topic: sliders for the word and letter spacing limits and tracking.
+
 - `HorizontalTextAlignment` on `TextBox` (and every `TextBoxBase`): wrapped lines left, centered, right or justified,
   the caret, clicks and selection following the stretched text. Sandbox Paragraph topic: the editor is justified with
   the columns, and a Hebrew column shows justified right-to-left text, its last line on the right. The caret of an

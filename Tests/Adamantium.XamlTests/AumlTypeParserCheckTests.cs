@@ -28,6 +28,8 @@ public class AumlTypeParserCheckTests
     [TestCase("<Border Background=\"#FF0000\"/>")]
     [TestCase("<Border Margin=\"1,2,3,4\"/>")]
     [TestCase("<Border HorizontalAlignment=\"Left\"/>")]
+    [TestCase("<TextBlock WordSpacing=\"80% 100% 133%\"/>")]
+    [TestCase("<TextBlock LetterSpacing=\"-5% 0% 10%\" Tracking=\"50\"/>")]
     public void TypesTheParserKnows_AreNotWarnedAbout(string element)
     {
         var warnings = AumlCodegenHarness.Warnings(WindowWith(element));

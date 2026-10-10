@@ -28,10 +28,78 @@
                           Margin="24,0,0,0"/>
         </StackPanel>
 
+        <!-- InDesign's justification: how far justified lines may squeeze and stretch their spaces, then their letters,
+             in percents of the space; and tracking, in thousandths of an em. -->
+        <WrapPanel Orientation="Horizontal"
+                   Margin="0,12,0,0">
+            <TextBlock x:Name="WordSpacingLabel"
+                       Text="{Localize TextStrings.WordSpacing}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="WordMinimumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=WordSpacingLabel}"
+                    Width="120"
+                    Minimum="50"
+                    Maximum="100"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding WordMinimum, Mode=TwoWay}"
+                    Margin="8,0,4,0"/>
+            <Slider AutomationProperties.AutomationId="WordMaximumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=WordSpacingLabel}"
+                    Width="120"
+                    Minimum="100"
+                    Maximum="300"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding WordMaximum, Mode=TwoWay}"
+                    Margin="0,0,24,0"/>
+            <TextBlock x:Name="LetterSpacingLabel"
+                       Text="{Localize TextStrings.LetterSpacing}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="LetterMinimumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LetterSpacingLabel}"
+                    Width="120"
+                    Minimum="-20"
+                    Maximum="0"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding LetterMinimum, Mode=TwoWay}"
+                    Margin="8,0,4,0"/>
+            <Slider AutomationProperties.AutomationId="LetterMaximumSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=LetterSpacingLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="50"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding LetterMaximum, Mode=TwoWay}"
+                    Margin="0,0,24,0"/>
+            <TextBlock x:Name="TrackingLabel"
+                       Text="{Localize TextStrings.Tracking}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="TrackingSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=TrackingLabel}"
+                    Width="160"
+                    Minimum="-100"
+                    Maximum="200"
+                    TickFrequency="5"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding Tracking, Mode=TwoWay}"
+                    Margin="8,0,0,0"/>
+        </WrapPanel>
+
         <!-- The same paragraph broken a line at a time and as a whole. -->
         <TextBlock Text="{Localize TextStrings.ParagraphTitle}"
                    Margin="0,16,0,8"/>
-        <WrapPanel Orientation="Horizontal">
+        <WrapPanel Orientation="Horizontal"
+                   WordSpacing="{Binding WordSpacing}"
+                   LetterSpacing="{Binding LetterSpacing}"
+                   Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
                 <TextBlock Text="{Localize TextStrings.LineAtATime}"
@@ -115,7 +183,10 @@
              nowhere to break ends its line in an ellipsis instead of covering the next column. -->
         <WrapPanel Orientation="Horizontal"
                    Margin="0,12,0,0"
-                   LineBreaking="{Binding LineBreaking}">
+                   LineBreaking="{Binding LineBreaking}"
+                   WordSpacing="{Binding WordSpacing}"
+                   LetterSpacing="{Binding LetterSpacing}"
+                   Tracking="{Binding Tracking}">
             <StackPanel Orientation="Vertical"
                         Margin="0,0,16,16">
                 <TextBlock Text="Русский (ru)"

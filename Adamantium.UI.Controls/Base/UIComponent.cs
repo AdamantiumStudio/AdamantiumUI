@@ -439,6 +439,44 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(OpticalMarginAlignmentProperty, value);
     }
 
+    public static readonly AdamantiumProperty WordSpacingProperty = AdamantiumProperty.Register(nameof(WordSpacing),
+        typeof(SpacingRange), typeof(UIComponent),
+        new PropertyMetadata(SpacingRange.Words, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How wide the spaces between words of the text in this element and its descendants are, as shares of
+    /// the font's space, and how far justified lines may squeeze and stretch them: <c>WordSpacing="80% 100% 133%"</c>
+    /// (InDesign's, the default).</summary>
+    public SpacingRange WordSpacing
+    {
+        get => GetValue<SpacingRange>(WordSpacingProperty);
+        set => SetValue(WordSpacingProperty, value);
+    }
+
+    public static readonly AdamantiumProperty LetterSpacingProperty = AdamantiumProperty.Register(nameof(LetterSpacing),
+        typeof(SpacingRange), typeof(UIComponent),
+        new PropertyMetadata(SpacingRange.Letters, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>What is added between letters of the text in this element and its descendants, as shares of the
+    /// font's space, and how far justified lines may change it once their spaces are at their limits:
+    /// <c>LetterSpacing="-5% 0% 10%"</c>; none by default. Arabic and other joined scripts are never spaced.</summary>
+    public SpacingRange LetterSpacing
+    {
+        get => GetValue<SpacingRange>(LetterSpacingProperty);
+        set => SetValue(LetterSpacingProperty, value);
+    }
+
+    public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
+        typeof(double), typeof(UIComponent),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Space added after each character of the text in this element and its descendants, in thousandths of
+    /// an em, as InDesign's tracking; negative draws the letters closer. 0 by default.</summary>
+    public double Tracking
+    {
+        get => GetValue<double>(TrackingProperty);
+        set => SetValue(TrackingProperty, value);
+    }
+
     public static readonly AdamantiumProperty FontFeaturesProperty = AdamantiumProperty.Register(nameof(FontFeatures),
         typeof(FontFeatureList), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
