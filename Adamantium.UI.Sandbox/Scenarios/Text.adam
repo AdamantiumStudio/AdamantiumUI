@@ -54,6 +54,9 @@ select id=LineMiddleRadio
 select id=LineTopRadio
 set id=TiersSlider 1
 set id=LineLengthSlider 300
+select id=TextView/name="Decorations & Effects"
+wait id=Topic/id=DecorationsStandView
+wait id=DecorationLinesSample
 select id=TextView/name=Basics
 wait id=Topic/id=BasicsStandView
 set id=FontSizeSlider 24

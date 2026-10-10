@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Title" Text="Текст — по одной теме"/>
     <Phrase Key="TopicBasics" Text="Основы"/>
+    <Phrase Key="TopicDecorations" Text="Оформление и эффекты"/>
     <Phrase Key="TopicEditing" Text="Редактирование"/>
     <Phrase Key="TopicFaces" Text="Начертания"/>
     <Phrase Key="TopicColor" Text="Цвет и эмодзи"/>
@@ -96,6 +97,8 @@
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
+    <Phrase Key="DecorationFlagsTitle" Text="Линии по имени: под текстом, сквозь него и над ним, и волнистая — как у орфографической ошибки:"/>
+    <Phrase Key="DecorationLinesTitle" Text="Линии оформления, каждая со своей кистью, толщиной, пунктиром и смещением:"/>
     <Phrase Key="BaselineAlignmentTitle" Text="Положение по базовой линии: верхний и нижний индекс там, где их ставит шрифт; мелкие участки у верха, середины и низа строки и у верха и низа текста:"/>
     <Phrase Key="LinesTitle" Text="Строки: расстояние между базовыми линиями, промежуток между строками и наибольшее число строк (0 — все); крупный участок раздвигает свою строку:"/>
     <Phrase Key="LinesHeight" Text="Высота строки:"/>

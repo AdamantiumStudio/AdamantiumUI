@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Graphics.Fonts;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
@@ -59,7 +60,7 @@ public class InlineUIContainerTests
     }
 
     [Test]
-    public void TheChild_StandsOnTheBaseline_InTheRoomItTakes()
+    public void AChildWithoutText_StandsOnTheBaseline_InTheRoomItTakes()
     {
         var (text, child, _) = Block(40, 10);
         Host(text);
@@ -68,6 +69,32 @@ public class InlineUIContainerTests
         Assert.That(child.Bounds.Width, Is.EqualTo(40).Within(1e-3));
         Assert.That(child.Bounds.Y + child.Bounds.Height, Is.EqualTo(line.Baseline).Within(1e-3));
         Assert.That(LeftOf(text, 3) - child.Bounds.X, Is.GreaterThanOrEqualTo(40 - 1e-3), "the text goes on after it");
+    }
+
+    [Test]
+    public void AChildWithText_SetsItsTextOnTheLinesBaseline()
+    {
+        var label = new TextBlock { Text = "OK", FontSize = 14 };
+        var button = new Border { Padding = new Thickness(8, 6, 8, 9), Child = label };
+        var text = new TextBlock { FontSize = 20 };
+        text.Inlines.Add(new Run { Text = "press " });
+        text.Inlines.Add(new InlineUIContainer { Child = button });
+        text.Inlines.Add(new Run { Text = " now" });
+        Host(text);
+
+        var labelBaseline = button.Bounds.Y + label.Bounds.Y + label.Layout.GetLine(0).Baseline;
+        Assert.That(labelBaseline, Is.EqualTo(text.Layout.GetLine(0).Baseline).Within(1));
+    }
+
+    [Test]
+    public void CenteredByItsContainer_ItStandsInTheMiddleOfTheLine()
+    {
+        var (text, child, container) = Block(40, 10);
+        container.BaselineAlignment = BaselineAlignment.Center;
+        Host(text);
+        var line = text.Layout.GetLine(0);
+
+        Assert.That(child.Bounds.Y + child.Bounds.Height / 2, Is.EqualTo(line.Top + line.Height / 2).Within(1));
     }
 
     [Test]
