@@ -166,6 +166,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private readonly List<(int Index, IMeasurableComponent Child)> _objects = [];
     private readonly List<IMeasurableComponent> _hosted = [];
     private readonly List<Size> _hostedSizes = [];
+    private readonly Dictionary<IMeasurableComponent, double> _hostedRaises = [];
     private Hyperlink _pressedLink;
     private int _focusedLink = -1;
     private bool _overLink;
@@ -607,6 +608,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         foreach (var gone in _hosted.Where(child => !children.Contains(child)).ToList())
         {
             _hosted.Remove(gone);
+            _hostedRaises.Remove(gone);
             RemoveVisualChild(gone);
         }
 
@@ -704,7 +706,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                     start++;
                     break;
                 case InlineUIContainer { Child: { } child }:
-                    attributed.Apply(start, 1, InlineAttributes(chain, child.DesiredSize));
+                    attributed.Apply(start, 1,
+                        InlineAttributes(chain, child.DesiredSize, _hostedRaises.GetValueOrDefault(child)));
                     _objects.Add((start, child));
                     start++;
                     break;
@@ -725,7 +728,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
     // and the lines add up.
-    private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null)
+    private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null, double objectRaise = 0)
     {
         var fontSize = double.NaN;
         Brush foreground = null;
@@ -763,6 +766,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             tracking = inline.Tracking ?? tracking;
             shift = inline.BaselineShift ?? shift;
             alignment = inline.BaselineAlignment ?? alignment;
+        }
+
+        if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
+        {
+            shift = (shift ?? 0) + objectRaise;
         }
 
         var resolvedWeight = weight ?? FontWeight;
@@ -933,18 +941,66 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
 
         var sizes = new List<Size>(_hosted.Count);
+        var raised = false;
         foreach (var child in _hosted)
         {
             child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             sizes.Add(child.DesiredSize);
+            var raise = HostedRaise(child);
+            if (!_hostedRaises.TryGetValue(child, out var old) || !old.Equals(raise))
+            {
+                _hostedRaises[child] = raise;
+                raised = true;
+            }
         }
 
-        if (!sizes.SequenceEqual(_hostedSizes))
+        if (raised || !sizes.SequenceEqual(_hostedSizes))
         {
             _hostedSizes.Clear();
             _hostedSizes.AddRange(sizes);
             _inlinesDirty = true;
         }
+    }
+
+    private double HostedRaise(IMeasurableComponent child)
+    {
+        if (Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is
+            { BaselineAlignment: { } alignment } && alignment != BaselineAlignment.Baseline)
+        {
+            return 0;
+        }
+
+        var size = child.DesiredSize;
+        var slot = child.PreviousArrangeSlot is { } previous && previous.Size == size ? previous : new Rect(size);
+        child.Arrange(slot);
+        return RaiseIn(child, slot);
+    }
+
+    private static double RaiseIn(IMeasurableComponent child, Rect slot) =>
+        ContentBaseline(child) is { } baseline ? baseline - slot.Y - slot.Height : 0;
+
+    private static double? ContentBaseline(IUIComponent element)
+    {
+        if (element.Visibility != Visibility.Visible)
+        {
+            return null;
+        }
+
+        if (element is TextBlock { Layout: { LineCount: > 0 } layout, WritingMode: WritingMode.Horizontal } text
+            && !string.IsNullOrEmpty(text.ShownText))
+        {
+            return element.Bounds.Y + layout.GetLine(0).Baseline;
+        }
+
+        foreach (var child in element.VisualChildren)
+        {
+            if (ContentBaseline(child) is { } baseline)
+            {
+                return element.Bounds.Y + baseline;
+            }
+        }
+
+        return null;
     }
 
     private void ArrangeHosted()
@@ -964,8 +1020,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             }
 
             var child = _objects[index].Child;
-            child.Arrange(new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height));
+            var slot = new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height);
+            child.Arrange(slot);
             placed.Add(child);
+            if (_hostedRaises.TryGetValue(child, out var raise) && raise != 0 && !RaiseIn(child, slot).Equals(raise))
+            {
+                InvalidateMeasure();
+            }
         }
 
         foreach (var child in _hosted.Where(child => !placed.Contains(child)))

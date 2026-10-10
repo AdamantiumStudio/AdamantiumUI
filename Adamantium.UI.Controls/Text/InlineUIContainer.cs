@@ -3,9 +3,12 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-/// <summary>A control set into a <see cref="TextBlock"/>'s line, as WPF's: it takes the room its size asks for, stands
-/// on the baseline, raises a line it is taller than and wraps as a word does. It takes input, focus and its DataContext
-/// as any control. Horizontal text only.</summary>
+/// <summary>A control set into a <see cref="TextBlock"/>'s line, as WPF's: it takes the room its size asks for, raises
+/// a line it is taller than and wraps as a word does. <see cref="Inline.BaselineAlignment"/> places it across the line:
+/// on the baseline (the default) the control's own baseline - the first line of text it shows, as a button's label,
+/// else its bottom - stands on the line's; <c>Center</c>, <c>Top</c>, <c>Bottom</c>, <c>TextTop</c> and
+/// <c>TextBottom</c> place its box. It takes input, focus and its DataContext as any control. Horizontal text
+/// only.</summary>
 public class InlineUIContainer : Inline
 {
     public static readonly AdamantiumProperty ChildProperty = AdamantiumProperty.Register(nameof(Child),
