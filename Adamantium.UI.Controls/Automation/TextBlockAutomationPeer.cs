@@ -7,7 +7,8 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of a <see cref="TextBlock"/>: text, called by what it says; the links in it are its children.</summary>
+/// <summary>The peer of a <see cref="TextBlock"/>: text, called by what it says; the links in it and the controls set
+/// into its lines are its children.</summary>
 public class TextBlockAutomationPeer : UIComponentAutomationPeer
 {
     private readonly ConditionalWeakTable<Hyperlink, HyperlinkAutomationPeer> _linkPeers = new();
@@ -26,13 +27,18 @@ public class TextBlockAutomationPeer : UIComponentAutomationPeer
         var links = block.Links;
         if (links.Count == 0)
         {
-            return [];
+            return block.HostedChildren.Count == 0 ? [] : base.ChildrenCore();
         }
 
         var peers = new List<AutomationPeer>(links.Count);
         foreach (var link in links)
         {
             peers.Add(_linkPeers.GetValue(link, key => new HyperlinkAutomationPeer(this, block, key)));
+        }
+
+        if (block.HostedChildren.Count > 0)
+        {
+            peers.AddRange(base.ChildrenCore());
         }
 
         return peers;

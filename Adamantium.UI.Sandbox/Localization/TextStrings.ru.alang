@@ -83,6 +83,12 @@
     <Phrase Key="LinksSite" Text="Adamantium на GitHub"/>
     <Phrase Key="LinksMiddle" Text=" или посчитайте нажатия: "/>
     <Phrase Key="LinksCount" Text="нажми меня"/>
+    <Phrase Key="InlineControlsTitle" Text="Контролы в строке: стоят на базовой линии, высокий поднимает свою строку, переносятся как слова:"/>
+    <Phrase Key="InlineControlsAgree" Text="Отметьте "/>
+    <Phrase Key="InlineControlsPress" Text=" в знак согласия и нажмите "/>
+    <Phrase Key="InlineControlsSwatch" Text=" - или посмотрите на образец "/>
+    <Phrase Key="InlineControlsEnd" Text=": он выше текста и поднимает свою строку."/>
+    <Phrase Key="InlineControlsButton" Text="ОК"/>
     <Phrase Key="LineBreakTitle" Text="LineBreak кончает строку, а не абзац: после него латинская строка остаётся в абзаце на иврите и начинается справа; после перевода строки это отдельный абзац:"/>
     <Phrase Key="WithLineBreak" Text="С LineBreak"/>
     <Phrase Key="WithNewline" Text="С переводом строки"/>

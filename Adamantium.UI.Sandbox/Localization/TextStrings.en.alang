@@ -83,6 +83,12 @@
     <Phrase Key="LinksSite" Text="Adamantium on GitHub"/>
     <Phrase Key="LinksMiddle" Text=", or count a click: "/>
     <Phrase Key="LinksCount" Text="click me"/>
+    <Phrase Key="InlineControlsTitle" Text="Controls in a line: they stand on the baseline, a tall one raises its line, and they wrap as words do:"/>
+    <Phrase Key="InlineControlsAgree" Text="Tick "/>
+    <Phrase Key="InlineControlsPress" Text=" to agree, then press "/>
+    <Phrase Key="InlineControlsSwatch" Text=" - or look at this swatch "/>
+    <Phrase Key="InlineControlsEnd" Text=", which is taller than the text and raises its line."/>
+    <Phrase Key="InlineControlsButton" Text="OK"/>
     <Phrase Key="LineBreakTitle" Text="LineBreak ends the line, not the paragraph: after it the Latin line stays in the Hebrew paragraph and starts on the right; after a newline it is a paragraph of its own:"/>
     <Phrase Key="WithLineBreak" Text="With LineBreak"/>
     <Phrase Key="WithNewline" Text="With a newline"/>
