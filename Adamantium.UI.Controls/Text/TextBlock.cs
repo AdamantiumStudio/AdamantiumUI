@@ -8,12 +8,13 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-public class TextBlock : InputUIComponent
+public class TextBlock : InputUIComponent, IFocusableInParts
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
         typeof(string), typeof(TextBlock),
@@ -152,6 +153,11 @@ public class TextBlock : InputUIComponent
     private const char LineSeparator = (char)0x2028;
     private TextAttributes _lastShaping;
 
+    private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
+    private Hyperlink _pressedLink;
+    private int _focusedLink = -1;
+    private bool _overLink;
+    private bool _madeFocusable;
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -244,9 +250,25 @@ public class TextBlock : InputUIComponent
 
         var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
         _runFontsPending = false;
+        _links.Clear();
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
+        if (_links.Count > 0 && !Focusable && GetValueSource(FocusableProperty) == ValuePriority.Default)
+        {
+            SetCurrentValue(FocusableProperty, true);
+            _madeFocusable = true;
+        }
+        else if (_links.Count == 0 && _madeFocusable)
+        {
+            SetCurrentValue(FocusableProperty, false);
+            _madeFocusable = false;
+        }
+
+        if (_focusedLink >= _links.Count)
+        {
+            _focusedLink = _links.Count - 1;
+        }
         _textLayout.Exclusions = Exclusions;
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _cachedSize = Lay();
@@ -583,7 +605,13 @@ public class TextBlock : InputUIComponent
                     start++;
                     break;
                 case Span span:
+                    var spanStart = start;
                     ApplyInlines(span.Inlines, chain, attributed, ref start);
+                    if (span is Hyperlink link)
+                    {
+                        _links.Add((spanStart, start, link));
+                    }
+
                     break;
             }
 
@@ -830,6 +858,202 @@ public class TextBlock : InputUIComponent
         DrawAdornments(session, backgrounds: true);
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
         DrawAdornments(session, backgrounds: false);
+    }
+
+    public override Rect? FocusBounds
+    {
+        get
+        {
+            if (_focusedLink < 0 || _focusedLink >= _links.Count)
+            {
+                return null;
+            }
+
+            var rects = LinkRects(_links[_focusedLink].Link);
+            if (rects.Count == 0)
+            {
+                return null;
+            }
+
+            var left = rects.Min(rect => rect.X);
+            var top = rects.Min(rect => rect.Y);
+            return new Rect(left, top, rects.Max(rect => rect.X + rect.Width) - left,
+                rects.Max(rect => rect.Y + rect.Height) - top);
+        }
+    }
+
+    internal IReadOnlyList<Hyperlink> Links => _links.ConvertAll(link => link.Link);
+
+    internal Hyperlink FocusedLink => _focusedLink >= 0 && _focusedLink < _links.Count ? _links[_focusedLink].Link : null;
+
+    internal void FocusLink(Hyperlink link)
+    {
+        var index = _links.FindIndex(candidate => ReferenceEquals(candidate.Link, link));
+        if (index < 0 || !Focus())
+        {
+            return;
+        }
+
+        _focusedLink = index;
+        InvalidateRender(false);
+    }
+
+    internal IReadOnlyList<Rect> LinkRects(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link))
+            {
+                return _textLayout.GetRangeRects(start, end)
+                    .Select(rect => new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height))
+                    .ToList();
+            }
+        }
+
+        return [];
+    }
+
+    internal string LinkText(Hyperlink link)
+    {
+        foreach (var (start, end, candidate) in _links)
+        {
+            if (ReferenceEquals(candidate, link) && _lastText is { } text && end <= text.Length)
+            {
+                return text.Substring(start, end - start).Replace(LineSeparator, ' ');
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private Hyperlink LinkAt(MouseEventArgs e)
+    {
+        if (_links.Count == 0)
+        {
+            return null;
+        }
+
+        var point = e.GetPosition(this);
+        var hit = _textLayout.HitTest(point.X - LinesShift(), point.Y);
+        if (!hit.IsInside)
+        {
+            return null;
+        }
+
+        foreach (var (start, end, link) in _links)
+        {
+            if (hit.Index >= start && hit.Index < end)
+            {
+                return link;
+            }
+        }
+
+        return null;
+    }
+
+    bool IFocusableInParts.TakesFocusAt(MouseButtonEventArgs e) => LinkAt(e) != null;
+
+    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        base.OnMouseMove(sender, e);
+        var overLink = LinkAt(e) != null;
+        if (overLink != _overLink)
+        {
+            _overLink = overLink;
+            Mouse.Cursor = overLink ? Cursors.Of(CursorType.Hand) : Cursor;
+        }
+    }
+
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _overLink = false;
+        _pressedLink = null;
+    }
+
+    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(sender, e);
+        _pressedLink = LinkAt(e);
+        if (_pressedLink == null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var index = _links.FindIndex(candidate => ReferenceEquals(candidate.Link, _pressedLink));
+        if (IsKeyboardFocused && index != _focusedLink)
+        {
+            _focusedLink = index;
+            InvalidateRender(false);
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(sender, e);
+        var link = LinkAt(e);
+        var pressed = _pressedLink;
+        _pressedLink = null;
+        if (link != null && ReferenceEquals(link, pressed))
+        {
+            e.Handled = true;
+            link.Activate();
+        }
+    }
+
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (_links.Count > 0)
+        {
+            var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+            _focusedLink = backwards ? _links.Count - 1 : 0;
+            InvalidateRender(false);
+        }
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        _focusedLink = -1;
+        InvalidateRender(false);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled)
+        {
+            return;
+        }
+
+        const InputModifiers shift = InputModifiers.LeftShift | InputModifiers.RightShift;
+        const InputModifiers others = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftAlt |
+                                      InputModifiers.RightAlt;
+        var modifiers = Keyboard.Modifiers;
+        if ((modifiers & others) != 0)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Tab:
+                var step = (modifiers & shift) != 0 ? -1 : 1;
+                if (_focusedLink + step >= 0 && _focusedLink + step < _links.Count)
+                {
+                    _focusedLink += step;
+                    InvalidateRender(false);
+                    e.Handled = true;
+                }
+
+                break;
+            case Key.Enter or Key.Space when !e.IsRepeated && (modifiers & shift) == 0:
+                e.Handled = true;
+                _links[_focusedLink].Link.Activate();
+                break;
+        }
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new TextBlockAutomationPeer(this);

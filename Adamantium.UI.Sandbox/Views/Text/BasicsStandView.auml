@@ -93,6 +93,27 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Links: one opens an address in the system's browser, one runs a command; Tab walks them, Enter activates. -->
+        <TextBlock Text="{Localize TextStrings.LinksTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="LinksSample"
+                   FontSize="18"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.LinksBefore}"/>
+                <Hyperlink AutomationProperties.AutomationId="SiteLink"
+                           NavigateUri="https://github.com/AdamantiumStudio">
+                    <Run Text="{Localize TextStrings.LinksSite}"/>
+                </Hyperlink>
+                <Run Text="{Localize TextStrings.LinksMiddle}"/>
+                <Hyperlink AutomationProperties.AutomationId="CountLink"
+                           Command="{Binding CountLinkCommand}">
+                    <Run Text="{Localize TextStrings.LinksCount}"/>
+                </Hyperlink>
+                <Run Text="{Binding LinkClicksText}"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- A LineBreak ends the line, not the paragraph: the Latin line after it stays in the Hebrew paragraph and
              starts on the right; after a newline it is a paragraph of its own and starts on the left. -->
         <TextBlock Text="{Localize TextStrings.LineBreakTitle}"

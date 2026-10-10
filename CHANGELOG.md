@@ -7,6 +7,16 @@ All packages share one version.
 
 ### Added
 
+- `Hyperlink` among a `TextBlock`'s inlines, as WPF's: a span, underlined and in the theme's accent color, that a
+  click, Enter or Space activates - `Click`, then `Command` with `CommandParameter`, then `RequestNavigate`; an absolute
+  web or mail `NavigateUri` nobody handles opens in the system's handler (other schemes need a `RequestNavigate`
+  handler). Over a link the pointer is a hand. A block with links takes the keyboard unless its author said otherwise:
+  Tab and Shift+Tab walk its links and the theme's focus ring goes round the one with the keyboard
+  (`InputUIComponent.FocusBounds`); a press on its plain text leaves the focus to the control around it
+  (`IFocusableInParts`). Automation sees each link as a Hyperlink child of its block, named by its text, with Invoke and
+  focus; `adam-auto click` and `hover` reach a link by its middle (`IElementPartPeer`). Inlines - a link's theme color -
+  follow a theme swap. Sandbox Text tab, Basics topic: a link to an address and a link counting its clicks.
+
 - Spans in a `TextBlock`'s `Inlines`, as WPF's and Avalonia's: `Span` groups inlines and gives them what it sets
   (color, size, background, weight, style, features, language, tracking, baseline shift...), the nearer setting winning
   and lines adding up; `Bold`, `Italic` and `Underline` are spans with one thing set; `LineBreak` ends the line within

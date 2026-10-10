@@ -226,6 +226,13 @@ public partial class TextViewModel : TabPageViewModel
     // How far the run of the basics topic's baseline shift sample is raised; negative lowers it.
     [Bindable] private double _runShift = 6;
 
+    // How many times the basics topic's counting link was activated.
+    [Bindable, Affects(nameof(LinkClicksText))] private int _linkClicks;
+
+    public string LinkClicksText => $" ({LinkClicks})";
+
+    [Command] private void CountLink() => LinkClicks++;
+
     // Genesis 1:1-2, unpointed.
     public string HebrewSample =>
         "בראשית ברא אלהים את השמים ואת הארץ. והארץ היתה תהו ובהו וחשך על פני תהום ורוח אלהים מרחפת על פני המים.";

@@ -230,11 +230,20 @@ public sealed class AutomationExecutor
             case AutomationCommand.RemoveFromSelection:
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).RemoveFromSelection();
                 break;
+            case AutomationCommand.Click when peer is IElementPartPeer part:
+                InputSimulator.Click(part.Element, Label(peer), MouseButtons.Left, MiddleOf(part, peer));
+                break;
             case AutomationCommand.Click:
                 InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Left);
                 break;
+            case AutomationCommand.RightClick when peer is IElementPartPeer part:
+                InputSimulator.Click(part.Element, Label(peer), MouseButtons.Right, MiddleOf(part, peer));
+                break;
             case AutomationCommand.RightClick:
                 InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Right);
+                break;
+            case AutomationCommand.Hover when peer is IElementPartPeer part:
+                InputSimulator.Hover(part.Element, Label(peer), MiddleOf(part, peer));
                 break;
             case AutomationCommand.Hover:
                 InputSimulator.Hover(OwnerOf(peer), Label(peer));
@@ -728,6 +737,9 @@ public sealed class AutomationExecutor
 
     private static T Pattern<T>(AutomationPeer peer, PatternId pattern) where T : class =>
         peer.GetPattern(pattern) as T ?? throw new AutomationException($"{Label(peer)} cannot {pattern}.");
+
+    private static Vector2 MiddleOf(IElementPartPeer part, AutomationPeer peer) =>
+        part.Middle ?? throw new AutomationException($"{Label(peer)} is not laid out on screen.");
 
     private static UIComponent OwnerOf(AutomationPeer peer) =>
         (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException(peer is IScrollItemProvider

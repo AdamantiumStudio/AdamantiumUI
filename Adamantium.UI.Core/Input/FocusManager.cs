@@ -28,7 +28,11 @@ public static class FocusManager
       if (e.OriginalSource == e.Source)
       {
          var element = e.OriginalSource as IInputComponent;
-         if (element != null && !CanFocus(element))
+         if (element is IFocusableInParts parts && !parts.TakesFocusAt(e))
+         {
+            element = element.GetSelfAndVisualAncestors().OfType<IInputComponent>().Skip(1).FirstOrDefault(CanFocus);
+         }
+         else if (element != null && !CanFocus(element))
          {
             // Walk up to the first FOCUSABLE self-or-ancestor (skip non-focusable input parts like a TextBox's inner
             // TextPresenter). FirstOrDefault() without the predicate returns `element` itself (self is first), which is
