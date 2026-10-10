@@ -103,4 +103,26 @@ public class PayloadPolicyTests
         Assert.That(a.RequiresBufferRebuild(colorOnly), Is.False, "color-only change must use the cheap re-raster path");
         Assert.That(a.RequiresBufferRebuild(sizeChanged), Is.True);
     }
+
+    [Test]
+    public void Text_LaidOutAgainInPlace_Rebuilds_WithTheSameTextAndSize()
+    {
+        var text = new Adamantium.UI.Controls.Text.TextBlock
+        {
+            Text = "one two three four five six", Width = 120, FontSize = 18,
+            TextWrapping = TextWrapping.WrapByWords, HorizontalTextAlignment = HorizontalTextAlignment.Justify,
+        };
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = text };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var prms = new TextRenderingParameters();
+        var before = new TextPayload(prms, text.DesiredSize, text.Layout, Brushes.Red, null, null);
+
+        text.LastLineAlignment = HorizontalTextAlignment.Right;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var after = new TextPayload(prms, text.DesiredSize, text.Layout, Brushes.Red, null, null);
+
+        Assert.That(after.TextLayout, Is.SameAs(before.TextLayout));
+        Assert.That(after.DesiredSize, Is.EqualTo(before.DesiredSize));
+        Assert.That(before.RequiresBufferRebuild(after), Is.True, "the glyphs moved: the old ones must not stay on screen");
+    }
 }

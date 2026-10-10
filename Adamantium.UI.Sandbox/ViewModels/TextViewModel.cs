@@ -202,12 +202,19 @@ public partial class TextViewModel : TabPageViewModel
 
     [Bindable, Affects(nameof(GlyphScaling))] private double _glyphMaximum = 100;
 
-    public SpacingRange GlyphScaling => new(Math.Min(GlyphMinimum, 100) / 100, 1, Math.Max(GlyphMaximum, 100) / 100);
+    public SpacingRange GlyphScaling => Range(GlyphMinimum, 100, GlyphMaximum);
 
-    // InDesign's justification settings of the paragraph topic, in percents of the space.
-    public SpacingRange WordSpacing => new(Math.Min(WordMinimum, 100) / 100, 1, Math.Max(WordMaximum, 100) / 100);
+    // InDesign's justification settings of the paragraph topic, in percents of the space; the desired value kept between
+    // the two a range slider sets.
+    public SpacingRange WordSpacing => Range(WordMinimum, 100, WordMaximum);
 
-    public SpacingRange LetterSpacing => new(Math.Min(LetterMinimum, 0) / 100, 0, Math.Max(LetterMaximum, 0) / 100);
+    public SpacingRange LetterSpacing => Range(LetterMinimum, 0, LetterMaximum);
+
+    private static SpacingRange Range(double minimum, double desired, double maximum) =>
+        new(minimum / 100, Math.Clamp(desired, minimum, Math.Max(minimum, maximum)) / 100, Math.Max(minimum, maximum) / 100);
+
+    // A justified line holding one word, then the paragraph's last line.
+    public string SingleWordSample => "Incomprehensibilities notwithstanding";
 
     // The Universal Declaration of Human Rights, article 1: justified with kashidas.
     public string ArabicParagraphSample =>
@@ -215,6 +222,9 @@ public partial class TextViewModel : TabPageViewModel
         "بروح الإخاء.";
 
     [Bindable] private bool _kashidas = true;
+
+    // How far the run of the basics topic's baseline shift sample is raised; negative lowers it.
+    [Bindable] private double _runShift = 6;
 
     // Genesis 1:1-2, unpointed.
     public string HebrewSample =>

@@ -76,6 +76,25 @@ public class TextBlockSpacingTests
     }
 
     [Test]
+    public void ARunsBaselineShift_RaisesIt_AndTheBlockKeepsItsHeight()
+    {
+        TextBlock Block(double? shift)
+        {
+            var text = new TextBlock { FontSize = 20 };
+            text.Inlines.Add(new Run { Text = "mc" });
+            text.Inlines.Add(new Run { Text = "2", BaselineShift = shift });
+            return Hosted(text);
+        }
+
+        var plain = Block(null);
+        var raised = Block(7);
+
+        Assert.That(raised.Layout.GetTextData()[2].Rect.Y, Is.EqualTo(plain.Layout.GetTextData()[2].Rect.Y - 7).Within(1e-3));
+        Assert.That(raised.Layout.GetTextData()[0].Rect, Is.EqualTo(plain.Layout.GetTextData()[0].Rect));
+        Assert.That(raised.DesiredSize.Height, Is.EqualTo(plain.DesiredSize.Height));
+    }
+
+    [Test]
     public void ARunsTracking_TakesPrecedence()
     {
         var text = new TextBlock { FontSize = 20 };

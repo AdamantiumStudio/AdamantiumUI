@@ -7,9 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
+  unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
+  E = mc², H₂O, xⁿ⁺¹, an underlined footnote mark, and a slider moving an underlined, highlighted run.
+
 - `Kashidas` on every element (inherited, on by default), taken by `TextBlock` and `TextBox`: justified Arabic
-  stretches its words with kashidas once its spaces are at their maximum. Sandbox Paragraph topic: a justified Arabic
-  column and a switch for kashidas.
+  stretches its words with kashidas once its spaces are at their maximum. Sandbox Paragraph topic, Justification
+  section: a justified Arabic paragraph under a switch for kashidas, and range sliders for word and letter spacing and
+  glyph scaling, each setting over the justified text it changes.
 
 - `LastLineAlignment` and `SingleWordJustification` on every element (inherited), taken by `TextBlock` and `TextBox`:
   where a justified paragraph's last line and a line of a single word stand. Sandbox Paragraph topic: buttons for
@@ -664,6 +669,14 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBlock` laid out again with the same text and size - a new last-line alignment, single-word justification,
+  kashidas switched off, a run's baseline shift - kept its old glyphs on screen: the renderer told text apart only by
+  its string and size. It compares the layout's revision too now.
+- A text line thinner than a pixel - the strikethrough of 12 px Segoe UI, the underline of a small footnote mark - could
+  fall between pixel rows and not be drawn. `TextBlock` draws underlines and strikethroughs on whole device pixels, at
+  least one thick.
+- `WrapPanel` arranged each item of a horizontal line at its own height, so `VerticalAlignment` did nothing: a label
+  beside taller buttons stuck to the top. Each item now gets the line's height and stands in it by its alignment.
 - A `{TemplateBinding}` on an attached property in a template - `ToolTipService.ToolTip`, `AutomationProperties.Name` -
   bound the part's own property of the same name instead: its `Name`, or its `ToolTip`, which no trigger of the
   template could then override. It binds the attached property now, and the designer previews it.

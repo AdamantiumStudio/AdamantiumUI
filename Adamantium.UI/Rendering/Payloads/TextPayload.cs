@@ -26,6 +26,9 @@ public class TextPayload(
     // A text snapshot: TextBlock reshapes one TextLayout in place, so only this string tells payloads apart.
     public string Text { get; } = textLayout?.Text;
 
+    // ...and this, when the text and size stay the same but the glyphs move: a new last-line alignment, kashidas off.
+    public int Revision { get; } = textLayout?.Revision ?? 0;
+
     // The LIVE brushes, read through their immutable snapshots - see RectanglePayload.
     private readonly Brush _foreground = foreground?.ForRendering();
     private readonly Brush _background = background?.ForRendering();
@@ -37,7 +40,8 @@ public class TextPayload(
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Foreground, Background, Stroke, LocalTransform);
+        return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Revision, Foreground, Background, Stroke,
+            LocalTransform);
     }
 
     public bool RequiresBufferRebuild(IRenderCachePolicy newState)
@@ -45,7 +49,7 @@ public class TextPayload(
         if (newState is not TextPayload payload) return true;
 
         return DesiredSize != payload.DesiredSize || Text != payload.Text || TextLayout != payload.TextLayout ||
-               TextRenderingParameters != payload.TextRenderingParameters;
+               Revision != payload.Revision || TextRenderingParameters != payload.TextRenderingParameters;
     }
 
     public bool Equals(TextPayload other)
@@ -53,7 +57,7 @@ public class TextPayload(
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         return Equals(TextRenderingParameters, other.TextRenderingParameters) &&
-               DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) &&
+               DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) && Revision == other.Revision &&
                Equals(Foreground, other.Foreground) && Equals(Background, other.Background) &&
                Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform;
     }

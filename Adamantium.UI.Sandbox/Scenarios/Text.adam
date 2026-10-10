@@ -34,6 +34,11 @@ toggle id=OpticalMarginsToggle
 set id=ColumnWidthSlider 160
 expect id=ColumnWidthSlider value=160
 set id=ColumnWidthSlider 220
+set id=WordSpacingRange/id=Upper 200
+expect id=WordSpacingRange/id=Upper value=200
+set id=WordSpacingRange/id=Upper 133
+set id=LetterSpacingRange/id=Upper 20
+set id=LetterSpacingRange/id=Upper 0
 select id=LastLineCenterRadio
 select id=SingleWordJustifyRadio
 select id=SingleWordStartRadio
@@ -53,5 +58,8 @@ select id=TextView/name=Basics
 wait id=Topic/id=BasicsStandView
 set id=FontSizeSlider 24
 expect id=FontSizeSlider value=24
+set id=RunShiftSlider -6
+expect id=RunShiftSlider value=-6
 # Back as the page opens.
+set id=RunShiftSlider 6
 set id=FontSizeSlider 22

@@ -64,5 +64,66 @@
                      FontSize="32"/>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Baseline shift: smaller runs raised and lowered off the baseline, the line's height unchanged; the
+             underlined footnote mark carries its line up with it. -->
+        <TextBlock Text="{Localize TextStrings.BaselineShiftTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Horizontal"
+                    Margin="0,0,0,6">
+            <TextBlock x:Name="RunShiftLabel"
+                       Text="{Localize TextStrings.RunShift}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="RunShiftSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=RunShiftLabel}"
+                    Width="240"
+                    Minimum="-12"
+                    Maximum="12"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding RunShift, Mode=TwoWay}"
+                    Margin="12,0,0,0"/>
+            <TextBlock Text="{Binding RunShift}"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"/>
+        </StackPanel>
+        <!-- The slider moves the marked run: it and its underline go up or down, its background and the line stay. -->
+        <TextBlock AutomationProperties.AutomationId="RunShiftSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left"
+                   Margin="0,12,0,18">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.RunShiftBefore}"/>
+                <Run Text="{Localize TextStrings.RunShiftRun}"
+                     BaselineShift="{Binding RunShift}"
+                     TextDecorations="Underline"
+                     Background="#7C3AED"/>
+                <Run Text="{Localize TextStrings.RunShiftAfter}"/>
+            </TextBlock.Inlines>
+        </TextBlock>
+        <TextBlock AutomationProperties.AutomationId="BaselineShiftSample"
+                   FontSize="22"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="E = mc"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineShift="9"/>
+                <Run Text="   H"/>
+                <Run Text="2"
+                     FontSize="13"
+                     BaselineShift="-4"/>
+                <Run Text="O   x"/>
+                <Run Text="n+1"
+                     FontSize="13"
+                     BaselineShift="9"/>
+                <Run Text="   footnote"/>
+                <Run Text="1"
+                     FontSize="13"
+                     BaselineShift="9"
+                     TextDecorations="Underline"/>
+            </TextBlock.Inlines>
+        </TextBlock>
     </StackPanel>
 </View>
