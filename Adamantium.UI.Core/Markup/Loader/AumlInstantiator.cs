@@ -60,6 +60,15 @@ internal sealed class AumlInstantiator
         }
 
         var actualType = _typeMapper?.Invoke(clrType) ?? clrType;
+
+        var valueText = actualType.IsValueType ? node.Children.OfType<AumlAstTextNode>().FirstOrDefault()?.Text?.Trim() : null;
+        if (!string.IsNullOrEmpty(valueText))
+        {
+            var parsed = TypeParser.Parse(valueText, actualType);
+            _root ??= parsed;
+            return parsed;
+        }
+
         var instance = Activator.CreateInstance(actualType);
         if (instance != null) SourceMap[instance] = new AumlSourceSpan(node.Line, node.Position);
         _root ??= instance;

@@ -742,6 +742,10 @@ All packages share one version.
 
 ### Fixed
 
+- The designer preview: a value-type element with its value as text (`<Color x:Key="Accent">#FF0000FF</Color>`,
+  `<Thickness>1,2,3,4</Thickness>`) is the value its text says - `Color` no longer resolves to a nested type of the
+  same name in a referenced assembly, and the text is parsed as the generator parses it.
+
 - Render clones (the loading skeleton cards): outside a scrolling area every copy was drawn at the last copy's place,
   a repaint without a full redraw - the skeleton's pulse among them - reached one copy of a child and no copy of the
   card itself, and a child that began drawing more shapes lost its other copies. Each copy is drawn at its own place,
