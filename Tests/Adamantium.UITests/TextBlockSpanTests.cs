@@ -62,6 +62,22 @@ public class TextBlockSpanTests
     }
 
     [Test]
+    public void BaselineAlignment_GoesToTheSpansRuns_ARunsOwnWins()
+    {
+        var text = new TextBlock();
+        var span = new Span { BaselineAlignment = BaselineAlignment.Superscript };
+        span.Inlines.Add(new Run { Text = "ab" });
+        span.Inlines.Add(new Run { Text = "cd", BaselineAlignment = BaselineAlignment.Subscript });
+        text.Inlines.Add(new Run { Text = "x" });
+        text.Inlines.Add(span);
+        Hosted(text);
+
+        Assert.That(At(text, 0).BaselineAlignment, Is.Null);
+        Assert.That(At(text, 1).BaselineAlignment, Is.EqualTo(BaselineAlignment.Superscript));
+        Assert.That(At(text, 3).BaselineAlignment, Is.EqualTo(BaselineAlignment.Subscript));
+    }
+
+    [Test]
     public void SpansNest_TheNearerOneWins_LinesAddUp()
     {
         var text = new TextBlock();

@@ -96,6 +96,7 @@
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
     <Phrase Key="RunShiftBefore" Text="В середине строки "/>
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
+    <Phrase Key="BaselineAlignmentTitle" Text="Положение по базовой линии: верхний и нижний индекс там, где их ставит шрифт; мелкие участки у верха, середины и низа строки и у верха и низа текста:"/>
     <Phrase Key="LinesTitle" Text="Строки: расстояние между базовыми линиями, промежуток между строками и наибольшее число строк (0 — все); крупный участок раздвигает свою строку:"/>
     <Phrase Key="LinesHeight" Text="Высота строки:"/>
     <Phrase Key="LinesSpacing" Text="Промежуток:"/>

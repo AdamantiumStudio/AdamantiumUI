@@ -61,6 +61,10 @@ public abstract class Inline : FundamentalUIComponent
     public static readonly AdamantiumProperty BaselineShiftProperty = AdamantiumProperty.Register(nameof(BaselineShift),
         typeof(double?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty BaselineAlignmentProperty = AdamantiumProperty.Register(
+        nameof(BaselineAlignment), typeof(BaselineAlignment?), typeof(Inline),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
 
@@ -166,6 +170,16 @@ public abstract class Inline : FundamentalUIComponent
     {
         get => GetValue<double?>(BaselineShiftProperty);
         set => SetValue(BaselineShiftProperty, value);
+    }
+
+    /// <summary>Where this inline stands across its line, as WPF's: on the baseline, at the top, middle or bottom of the
+    /// line, at the block font's ascender or descender, or where the font sets a superscript or a subscript. Its size
+    /// and the line's height stay as they are; <see cref="BaselineShift"/> adds to it. Null takes the enclosing span's,
+    /// or the baseline.</summary>
+    public BaselineAlignment? BaselineAlignment
+    {
+        get => GetValue<BaselineAlignment?>(BaselineAlignmentProperty);
+        set => SetValue(BaselineAlignmentProperty, value);
     }
 
     protected void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
