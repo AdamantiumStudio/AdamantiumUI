@@ -43,6 +43,18 @@
                          StrokeThickness="1"/>
     </DrawingImage>
 
+    <!-- Breakpoint: a filled disc in the critical color. -->
+    <DrawingImage x:Key="BreakpointIcon">
+        <GeometryDrawing Geometry="M0,5 A5,5 0 1,1 10,5 A5,5 0 1,1 0,5 Z"
+                         Brush="{ResourceReference SystemFillColorCritical}"/>
+    </DrawingImage>
+
+    <!-- Bookmark: a ribbon with a notch at its foot, in the caution color. -->
+    <DrawingImage x:Key="BookmarkIcon">
+        <GeometryDrawing Geometry="M2,0 L8,0 L8,10 L5,7.5 L2,10 Z"
+                         Brush="{ResourceReference SystemFillColorCaution}"/>
+    </DrawingImage>
+
     <!-- Code: angle brackets around a slash - the source of something. -->
     <DrawingImage x:Key="CodeIcon">
         <GeometryDrawing Geometry="M3,2 L0.5,5 L3,8 M7,2 L9.5,5 L7,8 M6,1 L4,9"

@@ -12,7 +12,7 @@ All packages share one version.
   every other theme.
 
 - Theme icons `MatchCaseIcon`, `WholeWordIcon`, `RegularExpressionIcon` and `FindInSelectionIcon` for search
-  options.
+  options; `BreakpointIcon` and `BookmarkIcon` for an editor's margin.
 
 - `Run.BaselineShift`: a run raised above the line's baseline (negative lowers it), its size and the line's height
   unchanged - superscripts and subscripts the font has no forms for, footnote marks. Sandbox Text tab, Basics topic:
