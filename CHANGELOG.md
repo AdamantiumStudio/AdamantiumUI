@@ -762,16 +762,48 @@ All packages share one version.
   - the containers a list dropped on a reset: they are announced discarded now, so what is inside lets go too;
   - a navigation region shown in a `ContentControl` or an `ItemsControl`: the region lives as long as the application,
     and its host stayed among its listeners;
+  - an `InfiniteCanvas` showing the application's scene: a discarded canvas takes the node controls and wires it put
+    on the scene off it again, leaving the graph as it was - the scene kept the canvas, and a canvas shown on the same
+    scene again laid a second set beside the first;
   - a table row following a record that reports only its errors (`INotifyDataErrorInfo` without
     `INotifyPropertyChanged`);
   - an `Image` showing a shared `DrawingImage` (a theme icon): the icon kept the first image that showed it;
   - an `{ObservableResource}` that a trigger set after the element was unloaded;
+  - a theme brush, which lists the elements painting with it: a discarded element now leaves the list even when it
+    never left a tree to give it up there, and an element that came back into a tree after the brush it inherits had
+    changed no longer takes it twice;
+  - a context menu, which is not in the visual tree: one bound to a view model's collection kept the element it belongs
+    to. An element's own menu now goes with it, and one its style shares with others is unhooked from it;
+  - the runs of a `TextBlock`: they are not in the visual tree, so a discarded block left them painting with their
+    brushes, and a theme brush kept each run and the block with it;
+  - the node controls an `InfiniteCanvas` built for the application's graph: their bindings to the nodes stayed open,
+    so every node it ever showed kept its control, the canvas and the page;
+  - the drawing raster (`DrawingImage` baked for an `ImageBrush` or a nine-slice), which kept every element that ever
+    asked for a bake so a repainted palette could redraw it - it holds them weakly now;
+  - a `DockingArea`, which listened to its window's closing and activation and never stopped;
+  - a window's layout manager, which kept the elements of its last layout pass in a reused list until the next pass;
+  - two registries kept for a leak hunt - one weak reference per layout manager ever made and per brush that ever had
+    an owner - which only grew;
+  - the render cache's fallback for composited animations, which remembered every element ever animated - it keeps
+    only the ones animated now;
   - the render cache: units of a removed control in its pre-render list, the stroked shapes of a longer earlier frame
     in the instanced fill's records, the motion nodes of the last scroll, and the node of every material (acrylic,
     mica) any earlier frame drew.
 
 - A `ListBox` thrown away with its page emptied the view model's collection bound to its `SelectedItems`, and any list
   thrown away ran its selection logic once more, raising `SelectionChanged` for nobody.
+
+- Recoloring a cloned subtree - the loading skeletons a virtualized list draws, pulsing - walked the whole scene on
+  every frame of the pulse: the render cache remembered one copy's records. It remembers each copy's now and repaints
+  them all in place. A shape that wears a shadow or a glow its outline cannot carry (an arc, text) no longer walks
+  the scene on every repaint either.
+
+- An animated `BitmapImage` built its frame texture from every frame's full-color pixels at once - 400 MB for a 200-frame
+  960x540 GIF, thrown away the moment it was uploaded, on every visit to the page that shows it. The frames are now read
+  and indexed one at a time through a single buffer; only an animation of more than 256 colors still needs them all.
+
+- A rectangle, ellipse or polygon drawn turned or slanted kept the color its brush had when it was first drawn that way:
+  a brush recolored in place (a palette variant) never reached it.
 
 - The designer preview: a value-type element with its value as text (`<Color x:Key="Accent">#FF0000FF</Color>`,
   `<Thickness>1,2,3,4</Thickness>`) is the value its text says - `Color` no longer resolves to a nested type of the

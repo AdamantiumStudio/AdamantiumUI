@@ -39,13 +39,15 @@ public class RenderCloneSlotTests
         public void Dispose() => Renderer.Dispose();
     }
 
-    private static Scene NewScene(bool prototypeDraws)
+    private static Scene NewScene(bool prototypeDraws) => NewScene(prototypeDraws, i => Matrix4x4F.Translation(i * Step, 0, 0));
+
+    private static Scene NewScene(bool prototypeDraws, Func<int, Matrix4x4F> place, bool checkFirst = true)
     {
         var device = GpuTestDevice.Device;
         var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)),
             Dim, Dim) { ClearColor = Colors.Black };
         var fill = new SolidColorBrush(new Color((byte)250, (byte)40, (byte)40, (byte)255));
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), ClipToBounds = true };
         var prototype = new TestControl { Bounds = new Rect(0, 0, 40, 40), RenderSize = new Size(40, 40) };
         var square = new TestControl { Bounds = new Rect(10, 10, 20, 20), RenderSize = new Size(20, 20) };
         square.RenderAction = s => s.DrawRectangle(fill, new Rect(0, 0, 20, 20));
@@ -60,13 +62,13 @@ public class RenderCloneSlotTests
         var clones = new Matrix4x4F[Copies];
         for (var i = 0; i < Copies; i++)
         {
-            clones[i] = Matrix4x4F.Translation(i * Step, 0, 0);
+            clones[i] = place(i);
         }
 
         prototype.RenderClones = clones;
         var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Fill = fill, Square = square };
         var px = scene.Draw();
-        for (var i = 0; i < Copies; i++)
+        for (var i = checkFirst ? 0 : 1; i < Copies; i++)
         {
             var (red, green) = At(px, 20 + i * Step, 20);
             Assert.That(red > 150 && green < 100, Is.True, $"copy {i} is drawn red at its own place: red={red} green={green}");
@@ -86,6 +88,68 @@ public class RenderCloneSlotTests
     public void ARecolorInPlace_ReachesEveryCopy(bool prototypeDraws)
     {
         using var scene = NewScene(prototypeDraws);
+
+        scene.Fill.Color = new Color((byte)40, (byte)220, (byte)40, (byte)255);
+        var px = scene.Draw();
+
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "every copy is repainted in place, not by a walk");
+        for (var i = 0; i < Copies; i++)
+        {
+            var (red, green) = At(px, 20 + i * Step, 20);
+            Assert.That(green > 150 && red < 100, Is.True, $"copy {i} is still the old color: red={red} green={green}");
+        }
+    }
+
+    // A second repaint finds every copy's records where the first one left them.
+    [Test]
+    public void ARecolorInPlace_ReachesEveryCopy_Twice()
+    {
+        using var scene = NewScene(false);
+
+        scene.Fill.Color = new Color((byte)40, (byte)220, (byte)40, (byte)255);
+        scene.Draw();
+        scene.Fill.Color = new Color((byte)120, (byte)120, (byte)120, (byte)255);
+        var px = scene.Draw();
+
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the second repaint is in place too");
+        for (var i = 0; i < Copies; i++)
+        {
+            var at = (20 * Dim + 20 + i * Step) * 4;
+            for (var channel = 0; channel < 3; channel++)
+            {
+                Assert.That(px[at + channel], Is.InRange(80, 170), $"copy {i} is not the new gray in channel {channel}");
+            }
+        }
+    }
+
+    // The first copy out of view draws nothing, and the brush still has to know the unit for the copies that draw.
+    [Test]
+    public void ARecolorInPlace_ReachesTheCopiesInView_WhenTheFirstIsOutOfIt()
+    {
+        using var scene = NewScene(false, i => Matrix4x4F.Translation(i == 0 ? -1000 : i * Step, 0, 0), checkFirst: false);
+
+        scene.Fill.Color = new Color((byte)40, (byte)220, (byte)40, (byte)255);
+        var px = scene.Draw();
+
+        for (var i = 1; i < Copies; i++)
+        {
+            var (red, green) = At(px, 20 + i * Step, 20);
+            Assert.That(green > 150 && red < 100, Is.True, $"copy {i} is still the old color: red={red} green={green}");
+        }
+    }
+
+    // A turned copy is drawn on its own, not from a record a patch can rewrite, and the body it is drawn with has to
+    // paint with the brush as it is now: it was built with the color of the moment it was first turned.
+    [Test]
+    public void ARecolorInPlace_ReachesATurnedCopy()
+    {
+        Matrix4x4F Place(int i)
+        {
+            var move = Matrix4x4F.Translation(i * Step, 0, 0);
+            return i != 1 ? move : Matrix4x4F.Translation(-20, -20, 0) * Matrix4x4F.RotationZ(0.3f) * Matrix4x4F.Translation(20, 20, 0) * move;
+        }
+
+        using var scene = NewScene(false, Place);
 
         scene.Fill.Color = new Color((byte)40, (byte)220, (byte)40, (byte)255);
         var px = scene.Draw();

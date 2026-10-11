@@ -852,8 +852,16 @@ public partial class InfiniteCanvas : Control
 
         _graph = new CanvasGraphHost(this);
         _drawing = new CanvasDrawingHost();
-        Follow(_graph, _graph.StopFollowing);
-        Follow(_drawing, _drawing.StopFollowing);
+        Follow(_graph, () =>
+        {
+            if (Scene is { } scene)
+            {
+                scene.Changed -= OnSceneEdited;
+            }
+
+            _graph.StopFollowing();
+            _drawing.StopFollowing();
+        });
 
         // Empty collections at Default priority, so a {Binding} can still replace them; a Local write would mask it.
         SetValue(ToolsProperty, new CanvasTools(), ValuePriority.Default);

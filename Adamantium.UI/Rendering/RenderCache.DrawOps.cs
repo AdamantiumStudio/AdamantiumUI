@@ -663,13 +663,8 @@ public partial class RenderCache
             return;
         }
 
-        _rectSlotByUnit.Remove(unit);
-        _sdfSlotByUnit.Remove(unit);
-        _textRunByUnit.Remove(unit);
-        _texRunByUnit.Remove(unit);
-        _fractalKindByUnit.Remove(unit);
-        _fillSlotByUnit.Remove(unit);
-        _haloRunsByUnit.Remove(unit);
+        ForgetSlots(unit);
+        _copiesByUnit.Remove(unit);
         unit.DeferDispose();
     }
 

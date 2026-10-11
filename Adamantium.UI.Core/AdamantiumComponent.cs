@@ -32,15 +32,15 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     internal void ReleaseRenderAttachments()
     {
         if (_renderAttachmentsReleased) return;
-        _renderAttachmentsReleased = true;
         ForEachRenderAttachment(static (value, owner) => value.DetachFrom(owner));
+        _renderAttachmentsReleased = true;
     }
 
     internal void TakeRenderAttachments()
     {
         if (!_renderAttachmentsReleased) return;
-        _renderAttachmentsReleased = false;
         ForEachRenderAttachment(static (value, owner) => value.AttachTo(owner));
+        _renderAttachmentsReleased = false;
     }
 
     // Driven by the value maps rather than by the type's registered properties: only a property that was actually GIVEN
@@ -563,15 +563,15 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             raw == AdamantiumProperty.UnsetValue ? container.Effective : Coerce(property, metadata, raw),
             AdamantiumProperty.InheritanceEpoch);
 
-        if (!attachable) return;
+        // Not while this element is OUT of the tree: leaving gave every link up, so there is none to move, and coming back
+        // takes whatever the value is by then.
+        if (!attachable || _renderAttachmentsReleased) return;
 
         var after = container.Effective;
         if (ReferenceEquals(before, after)) return;
 
         (before as IRenderAttachable)?.DetachFrom(this);
-        // Not while this element is OUT of the tree: leaving gave every link up, and taking one here would leave the
-        // value holding an element that the next leave can no longer release. Same rule as the Changed hook.
-        if (!_renderAttachmentsReleased) (after as IRenderAttachable)?.AttachTo(this);
+        (after as IRenderAttachable)?.AttachTo(this);
     }
 
     // The nearest ancestor's EXPLICIT value, or UnsetValue when no ancestor states one.

@@ -168,4 +168,27 @@ public class HaloTogglePatchRenderTests
         scene.Draw();
         Assert.That(_renderer.Cache.LastFrameReplayed, Is.True, "...nor switching it off");
     }
+
+    // An arc has no shape a band can wrap, so it wears none - and its recolor is not held back by a band it never had.
+    [Test]
+    public void RecoloringAnArcUnderAShadow_IsPatched_NotWalked()
+    {
+        var arc = new SolidColorBrush(Colors.Lime);
+        var control = new TestControl
+        {
+            RenderAction = s => s.DrawRectangle(new SolidColorBrush(Colors.White), new Rect(0, 0, Size, Size))
+                .DrawEllipse(new Rect(0, 0, Size, Size), arc, 0, 90, Adamantium.ProceduralGeometry.Shapes.EllipseType.Sector),
+            Shadow = new Shadow { OffsetY = 1, BlurRadius = 3, Color = Colors.Blue, Opacity = 1.0 }
+        };
+        control.Bounds = new Rect(0, 0, Size, Size);
+        control.RenderSize = new Size(Size, Size);
+        control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
+        var scene = new Scene { Control = control, Root = new VisualRoot(control, Dim, Dim) };
+        scene.Draw();
+
+        arc.Color = Colors.Red;
+        scene.Draw();
+
+        Assert.That(_renderer.Cache.LastFrameReplayed, Is.True, "the arc is repainted in place, not by a walk");
+    }
 }

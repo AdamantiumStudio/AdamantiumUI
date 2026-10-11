@@ -159,6 +159,21 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
    // Weakly registered brushes that have had an owner, so a sweep can reach an old theme's idle brushes too.
    private static readonly List<WeakReference<Brush>> BrushesWithOwners = new();
+   private static int _pruneBrushesAt = 1024;
+
+   private static void Register(Brush brush)
+   {
+      lock (BrushesWithOwners)
+      {
+         if (BrushesWithOwners.Count >= _pruneBrushesAt)
+         {
+            BrushesWithOwners.RemoveAll(static handle => !handle.TryGetTarget(out _));
+            _pruneBrushesAt = Math.Max(1024, BrushesWithOwners.Count * 2);
+         }
+
+         BrushesWithOwners.Add(new WeakReference<Brush>(brush));
+      }
+   }
 
    /// <summary>TEMP (leak hunt): brushes still listing a destroyed part as an owner or subscriber, and how many such
    /// entries there are.</summary>
@@ -244,7 +259,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       // OUTSIDE the map lock, and that ordering is the point: the diagnostics take BrushesWithOwners and then read a
       // brush's map, so a path that held the map while reaching for the global list would be the other half of a
       // deadlock. Nobody holds both at once.
-      if (firstOwner) lock (BrushesWithOwners) BrushesWithOwners.Add(new WeakReference<Brush>(this));
+      if (firstOwner) Register(this);
 
       Anchor(owner);
 

@@ -126,11 +126,11 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             return;
         }
 
-        Adamantium.UI.Core.VisualTreeNotifications.Attached += c => NoteChurn("attached", c);
-        Adamantium.UI.Core.VisualTreeNotifications.Detached += c => NoteChurn("detached", c);
-        Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged += c => NoteChurn("collapsed-flip", c);
-        Adamantium.UI.Core.VisualTreeNotifications.ShownOrHidden += c => NoteChurn("hidden-flip", c);
-        Adamantium.UI.Core.VisualTreeNotifications.ClipChanged += c => NoteChurn("clip", c);
+        Adamantium.UI.Core.VisualTreeNotifications.Attached += OnTreeAttached;
+        Adamantium.UI.Core.VisualTreeNotifications.Detached += OnTreeDetached;
+        Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged += OnVisibilityFlipped;
+        Adamantium.UI.Core.VisualTreeNotifications.ShownOrHidden += OnHiddenFlipped;
+        Adamantium.UI.Core.VisualTreeNotifications.ClipChanged += OnClipChanged;
 
         _lastMeasure = MeasurableUIComponent.TotalMeasureCalls;
         _lastArrange = MeasurableUIComponent.TotalArrangeCalls;
@@ -141,7 +141,25 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         AnimationManager.AddEndlessTicker(dt => Advance(target, dt));
     }
 
-    protected override void OnDetached(TextBlock target) => _running = false;
+    protected override void OnDetached(TextBlock target)
+    {
+        _running = false;
+        Adamantium.UI.Core.VisualTreeNotifications.Attached -= OnTreeAttached;
+        Adamantium.UI.Core.VisualTreeNotifications.Detached -= OnTreeDetached;
+        Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged -= OnVisibilityFlipped;
+        Adamantium.UI.Core.VisualTreeNotifications.ShownOrHidden -= OnHiddenFlipped;
+        Adamantium.UI.Core.VisualTreeNotifications.ClipChanged -= OnClipChanged;
+    }
+
+    private void OnTreeAttached(Adamantium.UI.Core.IUIComponent c) => NoteChurn("attached", c);
+
+    private void OnTreeDetached(Adamantium.UI.Core.IUIComponent c) => NoteChurn("detached", c);
+
+    private void OnVisibilityFlipped(Adamantium.UI.Core.IUIComponent c) => NoteChurn("collapsed-flip", c);
+
+    private void OnHiddenFlipped(Adamantium.UI.Core.IUIComponent c) => NoteChurn("hidden-flip", c);
+
+    private void OnClipChanged(Adamantium.UI.Core.IUIComponent c) => NoteChurn("clip", c);
 
     private bool Advance(TextBlock target, double dt)
     {

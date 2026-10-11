@@ -750,7 +750,7 @@ public partial class RenderCache
         {
             if (!_groupById.TryGetValue(c.RenderId, out var g)) continue;
             foreach (var u in g.Units)
-                if (Drawing(u) && HoldsInstances(u) && !IsSlotPatchable(u)) return false;
+                if (Drawing(u) && HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u))) return false;
         }
         return true;
     }
@@ -918,7 +918,7 @@ public partial class RenderCache
                 ResolveScissor(u.Component, World(u.Component), _cullScissor, out _, out var culled);
                 if (culled || _culledWhenRecorded.Contains(u)) return false;
 
-                if (HoldsInstances(u) && !IsSlotPatchable(u)) return false;
+                if (HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u))) return false;
             }
         }
 

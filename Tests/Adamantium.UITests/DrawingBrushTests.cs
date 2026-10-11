@@ -186,4 +186,35 @@ public class DrawingBrushTests
             Assert.That(DrawingImageRaster.PickStandIn([], wanted), Is.EqualTo(-1), "nothing baked, nothing to show");
         });
     }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference AskedForABakeThenDropped()
+    {
+        var owner = new Adamantium.UI.Controls.Decorators.Border();
+        var icon = new DrawingImage
+        {
+            Drawing = new GeometryDrawing
+            {
+                Geometry = new RectangleGeometry(new Rect(0, 0, 8, 8)), Brush = new SolidColorBrush(Colors.White)
+            }
+        };
+        DrawingImageRaster.Get(icon, new Size(16, 16), owner);
+        return new System.WeakReference(owner);
+    }
+
+    // The raster remembers who asked for a bake so a repainted palette can redraw them - but only for as long as they
+    // live: a page thrown away must not be kept for the sake of a repaint it will never show.
+    [Test]
+    public void AnElementThatAskedForABake_IsNotKeptByTheRaster()
+    {
+        var gone = AskedForABakeThenDropped();
+
+        for (var i = 0; i < 3; i++)
+        {
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
 }

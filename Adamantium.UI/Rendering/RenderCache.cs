@@ -257,7 +257,10 @@ public partial class RenderCache
         if (liveBrush == null) return;
         if (!_unitsByBrush.TryGetValue(liveBrush, out var list))
             _unitsByBrush[liveBrush] = list = new List<IRenderUnit>();
-        list.Add(unit);
+        if (IndexesCopy(unit))
+        {
+            list.Add(unit);
+        }
         // The walk that indexes it also BAKES it, so this is the version now on screen.
         _brushPaintBaked[liveBrush] = liveBrush.PaintVersion;
     }

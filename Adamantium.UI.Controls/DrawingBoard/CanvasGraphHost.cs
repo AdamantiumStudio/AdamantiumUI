@@ -291,8 +291,10 @@ internal sealed class CanvasGraphHost
         return at >= 0 && at < pins.Count ? pins[at] : null;
     }
 
-    /// <summary>Stops listening to the application's nodes, sockets and wires, and changes nothing on the plane or in the
-    /// model - for a canvas that has been destroyed, which the model outlives.</summary>
+    /// <summary>For a canvas that has been destroyed: stops listening to the application's nodes, sockets, wires and
+    /// scene, then takes its own items - the node controls and the wires drawn for them - off the scene, which the
+    /// application keeps. The model is not touched: the scene is let go of first, so nothing reads the removal as a cut.
+    /// </summary>
     public void StopFollowing()
     {
         if (_nodes is INotifyCollectionChanged was)
@@ -305,10 +307,12 @@ internal sealed class CanvasGraphHost
             scene.Changed -= OnSceneChanged;
         }
 
-        foreach (var model in _placed.Keys)
+        foreach (var (_, item) in _placed)
         {
-            Unfollow(model);
+            Discard(item);
         }
+
+        Clear();
     }
 
     private void Clear()
@@ -412,6 +416,14 @@ internal sealed class CanvasGraphHost
         _scene?.Remove(item);
 
         RebuildWires();
+    }
+
+    private void Discard(ElementItem item)
+    {
+        if (item.Element is not CanvasNode node) return;
+
+        node.PinsReordered -= OnPinsReordered;
+        DiscardedVisuals.Publish(node);
     }
 
     private static void Cut(Adamantium.Core.Collections.TrackingCollection<ICanvasSocket> sockets)

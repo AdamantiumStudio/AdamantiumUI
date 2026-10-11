@@ -449,6 +449,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         foreach (var binding in bindings) binding.CloseConnection();
         Resources.ObservableResource.CloseAll(this);
         LetGoOfFollowed();
+        ReleaseRenderAttachments();
 
         // ...and the BEHAVIORS, which carry bindings of their own. A binding is keyed by its TARGET, and a behavior is
         // not a component, so the sweep above cannot see one: a DragSourceBehavior's {Ancestor} binding stayed open, its
