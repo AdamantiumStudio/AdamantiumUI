@@ -126,17 +126,113 @@ public class PointerDeviceTests
         Assert.That(mouseClicks, Is.EqualTo(2));
     }
 
+    // Controls answer the left button. A finger presses it whatever its source said - here, nothing at all - or a
+    // platform that forgot would leave every button deaf to touch.
+    [Test]
+    public void AFinger_ClicksAButton_WhateverItsSourceSaid()
+    {
+        var button = new Adamantium.UI.Controls.Buttons.Button { Width = 100, Height = 100 };
+        _window.Content = button;
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        var clicks = 0;
+        button.Click += (_, _) => clicks++;
+
+        Send(RawPointerEventType.Down, 30, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Up, 30, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.Right);
+
+        Assert.That(clicks, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AFinger_HoldsTheLeftButtonWhileItLies()
+    {
+        bool? held = null;
+        _left.PointerMoved += (_, e) => held = e.Properties.IsLeftButtonPressed;
+
+        Send(RawPointerEventType.Down, 31, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Move, 31, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+
+        Assert.That(held, Is.True);
+        Send(RawPointerEventType.Up, 31, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+    }
+
+    // A pen's barrel held as its tip touches is the right button - the pen's way of asking for a context menu.
+    [Test]
+    public void APensBarrel_PressesTheRightButton()
+    {
+        var pressed = MouseButtons.None;
+        _left.AddHandler(PointerEvents.PointerPressedEvent,
+            new PointerPressedEventHandler((_, e) => pressed = e.ChangedButton), handledEventsToo: true);
+
+        var barrel = new PointerPointProperties { IsBarrelButtonPressed = true };
+        Send(RawPointerEventType.Down, 32, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.Left, barrel);
+        Send(RawPointerEventType.Up, 32, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.Left, barrel);
+
+        Assert.That(pressed, Is.EqualTo(MouseButtons.Right));
+    }
+
+    // The side button pressed while the tip already touches changes nothing: the pen lifts the button it pressed, so the
+    // element that took the press is let go of.
+    [Test]
+    public void APensSideButtonPressedMidStroke_LiftsTheButtonItPressed()
+    {
+        var pressed = MouseButtons.None;
+        var released = MouseButtons.None;
+        var moveHeldLeft = false;
+        _left.AddHandler(PointerEvents.PointerPressedEvent,
+            new PointerPressedEventHandler((_, e) => pressed = e.ChangedButton), handledEventsToo: true);
+        _left.AddHandler(PointerEvents.PointerReleasedEvent,
+            new PointerReleasedEventHandler((_, e) => released = e.ChangedButton), handledEventsToo: true);
+        _left.PointerMoved += (_, e) => moveHeldLeft = e.Properties.IsLeftButtonPressed;
+
+        var barrel = new PointerPointProperties { IsBarrelButtonPressed = true };
+        Send(RawPointerEventType.Down, 33, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Move, 33, PointerType.Pen, new Vector2(55, 50), 0, MouseButtons.None, barrel);
+        Send(RawPointerEventType.Up, 33, PointerType.Pen, new Vector2(55, 50), 0, MouseButtons.None, barrel);
+        Send(RawPointerEventType.LeaveWindow, 33, PointerType.Pen, Vector2.Zero, 0, MouseButtons.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pressed, Is.EqualTo(MouseButtons.Left));
+            Assert.That(moveHeldLeft, Is.True, "the stroke still holds the button it pressed");
+            Assert.That(released, Is.EqualTo(MouseButtons.Left));
+        });
+    }
+
+    // A finger hovering over a digitizer that sees it is no press: only a touch holds the left button.
+    [Test]
+    public void AHoveringFinger_HoldsNoButton()
+    {
+        bool? held = null;
+        _left.PointerMoved += (_, e) => held = e.Properties.IsLeftButtonPressed;
+
+        Send(RawPointerEventType.Move, 34, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+
+        Assert.That(held, Is.False);
+        Send(RawPointerEventType.LeaveWindow, 34, PointerType.Touch, Vector2.Zero, 0, MouseButtons.None);
+    }
+
     private static Pointer Finger(uint id) => PointerDevice.Current.Pointers.Single(p => p.Id == id);
 
-    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2 at, uint timestamp)
+    // The left button for a press or a release, as a platform says it for the mouse.
+    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2 at, uint timestamp) =>
+        Send(type, id, pointerType, at, timestamp,
+            type is RawPointerEventType.Down or RawPointerEventType.Up ? MouseButtons.Left : MouseButtons.None);
+
+    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2 at, uint timestamp,
+        MouseButtons button, PointerPointProperties properties = default)
     {
-        var held = type == RawPointerEventType.Down ? InputModifiers.LeftMouseButton : InputModifiers.None;
-        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, held, timestamp)
+        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, timestamp)
         {
             PointerId = id,
             PointerType = pointerType,
             IsPrimary = pointerType == PointerType.Mouse,
-            ChangedButton = type is RawPointerEventType.Down or RawPointerEventType.Up ? MouseButtons.Left : MouseButtons.None
+            ChangedButton = button,
+            Properties = properties
         });
     }
 }

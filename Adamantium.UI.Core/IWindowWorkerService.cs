@@ -43,6 +43,12 @@ public interface IWindowWorkerService
     /// the same behavior.</summary>
     public void SetMouseCapture(bool capture);
 
+    /// <summary>A desktop point to a point of the window's client area, both in physical pixels.</summary>
+    public PixelPoint ScreenToClient(PixelPoint screen);
+
+    /// <summary>A point of the window's client area to a desktop point, both in physical pixels.</summary>
+    public PixelPoint ClientToScreen(PixelPoint client);
+
     /// <summary>Enters or leaves relative mouse mode (hidden, centered cursor producing raw deltas); on leave the cursor
     /// reappears at <paramref name="restoreScreen"/>.</summary>
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen);

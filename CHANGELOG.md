@@ -7,6 +7,25 @@ All packages share one version.
 
 ### Added
 
+- Touch and pen on Windows. A window reads `WM_POINTER` messages for a finger or a pen into pointer events: position,
+  contact, primary, pressure, tilt, rotation, eraser and side button, and a finger's contact area. A gesture the system
+  cancels arrives as `PointerCanceled`. A finger no longer reaches the application as the mouse the system used to
+  make of it. The mouse and a touchpad still come as mouse messages.
+
+- `ISyntheticPointerInput`: the platform's own synthetic pointer input, which hands a finger or a pen to the system as
+  `SyntheticPointerFrame`s. It is for checking a platform's pointer path, since the system presses whatever window is
+  on top of the desktop. Windows implements it with a synthetic pointer device.
+  - `adam-auto touch|pen ... --os` and `throughSystem: true` on the automation's touch and pen methods use it.
+  - The command refuses when the element's window is not on top where the contact lands.
+  - It waits until the contact's release has reached the window.
+
+- Touch and pen in automation, simulated inside the application as the mouse is:
+  - `adam-auto touch <selector> tap | drag <x1,y1> <x2,y2>`;
+  - `adam-auto pen <selector> tap | drag ... [--pressure <0..1>] [--barrel] [--eraser]`;
+  - `AutomationElement.TapAsync`, `TouchDragAsync`, `PenTapAsync` and `PenDragAsync`.
+
+  The sandbox's `Touch.adam` scenario taps and drags its buttons, list, text box, slider and context menu.
+
 - `Transform.ShiftX` and `ShiftY`: a move in units of the owner's own size (1 = its whole width or height), added to
   `TranslateX`/`TranslateY` for a render transform. The render thread composes it too, so an animation of it is
   composited: a band can travel a fraction of its card whatever size the card is.
@@ -676,6 +695,15 @@ All packages share one version.
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
+
+- `PointerDevice` decides which button a finger or a pen presses, whatever its platform said. A finger is the left
+  button for as long as it lies on the surface, and a pen's tip is the left button. With its side button held, a pen
+  is the right button. Controls answer the left button, so a platform that reported a finger otherwise would have left
+  them deaf to touch.
+
+- `WindowBase.ScreenToClient` and `ClientToScreen` ask the window's platform worker
+  (`IWindowWorkerService.ScreenToClient` and `ClientToScreen`) instead of calling Windows themselves. The controls no
+  longer use `Adamantium.Win32` at all. A window with no platform behind it keeps a point as it is.
 
 - A `DoubleAnimation` plays as a two-key `AnimationCurve`, so the render thread plays a transform or an element's
   opacity by itself, the way it plays a keyframe animation: a slide, the tab indicator, a popup's scale-in or a fade

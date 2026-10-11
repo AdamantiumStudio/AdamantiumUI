@@ -1,0 +1,42 @@
+# A finger and a pen, inside the application. A finger presses the left button whatever its platform says, so a tap
+# clicks a button, picks a radio button and a list row, and focuses a text box, and a drag moves a slider's thumb.
+# A pen's tip does the same; held with its side button it is the right button, and opens a context menu.
+select id=GalleryTabs/id=Buttons
+wait id=ButtonsView/id=ClickCount --timeout 20s
+touch id=ButtonsView/name=Add tap
+expect id=ClickCount name=1
+pen id=ButtonsView/name=Add tap --pressure 0.8
+expect id=ClickCount name=2
+touch id=ButtonsView/name=Pro tap
+expect id=ChosenPlan name=Pro
+# Back as the page opens.
+touch id=ButtonsView/name=Reset tap
+expect id=ClickCount name=0
+touch id=ButtonsView/name=Free tap
+select id=GalleryTabs/id=Lists
+wait id=ListsView/id=SingleList --timeout 20s
+touch id=SingleList/name=Mars tap
+expect id=SelectedPlanet name=Mars
+touch id=SingleList/name=Earth tap
+expect id=SelectedPlanet name=Earth
+select id=GalleryTabs/id=Text
+wait id=TextView
+select id=TextView/name=Editing
+wait id=Topic/id=EditingStandView
+touch id=Message tap
+expect id=Message focus=True
+select id=GalleryTabs/id=Ranges
+wait id=ValueSlider
+expect id=ValueSlider value=40
+touch id=ValueSlider drag 120,12 420,12
+expect id=ValueSlider value=100
+pen id=ValueSlider drag 290,12 -50,12 --pressure 0.3
+expect id=ValueSlider value=0
+set id=ValueSlider 40
+select id=GalleryTabs/id=Menus
+wait id=MenusView/id=MenuSurface --timeout 20s
+pen id=MenuSurface tap --barrel
+wait id=SurfaceMenu --timeout 3s
+invoke id=SurfaceMenu/name=Copy
+expect id=MenuReport name="Picked: Copy"
+absent id=SurfaceMenu

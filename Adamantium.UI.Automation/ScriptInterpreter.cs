@@ -16,7 +16,7 @@ internal sealed class ScriptInterpreter
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
-        "hover", "wheel", "drag", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
+        "hover", "wheel", "drag", "touch", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
         "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -104,6 +104,8 @@ internal sealed class ScriptInterpreter
             "zoom" => SendAsync(Second(AutomationCommand.Zoom, arguments, allowErrors)),
             "pan" => SendAsync(Pair(AutomationCommand.Pan, arguments, allowErrors)),
             "wheel" => SendAsync(Second(AutomationCommand.Wheel, arguments, allowErrors)),
+            "touch" => SendAsync(Contact(AutomationCommand.Touch, arguments, allowErrors)),
+            "pen" => SendAsync(Contact(AutomationCommand.Pen, arguments, allowErrors)),
             "context-menu" => SendAsync(Target(AutomationCommand.ShowContextMenu, arguments, allowErrors)),
             "drop" => SendAsync(new AutomationRequest
             {
@@ -180,6 +182,34 @@ internal sealed class ScriptInterpreter
         Value = arguments.At(1),
         AllowErrors = allowErrors
     };
+
+    // touch|pen <selector> tap | drag <x1,y1> <x2,y2>, a pen's --pressure, --barrel and --eraser, and --os to hand
+    // the contact to the system.
+    private static AutomationRequest Contact(AutomationCommand command, ScriptArguments arguments, bool allowErrors)
+    {
+        var gesture = arguments.At(1);
+        var value = gesture switch
+        {
+            "tap" => null,
+            "drag" => $"{arguments.At(2)} {arguments.At(3)}",
+            _ => throw new AutomationException($"'{gesture}': tap, or drag x1,y1 x2,y2.")
+        };
+
+        var options = new List<string>();
+        if (arguments.Option("pressure") is { } pressure) options.Add($"pressure={pressure}");
+        if (arguments.Flag("barrel")) options.Add("barrel");
+        if (arguments.Flag("eraser")) options.Add("eraser");
+        if (arguments.Flag(AutomationExecutor.SystemInput)) options.Add(AutomationExecutor.SystemInput);
+
+        return new AutomationRequest
+        {
+            Command = command,
+            Target = arguments.At(0),
+            Value = value,
+            Properties = options.Count > 0 ? [.. options] : null,
+            AllowErrors = allowErrors
+        };
+    }
 
     private static AutomationRequest Pair(AutomationCommand command, ScriptArguments arguments, bool allowErrors) => new()
     {
