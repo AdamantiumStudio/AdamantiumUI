@@ -61,7 +61,7 @@
     </Style>
 
     <Style Selector="ToggleButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
             <!-- The outline BRIGHTENS rather than appearing: it is already there at rest. -->
             <Setter TargetName="InnerBorder" Property="BorderBrush"

@@ -862,7 +862,7 @@ public class Ribbon : Selector
     private KeyEventHandler _keyTipKeys;
     private KeyEventHandler _keyTipUp;
     private TextInputEventHandler _keyTipText;
-    private MouseButtonEventHandler _keyTipPress;
+    private PointerPressedEventHandler _keyTipPress;
 
     /// <summary>Alt is heard at the WINDOW, not at the band: the mode starts wherever the keyboard happens to be, and
     /// its first level covers the caption too - the quick-access bar wears badges there, as in Office.</summary>
@@ -878,7 +878,7 @@ public class Ribbon : Selector
         _keyTipRoot.AddHandler(Keyboard.PreviewKeyDownEvent, _keyTipKeys, handledEventsToo: true);
         _keyTipRoot.AddHandler(Keyboard.PreviewKeyUpEvent, _keyTipUp, handledEventsToo: true);
         _keyTipRoot.AddHandler(Keyboard.PreviewTextInputEvent, _keyTipText, handledEventsToo: true);
-        _keyTipRoot.AddHandler(Mouse.PreviewMouseDownEvent, _keyTipPress, handledEventsToo: true);
+        _keyTipRoot.AddHandler(PointerEvents.PreviewPointerPressedEvent, _keyTipPress, handledEventsToo: true);
     }
 
     private void UnhookKeyTips()
@@ -888,7 +888,7 @@ public class Ribbon : Selector
         _keyTipRoot.RemoveHandler(Keyboard.PreviewKeyDownEvent, _keyTipKeys);
         _keyTipRoot.RemoveHandler(Keyboard.PreviewKeyUpEvent, _keyTipUp);
         _keyTipRoot.RemoveHandler(Keyboard.PreviewTextInputEvent, _keyTipText);
-        _keyTipRoot.RemoveHandler(Mouse.PreviewMouseDownEvent, _keyTipPress);
+        _keyTipRoot.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _keyTipPress);
         _keyTipRoot = null;
         _keyTips?.End();
     }
@@ -934,7 +934,7 @@ public class Ribbon : Selector
     }
 
     // Reaching for the pointer means the keyboard route was abandoned - Office drops the badges on any press.
-    private void OnKeyTipPress(object sender, MouseButtonEventArgs e) => _keyTips?.End();
+    private void OnKeyTipPress(object sender, PointerPressedEventArgs e) => _keyTips?.End();
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {

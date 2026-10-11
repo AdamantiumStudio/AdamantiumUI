@@ -24,10 +24,10 @@ public class MarkupErrorCatalogTests
     public void ATemplatesTriggers_SettingItsPartsAsTheyAre_FailNothing()
     {
         var text = AumlCodegenHarness.WindowHeader + ">" + Template +
-                   "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\"><Setter TargetName=\"Chrome\" Property=\"Background\" Value=\"Red\"/>" +
+                   "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\"><Setter TargetName=\"Chrome\" Property=\"Background\" Value=\"Red\"/>" +
                    "<Setter TargetName=\"Label\" Property=\"Foreground\" Value=\"White\"/></PropertyTrigger>" +
-                   "<PropertyTrigger SourceName=\"Chrome\" Property=\"IsMouseOver\" Value=\"true\"><Setter Property=\"Opacity\" Value=\"0.5\"/></PropertyTrigger>" +
-                   "<MultiTrigger><MultiTrigger.Conditions><Condition Property=\"IsMouseOver\" Value=\"true\"/><Condition Property=\"IsPressed\" Value=\"true\"/></MultiTrigger.Conditions>" +
+                   "<PropertyTrigger SourceName=\"Chrome\" Property=\"IsPointerOver\" Value=\"true\"><Setter Property=\"Opacity\" Value=\"0.5\"/></PropertyTrigger>" +
+                   "<MultiTrigger><MultiTrigger.Conditions><Condition Property=\"IsPointerOver\" Value=\"true\"/><Condition Property=\"IsPressed\" Value=\"true\"/></MultiTrigger.Conditions>" +
                    "<Setter TargetName=\"Chrome\" Property=\"Opacity\" Value=\"0.8\"/></MultiTrigger>" + TemplateEnd + "</Window>";
 
         var errors = AumlCodegenHarness.Diagnose("MainWindow.auml", text, compile: false).Where(d => d.Severity == DiagnosticSeverity.Error);
@@ -99,14 +99,14 @@ public class MarkupErrorCatalogTests
     [TestCase("UnknownClrNamespace", RootWith + " xmlns:n=\"clr-namespace:Gone.Away\"><⟦n:Thing/></Window>", "Thing")]
 
     // Triggers and the parts of a template they set.
-    [TestCase("TargetNameOfNoPart", Template + "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\"><Setter ⟦TargetName=\"Nope\" Property=\"Background\" Value=\"Red\"/></PropertyTrigger>" + TemplateEnd, "has no part named 'Nope'")]
-    [TestCase("APartsPropertyThatIsNot", Template + "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\"><Setter TargetName=\"Label\" ⟦Property=\"BorderThickness\" Value=\"1\"/></PropertyTrigger>" + TemplateEnd, "Property BorderThickness could not be found in TextBlock")]
-    [TestCase("APartsBadValue", Template + "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\"><Setter TargetName=\"Chrome\" Property=\"Width\" ⟦Value=\"wide\"/></PropertyTrigger>" + TemplateEnd, "'wide' is not a valid")]
+    [TestCase("TargetNameOfNoPart", Template + "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\"><Setter ⟦TargetName=\"Nope\" Property=\"Background\" Value=\"Red\"/></PropertyTrigger>" + TemplateEnd, "has no part named 'Nope'")]
+    [TestCase("APartsPropertyThatIsNot", Template + "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\"><Setter TargetName=\"Label\" ⟦Property=\"BorderThickness\" Value=\"1\"/></PropertyTrigger>" + TemplateEnd, "Property BorderThickness could not be found in TextBlock")]
+    [TestCase("APartsBadValue", Template + "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\"><Setter TargetName=\"Chrome\" Property=\"Width\" ⟦Value=\"wide\"/></PropertyTrigger>" + TemplateEnd, "'wide' is not a valid")]
     [TestCase("TriggerOfAPropertyThatIsNot", Template + "<PropertyTrigger ⟦Property=\"IsHoverd\" Value=\"true\"/>" + TemplateEnd, "Property IsHoverd could not be found in Button")]
-    [TestCase("TriggerWithABadValue", Template + "<PropertyTrigger Property=\"IsMouseOver\" ⟦Value=\"maybe\"/>" + TemplateEnd, "'maybe' is not a valid")]
-    [TestCase("SourceNameOfNoPart", Template + "<PropertyTrigger ⟦SourceName=\"Nope\" Property=\"IsMouseOver\" Value=\"true\"/>" + TemplateEnd, "has no part named 'Nope'")]
+    [TestCase("TriggerWithABadValue", Template + "<PropertyTrigger Property=\"IsPointerOver\" ⟦Value=\"maybe\"/>" + TemplateEnd, "'maybe' is not a valid")]
+    [TestCase("SourceNameOfNoPart", Template + "<PropertyTrigger ⟦SourceName=\"Nope\" Property=\"IsPointerOver\" Value=\"true\"/>" + TemplateEnd, "has no part named 'Nope'")]
     [TestCase("ConditionOfAPropertyThatIsNot", Template + "<MultiTrigger><MultiTrigger.Conditions><Condition ⟦Property=\"IsHoverd\" Value=\"true\"/></MultiTrigger.Conditions></MultiTrigger>" + TemplateEnd, "IsHoverd")]
-    [TestCase("StyleTriggerOfNoPart", "<Grid><Grid.Styles><Style Selector=\"Button\"><Setter Property=\"Template\"><Setter.Value><ControlTemplate TargetType=\"Button\"><Border x:Name=\"Chrome\"/></ControlTemplate></Setter.Value></Setter><PropertyTrigger Property=\"IsMouseOver\" Value=\"true\"><Setter ⟦TargetName=\"Nope\" Property=\"Background\" Value=\"Red\"/></PropertyTrigger></Style></Grid.Styles></Grid>", "has no part named 'Nope'")]
+    [TestCase("StyleTriggerOfNoPart", "<Grid><Grid.Styles><Style Selector=\"Button\"><Setter Property=\"Template\"><Setter.Value><ControlTemplate TargetType=\"Button\"><Border x:Name=\"Chrome\"/></ControlTemplate></Setter.Value></Setter><PropertyTrigger Property=\"IsPointerOver\" Value=\"true\"><Setter ⟦TargetName=\"Nope\" Property=\"Background\" Value=\"Red\"/></PropertyTrigger></Style></Grid.Styles></Grid>", "has no part named 'Nope'")]
     [TestCase("ElementTriggerOfAPropertyThatIsNot", "<Border><Border.Triggers><DataTrigger Binding=\"{Binding X}\" Value=\"true\"><Setter ⟦Property=\"Bogus\" Value=\"1\"/></DataTrigger></Border.Triggers></Border>", "Property Bogus could not be found in Border")]
 
     // Directives.

@@ -290,9 +290,12 @@ public class OverlayWindow : ContentControl
 
     public OverlayWindow()
     {
-        // Any press within the window raises it to the front (like clicking a desktop window). MouseLeftButtonDown
-        // bubbles, so a press on a child that does not handle it still reaches here.
-        MouseLeftButtonDown += (_, _) => _manager?.BringToFront(this);
+        // Any press within the window raises it to the front (like clicking a desktop window), the ones a button or a
+        // field inside it took included.
+        AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler((_, e) =>
+        {
+            if (e.ChangedButton == MouseButtons.Left) _manager?.BringToFront(this);
+        }), handledEventsToo: true);
         // A window is a place the keyboard can be sent to as a whole: Ctrl+Tab steps between it, the other overlays and
         // the page behind, and comes back to where the keyboard was in each. A MODAL one is exempt by its own Tab trap.
         KeyboardNavigation.SetIsFocusArea(this, true);
@@ -306,15 +309,15 @@ public class OverlayWindow : ContentControl
         if (_pinButton != null) _pinButton.Click -= OnPinClick;
         if (_dragArea != null)
         {
-            _dragArea.MouseLeftButtonDown -= OnDragPress;
-            _dragArea.MouseMove -= OnDragMove;
-            _dragArea.MouseLeftButtonUp -= OnDragRelease;
+            _dragArea.PointerPressed -= OnDragPress;
+            _dragArea.PointerMoved -= OnDragMove;
+            _dragArea.PointerReleased -= OnDragRelease;
         }
         if (_resizeGrip != null)
         {
-            _resizeGrip.MouseLeftButtonDown -= OnResizePress;
-            _resizeGrip.MouseMove -= OnResizeMove;
-            _resizeGrip.MouseLeftButtonUp -= OnResizeRelease;
+            _resizeGrip.PointerPressed -= OnResizePress;
+            _resizeGrip.PointerMoved -= OnResizeMove;
+            _resizeGrip.PointerReleased -= OnResizeRelease;
         }
 
         _dragArea = GetTemplateChild("PART_TitleThumb") as InputUIComponent;
@@ -326,16 +329,16 @@ public class OverlayWindow : ContentControl
         if (_pinButton != null) _pinButton.Click += OnPinClick;
         if (_dragArea != null)
         {
-            _dragArea.MouseLeftButtonDown += OnDragPress;
-            _dragArea.MouseMove += OnDragMove;
-            _dragArea.MouseLeftButtonUp += OnDragRelease;
+            _dragArea.PointerPressed += OnDragPress;
+            _dragArea.PointerMoved += OnDragMove;
+            _dragArea.PointerReleased += OnDragRelease;
         }
         if (_resizeGrip != null)
         {
             _resizeGrip.Cursor = Cursors.SizeNWSE;   // diagonal resize cursor on hover, so the grip reads as resizable
-            _resizeGrip.MouseLeftButtonDown += OnResizePress;
-            _resizeGrip.MouseMove += OnResizeMove;
-            _resizeGrip.MouseLeftButtonUp += OnResizeRelease;
+            _resizeGrip.PointerPressed += OnResizePress;
+            _resizeGrip.PointerMoved += OnResizeMove;
+            _resizeGrip.PointerReleased += OnResizeRelease;
         }
     }
 
@@ -348,15 +351,15 @@ public class OverlayWindow : ContentControl
         if (_pinButton != null) _pinButton.Click -= OnPinClick;
         if (_dragArea != null)
         {
-            _dragArea.MouseLeftButtonDown -= OnDragPress;
-            _dragArea.MouseMove -= OnDragMove;
-            _dragArea.MouseLeftButtonUp -= OnDragRelease;
+            _dragArea.PointerPressed -= OnDragPress;
+            _dragArea.PointerMoved -= OnDragMove;
+            _dragArea.PointerReleased -= OnDragRelease;
         }
         if (_resizeGrip != null)
         {
-            _resizeGrip.MouseLeftButtonDown -= OnResizePress;
-            _resizeGrip.MouseMove -= OnResizeMove;
-            _resizeGrip.MouseLeftButtonUp -= OnResizeRelease;
+            _resizeGrip.PointerPressed -= OnResizePress;
+            _resizeGrip.PointerMoved -= OnResizeMove;
+            _resizeGrip.PointerReleased -= OnResizeRelease;
         }
         _closeButton = null;
         _pinButton = null;
@@ -449,9 +452,13 @@ public class OverlayWindow : ContentControl
     // (a fixed frame) - NOT the card's, which moves as we drag it. The base is the card's real top-left, so it works whether
     // the window was centered or explicitly placed; the first drag of a centered window switches it to explicit placement at
     // its current spot, so it doesn't jump.
-    private void OnDragPress(object sender, MouseButtonEventArgs e)
+    private void OnDragPress(object sender, PointerPressedEventArgs e)
     {
-        if (!AllowMove || HostPopup?.PlacementTarget is not IInputComponent frame) return;
+        if (e.ChangedButton != MouseButtons.Left || !AllowMove || HostPopup?.PlacementTarget is not IInputComponent frame)
+        {
+            return;
+        }
+
         _dragging = true;
         e.Handled = true;
         _dragStart = e.GetPosition(frame);
@@ -461,11 +468,11 @@ public class OverlayWindow : ContentControl
         _dragParentH = frame.RenderSize.Height;
         _dragCardW = RenderSize.Width;
         _dragCardH = RenderSize.Height;
-        _dragArea.CaptureMouse();
+        e.Pointer.Capture(_dragArea);
         _manager?.BringToFront(this);
     }
 
-    private void OnDragMove(object sender, MouseEventArgs e)
+    private void OnDragMove(object sender, PointerEventArgs e)
     {
         if (!_dragging || HostPopup?.PlacementTarget is not IInputComponent frame) return;
         var delta = e.GetPosition(frame) - _dragStart;
@@ -477,21 +484,32 @@ public class OverlayWindow : ContentControl
         SetCurrentValue(TopProperty, y);
     }
 
-    private void OnDragRelease(object sender, MouseButtonEventArgs e)
+    private void OnDragRelease(object sender, PointerReleasedEventArgs e)
     {
-        if (!_dragging) return;
+        if (!_dragging || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         _dragging = false;
         e.Handled = true;
-        if (_dragArea.IsMouseCaptured) _dragArea.ReleaseMouseCapture();
+        if (ReferenceEquals(e.Pointer.Captured, _dragArea))
+        {
+            e.Pointer.Capture(null);
+        }
     }
 
     private void OnPinClick(object sender, RoutedEventArgs e) => IsPinned = !IsPinned;
 
     // Resize drags the bottom-right grip. Because the card is CENTERED by the popup, growing it by (dw,dh) moves both edges
     // out by half; shift the popup offset by half the applied change so the top-left corner stays put under the grip.
-    private void OnResizePress(object sender, MouseButtonEventArgs e)
+    private void OnResizePress(object sender, PointerPressedEventArgs e)
     {
-        if (!CanResize || HostPopup?.PlacementTarget is not IInputComponent frame) return;
+        if (e.ChangedButton != MouseButtons.Left || !CanResize || HostPopup?.PlacementTarget is not IInputComponent frame)
+        {
+            return;
+        }
+
         _resizing = true;
         e.Handled = true;
         _resizeStart = e.GetPosition(frame);
@@ -501,11 +519,11 @@ public class OverlayWindow : ContentControl
         _resizeParentH = frame.RenderSize.Height;
         _resizeLeft = WorldTransform.TranslationVector.X;   // the card's current top-left in window space (stays fixed)
         _resizeTop = WorldTransform.TranslationVector.Y;
-        _resizeGrip.CaptureMouse();
+        e.Pointer.Capture(_resizeGrip);
         _manager?.BringToFront(this);
     }
 
-    private void OnResizeMove(object sender, MouseEventArgs e)
+    private void OnResizeMove(object sender, PointerEventArgs e)
     {
         if (!_resizing || HostPopup?.PlacementTarget is not IInputComponent frame) return;
         var delta = e.GetPosition(frame) - _resizeStart;
@@ -558,12 +576,19 @@ public class OverlayWindow : ContentControl
         SizeCard(width, height, at.X, at.Y, frame.RenderSize.Width, frame.RenderSize.Height);
     }
 
-    private void OnResizeRelease(object sender, MouseButtonEventArgs e)
+    private void OnResizeRelease(object sender, PointerReleasedEventArgs e)
     {
-        if (!_resizing) return;
+        if (!_resizing || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         _resizing = false;
         e.Handled = true;
-        if (_resizeGrip.IsMouseCaptured) _resizeGrip.ReleaseMouseCapture();
+        if (ReferenceEquals(e.Pointer.Captured, _resizeGrip))
+        {
+            e.Pointer.Capture(null);
+        }
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new OverlayWindowAutomationPeer(this);

@@ -15,7 +15,7 @@
         </Setter>
     </Style>
 
-    <!-- No IsMouseOver trigger, deliberately - see above. Stated as an absence with a reason, so the next person can
+    <!-- No IsPointerOver trigger, deliberately - see above. Stated as an absence with a reason, so the next person can
          see it was decided rather than forgotten. -->
 
 </StyleSet>

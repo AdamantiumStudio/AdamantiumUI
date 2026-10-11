@@ -26,7 +26,7 @@ public class RenderTargetPanel : Grid
 
    public RenderTargetPanel()
    {
-      LostMouseCapture += OnLostMouseCapture;
+      PointerCaptureLost += OnPointerCaptureLost;
    }
 
    /// <summary>The descriptor of the currently bound source, or <c>null</c> when nothing is bound.</summary>
@@ -164,9 +164,9 @@ public class RenderTargetPanel : Grid
       _looking = true;
       // Remember the panel-relative cursor so it reappears there on release; the exact inverse of PointToScreen, so it
       // does not drift across engage cycles.
-      _engagePoint = ScreenToPanel(MouseDevice.CurrentDevice.GetScreenPosition());
+      _engagePoint = ScreenToPanel(Mouse.Pointer.GetScreenPosition());
       Focus();
-      CaptureMouse();
+      Mouse.Pointer.Capture(this);
       (RootVisual as WindowBase)?.SetRelativeMouseMode(true, default);
    }
 
@@ -182,13 +182,13 @@ public class RenderTargetPanel : Grid
    {
       if (!_looking && !_leftDown && !_rightDown && !_middleDown)
       {
-         ReleaseMouseCapture();
+         ReleasePointerCaptures();
       }
    }
 
-   private void OnLostMouseCapture(object sender, MouseEventArgs e)
+   private void OnPointerCaptureLost(object sender, PointerEventArgs e)
    {
-      if (IsMouseCaptured)
+      if (IsPointerCaptured)
       {
          return;
       }
@@ -210,56 +210,68 @@ public class RenderTargetPanel : Grid
       return rootLocal - offset;
    }
 
-   protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+   protected override void OnPointerPressed(PointerPressedEventArgs e)
    {
-      base.OnMouseLeftButtonDown(sender, e);
-      _leftDown = true;
-      CaptureMouse();
+      base.OnPointerPressed(e);
+      switch (e.ChangedButton)
+      {
+         case MouseButtons.Left:
+            _leftDown = true;
+            e.Pointer.Capture(this);
+            if (MouseLookMode == MouseLookMode.Continuous)
+            {
+               Focus();
+            }
 
-      // NO grab on the left button: looking around is the RIGHT one (that is the button the engine rotates the camera
-      // with). Grabbing here hid and re-centered the cursor on a plain click, so every left-click pick measured from
-      // the middle of the surface instead of where it landed.
-      if (MouseLookMode == MouseLookMode.Continuous) 
-         Focus();
+            break;
+
+         case MouseButtons.Middle:
+            _middleDown = true;
+            e.Pointer.Capture(this);
+            break;
+
+         case MouseButtons.Right:
+            _rightDown = true;
+            e.Pointer.Capture(this);
+            if (MouseLookMode == MouseLookMode.Drag)
+            {
+               Engage();
+            }
+            else if (MouseLookMode == MouseLookMode.Continuous)
+            {
+               Focus();
+            }
+
+            break;
+      }
    }
 
-   protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+   protected override void OnPointerReleased(PointerReleasedEventArgs e)
    {
-      base.OnMouseLeftButtonUp(sender, e);
-      _leftDown = false;
-      LetGoOfPointer();
-   }
+      base.OnPointerReleased(e);
+      switch (e.ChangedButton)
+      {
+         case MouseButtons.Left:
+            _leftDown = false;
+            break;
 
-   protected override void OnMouseMiddleButtonDown(object sender, MouseButtonEventArgs e)
-   {
-      base.OnMouseMiddleButtonDown(sender, e);
-      _middleDown = true;
-      CaptureMouse();
-   }
+         case MouseButtons.Middle:
+            _middleDown = false;
+            break;
 
-   protected override void OnMouseMiddleButtonUp(object sender, MouseButtonEventArgs e)
-   {
-      base.OnMouseMiddleButtonUp(sender, e);
-      _middleDown = false;
-      LetGoOfPointer();
-   }
+         case MouseButtons.Right:
+            _rightDown = false;
+            if (MouseLookMode == MouseLookMode.Drag)
+            {
+               Disengage();
+            }
 
-   protected override void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-   {
-      base.OnMouseRightButtonDown(sender, e);
-      _rightDown = true;
-      CaptureMouse();
-      if (MouseLookMode == MouseLookMode.Drag)
-         Engage();
-      else if (MouseLookMode == MouseLookMode.Continuous) 
-         Focus();
-   }
+            break;
 
-   protected override void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-   {
-      base.OnMouseRightButtonUp(sender, e);
-      _rightDown = false;
-      if (MouseLookMode == MouseLookMode.Drag) Disengage();
+         default:
+            return;
+      }
+
       LetGoOfPointer();
    }
 

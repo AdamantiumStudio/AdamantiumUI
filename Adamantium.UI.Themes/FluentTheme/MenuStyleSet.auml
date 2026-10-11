@@ -87,7 +87,7 @@
     </Style>
 
     <Style Selector="MenuItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Root" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">

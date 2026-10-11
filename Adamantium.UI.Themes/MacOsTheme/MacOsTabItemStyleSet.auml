@@ -103,7 +103,7 @@
     </Style>
 
     <Style Selector="TabItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasIcon" Value="true">
@@ -129,7 +129,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="ShowCloseButton" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
         </MultiTrigger>
@@ -146,7 +146,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="ShowPinButton" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="PART_PinButton" Property="Visibility" Value="Visible"/>
         </MultiTrigger>

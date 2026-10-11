@@ -32,17 +32,19 @@ public class DropDownItem : ListBoxItem
     /// <summary>The pointer arriving on this row takes the highlight with it, so the list is never marked in two places
     /// at once - see <see cref="DropDown.HighlightFromContainer"/>. It also makes Enter commit what the pointer is on,
     /// which is what anyone who moved the mouse expects it to do.</summary>
-    protected override void OnMouseEnter(MouseEventArgs e)
+    protected override void OnPointerEntered(PointerEventArgs e)
     {
-        base.OnMouseEnter(e);
+        base.OnPointerEntered(e);
         (Owner ?? FindOwnerLogically())?.HighlightFromContainer(this);
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        // base sets IsPressed/Focus/Handled (its ListBox lookup is a harmless no-op with no ListBox ancestor here).
-        base.OnMouseLeftButtonDown(sender, e);
-        (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);
+        base.OnPointerPressed(e);
+        if (e.ChangedButton == MouseButtons.Left)
+        {
+            (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);
+        }
     }
 
     /// <summary>Enter or Space on a row that somehow holds the focus (a click focuses it) picks it - the same thing the

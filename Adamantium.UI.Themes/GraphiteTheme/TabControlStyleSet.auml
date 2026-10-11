@@ -40,7 +40,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="CloseBg" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
                             <Setter TargetName="CloseGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>
@@ -66,7 +66,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PinBg" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
                             <Setter TargetName="PinGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>

@@ -79,7 +79,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         if (_hoverHooked) return;
 
         _hoverHooked = true;
-        LayoutManager.GetOrCreate(this).LayoutUpdated += (_, _) => MouseDevice.CurrentDevice.RefreshMouseOver(this);
+        LayoutManager.GetOrCreate(this).LayoutUpdated += (_, _) => PointerDevice.Current.RefreshPointerOver(this);
     }
 
     // Default/cancel routing: the window is the root, so unhandled Enter/Esc reach it last, after everything on the way

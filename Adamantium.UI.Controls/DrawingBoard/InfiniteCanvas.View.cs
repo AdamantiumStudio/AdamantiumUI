@@ -785,9 +785,9 @@ public partial class InfiniteCanvas
 
         if (_overlayRoot != null)
         {
-            _overlayRoot.MouseDown += OnOverlayPressed;
-            _overlayRoot.MouseMove += OnOverlayMoved;
-            _overlayRoot.MouseUp += OnOverlayReleased;
+            _overlayRoot.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnOverlayPressed), true);
+            _overlayRoot.AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnOverlayMoved), true);
+            _overlayRoot.AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnOverlayReleased), true);
         }
 
         if (_overlayGrip != null) _overlayGrip.Click += OnGripClicked;
@@ -801,9 +801,9 @@ public partial class InfiniteCanvas
 
         if (_overlayRoot != null)
         {
-            _overlayRoot.MouseDown -= OnOverlayPressed;
-            _overlayRoot.MouseMove -= OnOverlayMoved;
-            _overlayRoot.MouseUp -= OnOverlayReleased;
+            _overlayRoot.RemoveHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnOverlayPressed));
+            _overlayRoot.RemoveHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnOverlayMoved));
+            _overlayRoot.RemoveHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnOverlayReleased));
         }
 
         if (_overlayGrip != null) _overlayGrip.Click -= OnGripClicked;
@@ -833,11 +833,7 @@ public partial class InfiniteCanvas
         SetCurrentValue(IsOverlayOpenProperty, !IsOverlayOpen);
     }
 
-    // Every press that reaches the panel is the PANEL's, and the canvas must not read it as a press on the plane too:
-    // a stroke's CaptureMouse() took the capture a button inside the panel had just taken, and that button never saw
-    // its own release. MouseDown is not marked handled by controls that answer it - they answer MouseLeftButtonDown,
-    // raised from a separate args object - so where the press came from is the only thing to go on.
-    private void OnOverlayPressed(object sender, MouseButtonEventArgs e)
+    private void OnOverlayPressed(object sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
         _overlayMoved = false;
@@ -854,10 +850,11 @@ public partial class InfiniteCanvas
 
         _draggingOverlay = true;
 
-        // Taken only when NOBODY below took it: the grip captures the press for itself, and stealing that would leave
-        // it never seeing its own release.
         _overlayCaptured = !onGrip;
-        if (_overlayCaptured) _overlayRoot.CaptureMouse();
+        if (_overlayCaptured)
+        {
+            e.Pointer.Capture(_overlayRoot);
+        }
     }
 
     private bool OnGrip(object source)
@@ -887,7 +884,7 @@ public partial class InfiniteCanvas
         return true;
     }
 
-    private void OnOverlayMoved(object sender, MouseEventArgs e)
+    private void OnOverlayMoved(object sender, PointerEventArgs e)
     {
         if (!_draggingOverlay || _overlayRoot == null) return;
 
@@ -907,13 +904,20 @@ public partial class InfiniteCanvas
         e.Handled = true;
     }
 
-    private void OnOverlayReleased(object sender, MouseButtonEventArgs e)
+    private void OnOverlayReleased(object sender, PointerReleasedEventArgs e)
     {
         e.Handled = true;
-        if (!_draggingOverlay) return;
+        if (!_draggingOverlay)
+        {
+            return;
+        }
 
         _draggingOverlay = false;
-        if (_overlayCaptured) _overlayRoot?.ReleaseMouseCapture();
+        if (_overlayCaptured && ReferenceEquals(e.Pointer.Captured, _overlayRoot))
+        {
+            e.Pointer.Capture(null);
+        }
+
         _overlayCaptured = false;
     }
 

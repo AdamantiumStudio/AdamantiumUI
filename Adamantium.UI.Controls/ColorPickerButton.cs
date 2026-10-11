@@ -92,11 +92,14 @@ public class ColorPickerButton : Control
         _popup = null;
     }
 
-    // Clicking the swatch toggles the flyout. The picker lives on the overlay, so its own drags never reach here.
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (!IsEnabled) return;
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         e.Handled = true;
         SetCurrentValue(IsOpenProperty, !IsOpen);
     }

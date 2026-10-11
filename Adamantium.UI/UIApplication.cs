@@ -367,7 +367,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     
     public bool DisableRendering { get; set; }
 
-    internal MouseDevice MouseDevice => MouseDevice.CurrentDevice;
+    internal PointerDevice PointerDevice => PointerDevice.Current;
     internal KeyboardDevice KeyboardDevice => KeyboardDevice.CurrentDevice;
 
     private void MainWindow_Closed(object sender, EventArgs e)

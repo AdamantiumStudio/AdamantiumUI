@@ -376,7 +376,7 @@ public class DataGridRow : Panel
     {
         if (_groupHeader == null) return;
 
-        _groupHeader.MouseLeftButtonDown -= OnGroupPressed;
+        _groupHeader.PointerPressed -= OnGroupPressed;
         Children.Remove(_groupHeader);
         _groupHeader = null;
     }
@@ -418,7 +418,7 @@ public class DataGridRow : Panel
         if (_groupHeader == null)
         {
             _groupHeader = new DataGridGroupHeader();
-            _groupHeader.MouseLeftButtonDown += OnGroupPressed;
+            _groupHeader.PointerPressed += OnGroupPressed;
             Children.Add(_groupHeader);
         }
 
@@ -487,9 +487,12 @@ public class DataGridRow : Panel
         foreach (var index in _leaving) DropGroupTotal(index);
     }
 
-    private void OnGroupPressed(object sender, MouseButtonEventArgs e)
+    private void OnGroupPressed(object sender, PointerPressedEventArgs e)
     {
-        if (Row == null || Owner == null) return;
+        if (Row == null || Owner == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         Owner.ToggleRow(Row);
         e.Handled = true;
@@ -509,7 +512,7 @@ public class DataGridRow : Panel
         if (_detailsToggle == null)
         {
             _detailsToggle = new DataGridRowDetailsToggle { ZIndex = 3 };
-            _detailsToggle.MouseLeftButtonDown += OnDetailsTogglePressed;
+            _detailsToggle.PointerPressed += OnDetailsTogglePressed;
             Children.Add(_detailsToggle);
         }
 
@@ -521,9 +524,9 @@ public class DataGridRow : Panel
         _detailsToggle.IsOpen = !_detailsToggle.IsBlank && Owner.IsRowDetailsOpen(Item);
     }
 
-    private void OnDetailsTogglePressed(object sender, MouseButtonEventArgs e)
+    private void OnDetailsTogglePressed(object sender, PointerPressedEventArgs e)
     {
-        if (_detailsToggle is { IsBlank: false } && Owner != null)
+        if (e.ChangedButton == MouseButtons.Left && _detailsToggle is { IsBlank: false } && Owner != null)
         {
             Owner.ToggleRowDetails(Item);
             e.Handled = true;
@@ -544,7 +547,7 @@ public class DataGridRow : Panel
         if (_number == null)
         {
             _number = new DataGridRowHeader { ZIndex = 3 };
-            _number.MouseLeftButtonDown += OnNumberPressed;
+            _number.PointerPressed += OnNumberPressed;
             Children.Add(_number);
         }
 
@@ -576,9 +579,12 @@ public class DataGridRow : Panel
 
     // Pressing the number takes the ROW - a rectangle across every column, which is what row selection IS here. Shift
     // stretches from the anchor and Ctrl adds another row, exactly as they do over the cells.
-    private void OnNumberPressed(object sender, MouseButtonEventArgs e)
+    private void OnNumberPressed(object sender, PointerPressedEventArgs e)
     {
-        if (Owner == null || Number <= 0) return;
+        if (Owner == null || Number <= 0 || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         // A group's number stands for the group, and there are no cells behind it to take: pressing it opens and closes
         // the group, which is the only thing that row can do.
@@ -589,7 +595,6 @@ public class DataGridRow : Panel
             return;
         }
 
-        // The modifiers carried BY THE EVENT - see OnMouseLeftButtonDown for why the keyboard is not re-read here.
         var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
         var control = (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
 
@@ -651,10 +656,13 @@ public class DataGridRow : Panel
     /// <summary>This row's group caption, or null while it has never stood for a group.</summary>
     internal DataGridGroupHeader GroupCaption => _groupHeader;
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (Owner == null || Row == null) return;
+        base.OnPointerPressed(e);
+        if (Owner == null || Row == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         // The expander is NOT handled here: the cell's own PART_Expander answers for it, so the area that reacts is the
         // area that is drawn. Working the rectangle out here meant two descriptions of one strip, and they disagreed by
@@ -681,12 +689,15 @@ public class DataGridRow : Panel
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (Owner is not { IsDragSelecting: true }) return;
+        base.OnPointerMoved(e);
+        if (Owner is not { IsDragSelecting: true })
+        {
+            return;
+        }
 
-        if ((e.Modifiers & InputModifiers.LeftMouseButton) == 0)
+        if (!e.Properties.IsLeftButtonPressed)
         {
             Owner.EndDragSelect();
             return;
@@ -696,10 +707,13 @@ public class DataGridRow : Panel
         if (columnIndex >= 0) Owner.DragSelectFromRow(this, columnIndex);
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        Owner?.EndDragSelect();
+        base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left)
+        {
+            Owner?.EndDragSelect();
+        }
     }
 
     /// <summary>A cell's expander was pressed - the cell knows it was clicked, only the row knows which flat row it

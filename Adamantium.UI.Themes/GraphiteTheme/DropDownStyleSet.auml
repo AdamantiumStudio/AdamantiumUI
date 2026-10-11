@@ -90,7 +90,7 @@
     </Style>
 
     <Style Selector="DropDown">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Rule" Property="Background" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>
         <!-- OPEN, not focused: a drop-down is answered by picking, so the state worth marking is that the list is

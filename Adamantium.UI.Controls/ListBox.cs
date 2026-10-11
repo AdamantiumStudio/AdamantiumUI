@@ -46,13 +46,14 @@ public class ListBox : Selector
     /// <summary>Raised on the same gesture, for whoever would rather have an event than a command.</summary>
     public event EventHandler<ItemActivatedEventArgs> ItemActivated;
 
-    public ListBox() => MouseDown += OnPressed;
+    public ListBox() => AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnPressed), handledEventsToo: true);
 
-    // Its OWN subscription rather than an override: MouseDown BUBBLES, and a press on a row is a press on the row, not
-    // on the list. Wired in the constructor, and nothing to let go of - a list outlives none of its own events.
-    private void OnPressed(object sender, MouseButtonEventArgs e)
+    private void OnPressed(object sender, PointerPressedEventArgs e)
     {
-        if (e.Handled || e.ClickCount != 2 || e.ChangedButton != MouseButtons.Left) return;
+        if (e.ClickCount != 2 || e.ChangedButton != MouseButtons.Left || !IsNearestList(e.OriginalSource as IUIComponent))
+        {
+            return;
+        }
 
         // WHAT WAS DOUBLE CLICKED is what is selected: the first of the two presses selected it, which is the same rule
         // a single click follows.
@@ -63,6 +64,20 @@ public class ListBox : Selector
         if (ItemActivatedCommand is { } command && command.CanExecute(item)) command.Execute(item);
 
         e.Handled = true;
+    }
+
+    // A list inside a row of this one answers a double click on its own rows; this one does not answer it too.
+    private bool IsNearestList(IUIComponent pressed)
+    {
+        for (var at = pressed; at != null; at = at.VisualParent)
+        {
+            if (at is ListBox list)
+            {
+                return ReferenceEquals(list, this);
+            }
+        }
+
+        return true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

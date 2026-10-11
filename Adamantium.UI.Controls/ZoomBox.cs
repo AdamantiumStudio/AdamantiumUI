@@ -96,10 +96,7 @@ public class ZoomBox : ContentControl
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
-        // Wheel = zoom, on the TUNNELLING PreviewMouseWheel: it fires on us (an ancestor) BEFORE the inner ScrollViewer's
-        // bubbling wheel-scroll, and setting Handled then suppresses that scroll (Preview + Main share one args). Subscribed
-        // per template (undone in OnRemoveTemplate) since the wheel only matters once the parts exist.
-        PreviewMouseWheel += OnWheel;
+        PreviewPointerWheelChanged += OnWheel;
 
         _scroll = GetTemplateChild("PART_Scroll") as ScrollViewer;
         _surface = GetTemplateChild("PART_Surface") as ContentPresenter;
@@ -116,7 +113,7 @@ public class ZoomBox : ContentControl
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
-        PreviewMouseWheel -= OnWheel;
+        PreviewPointerWheelChanged -= OnWheel;
         if (_scroll != null) _scroll.ScrollChanged -= OnScrollChanged;
     }
 
@@ -141,7 +138,7 @@ public class ZoomBox : ContentControl
         z._scroll.SetScrollOffset(new Vector2((float)z.OffsetX, (float)z.OffsetY));
     }
 
-    private void OnWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, PointerWheelEventArgs e)
     {
         if (!ZoomWithWheel || _scroll == null || _surface == null) return;
         e.Handled = true; // consumed as zoom, not scroll

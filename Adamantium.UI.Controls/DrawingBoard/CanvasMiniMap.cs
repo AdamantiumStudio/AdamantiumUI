@@ -52,9 +52,9 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
 
     public CanvasMiniMap()
     {
-        MouseDown += OnPressed;
-        MouseMove += OnMoved;
-        MouseUp += OnReleased;
+        PointerPressed += OnPressed;
+        PointerMoved += OnMoved;
+        PointerReleased += OnReleased;
     }
 
     private static void OnCanvasChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -152,18 +152,18 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
 
     // PRESSING THE MAP takes the camera there, and dragging keeps taking it - which is the whole interaction. A map you
     // can only look at answers half the question it raises.
-    private void OnPressed(object sender, MouseButtonEventArgs e)
+    private void OnPressed(object sender, PointerPressedEventArgs e)
     {
         if (e.ChangedButton != MouseButtons.Left || Canvas == null) return;
 
         _dragging = true;
-        CaptureMouse();
+        e.Pointer.Capture(this);
         Look(e.GetPosition(this));
 
         e.Handled = true;
     }
 
-    private void OnMoved(object sender, MouseEventArgs e)
+    private void OnMoved(object sender, PointerEventArgs e)
     {
         if (!_dragging) return;
 
@@ -171,12 +171,12 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
         e.Handled = true;
     }
 
-    private void OnReleased(object sender, MouseButtonEventArgs e)
+    private void OnReleased(object sender, PointerReleasedEventArgs e)
     {
-        if (!_dragging) return;
+        if (!_dragging || e.ChangedButton != MouseButtons.Left) return;
 
         _dragging = false;
-        ReleaseMouseCapture();
+        e.Pointer.Capture(null);
         e.Handled = true;
     }
 

@@ -147,7 +147,7 @@
     <!-- All three glyphs light together, and the signal is the CAPTION ZONE - approach the title bar and the lights show
          what they do, without having to find the 12px group first. -->
     <Style Selector="TitleBar">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="CloseGlyph" Property="Opacity" Value="1"/>
             <Setter TargetName="MinimizeGlyph" Property="Opacity" Value="1"/>
             <Setter TargetName="ZoomGlyph" Property="Opacity" Value="1"/>
@@ -238,7 +238,7 @@
     <!-- Hover is opt-in per class here (the plain button has none, on purpose). Its own style rather than the Icon
          class: the two disagree on BackgroundPressed, and equal specificity settles that by order. -->
     <Style Selector="Button.CaptionCommand">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>

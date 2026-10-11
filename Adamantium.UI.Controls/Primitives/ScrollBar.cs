@@ -171,7 +171,7 @@ public class ScrollBar : RangeBase
     {
         if (_track != null)
         {
-            var limit = _track.PageLimitFromPoint(MouseDevice.CurrentDevice.GetPosition(_track), increasing);
+            var limit = _track.PageLimitFromPoint(Mouse.Pointer.GetPosition(_track), increasing);
             stepped = increasing ? Math.Min(stepped, limit) : Math.Max(stepped, limit);
         }
 

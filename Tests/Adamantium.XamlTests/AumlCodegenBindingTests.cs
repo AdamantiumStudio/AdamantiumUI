@@ -111,7 +111,7 @@ public class AumlCodegenBindingTests
                    "<ControlTemplate TargetType=\"Button\">" +
                    "<Grid />" +
                    "<ControlTemplate.Triggers>" +
-                   "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\">" +
+                   "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\">" +
                    "<PropertyTrigger.EnterActions>" +
                    "<RunAnimationAction>" +
                    "<Animation Duration=\"0:0:0.3\" Easing=\"CubicOut\">" +
@@ -147,7 +147,7 @@ public class AumlCodegenBindingTests
     {
         // Triggers declared directly on a control (the logical layer) whose EnterActions run a keyframe Animation.
         var auml = WindowHeader + "><Button><Button.Triggers>" +
-                   "<PropertyTrigger Property=\"IsMouseOver\" Value=\"true\">" +
+                   "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\">" +
                    "<PropertyTrigger.EnterActions>" +
                    "<RunAnimationAction>" +
                    "<Animation Duration=\"0:0:0.2\" Easing=\"CubicOut\">" +

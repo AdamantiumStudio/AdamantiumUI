@@ -112,16 +112,16 @@ public class Expander : ContentControl
     {
         base.OnApplyTemplate();
 
-        if (_header != null) _header.MouseLeftButtonDown -= OnHeaderPressed;
+        if (_header != null) _header.PointerPressed -= OnHeaderPressed;
         _header = GetTemplateChild("PART_Header") as IInputComponent;
-        if (_header != null) _header.MouseLeftButtonDown += OnHeaderPressed;
+        if (_header != null) _header.PointerPressed += OnHeaderPressed;
     }
 
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
 
-        if (_header != null) _header.MouseLeftButtonDown -= OnHeaderPressed;
+        if (_header != null) _header.PointerPressed -= OnHeaderPressed;
         _header = null;
     }
 
@@ -147,9 +147,12 @@ public class Expander : ContentControl
         AutomationEvents.RaiseExpandCollapse(expander, expander.IsExpanded);
     }
 
-    private void OnHeaderPressed(object sender, MouseButtonEventArgs e)
+    private void OnHeaderPressed(object sender, PointerPressedEventArgs e)
     {
-        if (!IsEnabled) return;
+        if (!IsEnabled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         Focus();
         if (Toggle()) e.Handled = true;

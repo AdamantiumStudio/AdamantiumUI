@@ -316,10 +316,13 @@ public class RangeSlider : RangeLimitsBase
 
     // A click on the empty trough moves the nearer bound to it; a press on a thumb or the band starts a drag without
     // moving anything.
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (_track == null || e.Handled) return;
+        base.OnPointerPressed(e);
+        if (_track == null || e.Handled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         var point = e.GetPosition(_track);
         var vertical = Orientation == Orientation.Vertical;

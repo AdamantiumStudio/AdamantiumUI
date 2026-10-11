@@ -67,7 +67,7 @@
     </Style>
 
     <Style Selector="CheckBox">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Box" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
             <!-- The fill tokens differ by ~2% alpha (invisible here), so the hover reads off the BORDER brightening. -->
             <Setter TargetName="Box" Property="BorderBrush" Value="{ResourceReference TextFillColorTertiary}"/>
@@ -92,7 +92,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="IsChecked" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="Box" Property="Background" Value="{ThemeResource AccentFillColorSecondary}"/>
             <Setter TargetName="Box" Property="BorderBrush" Value="{ThemeResource AccentFillColorSecondary}"/>
@@ -101,7 +101,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="IsChecked" Value="null"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="Box" Property="Background" Value="{ThemeResource AccentFillColorSecondary}"/>
             <Setter TargetName="Box" Property="BorderBrush" Value="{ThemeResource AccentFillColorSecondary}"/>

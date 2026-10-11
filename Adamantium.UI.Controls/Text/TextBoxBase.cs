@@ -992,14 +992,14 @@ public abstract class TextBoxBase : Control
         return new Size(w, ContentHeight + FloatStripHeight());
     }
 
-    internal void SurfaceMouseDown(double localX, double localY, bool extend)
+    internal void SurfacePointerDown(double localX, double localY, bool extend)
     {
         Focus();
         var (index, after) = HitFromPoint(localX - _textOx, localY - _textOy);
         MoveCaretTo(index, extend, afterPrevious: after);
     }
 
-    internal void SurfaceMouseMove(double localX, double localY)
+    internal void SurfacePointerMove(double localX, double localY)
     {
         var (index, after) = HitFromPoint(localX - _textOx, localY - _textOy);
         MoveCaretTo(index, extend: true, afterPrevious: after);
@@ -1032,8 +1032,8 @@ public abstract class TextBoxBase : Control
         SelectAll();
     }
 
-    /// <summary>Drop a mouse selection that is still in progress - see <see cref="TextPresenter.CancelSelection"/>.</summary>
-    internal void CancelMouseSelection()
+    /// <summary>Drop a pointer selection that is still in progress - see <see cref="TextPresenter.CancelSelection"/>.</summary>
+    internal void CancelPointerSelection()
     {
         _presenter?.CancelSelection();
         SelectionLength = 0;

@@ -269,9 +269,9 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    protected override void OnMouseEnter(MouseEventArgs e)
+    protected override void OnPointerEntered(PointerEventArgs e)
     {
-        base.OnMouseEnter(e);
+        base.OnPointerEntered(e);
         // The pointer is back on a menu row: cancel any pending close - of THIS row (re-entered) and of the parent whose
         // submenu we just moved INTO (so it doesn't close behind us).
         CancelCloseTimer();
@@ -282,12 +282,9 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         if (HasItems) IsSubmenuOpen = true;
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseLeave(e);
-        // Left this row while its submenu is open: close it shortly, UNLESS the pointer moved into the submenu (a child's
-        // OnMouseEnter cancels this timer) or onto a sibling (which closes it immediately). The delay bridges the gap the
-        // pointer crosses from the row to its flyout.
+        base.OnPointerExited(e);
         if (HasItems && IsSubmenuOpen) StartCloseTimer();
     }
 
@@ -307,10 +304,10 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         IsSubmenuOpen = false;
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (IsOnAButtonInside(e.OriginalSource as IUIComponent))
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left || IsOnAButtonInside(e.OriginalSource as IUIComponent))
         {
             return;
         }

@@ -154,8 +154,7 @@ public class HyperlinkTests
             WindowExtension.UpdateTree(window);
         }
 
-        ((IObservableComponent)text).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = Mouse.PreviewMouseDownEvent });
+        PointerInput.PreviewPress(text);
 
         Assert.That(text.IsKeyboardFocused, Is.False);
         Assert.That(button.IsKeyboardFocused, Is.True);

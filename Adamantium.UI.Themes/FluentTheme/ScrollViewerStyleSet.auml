@@ -68,7 +68,7 @@
          different theme is free to do something else. Setters + the animation reach the parts via TargetName (a style
          trigger resolves named parts against the host's template). -->
     <Style Selector="ScrollViewer">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="PART_VerticalScrollBar" Property="IsHitTestVisible" Value="True"/>
             <Setter TargetName="PART_HorizontalScrollBar" Property="IsHitTestVisible" Value="True"/>
             <PropertyTrigger.EnterActions>

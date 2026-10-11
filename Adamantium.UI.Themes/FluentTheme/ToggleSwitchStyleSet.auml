@@ -52,7 +52,7 @@
     </Style>
 
     <Style Selector="ToggleSwitch">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="SwitchTrack" Property="Background"
                     Value="{ResourceReference ControlFillColorSecondary}"/>
         </PropertyTrigger>

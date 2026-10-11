@@ -92,7 +92,7 @@
 
     <!-- The tab's states (hover, close button, icon slot, current), owned here with the template. -->
     <Style Selector="TabItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <!-- The icon slot exists only when there is an icon to put in it: an always-reserved gutter would inset every
@@ -112,7 +112,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="ShowCloseButton" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
         </MultiTrigger>
@@ -131,7 +131,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="ShowPinButton" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="PART_PinButton" Property="Visibility" Value="Visible"/>
         </MultiTrigger>

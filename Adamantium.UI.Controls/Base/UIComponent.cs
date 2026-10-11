@@ -725,7 +725,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     // deepest one speaks last.
     private static void OnCursorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
-        if (component is UIComponent { } element and IInputComponent { IsMouseOver: true })
+        if (component is UIComponent { } element and IInputComponent { IsPointerOver: true })
         {
             Mouse.Cursor = element.Cursor;
         }

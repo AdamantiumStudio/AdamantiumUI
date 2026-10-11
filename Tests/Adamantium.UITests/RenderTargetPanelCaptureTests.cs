@@ -2,7 +2,6 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
 
@@ -14,7 +13,7 @@ public class RenderTargetPanelCaptureTests
     [TearDown]
     public void ReleaseThePointer()
     {
-        Mouse.Capture(null);
+        Mouse.Pointer.Capture(null);
     }
 
     [Test]
@@ -22,42 +21,42 @@ public class RenderTargetPanelCaptureTests
     {
         var panel = Built();
 
-        Raise(panel, MouseButtons.Left, Mouse.MouseDownEvent);
+        Press(panel, MouseButtons.Left);
 
-        Assert.That(Mouse.Captured, Is.SameAs(panel));
+        Assert.That(Mouse.Pointer.Captured, Is.SameAs(panel));
 
-        Raise(panel, MouseButtons.Left, Mouse.MouseUpEvent);
+        Release(panel, MouseButtons.Left);
 
-        Assert.That(Mouse.Captured, Is.Null);
+        Assert.That(Mouse.Pointer.Captured, Is.Null);
     }
 
     [Test]
     public void ReleasingOneOfTwoButtons_KeepsThePointer()
     {
         var panel = Built();
-        Raise(panel, MouseButtons.Left, Mouse.MouseDownEvent);
-        Raise(panel, MouseButtons.Middle, Mouse.MouseDownEvent);
+        Press(panel, MouseButtons.Left);
+        Press(panel, MouseButtons.Middle);
 
-        Raise(panel, MouseButtons.Left, Mouse.MouseUpEvent);
+        Release(panel, MouseButtons.Left);
 
-        Assert.That(Mouse.Captured, Is.SameAs(panel));
+        Assert.That(Mouse.Pointer.Captured, Is.SameAs(panel));
 
-        Raise(panel, MouseButtons.Middle, Mouse.MouseUpEvent);
+        Release(panel, MouseButtons.Middle);
 
-        Assert.That(Mouse.Captured, Is.Null);
+        Assert.That(Mouse.Pointer.Captured, Is.Null);
     }
 
     [Test]
     public void AButtonHeldWhenThePointerIsTaken_IsForgotten()
     {
         var panel = Built();
-        Raise(panel, MouseButtons.Left, Mouse.MouseDownEvent);
+        Press(panel, MouseButtons.Left);
 
-        Mouse.Capture(null);
-        Raise(panel, MouseButtons.Right, Mouse.MouseDownEvent);
-        Raise(panel, MouseButtons.Right, Mouse.MouseUpEvent);
+        Mouse.Pointer.Capture(null);
+        Press(panel, MouseButtons.Right);
+        Release(panel, MouseButtons.Right);
 
-        Assert.That(Mouse.Captured, Is.Null);
+        Assert.That(Mouse.Pointer.Captured, Is.Null);
     }
 
     private static RenderTargetPanel Built()
@@ -72,10 +71,11 @@ public class RenderTargetPanelCaptureTests
         return panel;
     }
 
-    private static void Raise(RenderTargetPanel panel, MouseButtons button, RoutedEvent routedEvent)
-    {
-        var state = routedEvent == Mouse.MouseDownEvent ? MouseButtonState.Pressed : MouseButtonState.Released;
+    private static void Press(RenderTargetPanel panel, MouseButtons button) =>
         ((IObservableComponent)panel).RaiseEvent(
-            new MouseButtonEventArgs(Mouse.PrimaryDevice, button, state, InputModifiers.None, 0) { RoutedEvent = routedEvent });
-    }
+            new PointerPressedEventArgs(Mouse.Pointer, button, InputModifiers.None, 0) { RoutedEvent = PointerEvents.PointerPressedEvent });
+
+    private static void Release(RenderTargetPanel panel, MouseButtons button) =>
+        ((IObservableComponent)panel).RaiseEvent(
+            new PointerReleasedEventArgs(Mouse.Pointer, button, InputModifiers.None, 0) { RoutedEvent = PointerEvents.PointerReleasedEvent });
 }

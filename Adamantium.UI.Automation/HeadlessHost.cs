@@ -23,7 +23,7 @@ public sealed class HeadlessHost : IAutomationHost
     public HeadlessHost(IEnumerable<IWindow> windows)
     {
         _windows = [.. windows];
-        MouseDevice.CurrentDevice.Capture(null);
+        Mouse.Pointer.Capture(null);
         if (UIAppContext.PlatformService != null && UIAppContext.Current?.UIContext is { } context)
         {
             foreach (var window in _windows)

@@ -36,9 +36,9 @@ public class RibbonGalleryWheelTests
 
     private static bool Wheel(RibbonGallery gallery, int delta)
     {
-        var args = new MouseWheelEventArgs(null, InputModifiers.None, delta, 0)
+        var args = new PointerWheelEventArgs(Mouse.Pointer, InputModifiers.None, delta, 0)
         {
-            RoutedEvent = Mouse.MouseWheelEvent
+            RoutedEvent = PointerEvents.PointerWheelChangedEvent
         };
         gallery.RaiseEvent(args);
         return args.Handled;
@@ -95,9 +95,9 @@ public class RibbonGalleryWheelTests
     public void ATiltWheelIsNotThisControlsAxis()
     {
         var gallery = WithRows(30, 5, 2);
-        var args = new MouseWheelEventArgs(null, InputModifiers.None, -120, 0, true)
+        var args = new PointerWheelEventArgs(Mouse.Pointer, InputModifiers.None, -120, 0, true)
         {
-            RoutedEvent = Mouse.MouseWheelEvent
+            RoutedEvent = PointerEvents.PointerWheelChangedEvent
         };
 
         gallery.RaiseEvent(args);

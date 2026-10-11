@@ -35,10 +35,14 @@ public class RibbonSplitButton : RibbonDropDownButton
         _dropDownArea = null;
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        _pressedDropDown = IsOverDropDownArea(e);
-        base.OnMouseLeftButtonDown(sender, e);
+        if (e.ChangedButton == MouseButtons.Left)
+        {
+            _pressedDropDown = IsOverDropDownArea(e);
+        }
+
+        base.OnPointerPressed(e);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -47,15 +51,15 @@ public class RibbonSplitButton : RibbonDropDownButton
         base.OnKeyDown(e);
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
+        base.OnPointerMoved(e);
         IsPointerOverDropDown = IsOverDropDownArea(e);
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseLeave(e);
+        base.OnPointerExited(e);
         IsPointerOverDropDown = false;
     }
 
@@ -76,7 +80,7 @@ public class RibbonSplitButton : RibbonDropDownButton
         base.OnClick();
     }
 
-    private bool IsOverDropDownArea(MouseEventArgs e)
+    private bool IsOverDropDownArea(PointerEventArgs e)
     {
         if (_dropDownArea == null) return false;
 

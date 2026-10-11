@@ -196,17 +196,19 @@ public class AutomationDriverTests
         var seen = new System.Collections.Generic.List<string>();
         var held = false;
         var moves = 0;
-        pad.AddHandler(InputUIComponent.MouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
+        pad.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler((_, e) =>
         {
+            if (e.ChangedButton != MouseButtons.Left) return;
             held = true;
             seen.Add(At("down", e.GetPosition(pad)));
         }), handledEventsToo: true);
-        pad.AddHandler(InputUIComponent.MouseLeftButtonUpEvent, new MouseButtonEventHandler((_, e) =>
+        pad.AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler((_, e) =>
         {
+            if (e.ChangedButton != MouseButtons.Left) return;
             held = false;
             seen.Add(At("up", e.GetPosition(pad)));
         }), handledEventsToo: true);
-        pad.MouseMove += (_, _) =>
+        pad.PointerMoved += (_, _) =>
         {
             if (held) moves++;
         };

@@ -57,7 +57,7 @@ public class ElementTriggerTests
         var button = new Button { Width = 120 };
 
         // Mirror exactly what the codegen emits: string Value / string keyframe setters.
-        var trigger = new PropertyTrigger { Property = "IsMouseOver", Value = "true" };
+        var trigger = new PropertyTrigger { Property = "IsPointerOver", Value = "true" };
         var anim = new Animation { Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
         anim.KeyFrames.Add(KeyFrameWith("Width", 0.0, "120"));
         anim.KeyFrames.Add(KeyFrameWith("Width", 1.0, "150"));
@@ -72,8 +72,8 @@ public class ElementTriggerTests
         parent.Children.Add(button);
         Assert.That(AnimationManager.HasActiveAnimations, Is.False, "nothing animates before the condition is met");
 
-        // Hover: IsMouseOver crosses to true -> the EnterAction must start the keyframe animation.
-        button.SetValue(InputUIComponent.IsMouseOverProperty, true);
+        // Hover: IsPointerOver crosses to true -> the EnterAction must start the keyframe animation.
+        button.SetValue(InputUIComponent.IsPointerOverProperty, true);
         Assert.That(AnimationManager.HasActiveAnimations, Is.True,
             "element-level trigger's EnterAction did not fire on hover");
 

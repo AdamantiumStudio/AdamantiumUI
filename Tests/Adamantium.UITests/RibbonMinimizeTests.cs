@@ -55,12 +55,7 @@ public class RibbonMinimizeTests
         return ribbon;
     }
 
-    private static void Press(RibbonTabHeader header, int clickCount)
-    {
-        ((IObservableComponent)header).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent, ClickCount = clickCount });
-    }
+    private static void Press(RibbonTabHeader header, int clickCount) => PointerInput.Press(header, clickCount: clickCount);
 
     private static RibbonTabHeader HeaderAt(Ribbon ribbon, int index) =>
         (RibbonTabHeader)ribbon.ItemContainerGenerator.ContainerFromIndex(index);

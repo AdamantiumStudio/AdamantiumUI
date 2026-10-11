@@ -65,7 +65,7 @@ public class Popup : MeasurableUIComponent, IContainer
         typeof(bool), typeof(Popup), new PropertyMetadata(false));
 
     private IPopupHost _host;   // the window layer this popup is registered with while open
-    private MouseButtonEventHandler _lightDismiss;   // window preview-press handler while an open, !KeepOpen popup is shown
+    private PointerPressedEventHandler _lightDismiss;   // window preview-press handler while an open, !KeepOpen popup is shown
     private KeyEventHandler _escapeDismiss;          // ...and its keyboard half (Escape)
     private IInputComponent _escapeContentRoot;      // the popup's own content root, hooked alongside the window (see HookEscape)
 
@@ -344,7 +344,7 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         if (_host is not IInputComponent root) return;
         _lightDismiss ??= OnGlobalPreviewDown;
-        root.AddHandler(Mouse.PreviewMouseDownEvent, _lightDismiss, handledEventsToo: true);
+        root.AddHandler(PointerEvents.PreviewPointerPressedEvent, _lightDismiss, handledEventsToo: true);
         OpenLightDismissable.Add(this);
     }
 
@@ -352,10 +352,10 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         OpenLightDismissable.Remove(this);
         if (_lightDismiss != null && (host ?? _host) is IInputComponent root)
-            root.RemoveHandler(Mouse.PreviewMouseDownEvent, _lightDismiss);
+            root.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _lightDismiss);
     }
 
-    internal static void PressedInOverlay(IPopupHost host, MouseButtonEventArgs e)
+    internal static void PressedInOverlay(IPopupHost host, PointerPressedEventArgs e)
     {
         foreach (var popup in OpenLightDismissable.ToArray())
         {
@@ -433,7 +433,7 @@ public class Popup : MeasurableUIComponent, IContainer
         e.Handled = true;
     }
 
-    private void OnGlobalPreviewDown(object sender, MouseButtonEventArgs e)
+    private void OnGlobalPreviewDown(object sender, PointerPressedEventArgs e)
     {
         if (e.OriginalSource is not IUIComponent src)
         {

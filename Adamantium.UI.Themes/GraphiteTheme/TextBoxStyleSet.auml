@@ -87,7 +87,7 @@
     </Style>
 
     <Style Selector="TextBox">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Rule" Property="Background" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>
         <!-- Focus last, so it wins the rule over hover. -->

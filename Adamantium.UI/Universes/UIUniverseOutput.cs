@@ -31,7 +31,7 @@ namespace Adamantium.UI.Universes
         {
             get
             {
-                var point = MouseDevice.CurrentDevice.GetScreenPosition();
+                var point = Mouse.Pointer.GetScreenPosition();
                 return new Vector2F((float)point.X, (float)point.Y);
             }
         }
@@ -273,9 +273,9 @@ namespace Adamantium.UI.Universes
             listenedInput.KeyDown += WindowOnKeyDown;
             listenedInput.KeyUp += WindowOnKeyUp;
             listenedInput.TextInput += WindowOnTextInput;
-            listenedInput.MouseDown += OnMouseDown;
-            listenedInput.MouseUp += OnMouseUp;
-            listenedInput.MouseWheel += OnMouseWheel;
+            listenedInput.PointerPressed += OnPointerPressed;
+            listenedInput.PointerReleased += OnPointerReleased;
+            listenedInput.PointerWheelChanged += OnPointerWheelChanged;
             listenedInput.RawMouseMove += OnMouseMove;
         }
 
@@ -301,9 +301,9 @@ namespace Adamantium.UI.Universes
             listenedInput.KeyDown -= WindowOnKeyDown;
             listenedInput.KeyUp -= WindowOnKeyUp;
             listenedInput.TextInput -= WindowOnTextInput;
-            listenedInput.MouseDown -= OnMouseDown;
-            listenedInput.MouseUp -= OnMouseUp;
-            listenedInput.MouseWheel -= OnMouseWheel;
+            listenedInput.PointerPressed -= OnPointerPressed;
+            listenedInput.PointerReleased -= OnPointerReleased;
+            listenedInput.PointerWheelChanged -= OnPointerWheelChanged;
             listenedInput.RawMouseMove -= OnMouseMove;
             listenedInput = null;
         }
@@ -396,7 +396,7 @@ namespace Adamantium.UI.Universes
         public override bool IsKeyboardFocused => InputComponent.IsKeyboardFocused && HostWindow is { IsActive: true };
 
         public override bool IsPointerOver =>
-            InputComponent.IsMouseDirectlyOver || ReferenceEquals(Mouse.Captured, InputComponent);
+            InputComponent.IsPointerDirectlyOver || ReferenceEquals(Mouse.Pointer.Captured, InputComponent);
 
         protected IWindow HostWindow => InputComponent as IWindow ?? InputComponent.RootVisual as IWindow;
 
@@ -413,7 +413,7 @@ namespace Adamantium.UI.Universes
             OnMouseInput(mouseInput);
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnPointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
             var mouseInput = new MouseInput();
             mouseInput.InputType = InputType.Wheel;
@@ -421,7 +421,7 @@ namespace Adamantium.UI.Universes
             OnMouseInput(mouseInput);
         }
 
-        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        private void OnPointerReleased(object sender, PointerReleasedEventArgs e)
         {
             if (!MouseTranslationKeys.TryGetValue(e.ChangedButton, out var button))
             {
@@ -431,7 +431,7 @@ namespace Adamantium.UI.Universes
             OnMouseInput(new MouseInput { InputType = InputType.Up, Button = button });
         }
 
-        private void OnMouseDown(object sender, MouseButtonEventArgs e)
+        private void OnPointerPressed(object sender, PointerPressedEventArgs e)
         {
             if (!MouseTranslationKeys.TryGetValue(e.ChangedButton, out var button))
             {

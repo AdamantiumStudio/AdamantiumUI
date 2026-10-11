@@ -46,9 +46,7 @@ public class ProgrammaticDragTests
     // would, so this is the real completion path, not a test-only back door.
     private void ReleaseButton()
     {
-        var args = new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left, MouseButtonState.Released,
-            InputModifiers.None, 0) { RoutedEvent = InputUIComponent.MouseLeftButtonUpEvent };
-        ((IObservableComponent)_source).RaiseEvent(args);
+        PointerInput.Release(_source);
     }
 
     [Test]

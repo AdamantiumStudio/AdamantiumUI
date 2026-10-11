@@ -49,7 +49,7 @@
     </Style>
 
     <Style Selector="RadioButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="OuterRing" Property="Fill" Value="{ResourceReference ControlFillColorSecondary}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsChecked" Value="true">

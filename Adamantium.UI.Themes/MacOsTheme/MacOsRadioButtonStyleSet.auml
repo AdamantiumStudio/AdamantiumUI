@@ -47,7 +47,7 @@
     </Style>
 
     <Style Selector="RadioButton">
-        <!-- No IsMouseOver trigger, deliberately - see MacOsButtonStyleSet. -->
+        <!-- No IsPointerOver trigger, deliberately - see MacOsButtonStyleSet. -->
         <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="OuterRing" Property="Fill" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="OuterRing" Property="Stroke" Value="{ThemeResource AccentFillColorDefault}"/>
@@ -97,13 +97,13 @@
     </Style>
 
     <!-- The hover is gated on NOT being the current page. A trigger setter carries the BAND of the style that declared
-         it and a class style outranks a type style, so an unguarded IsMouseOver here would sit above the inherited
+         it and a class style outranks a type style, so an unguarded IsPointerOver here would sit above the inherited
          IsChecked trigger and the page you are on would go gray the moment you pointed at it. Pressed is left to the
          toggle's own triggers, which this does not contradict. -->
     <Style Selector="RadioButton.PagerPage">
         <MultiTrigger>
             <MultiTrigger.Conditions>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
                 <Condition Property="IsChecked" Value="false"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>

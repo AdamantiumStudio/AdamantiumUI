@@ -51,7 +51,7 @@ public class MacOsHoverStatesTests
         Assert.That(plate, Is.Not.Null, $"{className}: the part the hover fill is written to");
 
         var atRest = plate.Background;
-        chip.SetValue(InputUIComponent.IsMouseOverProperty, true);
+        chip.SetValue(InputUIComponent.IsPointerOverProperty, true);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
 
         TestContext.WriteLine($"{className}: rest={atRest} hover={plate.Background} declared={chip.BackgroundPointerOver}");

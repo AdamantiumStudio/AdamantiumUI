@@ -20,9 +20,6 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class RibbonMenuButtonTests
 {
-    [TearDown]
-    public void TearDown() => Mouse.PrimaryDevice.UpdateButtonStates(InputModifiers.None);
-
     private static ContextMenu MenuWith(params string[] headers)
     {
         var menu = new ContextMenu();
@@ -159,21 +156,12 @@ public class RibbonMenuButtonTests
         // button subtracts its offset twice and the press lands in the wrong half.
         IUIComponent root = button;
         while (root.VisualParent != null) root = root.VisualParent;
-        Mouse.PrimaryDevice.SetExternalPosition((IInputComponent)root, new PixelPoint(x, y));
+        PointerDevice.Current.SetExternalMousePosition((IInputComponent)root, new PixelPoint(x, y));
 
         // A click only counts while the pointer is over the button, and nothing hit-tests in a pure-CPU test.
-        ((IObservableComponent)button).RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
-        { RoutedEvent = Mouse.MouseEnterEvent });
-
-        Mouse.PrimaryDevice.UpdateButtonStates(InputModifiers.LeftMouseButton);
-        ((IObservableComponent)button).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent });
-
-        Mouse.PrimaryDevice.UpdateButtonStates(InputModifiers.None);
-        ((IObservableComponent)button).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Released, InputModifiers.None, 0)
-        { RoutedEvent = InputUIComponent.MouseLeftButtonUpEvent });
+        PointerInput.Enter(button);
+        PointerInput.Press(button);
+        PointerInput.Release(button);
     }
 
     // The body is the ACTION. It must not drop the menu, or the split button is just a drop-down with extra steps.

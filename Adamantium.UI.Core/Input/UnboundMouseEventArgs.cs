@@ -1,13 +1,15 @@
-﻿using Adamantium.Mathematics;
+using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Input;
 
-public class UnboundMouseEventArgs:MouseEventArgs
+/// <summary>How far the mouse itself moved, unbound by the screen's edges.</summary>
+public class UnboundMouseEventArgs : PointerEventArgs
 {
-   public Vector2 Delta { get; }
+    public UnboundMouseEventArgs(Pointer pointer, Vector2 mouseDelta, InputModifiers modifiers, uint timestamp)
+        : base(pointer, modifiers, timestamp)
+    {
+        Delta = mouseDelta;
+    }
 
-   public UnboundMouseEventArgs(MouseDevice device, Vector2 mouseDelta, InputModifiers modifiers, uint timestamp) : base(device, modifiers, timestamp)
-   {
-      Delta = mouseDelta;
-   }
+    public Vector2 Delta { get; }
 }

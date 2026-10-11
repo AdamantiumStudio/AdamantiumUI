@@ -34,59 +34,56 @@ public static class WindowsMouseDeviceExtension
         return modifiers;
     }
 
-    /// <summary>Translate a Win32 mouse message into the neutral event type. EXPLICITLY, every case: this used to end in
-    /// <c>(RawMouseEventType)msg</c>, which only worked because the enum's values WERE the message numbers - a bargain
-    /// that quietly made a platform-neutral type Windows-shaped.</summary>
-    public static RawMouseEventType EventTypeFromMessage(this WindowMessages msg, IntPtr wParam)
+    /// <summary>Translate a Win32 mouse message into the neutral event type and the button it changed. EXPLICITLY, every
+    /// case: this used to end in a cast of the message, which only worked because the enum's values WERE the message
+    /// numbers - a bargain that quietly made a platform-neutral type Windows-shaped.</summary>
+    public static RawPointerEventType EventTypeFromMessage(this WindowMessages msg, IntPtr wParam, out MouseButtons button)
     {
+        button = MouseButtons.None;
         switch (msg)
         {
-            case WindowMessages.LeftButtondown:
-                return RawMouseEventType.LeftButtonDown;
-            case WindowMessages.LeftButtonup:
-                return RawMouseEventType.LeftButtonUp;
-            case WindowMessages.RightButtondown:
-                return RawMouseEventType.RightButtonDown;
-            case WindowMessages.RightButtonup:
-                return RawMouseEventType.RightButtonUp;
-            case WindowMessages.MiddleButtondown:
-                return RawMouseEventType.MiddleButtonDown;
-            case WindowMessages.MiddleButtonup:
-                return RawMouseEventType.MiddleButtonUp;
-            case WindowMessages.Xbuttondown:
-            {
-                var exactButton = Messages.GetMouseModifyKeys(msg, wParam);
-                return exactButton == MouseModifiers.XButton1 ? RawMouseEventType.X1ButtonDown : RawMouseEventType.X2ButtonDown;
-            }
-            case WindowMessages.Xbuttonup:
-            {
-                var exactButton = Messages.GetMouseModifyKeys(msg, wParam);
-                return exactButton == MouseModifiers.XButton1 ? RawMouseEventType.X1ButtonUp : RawMouseEventType.X2ButtonUp;
-            }
             // A CS_DBLCLKS window delivers the SECOND press of a double-click as WM_*BUTTONDBLCLK (not a plain DOWN). The
             // device layer has no separate double-click event - it recomputes the click count from timing - so surface a
             // dbl-click as a normal button DOWN. Without this the second press was dropped, so ClickCount never reached 2
             // (double-click-to-maximize, "select word", etc. never fired) and double-clicking a control produced one click.
+            case WindowMessages.LeftButtondown:
             case WindowMessages.LeftButtondblclk:
-                return RawMouseEventType.LeftButtonDown;
+                button = MouseButtons.Left;
+                return RawPointerEventType.Down;
+            case WindowMessages.LeftButtonup:
+                button = MouseButtons.Left;
+                return RawPointerEventType.Up;
+            case WindowMessages.RightButtondown:
             case WindowMessages.RightButtondblclk:
-                return RawMouseEventType.RightButtonDown;
+                button = MouseButtons.Right;
+                return RawPointerEventType.Down;
+            case WindowMessages.RightButtonup:
+                button = MouseButtons.Right;
+                return RawPointerEventType.Up;
+            case WindowMessages.MiddleButtondown:
             case WindowMessages.MiddleButtondblclk:
-                return RawMouseEventType.MiddleButtonDown;
+                button = MouseButtons.Middle;
+                return RawPointerEventType.Down;
+            case WindowMessages.MiddleButtonup:
+                button = MouseButtons.Middle;
+                return RawPointerEventType.Up;
+            case WindowMessages.Xbuttondown:
             case WindowMessages.Xbuttondblclk:
-            {
-                var exactButton = Messages.GetMouseModifyKeys(msg, wParam);
-                return exactButton == MouseModifiers.XButton1 ? RawMouseEventType.X1ButtonDown : RawMouseEventType.X2ButtonDown;
-            }
-            case WindowMessages.Mousemove:
-                return RawMouseEventType.MouseMove;
+                button = XButton(msg, wParam);
+                return RawPointerEventType.Down;
+            case WindowMessages.Xbuttonup:
+                button = XButton(msg, wParam);
+                return RawPointerEventType.Up;
             case WindowMessages.Mouseleave:
-                return RawMouseEventType.LeaveWindow;
+                return RawPointerEventType.LeaveWindow;
             case WindowMessages.MouseWheel:
             case WindowMessages.MouseHwheel:
-                return RawMouseEventType.MouseWheel;
+                return RawPointerEventType.Wheel;
             default:
-                return RawMouseEventType.MouseMove;
+                return RawPointerEventType.Move;
         }
     }
+
+    private static MouseButtons XButton(WindowMessages msg, IntPtr wParam) =>
+        Messages.GetMouseModifyKeys(msg, wParam) == MouseModifiers.XButton1 ? MouseButtons.XButton1 : MouseButtons.XButton2;
 }

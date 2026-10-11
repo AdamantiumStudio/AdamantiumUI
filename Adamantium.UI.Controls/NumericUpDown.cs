@@ -156,7 +156,11 @@ public class NumericUpDown : RangeLimitsBase
     public NumericUpDown()
     {
         AddHandler(Keyboard.PreviewTextInputEvent, new TextInputEventHandler(OnPreviewTextInput));
-        AddHandler(Mouse.MouseWheelEvent, new MouseWheelEventHandler(OnMouseWheelStep));
+        AddHandler(PointerEvents.PointerWheelChangedEvent, new PointerWheelEventHandler(OnWheelStep));
+        // Handled ones too: the text fills the control and takes the press for its caret, yet a press there still scrubs.
+        AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnScrubPressed), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnScrubMoved), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnScrubReleased), handledEventsToo: true);
     }
 
     public string Placeholder
@@ -624,58 +628,68 @@ public class NumericUpDown : RangeLimitsBase
     private double _scrubFrom;
     private int _scrubDirection;   // -1 / +1: which side of the press the drag is on, so the pointer only changes on a real turn
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void OnScrubPressed(object sender, PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        // A repeat click is a text-selection gesture (word, then all) - it must not arm a scrub, or the second press of
-        // a double-click would fight the selection it just made.
-        if (!IsDragScrubEnabled || IsReadOnly || e.ClickCount > 1) return;
+        if (e.ChangedButton != MouseButtons.Left || !IsDragScrubEnabled || IsReadOnly || e.ClickCount > 1)
+        {
+            return;
+        }
 
         _scrubOriginX = RootX(e);
         _scrubFrom = Value ?? StartingPoint();
         _scrubArmed = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    private void OnScrubMoved(object sender, PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!_scrubArmed) return;
+        if (!_scrubArmed)
+        {
+            return;
+        }
 
-        // Measured from the PRESS, never accumulated per event: an accumulated delta drifts, and here it would also
-        // fight the editor's own idea of where the drag began.
         var traveled = RootX(e) - _scrubOriginX;
         if (!_scrubbing)
         {
-            if (Math.Abs(traveled) < ScrubThreshold) return;   // still a click as far as anyone knows
-            BeginScrub();
+            if (Math.Abs(traveled) < ScrubThreshold)
+            {
+                return;
+            }
+
+            BeginScrub(e.Pointer);
         }
 
         ShowScrubCursor(traveled);
         SetValueFromInput(_scrubFrom + traveled / Math.Max(1, ScrubPixelsPerStep) * ScrubStep());
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void OnScrubReleased(object sender, PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (!_scrubArmed) return;
+        if (e.ChangedButton != MouseButtons.Left || !_scrubArmed)
+        {
+            return;
+        }
 
         _scrubArmed = false;
-        if (!_scrubbing) return;   // never crossed the threshold: it was a click, and the editor already handled it
+        if (!_scrubbing)
+        {
+            return;
+        }
 
         _scrubbing = false;
         Mouse.OverrideCursor = null;
         _text?.SuppressCaret(false);
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        if (ReferenceEquals(e.Pointer.Captured, this))
+        {
+            e.Pointer.Capture(null);
+        }
     }
 
-    private void BeginScrub()
+    private void BeginScrub(Pointer pointer)
     {
         _scrubbing = true;
-        // Take the press off the editor: it started a selection drag on the way here, and leaving that armed would mean
-        // a drag with no end - the button-up now comes to US - and the next hover would carry on selecting.
-        _text?.CancelMouseSelection();
-        _text?.SuppressCaret(true);   // the box is not being typed into for as long as this drag lasts
-        CaptureMouse();
+        _text?.CancelPointerSelection();
+        _text?.SuppressCaret(true);
+        pointer.Capture(this);
         _scrubDirection = 0;
     }
 
@@ -702,19 +716,24 @@ public class NumericUpDown : RangeLimitsBase
         return SmallChange;
     }
 
-    private double RootX(MouseEventArgs e)
+    private double RootX(PointerEventArgs e)
     {
         IUIComponent root = this;
         while (root.VisualParent is { } parent) root = parent;
         return root is IInputComponent input ? e.GetPosition(input).X : e.GetPosition(this).X;
     }
 
-    private void OnMouseWheelStep(object sender, MouseWheelEventArgs e)
+    private void OnWheelStep(object sender, PointerWheelEventArgs e)
     {
-        if (e.Handled || IsReadOnly || !IsMouseWheelEnabled || e.IsHorizontal || e.Delta == 0) return;
-        // Focus is the normal permission to take the wheel; hovering is enough only when asked for, because a control
-        // that swallows the wheel it was not given stops the surface under it from scrolling.
-        if (_text?.IsFocused != true && !(TracksMouseWheelWhenOver && IsMouseOver)) return;
+        if (e.Handled || IsReadOnly || !IsMouseWheelEnabled || e.IsHorizontal || e.Delta == 0)
+        {
+            return;
+        }
+
+        if (_text?.IsFocused != true && !(TracksMouseWheelWhenOver && IsPointerOver))
+        {
+            return;
+        }
 
         Step(Math.Sign(e.Delta), SmallChange);
         e.Handled = true;
