@@ -111,9 +111,8 @@ public partial class AnimationsViewModel : TabPageViewModel
     }
 
     /// <summary>ONE brush, painted by every card below and driven by ONE animation - the other half of the comparison.
-    /// This is how the real loading skeletons work (the theme's single <c>SkeletonPulseFill</c>), and it is what tells
-    /// the two costs apart: if 100 cards on one animated brush cost like 100 animations, the price is being paid per
-    /// PAINTER, not per animation.</summary>
+    /// It tells the two costs apart: if 100 cards on one animated brush cost like 100 animations, the price is being paid
+    /// per PAINTER, not per animation.</summary>
     public SolidColorBrush SharedPulse { get; } = new() { Color = Colors.White, Opacity = 0.05 };
 
     [Bindable] private bool _sharedPulseRunning;

@@ -80,6 +80,21 @@ public static class Compositor
         /// <summary>The element's alpha at the last <see cref="Recompose"/> - what the render thread writes to its slot.</summary>
         public float Alpha { get; private set; }
 
+        /// <summary>The element's alpha <paramref name="lag"/> seconds behind right now - what a copy of it drawn that much
+        /// later shows (see IUIComponent.RenderCloneStagger). An endless curve is read as if it had always been playing;
+        /// a finite one holds its start until the lag has passed.</summary>
+        public float AlphaAt(double lag)
+        {
+            var active = Elapsed - lag - Curve.Delay;
+            var period = Curve.Period;
+            if (active < 0 && Curve.IsEndless && period > 0)
+            {
+                active = active % period + period;
+            }
+
+            return (float)Curve.Evaluate(Curve.Tracks[0], active + Curve.Delay);
+        }
+
         public AdamantiumComponent Target { get; }
         public CompositorChannel Channel { get; }
         public AnimationCurve Curve { get; }
@@ -232,6 +247,7 @@ public static class Compositor
     // and cost the ability to reason about it.
     private static readonly object Gate = new();
     private static readonly List<Entry> Entries = new();
+    private static int _opacityEntries;
 
     /// <summary>Hand an animation to the render thread, if it can play it. Loop thread, when the animation starts. Returns
     /// null when it cannot - the caller then keeps the animation on the loop thread, as before.</summary>
@@ -303,10 +319,19 @@ public static class Compositor
                     entry.Promoted = true;
                 }
 
+                if (e.Channel == CompositorChannel.Opacity)
+                {
+                    _opacityEntries--;
+                }
+
                 Entries.RemoveAt(i);
             }
 
             Entries.Add(entry);
+            if (entry.Channel == CompositorChannel.Opacity)
+            {
+                _opacityEntries++;
+            }
         }
         return entry;
     }
@@ -317,7 +342,28 @@ public static class Compositor
     {
         lock (Gate)
         {
-            if (!Entries.Remove(entry) || entry.Channel != CompositorChannel.Transform || entry.Owner is not { } owner)
+            if (!Entries.Remove(entry))
+            {
+                return;
+            }
+
+            if (entry.Channel == CompositorChannel.Opacity)
+            {
+                _opacityEntries--;
+            }
+
+            if (entry.Owner is not { } owner)
+            {
+                return;
+            }
+
+            if (entry.Channel == CompositorChannel.Opacity)
+            {
+                owner.InvalidatePaint();
+                return;
+            }
+
+            if (entry.Channel != CompositorChannel.Transform)
             {
                 return;
             }
@@ -381,7 +427,35 @@ public static class Compositor
 
     public static void Reset()
     {
-        lock (Gate) Entries.Clear();
+        lock (Gate)
+        {
+            Entries.Clear();
+            _opacityEntries = 0;
+        }
+    }
+
+    /// <summary>Whether <paramref name="property"/> is <paramref name="target"/>'s own opacity and the render thread is
+    /// drawing it right now, so the loop thread's mirrored write of it needs no re-paint. Loop thread.</summary>
+    public static bool DrawsOpacity(AdamantiumComponent target, AdamantiumProperty property)
+    {
+        if (System.Threading.Volatile.Read(ref _opacityEntries) == 0
+            || AnimationChannels.Of(target, property) != CompositorChannel.Opacity)
+        {
+            return false;
+        }
+
+        lock (Gate)
+        {
+            foreach (var entry in Entries)
+            {
+                if (entry.Channel == CompositorChannel.Opacity && ReferenceEquals(entry.Target, target))
+                {
+                    return entry.AppliedRecently;
+                }
+            }
+        }
+
+        return false;
     }
 
     internal static bool Mirrored(Transform transform)
@@ -509,6 +583,23 @@ public static class Compositor
             foreach (var entry in Entries)
                 if (ReferenceEquals(entry.Target, target))
                     return entry;
+            return null;
+        }
+    }
+
+    /// <summary>The entry playing <paramref name="channel"/> on <paramref name="target"/>, or null.</summary>
+    public static Entry EntryFor(AdamantiumComponent target, CompositorChannel channel)
+    {
+        lock (Gate)
+        {
+            foreach (var entry in Entries)
+            {
+                if (entry.Channel == channel && ReferenceEquals(entry.Target, target))
+                {
+                    return entry;
+                }
+            }
+
             return null;
         }
     }

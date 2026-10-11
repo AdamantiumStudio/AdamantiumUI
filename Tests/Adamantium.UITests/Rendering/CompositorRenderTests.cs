@@ -219,6 +219,200 @@ public class CompositorRenderTests
         Assert.That(Center(renderer), Is.Not.EqualTo(mirrored), "after a loop tick the render thread still drives the fade");
     }
 
+    // A loading garland: one card drawn three times, each copy a second behind the one before it, fading 0.1 -> 0.9 over
+    // four seconds, endlessly.
+    private (OffscreenTestRenderer Renderer, TestRoot Root, Compositor.Entry Fade) Garland(bool endless = true)
+    {
+        AnimationManager.Reset();   // the heartbeat and the dirty set are shared with every fixture that ran before
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+
+        var root = new TestRoot(64, 64);
+        var card = new TestControl { RenderCloneStagger = TimeSpan.FromSeconds(1) };
+        card.Bounds = new Rect(0, 24, 16, 16);
+        card.RenderSize = new Size(16, 16);
+        var fill = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        fill.Bounds = new Rect(0, 0, 16, 16);
+        fill.RenderSize = new Size(16, 16);
+        card.Add(fill);
+        card.RenderClones = [Matrix4x4F.Translation(0, 0, 0), Matrix4x4F.Translation(24, 0, 0), Matrix4x4F.Translation(48, 0, 0)];
+        root.Add(card);
+
+        fill.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
+            new DoubleAnimation
+            {
+                From = 0.1, To = 0.9, Duration = TimeSpan.FromSeconds(4), IterationCount = endless ? double.PositiveInfinity : 1
+            });
+        var entry = Compositor.EntryFor(fill);
+        Assert.That(entry?.Channel, Is.EqualTo(CompositorChannel.Opacity));
+        Compositor.StartPending();
+
+        Assert.That(renderer.RenderFrame(root), Is.True);   // the fade's slots are made here...
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);   // ...and drawn by from here on
+        RenderDirty.Clear();
+        return (renderer, root, entry);
+    }
+
+    [Test]
+    public void EachCopyFadesItsStaggerBehindTheOneBefore()
+    {
+        var (renderer, root, entry) = Garland();
+        using var _ = renderer;
+        while (entry.Elapsed < 2.5) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var (first, second, third) = Copies(renderer);
+        Assert.That(first, Is.GreaterThan(second + 20), "the first copy is a second ahead of the second");
+        Assert.That(second, Is.GreaterThan(third + 20), "and the second a second ahead of the third");
+    }
+
+    [Test]
+    public void AGarlandThatGrows_RunsItsNewCopiesBehindLikeTheRest()
+    {
+        // A garland that GROWS after it settled (a list scrolled onto more pending slots), by a thousand copies: each new
+        // one takes the slot of its phase and runs its stagger behind, like the ones that were there.
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 128, 128) { ClearColor = Colors.Black };
+
+        var root = new TestRoot(128, 128);
+        var card = new TestControl { RenderCloneStagger = TimeSpan.FromMilliseconds(2) };
+        card.Bounds = new Rect(0, 0, 2, 2);
+        card.RenderSize = new Size(2, 2);
+        var fill = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 2, 2)) };
+        fill.Bounds = new Rect(0, 0, 2, 2);
+        fill.RenderSize = new Size(2, 2);
+        card.Add(fill);
+        root.Add(card);
+
+        static Matrix4x4F[] Cells(int count)
+        {
+            var cells = new Matrix4x4F[count];
+            for (var i = 0; i < count; i++)
+            {
+                cells[i] = Matrix4x4F.Translation(i % 64 * 2, i / 64 * 2, 0);   // copy i in the 2 px cell (i % 64, i / 64)
+            }
+
+            return cells;
+        }
+
+        void Settle()
+        {
+            for (var frame = 0; frame < 8; frame++)
+            {
+                Assert.That(renderer.RenderFrame(root), Is.True);
+                RenderDirty.Clear();
+                if (renderer.Cache.LastDrawPath == DrawPath.Replay)
+                {
+                    return;   // from here on nothing walks again by itself
+                }
+            }
+        }
+
+        card.RenderClones = Cells(300);
+        fill.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
+            new DoubleAnimation
+            {
+                From = 0.1, To = 0.9, Duration = TimeSpan.FromSeconds(4), IterationCount = double.PositiveInfinity
+            });
+        var entry = Compositor.EntryFor(fill);
+        Compositor.StartPending();
+        Settle();
+
+        card.RenderClones = Cells(1300);
+        card.InvalidateRender(false);
+        RenderDirty.MarkGeometry(card);
+        Settle();
+
+        while (entry.Elapsed < 2.5) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var px = Image.Load(path).GetPixelBuffer(0, 0);
+            static int Red(uint pixel) => (int)(pixel & 0xFF);
+            var first = Red(px.GetPixel<uint>(0, 0));                     // copy 0
+            var grown = Red(px.GetPixel<uint>(1000 % 64 * 2, 1000 / 64 * 2)); // copy 1000, two seconds behind
+            Assert.That(first, Is.GreaterThan(grown + 20), "a copy the garland grew into runs behind like the rest");
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void ALoopTickDuringTheFade_LeavesTheFrameToReplay()
+    {
+        // The loop mirrors the value into the property every tick. While the render thread draws the fade that write must
+        // not mark the element: a cloned group cannot be patched, so each mark would cost the frame a walk.
+        var (renderer, root, _) = Garland();
+        using var __ = renderer;
+
+        AnimationManager.Tick(0.0);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.That(renderer.Cache.LastDrawPath, Is.EqualTo(DrawPath.Replay),
+            "a mirrored opacity must leave the frame clean - no patch of every copy, no walk");
+    }
+
+    [Test]
+    public void OnceTheGarlandStops_EveryCopyShowsTheSame()
+    {
+        var (renderer, root, entry) = Garland();
+        using var _ = renderer;
+        while (entry.Elapsed < 2.5) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var (early, _, late) = Copies(renderer);
+        Assert.That(early, Is.GreaterThan(late + 20), "mid-pulse the copies stand apart");
+
+        AnimationManager.Cancel(entry.Target);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var (first, second, third) = Copies(renderer);
+        Assert.That(second, Is.EqualTo(first).Within(3), "the copies behind must not stay where the pulse left them");
+        Assert.That(third, Is.EqualTo(first).Within(3));
+    }
+
+    [Test]
+    public void AFiniteFade_PlaysOnEveryCopyTogether()
+    {
+        // Only a cycle folds the copies into a few phases; a fade that ends would need a slot per copy, so it is not
+        // staggered at all.
+        var (renderer, root, entry) = Garland(endless: false);
+        using var _ = renderer;
+        while (entry.Elapsed < 2.5) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var (first, second, third) = Copies(renderer);
+        Assert.That(first, Is.GreaterThan(60), "the fade is under way");
+        Assert.That(second, Is.EqualTo(first).Within(3));
+        Assert.That(third, Is.EqualTo(first).Within(3));
+    }
+
+    private static (int First, int Second, int Third) Copies(OffscreenTestRenderer renderer)
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var px = Image.Load(path).GetPixelBuffer(0, 0);
+            static int Red(uint pixel) => (int)(pixel & 0xFF);
+            return (Red(px.GetPixel<uint>(8, 32)), Red(px.GetPixel<uint>(32, 32)), Red(px.GetPixel<uint>(56, 32)));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
     private static uint Center(OffscreenTestRenderer renderer)
     {
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");

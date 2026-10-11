@@ -138,7 +138,8 @@ public partial class RenderCache
                 if (!LeftTheTree(component))
                 {
                     ProcessRenderCommands(component, _drawingContextInternal.GetDrawCommands(), projectionMatrix,
-                        !readOnly && wasGeometryValid, order, component.RenderClones);
+                        !readOnly && wasGeometryValid, order, component.RenderClones, component.RenderCloneSteps,
+                        component.RenderCloneStagger);
                 }
 
                 order += OrderGap;   // the flat list IS the paint order
@@ -189,7 +190,7 @@ public partial class RenderCache
                 _drawingContextInternal.Clear();
                 component.Render(_drawingContext);
                 var commands = CopyCommands(_drawingContextInternal.GetDrawCommands());
-                _packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, order, component.RenderClones));
+                _packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, order, true));
                 order += OrderGap;
             }
         }
@@ -250,7 +251,7 @@ public partial class RenderCache
             if (!LeftTheTree(draw.Component))
             {
                 ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid,
-                    draw.Order, draw.Clones);
+                    draw.Order, draw.Clones, draw.CloneSteps, draw.CloneStagger);
             }
         }
 
@@ -338,6 +339,8 @@ public partial class RenderCache
         _built = false;
         _clipOwners.Clear();
         _fadeOwners.Clear();
+        _copyFades.Clear();
+        _copyFadeSlots.Clear();
         _transformTable?.ReleaseAll();
     }
 
@@ -581,6 +584,7 @@ public partial class RenderCache
             slot = _transformTable.AcquireOpacitySlot(c.RenderId);
             _fadeOwners[c] = slot;
             _transformTable.SetAlpha(device, slot, s.Opacity);
+            SettleCopyFades(device, c, s.Opacity);
             _transformTable.SetOpacityParent(device, slot, parent);
 
             // Just allocated, and the buffer this frame draws from was sized BEFORE that: an instance carrying this

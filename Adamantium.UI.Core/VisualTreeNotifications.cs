@@ -38,6 +38,10 @@ public static class VisualTreeNotifications
     /// <summary>An element's PAINT is stale: it draws exactly the same thing, in a different color.</summary>
     public static event Action<IUIComponent> PaintInvalidated;
 
+    /// <summary>An element's opacity changed while the render thread draws it: the window needs no re-paint, but a copy
+    /// of the element baked elsewhere (a visual brush) does.</summary>
+    public static event Action<IUIComponent> PaintMirrored;
+
     /// <summary>An element MOVED: same content, new place.</summary>
     public static event Action<IUIComponent> Moved;
 
@@ -55,6 +59,7 @@ public static class VisualTreeNotifications
     public static void RaiseZOrderChanged(IUIComponent component) { if (component != null) ZOrderChanged?.Invoke(component); }
     public static void RaiseContentInvalidated(IUIComponent component) { if (component != null) ContentInvalidated?.Invoke(component); }
     public static void RaisePaintInvalidated(IUIComponent component) { if (component != null) PaintInvalidated?.Invoke(component); }
+    public static void RaisePaintMirrored(IUIComponent component) { if (component != null) PaintMirrored?.Invoke(component); }
     public static void RaiseMoved(IUIComponent component) { if (component != null) Moved?.Invoke(component); }
     public static void RaiseSubtreeMoved(IUIComponent component) { if (component != null) SubtreeMoved?.Invoke(component); }
     public static void RaiseStateSwapStarted() => StateSwapStarted?.Invoke();

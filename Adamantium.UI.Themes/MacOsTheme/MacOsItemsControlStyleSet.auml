@@ -37,29 +37,40 @@
         <Setter Property="ItemSkeletonTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <!-- No margin: the panel insets the card by the real item's. The fill is the SHARED brush, so the
-                         breathe below is one animation and not one per card (a screenful can be 4000+). -->
-                    <Border CornerRadius="{ResourceReference CornerRadiusDefault}" BorderThickness="1"
-                            IsHitTestVisible="False"
-                            Background="{ObservableResource SkeletonPulseFill}"
-                            BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                    <!-- No margin: the panel insets the card by the real item's. The panel draws this one card at every
+                         pending slot as a copy (a screenful can be 4000+), so the breathe below is still ONE animation:
+                         each copy plays it a little after the one before (RenderCloneStagger), like a garland. -->
+                    <Grid IsHitTestVisible="False"
+                          RenderCloneStagger="0:0:0.08">
+                        <Border x:Name="SkeletonFill"
+                                CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                Opacity="0.05"
+                                Background="{ObservableResource SkeletonPulseFill}"/>
+                        <Border CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                BorderThickness="1"
+                                BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                    </Grid>
+                    <!-- Shown while the list loads, collapsed once it is done: the breathe runs exactly as long. -->
+                    <DataTemplate.Triggers>
+                        <PropertyTrigger Property="Visibility"
+                                         Value="Visible">
+                            <PropertyTrigger.EnterActions>
+                                <RunAnimationAction TargetName="SkeletonFill">
+                                    <PulseAnimation Property="Opacity"
+                                                    Min="0.05"
+                                                    Max="0.15"
+                                                    Duration="0:0:1.2"
+                                                    Easing="CubicInOut"/>
+                                </RunAnimationAction>
+                            </PropertyTrigger.EnterActions>
+                            <PropertyTrigger.ExitActions>
+                                <StopAnimationAction TargetName="SkeletonFill"/>
+                            </PropertyTrigger.ExitActions>
+                        </PropertyTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
-
-    <!-- TargetName here resolves a keyed RESOURCE, not a template part - that is how a trigger reaches a shared brush. -->
-    <Style Selector="ItemsControl">
-        <PropertyTrigger Property="IsLoadingItems" Value="True">
-            <PropertyTrigger.EnterActions>
-                <RunAnimationAction TargetName="SkeletonPulseFill">
-                    <PulseAnimation Property="Opacity" Min="0.05" Max="0.15" Duration="0:0:1.2" Easing="CubicInOut"/>
-                </RunAnimationAction>
-            </PropertyTrigger.EnterActions>
-            <PropertyTrigger.ExitActions>
-                <StopAnimationAction TargetName="SkeletonPulseFill"/>
-            </PropertyTrigger.ExitActions>
-        </PropertyTrigger>
     </Style>
 
 </StyleSet>

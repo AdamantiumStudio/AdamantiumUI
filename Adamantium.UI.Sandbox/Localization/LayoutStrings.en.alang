@@ -6,4 +6,11 @@
     <Phrase Key="Opacity" Text="Opacity:"/>
     <Phrase Key="PageTiles" Text="Page the tiles instead of virtualizing them"/>
     <Phrase Key="Tiles" Text="Tiles"/>
+    <Phrase Key="Skeletons" Text="Skeletons"/>
+    <Phrase Key="Hold" Text="Hold the skeletons"/>
+    <Phrase Key="StaggerMs" Text="Stagger, ms:"/>
+    <Phrase Key="PulseMin" Text="Low:"/>
+    <Phrase Key="PulseMax" Text="High:"/>
+    <Phrase Key="PulseSeconds" Text="Half-cycle, s:"/>
+    <Phrase Key="Cell" Text="Cell:"/>
 </Language>

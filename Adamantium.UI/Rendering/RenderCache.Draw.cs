@@ -106,6 +106,7 @@ public partial class RenderCache
         // restores the full window scissor - that rect belongs to the window and no move touches it.
         public IUIComponent Clip;
         public IRenderUnit Unit;  // Unit
+        public int Fade;          // Unit: the opacity slot it drew with - a copy's phase slot, replayed as recorded
         public byte Batch;        // Segment: which collector (0 rect, 1 ellipse, 2 text, 3 gradient-rect, 4 gradient-ellipse, 5 pattern, 6 fractal, 7 textured)
                                   // InstancedFlush: InstancedFillCollector.ArenaBatchId, so a patch finds the flush it edits
         // Segment: the collector's STABLE segment id (see BatchCollector.Segment.Id) - never an index, so a split that
@@ -460,7 +461,10 @@ public partial class RenderCache
         var reserve = 0;
         foreach (var group in _groups)
         {
-            if (group.Clones is { Count: > 0 } clones) reserve += clones.Count;
+            if (group.Clones is { Count: > 0 } clones)
+            {
+                reserve += group.CloneStagger > TimeSpan.Zero ? clones.Count + MaxCopyPhases : clones.Count;
+            }
         }
 
         _cloneReserve = reserve;   // ...and the trace reads it from here instead of counting the scene again
@@ -780,6 +784,7 @@ public partial class RenderCache
             _opacityChain.Clear();
             _opacitySlotCache.Clear();
             _fadeSlotJustCreated = false;   // THIS walk is the one that re-bakes the instances with the new slot index
+            _copyFadeWalk++;
         }
 
         // Text + item-background + instanced-fill batches: reset per frame. Device renders only - GPU-free tests skip batching.
@@ -844,6 +849,7 @@ public partial class RenderCache
         var cloneStart = 0;
         var cloneEnd = 0;
         var cloneIndex = 0;
+        ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
@@ -860,6 +866,7 @@ public partial class RenderCache
                 cloneStart = groupIndex;
                 cloneEnd = CloneSubtreeEnd(groupIndex);
                 cloneIndex = 0;
+                cloneHost = group;
                 _cloneMatrix = clones[0];
                 // A cloned unit owns a record per copy, which the splice cannot move; a paint patch reaches each one.
                 group.NotBatchable("clones");
@@ -940,7 +947,13 @@ public partial class RenderCache
             // while baking, the per-unit path reuses it). Culled units returned above. Compose the effective alpha from the
             // frozen snapshot first, so batches (rru.FillOpacity) and per-unit renderers bake with the current opacity.
             unit.SetEffectiveOpacity(EffectiveOpacity(unit.Component));
-            unit.SetFadeSlot(OpacitySlotOf(device, unit.Component));
+            var fadeSlot = OpacitySlotOf(device, unit.Component);
+            if (cloneRun != null && device != null && cloneHost?.Component != null && cloneHost.CloneStagger > TimeSpan.Zero)
+            {
+                fadeSlot = CopyFadeSlot(device, unit.Component, cloneHost, cloneIndex, fadeSlot);
+            }
+
+            unit.SetFadeSlot(fadeSlot);
             // The rounded clip as a SHAPE, for the per-unit draws that take it as a uniform (the batched families read
             // the same numbers from the table by slot). Written before Update so the draw sees this frame's clip.
             if (unit.RenderData != null)
@@ -1738,7 +1751,7 @@ public partial class RenderCache
             if (_recording) group.NotBatchable($"perUnitDraw<{unit.GetType().Name}>");
             RefreshOverlayFade(unit);   // the chain from the table, as the replay does it - see RefreshOverlayFade
             unit.Render();
-            if (_recording) RecordOp(new RenderOp { Kind = RenderOpKind.Unit, Unit = unit, Order = _recordOrder });
+            if (_recording) RecordOp(new RenderOp { Kind = RenderOpKind.Unit, Unit = unit, Fade = unit.FadeSlot, Order = _recordOrder });
             }
 
             // End of a clone run's subtree: rewind to its first group under the next matrix, or leave the run.
@@ -1765,6 +1778,10 @@ public partial class RenderCache
 
         _cloneMatrix = null;   // a run that ended on the last group leaves it set otherwise
         _recording = recordingBeforeClones;
+        if (recordingBeforeClones)
+        {
+            ReleaseUnusedCopyFades();
+        }
 
         // Drain the tail batches (rects under fills under text), then leave the device on the full scissor for next pass.
         if (device != null) FlushBatches(device, fullScissor, ref scissorNarrowed);
@@ -1786,6 +1803,13 @@ public partial class RenderCache
             System.Threading.Interlocked.Increment(ref _withheldFrames);
             device?.WithholdFrame();
             StreamStaleBecause("deferredForRoom");
+            Core.LoopSignal.Request();
+        }
+
+        if (_copyFadeNotLive)
+        {
+            _copyFadeNotLive = false;
+            StreamStaleBecause("copyFadeSlot");
             Core.LoopSignal.Request();
         }
 
@@ -1977,6 +2001,8 @@ public partial class RenderCache
         }
 
         _transformTable.SetAlpha(device, slot, entry.Alpha);
+        ApplyCopyFades(device, owner, entry);
+        entry.MarkApplied();
 
         // Keep the snapshot's own value in step, so EffectiveOpacity (which the slot-blind families still bake with)
         // reads the alpha the compositor just applied.

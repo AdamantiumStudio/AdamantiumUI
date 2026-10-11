@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.Resources;
@@ -263,6 +264,78 @@ public class AnimationTests
 
         activator.Deactivate();
         Assert.That(AnimationManager.ActiveCount, Is.EqualTo(0), "teardown must not leave a looping animation behind");
+    }
+
+    [Test]
+    public void Pulse_TakesItsRangeFromBindingsOnTheElementItRuns()
+    {
+        AnimationManager.Reset();
+        var border = OnScreen();
+        border.DataContext = new Range { Low = 20, High = 80 };
+        var pulse = new PulseAnimation { Property = "Height", Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
+        pulse.SetBinding(PulseAnimation.MinProperty, new Binding(nameof(Range.Low)));
+        pulse.SetBinding(PulseAnimation.MaxProperty, new Binding(nameof(Range.High)));
+
+        pulse.Apply(border);
+        Assert.That(border.Height, Is.EqualTo(20).Within(0.001), "starts at the bound low end");
+
+        AnimationManager.Tick(0.5);
+        Assert.That(border.Height, Is.EqualTo(50).Within(1.0), "halfway to the bound high end");
+    }
+
+    [Test]
+    public void ChangingABoundValueWhileItRuns_RestartsTheAnimationWhereItWas()
+    {
+        AnimationManager.Reset();
+        var border = OnScreen();
+        var range = new Range { Low = 0, High = 100 };
+        border.DataContext = range;
+        var pulse = new PulseAnimation { Property = "Height", Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
+        pulse.SetBinding(PulseAnimation.MinProperty, new Binding(nameof(Range.Low)));
+        pulse.SetBinding(PulseAnimation.MaxProperty, new Binding(nameof(Range.High)));
+        pulse.Apply(border);
+        AnimationManager.Tick(0.25);
+        Assert.That(border.Height, Is.EqualTo(25).Within(1.0));
+
+        range.High = 200;
+        BindingUpdateQueue.Flush();
+        AnimationManager.Tick(0.0);
+        Assert.That(border.Height, Is.EqualTo(50).Within(1.0), "the new range, at the same point of the cycle");
+        Assert.That(AnimationManager.ActiveCount, Is.EqualTo(1), "restarted in place, not started a second time");
+
+        AnimationManager.Tick(0.25);
+        Assert.That(border.Height, Is.EqualTo(100).Within(1.0), "and it carries on from there");
+    }
+
+    [Test]
+    public void APulseLoopsBackAndForthByDefault_AndATemplateCanSayOtherwise()
+    {
+        var pulse = new PulseAnimation();
+        Assert.That(pulse.AutoReverse, Is.True);
+        Assert.That(pulse.IterationCount, Is.EqualTo(double.PositiveInfinity));
+
+        // What markup inside a template writes: below a local value, so a default set as one would mask it.
+        pulse.SetValue(Animation.IterationCountProperty, 3.0, ValuePriority.Template);
+        Assert.That(pulse.IterationCount, Is.EqualTo(3.0));
+    }
+
+    private sealed class Range : System.ComponentModel.INotifyPropertyChanged
+    {
+        private double _high;
+
+        public double Low { get; set; }
+
+        public double High
+        {
+            get => _high;
+            set
+            {
+                _high = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(High)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     }
 
     private static PulseAnimation PulseOpacity() =>

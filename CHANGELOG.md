@@ -7,6 +7,28 @@ All packages share one version.
 
 ### Added
 
+- `UIComponent.RenderCloneStagger`: each copy drawn by `RenderClones` plays the endless composited opacity animations
+  of the elements it draws this much later than the one before it, so one animation runs along the copies like a
+  garland. Copies in the same phase of the cycle share one opacity slot, written by the render thread, so a screenful
+  of thousands of copies costs a few dozen slots. A finite animation plays on every copy together. `RenderCloneSteps`
+  says which step of the stagger each copy takes, so a copy keeps its phase while the list of copies shrinks or grows
+  around it. The stagger is a registered property, so markup can bind it.
+
+- `VirtualizingPanel.HoldSkeletons`: while on, the panel binds no item and every slot in the window still without a
+  container shows a skeleton card, for as long as the data behind the list is not ready.
+
+- `Animation` and `PulseAnimation` are components: `Duration`, `Delay`, `IterationCount`, `AutoReverse`, `Easing`,
+  `Min`, `Max` and the pulsed `Property` are registered properties and can be bound in markup. The bindings resolve
+  against the element the animation runs on, and a change while it runs restarts it at the same point of its cycle.
+  In a style's trigger the animation is one object shared by every styled element, so bind it to a resource there,
+  not to an element's data.
+
+- The sandbox's Layout tab has a Skeletons stand: a list held on its skeleton cards with the stagger, the pulse's low
+  and high ends, its half-cycle and the cell on sliders.
+
+- `VisualTreeNotifications.PaintMirrored`: an element's opacity changed while the render thread draws it - nothing on
+  screen needs a re-paint, but a copy baked elsewhere (a visual brush) does.
+
 - `Transform.ShiftX` and `ShiftY`: a move in units of the owner's own size (1 = its whole width or height), added to
   `TranslateX`/`TranslateY` for a render transform. The render thread composes it too, so an animation of it is
   composited: a band can travel a fraction of its card whatever size the card is.
@@ -681,6 +703,10 @@ All packages share one version.
   last segment instead of stopping at its key.
 
 - An element's own `Opacity` animation is composited: the render thread writes it into the element's opacity slot.
+  While the render thread is drawing it, the loop's mirrored value no longer re-paints the element every tick.
+
+- The loading skeleton cards of every theme pulse their fill's opacity, started and stopped by the card's own
+  visibility, with each card a little behind the one before it, instead of all pulsing one shared brush at once.
 
 - `BusyIndicator.Shimmer` moves a glare band by `ShiftX` under the card's rounded clip instead of sliding three gradient
   stops, so the render thread plays it and it keeps gliding while the loop thread is busy; it looks the same.

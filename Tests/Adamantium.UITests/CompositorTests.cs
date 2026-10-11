@@ -308,6 +308,25 @@ public class CompositorTests
             "the property follows what is on screen, so bindings and triggers still see the fade");
     }
 
+    [Test]
+    public void AnEndlessFadeReadBehindWrapsAroundItsCycle()
+    {
+        // Copies far down a garland lag by more than a cycle; an endless pulse is read as if it had always been playing,
+        // so they pulse too instead of holding the start until their turn comes.
+        var element = AttachedBorder();
+        new PulseAnimation { Property = "Opacity", Min = 0.2, Max = 0.8, Duration = System.TimeSpan.FromSeconds(1) }.Apply(element);
+        var entry = Compositor.EntryFor(element);
+        Compositor.StartPending();
+        Thread.Sleep(300);
+
+        var period = entry.Curve.Period;
+        Assert.That(entry.AlphaAt(0.1 + 3 * period), Is.EqualTo(entry.AlphaAt(0.1)).Within(0.02));
+
+        // Five cycles and a quarter behind: a quarter into the cycle, halfway up - not the 0.2 a held start would show.
+        var lag = entry.Elapsed - period / 4 + 5 * period;
+        Assert.That(entry.AlphaAt(lag), Is.EqualTo(0.5).Within(0.05));
+    }
+
     // --- Paint channel: a brush's own opacity, on the render thread ---------------------------------------------------
     //
     // The skeleton pulse: ONE shared brush whose Opacity breathes while hundreds of cards paint with it. Unlike a transform,

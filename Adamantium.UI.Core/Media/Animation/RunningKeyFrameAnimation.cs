@@ -25,7 +25,11 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
     public RunningKeyFrameAnimation(AdamantiumComponent target, Animation animation, Action completed, double resumeElapsed = 0)
         : this(target, BuildCurve(target, animation), FillBehavior.HoldEnd, true, completed, resumeElapsed)
     {
+        Source = animation;
     }
+
+    /// <summary>The markup animation this was started from; null for a curve played directly.</summary>
+    public Animation Source { get; }
 
     /// <summary>Plays a ready curve. <paramref name="paintComposited"/> false keeps a paint curve on the loop thread, where
     /// the property it drives goes on changing as the animation plays.</summary>

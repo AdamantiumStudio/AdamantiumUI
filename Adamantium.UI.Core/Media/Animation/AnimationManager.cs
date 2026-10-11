@@ -209,6 +209,21 @@ public static class AnimationManager
         return null;
     }
 
+    /// <summary>The elapsed time of <paramref name="animation"/> running on <paramref name="target"/>, or null if it is not
+    /// running there. Loop thread.</summary>
+    internal static double? ElapsedOf(Animation animation, AdamantiumComponent target)
+    {
+        foreach (var a in Active)
+        {
+            if (a is RunningKeyFrameAnimation rk && ReferenceEquals(rk.Source, animation) && rk.AnimatesTarget(target))
+            {
+                return rk.CurrentElapsed;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Stops the animation (if any) running on <paramref name="property"/> of <paramref name="target"/> without
     /// firing its completion callback. Returns true if one was running. The caller releases the held animation value.</summary>
     internal static bool Cancel(AdamantiumComponent target, AdamantiumProperty property) =>
