@@ -66,7 +66,8 @@ public static class ToolTipService
 
     private static void OnPointerExited(object sender, PointerEventArgs e)
     {
-        if (ReferenceEquals(sender, _pending)) Hide();
+        // Only once nothing is over the owner: one pointer leaving while another stays is not leaving it.
+        if (ReferenceEquals(sender, _pending) && !_pending.IsPointerOver) Hide();
     }
 
     private static void OnTimerTick(object sender, EventArgs e)

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The long-press cue: an accent ring around the finger, faintly filled. -->
+    <Style Selector="HoldIndicator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="HoldIndicator">
+                    <Grid Width="48" Height="48">
+                        <Border CornerRadius="24" Background="{ThemeResource AccentFillColorDefault}" Opacity="0.18"/>
+                        <Border CornerRadius="24" BorderThickness="2.5" BorderBrush="{ThemeResource AccentFillColorDefault}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</StyleSet>

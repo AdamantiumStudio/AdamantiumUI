@@ -57,6 +57,20 @@ public abstract class ButtonBase : ContentControl
         FocusableProperty.OverrideMetadata(typeof(ButtonBase), new PropertyMetadata(true));
     }
 
+    protected ButtonBase()
+    {
+        AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+    }
+
+    /// <summary>Whether a finger or a pen held on the button is a long press rather than a press: the button lets go of
+    /// its pressed look and is not clicked by the lift. A repeat button says no - holding it is how it repeats.</summary>
+    protected virtual bool LongPressCancelsClick => true;
+
+    private void OnHolding(object sender, HoldingEventArgs e)
+    {
+        if (e.HoldingState == HoldingState.Started && LongPressCancelsClick) IsPressed = false;
+    }
+
     public event RoutedEventHandler Click
     {
         add => AddHandler(ClickEvent, value);
@@ -206,7 +220,8 @@ public abstract class ButtonBase : ContentControl
         var over = position.X >= 0 && position.Y >= 0
                    && position.X <= RenderSize.Width && position.Y <= RenderSize.Height;
 
-        if (wasPressed && IsEnabled && over && ClickMode == ClickMode.Release)
+        var longPress = e.Pointer.IsHolding && LongPressCancelsClick;
+        if (wasPressed && IsEnabled && over && ClickMode == ClickMode.Release && !longPress)
         {
             OnClick();
         }

@@ -43,6 +43,23 @@ public class ListBoxItem : ContentControl, ISelectable
         FocusableProperty.OverrideMetadata(typeof(ListBoxItem), new PropertyMetadata(true));
     }
 
+    public ListBoxItem()
+    {
+        AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+    }
+
+    // A finger held on a row picks it before the lift opens the menu, so the menu is about the row it was held on.
+    private void OnHolding(object sender, HoldingEventArgs e)
+    {
+        if (e.HoldingState != HoldingState.Started || !_deferSelect)
+        {
+            return;
+        }
+
+        _deferSelect = false;
+        OwnerListBox?.SelectFromContainer(this, e.Modifiers);
+    }
+
     public bool IsSelected
     {
         get => GetValue<bool>(IsSelectedProperty);
@@ -107,9 +124,10 @@ public class ListBoxItem : ContentControl, ISelectable
         // Defer the selection change on a press over an ALREADY-selected item (multi-select) - a plain OR Ctrl press - so a
         // drag keeps the whole selection (Ctrl-drag = COPY the selection); a release without a drag applies it on mouse-up
         // (plain -> collapse to one, Ctrl -> toggle off). Shift stays immediate (it extends the range, not a drag gesture).
+        // A finger always waits for its tap: a press that turns into scrolling the list must select nothing.
         var noShift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) == 0;
-        if (owner != null && noShift && IsSelected &&
-            owner.SelectionMode is SelectionMode.Extended or SelectionMode.Multiple)
+        if (owner != null && (e.Pointer.Type == PointerType.Touch ||
+                              noShift && IsSelected && owner.SelectionMode is SelectionMode.Extended or SelectionMode.Multiple))
         {
             _deferSelect = true;
             _downPoint = e.GetPosition(owner);

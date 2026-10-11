@@ -70,6 +70,37 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         FocusableProperty.OverrideMetadata(typeof(TreeViewItem), new PropertyMetadata(true));
     }
 
+    private readonly TouchTap _tap = new();
+
+    public TreeViewItem()
+    {
+        AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+    }
+
+    // A finger held on a node picks it before the lift opens the menu, so the menu is about the node it was held on.
+    private void OnHolding(object sender, HoldingEventArgs e)
+    {
+        if (e.HoldingState == HoldingState.Started && _tap.End(e))
+        {
+            FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
+        }
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        _tap.Move(e);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (_tap.End(e))
+        {
+            FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
+        }
+    }
+
     /// <summary>The flat row this container currently shows (its depth / expand / selection model). Null before binding.</summary>
     internal TreeRow Row { get; private set; }
 
@@ -161,7 +192,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         if (_rowRoot != null)
         {
             _enterHeader ??= (_, _) => IsPointerOverHeader = true;
-            _leaveHeader ??= (_, _) => IsPointerOverHeader = false;
+            _leaveHeader ??= (_, _) => IsPointerOverHeader = _rowRoot?.IsPointerOver == true;
             _rowRoot.AddHandler(PointerEvents.PointerEnteredEvent, _enterHeader, true);
             _rowRoot.AddHandler(PointerEvents.PointerExitedEvent, _leaveHeader, true);
         }
@@ -214,6 +245,12 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
 
             return;
         }
+        // A finger selects on its tap, so scrolling the tree through this node selects nothing.
+        if (_tap.Begin(e, this))
+        {
+            return;
+        }
+
         // Route the click (with its Ctrl/Shift modifiers) to the owner TreeView - the Single/Multiple/Extended policy lives
         // there, since it must reach across rows to clear or range-select the others.
         FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);

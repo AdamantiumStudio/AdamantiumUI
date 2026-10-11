@@ -183,6 +183,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         this.window.SetSurfaceHandle(source.Handle);
 
         ApplyTransparency();
+        SwitchOffSystemHoldCue(source.Handle);
 
         source.AddHook(CustomWndProc);
 
@@ -1255,6 +1256,15 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         if (capture) Win32Interop.SetCapture(window.Handle);
         else Win32Interop.ReleaseCapture();
+    }
+
+    // The framework shows a long press itself (HoldIndicator, on Gestures.Holding); the system's own ring for it would be
+    // a second cue, drawn where the framework does not know.
+    private static void SwitchOffSystemHoldCue(IntPtr handle)
+    {
+        var off = 0;
+        Win32Interop.SetWindowFeedbackSetting(handle, FeedbackType.TouchPressAndHold, 0, sizeof(int), ref off);
+        Win32Interop.SetWindowFeedbackSetting(handle, FeedbackType.PenPressAndHold, 0, sizeof(int), ref off);
     }
 
     // A finger or a pen. Handled, the system makes no mouse messages of it; the mouse and a touchpad are left to

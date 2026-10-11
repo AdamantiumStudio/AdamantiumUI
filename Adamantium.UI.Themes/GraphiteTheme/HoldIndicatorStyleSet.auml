@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The long-press cue: a thin accent ring around the finger, without a wash, as the drop cue keeps its frame dry. -->
+    <Style Selector="HoldIndicator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="HoldIndicator">
+                    <Border Width="44" Height="44" CornerRadius="22" BorderThickness="2"
+                            BorderBrush="{ThemeResource AccentFillColorDefault}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</StyleSet>

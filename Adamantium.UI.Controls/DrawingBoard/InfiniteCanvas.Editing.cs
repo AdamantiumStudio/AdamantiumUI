@@ -1286,8 +1286,15 @@ public partial class InfiniteCanvas
         }
     }
 
+    // Whether a pointer other than the one working the canvas is still pressing: then its moves and release are not
+    // this gesture's - a mouse passed over a pen's stroke must not take the stroke's release.
+    private bool HeldByAnother(Pointer pointer) =>
+        _activePointer is { } held && !ReferenceEquals(held, pointer) && held.Properties.Buttons != MouseButtons.None;
+
     private void OnPointerMove(object sender, PointerEventArgs e)
     {
+        if (HeldByAnother(e.Pointer)) return;
+
         _activePointer = e.Pointer;
         if (_panning)
         {
@@ -1408,6 +1415,8 @@ public partial class InfiniteCanvas
 
     private void OnPointerUp(object sender, PointerReleasedEventArgs e)
     {
+        if (HeldByAnother(e.Pointer)) return;
+
         _activePointer = e.Pointer;
 
         // The step the press opened is closed HERE whatever the release turns out to mean. A gesture that changed
