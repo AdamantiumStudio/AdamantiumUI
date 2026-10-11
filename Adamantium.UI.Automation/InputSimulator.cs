@@ -60,96 +60,127 @@ internal static class InputSimulator
         Stroke(window, start, InWindow(element, to));
     }
 
-    public static void Tap(UIComponent element, string label, Contact contact) => Tap(element, label, Middle(element), contact);
-
-    /// <summary>A finger or a pen put down at <paramref name="local"/>, a point in the element's own units, and lifted.
-    /// </summary>
-    public static void Tap(UIComponent element, string label, Vector2 local, Contact contact)
+    /// <summary>Contacts - a pen, or fingers - put down together, each at its path's start, and lifted together.</summary>
+    public static void Tap(IReadOnlyList<ContactPath> paths, IReadOnlyList<Contact> contacts)
     {
-        var (window, point) = PutDown(element, label, local, contact);
-        Lift(window, point, contact);
+        var at = Now();
+        Lift(PutDown(paths, contacts, at), contacts, at);
     }
 
-    /// <summary>A finger or a pen put down at <paramref name="local"/> and left there; <see cref="Lift"/> ends it.</summary>
-    public static (IWindow Window, Vector2 Point) PutDown(UIComponent element, string label, Vector2 local, Contact contact)
+    /// <summary>Contacts put down together, each at its path's start, and left there; <see cref="Lift"/> ends them.
+    /// Every place is checked before the first goes down.</summary>
+    public static (IWindow Window, Vector2 Point)[] PutDown(IReadOnlyList<ContactPath> paths, IReadOnlyList<Contact> contacts,
+        uint? timestamp = null)
     {
-        var (window, point) = ContactAt(element, label, local);
-        Send(RawPointerEventType.Down, window, point, contact);
-        return (window, point);
-    }
-
-    public static void Lift(IWindow window, Vector2 point, Contact contact)
-    {
-        Send(RawPointerEventType.Up, window, point, contact);
-        OutOfRange(window, contact);
-    }
-
-    /// <summary>A finger or a pen put down at <paramref name="from"/>, drawn to <paramref name="to"/> and lifted, both in
-    /// the element's own units.</summary>
-    public static void Stroke(UIComponent element, string label, Vector2 from, Vector2 to, Contact contact)
-    {
-        const int steps = 8;
-        var (window, start) = ContactAt(element, label, from);
-        var end = InWindow(element, to);
-
-        Send(RawPointerEventType.Down, window, start, contact);
-        Send(RawPointerEventType.Move, window, LeadIn(start, end), contact);
-        for (var step = 1; step <= steps; step++)
+        var down = paths.Select(path => ContactAt(path.Element, path.Label, path.From)).ToArray();
+        for (var i = 0; i < down.Length; i++)
         {
-            Send(RawPointerEventType.Move, window, start + (end - start) * (step / (double)steps), contact);
+            Send(RawPointerEventType.Down, down[i].Window, down[i].Point, contacts[i], timestamp ?? Now());
         }
 
-        Send(RawPointerEventType.Up, window, end, contact);
-        OutOfRange(window, contact);
+        return down;
+    }
+
+    public static void Lift(IReadOnlyList<(IWindow Window, Vector2 Point)> down, IReadOnlyList<Contact> contacts,
+        uint? timestamp = null)
+    {
+        for (var i = 0; i < down.Count; i++)
+        {
+            Send(RawPointerEventType.Up, down[i].Window, down[i].Point, contacts[i], timestamp ?? Now());
+            OutOfRange(down[i].Window, contacts[i], timestamp ?? Now());
+        }
+    }
+
+    /// <summary>Contacts put down together, drawn along their paths a step of each at a time, as a hand's fingers move at
+    /// once, and lifted at their ends.</summary>
+    public static void Stroke(IReadOnlyList<ContactPath> paths, IReadOnlyList<Contact> contacts)
+    {
+        const int steps = 8;
+        var at = Now();
+        var targets = paths.Select(path => InWindow(path.Element, path.To ?? path.From)).ToArray();
+        var down = PutDown(paths, contacts, at);
+        var ends = down.Select((start, i) => (start.Window, Point: targets[i])).ToArray();
+
+        for (var i = 0; i < down.Length; i++)
+        {
+            Send(RawPointerEventType.Move, down[i].Window, LeadIn(down[i].Point, ends[i].Point), contacts[i], at);
+        }
+
+        for (var step = 1; step <= steps; step++)
+        {
+            for (var i = 0; i < down.Length; i++)
+            {
+                var (start, end) = (down[i].Point, ends[i].Point);
+                Send(RawPointerEventType.Move, down[i].Window, start + (end - start) * (step / (double)steps), contacts[i], at);
+            }
+        }
+
+        Lift(ends, contacts, at);
     }
 
     // How far apart the system's frames come, as ISyntheticPointerInput plays them.
     private static readonly TimeSpan SystemFrameGap = TimeSpan.FromMilliseconds(16);
 
-    /// <summary>A tap (no <paramref name="to"/>) or a stroke as desktop frames for the system's own input; a tap that
-    /// rests <paramref name="hold"/> before it lifts is a long press. Refused
-    /// unless the element is this application's and on top of the desktop where the contact lands: the system presses
-    /// whatever window is there, and that must never be someone else's.</summary>
-    public static (IWindow Window, SyntheticPointerFrame[] Frames) SystemFrames(UIComponent element, string label,
-        Vector2 from, Vector2? to, Contact contact, TimeSpan hold = default)
+    /// <summary>Contacts tapped together, or stroked along their paths, as desktop frames for the system's own input -
+    /// each frame holding every contact; a tap that rests <paramref name="hold"/> before it lifts is a long press.
+    /// Refused unless every contact lands on one window of this application, on top of the desktop there: the system
+    /// presses whatever window is there, and that must never be someone else's.</summary>
+    public static (IWindow Window, SyntheticPointerFrame[][] Frames) SystemFrames(IReadOnlyList<ContactPath> paths,
+        IReadOnlyList<Contact> contacts, TimeSpan hold = default)
     {
         const int steps = 8;
-        var (window, start) = ContactAt(element, label, from);
-        var landing = window.ClientToScreen(start);
         var platform = UIApplication.Current?.Container is { } container && container.IsRegistered<IApplicationPlatform>()
             ? container.Resolve<IApplicationPlatform>()
             : null;
-        if (platform == null || platform.WindowFromScreenPoint(landing) != window.Handle)
-        {
-            throw new AutomationException(
-                $"{label} is not on top of the desktop at ({landing.X:0}, {landing.Y:0}): the system would press whatever is there.");
-        }
 
-        // A held contact keeps reporting where it rests, a frame apart, as a digitizer does.
-        var points = new List<Vector2> { start };
-        points.AddRange(Enumerable.Repeat(start, (int)Math.Ceiling(hold / SystemFrameGap)));
-        if (to is { } local)
+        IWindow window = null;
+        var tracks = new List<List<Vector2>>();
+        foreach (var path in paths)
         {
-            var end = InWindow(element, local);
-            points.Add(LeadIn(start, end));
-            for (var step = 1; step <= steps; step++)
+            var (at, start) = ContactAt(path.Element, path.Label, path.From);
+            if (window != null && !ReferenceEquals(at, window))
             {
-                points.Add(start + (end - start) * (step / (double)steps));
+                throw new AutomationException($"{path.Label} is in another window than the first contact; the system's contacts land on one.");
             }
+
+            window = at;
+            var landing = window.ClientToScreen(start);
+            if (platform == null || platform.WindowFromScreenPoint(landing) != window.Handle)
+            {
+                throw new AutomationException(
+                    $"{path.Label} is not on top of the desktop at ({landing.X:0}, {landing.Y:0}): the system would press whatever is there.");
+            }
+
+            // A held contact keeps reporting where it rests, a frame apart, as a digitizer does.
+            var points = new List<Vector2> { start };
+            points.AddRange(Enumerable.Repeat(start, (int)Math.Ceiling(hold / SystemFrameGap)));
+            if (path.To is { } local)
+            {
+                var end = InWindow(path.Element, local);
+                points.Add(LeadIn(start, end));
+                for (var step = 1; step <= steps; step++)
+                {
+                    points.Add(start + (end - start) * (step / (double)steps));
+                }
+            }
+
+            tracks.Add(points);
         }
 
-        var frames = new List<SyntheticPointerFrame>();
-        for (var i = 0; i < points.Count; i++)
+        SyntheticPointerFrame[] Frame(RawPointerEventType kind, int at) =>
+            [.. tracks.Select((points, i) => new SyntheticPointerFrame(kind, window.ClientToScreen(points[at]), contacts[i].Properties))];
+
+        var length = tracks[0].Count;
+        var frames = new List<SyntheticPointerFrame[]>();
+        for (var at = 0; at < length; at++)
         {
-            frames.Add(new SyntheticPointerFrame(i == 0 ? RawPointerEventType.Down : RawPointerEventType.Move,
-                window.ClientToScreen(points[i]), contact.Properties));
+            frames.Add(Frame(at == 0 ? RawPointerEventType.Down : RawPointerEventType.Move, at));
         }
 
-        var last = window.ClientToScreen(points[^1]);
-        frames.Add(new SyntheticPointerFrame(RawPointerEventType.Up, last, contact.Properties));
-        if (contact.Type == PointerType.Pen)
+        frames.Add(Frame(RawPointerEventType.Up, length - 1));
+        if (contacts[0].Type == PointerType.Pen)
         {
-            frames.Add(new SyntheticPointerFrame(RawPointerEventType.LeaveWindow, last, contact.Properties));
+            frames.Add(Frame(RawPointerEventType.LeaveWindow, length - 1));
         }
 
         return (window, [.. frames]);
@@ -175,21 +206,21 @@ internal static class InputSimulator
     }
 
     // A pen goes out of range once it is lifted away; a finger is gone with its lift already.
-    private static void OutOfRange(IWindow window, Contact contact)
+    private static void OutOfRange(IWindow window, Contact contact, uint timestamp)
     {
         if (contact.Type == PointerType.Pen)
         {
-            Send(RawPointerEventType.LeaveWindow, window, Vector2.Zero, contact);
+            Send(RawPointerEventType.LeaveWindow, window, Vector2.Zero, contact, timestamp);
         }
     }
 
     // No button is named: which one a finger or a pen presses is the pointer device's to say.
-    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, Contact contact) =>
-        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, InputModifiers.None, Now())
+    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, Contact contact, uint timestamp) =>
+        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, InputModifiers.None, timestamp)
         {
             PointerId = contact.Id,
             PointerType = contact.Type,
-            IsPrimary = true,
+            IsPrimary = contact.IsPrimary,
             Properties = contact.Properties with { IsLeftButtonPressed = type is RawPointerEventType.Down or RawPointerEventType.Move }
         });
 

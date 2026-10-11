@@ -152,5 +152,11 @@ public enum AutomationCommand
 
     /// <summary>A pen on the target, as <see cref="Touch"/> puts a finger there. <see cref="AutomationRequest.Properties"/>
     /// may hold <c>pressure=0..1</c>, <c>barrel</c> (the side button held: the right button) and <c>eraser</c>.</summary>
-    Pen
+    Pen,
+
+    /// <summary>Fingers on several elements at once, inside the application: one in the middle of each of
+    /// <see cref="AutomationRequest.Targets"/>, up to ten, put down together and lifted together - or, when
+    /// <see cref="AutomationRequest.Value"/> is <c>dx,dy</c>, each drawn that far across its element, in its own units.
+    /// </summary>
+    Touches
 }

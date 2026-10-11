@@ -1,0 +1,49 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:ctl="clr-namespace:Adamantium.UI.Sandbox.Controls">
+    <!-- DataContext is the MultiTouchViewModel. Ten columns, one per finger a touch screen reports: a button counting its
+         taps and a list of its own to scroll. The trail over them rings every contact that is down, as big as it
+         presses, and keeps the most that were down at once. -->
+    <Grid RowDefinitions="Auto,Auto,*" Margin="24">
+        <TextBlock Text="{Localize MultiTouchStrings.Hint}" Opacity="0.7" TextWrapping="WrapByWords" Margin="0,0,0,10"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="{Localize MultiTouchStrings.Now, count={Binding ElementName=Trail, Path=ContactCount}}"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Localize MultiTouchStrings.Most}" VerticalAlignment="Center" Margin="24,0,6,0"/>
+            <TextBlock AutomationProperties.AutomationId="MostContacts" Text="{Binding MostContacts}" FontSize="16"
+                       VerticalAlignment="Center"/>
+            <Button AutomationProperties.AutomationId="ResetTouches" Content="{Localize MultiTouchStrings.Reset}"
+                    Command="{Binding ResetCommand}" Margin="24,0,0,0"/>
+            <TextBlock AutomationProperties.AutomationId="Contacts"
+                       Text="{Binding ElementName=Trail, Path=Contacts}" Opacity="0.7" VerticalAlignment="Center"
+                       Margin="24,0,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <ItemsControl x:Name="Columns" AutomationProperties.AutomationId="TouchColumns" ItemsSource="{Binding Columns}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Width="104" Margin="0,0,8,0">
+                            <Button AutomationProperties.AutomationId="{Binding TapId}"
+                                    Content="{Localize MultiTouchStrings.Tap, number={Binding Number}}"
+                                    Command="{Binding TapCommand}" Height="64" HorizontalAlignment="Stretch"/>
+                            <TextBlock AutomationProperties.AutomationId="{Binding TapsId}" Text="{Binding Taps}"
+                                       FontSize="16" HorizontalAlignment="Center" Margin="0,6,0,6"/>
+                            <ListBox AutomationProperties.AutomationId="{Binding ListId}" ItemsSource="{Binding Rows}"
+                                     Height="260"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ctl:TouchTrail x:Name="Trail" Source="{Binding ElementName=Columns}"
+                            MostContacts="{Binding MostContacts, Mode=TwoWay}"
+                            Stroke="{ThemeResource AccentFillColorDefault}"/>
+        </Grid>
+    </Grid>
+</View>

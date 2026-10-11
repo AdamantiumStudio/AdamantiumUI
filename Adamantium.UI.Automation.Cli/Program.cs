@@ -39,7 +39,9 @@ public static class Program
                                                               long press, the touch way of a right click
           pen <selector> tap | hold | drag <x1,y1> <x2,y2> [--pressure <0..1>] [--barrel] [--eraser]
                                                               a pen on it; --barrel holds its side button
-          touch | pen ... --os                                the same through the system's own pointer input: it
+          touches <selector>... tap | hold | drag <dx,dy>     a finger on each, up to ten, down and up together;
+                                                              drag draws each by dx,dy of its own units
+          touch | touches | pen ... --os                      the same through the system's own pointer input: it
                                                               presses whatever is on top of the desktop there, so
                                                               only while nobody uses the computer
           drop <selector> <target> [--before|--after]         carry it onto another element and let it go there

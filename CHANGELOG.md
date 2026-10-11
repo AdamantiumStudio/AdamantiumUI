@@ -7,6 +7,24 @@ All packages share one version.
 
 ### Added
 
+- Several fingers at once in automation.
+  - **The command.** `adam-auto touches <selector>... tap | hold | drag <dx,dy>` puts a finger in the middle of each
+    element, up to ten, down together and lifted together. A drag draws each finger by the same offset, in its
+    element's own units. In C#, it is `AutomationSession.TapTogetherAsync`, `HoldTogetherAsync` and
+    `TouchDragTogetherAsync`.
+  - **Through the system.** With `--os`, all the fingers go through one synthetic device, and each frame carries
+    every finger. `ISyntheticPointerInput.Inject` now takes frames of several contacts.
+  - **Strokes are repeatable.** A simulated stroke inside the application now has one timestamp for the whole
+    gesture. A stroke timed by the clock could be flung on with inertia or not, depending on where the clock ticked
+    during it. An in-app stroke therefore never flings; a fling is checked through the system, with `--os`.
+  - **Disabled elements.** `touch`, `pen` and `touches` refuse a disabled element for a hold and with `--os` too,
+    as they already did for a tap or a drag inside the application.
+- The sandbox has a Multitouch page.
+  - **What it holds.** Ten columns, each with a button that counts its taps and a list of its own.
+  - **The rings.** A layer over the columns rings every contact that is down, sized by how hard it presses, and shows
+    the most contacts down at once.
+  - **Its scenario.** `Scenarios/MultiTouch.adam` drives the page with two to ten fingers.
+
 - `UIComponent.RenderCloneStagger`: each copy drawn by `RenderClones` plays the endless composited opacity animations
   of the elements it draws this much later than the one before it, so one animation runs along the copies like a
   garland. Copies in the same phase of the cycle share one opacity slot, written by the render thread, so a screenful

@@ -16,7 +16,7 @@ internal sealed class ScriptInterpreter
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
-        "hover", "wheel", "drag", "touch", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
+        "hover", "wheel", "drag", "touch", "touches", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
         "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -105,6 +105,7 @@ internal sealed class ScriptInterpreter
             "pan" => SendAsync(Pair(AutomationCommand.Pan, arguments, allowErrors)),
             "wheel" => SendAsync(Second(AutomationCommand.Wheel, arguments, allowErrors)),
             "touch" => SendAsync(Contact(AutomationCommand.Touch, arguments, allowErrors)),
+            "touches" => SendAsync(Fingers(arguments, allowErrors)),
             "pen" => SendAsync(Contact(AutomationCommand.Pen, arguments, allowErrors)),
             "context-menu" => SendAsync(Target(AutomationCommand.ShowContextMenu, arguments, allowErrors)),
             "drop" => SendAsync(new AutomationRequest
@@ -207,6 +208,43 @@ internal sealed class ScriptInterpreter
             Command = command,
             Target = arguments.At(0),
             Value = value,
+            Properties = options.Count > 0 ? [.. options] : null,
+            AllowErrors = allowErrors
+        };
+    }
+
+    private static AutomationRequest Fingers(ScriptArguments arguments, bool allowErrors)
+    {
+        var words = arguments.From(0).ToList();
+        var at = words.FindIndex(word => word is "tap" or AutomationExecutor.HoldGesture or "drag");
+        if (at < 1)
+        {
+            throw new AutomationException("touches <selector>... tap | hold | drag dx,dy: the elements, then the gesture.");
+        }
+
+        if (arguments.Option("pressure") != null || arguments.Flag("barrel") || arguments.Flag("eraser"))
+        {
+            throw new AutomationException("touches puts fingers down: --pressure, --barrel and --eraser are a pen's.");
+        }
+
+        var gesture = words[at];
+        var rest = words.Count - at - 1;
+        if (rest != (gesture == "drag" ? 1 : 0))
+        {
+            throw new AutomationException(gesture == "drag"
+                ? "touches ... drag dx,dy: one offset, the same for every finger."
+                : $"touches ... {gesture}: nothing comes after it.");
+        }
+
+        var options = new List<string>();
+        if (gesture == AutomationExecutor.HoldGesture) options.Add(AutomationExecutor.HoldGesture);
+        if (arguments.Flag(AutomationExecutor.SystemInput)) options.Add(AutomationExecutor.SystemInput);
+
+        return new AutomationRequest
+        {
+            Command = AutomationCommand.Touches,
+            Targets = [.. words.Take(at)],
+            Value = gesture == "drag" ? words[^1] : null,
             Properties = options.Count > 0 ? [.. options] : null,
             AllowErrors = allowErrors
         };
