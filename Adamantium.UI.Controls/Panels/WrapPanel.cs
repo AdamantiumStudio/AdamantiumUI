@@ -534,7 +534,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       var scrolling = offset != _lastMeasuredOffset;
       _lastMeasuredOffset = offset;
       // The user's dial now (ScrollBindBudget / FillBindBudget on VirtualizingPanel), not a constant. 0 = no budget.
-      var bindBudget = BudgetOrUnlimited(scrolling ? ScrollBindBudget : FillBindBudget);
+      var bindBudget = PassBudget(scrolling ? ScrollBindBudget : FillBindBudget);
 
       // Resolve columns + the realized window and measure it; if a realized item is bigger than the assumed uniform
       // cell, grow the cell (only along axes the user didn't pin) and resolve again. This converges in a couple of passes
@@ -577,14 +577,14 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          _cellGrew = false;
          _onSlotBound ??= OnSlotBound;
 
-         foreach (var c in Owner.ItemContainerGenerator.SetWindow(first, last, bindBudget, MinBindsPerPass, _onSlotBound))
+         foreach (var c in Owner.ItemContainerGenerator.SetWindow(first, last, bindBudget, PassMinBinds, _onSlotBound))
             ParkContainer(c);   // hide + deactivate its bindings so an off-screen tile leaves any shared source's fan-out
 
          if (!_cellGrew) break;
       }
 
       // Deferred slots continue next pass (InvalidateMeasureNextPass; a same-pass re-measure would defeat the budget).
-      if (Owner.ItemContainerGenerator.PendingIndices.Count > 0)
+      if (Owner.ItemContainerGenerator.PendingIndices.Count > 0 && FillsPending)
          LayoutManager.For(this).InvalidateMeasureNextPass(this);
 
       // Slots, not items: an open drop gap adds one, which can push the grid onto another line - the extent has to say so

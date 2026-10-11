@@ -1,0 +1,156 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- One of the layout tab's stands, navigated into its region under the key "Skeletons": nothing but the loading
+         cards. The list never binds an item - its panel holds every slot on a card - so the switch shows the cards or
+         empties the list, and the sliders tune them. The card is the theme's, written out here so its numbers can be
+         bound. Readouts have a fixed width: a changing string would re-measure the row, and the list under it. -->
+    <Grid RowDefinitions="Auto,*">
+        <WrapPanel Grid.Row="0"
+                   Orientation="Horizontal">
+            <ToggleButton AutomationProperties.AutomationId="ShowSkeletons"
+                          Content="{Localize LayoutStrings.Show}"
+                          IsChecked="{Binding ShowSkeletons, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          MarginRight="24"/>
+
+            <TextBlock x:Name="StaggerLabel"
+                       Text="{Localize LayoutStrings.StaggerMs}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="SkeletonStagger"
+                    AutomationProperties.LabeledBy="{Binding ElementName=StaggerLabel}"
+                    Width="140"
+                    Minimum="0"
+                    Maximum="400"
+                    TickFrequency="10"
+                    IsSnapToTickEnabled="true"
+                    Value="{Binding SkeletonStaggerMs, Mode=TwoWay}"
+                    MarginLeft="8"/>
+            <TextBlock Text="{Binding SkeletonStaggerMs}"
+                       Width="40"
+                       VerticalAlignment="Center"
+                       MarginLeft="8"/>
+
+            <TextBlock x:Name="PulseMinLabel"
+                       Text="{Localize LayoutStrings.PulseMin}"
+                       VerticalAlignment="Center"
+                       MarginLeft="20"/>
+            <Slider AutomationProperties.AutomationId="PulseMin"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PulseMinLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="1"
+                    TickFrequency="0.01"
+                    IsSnapToTickEnabled="true"
+                    Value="{Binding PulseMin, Mode=TwoWay}"
+                    MarginLeft="8"/>
+            <TextBlock Text="{Binding PulseMin}"
+                       Width="40"
+                       VerticalAlignment="Center"
+                       MarginLeft="8"/>
+
+            <TextBlock x:Name="PulseMaxLabel"
+                       Text="{Localize LayoutStrings.PulseMax}"
+                       VerticalAlignment="Center"
+                       MarginLeft="20"/>
+            <Slider AutomationProperties.AutomationId="PulseMax"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PulseMaxLabel}"
+                    Width="120"
+                    Minimum="0"
+                    Maximum="1"
+                    TickFrequency="0.01"
+                    IsSnapToTickEnabled="true"
+                    Value="{Binding PulseMax, Mode=TwoWay}"
+                    MarginLeft="8"/>
+            <TextBlock Text="{Binding PulseMax}"
+                       Width="40"
+                       VerticalAlignment="Center"
+                       MarginLeft="8"/>
+
+            <TextBlock x:Name="PulseSecondsLabel"
+                       Text="{Localize LayoutStrings.PulseSeconds}"
+                       VerticalAlignment="Center"
+                       MarginLeft="20"/>
+            <Slider AutomationProperties.AutomationId="PulseSeconds"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PulseSecondsLabel}"
+                    Width="120"
+                    Minimum="0.2"
+                    Maximum="5"
+                    TickFrequency="0.1"
+                    IsSnapToTickEnabled="true"
+                    Value="{Binding PulseSeconds, Mode=TwoWay}"
+                    MarginLeft="8"/>
+            <TextBlock Text="{Binding PulseSeconds}"
+                       Width="40"
+                       VerticalAlignment="Center"
+                       MarginLeft="8"/>
+
+            <TextBlock x:Name="SkeletonCellLabel"
+                       Text="{Localize LayoutStrings.Cell}"
+                       VerticalAlignment="Center"
+                       MarginLeft="20"/>
+            <Slider AutomationProperties.AutomationId="SkeletonCell"
+                    AutomationProperties.LabeledBy="{Binding ElementName=SkeletonCellLabel}"
+                    Width="140"
+                    Minimum="{Binding MinCell}"
+                    Maximum="{Binding MaxCell}"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="true"
+                    Value="{Binding SkeletonCell, Mode=TwoWay}"
+                    MarginLeft="8"/>
+            <TextBlock Text="{Binding SkeletonCell}"
+                       Width="40"
+                       VerticalAlignment="Center"
+                       MarginLeft="8"/>
+        </WrapPanel>
+
+        <ListBox Grid.Row="1"
+                 AutomationProperties.AutomationId="SkeletonGrid"
+                 AutomationProperties.Name="{Localize LayoutStrings.Skeletons}"
+                 MarginTop="14"
+                 ItemsSource="{Binding SkeletonSource}">
+            <!-- The theme's card, with its numbers bound, and a gap around it: no item is ever bound here, so there is
+                 no real tile whose margin the panel could copy. The pulse binds against the fill it runs on, whose data
+                 is this tab's view-model, and a slider moved while it runs restarts it where it was. -->
+            <ListBox.ItemSkeletonTemplate>
+                <DataTemplate>
+                    <Grid IsHitTestVisible="False"
+                          Margin="3"
+                          RenderCloneStagger="{Binding SkeletonStagger}">
+                        <Border x:Name="SkeletonFill"
+                                CornerRadius="4"
+                                Opacity="{Binding PulseMin}"
+                                Background="{ObservableResource SkeletonPulseFill}"/>
+                        <Border CornerRadius="4"
+                                BorderThickness="1"
+                                BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <PropertyTrigger Property="Visibility"
+                                         Value="Visible">
+                            <PropertyTrigger.EnterActions>
+                                <RunAnimationAction TargetName="SkeletonFill">
+                                    <PulseAnimation Property="Opacity"
+                                                    Min="{Binding PulseMin}"
+                                                    Max="{Binding PulseMax}"
+                                                    Duration="{Binding PulseDuration}"
+                                                    Easing="CubicInOut"/>
+                                </RunAnimationAction>
+                            </PropertyTrigger.EnterActions>
+                            <PropertyTrigger.ExitActions>
+                                <StopAnimationAction TargetName="SkeletonFill"/>
+                            </PropertyTrigger.ExitActions>
+                        </PropertyTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ListBox.ItemSkeletonTemplate>
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"
+                               ItemWidth="{Binding SkeletonCell}"
+                               ItemHeight="{Binding SkeletonCell}"
+                               HoldSkeletons="True"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+    </Grid>
+</View>

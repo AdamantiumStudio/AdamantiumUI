@@ -19,8 +19,11 @@ internal sealed class RunningAnimation : IRunningAnimation
     private readonly Action _completed;
     private double _elapsedSeconds;
 
-    public RunningAnimation(AdamantiumComponent target, AdamantiumProperty property, PropertyAnimation animation, Action completed)
+    public RunningAnimation(AdamantiumComponent target, AdamantiumProperty property, PropertyAnimation animation, Action completed,
+        double resumeElapsed = 0)
     {
+        Source = animation;
+        _elapsedSeconds = resumeElapsed;
         _target = target;
         _property = property;
         _valueAt = animation.Interpolation();
@@ -32,6 +35,12 @@ internal sealed class RunningAnimation : IRunningAnimation
         _fillBehavior = animation.FillBehavior;
         _completed = completed;
     }
+
+    /// <summary>The animation this was started from.</summary>
+    public PropertyAnimation Source { get; }
+
+    /// <summary>Where this animation is right now.</summary>
+    public double CurrentElapsed => _elapsedSeconds;
 
     public bool Animates(AdamantiumComponent target, AdamantiumProperty property) =>
         ReferenceEquals(_target, target) && _property == property;

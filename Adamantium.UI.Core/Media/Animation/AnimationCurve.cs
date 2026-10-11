@@ -40,6 +40,12 @@ public sealed class AnimationCurve
 
     public Track[] Tracks { get; }
 
+    /// <summary>Seconds before the first cycle starts.</summary>
+    public double Delay => _delaySeconds;
+
+    /// <summary>Seconds one full cycle takes: there and back when it reverses.</summary>
+    public double Period => _durationSeconds * (_autoReverse ? 2 : 1);
+
     /// <summary>True when the curve loops forever and so never finishes on its own.</summary>
     public bool IsEndless => double.IsPositiveInfinity(_iterationCount);
 

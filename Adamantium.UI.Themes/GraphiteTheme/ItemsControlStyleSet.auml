@@ -37,37 +37,46 @@
         </Setter>
     </Style>
 
-    <!-- The loading skeleton card: filled and breathing (unlike the dashed drop outline), painted with the shared
-         SkeletonPulseFill brush via {ObservableResource}, so one animation serves all cards. -->
+    <!-- The loading skeleton card: filled and breathing (unlike the dashed drop outline). The panel draws this one card at
+         every pending slot as a copy, and each copy breathes a little after the one before it (RenderCloneStagger), so
+         the breath runs along the cards like a garland. Gentler than Fluent's. -->
     <Style Selector="ItemsControl">
         <Setter Property="ItemSkeletonTemplate">
             <Setter.Value>
                 <DataTemplate>
                     <!-- No margin: the PANEL insets the card by the real item's margin, read from a realized row, so the
-                         cards line up with the real ones for any list. -->
-                    <Border CornerRadius="0"
-                            BorderThickness="{ResourceReference StrokeThin}"
-                            IsHitTestVisible="False"
-                            Background="{ObservableResource SkeletonPulseFill}"
-                            BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                         cards line up with the real ones for any list. The fill breathes; the outline over it stays. -->
+                    <Grid IsHitTestVisible="False"
+                          RenderCloneStagger="0:0:0.08">
+                        <Border x:Name="SkeletonFill"
+                                CornerRadius="0"
+                                Opacity="0.04"
+                                Background="{ObservableResource SkeletonPulseFill}"/>
+                        <Border CornerRadius="0"
+                                BorderThickness="{ResourceReference StrokeThin}"
+                                BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                    </Grid>
+                    <!-- Shown while the list loads, collapsed once it is done: the breath runs exactly as long. -->
+                    <DataTemplate.Triggers>
+                        <PropertyTrigger Property="Visibility"
+                                         Value="Visible">
+                            <PropertyTrigger.EnterActions>
+                                <RunAnimationAction TargetName="SkeletonFill">
+                                    <PulseAnimation Property="Opacity"
+                                                    Min="0.04"
+                                                    Max="0.11"
+                                                    Duration="0:0:1.4"
+                                                    Easing="CubicInOut"/>
+                                </RunAnimationAction>
+                            </PropertyTrigger.EnterActions>
+                            <PropertyTrigger.ExitActions>
+                                <StopAnimationAction TargetName="SkeletonFill"/>
+                            </PropertyTrigger.ExitActions>
+                        </PropertyTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
-
-    <!-- The list pulses the shared brush while IsLoadingItems (TargetName resolves the keyed resource); shared holds keep
-         one list from stopping another's pulse. Gentler than Fluent's. -->
-    <Style Selector="ItemsControl">
-        <PropertyTrigger Property="IsLoadingItems" Value="True">
-            <PropertyTrigger.EnterActions>
-                <RunAnimationAction TargetName="SkeletonPulseFill">
-                    <PulseAnimation Property="Opacity" Min="0.04" Max="0.11" Duration="0:0:1.4" Easing="CubicInOut"/>
-                </RunAnimationAction>
-            </PropertyTrigger.EnterActions>
-            <PropertyTrigger.ExitActions>
-                <StopAnimationAction TargetName="SkeletonPulseFill"/>
-            </PropertyTrigger.ExitActions>
-        </PropertyTrigger>
     </Style>
 
 </StyleSet>

@@ -95,6 +95,29 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     /// way the generator understands it.</summary>
     protected static double BudgetOrUnlimited(double ms) => ms <= 0 ? double.MaxValue : ms;
 
+    /// <summary>While true no item is bound: every slot in the window still without a container shows a skeleton card,
+    /// for as long as the data behind the list is not ready. Containers already bound stay; turning it off binds the
+    /// rest as usual. Honored by the panels that bind within a budget and draw skeleton cards: <c>WrapPanel</c>, and
+    /// <c>UniformGrid</c> while it virtualizes rows.</summary>
+    public static readonly AdamantiumProperty HoldSkeletonsProperty = AdamantiumProperty.Register(nameof(HoldSkeletons),
+        typeof(bool), typeof(VirtualizingPanel), new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
+
+    public bool HoldSkeletons
+    {
+        get => GetValue<bool>(HoldSkeletonsProperty);
+        set => SetValue(HoldSkeletonsProperty, value);
+    }
+
+    /// <summary>The budget a pass hands <c>SetWindow</c> for <paramref name="ms"/>: none at all while
+    /// <see cref="HoldSkeletons"/> is on.</summary>
+    protected double PassBudget(double ms) => HoldSkeletons ? 0 : BudgetOrUnlimited(ms);
+
+    /// <summary>The floor a pass hands <c>SetWindow</c>: none while <see cref="HoldSkeletons"/> is on.</summary>
+    protected int PassMinBinds => HoldSkeletons ? 0 : MinBindsPerPass;
+
+    /// <summary>Whether slots left pending by a pass are bound by the next one; not while they are held.</summary>
+    protected bool FillsPending => !HoldSkeletons;
+
     /// <summary>Index a dropped item would land at, or -1 for none. The panel leaves a real empty slot there and animates
     /// the items that move.</summary>
     public static readonly AdamantiumProperty DropGapIndexProperty = AdamantiumProperty.Register(nameof(DropGapIndex),
@@ -483,13 +506,19 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         // A FRESH list each time: the draw walk reads RenderClones on the render thread, so refilling the live one in
         // place would move clones under the frame drawing them.
         var clones = new List<Matrix4x4F>(pending.Count);
-        for (var i = 0; i < pending.Count; i++) AddClone(clones, slotRect(pending[i]), inset);
+        var steps = new List<int>(pending.Count);
+        for (var i = 0; i < pending.Count; i++)
+        {
+            AddClone(clones, slotRect(pending[i]), inset);
+            steps.Add(pending[i]);
+        }
 
         // A slot gets its container passes before it is laid out; keep its skeleton until then, or a band of holes shows.
         foreach (var index in Owner.ItemContainerGenerator.RealizedIndices)
         {
             if (Owner.ItemContainerGenerator.ContainerFromIndex(index) is IMeasurableComponent { IsArrangeValid: true }) continue;
             AddClone(clones, slotRect(SlotOf(index)), inset);
+            steps.Add(SlotOf(index));
         }
 
         // Only when the set actually MOVED. The prototype's re-record is what carries the new set to the render side, and
@@ -499,6 +528,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         if (!SameClones(_skeletonClones, clones))
         {
             _skeletonClones = clones;
+            prototype.RenderCloneSteps = steps;
             prototype.RenderClones = clones;
 
             // The recorder walks the geometry-dirty QUEUE, not the IsGeometryValid flag: InvalidateRender only clears the
@@ -538,6 +568,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
 
         _skeletonSet.Add(_skeletonPrototype);   // panel-owned, not a generator container
         AddVisualChild(_skeletonPrototype);
+        AddLogicalChild(_skeletonPrototype);
         return _skeletonPrototype;
     }
 
@@ -549,16 +580,15 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         if (_skeletonPrototype != null)
         {
             _skeletonPrototype.RenderClones = null;
+            _skeletonPrototype.RenderCloneSteps = null;
             _skeletonPrototype.Visibility = Visibility.Collapsed;
         }
 
         SyncLoadingState();
     }
 
-    // The LIST-level loading state (ItemsControl.IsLoadingItems): true exactly while cards are on screen. The theme keys
-    // the skeleton shimmer off it - ONE trigger per list starts/stops the pulse on the shared skeleton brush - so a
-    // screenful of cards costs one animation, not one per card (which is also one property write + one brush-changed
-    // fan-out per card per frame). The panel owns the STATE, the theme owns the look.
+    // The LIST-level loading state (ItemsControl.IsLoadingItems): true exactly while cards are on screen. The panel owns
+    // the STATE, the theme owns the look; the pulse itself is the one card's, played per copy by the render thread.
     private void SyncLoadingState()
     {
         if (Owner is { } owner) owner.IsLoadingItems = ActiveSkeletonCount > 0;
@@ -685,10 +715,15 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     // ItemTemplate may have changed).
     private void ResetSkeletons()
     {
-        // Hide FIRST: that is what drops IsLoadingItems (SyncLoadingState) and so fires the theme's ExitAction, which
-        // stops the shared pulse in the static AnimationManager. Dropping the reference below without it would leave the
-        // list reporting "loading" forever and the pulse ticking with no card on screen.
+        // Hide FIRST: collapsing the card is what fires the theme's ExitAction, which stops its pulse in the static
+        // AnimationManager, and it drops IsLoadingItems. Dropping the reference below without it would leave the list
+        // reporting "loading" forever and the pulse ticking with no card on screen.
         HideSkeletons();
+        if (_skeletonPrototype != null)
+        {
+            RemoveLogicalChild(_skeletonPrototype);
+        }
+
         _skeletonPrototype = null;
         _prototypeSize = default;
         _skeletonSet.Clear();
@@ -696,7 +731,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     }
 
     // A tab switch (or any subtree removal) detaches the panel while loading skeletons are still on screen. Detach alone
-    // changes nothing about the list's loading state, so the theme's ExitAction would never fire and the shared pulse
+    // collapses no card, so the theme's ExitAction would never fire and the card's pulse
     // would keep ticking in the static AnimationManager for a list nobody sees (the "switch tabs mid-load -> FPS never
     // recovers" report). Hide now to fire the stop; a re-attach + re-fill re-shows them and the pulse restarts.
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

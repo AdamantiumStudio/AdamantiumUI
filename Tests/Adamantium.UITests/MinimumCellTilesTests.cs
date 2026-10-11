@@ -1,9 +1,14 @@
+using System;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Resources.Triggers;
 using Adamantium.UI.Core.Templates;
 using NUnit.Framework;
 
@@ -25,15 +30,35 @@ public class MinimumCellTilesTests
         return result;
     });
 
-    private static ItemsControl TiledList(double budgetMs, bool withSkeletons = true)
+    private sealed class Garland
+    {
+        public double Low => 30;
+
+        public double High => 90;
+
+        public TimeSpan Stagger => TimeSpan.FromMilliseconds(120);
+    }
+
+    // The sandbox stand's card, with its stagger bound.
+    private static DataTemplate BoundSkeleton() => new(() =>
+    {
+        var card = new Grid();
+        card.SetBinding(UIComponent.RenderCloneStaggerProperty, new Binding(nameof(Garland.Stagger)));
+        card.Children.Add(new Border());
+        return new TemplateResult { RootComponent = card };
+    });
+
+    private static ItemsControl TiledList(double budgetMs, bool withSkeletons = true, bool hold = false,
+        DataTemplate skeleton = null, object dataContext = null)
     {
         var ic = new ItemsControl
         {
+            DataContext = dataContext,
             // The theme supplies this in the running application, and WITHOUT it the panel makes no skeleton cards at
             // all - so IsLoadingItems reads False and a themeless test would "prove" a defect that is only its own
             // missing template. Stand-in card, same shape as the theme's: a plain Border.
             ItemSkeletonTemplate = withSkeletons
-                ? new DataTemplate(() => new TemplateResult { RootComponent = new Border() })
+                ? skeleton ?? new DataTemplate(() => new TemplateResult { RootComponent = new Border() })
                 : null,
             ItemsSource = Enumerable.Range(0, Items).Cast<object>().ToList(),
             ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult
@@ -43,7 +68,8 @@ public class MinimumCellTilesTests
                     Orientation = Orientation.Horizontal,
                     ItemWidth = Cell,
                     ItemHeight = Cell,
-                    ScrollBindBudget = budgetMs
+                    ScrollBindBudget = budgetMs,
+                    HoldSkeletons = hold
                 }
             }),
             Template = ItemsPresenterTemplate()
@@ -125,5 +151,60 @@ public class MinimumCellTilesTests
         }
 
         Assert.Pass("reporting only");
+    }
+
+    [Test]
+    public void HeldSkeletons_StayUntilReleased_ThenTheTilesBind()
+    {
+        var ic = TiledList(budgetMs: 0, hold: true);
+        var panel = (VirtualizingPanel)ic.ItemsHostPanel;
+        var manager = LayoutManager.GetOrCreate(ic);
+
+        int Bound() => Enumerable.Range(0, Items).Count(i => ic.ItemContainerGenerator.ContainerFromIndex(i) != null);
+
+        for (var pass = 0; pass < 3; pass++)
+        {
+            manager.ExecuteLayoutPass();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Bound(), Is.Zero, "nothing is bound while the skeletons are held");
+            Assert.That(ic.IsLoadingItems, Is.True, "the window shows skeleton cards instead");
+            Assert.That(manager.IsSettled, Is.True, "and no pass keeps asking for the next one");
+        });
+
+        panel.HoldSkeletons = false;
+        for (var pass = 0; pass < 8 && !manager.IsSettled; pass++)
+        {
+            manager.ExecuteLayoutPass();
+        }
+
+        Assert.That(Bound(), Is.GreaterThan(0), "released, the window binds as usual");
+    }
+
+    [Test]
+    public void AHeldCard_TakesItsPulseAndStaggerFromTheListsData()
+    {
+        AnimationManager.Reset();
+        var ic = TiledList(budgetMs: 0, hold: true, skeleton: BoundSkeleton(), dataContext: new Garland());
+        new Rendering.TestRoot((int)ViewW, (int)ViewH).Add(ic);
+        LayoutManager.GetOrCreate(ic).ExecuteLayoutPass();
+        var card = ((IUIComponent)ic.ItemsHostPanel).VisualChildren.OfType<Grid>().Single();
+        var fill = (Border)card.Children[0];
+
+        // What the card's trigger does when it shows: a pulse whose range is bound, run on the fill.
+        var pulse = new PulseAnimation { Property = "Height", Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
+        pulse.SetBinding(PulseAnimation.MinProperty, new Binding(nameof(Garland.Low)));
+        pulse.SetBinding(PulseAnimation.MaxProperty, new Binding(nameof(Garland.High)));
+        pulse.Apply(fill);
+        AnimationManager.Tick(0.5);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ic.IsLoadingItems, Is.True);
+            Assert.That(card.RenderCloneStagger, Is.EqualTo(TimeSpan.FromMilliseconds(120)), "the stagger comes from the data");
+            Assert.That(fill.Height, Is.EqualTo(60).Within(1.0), "halfway between the bound low and high ends");
+        });
     }
 }

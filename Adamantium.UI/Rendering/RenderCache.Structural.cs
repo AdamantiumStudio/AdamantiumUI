@@ -383,7 +383,7 @@ public partial class RenderCache
             Core.Diagnostics.RuntimeStats.LastRecordEmptyDraws++;
         }
 
-        packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, rank, component.RenderClones));
+        packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, rank, true));
         MirrorUnits(component, commands.Count, wasGeometryValid);
     }
 

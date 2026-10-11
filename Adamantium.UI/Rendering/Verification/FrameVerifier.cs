@@ -29,6 +29,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
     private readonly HashSet<IUIComponent> _checked = [];
     private readonly List<string> _alarms = [];
     private readonly HashSet<IUIComponent> _animated = [];
+    private readonly HashSet<IUIComponent> _cloned = [];
 
     private int _state;
     private int _alarmCount;
@@ -158,7 +159,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             }
 
             _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds, parent,
-                (float)component.Opacity, world, animated, carried);
+                (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden);
             RenderCache.PushChildrenInPaintOrder(_stack, component.VisualChildren, hidden);
         }
     }
@@ -184,7 +185,23 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             {
                 Alarm($"{ComponentText.Of(component)}: drawn at {Place(world)}, the tree has it at {Place(fact.World)}");
             }
+
+            _cloned.Add(component);
+            if (!fact.Hidden && group.Clones != fact.Clones)
+            {
+                Alarm($"{ComponentText.Of(component)}: drawn as {group.Clones} copies, the tree asks for {fact.Clones}");
+            }
         }
+
+        foreach (var (component, fact) in _facts)
+        {
+            if (fact.Clones > 0 && !fact.Hidden && !_cloned.Contains(component))
+            {
+                Alarm($"{ComponentText.Of(component)}: the tree asks for {fact.Clones} copies, the cache has no group for it");
+            }
+        }
+
+        _cloned.Clear();
 
         _settings.CountVerified();
         if (_alarms.Count == 0)

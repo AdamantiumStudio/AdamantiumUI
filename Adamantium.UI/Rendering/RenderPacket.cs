@@ -109,6 +109,19 @@ internal sealed class RenderPacket
 internal readonly struct ComponentDraw(IUIComponent component, IReadOnlyList<IDrawCommand> commands, bool wasGeometryValid,
     long order, IReadOnlyList<Matrix4x4F> clones = null)
 {
+    public ComponentDraw(IUIComponent component, IReadOnlyList<IDrawCommand> commands, bool wasGeometryValid, long order,
+        bool withClones) : this(component, commands, wasGeometryValid, order, withClones ? component.RenderClones : null)
+    {
+        CloneSteps = withClones ? component.RenderCloneSteps : null;
+        CloneStagger = withClones ? component.RenderCloneStagger : default;
+    }
+
+    /// <summary>The step each copy takes in <see cref="CloneStagger"/>, snapshot with <see cref="Clones"/>.</summary>
+    public IReadOnlyList<int> CloneSteps { get; }
+
+    /// <summary>How far behind each step its copy plays, snapshot with <see cref="Clones"/>.</summary>
+    public TimeSpan CloneStagger { get; }
+
     public IUIComponent Component { get; } = component;
     public IReadOnlyList<IDrawCommand> Commands { get; } = commands;
     public bool WasGeometryValid { get; } = wasGeometryValid;

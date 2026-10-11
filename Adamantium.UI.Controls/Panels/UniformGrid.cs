@@ -211,7 +211,7 @@ public class UniformGrid : VirtualizingPanel
 
       var scrolling = offset != _lastMeasuredOffset;
       _lastMeasuredOffset = offset;
-      var budget = BudgetOrUnlimited(scrolling ? ScrollBindBudget : FillBindBudget);
+      var budget = PassBudget(scrolling ? ScrollBindBudget : FillBindBudget);
       _onSlotBound ??= OnSlotBound;
 
       for (var pass = 0; pass < MaxCellPasses; pass++)
@@ -223,7 +223,7 @@ public class UniformGrid : VirtualizingPanel
 
          _cellGrew = false;
          var last = Math.Min(count - 1, (lastRow + 1) * _columns - 1);
-         foreach (var parked in generator.SetWindow(firstRow * _columns, last, budget, MinBindsPerPass, _onSlotBound))
+         foreach (var parked in generator.SetWindow(firstRow * _columns, last, budget, PassMinBinds, _onSlotBound))
          {
             ParkContainer(parked);
          }
@@ -239,7 +239,10 @@ public class UniformGrid : VirtualizingPanel
          if (!_cellGrew) break;
       }
 
-      if (generator.PendingIndices.Count > 0) LayoutManager.For(this).InvalidateMeasureNextPass(this);
+      if (generator.PendingIndices.Count > 0 && FillsPending)
+      {
+         LayoutManager.For(this).InvalidateMeasureNextPass(this);
+      }
 
       return GridExtent();
    }

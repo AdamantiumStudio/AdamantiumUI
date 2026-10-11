@@ -9,4 +9,7 @@ public static class RegionNames
 
     /// <summary>The text tab's topic host: one topic at a time, navigated in by view key.</summary>
     public const string TextStand = "TextStand";
+
+    /// <summary>The layout tab's stand host: one stand at a time, navigated in by view key.</summary>
+    public const string LayoutStand = "LayoutStand";
 }

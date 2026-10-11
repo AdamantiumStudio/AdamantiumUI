@@ -130,6 +130,62 @@ public class AumlCodegenBindingTests
     }
 
     [Test]
+    public void TriggerAnimation_BindsItsTiming()
+    {
+        // An animation's timing is bindable like any component's property: a stand drives a pulse's range from sliders.
+        var auml = WindowHeader + "><Button><Button.Template>" +
+                   "<ControlTemplate TargetType=\"Button\">" +
+                   "<Grid />" +
+                   "<ControlTemplate.Triggers>" +
+                   "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\">" +
+                   "<PropertyTrigger.EnterActions>" +
+                   "<RunAnimationAction>" +
+                   "<PulseAnimation Property=\"Opacity\" Min=\"{Binding Low}\" Max=\"0.5\" Duration=\"{Binding Cycle}\"/>" +
+                   "</RunAnimationAction>" +
+                   "</PropertyTrigger.EnterActions>" +
+                   "</PropertyTrigger>" +
+                   "</ControlTemplate.Triggers>" +
+                   "</ControlTemplate>" +
+                   "</Button.Template></Button></Window>";
+
+        var code = Generate(auml, out var generated);
+        Assert.That(generated, Is.Empty, Errors(generated));
+        Assert.That(code, Does.Contain("SetBinding(\"Min\""));
+        Assert.That(code, Does.Contain("SetBinding(\"Duration\""));
+
+        var errors = Compile(auml);
+        Assert.That(errors, Is.Empty, "generated code did not compile: " + string.Join(" | ", errors.Select(d => d.ToString())));
+    }
+
+    [Test]
+    public void TriggerDoubleAnimation_GeneratedCodeCompiles()
+    {
+        // A property animation is markup too: named property, From and To, bindable like the rest.
+        var auml = WindowHeader + "><Button><Button.Template>" +
+                   "<ControlTemplate TargetType=\"Button\">" +
+                   "<Grid />" +
+                   "<ControlTemplate.Triggers>" +
+                   "<PropertyTrigger Property=\"IsPointerOver\" Value=\"true\">" +
+                   "<PropertyTrigger.EnterActions>" +
+                   "<RunAnimationAction>" +
+                   "<DoubleAnimation Property=\"Opacity\" From=\"0.5\" To=\"{Binding Target}\" Duration=\"0:0:0.2\" FillBehavior=\"Stop\"/>" +
+                   "</RunAnimationAction>" +
+                   "</PropertyTrigger.EnterActions>" +
+                   "</PropertyTrigger>" +
+                   "</ControlTemplate.Triggers>" +
+                   "</ControlTemplate>" +
+                   "</Button.Template></Button></Window>";
+
+        var code = Generate(auml, out var generated);
+        Assert.That(generated, Is.Empty, Errors(generated));
+        Assert.That(code, Does.Contain("DoubleAnimation"));
+        Assert.That(code, Does.Contain("SetBinding(\"To\""));
+
+        var errors = Compile(auml);
+        Assert.That(errors, Is.Empty, "generated code did not compile: " + string.Join(" | ", errors.Select(d => d.ToString())));
+    }
+
+    [Test]
     public void TemplateBinding_OnAnAttachedProperty_BindsTheAttachedProperty()
     {
         // ToolTipService.ToolTip, not the part's own ToolTip: that one copies itself onto the attached property as a
