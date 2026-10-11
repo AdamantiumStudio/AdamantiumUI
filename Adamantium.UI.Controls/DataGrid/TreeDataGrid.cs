@@ -339,9 +339,8 @@ public partial class TreeDataGrid : Selector
 
     protected override void ApplyItemsSource(IEnumerable newValue)
     {
-        if (_roots is INotifyCollectionChanged was) was.CollectionChanged -= OnSourceChanged;
         _roots = newValue;
-        if (_roots is INotifyCollectionChanged now) now.CollectionChanged += OnSourceChanged;
+        Follow(nameof(_roots), _roots as INotifyCollectionChanged, OnSourceChanged);
 
         RebuildFlattener();
     }
@@ -391,7 +390,7 @@ public partial class TreeDataGrid : Selector
     // case that must never silently keep a stale total.
     private void RebuildFlattener(bool sameRows = false)
     {
-        _flattener?.Clear();
+        Follow(nameof(_flattener), null);
 
         // The relation is worked out ONCE, here, and asked afterwards: finding a record's children by scanning the list
         // would be a scan per branch opened, and on ten thousand rows that is the table stopping every time someone
@@ -406,6 +405,7 @@ public partial class TreeDataGrid : Selector
         _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
         _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : _roots));
         _flattener.SetRoots(_shapedRoots);
+        Follow(nameof(_flattener), _flattener.Clear);
         RebuildRowExceptions();
         Items.SetSource(_flattener.Rows);
         if (!sameRows) RefreshTotals();

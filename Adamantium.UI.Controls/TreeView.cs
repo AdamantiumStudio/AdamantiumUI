@@ -140,7 +140,7 @@ public class TreeView : ItemsControl
 
     private void RebuildFlattener()
     {
-        _flattener?.Clear();
+        Follow(nameof(_flattener), null);
         // Child path from the HierarchicalDataTemplate's ItemsSource binding (e.g. {Binding Children} -> "Children").
         var childPath = (ItemTemplate as HierarchicalDataTemplate)?.ItemsSource is Binding binding ? binding.Path?.Path : null;
         // Expansion + selection paths from the ItemContainerStyle's IsExpanded / IsSelected setter bindings. Letting a
@@ -154,6 +154,7 @@ public class TreeView : ItemsControl
         _setNodeExpanded = TreeChildResolver.SetterForBoolPath(expandPath);
         _setNodeSelected = TreeChildResolver.SetterForBoolPath(selectPath);
         _flattener.SetRoots(_roots);
+        Follow(nameof(_flattener), _flattener.Clear);
         Items.SetSource(_flattener.Rows);   // the flat rows are now the effective item list -> virtualized directly
         RestoreSelectionFromRows();
         _anchorRow = null;

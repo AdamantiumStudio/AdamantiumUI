@@ -432,6 +432,7 @@ public partial class RenderCache
     private readonly List<Compositor.Entry> _compositedBuf = new();   // this thread's view of the composited set (reused)
     private readonly Dictionary<IUIComponent, (LayoutSnapshot Snap, Matrix4x4F ParentWorld)> _compositedFallback = new();   // keep animating across a settling swap's snapshot re-capture
     private readonly HashSet<IUIComponent> _compositedOwners = new();   // motion nodes the compositor moved THIS present (ExecuteOps re-Updates their per-unit draws)
+    private readonly List<IUIComponent> _fallbackGone = new();
 
     private const int MaxRetainedOps = 256;   // op stream past this -> a splice yields to a full walk that recompacts
     private readonly List<GroupPatch> _patchBuf = new();   // TrySplicedPatch: staged per-group patches (validated before mutation)
@@ -755,6 +756,7 @@ public partial class RenderCache
             _fractalKindByUnit.Clear();
             _fillSlotByUnit.Clear();
             _haloRunsByUnit.Clear();
+            _matSegNode.Clear();
             _unitsByBrush.Clear();
             _brushPaintBaked.Clear();
             _walkGroup = null;
@@ -762,6 +764,7 @@ public partial class RenderCache
             _nodeAllAware.Clear();
             _culledWhenRecorded.Clear();
             _clonedWhenRecorded.Clear();
+            ForgetCopies();
             _nodeStragglers.Clear();   // recorded per walk, exactly like the answers above it
             _movedNodesBuf.Clear();   // a full walk re-bakes fresh node matrices - pending node moves are subsumed
             _movedOwnersBuf.Clear();  // ...and every mover's subtree along with them
@@ -853,7 +856,7 @@ public partial class RenderCache
                 cloneEnd = CloneSubtreeEnd(groupIndex);
                 cloneIndex = 0;
                 _cloneMatrix = clones[0];
-                // Clone runs are recorded but not patchable: patches map one slot per unit, a cloned unit owns many.
+                // A cloned unit owns a record per copy, which the splice cannot move; a paint patch reaches each one.
                 group.NotBatchable("clones");
                 if (_recording)
                 {
@@ -910,7 +913,15 @@ public partial class RenderCache
                         _nodeAllAware.TryAdd(culledNode.RenderId, true);
 
                     // Remembered for this stream's lifetime: bringing it into view needs a walk (CollectMovedSubtree).
-                    if (_recording) _culledWhenRecorded.Add(unit);
+                    if (_recording)
+                    {
+                        _culledWhenRecorded.Add(unit);
+                        if (_cloneMatrix.HasValue)
+                        {
+                            _culledThisCopy.Add(unit);
+                        }
+                    }
+
                     continue;
                 }
             }
@@ -1723,6 +1734,11 @@ public partial class RenderCache
             // End of a clone run's subtree: rewind to its first group under the next matrix, or leave the run.
             if (cloneRun != null && groupIndex == cloneEnd - 1)
             {
+                if (_recording)
+                {
+                    NoteCopySlots(cloneStart, cloneEnd, cloneRun, cloneIndex == cloneRun.Count - 1);
+                }
+
                 if (++cloneIndex < cloneRun.Count)
                 {
                     _cloneMatrix = cloneRun[cloneIndex];
@@ -1896,6 +1912,7 @@ public partial class RenderCache
         if (!Compositor.Tick(_compositedBuf))   // recomposes matrices AND republishes paint snapshots
         {
             if (_compositedOwners.Count > 0) _compositedOwners.Clear();
+            _compositedFallback.Clear();
             return;
         }
 
@@ -1912,6 +1929,27 @@ public partial class RenderCache
             else if (entry.Channel == CompositorChannel.Opacity) ApplyCompositedOpacity(device, entry);
             else ApplyCompositedPaint(device, entry);
         }
+
+        if (_compositedFallback.Count <= _compositedOwners.Count)
+        {
+            return;
+        }
+
+        _fallbackGone.Clear();
+        foreach (var owner in _compositedFallback.Keys)
+        {
+            if (!_compositedOwners.Contains(owner))
+            {
+                _fallbackGone.Add(owner);
+            }
+        }
+
+        foreach (var owner in _fallbackGone)
+        {
+            _compositedFallback.Remove(owner);
+        }
+
+        _fallbackGone.Clear();
     }
 
     // OPACITY: the twin of the transform write below, four bytes instead of sixty-four. The element's alpha goes into its
@@ -1986,8 +2024,7 @@ public partial class RenderCache
                 continue;
             }
 
-            var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
-            PatchSlot(device, u, bakeWorld, slot);
+            PatchUnit(device, u);
         }
     }
 
@@ -2098,8 +2135,7 @@ public partial class RenderCache
                 u.SetFadeSlot(OpacitySlotOf(device, u.Component));
                 u.SetEffectiveOpacity(EffectiveOpacity(u.Component));
 
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
-                PatchSlot(device, u, bakeWorld, slot);
+                PatchUnit(device, u);
             }
         }
     }
@@ -2139,8 +2175,7 @@ public partial class RenderCache
                 u.SetFadeSlot(OpacitySlotOf(device, u.Component));
                 u.SetEffectiveOpacity(EffectiveOpacity(u.Component));
 
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
-                PatchSlot(device, u, bakeWorld, slot);
+                PatchUnit(device, u);
             }
         }
     }
@@ -2204,8 +2239,7 @@ public partial class RenderCache
                 // bypass this loop via ApplyCompositedOpacity.
 
                 u.SetEffectiveOpacity(EffectiveOpacity(u.Component));   // a paint change may be an opacity change
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
-                if (!PatchSlot(device, u, bakeWorld, slot))
+                if (!PatchUnit(device, u))
                     return SpliceRefused($"notBakeable<{u.Component?.GetType().Name}>");   // rotated; the walk re-bakes anyway
             }
         }
@@ -2274,13 +2308,14 @@ public partial class RenderCache
         // the splice or a walk does.
         if (!Drawing(u)) return !HoldsInstances(u);
 
-        // Cloned units own a slot per clone, but the maps remember only one, so the next walk repaints them.
-        if (u.Component != null && _groupById.TryGetValue(u.Component.RenderId, out var cloned)
-            && _clonedWhenRecorded.Contains(cloned))
-        {
-            return false;
-        }
+        if (_copiesByUnit.TryGetValue(u, out var copies)) return CopiesPatchable(u, copies);
+        if (Cloned(u)) return false;
 
+        return SlotsPatchable(u);
+    }
+
+    private bool SlotsPatchable(IRenderUnit u)
+    {
         // A band that APPEARED or went dark is a change of record count in the halo arena, and a patch can only rewrite
         // records that are already there. Its own family may well still be patchable - the shape would repaint and the
         // band would not - so the whole unit takes the walk.
@@ -2557,10 +2592,10 @@ public partial class RenderCache
         // No run is not "unchanged": a unit gaining its first band has no run yet (NoteHaloRun), so it must not patch.
         if (_haloRunsByUnit.Count == 0 || !_haloRunsByUnit.TryGetValue(u, out var runs))
         {
-            if (CountBands(bands, inner: false, opacity) != 0) return false;
-            if (CountBands(bands, inner: true, opacity) != 0) return false;
             var appearing = u.RenderData.LivingHalo;
-            return appearing is not { } band || band.Color.W * (float)opacity <= 0f;
+            var wears = CountBands(bands, inner: false, opacity) != 0 || CountBands(bands, inner: true, opacity) != 0
+                        || appearing is { } band && band.Color.W * (float)opacity > 0f;
+            return !wears || !TryHaloShape(u, out _, out _, out _, out _, out _);
         }
         if (CountBands(bands, inner: false, opacity) != runs.UnderCount) return false;
         if (CountBands(bands, inner: true, opacity) != runs.OverCount) return false;

@@ -27,6 +27,43 @@ public class DockingAreaTests
         return group;
     }
 
+    private static int WindowListenersTo(Window window, DockingArea area)
+    {
+        var count = 0;
+        foreach (var name in new[] { nameof(WindowBase.Closing), nameof(AdamantiumComponent.PropertyChanged) })
+        {
+            for (var type = window.GetType(); type != null; type = type.BaseType)
+            {
+                var field = type.GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                if (field?.GetValue(window) is not System.Delegate handler) continue;
+
+                count += handler.GetInvocationList().Count(d => ReferenceEquals(d.Target, area)
+                    || d.Target?.GetType().GetFields().Any(f => ReferenceEquals(f.GetValue(d.Target), area)) == true);
+                break;
+            }
+        }
+
+        return count;
+    }
+
+    // The window outlives a docking page shown in it. A discarded area has to stop listening to it, or the window keeps
+    // the area - and the page around it - for as long as it is open.
+    [Test]
+    public void ADiscardedArea_LeavesItsWindow()
+    {
+        var area = new DockingArea();
+        area.Children.Add(Group("scene", DockZone.Center));
+        var window = new Window { Width = 400, Height = 300, Content = area };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        area.Measure(new Size(400, 300));
+        Assume.That(WindowListenersTo(window, area), Is.GreaterThan(0), "the area follows its window");
+
+        DiscardedVisuals.Publish(area);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(WindowListenersTo(window, area), Is.Zero);
+    }
+
     [Test]
     public void ZonesBecomeRectangles_SidesFullHeight_BandInsideTheCenterColumn()
     {

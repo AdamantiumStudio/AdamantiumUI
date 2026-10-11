@@ -25,9 +25,7 @@ public class Polyline : CurveBase
     {
         if (a is Polyline line)
         {
-            if (e.OldValue is PointsCollection collection1) collection1.CollectionChanged -= line.PointsOnCollectionChanged;
-            
-            if (e.NewValue is PointsCollection collection2) collection2.CollectionChanged += line.PointsOnCollectionChanged;
+            line.Follow(PointsProperty, e.NewValue as INotifyCollectionChanged, line.PointsOnCollectionChanged);
         }
     }
 

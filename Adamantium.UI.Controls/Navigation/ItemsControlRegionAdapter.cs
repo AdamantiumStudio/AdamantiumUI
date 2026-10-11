@@ -45,7 +45,9 @@ public sealed class ItemsControlRegionAdapter : IRegionAdapter
         if (itemsControl.ItemTemplate == null && itemsControl.ItemTemplateSelector == null)
             itemsControl.ItemTemplateSelector = new ViewLocatorTemplateSelector(_viewLocator);
 
-        region.ActiveViewsChanged += (sender, e) => SyncItems();
+        EventHandler onChanged = (_, _) => SyncItems();
+        region.ActiveViewsChanged += onChanged;
+        itemsControl.Follow((this, region), () => region.ActiveViewsChanged -= onChanged);
         SyncItems();
     }
 }

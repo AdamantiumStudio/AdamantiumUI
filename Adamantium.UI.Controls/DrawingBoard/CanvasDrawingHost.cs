@@ -51,6 +51,18 @@ internal sealed class CanvasDrawingHost
         Fill();
     }
 
+    /// <summary>For a canvas that has been destroyed: stops listening to the application's collection and objects, then
+    /// takes the items it made for them off the scene, which the application keeps.</summary>
+    public void StopFollowing()
+    {
+        if (_objects is INotifyCollectionChanged was)
+        {
+            was.CollectionChanged -= OnObjectsChanged;
+        }
+
+        Clear();
+    }
+
     public void SetScene(ICanvasScene scene)
     {
         if (ReferenceEquals(_scene, scene)) return;

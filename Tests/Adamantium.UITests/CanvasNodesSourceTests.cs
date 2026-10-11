@@ -219,6 +219,50 @@ public class CanvasNodesSourceTests
         });
     }
 
+    // The scene and the graph are the application's and outlive the page; the node controls and the wires drawn for them
+    // are the canvas's. A canvas thrown away takes its own items off the scene - or the scene keeps the canvas and its
+    // page, and a canvas shown on it again lays a second set beside the first - and leaves the graph exactly as it was.
+    [Test]
+    public void ADiscardedCanvas_TakesItsItemsOffTheScene_AndLeavesTheGraphAlone()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var right = Made("Lerp", 300, 0, inputs: 2);
+        nodes.Add(left);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], right.Inputs[1]);
+        Assume.That(scene.Items.Count, Is.GreaterThan(0), "the canvas put its nodes and the wire on the scene");
+
+        DiscardedVisuals.Publish(canvas);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Is.Empty, "the canvas's own items are off the scene");
+            Assert.That(nodes, Has.Count.EqualTo(2));
+            Assert.That(right.Inputs[1].Connections, Has.Count.EqualTo(1), "the wire is still in the graph");
+        });
+    }
+
+    // The node controls are bound to the application's nodes, which outlive the canvas. A thrown-away canvas lets go of
+    // those bindings, or every node it ever showed keeps its control - and through it the canvas and its page.
+    [Test]
+    public void ADiscardedCanvas_LeavesTheNodesItShowed()
+    {
+        var (canvas, _, nodes) = Stage();
+        var model = Made("Add", 0, 0);
+        nodes.Add(model);
+        var control = (CanvasNode)canvas.ItemsHere().OfType<ElementItem>().Single().Element;
+
+        DiscardedVisuals.Publish(canvas);
+        DiscardedVisuals.Drain(int.MaxValue);
+        DiscardedVisuals.Drain(int.MaxValue);
+        model.Title = "Lerp";
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.That(control.Title, Is.EqualTo("Add"), "the control still follows the node");
+    }
+
     // A wire made between two sockets is a wire on the plane. Nothing is added to a collection: joining the sockets IS
     // making it.
     [Test]

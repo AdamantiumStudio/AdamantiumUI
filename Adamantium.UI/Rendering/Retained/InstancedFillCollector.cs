@@ -366,6 +366,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _pendingUnits.Clear();
         _hasUnion = false;
         _hasFringeUnion = false;
+        foreach (var record in _flushRecords)
+        {
+            record.Reset();
+        }
+
         _flushCount = 0;   // pooled flush records reused from index 0 this frame
         _groupRef = 0;     // the stencil is cleared with the frame, so coverage marks start over with it
 

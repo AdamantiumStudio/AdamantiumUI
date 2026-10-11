@@ -404,16 +404,7 @@ public class Ribbon : Selector
     {
         if (sender is not Ribbon ribbon) return;
 
-        if (e.OldValue is INotifyCollectionChanged oldSource)
-        {
-            oldSource.CollectionChanged -= ribbon.OnTabSetsCollectionChanged;
-        }
-
-        if (e.NewValue is INotifyCollectionChanged newSource)
-        {
-            newSource.CollectionChanged += ribbon.OnTabSetsCollectionChanged;
-        }
-
+        ribbon.Follow(TabSetsSourceProperty, e.NewValue as INotifyCollectionChanged, ribbon.OnTabSetsCollectionChanged);
         ribbon.ShowTabSets();
     }
 
@@ -472,9 +463,9 @@ public class Ribbon : Selector
         set.DataContext = item;
 
         var group = new RibbonContextualGroup { Key = $"{nameof(RibbonTabSet)}{++_tabSetCount}" };
-        Follow(group, nameof(RibbonContextualGroup.Header), set, nameof(RibbonTabSet.Header));
-        Follow(group, nameof(RibbonContextualGroup.Accent), set, nameof(RibbonTabSet.Accent));
-        Follow(group, nameof(RibbonContextualGroup.IsActive), set, nameof(RibbonTabSet.IsActive));
+        Mirror(group, nameof(RibbonContextualGroup.Header), set, nameof(RibbonTabSet.Header));
+        Mirror(group, nameof(RibbonContextualGroup.Accent), set, nameof(RibbonTabSet.Accent));
+        Mirror(group, nameof(RibbonContextualGroup.IsActive), set, nameof(RibbonTabSet.IsActive));
         ContextualGroups.Add(group);
 
         foreach (var tab in set.Tabs)
@@ -485,9 +476,10 @@ public class Ribbon : Selector
         }
 
         _tabSets[item] = (set, built, group);
+        Follow((nameof(_tabSets), item), built.Destroy);
     }
 
-    private static void Follow(RibbonContextualGroup group, string property, RibbonTabSet set, string setProperty)
+    private static void Mirror(RibbonContextualGroup group, string property, RibbonTabSet set, string setProperty)
     {
         group.SetBinding(property, new Core.Data.Binding(setProperty) { Source = set, IsImmediate = true });
     }
@@ -502,7 +494,7 @@ public class Ribbon : Selector
         }
 
         ContextualGroups.Remove(shown.Group);
-        shown.Built.Destroy();
+        Follow((nameof(_tabSets), item), null);
     }
 
     private static void OnDrawerChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
@@ -1146,14 +1138,13 @@ public class Ribbon : Selector
 
         if (e.OldValue is RibbonContextualGroups old)
         {
-            old.CollectionChanged -= ribbon.OnContextualGroupsCollectionChanged;
             foreach (var group in old) ribbon.Release(group);
         }
 
         ribbon._contextualGroups = e.NewValue as RibbonContextualGroups;
+        ribbon.Follow(ContextualGroupsProperty, ribbon._contextualGroups, ribbon.OnContextualGroupsCollectionChanged);
         if (ribbon._contextualGroups == null) return;
 
-        ribbon._contextualGroups.CollectionChanged += ribbon.OnContextualGroupsCollectionChanged;
         foreach (var group in ribbon._contextualGroups) ribbon.Adopt(group);
     }
 
@@ -1207,7 +1198,12 @@ public class Ribbon : Selector
         if (group == null || !_watched.Remove(group)) return;
 
         group.PropertyChanged -= OnContextualGroupChanged;
-        group.InheritanceParent = null;
+        if (ReferenceEquals(group.InheritanceParent, this))
+        {
+            group.InheritanceParent = null;
+        }
+
+        Follow((nameof(_watched), group), null);
     }
 
     private readonly HashSet<RibbonContextualGroup> _watched = [];
@@ -1241,6 +1237,7 @@ public class Ribbon : Selector
         // order - otherwise every such group sorts as "oldest" and the strip's order depends on nothing.
         if (group.IsActive) group.ActivatedAt = ++_activations;
         group.PropertyChanged += OnContextualGroupChanged;
+        Follow((nameof(_watched), group), () => Release(group));
     }
 
     private void OnContextualGroupChanged(object sender, AdamantiumPropertyChangedEventArgs e)

@@ -127,7 +127,6 @@ public class PropertyGrid : Control
     private PropertyDefinitionBuilder _builder;
     private IReadOnlyList<PropertySection> _generated = [];
     private Type _generatedFor;
-    private INotifyCollectionChanged _followedSource;
 
     static PropertyGrid()
     {
@@ -298,7 +297,7 @@ public class PropertyGrid : Control
         // row could never hear the change that brings it back. This is what makes IsVisible mean anything after the
         // first pass - an inspector whose lines come and go with what is selected asks for exactly that.
         Watch();
-        Unfollow();
+        UnfollowItems();
 
         if (_host == null) return;
 
@@ -752,7 +751,7 @@ public class PropertyGrid : Control
         // either of them under a heading that claims to be about both would be a lie an edit then acts on.
         if (targets.Count != 1 || ValueOf(targets[0], items) is not IEnumerable source) return;
 
-        Follow(source);
+        FollowItems(source);
 
         var index = 0;
         foreach (var item in source)
@@ -778,17 +777,20 @@ public class PropertyGrid : Control
 
     // The collections an ItemsProperty is showing, for as long as it is showing them. A socket added or dropped is a
     // ROW appearing or going, which no amount of re-reading values can do - the rows have to be built again.
-    private void Follow(IEnumerable source)
+    private void FollowItems(IEnumerable source)
     {
         if (source is not INotifyCollectionChanged live || _followed.Contains(live)) return;
 
-        live.CollectionChanged += OnFollowedChanged;
+        Follow((nameof(_followed), live), live, OnFollowedChanged);
         _followed.Add(live);
     }
 
-    private void Unfollow()
+    private void UnfollowItems()
     {
-        foreach (var live in _followed) live.CollectionChanged -= OnFollowedChanged;
+        foreach (var live in _followed)
+        {
+            Follow((nameof(_followed), live), null);
+        }
 
         _followed.Clear();
     }
@@ -797,14 +799,7 @@ public class PropertyGrid : Control
 
     private void Watch()
     {
-        foreach (var definition in _watched)
-        {
-            definition.LayoutChanged -= OnDefinitionLayoutChanged;
-            definition.WordsChanged -= OnDefinitionWordsChanged;
-            if (definition is ImageSourceProperty picture) picture.Picked -= OnPicturePicked;
-        }
-
-        _watched.Clear();
+        Unwatch();
 
         foreach (var section in DisplayedSections())
         {
@@ -812,11 +807,30 @@ public class PropertyGrid : Control
         }
     }
 
+    private void Unwatch()
+    {
+        foreach (var definition in _watched)
+        {
+            Follow((nameof(_watched), definition), null);
+        }
+
+        _watched.Clear();
+    }
+
     private void Watch(PropertyDefinition definition)
     {
         definition.LayoutChanged += OnDefinitionLayoutChanged;
         definition.WordsChanged += OnDefinitionWordsChanged;
         if (definition is ImageSourceProperty picture) picture.Picked += OnPicturePicked;
+        Follow((nameof(_watched), definition), () =>
+        {
+            definition.LayoutChanged -= OnDefinitionLayoutChanged;
+            definition.WordsChanged -= OnDefinitionWordsChanged;
+            if (definition is ImageSourceProperty shown)
+            {
+                shown.Picked -= OnPicturePicked;
+            }
+        });
         _watched.Add(definition);
 
         foreach (var child in definition.Children) Watch(child);
@@ -854,17 +868,7 @@ public class PropertyGrid : Control
             return;
         }
 
-        if (grid._followedSource != null)
-        {
-            grid._followedSource.CollectionChanged -= grid.OnSectionsChanged;
-        }
-
-        grid._followedSource = grid.SectionsSource as INotifyCollectionChanged;
-        if (grid._followedSource != null)
-        {
-            grid._followedSource.CollectionChanged += grid.OnSectionsChanged;
-        }
-
+        grid.Follow(SectionsSourceProperty, grid.SectionsSource as INotifyCollectionChanged, grid.OnSectionsChanged);
         grid.Rebuild();
     }
 

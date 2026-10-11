@@ -727,7 +727,7 @@ public partial class RenderCache
         {
             if (!_groupById.TryGetValue(c.RenderId, out var g)) continue;
             foreach (var u in g.Units)
-                if (Drawing(u) && HoldsInstances(u) && !IsSlotPatchable(u)) return false;
+                if (Drawing(u) && HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u))) return false;
         }
         return true;
     }
@@ -755,6 +755,18 @@ public partial class RenderCache
     // Apply the moved nodes' new matrices (64B each) before a replay-based draw; stale position memos drop and rebuild
     // lazily O(dirty). Returns false when ANY moved node has non-aware retained content - the caller full-walks.
     private bool RefreshMovedNodes(IGraphicsDevice device)
+    {
+        try
+        {
+            return RefreshMovedNodesCore(device);
+        }
+        finally
+        {
+            _nestedMovedNodes.Clear();
+        }
+    }
+
+    private bool RefreshMovedNodesCore(IGraphicsDevice device)
     {
         if (_movedNodesBuf.Count == 0)
         {
@@ -883,7 +895,7 @@ public partial class RenderCache
                 ResolveScissor(u.Component, World(u.Component), _cullScissor, out _, out var culled);
                 if (culled || _culledWhenRecorded.Contains(u)) return false;
 
-                if (HoldsInstances(u) && !IsSlotPatchable(u)) return false;
+                if (HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u))) return false;
             }
         }
 

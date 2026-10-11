@@ -490,11 +490,7 @@ public class DataPager : Control
         // add a step hands the same collection over and adds to it - so the pager listens to the collection as well as
         // to the property. Without this the picker still grew (the items control is watching the same collection), but
         // the size could be left pointing at a step that had just been removed.
-        if (e.OldValue is INotifyCollectionChanged wasObservable)
-            wasObservable.CollectionChanged -= pager.OnPageSizesCollectionChanged;
-
-        if (e.NewValue is INotifyCollectionChanged isObservable)
-            isObservable.CollectionChanged += pager.OnPageSizesCollectionChanged;
+        pager.Follow(PageSizesProperty, e.NewValue as INotifyCollectionChanged, pager.OnPageSizesCollectionChanged);
 
         pager.SnapPageSizeToProgression();
     }
@@ -709,8 +705,6 @@ public class DataPager : Control
 
     private void AttachSource(object source)
     {
-        if (_paged != null) _paged.PropertyChanged -= OnPagedPropertyChanged;
-
         _paged = source switch
         {
             null => null,
@@ -725,9 +719,12 @@ public class DataPager : Control
         if (_paged != null)
         {
             _paged.PageSize = PageSize;
-            _paged.PropertyChanged += OnPagedPropertyChanged;
         }
 
+        Follow(nameof(_paged), _paged, OnPagedPropertyChanged);
+        Follow(nameof(CollectionView), _paged is CollectionView own && !ReferenceEquals(own, source)
+            ? own.LetGoOfSource
+            : null);
         PagedSource = _paged;
         Refresh();
     }

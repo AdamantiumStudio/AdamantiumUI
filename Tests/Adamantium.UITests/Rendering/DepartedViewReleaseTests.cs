@@ -114,6 +114,32 @@ public class DepartedViewReleaseTests
             "the window's cache never heard the view leave, so it kept the view and everything it drew");
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference ShownWithAMaterialThenReplaced(Stage stage)
+    {
+        var view = View();
+        ((Border)view.Child).Background = new MaterialBrush();
+        stage.Presenter.Content = view;
+        stage.Frame();
+        stage.Presenter.Content = View();
+        return new WeakReference(view);
+    }
+
+    // A material remembers the node it was drawn under, to move its capture with it; a frame that draws no material any
+    // more must not go on remembering.
+    [Test]
+    public void AViewDrawingAMaterialIsCollected()
+    {
+        using var stage = new Stage();
+
+        var gone = ShownWithAMaterialThenReplaced(stage);
+        RenderDirty.MarkStructural();
+        stage.Frame();
+        Settle(stage);
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
+
     [Test]
     public void AViewThatLeavesUnderAFullWalkIsCollected()
     {

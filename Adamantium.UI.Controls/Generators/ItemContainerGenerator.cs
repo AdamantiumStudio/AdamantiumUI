@@ -350,7 +350,10 @@ public class ItemContainerGenerator
         }
     }
 
-    /// <summary>Drops every realized container and the recycle pool (e.g. on a Reset / ItemTemplate change).</summary>
+    /// <summary>Drops every realized container and the recycle pool (e.g. on a Reset / ItemTemplate change). Nothing hands
+    /// those containers out again, so they are announced discarded: whatever inside them listens to something longer-lived
+    /// - a shared icon, a record - lets go of it. An item that is an element of its own is not: the list shows it again.
+    /// </summary>
     public void Clear()
     {
         // Every generated container is CLEARED first, exactly as recycling one clears it: a container may hold a
@@ -361,6 +364,25 @@ public class ItemContainerGenerator
             _owner.ClearContainer(container);
         }
 
+        foreach (var pooled in _pooledSet)
+        {
+            (pooled as Core.FundamentalUIComponent)?.Revive();
+        }
+
+        var handedIn = new HashSet<IUIComponent>();
+        foreach (var item in _owner.Items)
+        {
+            if (item is IUIComponent element)
+            {
+                handedIn.Add(element);
+            }
+        }
+
+        foreach (var container in _generated)
+        {
+            Discard(container, handedIn);
+        }
+
         _byIndex.Clear();
         _indexByContainer.Clear();
         PoolClear();
@@ -369,6 +391,20 @@ public class ItemContainerGenerator
         // the panel to park - handing it a list of dead containers would be worse than handing it none.
         _unmapped.Clear();
         _newlyMapped.Clear();
+    }
+
+    private static void Discard(IUIComponent node, HashSet<IUIComponent> handedIn)
+    {
+        if (handedIn.Contains(node))
+        {
+            return;
+        }
+
+        DiscardedVisuals.Publish(node);
+        foreach (var child in node.VisualChildren)
+        {
+            Discard(child, handedIn);
+        }
     }
 
     /// <summary>Shifts realized indices to account for <paramref name="count"/> items inserted at <paramref name="index"/>.</summary>

@@ -233,6 +233,66 @@ public class TreeViewVirtualizationTests
         };
     }
 
+    private sealed class WatchedRoots : ObservableCollection<Node>
+    {
+        public WatchedRoots(params Node[] nodes) : base(nodes)
+        {
+        }
+
+        public int Listeners;
+
+        public override event NotifyCollectionChangedEventHandler CollectionChanged
+        {
+            add
+            {
+                Listeners++;
+                base.CollectionChanged += value;
+            }
+            remove
+            {
+                Listeners--;
+                base.CollectionChanged -= value;
+            }
+        }
+    }
+
+    // The tree is thrown away with its page; the view-model's tree is not. Letting go of it must neither leave the
+    // view-model listening for the tree nor fold or deselect the view-model's nodes on the way out.
+    [Test]
+    public void ADiscardedTree_LetsGoOfTheViewModel_AndLeavesItsStateAlone()
+    {
+        var a1 = new Node("a1") { Selected = true };
+        var a = new Node("a", a1) { Expanded = true };
+        var roots = new WatchedRoots(a, new Node("b"));
+        var style = new Adamantium.UI.Core.Resources.Style
+        {
+            Selector = new Adamantium.UI.Core.Resources.StyleSelector { Types = { typeof(TreeViewItem) } }
+        };
+        style.Setters.Add(new Adamantium.UI.Core.Resources.Setter("IsExpanded", new Binding(nameof(Node.Expanded))));
+        style.Setters.Add(new Adamantium.UI.Core.Resources.Setter("IsSelected", new Binding(nameof(Node.Selected))));
+        var tree = new TreeView
+        {
+            ItemTemplate = new HierarchicalDataTemplate(() => new TemplateResult { RootComponent = new Border() })
+            {
+                ItemsSource = new Binding("Children")
+            },
+            ItemContainerStyle = style,
+            ItemsSource = roots
+        };
+        Assume.That(Selected(tree), Is.EqualTo("a1"), "the tree restored the view-model's selection");
+        Assume.That(roots.Listeners, Is.GreaterThan(0), "and follows its roots");
+
+        Adamantium.UI.Core.DiscardedVisuals.Publish(tree);
+        Adamantium.UI.Core.DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(roots.Listeners, Is.Zero, "a discarded tree stops following the roots");
+            Assert.That(a.Expanded, Is.True, "the branch stays open in the view-model");
+            Assert.That(a1.Selected, Is.True, "the node stays selected in the view-model");
+        });
+    }
+
     private static void Press(TreeView tree, Key key) =>
         tree.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0)
         {
