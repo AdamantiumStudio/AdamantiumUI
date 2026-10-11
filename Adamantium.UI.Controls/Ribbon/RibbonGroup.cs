@@ -116,7 +116,11 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         var template = TemplateFor(item);
         if (template is not HierarchicalDataTemplate && template?.Build(null).RootComponent is Base.UIComponent command)
         {
-            if (ItemContainerStyle != null) command.Styles.Add(ItemContainerStyle);
+            if (ItemContainerStyle != null)
+            {
+                command.Styles.Add(ItemContainerStyle);
+            }
+
             _builtBy.AddOrUpdate(command, template);
             return command;
         }

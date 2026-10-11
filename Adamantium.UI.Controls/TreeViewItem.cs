@@ -222,17 +222,6 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
     }
 
-    // Focus arriving by any route (a click, a Tab into the tree, the arrow keys) tells the tree WHICH ROW now owns the
-    // keyboard place - the tree keeps that as a row, not as this container, and re-delivers it when containers recycle.
-    protected override void OnGotFocus(RoutedEventArgs e)
-    {
-        base.OnGotFocus(e);
-        if (IsFocused && Row is { } row)
-        {
-            FindOwnerTreeView()?.NoteFocusedRow(row);
-        }
-    }
-
     // The TreeView hosting this node; its SelectionMode decides the click policy and it owns the flat-list expansion.
     internal TreeView FindOwnerTreeView()
     {

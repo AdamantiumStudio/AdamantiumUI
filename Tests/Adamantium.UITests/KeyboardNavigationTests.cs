@@ -25,6 +25,38 @@ public class KeyboardNavigationTests
 
     private static Button NewButton(string name) => new() { Name = name, Width = 40, Height = 20 };
 
+    private sealed class WatchingButton : Button
+    {
+        public bool? ReturningWhenFocused;
+
+        protected override void OnGotFocus(Adamantium.UI.Core.RoutedEvents.RoutedEventArgs e)
+        {
+            base.OnGotFocus(e);
+            if (IsFocused)
+            {
+                ReturningWhenFocused = FocusManager.IsReturning;
+            }
+        }
+    }
+
+    // Focus put back is not a move: it keeps the ring it had, but nothing scrolls to it. A list row coming back into
+    // the window as a buffer row pulled the scroll to itself on every wheel notch.
+    [Test]
+    public void AReturnedFocus_KeepsItsRing_ButIsNotAMove()
+    {
+        var button = new WatchingButton();
+
+        FocusManager.Return(button, ringVisible: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(button));
+            Assert.That(FocusManager.IsFocusVisible, Is.True, "the ring it had is kept");
+            Assert.That(button.ReturningWhenFocused, Is.True, "the element was told it is a return, so it does not scroll");
+            Assert.That(FocusManager.IsReturning, Is.False, "and only for that call");
+        });
+    }
+
     // A root that is NOT a panel, so the walk has to leave the panel it starts in - as it does in a real window.
     private static Border Root(Panel content) => new() { Width = 200, Height = 100, Child = content };
 
@@ -906,6 +938,63 @@ public class KeyboardNavigationTests
             Assert.That(ring, Is.Not.Null);
             Assert.That(ring?.AdornedElement, Is.SameAs(control), "the ring wraps the control, not its part");
         });
+    }
+
+    private static void PressTab(IInputComponent on) =>
+        on.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Tab, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+
+    /// <summary>A click focuses without a ring, so the keyboard cannot see where it starts: the first Tab shows the ring
+    /// where the focus is, and only the next one moves on. It went straight to the next control.</summary>
+    [Test]
+    public void TheFirstTabAfterAClick_ShowsTheRingWhereTheFocusIs()
+    {
+        var a = NewButton("a");
+        var b = NewButton("b");
+        var stack = new StackPanel();
+        stack.Children.Add(a);
+        stack.Children.Add(b);
+        var window = new Window { Width = 200, Height = 100, Content = stack };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        FocusManager.Focus(a, NavigationMethod.Mouse);
+
+        PressTab(a);
+        var ring = window.AdornerLayer.Adorners.OfType<FocusAdorner>().SingleOrDefault();
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(a), "the first Tab stays on the clicked control");
+            Assert.That(ring?.AdornedElement, Is.SameAs(a), "and shows the ring on it");
+            Assert.That(a.IsFocusVisible, Is.True);
+        });
+
+        PressTab(a);
+        Assert.That(FocusManager.Focused, Is.SameAs(b), "the next Tab moves on");
+    }
+
+    /// <summary>A control a DATA template built wears the ring itself. Its templated parent is the presenter showing the
+    /// item, which is no control of its own - a ring around it took in the control's margin.</summary>
+    [Test]
+    public void AControlADataTemplateBuilt_WearsTheRingItself()
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = "item",
+            ContentTemplate = new DataTemplate(() => new TemplateResult
+            {
+                RootComponent = new Button { Width = 40, Height = 20, MarginRight = 4 }
+            })
+        };
+        var window = new Window { Width = 200, Height = 100, Content = presenter };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        var button = presenter.GetVisualDescendants().OfType<Button>().Single();
+        Assume.That(button.TemplatedParent, Is.SameAs(presenter));
+
+        FocusManager.Focus(button, NavigationMethod.Tab);
+
+        var ring = window.AdornerLayer.Adorners.OfType<FocusAdorner>().SingleOrDefault();
+        Assert.That(ring?.AdornedElement, Is.SameAs(button));
     }
 
     /// <summary>A control made of SEVERAL stops - a question's two answers - rings the stop that has the focus: a ring

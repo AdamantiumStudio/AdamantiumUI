@@ -10,7 +10,7 @@ public class ItemContainerGenerator
     private readonly ItemsControl _owner;
     private readonly Dictionary<int, IUIComponent> _byIndex = new();
     private readonly Dictionary<IUIComponent, int> _indexByContainer = new();
-    private readonly List<IUIComponent> _recyclePool = new();   // a stack: the most recently parked is last
+    private readonly List<IUIComponent> _recyclePool = [];
 
     // Membership mirror of _recyclePool: List<T>.Contains is a linear re-read, and the pool is unbounded, so the
     // duplicate guard in ReclaimDetached was quadratic in the pool depth. Written only through PoolPush/PoolPop/PoolClear.
@@ -45,6 +45,7 @@ public class ItemContainerGenerator
     {
         if (_pooledSet.Add(container))
         {
+            _owner.LetGoOfFocus(container);
             _recyclePool.Add(container);
             // Out of the tree, but waiting to be re-bound to another item - not dead. Saying so is what keeps a
             // teardown from releasing a container that is about to be handed straight back out.
@@ -54,13 +55,14 @@ public class ItemContainerGenerator
 
     private IUIComponent PoolPop() => PoolTake(_recyclePool.Count - 1);
 
-    // The most recently parked container the owner can show the item in, or -1. Searching past a misfit is what keeps the
-    // pool bounded: one that never fits would otherwise sit on top and every item after it would get a new container.
     private int PoolFitFor(object item)
     {
         for (var i = _recyclePool.Count - 1; i >= 0; i--)
         {
-            if (_owner.CanReuseContainer(_recyclePool[i], item)) return i;
+            if (_owner.CanReuseContainer(_recyclePool[i], item))
+            {
+                return i;
+            }
         }
 
         return -1;
@@ -176,6 +178,11 @@ public class ItemContainerGenerator
         _byIndex[index] = container;
         NoteMapped(container);
         _indexByContainer[container] = index;
+        if (!ReferenceEquals(container, item))
+        {
+            _owner.FollowKeyboard(container, index);
+        }
+
         return container;
     }
 
@@ -297,6 +304,11 @@ public class ItemContainerGenerator
             // measure that follows it is the expensive part, so measuring here (not in a separate unbudgeted loop) is what
             // makes the budget actually bound the frame - the next iteration's time check sees the measure cost too.
             onBound?.Invoke(container);
+
+            if (!ReferenceEquals(container, item))
+            {
+                _owner.FollowKeyboard(container, i);
+            }
         }
 
         // 3. Donors not reused (the window shrank) - park them for when it grows again, and report them so the panel hides

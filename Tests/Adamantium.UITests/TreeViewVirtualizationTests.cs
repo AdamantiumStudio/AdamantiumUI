@@ -301,6 +301,13 @@ public class TreeViewVirtualizationTests
 
     private static string Selected(TreeView tree) => (tree.SelectedItem as Node)?.Name;
 
+    // What the panel does to a container it binds to a row.
+    private static void Bind(TreeView tree, TreeViewItem container, int index)
+    {
+        tree.PrepareContainer(container, tree.Items[index]);
+        tree.FollowKeyboard(container, index);
+    }
+
     private static string[] VisibleRows(TreeView tree) =>
         tree.Items.Cast<TreeRow>().Select(r => ((Node)r.Node).Name).ToArray();
 
@@ -380,12 +387,12 @@ public class TreeViewVirtualizationTests
         Press(tree, Key.DownArrow);   // "a" owns the keyboard place
 
         var container = new TreeViewItem();
-        tree.PrepareContainer(container, tree.Items[0]);   // showing "a"
+        Bind(tree, container, 0);   // showing "a"
         FocusManager.Focus(container);
 
         // The scroll carries "a" off-screen and recycles this container onto another row. Keeping the focus here would
         // re-draw the ring on every row the scroll reuses it for.
-        tree.PrepareContainer(container, tree.Items[1]);   // now showing "b"
+        Bind(tree, container, 1);   // now showing "b"
         Assert.Multiple(() =>
         {
             Assert.That(container.IsFocused, Is.False, "the ring does not stay on a container showing someone else's row");
@@ -394,7 +401,7 @@ public class TreeViewVirtualizationTests
 
         // ...and the row coming back into view takes its focus back, on whichever container now shows it.
         var returned = new TreeViewItem();
-        tree.PrepareContainer(returned, tree.Items[0]);
+        Bind(tree, returned, 0);
         Assert.That(FocusManager.Focused, Is.SameAs(returned), "the row is visible again, so the ring returns to it");
     }
 

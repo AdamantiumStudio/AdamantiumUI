@@ -8,6 +8,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -16,13 +17,14 @@ namespace Adamantium.UI.Controls;
 
 /// <summary>Presents <see cref="Items"/> or <see cref="ItemsSource"/> as templated containers laid out by
 /// <see cref="ItemsPanel"/>. The template must contain an <see cref="ItemsPresenter"/> named <c>PART_ItemsPresenter</c>.</summary>
-public class ItemsControl : Control, IContainer
+public class ItemsControl : Control, IContainer, IKeyboardEntry
 {
     private static readonly ConditionalWeakTable<IUIComponent, ItemsControl> AuthoredIn = new();
     private static readonly ConditionalWeakTable<IUIComponent, object> Refused = new();
 
     private readonly ConditionalWeakTable<IUIComponent, object> _taken = new();
     private ItemsPresenter _presenter;
+    private bool _ringWasVisible;
 
     public static readonly AdamantiumProperty ItemsSourceProperty = AdamantiumProperty.Register(nameof(ItemsSource),
         typeof(IEnumerable), typeof(ItemsControl), new PropertyMetadata(null, OnItemsSourceChanged));
@@ -61,6 +63,11 @@ public class ItemsControl : Control, IContainer
     public ItemCollection Items { get; }
 
     public ItemContainerGenerator ItemContainerGenerator { get; }
+
+    /// <summary>The index in <see cref="Items"/> of the item the keyboard is on, or -1. It is kept as the place, not as a
+    /// container: a virtualizing panel hands containers to other items as it scrolls, and the focus follows whichever
+    /// container shows this one. It moves with the items as they are inserted and removed.</summary>
+    protected int KeyboardIndex { get; set; } = -1;
 
     /// <summary>The panel laying out the item containers, or null before the template is applied. Virtual for controls
     /// that split items across several panels.</summary>
@@ -225,6 +232,7 @@ public class ItemsControl : Control, IContainer
             NoteAuthored(e);
         }
 
+        MoveKeyboardWith(e);
         _presenter?.OnItemsChanged(e);
         OnItemsChanged(e);
     }
@@ -356,6 +364,138 @@ public class ItemsControl : Control, IContainer
             presenter.ContentTemplate = ItemTemplate;
             presenter.ContentTemplateSelector = ItemTemplateSelector;
             presenter.Content = item;
+        }
+    }
+
+    /// <summary>A container that takes the focus puts the keyboard on its item.</summary>
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        base.OnGotFocus(e);
+
+        if (e.OriginalSource == this)
+        {
+            _ringWasVisible = FocusManager.IsFocusVisible;
+            return;
+        }
+
+        for (var node = e.OriginalSource as IUIComponent; node != null && node != this; node = node.VisualParent)
+        {
+            var index = ItemContainerGenerator.IndexFromContainer(node);
+            if (index >= 0)
+            {
+                KeyboardIndex = index;
+                return;
+            }
+        }
+    }
+
+    /// <summary>Tab enters at the row the keyboard is on. A row scrolled out of the window is scrolled back, and the list
+    /// holds the focus until its container arrives.</summary>
+    IInputComponent IKeyboardEntry.KeyboardEntry()
+    {
+        if (KeyboardIndex < 0 || KeyboardIndex >= Items.Count)
+        {
+            return null;
+        }
+
+        if (ItemContainerGenerator.ContainerFromIndex(KeyboardIndex) is { } container)
+        {
+            return container is IInputComponent row && FocusManager.CanFocus(row) && KeyboardNavigation.GetIsTabStop(row)
+                ? row
+                : null;
+        }
+
+        if (!FocusManager.CanFocus(this))
+        {
+            return null;
+        }
+
+        ScrollIntoView(Items[KeyboardIndex]);
+        return this;
+    }
+
+    internal void FollowKeyboard(IUIComponent container, int index)
+    {
+        if (index != KeyboardIndex)
+        {
+            LetGoOfFocus(container);
+            return;
+        }
+
+        var focused = FocusManager.Focused;
+        var ownsFocus = ReferenceEquals(focused, this) || ItemContainerGenerator.IndexFromContainer(focused as IUIComponent) >= 0;
+        if (ownsFocus && container is IInputComponent { Focusable: true, IsFocused: false } input)
+        {
+            FocusManager.Return(input, ReferenceEquals(focused, this) ? _ringWasVisible : FocusManager.IsFocusVisible);
+        }
+    }
+
+    internal void LetGoOfFocus(IUIComponent container)
+    {
+        if (container is IInputComponent { IsFocused: true } && Focusable)
+        {
+            var ring = FocusManager.IsFocusVisible;
+            FocusManager.Focus(this, NavigationMethod.Unspecified);
+            _ringWasVisible = ring;
+        }
+    }
+
+    private void MoveKeyboardWith(NotifyCollectionChangedEventArgs e)
+    {
+        if (KeyboardIndex < 0)
+        {
+            return;
+        }
+
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                if (e.NewStartingIndex < 0)
+                {
+                    KeyboardIndex = -1;
+                }
+                else if (e.NewStartingIndex <= KeyboardIndex)
+                {
+                    KeyboardIndex += e.NewItems.Count;
+                }
+
+                break;
+
+            case NotifyCollectionChangedAction.Remove:
+                if (e.OldStartingIndex < 0 || KeyboardIndex < e.OldStartingIndex + e.OldItems.Count && KeyboardIndex >= e.OldStartingIndex)
+                {
+                    KeyboardIndex = -1;
+                }
+                else if (e.OldStartingIndex < KeyboardIndex)
+                {
+                    KeyboardIndex -= e.OldItems.Count;
+                }
+
+                break;
+
+            case NotifyCollectionChangedAction.Move:
+                var moved = KeyboardIndex >= e.OldStartingIndex && KeyboardIndex < e.OldStartingIndex + e.OldItems.Count;
+                if (moved)
+                {
+                    KeyboardIndex = e.NewStartingIndex + (KeyboardIndex - e.OldStartingIndex);
+                    break;
+                }
+
+                if (e.OldStartingIndex < KeyboardIndex)
+                {
+                    KeyboardIndex -= e.OldItems.Count;
+                }
+
+                if (e.NewStartingIndex <= KeyboardIndex)
+                {
+                    KeyboardIndex += e.OldItems.Count;
+                }
+
+                break;
+
+            case NotifyCollectionChangedAction.Reset:
+                KeyboardIndex = -1;
+                break;
         }
     }
 

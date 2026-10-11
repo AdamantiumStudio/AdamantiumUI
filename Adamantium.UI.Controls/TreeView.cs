@@ -85,9 +85,6 @@ public class TreeView : ItemsControl
     // containers just mirror their row. The set is the currently-selected rows; the anchor is the Shift-range fixed end.
     private readonly HashSet<TreeRow> _selectedRows = [];
     private TreeRow _anchorRow;
-    // The row that owns the KEYBOARD place - the same reason selection lives on rows, and it survives virtualization the
-    // same way. See PrepareContainer: a focus pinned to a container drifts when the panel recycles that container.
-    private TreeRow _focusedRow;
     // Writes a node's selection onto the node itself (from the ItemContainerStyle's IsSelected binding path), so a selection
     // persists across a view rebuild and reaches OFF-SCREEN rows that have no container. No-op if the style doesn't bind it.
     private Action<object, bool> _setNodeSelected = static (_, _) => { };
@@ -380,23 +377,6 @@ public class TreeView : ItemsControl
             {
                 node.SetCurrentValue(TreeViewItem.IsExpandedProperty, !row.IsExpanded);
             }
-
-            // The focus rides the ROW, exactly as the selection does. A container is not a place in the tree: the panel
-            // recycles containers onto other rows as the view scrolls, so a focus left pinned to one drifts onto
-            // whatever row it lands on - the focus ring a row or two below the one the arrow key actually went to.
-            if (ReferenceEquals(row, _focusedRow))
-            {
-                if (IsKeyboardFocusWithin && !node.IsFocused)
-                {
-                    FocusManager.Focus(node, NavigationMethod.Directional);
-                }
-            }
-            else if (node.IsFocused)
-            {
-                // The focused container now shows another row: the tree holds focus until that row is bound again.
-                // Unspecified, so no ring is drawn around the tree.
-                FocusManager.Focus(this, NavigationMethod.Unspecified);
-            }
         }
         else
         {
@@ -519,21 +499,24 @@ public class TreeView : ItemsControl
         SetRowExpanded(row, expanded);
     }
 
-    // A container took the focus (a click, a Tab in): its row is the keyboard place from now on.
-    internal void NoteFocusedRow(TreeRow row) => _focusedRow = row;
-
-    // Where the keyboard is: the row that owns the place, else the focused container's row, else the selection.
     private int CurrentRowIndex()
     {
-        if (_focusedRow != null && Items.IndexOf(_focusedRow) is var known && known >= 0)
-            return known;
+        if (KeyboardIndex >= 0 && KeyboardIndex < Items.Count)
+        {
+            return KeyboardIndex;
+        }
 
         if (FocusManager.Focused is TreeViewItem { Row: { } focused } && Items.IndexOf(focused) is var index && index >= 0)
+        {
             return index;
+        }
 
         for (var i = 0; i < Items.Count; i++)
         {
-            if (Items[i] is TreeRow row && ReferenceEquals(row.Node, SelectedItem)) return i;
+            if (Items[i] is TreeRow row && ReferenceEquals(row.Node, SelectedItem))
+            {
+                return i;
+            }
         }
 
         return -1;
@@ -565,9 +548,7 @@ public class TreeView : ItemsControl
     /// makes, and for the same reason: a selection scrolled far out of the window otherwise goes unreachable).</summary>
     private void ShowRow(int index)
     {
-        // The ROW owns the keyboard place from here on, whether or not it has a visual yet: the scroll below can rebind
-        // every container under us, and PrepareContainer hands the focus to whichever one ends up showing this row.
-        _focusedRow = Items[index] as TreeRow;
+        KeyboardIndex = index;
 
         var container = ItemContainerGenerator.ContainerFromIndex(index);
         if (container is IInputComponent focusable && container.Visibility == Visibility.Visible)

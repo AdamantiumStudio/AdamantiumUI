@@ -62,6 +62,7 @@ public class DataPager : Control
     // came back on a wider window look like a setting that changed itself.
     private PagerDisplayMode _shed = PagerDisplayMode.None;
     private readonly Dictionary<PagerDisplayMode, double> _partWidths = new();
+    private readonly ObservableCollection<PagerPageItem> _pageItems = [];
 
     private static readonly string FitLog = Environment.GetEnvironmentVariable("ADAM_PAGER_FIT");
 
@@ -162,8 +163,8 @@ public class DataPager : Control
     public static readonly AdamantiumProperty PageNumberTextProperty = AdamantiumProperty.Register(
         nameof(PageNumberText), typeof(string), typeof(DataPager), new PropertyMetadata(string.Empty));
 
-    /// <summary>The row of page numbers, gaps included - see <see cref="PagerPageItem"/>. Rebuilt whenever the page or
-    /// the count moves.</summary>
+    /// <summary>The row of page numbers, gaps included - see <see cref="PagerPageItem"/>. One collection whose entries
+    /// change in place as the page or the count moves.</summary>
     public static readonly AdamantiumProperty PageItemsProperty = AdamantiumProperty.Register(nameof(PageItems),
         typeof(IReadOnlyList<PagerPageItem>), typeof(DataPager), new PropertyMetadata(null));
 
@@ -642,7 +643,7 @@ public class DataPager : Control
     {
         if (_paged?.PageCount is not { } pages || pages <= 0)
         {
-            PageItems = [];
+            ShowPageItems([]);
             return;
         }
 
@@ -653,7 +654,7 @@ public class DataPager : Control
         if (pages <= slots)
         {
             for (var page = 0; page < pages; page++) items.Add(Numbered(page, current));
-            PageItems = items;
+            ShowPageItems(items);
             return;
         }
 
@@ -680,7 +681,58 @@ public class DataPager : Control
         for (var page = from; page <= to; page++) items.Add(Numbered(page, current));
         if (trailing) items.Add(Gap(current + 1));
 
-        PageItems = items;
+        ShowPageItems(items);
+    }
+
+    private void ShowPageItems(List<PagerPageItem> items)
+    {
+        var focused = FocusManager.Focused is UIComponent { DataContext: PagerPageItem entry } && _pageItems.Contains(entry)
+            ? entry
+            : null;
+        var focusedText = focused?.Text;
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (i < _pageItems.Count)
+            {
+                _pageItems[i].Become(items[i]);
+            }
+            else
+            {
+                _pageItems.Add(items[i]);
+            }
+        }
+
+        while (_pageItems.Count > items.Count)
+        {
+            _pageItems.RemoveAt(_pageItems.Count - 1);
+        }
+
+        if (!ReferenceEquals(PageItems, _pageItems))
+        {
+            PageItems = _pageItems;
+        }
+
+        if (focused != null && focused.Text != focusedText)
+        {
+            FocusTheCurrentPage();
+        }
+    }
+
+    private void FocusTheCurrentPage()
+    {
+        if (_pageItems.FirstOrDefault(item => item.IsCurrent) is not { } current
+            || GetTemplateChild("NumbersGroup") is not ItemsControl numbers
+            || numbers.ItemContainerGenerator.ContainerFromIndex(_pageItems.IndexOf(current)) is not { } container)
+        {
+            return;
+        }
+
+        var button = container.GetVisualDescendants().OfType<IInputComponent>().FirstOrDefault(FocusManager.CanFocus);
+        if (button != null)
+        {
+            FocusManager.Return(button, FocusManager.IsFocusVisible);
+        }
     }
 
     private PagerPageItem Numbered(int pageIndex, int current) =>
@@ -742,7 +794,7 @@ public class DataPager : Control
             CanGoBack = false;
             CanGoForward = false;
             PageNumberText = string.Empty;
-            PageItems = [];
+            ShowPageItems([]);
             return;
         }
 

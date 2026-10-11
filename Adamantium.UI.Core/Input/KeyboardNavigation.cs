@@ -155,8 +155,7 @@ public static class KeyboardNavigation
         if (target == null || ReferenceEquals(target, current))
             return false;
 
-        FocusManager.Focus(target, IsTabbing(direction) ? NavigationMethod.Tab : NavigationMethod.Directional);
-        return true;
+        return FocusManager.Focus(target, IsTabbing(direction) ? NavigationMethod.Tab : NavigationMethod.Directional);
     }
 
     /// <summary>Steps the focus to the next declared focus AREA (Ctrl+Tab), or the previous one (Ctrl+Shift+Tab). It
@@ -297,6 +296,12 @@ public static class KeyboardNavigation
         if (!ReferenceEquals(RootOf(FocusManager.Focused), sender))
             return;
 
+        if (IsTabbing(direction.Value) && IsStop(FocusManager.Focused, direction.Value) && FocusManager.Reveal())
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (Move(direction.Value))
             e.Handled = true;
     }
@@ -407,6 +412,14 @@ public static class KeyboardNavigation
         if (node == null || node.Visibility != Visibility.Visible)
             return null;
 
+        if (IsTabbing(direction) && GetTabNavigation(node) == KeyboardNavigationMode.Once
+            && node is IKeyboardEntry entry && entry.KeyboardEntry() is { } chosen)
+        {
+            return !ReferenceEquals(chosen, node) && RememberedStop(node, direction) is { } inside && IsWithin(inside, chosen)
+                ? inside
+                : chosen;
+        }
+
         if (RememberedStop(node, direction) is { } remembered)
             return remembered;
 
@@ -458,6 +471,19 @@ public static class KeyboardNavigation
             ordered.Add(c);
 
         return ordered;
+    }
+
+    private static bool IsWithin(IUIComponent node, IInputComponent container)
+    {
+        for (; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, container))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsStop(IUIComponent node, FocusNavigationDirection direction) =>

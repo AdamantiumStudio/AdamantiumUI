@@ -353,6 +353,46 @@ public class DataPagerTests
         Assert.That(pager.PageIndex, Is.EqualTo(11));
     }
 
+    /// <summary>The row's entries change in place as the page moves: a button showing one is not rebuilt, and the focus a
+    /// click put on it survives the click. Rebuilt, the clicked button left the tree and took the focus with it, and the
+    /// next Tab started again from the top of the window.</summary>
+    [Test]
+    public void TurningThePage_ChangesTheRowInPlace()
+    {
+        var pager = Pager(20, 0);
+        var row = pager.PageItems;
+        var second = row[1];
+
+        second.Command.Execute();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pager.PageItems, Is.SameAs(row), "the same row");
+            Assert.That(pager.PageItems[1], Is.SameAs(second), "the same entry");
+            Assert.That(second.IsCurrent, Is.True, "now marking the page it turned to");
+        });
+    }
+
+    /// <summary>A gap clicked stays a gap, but its button was checked by the click: the entry says again that it is not
+    /// the current page, or two buttons in the row stayed marked.</summary>
+    [Test]
+    public void AClickedGap_SaysAgainItIsNotTheCurrentPage()
+    {
+        var pager = Pager(20, 0);
+        var gap = pager.PageItems[^1];
+        var told = false;
+        gap.PropertyChanged += (_, e) => told |= e.PropertyName == nameof(PagerPageItem.IsCurrent);
+
+        gap.Command.Execute();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pager.PageItems[^1], Is.SameAs(gap));
+            Assert.That(gap.IsCurrent, Is.False);
+            Assert.That(told, Is.True);
+        });
+    }
+
     /// <summary>Over a source that cannot count there are no numbers to draw - the arrows and the box are the whole
     /// pager until a short page reveals the end.</summary>
     [Test]

@@ -107,6 +107,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
             new RoutedEventHandler(GotKeyboardFocusWithinHandler));
         Keyboard.LostKeyboardFocusWithinEvent.RegisterClassHandler<IInputComponent>(
             new RoutedEventHandler(LostKeyboardFocusWithinHandler));
+        FocusManager.FocusRevealedEvent.RegisterClassHandler<IInputComponent>(new RoutedEventHandler(FocusRevealedHandler));
         Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(KeyDownHandler));
         Keyboard.KeyUpEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(KeyUpHandler));
         Keyboard.PreviewKeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(PreviewKeyDownHandler));
@@ -754,6 +755,20 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         ui.IsFocusVisible = false;
     }
 
+    private static void FocusRevealedHandler(object sender, RoutedEventArgs e)
+    {
+        if (sender is not InputUIComponent ui)
+        {
+            return;
+        }
+
+        ui.IsFocusVisible = true;
+        if (ui.IsFocused)
+        {
+            ui.ShowFocusRing();
+        }
+    }
+
     private static void MouseEnterHandler(object sender, MouseEventArgs e)
     {
         if (sender is InputUIComponent ui && !ui.IsMouseOver)
@@ -1253,8 +1268,16 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         IsFocused = e.OriginalSource == this;
         if (IsFocused && FocusManager.IsFocusVisible)
         {
-            AdornerHost()?.AdornerLayer.SetFocus(FocusVisualOwner());
-            // Keyboard only: scrolling under a click would move the target from under the cursor.
+            ShowFocusRing();
+        }
+    }
+
+    private void ShowFocusRing()
+    {
+        AdornerHost()?.AdornerLayer.SetFocus(FocusVisualOwner());
+        // Keyboard only: scrolling under a click would move the target from under the cursor.
+        if (!FocusManager.IsReturning)
+        {
             (FocusVisualOwner() as UIComponent)?.BringIntoView();
         }
     }
@@ -1262,7 +1285,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     private InputUIComponent FocusVisualOwner()
     {
         var owner = this;
-        while (owner.TemplatedParent is InputUIComponent templated && HasOneStop(templated))
+        while (owner.TemplatedParent is TemplatedUIComponent templated && HasOneStop(templated))
         {
             owner = templated;
         }

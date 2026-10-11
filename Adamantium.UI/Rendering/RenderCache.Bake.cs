@@ -1019,26 +1019,27 @@ public partial class RenderCache
         return result;
     }
 
-    // An adorner's clip comes only from ancestors with IUIComponent.ClipsAdorners, not every ClipToBounds box; not
-    // memoized, adorners are few.
     private Rect? AdornerClip(IUIComponent node, IUIComponent adorner)
     {
-        // The viewport is widened by what the adorner is entitled to draw outside its target: otherwise a control
-        // standing flush against the edge of a scroll area wears a shaved ring, which is exactly what the standoff
-        // exists to avoid. Bounded by the standoff itself, so a row scrolled further than that is still cut.
         var standoff = (adorner as Controls.Adorners.Adorner)?.ClipStandoff ?? 0;
+        var reach = standoff > 0
+            ? new Rect(-standoff, -standoff, standoff * 2, standoff * 2).TransformToAABB(World(adorner))
+            : default;
 
         Rect? result = null;
         for (var n = node; n != null; n = ApplySnap(n).RenderParent)
         {
             var s = ApplySnap(n);
-            if (!s.ClipToBounds || !n.ClipsAdorners) continue;
+            if (!s.ClipToBounds || !n.ClipsAdorners)
+            {
+                continue;
+            }
 
             var rect = new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height).TransformToAABB(World(n));
             if (standoff > 0)
             {
-                rect = new Rect(rect.X - standoff, rect.Y - standoff,
-                    rect.Width + standoff * 2, rect.Height + standoff * 2);
+                rect = new Rect(rect.X - reach.Width / 2, rect.Y - reach.Height / 2,
+                    rect.Width + reach.Width, rect.Height + reach.Height);
             }
 
             result = result is { } r ? r.Intersect(rect) : rect;

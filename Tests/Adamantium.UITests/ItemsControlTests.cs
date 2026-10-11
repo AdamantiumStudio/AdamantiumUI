@@ -4,12 +4,14 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
@@ -254,6 +256,228 @@ public class ItemsControlTests
             Assert.That(gen.RealizedCount, Is.LessThan(60), "window stays bounded after scrolling");
             Assert.That(realized, Has.Some.InRange(248, 252), "window now centered near item 250");
             Assert.That(gen.ContainerFromIndex(0), Is.Null, "the top is recycled away after scrolling");
+        });
+    }
+
+    private static void ScrollTo(ItemsControl list, double offset)
+    {
+        var panel = list.ItemsHostPanel;
+        ((IScrollableContent)panel).SetOffset(new Vector2(0, offset));
+        panel.Measure(new Size(100, 300), true);
+        panel.Arrange(new Rect(0, 0, 100, 300), true);
+    }
+
+    // The keyboard place in a long list is the ITEM. Scrolled away, its container is handed to another item and the
+    // ring rode along onto that row; scrolled back, the ring returns to whichever container shows the item now.
+    [Test]
+    public void AFocusedRowScrolledAway_LeavesTheFocusWithTheList_AndTakesItBackWhenItReturns()
+    {
+        var list = new ListBox
+        {
+            ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Height = 20 } }),
+            ItemsSource = Enumerable.Range(0, 1000).Cast<object>().ToList(),
+            Template = ItemsPresenterTemplate()
+        };
+        list.Measure(new Size(100, 300));
+        list.Arrange(new Rect(0, 0, 100, 300));
+        var generator = list.ItemContainerGenerator;
+        var first = (ListBoxItem)generator.ContainerFromIndex(0);
+        FocusManager.Focus(first);
+        Assume.That(first.IsFocused, Is.True);
+
+        ScrollTo(list, 5000);
+        Assert.Multiple(() =>
+        {
+            Assert.That(generator.ContainerFromIndex(0), Is.Null, "the first row went out of the window");
+            Assert.That(FocusManager.Focused, Is.SameAs(list), "the list holds the keyboard while its row has no container");
+        });
+
+        ScrollTo(list, 0);
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(generator.ContainerFromIndex(0)), "the row is back, and so is its focus");
+            Assert.That(FocusManager.IsFocusVisible, Is.False, "a row focused without the keyboard came back wearing its ring");
+        });
+    }
+
+    private sealed class PlaceableList : ListBox
+    {
+        public void PutKeyboardOn(int index) => KeyboardIndex = index;
+    }
+
+    private static T LongList<T>(System.Collections.IEnumerable items, Func<IUIComponent> row = null) where T : ListBox, new()
+    {
+        row ??= () => new Border { Height = 20 };
+        var containerStyle = new Style { Selector = new StyleSelector { Types = { typeof(ListBoxItem) } } };
+        containerStyle.Setters.Add(new Setter("Template", ListBoxItemChromeTemplate()));
+        var list = new T
+        {
+            ItemContainerStyle = containerStyle,
+            ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = row() }),
+            ItemsSource = items,
+            Template = ItemsPresenterTemplate()
+        };
+        list.Measure(new Size(100, 300));
+        list.Arrange(new Rect(0, 0, 100, 300));
+        return list;
+    }
+
+    // Rows equal by value are still different rows: the one scrolled in is not the one the keyboard is on.
+    [Test]
+    public void ARowEqualToTheFocusedOne_DoesNotTakeItsFocus()
+    {
+        var list = LongList<ListBox>(Enumerable.Repeat("same", 1000).ToList());
+        var first = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(0);
+        FocusManager.Focus(first);
+
+        ScrollTo(list, 5000);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(list), "a row holding an equal item took the focus of the one scrolled away");
+    }
+
+    // The keyboard place moves with the items: an item inserted above it does not hand the focus to its neighbor.
+    [Test]
+    public void TheKeyboardPlace_MovesWithAnInsertAboveIt()
+    {
+        var items = new ObservableCollection<object>(Enumerable.Range(0, 1000).Cast<object>());
+        var list = LongList<ListBox>(items);
+        var generator = list.ItemContainerGenerator;
+        FocusManager.Focus((ListBoxItem)generator.ContainerFromIndex(0));
+
+        items.Insert(0, -1);
+        ScrollTo(list, 5000);
+        ScrollTo(list, 0);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(generator.ContainerFromIndex(1)), "the focus went back to the old index");
+    }
+
+    // Only a focused ROW gives its focus to the list. A focus inside one - an editor in a cell - is left alone: taking it
+    // away commits the edit, and the row is gone by then.
+    [Test]
+    public void AFocusInsideARow_IsNotTakenByTheList()
+    {
+        var list = LongList<ListBox>(Enumerable.Range(0, 1000).Cast<object>().ToList(), () => new Button { Height = 20 });
+        var inner = Descendants((IUIComponent)list.ItemContainerGenerator.ContainerFromIndex(0)).OfType<Button>().First();
+        FocusManager.Focus(inner);
+
+        ScrollTo(list, 5000);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(inner));
+    }
+
+    // The keyboard jumps to a row not built yet while the row it left stays in the window: the focus follows it there,
+    // instead of staying on the old row while the place has moved on.
+    [Test]
+    public void AJumpToARowNotBuiltYet_TakesTheFocusFromTheRowItLeft()
+    {
+        var list = LongList<PlaceableList>(Enumerable.Range(0, 1000).Cast<object>().ToList());
+        var generator = list.ItemContainerGenerator;
+        FocusManager.Focus((ListBoxItem)generator.ContainerFromIndex(10));
+        Assume.That(generator.ContainerFromIndex(20), Is.Null, "the target row is not built yet");
+
+        list.PutKeyboardOn(20);
+        ScrollTo(list, 200);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(generator.ContainerFromIndex(10), Is.Not.Null, "the row it left is still in the window");
+            Assert.That(FocusManager.Focused, Is.SameAs(generator.ContainerFromIndex(20)));
+        });
+    }
+
+    // Tab enters a list at the row the keyboard is on. It entered at the container last focused, which by then showed
+    // some other row - a "random" row each time the list had been scrolled.
+    [Test]
+    public void TabIntoTheList_EntersAtTheKeyboardRow_NotAtAContainerShowingAnotherRow()
+    {
+        var list = LongList<ListBox>(Enumerable.Range(0, 1000).Cast<object>().ToList());
+        list.Height = 300;
+        var before = new Button { Width = 40, Height = 20 };
+        var root = new StackPanel();
+        root.Children.Add(before);
+        root.Children.Add(list);
+        root.Measure(new Size(100, 400));
+        root.Arrange(new Rect(0, 0, 100, 400));
+        var generator = list.ItemContainerGenerator;
+        FocusManager.Focus((ListBoxItem)generator.ContainerFromIndex(3));
+        FocusManager.Focus(before, NavigationMethod.Tab);
+
+        ScrollTo(list, 5000);
+        Assume.That(generator.ContainerFromIndex(3), Is.Null, "the keyboard row went out of the window");
+        KeyboardNavigation.Move(FocusNavigationDirection.Next);
+        Assert.That(FocusManager.Focused, Is.SameAs(list), "the row is out of the window, so the list holds the place");
+
+        ScrollTo(list, 0);
+        Assert.That(FocusManager.Focused, Is.SameAs(generator.ContainerFromIndex(3)), "and hands it to the row as it comes in");
+    }
+
+    private static (StackPanel Root, Button Before, Button After) AroundAList(ListBox list)
+    {
+        list.Height = 300;
+        var before = new Button { Width = 40, Height = 20 };
+        var after = new Button { Width = 40, Height = 20 };
+        var root = new StackPanel();
+        root.Children.Add(before);
+        root.Children.Add(list);
+        root.Children.Add(after);
+        root.Measure(new Size(100, 400));
+        root.Arrange(new Rect(0, 0, 100, 400));
+        return (root, before, after);
+    }
+
+    // A list that cannot take the focus is no wall. Its entry named the list anyway, the focus was refused, the key was
+    // spent - and every Tab stopped in front of it.
+    [Test]
+    public void TabIsNotStoppedByAListThatCannotTakeTheFocus()
+    {
+        var list = LongList<ListBox>(Enumerable.Range(0, 1000).Cast<object>().ToList());
+        var (_, before, _) = AroundAList(list);
+        FocusManager.Focus((ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(3));
+        FocusManager.Focus(before, NavigationMethod.Tab);
+        ScrollTo(list, 5000);
+        list.IsEnabled = false;
+
+        var moved = KeyboardNavigation.Move(FocusNavigationDirection.Next);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.Not.SameAs(before), "the Tab went nowhere");
+            Assert.That(moved, Is.True);
+        });
+    }
+
+    // Coming back into a list lands where the keyboard was inside its row - a field in it - not on the row around it.
+    [Test]
+    public void TabBackIntoAList_LandsOnTheFieldInTheRowItLeft()
+    {
+        var list = LongList<ListBox>(Enumerable.Range(0, 1000).Cast<object>().ToList(), () => new Button { Height = 20 });
+        var (_, before, _) = AroundAList(list);
+        var field = Descendants((IUIComponent)list.ItemContainerGenerator.ContainerFromIndex(0)).OfType<Button>().First();
+        FocusManager.Focus(field, NavigationMethod.Tab);
+        FocusManager.Focus(before, NavigationMethod.Tab);
+
+        KeyboardNavigation.Move(FocusNavigationDirection.Next);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
+    // Whether the ring comes back is decided by how the focus last came to the list, not by how it once left a row.
+    [Test]
+    public void AListClickedAfterItsRowLeft_BringsTheRowBackWithoutTheRing()
+    {
+        var list = LongList<ListBox>(Enumerable.Range(0, 1000).Cast<object>().ToList());
+        var generator = list.ItemContainerGenerator;
+        FocusManager.Focus((ListBoxItem)generator.ContainerFromIndex(0), NavigationMethod.Directional);
+
+        ScrollTo(list, 5000);
+        FocusManager.Focus(new Button(), NavigationMethod.Mouse);
+        FocusManager.Focus(list, NavigationMethod.Mouse);
+        ScrollTo(list, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(generator.ContainerFromIndex(0)));
+            Assert.That(FocusManager.IsFocusVisible, Is.False, "a list taken by the mouse brought its row back with a ring");
         });
     }
 
