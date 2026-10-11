@@ -405,7 +405,7 @@
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                                     Value="{ThemeResource AccentForegroundColor}"/>
                         </PropertyTrigger>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="StripBg" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                         </PropertyTrigger>
@@ -441,7 +441,7 @@
                             <Setter TargetName="Sign" Property="Text" Value=""/>
                             <Setter Property="Cursor" Value="Arrow"/>
                         </PropertyTrigger>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="ToggleBg" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                         </PropertyTrigger>
@@ -783,7 +783,7 @@
                     </Border>
 
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="ChipBg" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                         </PropertyTrigger>
@@ -793,7 +793,7 @@
                             <Setter TargetName="ChipBg" Property="Opacity" Value="0.6"/>
                         </PropertyTrigger>
                         <!-- The × lights up under the pointer, or nothing says it is a button rather than a mark. -->
-                        <PropertyTrigger SourceName="PART_Remove" Property="IsMouseOver" Value="true">
+                        <PropertyTrigger SourceName="PART_Remove" Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Remove" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                             <Setter TargetName="RemoveGlyph" Property="Foreground"
@@ -900,7 +900,7 @@
                         <PropertyTrigger Property="IsDescending" Value="true">
                             <Setter TargetName="DirectionGlyph" Property="Text" Value="↓"/>
                         </PropertyTrigger>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="ChipBg" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                         </PropertyTrigger>
@@ -909,7 +909,7 @@
                         <PropertyTrigger Property="IsDragging" Value="true">
                             <Setter TargetName="ChipBg" Property="Opacity" Value="0.6"/>
                         </PropertyTrigger>
-                        <PropertyTrigger SourceName="PART_Remove" Property="IsMouseOver" Value="true">
+                        <PropertyTrigger SourceName="PART_Remove" Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Remove" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                             <Setter TargetName="RemoveGlyph" Property="Foreground"

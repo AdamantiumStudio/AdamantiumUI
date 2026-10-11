@@ -62,7 +62,7 @@ public class ElementTool : ICanvasTool
         _from = e.World;
         _box = new Rect(_from.X, _from.Y, 0, 0);
 
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         e.Handled = true;
     }
 
@@ -81,7 +81,7 @@ public class ElementTool : ICanvasTool
 
         var box = Between(_from, e.World);
         _box = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
 
         var element = _make();
         if (element == null)
@@ -125,7 +125,7 @@ public class ElementTool : ICanvasTool
         if (_box == null) return;
 
         _box = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         canvas.Repaint();
     }
 

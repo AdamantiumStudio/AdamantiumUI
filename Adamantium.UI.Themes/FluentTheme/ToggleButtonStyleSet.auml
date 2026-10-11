@@ -59,7 +59,7 @@
     </Style>
 
     <Style Selector="ToggleButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsChecked" Value="true">
@@ -68,13 +68,13 @@
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundChecked}"/>
         </PropertyTrigger>
         <!-- Checked + hover: dim the accent a notch (Fluent's checked PointerOver). Declared after IsChecked so it lands
-             ON TOP of the trigger value stack while active - without it, the plain IsMouseOver trigger above painted the
+             ON TOP of the trigger value stack while active - without it, the plain IsPointerOver trigger above painted the
              neutral pointer-over fill over the accent, leaving a checked toggle a blank box with only its accent border
              (glaring on the light theme, where the neutral fill is near-white and the accent foreground vanished). -->
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="IsChecked" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundCheckedPointerOver}"/>
             <Setter TargetName="InnerBorder" Property="BorderBrush" Value="{TemplateBinding BackgroundCheckedPointerOver}"/>

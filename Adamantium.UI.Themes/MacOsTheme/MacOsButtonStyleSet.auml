@@ -55,7 +55,7 @@
     </Style>
 
     <Style Selector="Button">
-        <!-- No IsMouseOver trigger at all. The brush above already says hover changes nothing; a trigger that assigns
+        <!-- No IsPointerOver trigger at all. The brush above already says hover changes nothing; a trigger that assigns
              the same value would only invite someone to "fix" it later by giving it a different one. -->
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
@@ -99,7 +99,7 @@
          plain button's trigger block states its absence as a decision - adding one there would contradict the sentence
          written beside it. -->
     <Style Selector="Button.Icon">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>

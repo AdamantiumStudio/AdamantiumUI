@@ -62,8 +62,8 @@ public class TilesHost : ItemsControl
 
     public TilesHost()
     {
-        MouseMove += OnHostMouseMove;
-        MouseLeave += OnHostMouseLeave;
+        PointerMoved += OnHostPointerMoved;
+        PointerExited += OnHostPointerExited;
     }
 
     // Re-assign fragments after each layout pass so tiles realized while scrolling get their UVs; render-only writes, so
@@ -249,7 +249,7 @@ public class TilesHost : ItemsControl
 
     // --- Tilt field -----------------------------------------------------------------------------------------------
 
-    private void OnHostMouseMove(object sender, MouseEventArgs e)
+    private void OnHostPointerMoved(object sender, PointerEventArgs e)
     {
         var cursor = e.GetPosition(this);
         var maxAngle = TiltMaxAngle;
@@ -269,7 +269,7 @@ public class TilesHost : ItemsControl
         }
     }
 
-    private void OnHostMouseLeave(object sender, MouseEventArgs e)
+    private void OnHostPointerExited(object sender, PointerEventArgs e)
     {
         CollectTiles();
         foreach (var tile in _tiles)

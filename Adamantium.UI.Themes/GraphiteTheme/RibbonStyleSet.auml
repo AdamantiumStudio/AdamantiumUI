@@ -211,7 +211,7 @@
     </Style>
 
     <Style Selector="ToggleButton.RibbonMinimizeButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -273,7 +273,7 @@
     </Style>
 
     <Style Selector="RibbonTabHeader">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsSelected" Value="true">
@@ -719,7 +719,7 @@
     </Style>
 
     <Style Selector="RibbonGalleryItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsSelected" Value="true">
@@ -818,7 +818,7 @@
     </Style>
 
     <Style Selector="RibbonButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1100,7 +1100,7 @@
     </Style>
 
     <Style Selector="ToggleButton.RibbonFileTab">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1152,7 +1152,7 @@
     </Style>
 
     <Style Selector="Button.RibbonBackstageBack">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1227,7 +1227,7 @@
     </Style>
 
     <Style Selector="RibbonApplicationMenuItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1508,7 +1508,7 @@
         </PropertyTrigger>
         <MultiTrigger>
             <MultiTrigger.Conditions>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
                 <Condition Property="IsPointerOverDropDown" Value="false"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="ActionArea" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>

@@ -24,9 +24,9 @@ public class CanvasElementLayer : Panel
 
     public CanvasElementLayer()
     {
-        // Its OWN event, so there is nothing to let go of: MouseDown bubbles, which is what lets one handler here stand
+        // Its OWN event, so there is nothing to let go of: PointerPressed bubbles, which is what lets one handler here stand
         // for every node the layer will ever hold.
-        MouseDown += OnPressed;
+        PointerPressed += OnPressed;
     }
 
     /// <summary>Puts the layer's children in step with the items it should be showing. Cheap to call - it returns having
@@ -88,7 +88,7 @@ public class CanvasElementLayer : Panel
 
     // Decides whether a press on a node drags it or operates its content, before it bubbles to the canvas; the node says
     // which part is a handle. The right button is left alone.
-    private void OnPressed(object sender, MouseButtonEventArgs e)
+    private void OnPressed(object sender, PointerPressedEventArgs e)
     {
         if (e.Handled || Owner == null || e.ChangedButton != MouseButtons.Left) return;
         if (Node(e.OriginalSource) is not { } node) return;

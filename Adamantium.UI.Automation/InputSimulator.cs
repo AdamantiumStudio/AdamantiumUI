@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
@@ -19,12 +20,12 @@ internal static class InputSimulator
     {
         using var pointer = SimulatedPointer.Install();
         var (window, point) = HoverAt(element, label, local);
-        var (down, up, held) = button == MouseButtons.Right
-            ? (RawMouseEventType.RightButtonDown, RawMouseEventType.RightButtonUp, InputModifiers.RightMouseButton)
-            : (RawMouseEventType.LeftButtonDown, RawMouseEventType.LeftButtonUp, InputModifiers.LeftMouseButton);
+        var (changed, held) = button == MouseButtons.Right
+            ? (MouseButtons.Right, InputModifiers.RightMouseButton)
+            : (MouseButtons.Left, InputModifiers.LeftMouseButton);
 
-        Send(down, window, point, held);
-        Send(up, window, point, InputModifiers.None);
+        Send(RawPointerEventType.Down, window, point, held, changed);
+        Send(RawPointerEventType.Up, window, point, InputModifiers.None, changed);
     }
 
     public static void Hover(UIComponent element, string label) => Hover(element, label, Middle(element));
@@ -44,11 +45,10 @@ internal static class InputSimulator
         using var pointer = SimulatedPointer.Install();
         var (window, point) = HoverAt(element, label, Middle(element));
         var layout = LayoutManager.GetOrCreate((IUIComponent)window);
-        var device = MouseDevice.CurrentDevice;
         for (var i = 0; i < Math.Abs(notches); i++)
         {
-            device.ProcessEvent(new RawMouseWheelEventArgs(Math.Sign(notches) * notch, RawMouseEventType.MouseWheel,
-                (IInputComponent)window, point, InputModifiers.None, device, Now()));
+            PointerDevice.Current.ProcessEvent(new RawPointerWheelEventArgs(Math.Sign(notches) * notch,
+                (IInputComponent)window, point, InputModifiers.None, Now()));
             layout.ExecuteLayoutPass();
         }
     }
@@ -59,6 +59,121 @@ internal static class InputSimulator
         var (window, start) = HoverAt(element, label, from);
         Stroke(window, start, InWindow(element, to));
     }
+
+    public static void Tap(UIComponent element, string label, Contact contact) => Tap(element, label, Middle(element), contact);
+
+    /// <summary>A finger or a pen put down at <paramref name="local"/>, a point in the element's own units, and lifted.
+    /// </summary>
+    public static void Tap(UIComponent element, string label, Vector2 local, Contact contact)
+    {
+        var (window, point) = ContactAt(element, label, local);
+        Send(RawPointerEventType.Down, window, point, contact);
+        Send(RawPointerEventType.Up, window, point, contact);
+        OutOfRange(window, contact);
+    }
+
+    /// <summary>A finger or a pen put down at <paramref name="from"/>, drawn to <paramref name="to"/> and lifted, both in
+    /// the element's own units.</summary>
+    public static void Stroke(UIComponent element, string label, Vector2 from, Vector2 to, Contact contact)
+    {
+        const int steps = 8;
+        var (window, start) = ContactAt(element, label, from);
+        var end = InWindow(element, to);
+
+        Send(RawPointerEventType.Down, window, start, contact);
+        Send(RawPointerEventType.Move, window, LeadIn(start, end), contact);
+        for (var step = 1; step <= steps; step++)
+        {
+            Send(RawPointerEventType.Move, window, start + (end - start) * (step / (double)steps), contact);
+        }
+
+        Send(RawPointerEventType.Up, window, end, contact);
+        OutOfRange(window, contact);
+    }
+
+    /// <summary>A tap (no <paramref name="to"/>) or a stroke as desktop frames for the system's own input. Refused
+    /// unless the element is this application's and on top of the desktop where the contact lands: the system presses
+    /// whatever window is there, and that must never be someone else's.</summary>
+    public static (IWindow Window, SyntheticPointerFrame[] Frames) SystemFrames(UIComponent element, string label,
+        Vector2 from, Vector2? to, Contact contact)
+    {
+        const int steps = 8;
+        var (window, start) = ContactAt(element, label, from);
+        var landing = window.ClientToScreen(start);
+        var platform = UIApplication.Current?.Container is { } container && container.IsRegistered<IApplicationPlatform>()
+            ? container.Resolve<IApplicationPlatform>()
+            : null;
+        if (platform == null || platform.WindowFromScreenPoint(landing) != window.Handle)
+        {
+            throw new AutomationException(
+                $"{label} is not on top of the desktop at ({landing.X:0}, {landing.Y:0}): the system would press whatever is there.");
+        }
+
+        var points = new List<Vector2> { start };
+        if (to is { } local)
+        {
+            var end = InWindow(element, local);
+            points.Add(LeadIn(start, end));
+            for (var step = 1; step <= steps; step++)
+            {
+                points.Add(start + (end - start) * (step / (double)steps));
+            }
+        }
+
+        var frames = new List<SyntheticPointerFrame>();
+        for (var i = 0; i < points.Count; i++)
+        {
+            frames.Add(new SyntheticPointerFrame(i == 0 ? RawPointerEventType.Down : RawPointerEventType.Move,
+                window.ClientToScreen(points[i]), contact.Properties));
+        }
+
+        var last = window.ClientToScreen(points[^1]);
+        frames.Add(new SyntheticPointerFrame(RawPointerEventType.Up, last, contact.Properties));
+        if (contact.Type == PointerType.Pen)
+        {
+            frames.Add(new SyntheticPointerFrame(RawPointerEventType.LeaveWindow, last, contact.Properties));
+        }
+
+        return (window, [.. frames]);
+    }
+
+    // Where a contact lands, refused if something else is there: a finger has no hover to find out with first.
+    private static (IWindow Window, Vector2 Point) ContactAt(UIComponent element, string label, Vector2 local)
+    {
+        if (element.RootVisual is not IWindow window)
+        {
+            throw new AutomationException($"{label} is not in a window.");
+        }
+
+        var point = InWindow(element, local);
+        var over = PointerDevice.HitTestTopmost((IInputComponent)window, point, boundsForContent: true);
+        if (!IsWithin(over as IUIComponent, element))
+        {
+            throw new AutomationException(
+                $"{label} is covered at ({point.X:0}, {point.Y:0}) by {over?.GetType().Name ?? "nothing"}; the contact would not reach it.");
+        }
+
+        return (window, point);
+    }
+
+    // A pen goes out of range once it is lifted away; a finger is gone with its lift already.
+    private static void OutOfRange(IWindow window, Contact contact)
+    {
+        if (contact.Type == PointerType.Pen)
+        {
+            Send(RawPointerEventType.LeaveWindow, window, Vector2.Zero, contact);
+        }
+    }
+
+    // No button is named: which one a finger or a pen presses is the pointer device's to say.
+    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, Contact contact) =>
+        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, InputModifiers.None, Now())
+        {
+            PointerId = contact.Id,
+            PointerType = contact.Type,
+            IsPrimary = true,
+            Properties = contact.Properties with { IsLeftButtonPressed = type is RawPointerEventType.Down or RawPointerEventType.Move }
+        });
 
     /// <summary>Takes <paramref name="source"/> at <paramref name="from"/> and lets it go over <paramref name="at"/> of
     /// <paramref name="target"/> - a point that has to be on <paramref name="within"/> - as a hand carrying one onto
@@ -94,17 +209,17 @@ internal static class InputSimulator
             : window;
 
         var layout = LayoutManager.GetOrCreate(root);
-        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
-        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Down, window, start, InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             // A layout pass between moves, as a frame would come between them.
             layout.ExecuteLayoutPass();
             var point = start + (end - start) * (step / (double)steps);
-            Send(RawMouseEventType.MouseMove, window, point, InputModifiers.LeftMouseButton, Over(point));
+            Send(RawPointerEventType.Move, window, point, InputModifiers.LeftMouseButton, over: Over(point));
         }
 
-        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None, Over(end));
+        Send(RawPointerEventType.Up, window, end, InputModifiers.None, MouseButtons.Left, Over(end));
     }
 
     private static bool Holds(IWindow window, PixelPoint screen)
@@ -125,15 +240,15 @@ internal static class InputSimulator
     private static void Stroke(IWindow window, Vector2 start, Vector2 end)
     {
         const int steps = 8;
-        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
-        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Down, window, start, InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             var at = start + (end - start) * (step / (double)steps);
-            Send(RawMouseEventType.MouseMove, window, at, InputModifiers.LeftMouseButton);
+            Send(RawPointerEventType.Move, window, at, InputModifiers.LeftMouseButton);
         }
 
-        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
+        Send(RawPointerEventType.Up, window, end, InputModifiers.None, MouseButtons.Left);
     }
 
     /// <summary>Whether a pointer at <paramref name="local"/> of <paramref name="element"/> would be on
@@ -170,8 +285,8 @@ internal static class InputSimulator
         }
 
         var point = InWindow(element, local);
-        Send(RawMouseEventType.MouseMove, window, point, InputModifiers.None);
-        var over = MouseDevice.CurrentDevice.DirectlyOver;
+        Send(RawPointerEventType.Move, window, point, InputModifiers.None);
+        var over = Mouse.Pointer.DirectlyOver;
         if (!IsWithin(over, element))
         {
             throw new AutomationException(
@@ -271,19 +386,22 @@ internal static class InputSimulator
     }
 
     // The event goes to window; the pointer is over the window named, another one only while a captured gesture is over it.
-    private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers, IWindow over = null)
+    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, InputModifiers modifiers,
+        MouseButtons changed = MouseButtons.None, IWindow over = null)
     {
-        var device = MouseDevice.CurrentDevice;
         if (Mouse.Platform is SimulatedPointer pointer)
         {
             pointer.Position = window.PointToScreen(point);
             pointer.Window = over ?? window;
         }
 
-        device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
+        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, modifiers, Now())
+        {
+            ChangedButton = changed
+        });
     }
 
-    private static Vector2 Middle(UIComponent element) =>
+    public static Vector2 Middle(UIComponent element) =>
         new(element.RenderSize.Width / 2, element.RenderSize.Height / 2);
 
     private static Vector2 InWindow(UIComponent element, Vector2 local)

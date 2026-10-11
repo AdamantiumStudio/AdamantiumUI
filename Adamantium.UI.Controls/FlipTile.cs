@@ -129,10 +129,13 @@ public class FlipTile : Control
         _transform.BeginAnimation(Transform.RotationYProperty, new DoubleAnimation { From = fromY, To = 0, Duration = TimeSpan.FromSeconds(0.25), FillBehavior = FillBehavior.Stop });
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        Flip();
+        base.OnPointerPressed(e);
+        if (e.ChangedButton == MouseButtons.Left)
+        {
+            Flip();
+        }
     }
 
     /// <summary>Turns the tile over now, as a click does - not waiting its turn in a wave.</summary>

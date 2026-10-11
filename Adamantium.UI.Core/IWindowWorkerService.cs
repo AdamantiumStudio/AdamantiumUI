@@ -39,9 +39,15 @@ public interface IWindowWorkerService
 
     /// <summary>Acquire (true) or release (false) the OS-level mouse capture for this window, so a press-drag keeps
     /// receiving move/up even when the pointer leaves the window. Platform-specific (Win32 SetCapture/ReleaseCapture).
-    /// The shared logic that decides WHEN to call this lives in MouseDevice.SyncOsMouseCapture, so every platform gets
+    /// The shared logic that decides WHEN to call this lives in PointerDevice.SyncOsMouseCapture, so every platform gets
     /// the same behavior.</summary>
     public void SetMouseCapture(bool capture);
+
+    /// <summary>A desktop point to a point of the window's client area, both in physical pixels.</summary>
+    public PixelPoint ScreenToClient(PixelPoint screen);
+
+    /// <summary>A point of the window's client area to a desktop point, both in physical pixels.</summary>
+    public PixelPoint ClientToScreen(PixelPoint client);
 
     /// <summary>Enters or leaves relative mouse mode (hidden, centered cursor producing raw deltas); on leave the cursor
     /// reappears at <paramref name="restoreScreen"/>.</summary>

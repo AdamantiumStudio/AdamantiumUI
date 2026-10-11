@@ -94,11 +94,7 @@ public class RibbonDrawerTests
         Settle(window);
         Assert.That(drawer.IsOpen, Is.True, "precondition: the drawer is out");
 
-        ((IObservableComponent)outside).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        {
-            RoutedEvent = Mouse.PreviewMouseDownEvent
-        });
+        PointerInput.PreviewPress(outside);
         Settle(window);
 
         Assert.Multiple(() =>

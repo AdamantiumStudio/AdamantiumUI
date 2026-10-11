@@ -99,7 +99,7 @@ public class ScrollViewer : ContentControl
     // opt back in with Focusable="True" in its markup.
     public ScrollViewer()
     {
-        MouseWheel += OnMouseWheel;
+        PointerWheelChanged += OnWheel;
     }
 
     // How much of the viewport a page keeps: a page that moved the WHOLE height would leave the reader with no line in
@@ -375,7 +375,7 @@ public class ScrollViewer : ContentControl
             Math.Abs(p1.X - p0.X), Math.Abs(p1.Y - p0.Y)));
     }
 
-    private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, PointerWheelEventArgs e)
     {
         if (_presenter == null) return;
         var step = (e.Delta / 120.0) * WheelLinesPerNotch * LineStep;

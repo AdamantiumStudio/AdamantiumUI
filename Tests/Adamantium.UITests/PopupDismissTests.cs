@@ -43,11 +43,7 @@ public class PopupDismissTests
 
     private static void Press(IUIComponent target, Window window)
     {
-        ((IObservableComponent)target).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        {
-            RoutedEvent = Mouse.PreviewMouseDownEvent
-        });
+        PointerInput.PreviewPress((IInputComponent)target);
 
         Settle(window);
     }
@@ -109,11 +105,7 @@ public class PopupDismissTests
     // What the mouse does: the press is raised on what was hit, and its route ends at the root of the overlay it is in.
     private static void PressOn(IUIComponent pressed, Window window)
     {
-        ((IObservableComponent)pressed).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        {
-            RoutedEvent = Mouse.PreviewMouseDownEvent
-        });
+        PointerInput.PreviewPress((IInputComponent)pressed);
 
         Settle(window);
     }

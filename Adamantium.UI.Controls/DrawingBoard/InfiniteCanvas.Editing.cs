@@ -1035,7 +1035,7 @@ public partial class InfiniteCanvas
         canvas.Repaint();
     }
 
-    private void OnWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, PointerWheelEventArgs e)
     {
         if (!ZoomWithWheel || e.Handled) return;
 
@@ -1075,7 +1075,7 @@ public partial class InfiniteCanvas
             Environment.GetEnvironmentVariable("ADAM_CANVAS_PRESSCALLERS") == "1";
     }
 
-    private void OnPointerDown(object sender, MouseButtonEventArgs e)
+    private void OnPointerDown(object sender, PointerPressedEventArgs e)
     {
         if (PressLog == null)
         {
@@ -1156,9 +1156,11 @@ public partial class InfiniteCanvas
         }
     }
 
-    private void PointerDown(object sender, MouseButtonEventArgs e)
+    private void PointerDown(object sender, PointerPressedEventArgs e)
     {
         if (e.Handled) return;
+
+        _activePointer = e.Pointer;
 
         // ONE STEP per gesture: a press is where a change begins and the release is where it ends, so dragging ten
         // things across the plane is one thing to undo. Opened before the tool is asked anything.
@@ -1223,7 +1225,7 @@ public partial class InfiniteCanvas
             _panFrom = e.GetPosition(this);
             _panOffsetFrom = Offset;
 
-            CaptureMouse();
+            e.Pointer.Capture(this);
             e.Handled = true;
             return;
         }
@@ -1247,7 +1249,7 @@ public partial class InfiniteCanvas
             {
                 BeginEdit("Reshape");
                 _draggingPoint = point;
-                CaptureMouse();
+                e.Pointer.Capture(this);
 
                 e.Handled = true;
                 return;
@@ -1257,7 +1259,7 @@ public partial class InfiniteCanvas
             if (handle is not (CanvasHandle.None or CanvasHandle.Body))
             {
                 _frame.Begin(this, handle, InShapeSpace(ScreenToWorld(at)));
-                CaptureMouse();
+                e.Pointer.Capture(this);
 
                 e.Handled = true;
                 return;
@@ -1271,8 +1273,22 @@ public partial class InfiniteCanvas
         if (args.Handled) e.Handled = true;
     }
 
-    private void OnPointerMove(object sender, MouseEventArgs e)
+    /// <summary>Holds the pointer that is working the canvas, so a tool's drag keeps its moves and its release when the
+    /// pointer leaves the canvas.</summary>
+    public void CapturePointer() => _activePointer?.Capture(this);
+
+    /// <summary>Lets go of the pointer working the canvas, if the canvas holds it.</summary>
+    public void ReleasePointer()
     {
+        if (_activePointer != null && ReferenceEquals(_activePointer.Captured, this))
+        {
+            _activePointer.Capture(null);
+        }
+    }
+
+    private void OnPointerMove(object sender, PointerEventArgs e)
+    {
+        _activePointer = e.Pointer;
         if (_panning)
         {
             // From where the drag STARTED, not from the last move: accumulating deltas drifts, and the camera has
@@ -1380,7 +1396,7 @@ public partial class InfiniteCanvas
         return null;
     }
 
-    private void OnPointerLeft(object sender, MouseEventArgs e)
+    private void OnPointerLeft(object sender, PointerEventArgs e)
     {
         var had = _snap != null || _pointerInside;
 
@@ -1390,8 +1406,10 @@ public partial class InfiniteCanvas
         if (had) Repaint();
     }
 
-    private void OnPointerUp(object sender, MouseButtonEventArgs e)
+    private void OnPointerUp(object sender, PointerReleasedEventArgs e)
     {
+        _activePointer = e.Pointer;
+
         // The step the press opened is closed HERE whatever the release turns out to mean. A gesture that changed
         // nothing records nothing.
         try
@@ -1399,7 +1417,7 @@ public partial class InfiniteCanvas
             if (_draggingPoint >= 0)
             {
                 _draggingPoint = -1;
-                ReleaseMouseCapture();
+                e.Pointer.Capture(null);
                 e.Handled = true;
                 return;
             }
@@ -1407,7 +1425,7 @@ public partial class InfiniteCanvas
             if (_panning)
             {
                 _panning = false;
-                ReleaseMouseCapture();
+                e.Pointer.Capture(null);
 
                 // When the gesture ends, not while it runs: a pan raises the camera on every mouse move.
                 RememberLayout();
@@ -1418,13 +1436,13 @@ public partial class InfiniteCanvas
             if (_frame.IsActive)
             {
                 _frame.End();
-                ReleaseMouseCapture();
+                e.Pointer.Capture(null);
 
                 e.Handled = true;
                 return;
             }
 
-            var args = Describe(e.GetPosition(this), e.ChangedButton, e.ClickCount, e.Modifiers);
+            var args = Describe(e.GetPosition(this), e.ChangedButton, 1, e.Modifiers);
             Tool?.OnReleased(this, args);
             if (args.Handled) e.Handled = true;
         }

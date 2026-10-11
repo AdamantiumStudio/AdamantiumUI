@@ -71,7 +71,7 @@ public class PenTool : ICanvasTool
         _drawing = new StrokeItem(e.World, canvas.Ink.Copy(), canvas.ScreenToWorldLength(canvas.InkThickness));
         _drawing.Add(e.World);
 
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         canvas.Repaint();
         e.Handled = true;
     }
@@ -122,7 +122,7 @@ public class PenTool : ICanvasTool
         // moved without anyone seeing it, and how far apart the points of a finished stroke need to be to read as smooth.
         finished.Smooth(canvas.ScreenToWorldLength(0.6), canvas.ScreenToWorldLength(4));
 
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         canvas.Place(finished);
         canvas.Repaint();
 

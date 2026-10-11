@@ -100,8 +100,8 @@ public class CanvasNode : ContentControl
         Rebuild(_inputs, Inputs, true);
         Rebuild(_outputs, Outputs, false);
 
-        MouseDown += OnGripPressed;
-        MouseUp += OnGripReleased;
+        PointerPressed += OnGripPressed;
+        PointerReleased += OnGripReleased;
     }
 
     // THE MOVE BEING SHOWN, while the grip is held. None of it is a change to the node: the held row is drawn where
@@ -123,8 +123,8 @@ public class CanvasNode : ContentControl
     private const double SlideSeconds = 0.12;
 
     /// <summary>A press on a socket's grip starts moving the socket (the pin itself pulls wires). Taken on bubbling
-    /// MouseDown so the canvas never sees it and does not drag the node.</summary>
-    private void OnGripPressed(object sender, MouseButtonEventArgs e)
+    /// PointerPressed so the canvas never sees it and does not drag the node.</summary>
+    private void OnGripPressed(object sender, PointerPressedEventArgs e)
     {
         if (e.ChangedButton != MouseButtons.Left) return;
         if (Grip(e.OriginalSource as IUIComponent) is not { } held) return;
@@ -146,7 +146,7 @@ public class CanvasNode : ContentControl
         Smooth(_rows[from], false);
         Raise(_rows[from], true);
 
-        CaptureMouse();
+        e.Pointer.Capture(this);
         e.Handled = true;
     }
 
@@ -224,9 +224,9 @@ public class CanvasNode : ContentControl
     /// passed step aside by exactly one row, and the gap left under the pointer is the place the socket will take.
     /// Nothing crosses to the other side - that would be a change of direction, which a drag along an edge cannot
     /// mean.</summary>
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
+        base.OnPointerMoved(e);
 
         if (_moving == null) return;
 
@@ -289,7 +289,7 @@ public class CanvasNode : ContentControl
     /// <summary>Letting go settles the held row into the gap that was made for it, and only THEN is the move a fact:
     /// what the sockets are belongs to whoever handed them over, and until they have moved one, everything on screen is
     /// a picture of a move.</summary>
-    private void OnGripReleased(object sender, MouseButtonEventArgs e)
+    private void OnGripReleased(object sender, PointerReleasedEventArgs e)
     {
         if (_moving == null || e.ChangedButton != MouseButtons.Left) return;
 
@@ -305,7 +305,7 @@ public class CanvasNode : ContentControl
         _rows.Clear();
         _aside.Clear();
 
-        ReleaseMouseCapture();
+        e.Pointer.Capture(null);
         e.Handled = true;
 
         Raise(held, false);

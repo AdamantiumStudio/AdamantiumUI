@@ -101,6 +101,54 @@ public class AutomationDriverTests
     }
 
     [Test]
+    public async Task ATap_AndAPenTap_PressAButton()
+    {
+        var clicked = 0;
+        var save = new Button { Name = "Save", Content = "Save", Width = 120, Height = 32 };
+        save.Click += (_, _) => clicked++;
+        await using var session = await Driving(save);
+
+        await session.Find(By.Id("Save")).TapAsync();
+        await session.Find(By.Id("Save")).PenTapAsync(pressure: 0.9f);
+
+        Assert.That(clicked, Is.EqualTo(2));
+    }
+
+    // Handing a contact to the system needs the platform's own pointer input. Where there is none - a host with no
+    // platform behind it - the command says so instead of pressing nothing and calling it done.
+    [Test]
+    public async Task ATapThroughTheSystem_WithNoPlatformInput_IsRefused()
+    {
+        var clicked = 0;
+        var save = new Button { Name = "Save", Content = "Save", Width = 120, Height = 32 };
+        save.Click += (_, _) => clicked++;
+        await using var session = await Driving(save);
+
+        var refusal = Assert.ThrowsAsync<AutomationException>(() => session.Find(By.Id("Save")).TapAsync(throughSystem: true));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(refusal.Message, Does.Contain("no synthetic pointer input"));
+            Assert.That(clicked, Is.Zero);
+        });
+    }
+
+    // The pen's side button held as the tip touches is the right button: a press, but not a click.
+    [Test]
+    public async Task APenTap_WithItsSideButton_PressesTheRightButton()
+    {
+        var pressed = MouseButtons.None;
+        var pad = new ContentControl { Name = "Pad", Width = 120, Height = 60, Background = Adamantium.UI.Core.Media.Brushes.Gray };
+        pad.AddHandler(PointerEvents.PointerPressedEvent,
+            new PointerPressedEventHandler((_, e) => pressed = e.ChangedButton), handledEventsToo: true);
+        await using var session = await Driving(pad);
+
+        await session.Find(By.Id("Pad")).PenTapAsync(barrel: true);
+
+        Assert.That(pressed, Is.EqualTo(MouseButtons.Right));
+    }
+
+    [Test]
     public async Task Type_PutsTheTextInTheBox()
     {
         var box = new TextBox { Name = "Search", Width = 200 };
@@ -196,17 +244,19 @@ public class AutomationDriverTests
         var seen = new System.Collections.Generic.List<string>();
         var held = false;
         var moves = 0;
-        pad.AddHandler(InputUIComponent.MouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
+        pad.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler((_, e) =>
         {
+            if (e.ChangedButton != MouseButtons.Left) return;
             held = true;
             seen.Add(At("down", e.GetPosition(pad)));
         }), handledEventsToo: true);
-        pad.AddHandler(InputUIComponent.MouseLeftButtonUpEvent, new MouseButtonEventHandler((_, e) =>
+        pad.AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler((_, e) =>
         {
+            if (e.ChangedButton != MouseButtons.Left) return;
             held = false;
             seen.Add(At("up", e.GetPosition(pad)));
         }), handledEventsToo: true);
-        pad.MouseMove += (_, _) =>
+        pad.PointerMoved += (_, _) =>
         {
             if (held) moves++;
         };

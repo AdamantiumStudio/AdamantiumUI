@@ -29,9 +29,38 @@ All packages share one version.
 - `VisualTreeNotifications.PaintMirrored`: an element's opacity changed while the render thread draws it - nothing on
   screen needs a re-paint, but a copy baked elsewhere (a visual brush) does.
 
+- Touch and pen on Windows. A window reads `WM_POINTER` messages for a finger or a pen into pointer events: position,
+  contact, primary, pressure, tilt, rotation, eraser and side button, and a finger's contact area. A gesture the system
+  cancels arrives as `PointerCanceled`. A finger no longer reaches the application as the mouse the system used to
+  make of it. The mouse and a touchpad still come as mouse messages.
+
+- `ISyntheticPointerInput`: the platform's own synthetic pointer input, which hands a finger or a pen to the system as
+  `SyntheticPointerFrame`s. It is for checking a platform's pointer path, since the system presses whatever window is
+  on top of the desktop. Windows implements it with a synthetic pointer device.
+  - `adam-auto touch|pen ... --os` and `throughSystem: true` on the automation's touch and pen methods use it.
+  - The command refuses when the element's window is not on top where the contact lands.
+  - It waits until the contact's release has reached the window.
+
+- Touch and pen in automation, simulated inside the application as the mouse is:
+  - `adam-auto touch <selector> tap | drag <x1,y1> <x2,y2>`;
+  - `adam-auto pen <selector> tap | drag ... [--pressure <0..1>] [--barrel] [--eraser]`;
+  - `AutomationElement.TapAsync`, `TouchDragAsync`, `PenTapAsync` and `PenDragAsync`.
+
+  The sandbox's `Touch.adam` scenario taps and drags its buttons, list, text box, slider and context menu.
+
 - `Transform.ShiftX` and `ShiftY`: a move in units of the owner's own size (1 = its whole width or height), added to
   `TranslateX`/`TranslateY` for a render transform. The render thread composes it too, so an animation of it is
   composited: a band can travel a fraction of its card whatever size the card is.
+
+- Pointer input, one model for the mouse, a finger and a pen: `Pointer` (each with its own position, capture and element
+  under it, so two fingers drag two things at once), `PointerType`, `PointerPoint` and `PointerPointProperties` (buttons,
+  pressure, tilt, twist, eraser, barrel button, contact size), and the events of `PointerEvents`: `PointerPressed`,
+  `PointerReleased`, `PointerMoved`, `PointerEntered`, `PointerExited`, `PointerWheelChanged`, `GotPointerCapture`,
+  `PointerCaptureLost`, `PointerCanceled`, with `Preview` tunnels for press, release, move and wheel.
+  `PointerDevice.Current` turns a platform's `RawPointerEventArgs` into them. A control overrides
+  `OnPointerPressed(PointerPressedEventArgs)` and the like, reads the button from `ChangedButton` and what is held from
+  `Properties`, and captures with `e.Pointer.Capture(this)`. `IsPointerOver` and `IsPointerDirectlyOver` count every
+  pointer over an element. The mouse is `Mouse.Pointer`.
 
 - `FocusManager.Reveal()` and `FocusManager.FocusRevealedEvent`: shows where the focus is without moving it. The first
   Tab after a click now lights the ring on the clicked control instead of jumping to the next one; the next Tab moves on.
@@ -689,6 +718,15 @@ All packages share one version.
 
 ### Changed
 
+- `PointerDevice` decides which button a finger or a pen presses, whatever its platform said. A finger is the left
+  button for as long as it lies on the surface, and a pen's tip is the left button. With its side button held, a pen
+  is the right button. Controls answer the left button, so a platform that reported a finger otherwise would have left
+  them deaf to touch.
+
+- `WindowBase.ScreenToClient` and `ClientToScreen` ask the window's platform worker
+  (`IWindowWorkerService.ScreenToClient` and `ClientToScreen`) instead of calling Windows themselves. The controls no
+  longer use `Adamantium.Win32` at all. A window with no platform behind it keeps a point as it is.
+
 - A `DoubleAnimation` plays as a two-key `AnimationCurve`, so the render thread plays a transform or an element's
   opacity by itself, the way it plays a keyframe animation: a slide, the tab indicator, a popup's scale-in or a fade
   keeps moving while the loop thread is busy, and the property still follows what is on screen. Several animations of
@@ -710,6 +748,16 @@ All packages share one version.
 
 - `BusyIndicator.Shimmer` moves a glare band by `ShiftX` under the card's rounded clip instead of sliding three gradient
   stops, so the render thread plays it and it keeps gliding while the loop thread is busy; it looks the same.
+
+- A pointer event is one event along its whole route, as in WPF: an element that handles a press handles it for every
+  element after it, and their `OnPointerPressed` is not called. The left-button-down event used to be raised again,
+  unhandled, on every element of the route. So a press that a button, a check box or a text field inside a list row,
+  a tree row, a grid row or a tab takes no longer selects that row or tab, and a universe hosted in a window or a
+  `RenderTargetPanel` no longer gets a press, release or wheel a control in front of it handled. Something that must
+  see a gesture whatever handled it subscribes with `AddHandler(..., handledEventsToo: true)`, as drag and drop, a
+  list's double click, a `NumericUpDown`'s drag to scrub, an `OverlayWindow` coming to the front and the canvas's grips
+  now do.
+- Themes and triggers watch `IsPointerOver` instead of `IsMouseOver`.
 
 - A text block of 2048 glyphs or more builds quads only for the part its window shows and a window's height and width
   around it, instead of for the whole text. Scrolled past that band, the frame builds the new band and draws again;
@@ -823,6 +871,14 @@ All packages share one version.
 
 ### Removed
 
+- The mouse events and their device, replaced by pointer input: `MouseDevice`, `MouseEventArgs`, `MouseButtonEventArgs`,
+  `MouseWheelEventArgs` and their handlers, `MouseButtonState`, `RawMouseEventArgs`, `RawMouseWheelEventArgs`,
+  `RawInputMouseEventArgs` and `RawMouseEventType`; `MouseDown`, `MouseUp`, `MouseMove`, `MouseWheel`, `MouseEnter`,
+  `MouseLeave`, `MouseDoubleClick`, `GotMouseCapture`, `LostMouseCapture`, the per-button events (`MouseLeftButtonDown`
+  and the rest, left, middle and right, down and up, with their `Preview` and `Raw` forms) and their `On...` methods;
+  `IsMouseOver`, `IsMouseDirectlyOver`, `IsMouseCaptured`, `CaptureMouse`, `ReleaseMouseCapture`, `CaptureStylus` and
+  `ReleaseStylusCapture`. `Mouse` keeps the cursor, the desktop position and `RawMouseMove`; a double click is
+  `PointerPressedEventArgs.ClickCount`.
 - `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 

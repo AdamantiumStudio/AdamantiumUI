@@ -18,29 +18,35 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class TabDragGestureTests
 {
-    // The button state is app-global on the mouse device: a test that left it pressed would make every test after it
-    // think a drag is in progress.
-    [TearDown]
-    public void TearDown() => ReleaseButton();
+    // The buttons each move reports as held - what a real move carries from the OS.
+    private InputModifiers _held;
 
-    private static void HoldButton() => Mouse.PrimaryDevice.UpdateButtonStates(InputModifiers.LeftMouseButton);
+    // One fixture instance serves every test, so a test that left the button held must not hand it to the next.
+    [SetUp]
+    public void SetUp() => ReleaseButton();
 
-    private static void ReleaseButton() => Mouse.PrimaryDevice.UpdateButtonStates(InputModifiers.None);
+    private void HoldButton() => _held = InputModifiers.LeftMouseButton;
+
+    private void ReleaseButton() => _held = InputModifiers.None;
 
     private static void PressAt(TabItem tab, double x, double y)
     {
-        Mouse.PrimaryDevice.SetExternalPosition(tab, new PixelPoint(x, y));
-        var args = new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left, MouseButtonState.Pressed,
-            InputModifiers.LeftMouseButton, 0) { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent };
+        PointerDevice.Current.SetExternalMousePosition(tab, new PixelPoint(x, y));
+        var args = new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left, InputModifiers.LeftMouseButton, 0)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        };
         ((IObservableComponent)tab).RaiseEvent(args);
     }
 
-    private static void MoveTo(TabItem tab, double x, double y)
+    private void MoveTo(TabItem tab, double x, double y)
     {
-        Mouse.PrimaryDevice.SetExternalPosition(tab, new PixelPoint(x, y));
-        var args = new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
+        PointerDevice.Current.SetExternalMousePosition(tab, new PixelPoint(x, y));
+        var args = new PointerEventArgs(Mouse.Pointer, _held, 0)
         {
-            RoutedEvent = Mouse.MouseMoveEvent
+            RoutedEvent = PointerEvents.PointerMovedEvent,
+            Properties = PointerPointProperties.FromMouse(_held)
         };
         ((IObservableComponent)tab).RaiseEvent(args);
     }
@@ -50,14 +56,14 @@ public class TabDragGestureTests
     // Pressing a FOLDED strip expands the panel on the preview of the press, which re-templates the tree under the
     // cursor - so the button-up lands in the new tree and never reaches this tab. If the tab took its own latch as the
     // authority on "the button is down", that latch stayed true for good, and afterwards a plain HOVER walked straight
-    // into the drag path and slid the tabs out of the strip. The device knows the button is up; ask it.
+    // into the drag path and slid the tabs out of the strip. The move knows the button is up; ask it.
     [Test]
     public void MoveWithNoButtonHeld_DoesNotPickTheTabUp()
     {
         var (tc, tabs) = ArrangedStrip(Orientation.Horizontal, 40, 100, 60);
 
         PressAt(tabs[0], 10, 10);   // the press the tab did see
-        ReleaseButton();            // ...whose release went somewhere else - the device is the only thing that knows
+        ReleaseButton();            // ...whose release went somewhere else - only the moves after it say so
         MoveTo(tabs[0], 60, 10);
         MoveTo(tabs[0], 120, 10);
 

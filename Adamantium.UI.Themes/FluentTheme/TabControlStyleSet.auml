@@ -36,7 +36,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- Highlight the button itself on hover so it clearly reacts. -->
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="CloseBg" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
                             <Setter TargetName="CloseGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>
@@ -58,7 +58,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PinBg" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
                             <Setter TargetName="PinGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>

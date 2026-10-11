@@ -78,9 +78,7 @@ public class CanvasToolRailTests
 
     private static void Press(IUIComponent target, Window window)
     {
-        ((IObservableComponent)target).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0)
-        { RoutedEvent = Mouse.PreviewMouseDownEvent });
+        PointerInput.PreviewPress((IInputComponent)target);
 
         Settle(window);
     }

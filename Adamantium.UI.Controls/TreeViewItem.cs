@@ -53,7 +53,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     public static readonly AdamantiumProperty HasItemsProperty = AdamantiumProperty.Register(nameof(HasItems),
         typeof(bool), typeof(TreeViewItem), new PropertyMetadata(false));
 
-    // Read-only: true while the pointer is over THIS node's header row (not a descendant node). IsMouseOver can't be used
+    // Read-only: true while the pointer is over THIS node's header row (not a descendant node). IsPointerOver can't be used
     // for the hover highlight - it's true for the whole subtree, so hovering a deep node would light up its ancestors too.
     public static readonly AdamantiumProperty IsPointerOverHeaderProperty = AdamantiumProperty.Register(nameof(IsPointerOverHeader),
         typeof(bool), typeof(TreeViewItem), new PropertyMetadata(false));
@@ -154,7 +154,7 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
             _expander.Click += OnExpanderClick;
         }
         // Track hover on the HEADER row only. Root's mouse enter/leave is exactly "over this node's own row" - unlike
-        // IsMouseOver, which would stay true over descendants (though the flat design has none nested, this stays correct).
+        // IsPointerOver, which would stay true over descendants (though the flat design has none nested, this stays correct).
         // NAMED handlers kept in fields, not lambdas: RemoveHandler matches on the delegate, so a lambda - or a freshly
         // made one - could never be taken off again.
         _rowRoot = GetTemplateChild("Root") as IInputComponent;
@@ -162,8 +162,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         {
             _enterHeader ??= (_, _) => IsPointerOverHeader = true;
             _leaveHeader ??= (_, _) => IsPointerOverHeader = false;
-            _rowRoot.AddHandler(Mouse.MouseEnterEvent, _enterHeader, true);
-            _rowRoot.AddHandler(Mouse.MouseLeaveEvent, _leaveHeader, true);
+            _rowRoot.AddHandler(PointerEvents.PointerEnteredEvent, _enterHeader, true);
+            _rowRoot.AddHandler(PointerEvents.PointerExitedEvent, _leaveHeader, true);
         }
     }
 
@@ -179,8 +179,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         if (_expander != null) _expander.Click -= OnExpanderClick;
         if (_rowRoot != null)
         {
-            if (_enterHeader != null) _rowRoot.RemoveHandler(Mouse.MouseEnterEvent, _enterHeader);
-            if (_leaveHeader != null) _rowRoot.RemoveHandler(Mouse.MouseLeaveEvent, _leaveHeader);
+            if (_enterHeader != null) _rowRoot.RemoveHandler(PointerEvents.PointerEnteredEvent, _enterHeader);
+            if (_leaveHeader != null) _rowRoot.RemoveHandler(PointerEvents.PointerExitedEvent, _leaveHeader);
         }
         _expander = null;
         _rowRoot = null;
@@ -189,16 +189,13 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     private void OnExpanderClick(object sender, RoutedEventArgs e) => FindOwnerTreeView()?.ToggleRow(this);
 
     private IInputComponent _rowRoot;
-    private MouseEventHandler _enterHeader;
-    private MouseEventHandler _leaveHeader;
+    private PointerEventHandler _enterHeader;
+    private PointerEventHandler _leaveHeader;
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        // Select only the node whose OWN header row is under the pointer. e.Handled CAN'T gate this: MouseDownEvent bubbles,
-        // and its class handler re-raises a FRESH MouseLeftButtonDown (Handled=false) for every ancestor - so a child's
-        // Handled is invisible to them. IsPointerOverHeader is true only for the row directly under the pointer. WPF-canonical.
-        if (!IsPointerOverHeader)
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left || !IsPointerOverHeader)
         {
             return;
         }

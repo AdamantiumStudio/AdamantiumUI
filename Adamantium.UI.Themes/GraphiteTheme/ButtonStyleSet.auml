@@ -55,7 +55,7 @@
     </Style>
 
     <Style Selector="Button">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
             <!-- The outline BRIGHTENS rather than appearing: it is already there, so hover has only to strengthen it. -->
             <Setter TargetName="InnerBorder" Property="BorderBrush"
@@ -92,7 +92,7 @@
     <Style Selector="Button.Toolbar">
         <!-- The edge appears WITH the hover here, since there is none at rest to brighten - and goes away again when
              the button cannot be pressed, rather than dimming to the gray the outlined form fades to. -->
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="BorderBrush"
                     Value="{ResourceReference ControlStrokeColorDefault}"/>
         </PropertyTrigger>

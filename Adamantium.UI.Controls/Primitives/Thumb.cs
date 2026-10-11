@@ -95,49 +95,64 @@ public class Thumb : Control
       IsDragging = false;
    }
 
-   protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => BeginDrag(e);
+   protected override void OnPointerPressed(PointerPressedEventArgs e)
+   {
+      base.OnPointerPressed(e);
+      if (e.ChangedButton == MouseButtons.Left)
+      {
+         BeginDrag(e);
+      }
+   }
 
    /// <summary>Starts a drag from <paramref name="e"/> as if the press hit this thumb, for owners that route near-misses
    /// to it. Idempotent while a drag is live.</summary>
-   public void BeginDrag(MouseButtonEventArgs e)
+   public void BeginDrag(PointerPressedEventArgs e)
    {
-      // Already dragging AND still holding capture -> ignore. If IsDragging is stale (capture was revoked externally,
-      // e.g. an alt-tab, without an up reaching us) a fresh press re-starts cleanly instead of being swallowed.
-      if (IsDragging && IsMouseCaptured) return;
+      if (IsDragging && IsPointerCaptured)
+      {
+         return;
+      }
 
       IsDragging = true;
       e.Handled = true;
       dragStartPoint = DragPosition(e);
-      // Capture so the drag keeps tracking once the pointer leaves the thumb. WITHOUT this the move never reaches the
-      // thumb: the raw-move event is routed to the FOCUSED element, and the captured MouseMove below is the only path
-      // that honors capture - so the thumb (unfocused) would otherwise never see a drag and never move.
-      CaptureMouse();
+      e.Pointer.Capture(this);
       RaiseEvent(new DragStartedEventArgs(dragStartPoint) { RoutedEvent = DragStartedEvent });
    }
 
-   protected override void OnMouseMove(object sender, MouseEventArgs e)
+   protected override void OnPointerMoved(PointerEventArgs e)
    {
       e.Handled = true;
-      if (!IsDragging) return;
+      if (!IsDragging)
+      {
+         return;
+      }
 
       var delta = DragPosition(e) - dragStartPoint;
       RaiseEvent(new DragEventArgs(delta) { RoutedEvent = DragDeltaEvent });
    }
 
-   protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+   protected override void OnPointerReleased(PointerReleasedEventArgs e)
    {
+      base.OnPointerReleased(e);
+      if (e.ChangedButton != MouseButtons.Left)
+      {
+         return;
+      }
+
       e.Handled = true;
-      if (!IsDragging) return;
+      if (!IsDragging)
+      {
+         return;
+      }
 
       IsDragging = false;
-      if (IsMouseCaptured) ReleaseMouseCapture();
+      e.Pointer.Capture(null);
       var delta = DragPosition(e) - dragStartPoint;
       RaiseEvent(new DragCompletedEventArgs(delta, false) { RoutedEvent = DragCompletedEvent });
    }
 
-   // Pointer position in the root's space, which never moves during the drag, so a value that re-lays out the thumb's
-   // parent does not feed back into DragDelta.
-   private Vector2 DragPosition(MouseEventArgs e)
+   private Vector2 DragPosition(PointerEventArgs e)
    {
       IUIComponent root = this;
       while (root.VisualParent is { } parent) root = parent;

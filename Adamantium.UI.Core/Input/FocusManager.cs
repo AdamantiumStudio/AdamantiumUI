@@ -25,10 +25,10 @@ public static class FocusManager
 
    static FocusManager()
    {
-      Mouse.PreviewMouseDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(OnPreviewMouseDown));
+      PointerEvents.PreviewPointerPressedEvent.RegisterClassHandler<IInputComponent>(new PointerPressedEventHandler(OnPreviewPointerPressed));
    }
 
-   private static void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+   private static void OnPreviewPointerPressed(object sender, PointerPressedEventArgs e)
    {
       if (e.OriginalSource == e.Source)
       {
@@ -215,7 +215,7 @@ public static class FocusManager
    }
 
    // One place that tells everyone the focus moved: the two elements themselves, and every element that gained or lost
-   // "the focus is somewhere inside me" (the same ancestor-chain machinery IsMouseOver runs on - a composite control has
+   // "the focus is somewhere inside me" (the same ancestor-chain machinery IsPointerOver runs on - a composite control has
    // to know the focus is in its editor without being the focused element itself).
    private static void AnnounceFocusMove(IInputComponent previous, IInputComponent current, NavigationMethod method)
    {

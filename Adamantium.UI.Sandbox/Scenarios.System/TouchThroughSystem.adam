@@ -1,0 +1,36 @@
+# Touch.adam through the system's own pointer input: real WM_POINTER messages from a synthetic device, read by the
+# window as a touchscreen's or a pen's would be. It presses whatever is on top of the desktop, so it lives apart from
+# Scenarios and runs only on request, while nobody uses the computer.
+select id=GalleryTabs/id=Buttons
+wait id=ButtonsView/id=ClickCount --timeout 20s
+touch id=ButtonsView/name=Add tap --os
+expect id=ClickCount name=1
+pen id=ButtonsView/name=Add tap --pressure 0.8 --os
+expect id=ClickCount name=2
+touch id=ButtonsView/name=Pro tap --os
+expect id=ChosenPlan name=Pro
+# Back as the page opens.
+touch id=ButtonsView/name=Reset tap --os
+expect id=ClickCount name=0
+touch id=ButtonsView/name=Free tap --os
+select id=GalleryTabs/id=Lists
+wait id=ListsView/id=SingleList --timeout 20s
+touch id=SingleList/name=Mars tap --os
+expect id=SelectedPlanet name=Mars
+touch id=SingleList/name=Earth tap --os
+expect id=SelectedPlanet name=Earth
+select id=GalleryTabs/id=Ranges
+wait id=ValueSlider
+expect id=ValueSlider value=40
+touch id=ValueSlider drag 120,12 420,12 --os
+expect id=ValueSlider value=100
+pen id=ValueSlider drag 290,12 -50,12 --pressure 0.3 --os
+expect id=ValueSlider value=0
+set id=ValueSlider 40
+select id=GalleryTabs/id=Menus
+wait id=MenusView/id=MenuSurface --timeout 20s
+pen id=MenuSurface tap --barrel --os
+wait id=SurfaceMenu --timeout 3s
+invoke id=SurfaceMenu/name=Copy
+expect id=MenuReport name="Picked: Copy"
+absent id=SurfaceMenu

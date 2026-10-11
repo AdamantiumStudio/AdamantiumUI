@@ -175,42 +175,46 @@ public class ColorPicker : Control
 
     // ---- Pointer drag over the three areas -----------------------------------------------------------------------
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         _drag = HitArea(e);
         if (_drag == DragTarget.None)
         {
             return;
         }
 
-        CaptureMouse();
-        UpdateFromPointer();
+        e.Pointer.Capture(this);
+        UpdateFromPointer(e);
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (IsMouseCaptured && _drag != DragTarget.None)
+        base.OnPointerMoved(e);
+        if (ReferenceEquals(e.Pointer.Captured, this) && _drag != DragTarget.None)
         {
-            UpdateFromPointer();
+            UpdateFromPointer(e);
         }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (_drag != DragTarget.None)
+        base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left && _drag != DragTarget.None)
         {
             _drag = DragTarget.None;
-            ReleaseMouseCapture();
+            e.Pointer.Capture(null);
             e.Handled = true;
         }
     }
 
-    // Which area (if any) is under the pointer - the press picks the drag target, and moves keep updating it.
-    private DragTarget HitArea(MouseButtonEventArgs e)
+    private DragTarget HitArea(PointerEventArgs e)
     {
         if (Inside(_svArea, e) || Inside(_svThumb as InputUIComponent, e))
         {
@@ -230,7 +234,7 @@ public class ColorPicker : Control
         return DragTarget.None;
     }
 
-    private static bool Inside(InputUIComponent area, MouseButtonEventArgs e)
+    private static bool Inside(InputUIComponent area, PointerEventArgs e)
     {
         if (area == null)
         {
@@ -241,26 +245,26 @@ public class ColorPicker : Control
         return p.X >= 0 && p.Y >= 0 && p.X <= area.ActualWidth && p.Y <= area.ActualHeight;
     }
 
-    private void UpdateFromPointer()
+    private void UpdateFromPointer(PointerEventArgs e)
     {
         switch (_drag)
         {
             case DragTarget.SaturationValue when _svArea != null:
             {
-                var p = Mouse.GetPosition(_svArea);
+                var p = e.GetPosition(_svArea);
                 _sat = Clamp01(p.X / Math.Max(1, _svArea.ActualWidth));
                 _val = Clamp01(1 - p.Y / Math.Max(1, _svArea.ActualHeight));
                 break;
             }
             case DragTarget.Hue when _hueArea != null:
             {
-                var p = Mouse.GetPosition(_hueArea);
+                var p = e.GetPosition(_hueArea);
                 _hue = Clamp01(p.Y / Math.Max(1, _hueArea.ActualHeight)) * 360;
                 break;
             }
             case DragTarget.Alpha when _alphaArea != null:
             {
-                var p = Mouse.GetPosition(_alphaArea);
+                var p = e.GetPosition(_alphaArea);
                 _alpha = 1 - Clamp01(p.Y / Math.Max(1, _alphaArea.ActualHeight));
                 break;
             }

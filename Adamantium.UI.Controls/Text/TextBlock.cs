@@ -1206,7 +1206,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         return string.Empty;
     }
 
-    private Hyperlink LinkAt(MouseEventArgs e)
+    private Hyperlink LinkAt(PointerEventArgs e)
     {
         if (_links.Count == 0)
         {
@@ -1231,11 +1231,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         return null;
     }
 
-    bool IFocusableInParts.TakesFocusAt(MouseButtonEventArgs e) => LinkAt(e) != null;
+    bool IFocusableInParts.TakesFocusAt(PointerPressedEventArgs e) => LinkAt(e) != null;
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
+        base.OnPointerMoved(e);
         var overLink = LinkAt(e) != null;
         if (overLink != _overLink)
         {
@@ -1244,16 +1244,21 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseLeave(e);
+        base.OnPointerExited(e);
         _overLink = false;
         _pressedLink = null;
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         _pressedLink = LinkAt(e);
         if (_pressedLink == null)
         {
@@ -1269,9 +1274,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         var link = LinkAt(e);
         var pressed = _pressedLink;
         _pressedLink = null;

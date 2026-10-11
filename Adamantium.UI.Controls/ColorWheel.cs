@@ -74,41 +74,41 @@ public class ColorWheel : Control
 
     // ---- Pointer drag over the wheel -----------------------------------------------------------------------------
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (_wheel == null || !Inside(_wheel, e))
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left || _wheel == null || !Inside(_wheel, e))
         {
             return;
         }
 
         _dragging = true;
-        CaptureMouse();
-        UpdateFromPointer();
+        e.Pointer.Capture(this);
+        UpdateFromPointer(e);
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (IsMouseCaptured && _dragging)
+        base.OnPointerMoved(e);
+        if (ReferenceEquals(e.Pointer.Captured, this) && _dragging)
         {
-            UpdateFromPointer();
+            UpdateFromPointer(e);
         }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (_dragging)
+        base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left && _dragging)
         {
             _dragging = false;
-            ReleaseMouseCapture();
+            e.Pointer.Capture(null);
             e.Handled = true;
         }
     }
 
-    private static bool Inside(Border area, MouseButtonEventArgs e)
+    private static bool Inside(Border area, PointerEventArgs e)
     {
         var p = e.GetPosition(area);
         return p.X >= 0 && p.Y >= 0 && p.X <= area.ActualWidth && p.Y <= area.ActualHeight;
@@ -116,14 +116,14 @@ public class ColorWheel : Control
 
     // Pointer -> (hue, saturation): angle from the center (0 at top, clockwise, matching the conic gradient) is hue;
     // distance / radius is saturation, clamped so a drag past the rim pins saturation at 1.
-    private void UpdateFromPointer()
+    private void UpdateFromPointer(PointerEventArgs e)
     {
         if (_wheel == null)
         {
             return;
         }
 
-        var p = Mouse.GetPosition(_wheel);
+        var p = e.GetPosition(_wheel);
         var cx = _wheel.ActualWidth / 2;
         var cy = _wheel.ActualHeight / 2;
         var maxR = Math.Max(1, Math.Min(cx, cy));

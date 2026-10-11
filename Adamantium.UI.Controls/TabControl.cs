@@ -619,7 +619,7 @@ public class TabControl : Selector
         ? panel.Orientation == Orientation.Vertical
         : TabStripPlacement is TabStripPlacement.Left or TabStripPlacement.Right;
 
-    internal void BeginDrag(TabItem tab, MouseEventArgs e)
+    internal void BeginDrag(TabItem tab, PointerEventArgs e)
     {
         if (ItemsHostPanel is not { } panel) return;
         var pos = e.GetPosition(panel);
@@ -645,7 +645,7 @@ public class TabControl : Selector
         SetOffset(tab, 0);
     }
 
-    internal void UpdateDrag(TabItem tab, MouseEventArgs e)
+    internal void UpdateDrag(TabItem tab, PointerEventArgs e)
     {
         if (ItemsHostPanel is not { } panel) return;
         var pos = e.GetPosition(panel);
@@ -665,7 +665,7 @@ public class TabControl : Selector
         AutoScrollStrip(e);
     }
 
-    private void AutoScrollStrip(MouseEventArgs e)
+    private void AutoScrollStrip(PointerEventArgs e)
     {
         // The field: asking GetTemplateChild again mid-drag found nothing.
         if (_tabStrip is not { } strip) return;

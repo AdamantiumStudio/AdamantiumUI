@@ -100,6 +100,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         messageTable[(uint)WindowMessages.MouseWheel] = HandleMouseWheel;
         messageTable[(uint)WindowMessages.MouseHwheel] = HandleMouseWheel;   // horizontal (tilt) wheel
+
+        messageTable[(uint)WindowMessages.PointerDown] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerUpdate] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerUp] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerLeave] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerCaptureChanged] = HandlePointer;
         messageTable[(uint)WindowMessages.Setcursor] = HandleSetCursor;
         messageTable[(uint)WindowMessages.Getobject] = HandleGetObject;
         messageTable[BeginMoveDragMessage] = HandleBeginMoveDrag;
@@ -1172,7 +1178,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         // RELATIVE mouse mode (mouse-look): synthesize a RawMouseMove delta from the physical move and re-center the
         // cursor, so the universe gets unbounded relative motion (the cursor never reaches the window edge). The normal
-        // MouseMove is suppressed while looking - the cursor is hidden and pinned to the center.
+        // pointer move is suppressed while looking - the cursor is hidden and pinned to the center.
         if (_relativeActive)
         {
             Win32Interop.GetCursorPos(out var cur);
@@ -1181,10 +1187,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             if (dx != 0 || dy != 0)
             {
                 Win32Interop.SetCursorPos(_recenterScreen.X, _recenterScreen.Y);
-                var rawArgs = new RawInputMouseEventArgs(new Vector2(dx, dy), RawMouseEventType.RawMouseMove, window,
-                    ToLogical(Messages.PointFromLParam(lParam)),
-                    WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam), MouseDevice.CurrentDevice, GetTimeStamp());
-                DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(rawArgs));
+                var rawArgs = new RawMouseDeltaEventArgs(new Vector2(dx, dy), window,
+                    WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam), GetTimeStamp());
+                DispatchInput(() => PointerDevice.Current.ProcessDelta(rawArgs));
             }
             handled = true;
             return IntPtr.Zero;
@@ -1202,9 +1207,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             trackMouse = true;
             Win32Interop.TrackMouseEvent(ref tm);
         }
-        var eventArgs = new RawMouseEventArgs(RawMouseEventType.MouseMove, window, ToLogical(Messages.PointFromLParam(lParam)),
-            WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam), MouseDevice.CurrentDevice, GetTimeStamp());
-        DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(eventArgs));
+        var eventArgs = new RawPointerEventArgs(RawPointerEventType.Move, window, ToLogical(Messages.PointFromLParam(lParam)),
+            WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam), GetTimeStamp());
+        DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
         // A drag's override cursor: WM_SETCURSOR barely fires while the mouse is captured, so re-assert the override on
         // every move here (the reliable path) - otherwise the drop-effect cursor (Move / Copy / No) never shows.
         if (Mouse.OverrideCursor is { } dragCursor) Cursor.Platform?.Apply(dragCursor);
@@ -1215,9 +1220,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr HandleMouseLeave(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         trackMouse = false;
-        var eventArgs = new RawMouseEventArgs(RawMouseEventType.LeaveWindow, window, Vector2.Zero,
-            KeyboardDevice.CurrentDevice.Modifiers, MouseDevice.CurrentDevice, GetTimeStamp());
-        DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(eventArgs));
+        var eventArgs = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2.Zero,
+            KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp());
+        DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
         handled = true;
         return IntPtr.Zero;
     }
@@ -1225,13 +1230,13 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr HandleMouseLeftButtonDown(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         var modifiers = WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam);
-        var eventType = WindowsMouseDeviceExtension.EventTypeFromMessage(windowMessage, wParam);
-        var eventArgs = new RawMouseEventArgs(eventType, window, ToLogical(Messages.PointFromLParam(lParam)),
-            modifiers, MouseDevice.CurrentDevice, GetTimeStamp());
-        DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(eventArgs));
+        var eventType = WindowsMouseDeviceExtension.EventTypeFromMessage(windowMessage, wParam, out var button);
+        var eventArgs = new RawPointerEventArgs(eventType, window, ToLogical(Messages.PointFromLParam(lParam)),
+            modifiers, GetTimeStamp()) { ChangedButton = button };
+        DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
 
         // OS capture while any button is down (from wParam), so a release outside the window still arrives; set here on
-        // the pump thread, independent of MouseDevice.Captured, which the loop thread sets later.
+        // the pump thread, independent of the mouse pointer's capture, which the loop thread sets later.
         var anyButton = InputModifiers.LeftMouseButton | InputModifiers.RightMouseButton |
             InputModifiers.MiddleMouseButton | InputModifiers.X1MouseButton | InputModifiers.X2MouseButton;
         var buttonDown = (modifiers & anyButton) != 0;
@@ -1245,11 +1250,39 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         return IntPtr.Zero;
     }
 
-    // Platform-specific OS capture (the shared "when" lives in MouseDevice.SyncOsMouseCapture).
+    // Platform-specific OS capture (the shared "when" lives in PointerDevice.SyncOsMouseCapture).
     public void SetMouseCapture(bool capture)
     {
         if (capture) Win32Interop.SetCapture(window.Handle);
         else Win32Interop.ReleaseCapture();
+    }
+
+    // A finger or a pen. Handled, the system makes no mouse messages of it; the mouse and a touchpad are left to
+    // WM_MOUSE*, which the default handling makes of them.
+    private IntPtr HandlePointer(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        var eventArgs = WindowsPointerInput.Read(windowMessage, wParam, window, GetTimeStamp());
+        handled = eventArgs != null;
+        if (handled)
+        {
+            DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
+        }
+
+        return IntPtr.Zero;
+    }
+
+    public PixelPoint ScreenToClient(PixelPoint screen)
+    {
+        var point = new NativePoint((int)screen.X, (int)screen.Y);
+        Win32Interop.ScreenToClient(window.Handle, ref point);
+        return new PixelPoint(point.X, point.Y);
+    }
+
+    public PixelPoint ClientToScreen(PixelPoint client)
+    {
+        var point = new NativePoint((int)client.X, (int)client.Y);
+        Win32Interop.ClientToScreen(window.Handle, ref point);
+        return new PixelPoint(point.X, point.Y);
     }
 
     // Called on the LOOP thread (from RenderTargetPanel via the window). Posts the enter/exit to the pump thread (cursor
@@ -1334,22 +1367,21 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         // the drag is still live. Capture() re-routes input against the visual tree, so marshal it onto the loop thread
         // (the check runs there too - no cross-thread read of Captured).
         osMouseCaptured = false;
-        DispatchInput(() => { if (MouseDevice.CurrentDevice.Captured != null) MouseDevice.CurrentDevice.Capture(null); });
+        DispatchInput(() => { if (Mouse.Pointer.Captured != null) Mouse.Pointer.Capture(null); });
         handled = true;
         return IntPtr.Zero;
     }
 
     private IntPtr HandleMouseWheel(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
-        var eventArgs = new RawMouseWheelEventArgs(
+        var eventArgs = new RawPointerWheelEventArgs(
             Messages.GetWheelDelta(wParam),
-            RawMouseEventType.MouseWheel,
             window,
             window.PointToClient(ToPixel(Messages.PointFromLParam(lParam))),
             WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam),
-            MouseDevice.CurrentDevice, GetTimeStamp(),
+            GetTimeStamp(),
             windowMessage == WindowMessages.MouseHwheel);
-        DispatchInput(() => MouseDevice.CurrentDevice.ProcessEvent(eventArgs));
+        DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
         handled = true;
         return IntPtr.Zero;
     }

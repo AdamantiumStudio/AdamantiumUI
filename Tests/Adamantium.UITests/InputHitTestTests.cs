@@ -173,9 +173,7 @@ public class InputHitTestTests
         });
     }
 
-    private static void PointAt(IObservableComponent component) =>
-        component.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
-        { RoutedEvent = Mouse.MouseEnterEvent });
+    private static void PointAt(IInputComponent component) => PointerInput.Enter(component);
 
     // A cursor that changes while the pointer STANDS STILL has to reach the screen. Anything that decides its cursor
     // from where inside itself the pointer is - a column separator, a splitter, a resize grip - changes it without any
@@ -210,8 +208,7 @@ public class InputHitTestTests
         PointAt(grip);
         Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.SizeEWE), "the grip never said what it was");
 
-        ((IObservableComponent)grip).RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
-        { RoutedEvent = Mouse.MouseLeaveEvent });
+        PointerInput.Exit(grip);
 
         Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.Arrow), "the pointer is over the panel and still wearing the grip");
     }
@@ -229,5 +226,19 @@ public class InputHitTestTests
         elsewhere.Cursor = Cursors.SizeNS;
 
         Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.Hand), "the pointer is still over the first one");
+    }
+
+    // An ancestor can be told the same pointer entered twice: a hovered subtree taken out of the tree cuts the chain the
+    // next move compares against. One exit must still clear it, or hover stays lit after the pointer has gone.
+    [Test]
+    public void AnEnterToldTwice_IsUndoneByOneExit()
+    {
+        var panel = new Border();
+
+        PointerInput.Enter(panel);
+        PointerInput.Enter(panel);
+        PointerInput.Exit(panel);
+
+        Assert.That(panel.IsPointerOver, Is.False);
     }
 }

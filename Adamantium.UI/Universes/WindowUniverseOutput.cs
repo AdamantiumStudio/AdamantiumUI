@@ -28,7 +28,7 @@ namespace Adamantium.UI.Universes
 
         public override bool IsKeyboardFocused => window.IsActive;
 
-        public override bool IsPointerOver => InputComponent.IsMouseOver;
+        public override bool IsPointerOver => InputComponent.IsPointerOver;
 
         protected override bool CanHandle(OutputContext context)
         {

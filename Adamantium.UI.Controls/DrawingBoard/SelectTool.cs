@@ -73,7 +73,7 @@ public class SelectTool : ICanvasTool
             canvas.Select(inside, false);
             _grip = CanvasHandle.Body;
             Begin(canvas);
-            canvas.CaptureMouse();
+            canvas.CapturePointer();
             e.Handled = true;
             return;
         }
@@ -90,7 +90,7 @@ public class SelectTool : ICanvasTool
             {
                 _grip = CanvasHandle.Body;
                 Begin(canvas);
-                canvas.CaptureMouse();
+                canvas.CapturePointer();
             }
 
             e.Handled = true;
@@ -103,7 +103,7 @@ public class SelectTool : ICanvasTool
         _bandExtends = e.Extends;
         _band = new Rect(e.Pointer.X, e.Pointer.Y, 0, 0);
 
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         e.Handled = true;
     }
 
@@ -159,7 +159,7 @@ public class SelectTool : ICanvasTool
             return;
         }
 
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         Drop(canvas);
 
         if (_band is { } band)
@@ -213,7 +213,7 @@ public class SelectTool : ICanvasTool
         _grip = CanvasHandle.None;
         _startBounds.Clear();
 
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
     }
 
     private void Begin(InfiniteCanvas canvas)

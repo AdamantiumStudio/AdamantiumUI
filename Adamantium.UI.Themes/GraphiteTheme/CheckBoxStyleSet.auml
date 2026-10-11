@@ -60,7 +60,7 @@
     </Style>
 
     <Style Selector="CheckBox">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Box" Property="BorderBrush" Value="{ObservableResource TextFillColorTertiary}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsChecked" Value="true">
@@ -83,7 +83,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="IsChecked" Value="true"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="Box" Property="Background" Value="{ThemeResource AccentFillColorSecondary}"/>
             <Setter TargetName="Box" Property="BorderBrush" Value="{ThemeResource AccentFillColorSecondary}"/>
@@ -91,7 +91,7 @@
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="IsChecked" Value="null"/>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="Box" Property="Background" Value="{ThemeResource AccentFillColorSecondary}"/>
             <Setter TargetName="Box" Property="BorderBrush" Value="{ThemeResource AccentFillColorSecondary}"/>

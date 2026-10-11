@@ -42,12 +42,12 @@ public static class ToolTipService
         if (a is not IInputComponent input) return;
 
         // Idempotent: (re)wire hover only while a tooltip is set. Unsubscribe first so re-setting doesn't double-hook.
-        input.MouseEnter -= OnMouseEnter;
-        input.MouseLeave -= OnMouseLeave;
+        input.PointerEntered -= OnPointerEntered;
+        input.PointerExited -= OnPointerExited;
         if (e.NewValue != null)
         {
-            input.MouseEnter += OnMouseEnter;
-            input.MouseLeave += OnMouseLeave;
+            input.PointerEntered += OnPointerEntered;
+            input.PointerExited += OnPointerExited;
         }
         else if (ReferenceEquals(_pending, input))
         {
@@ -55,7 +55,7 @@ public static class ToolTipService
         }
     }
 
-    private static void OnMouseEnter(object sender, MouseEventArgs e)
+    private static void OnPointerEntered(object sender, PointerEventArgs e)
     {
         if (sender is not IInputComponent input || GetToolTip((AdamantiumComponent)input) == null) return;
         _pending = input;
@@ -64,7 +64,7 @@ public static class ToolTipService
         _timer.Start(TimeSpan.FromMilliseconds(GetInitialShowDelay((AdamantiumComponent)input)));
     }
 
-    private static void OnMouseLeave(object sender, MouseEventArgs e)
+    private static void OnPointerExited(object sender, PointerEventArgs e)
     {
         if (ReferenceEquals(sender, _pending)) Hide();
     }
@@ -72,7 +72,7 @@ public static class ToolTipService
     private static void OnTimerTick(object sender, EventArgs e)
     {
         _timer.Stop();   // one-shot: fire once after the delay
-        if (_pending is not { IsMouseOver: true }) return;   // pointer left during the delay
+        if (_pending is not { IsPointerOver: true }) return;   // pointer left during the delay
 
         var owner = _pending;
         // The themed ToolTip control renders both a string (via its template's ContentPresenter) and a UI element as-is.

@@ -24,7 +24,7 @@ public class PopupLayer
     // (Popup.Open/Close -> Add/Remove: a dialog opened from a command, a light-dismissed menu). Without this a popup
     // opened/closed mid-render corrupts the enumeration ("Collection was modified"). Guard every touch.
     private readonly object _sync = new();
-    private MouseButtonEventHandler _overlayPress;
+    private PointerPressedEventHandler _overlayPress;
 
     /// <summary>The laid-out child of every open popup (declaration order = back-to-front), for the overlay to render.</summary>
     public IReadOnlyList<IUIComponent> Roots
@@ -71,7 +71,7 @@ public class PopupLayer
         AttachToOwner(popup.ChildValue as UIComponent);
 
         _overlayPress ??= (_, e) => Popup.PressedInOverlay(Owner, e);
-        (popup.ChildValue as IInputComponent)?.AddHandler(Mouse.PreviewMouseDownEvent, _overlayPress, handledEventsToo: true);
+        (popup.ChildValue as IInputComponent)?.AddHandler(PointerEvents.PreviewPointerPressedEvent, _overlayPress, handledEventsToo: true);
     }
 
     public void Remove(Popup popup)
@@ -88,7 +88,7 @@ public class PopupLayer
         if (popup.ChildValue is not { } overlayRoot) return;
         if (_overlayPress != null)
         {
-            (overlayRoot as IInputComponent)?.RemoveHandler(Mouse.PreviewMouseDownEvent, _overlayPress);
+            (overlayRoot as IInputComponent)?.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _overlayPress);
         }
 
         // Take the ring down BEFORE the way back out is forgotten - after that nothing inside can reach the layer.

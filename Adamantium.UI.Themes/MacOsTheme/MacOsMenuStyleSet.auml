@@ -81,7 +81,7 @@
     </Style>
 
     <Style Selector="MenuItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Root" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
             <Setter TargetName="Gesture" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>

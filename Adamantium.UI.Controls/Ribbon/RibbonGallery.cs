@@ -89,12 +89,12 @@ public class RibbonGallery : Selector
             RefreshDropDown();
         };
 
-        MouseWheel += OnMouseWheel;
+        PointerWheelChanged += OnWheel;
     }
 
     // The wheel steps the visible rows; at either end it stays unhandled so the surrounding strip scrolls, as in
     // ScrollViewer. Tilt passes through.
-    private void OnMouseWheel(object sender, Core.Input.MouseWheelEventArgs e)
+    private void OnWheel(object sender, Core.Input.PointerWheelEventArgs e)
     {
         if (e.IsHorizontal) return;
 

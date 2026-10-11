@@ -167,14 +167,19 @@ public abstract class ButtonBase : ContentControl
         }
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        if (!IsEnabled) return;
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.ChangedButton != MouseButtons.Left || e.Handled)
+        {
+            return;
+        }
+
         e.Handled = true;
 
         // Capture so move/up keep arriving even when the pointer leaves the button (press-drag-release semantics).
         Focus();
-        CaptureMouse();
+        e.Pointer.Capture(this);
         IsPressed = true;
 
         if (ClickMode == ClickMode.Press)
@@ -183,20 +188,20 @@ public abstract class ButtonBase : ContentControl
         }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left || !ReferenceEquals(e.Pointer.Captured, this))
+        {
+            return;
+        }
+
         e.Handled = true;
 
         var wasPressed = IsPressed;
         IsPressed = false;
-        if (IsMouseCaptured)
-        {
-            ReleaseMouseCapture();
-        }
+        e.Pointer.Capture(null);
 
-        // Containment, NOT IsMouseOver: capture deliberately pins that flag to the captured element so a drag does not
-        // lose hover (see MouseDevice.MouseMove), and this button captures on press - so it read "over" wherever the
-        // pointer was, and press-drag-away-release still clicked.
         var position = e.GetPosition(this);
         var over = position.X >= 0 && position.Y >= 0
                    && position.X <= RenderSize.Width && position.Y <= RenderSize.Height;
@@ -207,32 +212,41 @@ public abstract class ButtonBase : ContentControl
         }
     }
 
-    protected override void OnMouseEnter(MouseEventArgs e)
+    protected override void OnPointerEntered(PointerEventArgs e)
     {
-        base.OnMouseEnter(e);
+        base.OnPointerEntered(e);
 
         if (ClickMode == ClickMode.Hover)
         {
-            if (IsEnabled) OnClick();
+            if (IsEnabled)
+            {
+                OnClick();
+            }
+
             return;
         }
 
-        // Re-pressing when the pointer returns while the button is still held (it was disarmed on leave).
-        if (IsMouseCaptured && Mouse.LeftButton == MouseButtonState.Pressed)
+        if (ReferenceEquals(e.Pointer.Captured, this) && e.Properties.IsLeftButtonPressed)
         {
             IsPressed = true;
         }
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseLeave(e);
+        base.OnPointerExited(e);
 
-        // Dragging off visually disarms the button but keeps the capture, so returning re-presses it.
-        if (IsMouseCaptured)
+        if (ReferenceEquals(e.Pointer.Captured, this))
         {
             IsPressed = false;
         }
+    }
+
+    // The pointer taken away mid-press (another window, Alt+Tab) ends the press: no release will come to say so.
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        IsPressed = false;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

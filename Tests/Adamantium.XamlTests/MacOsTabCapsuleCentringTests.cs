@@ -127,9 +127,9 @@ public class MacOsTabCapsuleCenteringTests
         // Written through the property itself: the CLR setter is private, because only the input pass gets to say the
         // pointer is over something.
         var atRest = plate.Background;
-        chevron.SetValue(InputUIComponent.IsMouseOverProperty, true);
+        chevron.SetValue(InputUIComponent.IsPointerOverProperty, true);
         var hovered = plate.Background;
-        chevron.SetValue(InputUIComponent.IsMouseOverProperty, false);
+        chevron.SetValue(InputUIComponent.IsPointerOverProperty, false);
         var afterwards = plate.Background;
 
         TestContext.WriteLine($"rest={atRest}, hover={hovered}, after={afterwards}");

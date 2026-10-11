@@ -367,7 +367,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     
     public bool DisableRendering { get; set; }
 
-    internal MouseDevice MouseDevice => MouseDevice.CurrentDevice;
+    internal PointerDevice PointerDevice => PointerDevice.Current;
     internal KeyboardDevice KeyboardDevice => KeyboardDevice.CurrentDevice;
 
     private void MainWindow_Closed(object sender, EventArgs e)
@@ -626,6 +626,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Drag-drop with other applications; unregistered elsewhere, where only in-app drag-drop runs.
         if (!containerRegistry.IsRegistered<INativeDragDrop>() && OperatingSystem.IsWindows())
             containerRegistry.RegisterSingleton<INativeDragDrop, WindowsDragDrop>();
+
+        // A finger or a pen handed to the system, for checking the platform's own pointer path.
+        if (!containerRegistry.IsRegistered<ISyntheticPointerInput>() && OperatingSystem.IsWindows())
+            containerRegistry.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
 
         // Where windows' places are kept between runs; an application registers its own store to keep them elsewhere.
         if (!containerRegistry.IsRegistered<IWindowPlacementStore>())

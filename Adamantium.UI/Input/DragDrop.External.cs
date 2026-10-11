@@ -165,7 +165,7 @@ public static partial class DragDrop
         _externalUpdatePending = false;
         if (!_externalActive || _externalWindow == null) return;
         _data = _externalData;
-        Mouse.PrimaryDevice.SetExternalPosition(_externalWindow as IInputComponent, ExternalPoint);
+        PointerDevice.Current.SetExternalMousePosition(_externalWindow as IInputComponent, ExternalPoint);
         UpdateDragOver();
     }
 
@@ -269,10 +269,10 @@ public static partial class DragDrop
         var source = _source;
         if (!_dragging || source == null) return;
 
-        // Unhook BEFORE releasing the capture: the release raises LostMouseCapture, which would cancel the very drag we
+        // Unhook BEFORE releasing the capture: the release raises PointerCaptureLost, which would cancel the very drag we
         // are handing over. From here the OS owns the pointer.
         Detach(source);
-        if (ReferenceEquals(Mouse.Captured, source)) Mouse.Capture(null);
+        if (ReferenceEquals(Mouse.Pointer.Captured, source)) Mouse.Pointer.Capture(null);
 
         // ptOffset (0,0): the cursor sits at the image's top-left, so the ghost trails down-right of it - the same
         // relationship our own floating ghost has.

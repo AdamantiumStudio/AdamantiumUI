@@ -1,0 +1,111 @@
+using Adamantium.Mathematics;
+
+namespace Adamantium.UI.Core.Input;
+
+/// <summary>One pointer: the mouse, a finger, or a pen. Each has its own position, capture and element under it, so two
+/// fingers drag two things at once.</summary>
+public sealed class Pointer
+{
+    internal PixelPoint ScreenPosition;
+    internal IInputComponent PositionRoot;
+    internal IInputComponent HoverRoot;
+    internal int ClickCount;
+
+    // The button a finger or a pen pressed when it touched, kept until it lifts: its moves and its lift say the same
+    // button, whatever changes on the way.
+    internal MouseButtons ContactButton;
+    internal uint LastClickTime;
+    internal IInputComponent LastClicked;
+    internal Vector2 LastClickPosition;
+
+    internal Pointer(uint id, PointerType type, bool isPrimary)
+    {
+        Id = id;
+        Type = type;
+        IsPrimary = isPrimary;
+        Properties = new PointerPointProperties { Pressure = PointerPointProperties.DefaultPressure };
+    }
+
+    /// <summary>The OS's id for the pointer, stable while it is in use. The mouse is always 1.</summary>
+    public uint Id { get; }
+
+    public PointerType Type { get; }
+
+    /// <summary>The mouse, or the first finger or pen down: the one that clicks and that the OS moves the cursor with.</summary>
+    public bool IsPrimary { get; internal set; }
+
+    /// <summary>The element this pointer's events go to whatever is under it, or null.</summary>
+    public IInputComponent Captured { get; private set; }
+
+    /// <summary>The element directly under the pointer, or null.</summary>
+    public IInputComponent DirectlyOver { get; internal set; }
+
+    /// <summary>What the pointer last reported: buttons, pressure, tilt.</summary>
+    public PointerPointProperties Properties { get; internal set; }
+
+    /// <summary>Gives this pointer's events to <paramref name="component"/> whatever is under it; null releases it. The
+    /// element that had it is told it lost it.</summary>
+    public bool Capture(IInputComponent component)
+    {
+        var previous = Captured;
+        if (ReferenceEquals(previous, component))
+        {
+            return component != null;
+        }
+
+        Captured = component;
+        previous?.RaiseEvent(new PointerEventArgs(this, InputModifiers.None, 0) { RoutedEvent = PointerEvents.PointerCaptureLostEvent });
+        component?.RaiseEvent(new PointerEventArgs(this, InputModifiers.None, 0) { RoutedEvent = PointerEvents.GotPointerCaptureEvent });
+        return component != null;
+    }
+
+    /// <summary>Where the pointer is, in <paramref name="relativeTo"/>'s own units.</summary>
+    public Vector2 GetPosition(IInputComponent relativeTo)
+    {
+        IUIComponent root = relativeTo;
+        while (root.VisualParent != null)
+        {
+            root = root.VisualParent;
+        }
+
+        var clientRoot = root is IWindow ? root : ((PositionRoot as IUIComponent) ?? root);
+        var p = clientRoot.PointToClient(ScreenPosition);
+
+        if (Transformed(relativeTo))
+        {
+            var local = Vector3F.TransformCoordinate(new Vector3F((float)p.X, (float)p.Y, 0),
+                Matrix4x4F.Invert(relativeTo.WorldTransform));
+
+            return new Vector2(local.X, local.Y);
+        }
+
+        IUIComponent v = relativeTo;
+        while (v != null)
+        {
+            p -= v.Bounds.Location;
+            v = v.VisualParent;
+        }
+
+        return p;
+    }
+
+    /// <summary>The pointer in <paramref name="relativeTo"/>'s units, with what it reports.</summary>
+    public PointerPoint GetCurrentPoint(IInputComponent relativeTo) => new(this, GetPosition(relativeTo), Properties);
+
+    /// <summary>Where the pointer is on the desktop.</summary>
+    public PixelPoint GetScreenPosition() =>
+        Type == PointerType.Mouse && Mouse.Platform is { } platform ? platform.Position : ScreenPosition;
+
+    private static bool Transformed(IUIComponent of)
+    {
+        for (var at = of; at != null; at = at.VisualParent)
+        {
+            if (at.RenderTransform != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

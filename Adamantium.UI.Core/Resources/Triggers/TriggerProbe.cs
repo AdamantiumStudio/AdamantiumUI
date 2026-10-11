@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Adamantium.UI.Core.Resources.Triggers;
 
-/// <summary>Logs to a file what triggers on the property named by ADAM_TRIGGER_PROBE (e.g. "IsMouseOver") were told, to
+/// <summary>Logs to a file what triggers on the property named by ADAM_TRIGGER_PROBE (e.g. "IsPointerOver") were told, to
 /// tell a stuck trigger from one never re-evaluated.</summary>
 public static class TriggerProbe
 {

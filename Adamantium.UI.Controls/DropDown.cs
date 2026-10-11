@@ -134,12 +134,12 @@ public class DropDown : Selector
     public DropDown()
     {
         SelectionChanged += (_, _) => UpdateDisplayContent();
-        MouseWheel += OnHeaderMouseWheel;
+        PointerWheelChanged += OnHeaderWheel;
     }
 
     // Wheel over the CLOSED drop-down steps the selection: down = next item, up = previous. Off unless asked for - see
     // StepsWithMouseWheel. When the list is open we leave the event alone so the popup can scroll instead.
-    private void OnHeaderMouseWheel(object sender, MouseWheelEventArgs e)
+    private void OnHeaderWheel(object sender, PointerWheelEventArgs e)
     {
         if (!StepsWithMouseWheel || !IsEnabled || IsDropDownOpen) return;
         var count = Items.Count;
@@ -250,10 +250,14 @@ public class DropDown : Selector
 
     // Clicking the header toggles the list. The popup's contents live in the overlay layer (not our visual subtree), so a
     // click on an item is hit-tested there and never reaches this handler - only header clicks do.
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (!IsEnabled) return;
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         e.Handled = true;
         Focus();
         IsDropDownOpen = !IsDropDownOpen;

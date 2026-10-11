@@ -110,12 +110,12 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
 
         // While folded down, the only thing left is the tab strip - so a click on it is what shows the panel. Preview, and
         // before selection: the point of the click is "show me this panel", and it should not have to be made twice.
-        AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(OnPreviewDown), handledEventsToo: true);
+        AddHandler(PointerEvents.PreviewPointerPressedEvent, new PointerPressedEventHandler(OnPreviewDown), handledEventsToo: true);
     }
 
     // A click on a put-away strip REVEALS the panel; only the auto-hide button puts it back. Glancing at a tool and keeping it open
     // are different things, which is why this is three states and not a flag.
-    private void OnPreviewDown(object sender, MouseButtonEventArgs e)
+    private void OnPreviewDown(object sender, PointerPressedEventArgs e)
     {
         // Touching a panel is what makes it the one being worked in - anywhere in it, tab strip, caption or body.
         Area?.MakeActive(this);
@@ -142,13 +142,13 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     private Vector2 _captionPress;
     private bool _captionPressed;
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-
-        // Handled means a child took it - the auto-hide and close buttons do, which is why they are not torn off by a wobble.
-        if (e.Handled) return;
-        if (e.OriginalSource is not IUIComponent source) return;
+        base.OnPointerPressed(e);
+        if (e.Handled || e.ChangedButton != MouseButtons.Left || e.OriginalSource is not IUIComponent source)
+        {
+            return;
+        }
 
         // EITHER caption: the docked one, or the flyout's while the panel is revealed.
         var onCaption = (_caption != null && IsWithin(source, _caption))
@@ -160,14 +160,15 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         _captionPressed = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!_captionPressed) return;
+        base.OnPointerMoved(e);
+        if (!_captionPressed)
+        {
+            return;
+        }
 
-        // Whether the button is down is the DEVICE's to answer: a latched flag never clears when the up lands in a tree
-        // that has been rebuilt underneath it (see TabItem.OnMouseMove).
-        if (e.MouseDevice.LeftButton != MouseButtonState.Pressed)
+        if (!e.Properties.IsLeftButtonPressed)
         {
             _captionPressed = false;
             return;
@@ -180,10 +181,13 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         Area?.TearOffGroup(this, Mouse.ScreenCoordinates);
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        _captionPressed = false;
+        base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left)
+        {
+            _captionPressed = false;
+        }
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
@@ -464,9 +468,9 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     /// by in that state.</summary>
     private IInputComponent _flyoutCaption;
 
-    private MouseButtonEventHandler _captionDown;
-    private MouseEventHandler _captionMove;
-    private MouseButtonEventHandler _captionUp;
+    private PointerPressedEventHandler _captionDown;
+    private PointerEventHandler _captionMove;
+    private PointerReleasedEventHandler _captionUp;
 
     public override void OnApplyTemplate()
     {
@@ -490,22 +494,22 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         // under this group, so nothing bubbles from it to here.
         if (_flyoutCaption != null)
         {
-            _flyoutCaption.RemoveHandler(Mouse.MouseDownEvent, _captionDown);
-            _flyoutCaption.RemoveHandler(Mouse.MouseMoveEvent, _captionMove);
-            _flyoutCaption.RemoveHandler(Mouse.MouseUpEvent, _captionUp);
+            _flyoutCaption.RemoveHandler(PointerEvents.PointerPressedEvent, _captionDown);
+            _flyoutCaption.RemoveHandler(PointerEvents.PointerMovedEvent, _captionMove);
+            _flyoutCaption.RemoveHandler(PointerEvents.PointerReleasedEvent, _captionUp);
         }
 
         _flyoutCaption = GetTemplateChild("PART_FlyoutHeader") as IInputComponent;
 
         if (_flyoutCaption != null)
         {
-            _captionDown ??= OnMouseLeftButtonDown;
-            _captionMove ??= OnMouseMove;
-            _captionUp ??= OnMouseLeftButtonUp;
+            _captionDown ??= (_, e) => OnPointerPressed(e);
+            _captionMove ??= (_, e) => OnPointerMoved(e);
+            _captionUp ??= (_, e) => OnPointerReleased(e);
 
-            _flyoutCaption.AddHandler(Mouse.MouseDownEvent, _captionDown);
-            _flyoutCaption.AddHandler(Mouse.MouseMoveEvent, _captionMove);
-            _flyoutCaption.AddHandler(Mouse.MouseUpEvent, _captionUp);
+            _flyoutCaption.AddHandler(PointerEvents.PointerPressedEvent, _captionDown);
+            _flyoutCaption.AddHandler(PointerEvents.PointerMovedEvent, _captionMove);
+            _flyoutCaption.AddHandler(PointerEvents.PointerReleasedEvent, _captionUp);
         }
 
         // The flyout carries its own pair of them: while a panel is revealed its docked caption is not on screen, and a

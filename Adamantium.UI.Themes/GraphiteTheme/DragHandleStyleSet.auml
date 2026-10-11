@@ -25,7 +25,7 @@
     <Style Selector="DragHandle">
         <!-- Resting it is tertiary - present, but not competing with the row's own text. Under the pointer it comes up
              to primary, which is the whole announcement that this row can be moved. -->
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         </PropertyTrigger>
     </Style>

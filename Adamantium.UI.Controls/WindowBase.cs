@@ -14,7 +14,6 @@ using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
-using Adamantium.Win32;
 
 namespace Adamantium.UI.Controls;
 
@@ -79,7 +78,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         if (_hoverHooked) return;
 
         _hoverHooked = true;
-        LayoutManager.GetOrCreate(this).LayoutUpdated += (_, _) => MouseDevice.CurrentDevice.RefreshMouseOver(this);
+        LayoutManager.GetOrCreate(this).LayoutUpdated += (_, _) => PointerDevice.Current.RefreshPointerOver(this);
     }
 
     // Default/cancel routing: the window is the root, so unhandled Enter/Esc reach it last, after everything on the way
@@ -907,10 +906,10 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public Vector2 ScreenToClient(PixelPoint p)
     {
-        var point = new NativePoint((int)p.X, (int)p.Y);
-        Win32Interop.ScreenToClient(Handle, ref point);
-        // Win32 returns PHYSICAL client px; the framework works in logical DIP -> divide by THIS window's scale.
-        return new PixelPoint(point.X, point.Y).ToLogical(DpiScale);
+        // The platform answers in PHYSICAL client px; the framework works in logical DIP -> divide by THIS window's
+        // scale. A window with no platform behind it keeps the point as it is.
+        var client = WindowWorkerService?.ScreenToClient(p) ?? p;
+        return client.ToLogical(DpiScale);
     }
 
     /// <summary>A point of this window's client area (LOGICAL) to a desktop point (PHYSICAL). The asymmetry is the
@@ -918,11 +917,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// scale of the window the point concerns - see <see cref="Left"/>.</summary>
     public PixelPoint ClientToScreen(Vector2 p)
     {
-        // p is logical DIP -> back to physical client px before handing to Win32; the returned screen coords stay physical.
+        // p is logical DIP -> back to physical client px before handing to the platform; the screen coords stay physical.
         var physical = PixelPoint.FromLogical(p, DpiScale);
-        var point = new NativePoint((int)physical.X, (int)physical.Y);
-        Win32Interop.ClientToScreen(Handle, ref point);
-        return new PixelPoint(point.X, point.Y);
+        return WindowWorkerService?.ClientToScreen(physical) ?? physical;
     }
 
     public bool ShouldDisplayWindow { get; protected set; }

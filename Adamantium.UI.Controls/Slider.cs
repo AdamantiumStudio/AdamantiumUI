@@ -191,7 +191,7 @@ public class Slider : RangeBase
             return;
         }
 
-        var limit = _track.PageLimitFromPoint(MouseDevice.CurrentDevice.GetPosition(_track), increasing);
+        var limit = _track.PageLimitFromPoint(Mouse.Pointer.GetPosition(_track), increasing);
         SetValueFromInput(PageTarget(stepped, limit, increasing));
     }
 
@@ -214,7 +214,7 @@ public class Slider : RangeBase
     private void MoveToMousePoint()
     {
         if (_track == null) return;
-        SetValueFromInput(SnapToTick(_track.ValueFromPoint(MouseDevice.CurrentDevice.GetPosition(_track))));
+        SetValueFromInput(SnapToTick(_track.ValueFromPoint(Mouse.Pointer.GetPosition(_track))));
     }
 
     // The accent fill (PART_SelectionRange) is driven exactly like ProgressBar's PART_Indicator: project the value

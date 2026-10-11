@@ -80,7 +80,7 @@
              The tick is repainted with them: on an accent plate the text color it borrows would be unreadable. -->
         <!-- ONE trigger, not two. IsHighlighted is now driven by the pointer as well as by the arrows (the row hands
              the highlight to its owner on mouse-enter), so there is a single mark and a single place that draws it.
-             A second trigger on IsMouseOver would put the plate back on a row the highlight has already left - which is
+             A second trigger on IsPointerOver would put the plate back on a row the highlight has already left - which is
              the two-plates-at-once the tick was introduced to end. -->
         <PropertyTrigger Property="IsHighlighted" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>

@@ -29,6 +29,9 @@ public class CanvasPane : ContentControl
     private bool _moved;
     private bool _captured;
     private double _wide;
+    private PointerPressedEventHandler _onPressed;
+    private PointerEventHandler _onMoved;
+    private PointerReleasedEventHandler _onReleased;
     private Vector2 _from;
     private Vector2 _at;
 
@@ -276,9 +279,12 @@ public class CanvasPane : ContentControl
         _sizerRight = GetTemplateChild("PART_SizerRight") as IUIComponent;
         SyncSizer();
 
-        MouseDown += OnPressed;
-        MouseMove += OnMoved;
-        MouseUp += OnReleased;
+        _onPressed ??= OnPressed;
+        _onMoved ??= OnMoved;
+        _onReleased ??= OnReleased;
+        AddHandler(PointerEvents.PointerPressedEvent, _onPressed, handledEventsToo: true);
+        AddHandler(PointerEvents.PointerMovedEvent, _onMoved, handledEventsToo: true);
+        AddHandler(PointerEvents.PointerReleasedEvent, _onReleased, handledEventsToo: true);
     }
 
     public override void OnRemoveTemplate()
@@ -289,9 +295,9 @@ public class CanvasPane : ContentControl
         if (_turn != null) _turn.Click -= OnTurnClicked;
         if (_snap != null) _snap.Click -= OnSnapClicked;
 
-        MouseDown -= OnPressed;
-        MouseMove -= OnMoved;
-        MouseUp -= OnReleased;
+        RemoveHandler(PointerEvents.PointerPressedEvent, _onPressed);
+        RemoveHandler(PointerEvents.PointerMovedEvent, _onMoved);
+        RemoveHandler(PointerEvents.PointerReleasedEvent, _onReleased);
 
         _grip = null;
         _turn = null;
@@ -426,7 +432,7 @@ public class CanvasPane : ContentControl
     }
 
     // Every press on a pane is the pane's; the canvas must not also start a stroke and steal a button's capture.
-    private void OnPressed(object sender, MouseButtonEventArgs e)
+    private void OnPressed(object sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
         _moved = false;
@@ -444,7 +450,7 @@ public class CanvasPane : ContentControl
                 Bounds.X, Bounds.X + ActualWidth);
             _sizing = true;
             _captured = true;
-            CaptureMouse();
+            e.Pointer.Capture(this);
             return;
         }
 
@@ -461,10 +467,13 @@ public class CanvasPane : ContentControl
         // it never seeing its own release - so no click, so the pane could never be folded. Nothing is lost by not
         // taking it: the grip is inside this pane, so its moves and its release bubble here anyway.
         _captured = !onGrip;
-        if (_captured) CaptureMouse();
+        if (_captured)
+        {
+            e.Pointer.Capture(this);
+        }
     }
 
-    private void OnMoved(object sender, MouseEventArgs e)
+    private void OnMoved(object sender, PointerEventArgs e)
     {
         if (_sizing && Layer != null)
         {
@@ -523,14 +532,18 @@ public class CanvasPane : ContentControl
         Settled();
     }
 
-    private void OnReleased(object sender, MouseButtonEventArgs e)
+    private void OnReleased(object sender, PointerReleasedEventArgs e)
     {
         e.Handled = true;
 
         if (_sizing)
         {
             _sizing = false;
-            if (_captured) ReleaseMouseCapture();
+            if (_captured)
+            {
+                e.Pointer.Capture(null);
+            }
+
             _captured = false;
             Settled();
             return;
@@ -539,7 +552,11 @@ public class CanvasPane : ContentControl
         if (!_dragging) return;
 
         _dragging = false;
-        if (_captured) ReleaseMouseCapture();
+        if (_captured)
+        {
+            e.Pointer.Capture(null);
+        }
+
         _captured = false;
 
         if (_moved) StickToEdge();
