@@ -40,6 +40,14 @@ public class Transform : AnimatableUIComponent
     public static readonly AdamantiumProperty TranslateYProperty = AdamantiumProperty.Register(nameof(TranslateY),
         typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
 
+    /// <summary>A move in units of the owner's own size, added to <see cref="TranslateX"/>/<see cref="TranslateY"/>: 1 moves
+    /// it by its whole width or height. Resolved where the owner's size is known, so it applies to a render transform.</summary>
+    public static readonly AdamantiumProperty ShiftXProperty = AdamantiumProperty.Register(nameof(ShiftX),
+        typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
+
+    public static readonly AdamantiumProperty ShiftYProperty = AdamantiumProperty.Register(nameof(ShiftY),
+        typeof (Double), typeof (Transform), new PropertyMetadata(default(Double), TransformPropertyChangedCallback));
+
     /// <summary>Shear angles (degrees) about the rotation center - <see cref="SkewX"/> slants horizontally with y (the
     /// "italic" lean), <see cref="SkewY"/> vertically with x. WPF's SkewTransform AngleX/AngleY; folded into the same
     /// single matrix, so a sheared element stays in the instanced batches like any other.</summary>
@@ -105,6 +113,20 @@ public class Transform : AnimatableUIComponent
         set => SetValue(TranslateYProperty, value);
     }
         
+    /// <summary>A horizontal move in widths of the owner; see <see cref="ShiftXProperty"/>.</summary>
+    public Double ShiftX
+    {
+        get => GetValue<Double>(ShiftXProperty);
+        set => SetValue(ShiftXProperty, value);
+    }
+
+    /// <summary>A vertical move in heights of the owner; see <see cref="ShiftXProperty"/>.</summary>
+    public Double ShiftY
+    {
+        get => GetValue<Double>(ShiftYProperty);
+        set => SetValue(ShiftYProperty, value);
+    }
+
     public Double SkewX
     {
         get => GetValue<Double>(SkewXProperty);
@@ -130,6 +152,10 @@ public class Transform : AnimatableUIComponent
     }
         
     public Matrix4x4 Matrix { get; private set; } = Matrix4x4.Identity;
+
+    /// <summary><see cref="ShiftX"/> and <see cref="ShiftY"/> as of the last change, for composing without the property
+    /// system.</summary>
+    public Vector2 Shift { get; private set; }
 
     /// <summary>The element this transform is assigned to as RenderTransform (set by the owner). Lets a transform tick
     /// mark ONLY its owner when the owner is a render MOTION NODE (its slot matrix rewrites - the O(1) tilt/flip path)
@@ -173,6 +199,7 @@ public class Transform : AnimatableUIComponent
     private void UpdateTransform()
     {
         Matrix = CalculateFinalTransform();
+        Shift = new Vector2(ShiftX, ShiftY);
 
         // A LayoutTransform reshapes the owner's FOOTPRINT, so a value change (AUML setting ScaleX after the property, an
         // animated zoom, ...) must re-run LAYOUT: measure re-cascades into arrange and the render. A RenderTransform only
@@ -207,6 +234,8 @@ public class Transform : AnimatableUIComponent
         RotationCenterY = RotationCenterY,
         TranslateX = TranslateX,
         TranslateY = TranslateY,
+        ShiftX = ShiftX,
+        ShiftY = ShiftY,
         SkewX = SkewX,
         SkewY = SkewY
     };

@@ -217,6 +217,12 @@ public static class Compositor
                 matrix = Matrix4x4F.Translation(-ox, -oy, 0) * matrix * Matrix4x4F.Translation(ox, oy, 0);
             }
 
+            if (values.ShiftX != 0 || values.ShiftY != 0)
+            {
+                matrix *= Matrix4x4F.Translation((float)(values.ShiftX * basis.RenderSize.Width),
+                    (float)(values.ShiftY * basis.RenderSize.Height), 0);
+            }
+
             return matrix * Matrix4x4F.Translation((float)basis.BoundsLocation.X, (float)basis.BoundsLocation.Y, 0);
         }
     }

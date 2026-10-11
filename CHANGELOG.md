@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `Transform.ShiftX` and `ShiftY`: a move in units of the owner's own size (1 = its whole width or height), added to
+  `TranslateX`/`TranslateY` for a render transform. The render thread composes it too, so an animation of it is
+  composited: a band can travel a fraction of its card whatever size the card is.
+
 - `FocusManager.Reveal()` and `FocusManager.FocusRevealedEvent`: shows where the focus is without moving it. The first
   Tab after a click now lights the ring on the clicked control instead of jumping to the next one; the next Tab moves on.
 
@@ -677,6 +681,9 @@ All packages share one version.
   last segment instead of stopping at its key.
 
 - An element's own `Opacity` animation is composited: the render thread writes it into the element's opacity slot.
+
+- `BusyIndicator.Shimmer` moves a glare band by `ShiftX` under the card's rounded clip instead of sliding three gradient
+  stops, so the render thread plays it and it keeps gliding while the loop thread is busy; it looks the same.
 
 - A text block of 2048 glyphs or more builds quads only for the part its window shows and a window's height and width
   around it, instead of for the whole text. Scrolled past that band, the frame builds the new band and draws again;

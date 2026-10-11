@@ -1169,6 +1169,12 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
                     matrix = Matrix4x4F.Translation(-ox, -oy, 0) * matrix * Matrix4x4F.Translation(ox, oy, 0);
                 }
 
+                var shift = renderTransform.Shift;
+                if (shift.X != 0 || shift.Y != 0)
+                {
+                    matrix *= Matrix4x4F.Translation((float)(shift.X * RenderSize.Width), (float)(shift.Y * RenderSize.Height), 0);
+                }
+
                 localTransform = matrix * localTransform;
             }
 

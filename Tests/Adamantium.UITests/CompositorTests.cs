@@ -218,6 +218,22 @@ public class CompositorTests
     }
 
     [Test]
+    public void AShiftMovesTheElementByItsOwnSize_TheSameOnBothThreads()
+    {
+        var (element, transform) = Spinner();   // 40 x 40, turning about its center
+        transform.ScaleX = 2;
+
+        transform.ShiftX = 0.5;
+        var loop = element.LocalTransform;
+        Assert.That(loop.M41, Is.EqualTo(-20f + 20f).Within(0.01), "a doubled width about the center, then half a width on");
+
+        transform.BeginAnimation(Transform.ShiftXProperty, Over(0.5, 0.5, 1));
+        Compositor.Tick(_view);
+        Assert.That(_view[0].Local.M41, Is.EqualTo(loop.M41).Within(0.01), "the render thread composes the same move");
+        Assert.That(_view[0].Local.M11, Is.EqualTo(loop.M11).Within(0.01));
+    }
+
+    [Test]
     public void ParkingAPageLetsGoOfItsTransformAnimations()
     {
         var (element, transform) = Spinner();
