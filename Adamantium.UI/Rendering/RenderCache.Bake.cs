@@ -325,6 +325,7 @@ public partial class RenderCache
         }
 
         _groupById.Clear();
+        _bandedText.Clear();
         ClearOrder();
         _recordedUnits.Clear();   // the recorder's mirror of the above
         // The designer builds a new tree per render (fresh RenderIds), so the old frozen layout would grow unboundedly.

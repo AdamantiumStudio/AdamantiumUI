@@ -444,7 +444,11 @@ public partial class RenderCache
             }
             if (allMatch)
             {
-                for (var i = 0; i < drawCommands.Count; i++) units[i].UpdateWithDrawCommand(drawCommands[i]);
+                for (var i = 0; i < drawCommands.Count; i++)
+                {
+                    units[i].UpdateWithDrawCommand(drawCommands[i]);
+                    NoteBandedText(units[i]);
+                }
                 group.Order = order;
                 return;
             }
