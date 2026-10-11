@@ -65,6 +65,7 @@
         <StyleInclude Source="{x:Type fluent:DataGridStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ListBoxItemStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DropInsertionIndicatorStyleSet}"/>
+        <StyleInclude Source="{x:Type fluent:HoldIndicatorStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DragHandleStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:SelectionAdornerStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:HoverAdornerStyleSet}"/>

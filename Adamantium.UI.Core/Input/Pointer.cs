@@ -34,6 +34,10 @@ public sealed class Pointer
     /// <summary>The mouse, or the first finger or pen down: the one that clicks and that the OS moves the cursor with.</summary>
     public bool IsPrimary { get; internal set; }
 
+    /// <summary>Whether a finger or a pen is held still past <see cref="Gestures.HoldingTime"/>: a lift now completes a
+    /// long press rather than a tap.</summary>
+    public bool IsHolding { get; internal set; }
+
     /// <summary>The element this pointer's events go to whatever is under it, or null.</summary>
     public IInputComponent Captured { get; private set; }
 

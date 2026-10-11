@@ -34,3 +34,8 @@ wait id=SurfaceMenu --timeout 3s
 invoke id=SurfaceMenu/name=Copy
 expect id=MenuReport name="Picked: Copy"
 absent id=SurfaceMenu
+touch id=MenuSurface hold --os
+wait id=SurfaceMenu --timeout 3s
+invoke id=SurfaceMenu/name=Cut
+expect id=MenuReport name="Picked: Cut"
+absent id=SurfaceMenu

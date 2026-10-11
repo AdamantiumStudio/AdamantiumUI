@@ -27,6 +27,12 @@ public sealed class AutomationExecutor
 
     // The option of a touch or pen command that hands the contact to the system instead of the application.
     internal const string SystemInput = "os";
+
+    // The option of a touch or pen tap held past the holding time before it lifts: a long press.
+    internal const string HoldGesture = "hold";
+
+    // A little past the holding time, so the hold has certainly started before the contact lifts.
+    private static readonly TimeSpan HoldMargin = TimeSpan.FromMilliseconds(150);
     private const char LineSeparator = (char)0x2028;
 
     private readonly IAutomationHost _host;
@@ -66,6 +72,8 @@ public sealed class AutomationExecutor
                     return await ShotAsync(request, timeout);
                 case AutomationCommand.Touch or AutomationCommand.Pen when request.Properties?.Contains(SystemInput) == true:
                     return await SystemContactAsync(request, timeout);
+                case AutomationCommand.Touch or AutomationCommand.Pen when request.Properties?.Contains(HoldGesture) == true:
+                    return await HoldAsync(request, timeout);
                 case AutomationCommand.Windows:
                 case AutomationCommand.Tree:
                 case AutomationCommand.Find:
@@ -131,6 +139,32 @@ public sealed class AutomationExecutor
         return await SettledAsync(request, mark, timeout);
     }
 
+    // A finger or a pen put down, held still past the holding time and lifted. Pressed and let go on the loop with the
+    // real hold timer running between, so the hold starts as it would under a hand.
+    private async Task<AutomationReply> HoldAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        var mark = ErrorJournal.Mark();
+        var contact = ContactOf(request);
+        var (window, point) = await _host.RunOnLoopAsync(() =>
+        {
+            var peer = Resolve(request.Target);
+            var (element, from, _) = ContactPlace(peer, request);
+            return InputSimulator.PutDown(element, Label(peer), from, contact);
+        }, timeout);
+
+        await Task.Delay(Gestures.HoldingTime + HoldMargin);
+        await _host.RunOnLoopAsync(() =>
+        {
+            InputSimulator.Lift(window, point, contact);
+            return true;
+        }, timeout);
+
+        return await SettledAsync(request, mark, timeout);
+    }
+
+    private static Contact ContactOf(AutomationRequest request) =>
+        request.Command == AutomationCommand.Touch ? Contact.Finger() : PenOf(request.Properties);
+
     // A finger or a pen through the system's own input. The frames are worked out on the loop and played by the system
     // on a worker; the reply waits for the contact's release to reach the window - the proof that the platform's own
     // pointer path delivered it.
@@ -140,7 +174,8 @@ public sealed class AutomationExecutor
         var input = UIApplication.Current?.Container is { } container && container.IsRegistered<ISyntheticPointerInput>()
             ? container.Resolve<ISyntheticPointerInput>()
             : throw new AutomationException("This platform has no synthetic pointer input to hand the contact to.");
-        var contact = request.Command == AutomationCommand.Touch ? Contact.Finger() : PenOf(request.Properties);
+        var contact = ContactOf(request);
+        var hold = request.Properties.Contains(HoldGesture) ? Gestures.HoldingTime + HoldMargin : TimeSpan.Zero;
 
         var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var onReleased = new PointerReleasedEventHandler((_, e) =>
@@ -158,7 +193,7 @@ public sealed class AutomationExecutor
             {
                 var peer = Resolve(request.Target);
                 var (element, from, to) = ContactPlace(peer, request);
-                var plan = InputSimulator.SystemFrames(element, Label(peer), from, to, contact);
+                var plan = InputSimulator.SystemFrames(element, Label(peer), from, to, contact, hold);
                 window = (IInputComponent)plan.Window;
                 window.AddHandler(PointerEvents.PointerReleasedEvent, onReleased, handledEventsToo: true);
                 return plan.Frames;
@@ -547,7 +582,7 @@ public sealed class AutomationExecutor
         var eraser = false;
         foreach (var option in options ?? [])
         {
-            if (option == SystemInput)
+            if (option is SystemInput or HoldGesture)
             {
                 continue;
             }

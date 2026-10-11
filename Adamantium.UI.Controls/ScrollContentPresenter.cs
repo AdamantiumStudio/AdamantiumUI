@@ -22,6 +22,11 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     private Vector2 _panStartPoint;
     private Vector2 _panStartOffset;
 
+    private Pointer _finger;
+    private Vector2 _fingerStart;
+    private Vector2 _fingerStartOffset;
+    private bool _fingerScrolling;
+
     private Size _extent;
     private Size _viewport;
     private Vector2 _offset;
@@ -47,7 +52,11 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     private Vector2 _inertiaVelocity;   // px/s, flick mode
 
     // Pan velocity tracking, to fling on release.
-    private long _lastMoveTimestamp;
+    private uint _lastMoveTimestamp;
+    private bool _hasLastMove;
+
+    // How long a hand may rest before it lifts and still flick: longer than a frame or two, shorter than a pause.
+    private const uint FlickRestMs = 100;
     private Vector2 _lastMoveOffset;
     private Vector2 _panVelocity;
 
@@ -75,6 +84,12 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         // per-unit clip, which intersects every ClipToBounds ancestor).
         ClipToBounds = true;
         // (Focusable=false comes from ContentPresenter's metadata override - a passive presenter is never a focus target.)
+
+        // A finger is watched whatever took its press: one that began on a button still scrolls.
+        AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnFingerPressed), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnFingerMoved), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnFingerReleased), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnFingerGone), handledEventsToo: true);
     }
 
     /// <summary>This clip is a VIEWPORT, so it binds adorners too: a focus ring on a row scrolled half out of the list
@@ -99,6 +114,9 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     /// <summary>Which axes a content drag pans (set by the <see cref="ScrollViewer"/>). None = drag does nothing.</summary>
     public PanningMode PanningMode { get; set; } = PanningMode.None;
+
+    /// <summary>Whether a finger scrolls the content - see <see cref="ScrollViewer.IsTouchScrollEnabled"/>.</summary>
+    public bool IsTouchScrollEnabled { get; set; } = true;
 
     public event EventHandler ScrollMetricsChanged;
 
@@ -198,7 +216,9 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (e.Handled || PanningMode == PanningMode.None || e.ChangedButton != MouseButtons.Left)
+        // A finger scrolls by its own rule (OnFingerPressed); PanningMode is the mouse's and a pen's.
+        if (e.Handled || PanningMode == PanningMode.None || e.ChangedButton != MouseButtons.Left ||
+            e.Pointer.Type == PointerType.Touch)
         {
             return;
         }
@@ -207,7 +227,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _isPanning = false;
         _panStartPoint = e.GetPosition(this);
         _panStartOffset = Offset;
-        _lastMoveTimestamp = 0;
+        _hasLastMove = false;
         _panVelocity = default;
         e.Pointer.Capture(this);
     }
@@ -215,7 +235,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (!ReferenceEquals(e.Pointer.Captured, this))
+        if (!ReferenceEquals(e.Pointer.Captured, this) || ReferenceEquals(e.Pointer, _finger))
         {
             return;
         }
@@ -237,26 +257,150 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             _ => raw
         };
         SetOffsetCore(_panStartOffset - delta);   // pan drives the offset directly (Down already stopped inertia)
-
-        // Track the offset's velocity so a flick can continue it on release; blend a little so one jittery sample
-        // doesn't dominate the release velocity.
-        var now = System.Diagnostics.Stopwatch.GetTimestamp();
-        var current = Offset;
-        if (_lastMoveTimestamp != 0)
-        {
-            var moveDt = (now - _lastMoveTimestamp) / (double)System.Diagnostics.Stopwatch.Frequency;
-            if (moveDt > 0.0001)
-                _panVelocity = _panVelocity * 0.4 + (current - _lastMoveOffset) * (1.0 / moveDt) * 0.6;
-        }
-        _lastMoveTimestamp = now;
-        _lastMoveOffset = current;
+        TrackPanVelocity(e.Timestamp);
         e.Handled = true;
+    }
+
+    // Track the offset's velocity so a flick can continue it on release; blend a little so one jittery sample doesn't
+    // dominate the release velocity. Timed by the moves themselves - when the hand made them, in ms - not by when the
+    // loop got round to them: a frame's worth of moves handled at once would otherwise read as a hand moving at a speed
+    // no hand has, and fling the content off.
+    private void TrackPanVelocity(uint timestamp)
+    {
+        var current = Offset;
+        if (_hasLastMove && timestamp != _lastMoveTimestamp)
+        {
+            var moveDt = unchecked(timestamp - _lastMoveTimestamp) / 1000.0;
+            _panVelocity = _panVelocity * 0.4 + (current - _lastMoveOffset) * (1.0 / moveDt) * 0.6;
+        }
+
+        _hasLastMove = true;
+        _lastMoveTimestamp = timestamp;
+        _lastMoveOffset = current;
+    }
+
+    // --- A finger: scrolls along the axes that have somewhere to go, taking the finger from what it began on ---
+
+    private void OnFingerPressed(object sender, PointerPressedEventArgs e)
+    {
+        // A second finger leaves the first one's scroll alone. A first finger whose lift went elsewhere - an outer scroll
+        // area took it, or it lifted outside - is gone from the surface, and the new one replaces it.
+        if (!IsTouchScrollEnabled || e.Pointer.Type != PointerType.Touch ||
+            _finger != null && PointerDevice.Current.Pointers.Contains(_finger))
+        {
+            return;
+        }
+
+        StopInertia();
+        _finger = e.Pointer;
+        _fingerStart = e.GetPosition(this);
+        _fingerStartOffset = Offset;
+        _fingerScrolling = false;
+        _hasLastMove = false;
+        _panVelocity = default;
+    }
+
+    private void OnFingerMoved(object sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(e.Pointer, _finger))
+        {
+            return;
+        }
+
+        if (!_fingerScrolling)
+        {
+            // What takes the finger's moves itself - a slider's thumb, a text selection, a carried row, a scroll area
+            // inside this one that took it first - keeps the gesture; so does what a held finger holds.
+            if (e.Handled || e.Pointer.IsHolding ||
+                e.Pointer.Captured is ScrollContentPresenter inner && !ReferenceEquals(inner, this))
+            {
+                _finger = null;
+                return;
+            }
+
+            if (!PlatformSettings.ExceedsDragThreshold(Scrollable(e.GetPosition(this) - _fingerStart), this))
+            {
+                return;
+            }
+
+            // Taken from what the finger began on: a button lets go of the press and is not clicked.
+            _fingerScrolling = true;
+            e.Pointer.Capture(this);
+        }
+
+        SetOffsetCore(_fingerStartOffset - Scrollable(e.GetPosition(this) - _fingerStart));
+        TrackPanVelocity(e.Timestamp);
+        e.Handled = true;
+    }
+
+    private void OnFingerReleased(object sender, PointerReleasedEventArgs e)
+    {
+        if (!ReferenceEquals(e.Pointer, _finger))
+        {
+            return;
+        }
+
+        var scrolled = _fingerScrolling;
+        _finger = null;
+        _fingerScrolling = false;
+        if (!scrolled)
+        {
+            return;
+        }
+
+        e.Handled = true;   // a scroll, not a tap
+        if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
+        if (IsInertiaEnabled && IsFlick(e.Timestamp)) StartFlick(_panVelocity);
+    }
+
+    // A lift that comes while the content is still moving flicks it on. One after the hand had stopped does not: the
+    // last speed it was moving at is old news by then.
+    private bool IsFlick(uint liftTimestamp) =>
+        _panVelocity.Length() > FlickStartSpeed && unchecked(liftTimestamp - _lastMoveTimestamp) <= FlickRestMs;
+
+    private void OnFingerGone(object sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(e.Pointer, _finger)) return;
+
+        _finger = null;
+        _fingerScrolling = false;
+    }
+
+    /// <summary>Whether <paramref name="pointer"/> may carry <paramref name="element"/> - a dragged row, a tab - now. The
+    /// mouse and a pen always may. A finger may once it holds, or where no scroll area around the element could scroll
+    /// under it: until then, the finger's move is a scroll.</summary>
+    internal static bool LetsFingerCarry(Pointer pointer, IUIComponent element)
+    {
+        if (pointer.Type != PointerType.Touch || pointer.IsHolding)
+        {
+            return true;
+        }
+
+        for (var at = element?.VisualParent; at != null; at = at.VisualParent)
+        {
+            if (at is ScrollContentPresenter { IsTouchScrollEnabled: true } presenter &&
+                presenter.Scrollable(Vector2.One) != Vector2.Zero)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // A drag along the axes this content can actually move on; the others stay put.
+    private Vector2 Scrollable(Vector2 drag)
+    {
+        var extent = Extent;
+        return new Vector2(
+            CanScrollHorizontally && extent.Width > _viewport.Width ? drag.X : 0,
+            CanScrollVertically && extent.Height > _viewport.Height ? drag.Y : 0);
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
-        if (e.ChangedButton != MouseButtons.Left)
+        if (e.ChangedButton != MouseButtons.Left || ReferenceEquals(e.Pointer, _finger))
         {
             return;
         }
@@ -269,7 +413,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         if (_isPanning)
         {
             e.Handled = true;   // it was a pan, not a click
-            if (IsInertiaEnabled && _panVelocity.Length() > FlickStartSpeed)
+            if (IsInertiaEnabled && IsFlick(e.Timestamp))
                 StartFlick(_panVelocity);   // fling: keep scrolling with decaying velocity
         }
         _isPanning = false;

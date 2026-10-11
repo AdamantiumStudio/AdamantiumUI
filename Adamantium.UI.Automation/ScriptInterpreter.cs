@@ -183,19 +183,20 @@ internal sealed class ScriptInterpreter
         AllowErrors = allowErrors
     };
 
-    // touch|pen <selector> tap | drag <x1,y1> <x2,y2>, a pen's --pressure, --barrel and --eraser, and --os to hand
+    // touch|pen <selector> tap | hold | drag <x1,y1> <x2,y2>, a pen's --pressure, --barrel and --eraser, and --os to hand
     // the contact to the system.
     private static AutomationRequest Contact(AutomationCommand command, ScriptArguments arguments, bool allowErrors)
     {
         var gesture = arguments.At(1);
         var value = gesture switch
         {
-            "tap" => null,
+            "tap" or AutomationExecutor.HoldGesture => null,
             "drag" => $"{arguments.At(2)} {arguments.At(3)}",
-            _ => throw new AutomationException($"'{gesture}': tap, or drag x1,y1 x2,y2.")
+            _ => throw new AutomationException($"'{gesture}': tap, hold, or drag x1,y1 x2,y2.")
         };
 
         var options = new List<string>();
+        if (gesture == AutomationExecutor.HoldGesture) options.Add(AutomationExecutor.HoldGesture);
         if (arguments.Option("pressure") is { } pressure) options.Add($"pressure={pressure}");
         if (arguments.Flag("barrel")) options.Add("barrel");
         if (arguments.Flag("eraser")) options.Add("eraser");

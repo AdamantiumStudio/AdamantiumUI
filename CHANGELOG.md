@@ -29,6 +29,36 @@ All packages share one version.
 - `VisualTreeNotifications.PaintMirrored`: an element's opacity changed while the render thread draws it - nothing on
   screen needs a re-paint, but a copy baked elsewhere (a visual brush) does.
 
+- A finger scrolls a `ScrollViewer`, along the axes it has room to move on, and a flick carries on with inertia.
+  - **From a button.** A finger that began on a button scrolls once it moves past the drag threshold; the button lets
+    go and is not clicked.
+  - **Who keeps the gesture.** What takes the finger's moves itself keeps them: a slider's thumb, a text selection,
+    or a scroll area inside this one, which scrolls before the page around it.
+  - **Switching it off.** `ScrollViewer.IsTouchScrollEnabled`, true by default.
+  - **The mouse.** `PanningMode` still governs only the mouse and the pen.
+  - **Rows.** A finger selects a row of a `ListBox`, a `TreeView` or a data grid on its tap, so scrolling a list
+    selects nothing. A hold selects the row as it starts, before the menu. A finger dragged across a grid scrolls it
+    and does not sweep a selection; a second tap still opens a cell for editing.
+  - **Carrying.** In a scroll area the finger can scroll, a finger carries a draggable row or a tab once it has held
+    it. Until then its move is a scroll. Where nothing around could scroll, it carries at the drag threshold, as the
+    mouse does. Drag and drop follows the pointer that pressed, a finger or a pen included. A drag to another
+    application stays the mouse's.
+
+- A long press, `Gestures.HoldingEvent`.
+  - **How it runs.** A finger or a pen held still for `Gestures.HoldingTime` (500 ms by default), without moving past
+    the drag threshold, raises `Started` on what it pressed. The lift then raises `Completed`. Moving off, or the
+    system taking the contact away, raises `Canceled`. The mouse does not hold.
+  - **What it changes.** A lift that ends a hold is no tap: a button pressed and held is not clicked
+    (`Pointer.IsHolding`; `ButtonBase.LongPressCancelsClick`, which a `RepeatButton` turns off to go on repeating). The
+    pointer's capture stays, so a thumb held a moment before it moves still drags. A pen pressed with its side button
+    does not hold.
+  - **Double tap.** Two taps in a row count as a double tap across touches, though each touch is a new pointer.
+  - **Context menu.** A completed hold opens the context menu, the touch way of the right button.
+  - **The cue.** While the hold lasts, a `HoldIndicator` drawn by the theme rings the contact. On Windows, the
+    system's own press-and-hold ring is switched off.
+  - **Automation.** `adam-auto touch|pen <selector> hold` and `AutomationElement.HoldAsync`/`PenHoldAsync` long-press
+    inside the application, or through the system with `--os`.
+
 - Touch and pen on Windows. A window reads `WM_POINTER` messages for a finger or a pen into pointer events: position,
   contact, primary, pressure, tilt, rotation, eraser and side button, and a finger's contact area. A gesture the system
   cancels arrives as `PointerCanceled`. A finger no longer reaches the application as the mouse the system used to
@@ -883,6 +913,14 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- A flick of scrolled content carries on at the speed the hand moved. That speed is now measured by the times the
+  moves were made, not by when the loop handled them. Several moves handled in one frame read as a speed no hand
+  has, and sometimes flung the content far past where the gesture ended.
+
+- With two pointers at once, one leaving an element no longer acts as if all had. A submenu stays open, a tooltip
+  stays up and a tree row stays lit while another pointer is still over it. A drawing canvas keeps a pen's stroke from
+  the mouse passing over it until the pen lifts.
 
 - The data pager's page row changes in place as the page moves (`PagerPageItem` now raises `PropertyChanged`). It was
   rebuilt on every turn, so the clicked page button left the tree with the focus, and the next Tab started from the top

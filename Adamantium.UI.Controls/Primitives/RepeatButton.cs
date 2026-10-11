@@ -79,6 +79,9 @@ public class RepeatButton : ButtonBase
         }
     }
 
+    // Held is what a repeat button is for: it goes on repeating, as it does under a mouse button.
+    protected override bool LongPressCancelsClick => false;
+
     protected override void OnPointerCaptureLost(PointerEventArgs e)
     {
         base.OnPointerCaptureLost(e);

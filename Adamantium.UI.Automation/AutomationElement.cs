@@ -232,6 +232,17 @@ public sealed class AutomationElement
         bool eraser = false, bool throughSystem = false) =>
         ContactAsync(AutomationCommand.Pen, Stroke(fromX, fromY, toX, toY), PenOptions(pressure, barrel, eraser), throughSystem);
 
+    /// <summary>A finger held still in its middle past the holding time and lifted: a long press, the touch way of a
+    /// right click.</summary>
+    public Task HoldAsync(bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Touch, null, [AutomationExecutor.HoldGesture], throughSystem);
+
+    /// <summary>A pen held still in its middle past the holding time and lifted, as <see cref="HoldAsync"/> holds a
+    /// finger.</summary>
+    public Task PenHoldAsync(float pressure = 0.5f, bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Pen, null, [.. PenOptions(pressure, false, false), AutomationExecutor.HoldGesture],
+            throughSystem);
+
     private Task ContactAsync(AutomationCommand command, string stroke, string[] options, bool throughSystem) =>
         _session.RunAsync(new AutomationRequest
         {
