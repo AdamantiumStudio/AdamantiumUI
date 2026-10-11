@@ -472,6 +472,9 @@ public partial class RenderCache
 
         group = BuildUnitsFor(component, drawCommands, _projectionMatrix);
         group.Order = order;
+        group.Clones = clones;   // a group made here for the first time - a clone host that draws nothing of its own
+        group.CloneSteps = cloneSteps;
+        group.CloneStagger = cloneStagger;
 
         if (needsInsert)
         {
@@ -521,12 +524,31 @@ public partial class RenderCache
             if (draw.Commands.Count == 0)
             {
                 // Recorded nothing: clean keeps what it drew; dirty now draws nothing, so empty the group but keep its rank
-                // so a return is a refill, not a re-insert.
-                if (!draw.WasGeometryValid && _groupById.TryGetValue(draw.Component.RenderId, out var emptied))
+                // so a return is a refill, not a re-insert. A clone host that draws nothing of its own still needs its
+                // group - the copies run from it - as the full walk gives it one (ProcessRenderCommands).
+                _groupById.TryGetValue(draw.Component.RenderId, out var emptied);
+                if (emptied != null)
                 {
-                    foreach (var unit in emptied.Units) Retire(unit);
-                    emptied.ClearUnits();
+                    emptied.Clones = draw.Clones;
+                    emptied.CloneSteps = draw.CloneSteps;
+                    emptied.CloneStagger = draw.CloneStagger;
+                    if (!draw.WasGeometryValid)
+                    {
+                        foreach (var unit in emptied.Units) Retire(unit);
+                        emptied.ClearUnits();
+                    }
                 }
+
+                if (draw.Clones is { Count: > 0 } && (emptied == null || !emptied.InOrder || emptied.Order != draw.Order))
+                {
+                    var host = emptied ?? BuildUnitsFor(draw.Component, draw.Commands, packet.ProjectionMatrix);
+                    host.Clones = draw.Clones;
+                    host.CloneSteps = draw.CloneSteps;
+                    host.CloneStagger = draw.CloneStagger;
+                    host.Order = draw.Order;
+                    QueueInsert(host);
+                }
+
                 continue;
             }
 

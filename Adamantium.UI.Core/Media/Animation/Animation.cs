@@ -79,7 +79,13 @@ public class Animation : AdamantiumComponent
     {
         if (!ReferenceEquals(InheritanceParent, target) && Data.BindingEngine.HasBindings(this))
         {
+            if (InheritanceParent != null)
+            {
+                InheritanceParent.PropertyChanged -= OnTargetPropertyChanged;
+            }
+
             InheritanceParent = target;
+            target.PropertyChanged += OnTargetPropertyChanged;
             Data.BindingEngine.RefreshBindings(this);
         }
 
@@ -93,6 +99,14 @@ public class Animation : AdamantiumComponent
     /// from friendly properties (Min/Max/...) just before it runs. The base keyframe animation authors its frames in
     /// markup, so this is a no-op for it.</summary>
     protected virtual void Prepare() { }
+
+    private void OnTargetPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == FundamentalUIComponent.DataContextProperty)
+        {
+            Data.BindingEngine.RefreshBindings(this);
+        }
+    }
 
     /// <summary>A derived type calls this from the change of a property its <see cref="Prepare"/> reads, so a running
     /// animation picks the new value up without losing its place.</summary>

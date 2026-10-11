@@ -397,6 +397,84 @@ public class CompositorRenderTests
         Assert.That(third, Is.EqualTo(first).Within(3));
     }
 
+    [TestCase(0)]
+    [TestCase(80)]
+    public void HeldSkeletonCards_PulseOnScreen(int staggerMs)
+    {
+        // The sandbox's Skeletons stand, end to end: a held list draws one card at every slot, the card's fill pulses,
+        // and every copy on screen pulses with it.
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 200, 120) { ClearColor = Colors.Black };
+
+        var root = new TestRoot(200, 120);
+        var list = new Adamantium.UI.Controls.ItemsControl
+        {
+            ItemSkeletonTemplate = new Adamantium.UI.Core.Templates.DataTemplate(() =>
+            {
+                var card = new Adamantium.UI.Controls.Panels.Grid { RenderCloneStagger = TimeSpan.FromMilliseconds(staggerMs) };
+                card.Children.Add(new Adamantium.UI.Controls.Decorators.Border { Background = Brushes.Red });
+                return new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = card };
+            }),
+            ItemsSource = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Range(0, 500)),
+            ItemsPanel = new Adamantium.UI.Controls.ItemsPanelTemplate(() => new Adamantium.UI.Core.Templates.TemplateResult
+            {
+                RootComponent = new Adamantium.UI.Controls.Panels.WrapPanel { ItemWidth = 24, ItemHeight = 24, HoldSkeletons = true }
+            }),
+            Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+            {
+                var presenter = new Adamantium.UI.Controls.ItemsPresenter();
+                var result = new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = presenter };
+                result.RegisterName("PART_ItemsPresenter", presenter);
+                return result;
+            })
+        };
+        root.Add(list);
+        list.Measure(new Size(200, 120));
+        list.Arrange(new Rect(0, 0, 200, 120));
+        LayoutManager.GetOrCreate(list).ExecuteLayoutPass();
+
+        var card = System.Linq.Enumerable.Single(
+            System.Linq.Enumerable.OfType<Adamantium.UI.Controls.Panels.Grid>(((IUIComponent)list.ItemsHostPanel).VisualChildren));
+        var fill = card.Children[0];
+        new PulseAnimation { Property = "Opacity", Min = 0.1, Max = 0.9, Duration = TimeSpan.FromSeconds(1) }
+            .Apply((AdamantiumComponent)fill);
+        var entry = Compositor.EntryFor((AdamantiumComponent)fill, CompositorChannel.Opacity);
+        Assert.That(entry, Is.Not.Null, "the fill's pulse is composited");
+        Compositor.StartPending();
+
+        int RedOfTheSixthCard()
+        {
+            Assert.That(renderer.RenderFrame(root), Is.True);
+            RenderDirty.Clear();
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
+            renderer.Save(path, ImageFileType.Png);
+            try
+            {
+                return (int)(Image.Load(path).GetPixelBuffer(0, 0).GetPixel<uint>(5 * 24 + 12, 12) & 0xFF);
+            }
+            finally
+            {
+                System.IO.File.Delete(path);
+            }
+        }
+
+        RedOfTheSixthCard();
+        var low = int.MaxValue;
+        var high = int.MinValue;
+        var until = entry.Elapsed + 2.2;
+        while (entry.Elapsed < until)
+        {
+            var red = RedOfTheSixthCard();
+            low = Math.Min(low, red);
+            high = Math.Max(high, red);
+            Thread.Sleep(100);
+        }
+
+        Assert.That(high - low, Is.GreaterThan(100), $"over a whole cycle the copy pulses on screen (low {low}, high {high})");
+    }
+
     private static (int First, int Second, int Third) Copies(OffscreenTestRenderer renderer)
     {
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");

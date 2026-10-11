@@ -19,7 +19,7 @@ public partial class RenderCache
                 continue;
             }
 
-            views.Add(new GroupView(component, group.Units.Count));
+            views.Add(new GroupView(component, group.Units.Count, group.Clones?.Count ?? 0));
         }
 
         return views;
