@@ -1,7 +1,8 @@
 namespace Adamantium.UI.Core.Media.Animation;
 
 /// <summary>Decides which <see cref="CompositorChannel"/> an animation belongs to, from what its property touches: a
-/// <see cref="Transform"/> or an <see cref="PropertyMetadataOptions.AffectsPaint"/> property; the rest stays on the loop.</summary>
+/// <see cref="Transform"/>, an element's own Opacity or an <see cref="PropertyMetadataOptions.AffectsPaint"/> property;
+/// the rest stays on the loop.</summary>
 public static class AnimationChannels
 {
     /// <summary>The channel one animated property of one target belongs to.</summary>
@@ -9,9 +10,7 @@ public static class AnimationChannels
     {
         if (target is Transform) return CompositorChannel.Transform;
 
-        // An element's own Opacity stays on the loop: composited, the property would stop advancing for bindings and
-        // triggers, and a fade already dirties just one element.
-        if (target is IUIComponent && ReferenceEquals(property, OpacityOf(target))) return CompositorChannel.None;
+        if (target is IUIComponent && ReferenceEquals(property, OpacityOf(target))) return CompositorChannel.Opacity;
 
         var metadata = property.GetDefaultMetadata(target.GetType());
         return metadata is { AffectsPaint: true } ? CompositorChannel.Paint : CompositorChannel.None;

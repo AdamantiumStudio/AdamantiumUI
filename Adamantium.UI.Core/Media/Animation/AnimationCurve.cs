@@ -87,18 +87,32 @@ public sealed class AnimationCurve
     {
         var cues = track.Cues;
         var values = track.Values;
-        if (position <= cues[0]) return values[0];
-        if (position >= cues[^1]) return values[^1];
+        if (position <= cues[0])
+        {
+            return position < 0.0 && cues[0] == 0.0 && cues.Length > 1 ? Lerp(track, 0, position) : values[0];
+        }
+
+        if (position >= cues[^1])
+        {
+            return position > 1.0 && cues[^1] == 1.0 && cues.Length > 1 ? Lerp(track, cues.Length - 2, position) : values[^1];
+        }
 
         for (var i = 0; i < cues.Length - 1; i++)
         {
             if (position <= cues[i + 1])
             {
-                var span = cues[i + 1] - cues[i];
-                var t = span <= 0 ? 0.0 : (position - cues[i]) / span;
-                return values[i] + (values[i + 1] - values[i]) * t;
+                return Lerp(track, i, position);
             }
         }
         return values[^1];
+    }
+
+    private static double Lerp(Track track, int segment, double position)
+    {
+        var cues = track.Cues;
+        var values = track.Values;
+        var span = cues[segment + 1] - cues[segment];
+        var t = span <= 0 ? 0.0 : (position - cues[segment]) / span;
+        return values[segment] + (values[segment + 1] - values[segment]) * t;
     }
 }

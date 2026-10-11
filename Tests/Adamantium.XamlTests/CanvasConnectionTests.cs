@@ -478,7 +478,7 @@ public class CanvasConnectionTests
         });
 
         // The rows settle, and only then is the move a fact.
-        Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.5);
+        AnimationTime.Pass(0.5);
         Settle(window);
 
         Assert.Multiple(() =>

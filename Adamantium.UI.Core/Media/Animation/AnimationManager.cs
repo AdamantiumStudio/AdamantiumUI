@@ -40,6 +40,7 @@ public static class AnimationManager
     {
         if (!match(a)) return false;
         ActiveSet.Remove(a);
+        (a as RunningKeyFrameAnimation)?.ReleaseComposited();
         return true;
     });
 
@@ -113,7 +114,10 @@ public static class AnimationManager
             if (!ActiveSet.Contains(animation)) continue;
             // Safety net: mark the animation's target per component, never a global flag, which would disable partial
             // renders. Delegate tickers have no target.
-            if (animation.DirtyTarget is { } dirtyTarget) RenderDirty.MarkGeometry(dirtyTarget);
+            if (animation.DirtyTarget is { } dirtyTarget && animation is not RunningKeyFrameAnimation { IsComposited: true })
+            {
+                RenderDirty.MarkGeometry(dirtyTarget);
+            }
             if (animation.Advance(deltaSeconds))
                 Remove(animation);
         }
@@ -168,11 +172,16 @@ public static class AnimationManager
     {
         if (DeferIfOutOfTree(target, target, () => Begin(target, property, animation, completed))) return;
 
-        // Re-animating the same property restarts from the new animation - drop any in-flight one first.
+        // Re-animating the same property restarts from the new animation - drop the in-flight one once this one has taken
+        // its place on the render thread.
+        IRunningAnimation running = animation.Curve(property) is { } curve
+            ? new RunningKeyFrameAnimation(target, curve, animation.FillBehavior, false, completed)
+            : new RunningAnimation(target, property, animation, completed);
         RemoveWhere(a => a.Animates(target, property));
-        var running = new RunningAnimation(target, property, animation, completed);
-        running.Advance(0);   // apply the From value immediately so there is no one-frame flash before the first tick
-        Add(running);
+        if (!running.Advance(0))   // apply the From value immediately so there is no one-frame flash before the first tick
+        {
+            Add(running);
+        }
     }
 
     /// <summary>Starts a keyframe <see cref="Animation"/> on <paramref name="target"/>, dropping any in-flight animation
@@ -184,8 +193,10 @@ public static class AnimationManager
         var running = new RunningKeyFrameAnimation(target, animation, completed, resumeElapsed);
         foreach (var property in running.Properties)
             RemoveWhere(a => a.Animates(target, property));
-        running.Advance(0);   // apply the start values immediately so there is no one-frame flash
-        Add(running);
+        if (!running.Advance(0))   // apply the start values immediately so there is no one-frame flash
+        {
+            Add(running);
+        }
     }
 
     /// <summary>The elapsed time of the animation currently running on <paramref name="target"/> (any property), or null if
@@ -200,22 +211,14 @@ public static class AnimationManager
 
     /// <summary>Stops the animation (if any) running on <paramref name="property"/> of <paramref name="target"/> without
     /// firing its completion callback. Returns true if one was running. The caller releases the held animation value.</summary>
-    internal static bool Cancel(AdamantiumComponent target, AdamantiumProperty property)
-    {
-        var canceled = RemoveWhere(a => a.Animates(target, property)) > 0;
-        if (canceled) Compositor.Release(target);   // the render thread must stop playing what the loop just stopped
-        return canceled;
-    }
+    internal static bool Cancel(AdamantiumComponent target, AdamantiumProperty property) =>
+        RemoveWhere(a => a.Animates(target, property)) > 0;
 
     /// <summary>Stops EVERY animation running on <paramref name="target"/> (any property), without firing completions -
     /// the WPF <c>StopStoryboard</c> analog. Used to end a looping animation on demand (e.g. a StopAnimationAction, or a
     /// recycled loading card whose pulse must stop once its real item has loaded). The held Animation-priority values
     /// stay until the caller/property system releases them.</summary>
-    public static void Cancel(AdamantiumComponent target)
-    {
-        RemoveWhere(a => a.AnimatesTarget(target));
-        Compositor.Release(target);
-    }
+    public static void Cancel(AdamantiumComponent target) => RemoveWhere(a => a.AnimatesTarget(target));
 
     /// <summary>Stops everything running anywhere under <paramref name="root"/> - what parking a whole page needs. ONE
     /// pass over what is actually running, asking each animation whether its target sits in that subtree: a page has a
@@ -225,19 +228,7 @@ public static class AnimationManager
     {
         if (root == null) return;
 
-        var released = new List<AdamantiumComponent>();
-        RemoveWhere(a =>
-        {
-            if (a.DirtyTarget is not { } target || !IsWithin(target, root)) return false;
-
-            released.Add(target as AdamantiumComponent);
-            return true;
-        });
-
-        foreach (var target in released)
-        {
-            if (target != null) Compositor.Release(target);
-        }
+        RemoveWhere(a => a.DirtyTarget is { } target && IsWithin(target, root));
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent root)

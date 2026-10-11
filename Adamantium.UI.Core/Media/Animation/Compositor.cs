@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media.Animation;
@@ -44,7 +45,7 @@ public static class Compositor
             Owner = owner;
             Curve = curve;
             _basis = basis;
-            _startTimestamp = Stopwatch.GetTimestamp() - (long)(resumeElapsed * Stopwatch.Frequency);
+            _resumeElapsed = resumeElapsed;
             Local = ComposeLocal(basis, curve, Elapsed);
         }
 
@@ -55,7 +56,7 @@ public static class Compositor
             Channel = CompositorChannel.Paint;
             Curve = curve;
             _paintBase = paintBase;
-            _startTimestamp = Stopwatch.GetTimestamp() - (long)(resumeElapsed * Stopwatch.Frequency);
+            _resumeElapsed = resumeElapsed;
         }
 
         // Opacity: one element whose alpha the render thread writes into its opacity slot. No basis and no snapshot - the
@@ -66,7 +67,7 @@ public static class Compositor
             Channel = CompositorChannel.Opacity;
             Owner = owner;
             Curve = curve;
-            _startTimestamp = Stopwatch.GetTimestamp() - (long)(resumeElapsed * Stopwatch.Frequency);
+            _resumeElapsed = resumeElapsed;
             Alpha = (float)curve.Evaluate(curve.Tracks[0], Elapsed);
         }
 
@@ -108,13 +109,29 @@ public static class Compositor
         /// brush's slots)? Meaningful only for a Paint entry.</summary>
         public bool PaintChanged { get; private set; }
 
-        private readonly long _startTimestamp;
+        private readonly double _resumeElapsed;
+        private long _startTimestamp;
 
         /// <summary>Seconds since this animation began - read straight off the monotonic clock, not accumulated. Both threads
         /// therefore get the same answer for the same instant, no matter who asks, how often, or in what order: there is
         /// nothing to keep in step because there is no counter. (Accumulating a delta would need every reader to agree on who
-        /// advances it - and would drift the moment two did.)</summary>
-        public double Elapsed => (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
+        /// advances it - and would drift the moment two did.) Until <see cref="Start"/>, it holds where it starts from.</summary>
+        public double Elapsed
+        {
+            get
+            {
+                var start = Volatile.Read(ref _startTimestamp);
+                return start == 0 ? _resumeElapsed : (Stopwatch.GetTimestamp() - start) / (double)Stopwatch.Frequency;
+            }
+        }
+
+        internal void Start()
+        {
+            if (Volatile.Read(ref _startTimestamp) == 0)
+            {
+                Volatile.Write(ref _startTimestamp, Stopwatch.GetTimestamp() - (long)(_resumeElapsed * Stopwatch.Frequency));
+            }
+        }
 
         // When the render thread last applied this transform; if stale, the loop forces a re-record. A torn read is
         // corrected next frame.
@@ -135,16 +152,10 @@ public static class Compositor
         }
 
         /// <summary>Recompute this animation's applied state for RIGHT NOW. Idempotent - calling it twice in a frame is
-        /// harmless. Transform: recompose the matrix into <see cref="Local"/>. Paint: build and publish the brush snapshot
-        /// (the render cache then re-bakes the slots that read it).</summary>
+        /// harmless. Opacity: the alpha. Paint: build and publish the brush snapshot (the render cache then re-bakes the
+        /// slots that read it). A transform's matrix is folded from all its animations by <see cref="Tick"/>.</summary>
         internal void Recompose()
         {
-            if (Channel == CompositorChannel.Transform)
-            {
-                Local = ComposeLocal(_basis, Curve, Elapsed);
-                return;
-            }
-
             if (Channel == CompositorChannel.Opacity)
             {
                 Alpha = (float)Curve.Evaluate(Curve.Tracks[0], Elapsed);
@@ -178,9 +189,24 @@ public static class Compositor
         private static Matrix4x4F ComposeLocal(Basis basis, AnimationCurve curve, double elapsed)
         {
             var values = basis.Values;
-            foreach (var track in curve.Tracks)
-                values.Set(track.Property, curve.Evaluate(track, elapsed));
+            Apply(ref values, curve, elapsed);
+            return ToLocal(basis, values);
+        }
 
+        internal void Fold(ref TransformValues values) => Apply(ref values, Curve, Elapsed);
+
+        internal void Place(Basis basis, TransformValues values) => Local = ToLocal(basis, values);
+
+        private static void Apply(ref TransformValues values, AnimationCurve curve, double elapsed)
+        {
+            foreach (var track in curve.Tracks)
+            {
+                values.Set(track.Property, curve.Evaluate(track, elapsed));
+            }
+        }
+
+        private static Matrix4x4F ToLocal(Basis basis, TransformValues values)
+        {
             var matrix = (Matrix4x4F)values.ToMatrix();
 
             var origin = basis.Origin;
@@ -211,7 +237,11 @@ public static class Compositor
         {
             case CompositorChannel.Transform:
             {
-                if (target is not Transform transform || transform.Owner is not { } owner) return null;
+                if (target is not Transform transform || transform.Owner is not { } owner || transform.IsLayoutTransform
+                    || owner.LayoutTransform != null)
+                {
+                    return null;
+                }
 
                 // A world-baked element cannot be moved by a matrix write. Promote it - and mark it structural, because its
                 // subtree's instances must be re-baked in the node's space before the slot means anything. Remember WE did
@@ -253,32 +283,92 @@ public static class Compositor
         {
             // Re-animating the same target replaces it; carry a running compositor-promotion across the swap so it isn't
             // lost (the node stays a motion node, and the LAST Release un-promotes it).
-            if (entry.Channel == CompositorChannel.Transform && !entry.Promoted &&
-                Entries.Find(e => ReferenceEquals(e.Target, target)) is { Promoted: true })
-                entry.Promoted = true;
-            Entries.RemoveAll(e => ReferenceEquals(e.Target, target));
+            for (var i = Entries.Count - 1; i >= 0; i--)
+            {
+                var e = Entries[i];
+                if (!ReferenceEquals(e.Target, target)
+                    || (entry.Channel == CompositorChannel.Transform && !SharesAProperty(e.Curve, curve)))
+                {
+                    continue;
+                }
+
+                if (e.Promoted)
+                {
+                    entry.Promoted = true;
+                }
+
+                Entries.RemoveAt(i);
+            }
+
             Entries.Add(entry);
         }
         return entry;
     }
 
-    /// <summary>Stop compositing this target (the animation was canceled or finished). Loop thread.</summary>
-    public static void Release(AdamantiumComponent target)
+    /// <summary>Stop compositing the one animation <paramref name="entry"/> plays (it was canceled or finished), after its
+    /// last value was written to the property. Loop thread.</summary>
+    public static void Release(Entry entry)
     {
         lock (Gate)
         {
-            for (var i = Entries.Count - 1; i >= 0; i--)
+            if (!Entries.Remove(entry) || entry.Channel != CompositorChannel.Transform || entry.Owner is not { } owner)
             {
-                var e = Entries[i];
-                if (!ReferenceEquals(e.Target, target)) continue;
-                // Un-promote a node WE promoted, so a once-animated static node stops full-re-recording every frame; re-bake
-                // it in world space now no matrix drives it. An intrinsic motion node (FlipTile, scroll viewport) is left be.
-                if (e.Promoted && e.Owner != null)
-                {
-                    e.Owner.IsRenderMotionNode = false;
-                    RenderDirty.MarkStructural(e.Owner);
-                }
-                Entries.RemoveAt(i);
+                return;
+            }
+
+            if (Entries.Find(e => ReferenceEquals(e.Target, entry.Target)) is { } sibling)
+            {
+                sibling.Promoted |= entry.Promoted;
+                return;
+            }
+
+            if (entry.Promoted)
+            {
+                owner.IsRenderMotionNode = false;
+                RenderDirty.MarkStructural(owner);
+            }
+            else
+            {
+                RenderDirty.MarkNodeTransform(owner);
+            }
+        }
+    }
+
+    private static bool SharesAProperty(AnimationCurve a, AnimationCurve b)
+    {
+        foreach (var track in b.Tracks)
+        {
+            if (Animates(a, track.Property))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool Animates(AnimationCurve curve, AdamantiumProperty property)
+    {
+        foreach (var track in curve.Tracks)
+        {
+            if (track.Property == property)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Starts the clock of every animation taken over since the last call. Loop thread, once a frame is recorded:
+    /// the frame that builds what an animation moves then does not spend its duration before any of it is shown.</summary>
+    public static void StartPending()
+    {
+        lock (Gate)
+        {
+            foreach (var entry in Entries)
+            {
+                entry.Start();
             }
         }
     }
@@ -286,6 +376,24 @@ public static class Compositor
     public static void Reset()
     {
         lock (Gate) Entries.Clear();
+    }
+
+    internal static bool Mirrored(Transform transform)
+    {
+        var drawn = false;
+        lock (Gate)
+        {
+            foreach (var entry in Entries)
+            {
+                if (ReferenceEquals(entry.Target, transform))
+                {
+                    entry.CurrentBasis = CaptureBasis(transform, entry.Owner);
+                    drawn |= entry.AppliedRecently;
+                }
+            }
+        }
+
+        return drawn;
     }
 
     /// <summary>Re-capture every entry's base from the live tree. Loop thread, once per frame: layout may have moved or
@@ -301,7 +409,7 @@ public static class Compositor
                 {
                     entry.CurrentBasis = CaptureBasis((Transform)entry.Target, entry.Owner);
                 }
-                else if (((Brush)entry.Target).ConsumeBaseChange())
+                else if (entry.Channel == CompositorChannel.Paint && ((Brush)entry.Target).ConsumeBaseChange())
                 {
                     // Only when the brush itself changed (a theme recolor) - not every frame, which would reset the dedup.
                     entry.PaintBase = ((Brush)entry.Target).CaptureBase();
@@ -312,7 +420,8 @@ public static class Compositor
 
     /// <summary>Recompose every composited animation for the instant it is called, into <paramref name="into"/> (the caller
     /// keeps and reuses that list, so a present allocates nothing). Called by the RENDER thread, once per present.
-    /// False = nothing is composited, and <paramref name="into"/> is empty.</summary>
+    /// Every animation of one transform lands in its one matrix. False = nothing is composited, and
+    /// <paramref name="into"/> is empty.</summary>
     public static bool Tick(List<Entry> into)
     {
         into.Clear();
@@ -322,9 +431,40 @@ public static class Compositor
             into.AddRange(Entries);
         }
 
-        foreach (var entry in into) entry.Recompose();
+        var folded = _folded ??= new Dictionary<AdamantiumComponent, (Basis Basis, TransformValues Values)>();
+        foreach (var entry in into)
+        {
+            if (entry.Channel != CompositorChannel.Transform)
+            {
+                entry.Recompose();
+                continue;
+            }
+
+            if (!folded.TryGetValue(entry.Target, out var sofar))
+            {
+                var basis = entry.CurrentBasis;
+                sofar = (basis, basis.Values);
+            }
+
+            entry.Fold(ref sofar.Values);
+            folded[entry.Target] = sofar;
+        }
+
+        foreach (var entry in into)
+        {
+            if (entry.Channel == CompositorChannel.Transform)
+            {
+                var (basis, values) = folded[entry.Target];
+                entry.Place(basis, values);
+            }
+        }
+
+        folded.Clear();
         return true;
     }
+
+    [ThreadStatic]
+    private static Dictionary<AdamantiumComponent, (Basis Basis, TransformValues Values)> _folded;
 
     /// <summary>Whether the render thread is playing this target; if so, the loop thread's mirror writes must not
     /// invalidate its render.</summary>

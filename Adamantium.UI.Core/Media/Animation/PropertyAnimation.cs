@@ -29,4 +29,6 @@ public abstract class PropertyAnimation
     public FillBehavior FillBehavior { get; set; } = FillBehavior.HoldEnd;
 
     internal abstract Func<double, object> Interpolation();
+
+    internal virtual AnimationCurve Curve(AdamantiumProperty property) => null;
 }

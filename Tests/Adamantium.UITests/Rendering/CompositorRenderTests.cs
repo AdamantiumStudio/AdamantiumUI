@@ -64,6 +64,7 @@ public class CompositorRenderTests
             }
         };
         slide.Apply(transform);
+        Compositor.StartPending();   // the frame that started it is recorded: its clock starts
 
         Assert.That(Compositor.EntryFor(transform), Is.Not.Null, "the slide must be composited");
 
@@ -123,6 +124,7 @@ public class CompositorRenderTests
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter("RotationAngle", 360.0) } }
             }
         }.Apply(transform);
+        Compositor.StartPending();
 
         // Horizontal: (22,32) is inside the bar, (32,22) is above it.
         Assert.That(renderer.RenderFrame(root), Is.True);
@@ -160,6 +162,7 @@ public class CompositorRenderTests
         root.Add(control);
 
         new PulseAnimation { Property = "Opacity", Min = 0.1, Max = 0.9, Duration = System.TimeSpan.FromSeconds(4) }.Apply(brush);
+        Compositor.StartPending();
         Assert.That(Compositor.EntryFor(brush), Is.Not.Null, "a brush-opacity pulse must be composited");
 
         Assert.That(renderer.RenderFrame(root), Is.True);
@@ -177,6 +180,43 @@ public class CompositorRenderTests
             "a higher brush opacity must blend a redder pixel - re-baked by the render thread with the loop thread idle");
         Assert.That(brush.Opacity, Is.EqualTo(0.1),
             "and the LIVE brush opacity is untouched: paint is not mirrored, so only the compositor changed the picture");
+    }
+
+    [Test]
+    public void TheRenderThreadFadesAnElementWhileTheLoopThreadDoesNothing()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.CornflowerBlue };
+
+        var root = new TestRoot(64, 64);
+        var control = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 40)) };
+        control.Bounds = new Rect(12, 12, 40, 40);
+        control.RenderSize = new Size(40, 40);
+        root.Add(control);
+
+        control.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
+            new DoubleAnimation { From = 0.1, To = 0.9, Duration = TimeSpan.FromSeconds(4) });
+        var entry = Compositor.EntryFor(control);
+        Assert.That(entry?.Channel, Is.EqualTo(CompositorChannel.Opacity), "an element's fade must be composited");
+        Compositor.StartPending();
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var early = Center(renderer);
+
+        while (entry.Elapsed < 1.5) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var later = Center(renderer);
+        Assert.That(later, Is.Not.EqualTo(early), "the render thread faded the element with the loop thread never ticked");
+
+        // A loop tick writes the same value into the property and marks the element; the render thread must keep fading
+        // it afterwards rather than be pinned to what that tick wrote.
+        AnimationManager.Tick(0.0);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var mirrored = Center(renderer);
+
+        while (entry.Elapsed < 3.0) Thread.Sleep(5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(Center(renderer), Is.Not.EqualTo(mirrored), "after a loop tick the render thread still drives the fade");
     }
 
     private static uint Center(OffscreenTestRenderer renderer)

@@ -663,6 +663,21 @@ All packages share one version.
 
 ### Changed
 
+- A `DoubleAnimation` plays as a two-key `AnimationCurve`, so the render thread plays a transform or an element's
+  opacity by itself, the way it plays a keyframe animation: a slide, the tab indicator, a popup's scale-in or a fade
+  keeps moving while the loop thread is busy, and the property still follows what is on screen. Several animations of
+  one transform's different properties play side by side in its one matrix; a finished one lets go of its own part
+  only. A `DoubleAnimation` of a brush's property stays on the loop thread, where the property goes on changing. A
+  layout transform, and the render transform of an element that has one, stay on the loop thread too.
+
+- A composited animation's clock starts once the frame that asked for it is recorded instead of when it is asked for,
+  so the frame that builds a page sliding in does not use up the slide: the page appears where the slide begins and
+  slides from there. `Compositor.StartPending` starts them; the application loop calls it after every frame.
+  Keyframe animations honor the same easing past 0..1 that a `DoubleAnimation` always did, continuing the first or
+  last segment instead of stopping at its key.
+
+- An element's own `Opacity` animation is composited: the render thread writes it into the element's opacity slot.
+
 - A text block of 2048 glyphs or more builds quads only for the part its window shows and a window's height and width
   around it, instead of for the whole text. Scrolled past that band, the frame builds the new band and draws again;
   a copy of the block drawn by `RenderClones` builds the whole text, as before.

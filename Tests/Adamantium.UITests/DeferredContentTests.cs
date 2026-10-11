@@ -36,6 +36,7 @@ public class DeferredContentTests
             presenter.Measure(Host);
             presenter.Arrange(new Rect(0, 0, Host.Width, Host.Height));
             if (tick > 0) AnimationManager.Tick(tick);
+            Compositor.StartPending();   // the frame is over
             if (done()) return true;
             Thread.Sleep(1);
         }

@@ -80,6 +80,7 @@ public class DeferredLoaderAnimationTests
         while (sw.Elapsed.TotalSeconds < 2 && Math.Abs(spin.RotationAngle - before) < 0.001)
         {
             AnimationManager.Tick(0.05);
+            Compositor.StartPending();   // the frame is over
             Thread.Sleep(1);
         }
 

@@ -185,7 +185,7 @@ public class Transform : AnimatableUIComponent
 
         // The render thread is drawing this matrix, so this write is only a mirror; if it has not applied it recently,
         // fall through and re-bake.
-        if (Media.Animation.Compositor.EntryFor(this) is { AppliedRecently: true }) return;
+        if (Media.Animation.Compositor.Mirrored(this)) return;
 
         // A transform moves its owner without changing geometry: mark just the motion node, else the global Transform
         // mark (which, with no owner, re-captures the snapshot).

@@ -339,7 +339,7 @@ public class AnimationTests
         Assert.That(second.RenderTransform, Is.Not.Null);
         Assert.That(second.RenderTransform.TranslateX, Is.EqualTo(200).Within(0.5), "incoming starts off-screen at +width");
 
-        AnimationManager.Tick(0.25);   // past the 0.2s duration
+        AnimationTime.Pass(0.25);   // past the 0.2s duration
 
         Assert.That(second.RenderTransform.TranslateX, Is.EqualTo(0).Within(0.01), "incoming settles at 0");
         Assert.That(presenter.GetVisualDescendants(), Does.Not.Contain(first), "outgoing removed once its slide-out completes");

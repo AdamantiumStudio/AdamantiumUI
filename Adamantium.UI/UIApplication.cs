@@ -865,6 +865,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void OnCycleFinishedInternal()
     {
+        Compositor.StartPending();
+
         // Snapshots are recorded here, on the loop thread, once the frame has settled; they are drawn on the render thread.
         _visualRenderer?.RecordPendingSnapshots();
 
