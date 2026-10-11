@@ -129,6 +129,7 @@ public class ListBox : Selector
     /// <summary>Put the focus on the newly selected row and scroll it into view.</summary>
     private void ShowSelected(int index)
     {
+        KeyboardIndex = index;
         var container = ItemContainerGenerator.ContainerFromIndex(index);
         if (container is IInputComponent focusable && container.Visibility == Visibility.Visible)
         {

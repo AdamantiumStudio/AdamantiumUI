@@ -405,6 +405,90 @@ public class GpuRenderUnitTests
         finally { System.IO.File.Delete(path); }
     }
 
+    private sealed class AdornerViewport : Adamantium.UI.Controls.Decorators.Border
+    {
+        public override bool ClipsAdorners => true;
+    }
+
+    // A ring under a scaling ancestor is drawn scaled, so the viewport must admit its standoff scaled too: admitted in
+    // world units as is, a control flush against a zoomed scroll area wore a ring shaved by half.
+    [Test]
+    public void Adorner_FocusRing_UnderAScale_KeepsItsWholeStandoffAtAViewportEdge()
+    {
+        var factory = new RenderUnitFactory(_device, _resourceFactory);
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+
+        var box = new Adamantium.UI.Controls.Shapes.Rectangle
+        {
+            Width = 8,
+            Height = 8,
+            Fill = Brushes.Red,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            RenderTransform = new Transform { ScaleX = 2, ScaleY = 2 }
+        };
+        var viewport = new AdornerViewport { ClipToBounds = true, Child = box };
+        viewport.Measure(new Size(32, 32));
+        viewport.Arrange(new Rect(16, 16, 32, 32));
+
+        var root = new TestRoot(64, 64);
+        root.Add(viewport);
+
+        var ring = new Adamantium.UI.Controls.Adorners.FocusAdorner(box) { Outset = 2 };
+        ring.Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+            new Adamantium.UI.Core.Templates.TemplateResult
+            {
+                RootComponent = new Adamantium.UI.Controls.Decorators.Border
+                {
+                    BorderThickness = new Thickness(2),
+                    BorderBrush = Brushes.Lime
+                }
+            });
+
+        var bounds = ring.AdornedBounds;
+        ((IMeasurableComponent)ring).Measure(bounds.Size, true);
+        ((IMeasurableComponent)ring).Arrange(bounds, true);
+
+        var flat = new System.Collections.Generic.List<IUIComponent>();
+        void Flatten(IUIComponent c)
+        {
+            flat.Add(c);
+            foreach (var child in c.VisualChildren)
+            {
+                Flatten(child);
+            }
+        }
+
+        Flatten(ring);
+        renderer.Adorners = flat;
+
+        Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
+
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"scaledring_{System.Guid.NewGuid():N}.bgra");
+        renderer.SaveRaw(path);
+        try
+        {
+            var bytes = System.IO.File.ReadAllBytes(path);
+            bool Ring(int x, int y)
+            {
+                var o = (y * 64 + x) * 4;
+                return bytes[o + 1] > 150 && bytes[o] < 110 && bytes[o + 2] < 110;
+            }
+
+            Assert.Multiple(() =>
+            {
+                // The box is 16..32 on screen; outset 2 and line 2, both doubled, put the ring at 12..16.
+                Assert.That(Ring(14, 24), Is.True, "sanity: the inner half of the ring is drawn");
+                Assert.That(Ring(12, 24), Is.True, "the outer half of the ring was cut by the viewport");
+                Assert.That(Ring(24, 12), Is.True, "...on the top edge too");
+            });
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
     // An element that FILLS the surface (touches every edge): the selection chrome must be drawn INSIDE its bounds so it
     // stays within the window framebuffer. Regression: it used to inflate the frame + handles OUTSIDE the bounds, so for
     // an edge element they fell off-window and were clipped to a few corner specks (the designer's "no frame" bug).

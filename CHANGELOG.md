@@ -7,6 +7,24 @@ All packages share one version.
 
 ### Added
 
+- `FocusManager.Reveal()` and `FocusManager.FocusRevealedEvent`: shows where the focus is without moving it. The first
+  Tab after a click now lights the ring on the clicked control instead of jumping to the next one; the next Tab moves on.
+
+- `FocusManager.Return(component, ringVisible)` and `FocusManager.IsReturning`: puts the focus back where it was, with
+  the ring only if it had one, and scrolls nothing - a list row coming back into the window no longer pulls the scroll
+  to itself, which held the list in place and laid rows out of order.
+
+- `IKeyboardEntry`: a container that Tab enters once says itself where. A list enters at the row the keyboard is on,
+  scrolling to it if it is out of the window, instead of at the container last focused, which by then showed another
+  row.
+
+- `ItemsControl.KeyboardIndex`: the place of the item the keyboard is on, kept as its index rather than its container,
+  and moved with inserts, removes and moves. Every focusable items control now does what only the tree did: a focused
+  row scrolled out of a virtualizing panel leaves the focus with the list instead of riding its container onto another
+  row (or being lost when the container is parked), and the row scrolled back takes the focus again, with the ring only
+  if it had one. A container taking the focus sets it; the tree and the list box set it from the arrow keys. Only a
+  focused row is let go of: a focus inside one, such as a cell editor, is left where it is.
+
 - `ItemsControl.CanReuseContainer(container, item)`: a control whose containers differ by item says which recycled
   container may show which item; the most recently parked one that fits is handed out, and only when none does is a
   new container made.
@@ -761,6 +779,18 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- The data pager's page row changes in place as the page moves (`PagerPageItem` now raises `PropertyChanged`). It was
+  rebuilt on every turn, so the clicked page button left the tree with the focus, and the next Tab started from the top
+  of the window. A focused button that comes to show another page as the row shifts hands the focus to the page turned
+  to, and a clicked gap no longer stays marked beside the current page.
+
+- A control a data template built wears the focus ring itself. The ring climbed to its templated parent, the presenter
+  showing the item, and took in the control's margin - the data pager's page buttons wore a ring wider on one side.
+
+- A focus ring under a scaling ancestor (a zoom box, a scale transform) keeps its whole standoff at the edge of a
+  scroll area. The viewport admitted the adorner's `ClipStandoff` in world units as is, while the ring is drawn scaled,
+  so a control flush against a zoomed viewport's edge wore a ring cut by the scale.
 
 - A two-way binding whose converter answers `UnsetValue` on the way back writes nothing to the source. It used to write
   the marker, which threw inside the target's change report, and every listener after the binding missed the change:

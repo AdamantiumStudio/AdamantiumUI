@@ -873,9 +873,10 @@ public class BindingExpression : BindingExpressionBase
       if (Binding.Converter != null)
          value = Binding.Converter.ConvertBack(value, sourceType, Binding.ConverterParameter, FormatCulture);
 
-      // The converter has nothing to write back for this value - the mirror of UpdateTarget. Written anyway, it threw
-      // inside the target's change report and every listener after this binding missed the change.
-      if (ReferenceEquals(value, AdamantiumProperty.UnsetValue)) return;
+      if (ReferenceEquals(value, AdamantiumProperty.UnsetValue))
+      {
+         return;
+      }
 
       // "No value" cannot be written into a source that has no way to hold it: a NumericUpDown that was cleared has a
       // null Value, and a view-model exposing a plain double would take it as a reflection error mid-keystroke. Leave

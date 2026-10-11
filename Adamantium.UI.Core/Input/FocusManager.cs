@@ -9,6 +9,11 @@ public static class FocusManager
    public static readonly RoutedEvent GotFocusEvent = EventManager.RegisterRoutedEvent("GotFocus",
       RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(FocusManager));
 
+   /// <summary>Raised on the focused element when <see cref="Reveal"/> shows where the focus is; bubbles up the chain
+   /// that holds it.</summary>
+   public static readonly RoutedEvent FocusRevealedEvent = EventManager.RegisterRoutedEvent("FocusRevealed",
+      RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(FocusManager));
+
    public static readonly RoutedEvent LostFocusEvent = EventManager.RegisterRoutedEvent("LostFocus",
       RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(FocusManager));
 
@@ -176,6 +181,38 @@ public static class FocusManager
    /// <summary>True while the focus was last moved BY THE KEYBOARD. What a focus visual keys off: a ring that also
    /// appeared on every click is noise, since a click already says where you are.</summary>
    public static bool IsFocusVisible { get; private set; }
+
+   /// <summary>Shows where the focus is without moving it. A focus the mouse put somewhere wears no ring, and the first
+   /// Tab asks for the ring rather than leaving. False when there is nothing to show.</summary>
+   public static bool Reveal()
+   {
+      if (Focused == null || IsFocusVisible)
+      {
+         return false;
+      }
+
+      IsFocusVisible = true;
+      Focused.RaiseEvent(new RoutedEventArgs(FocusRevealedEvent));
+      return true;
+   }
+
+   /// <summary>True while <see cref="Return"/> is putting the focus back: nothing is scrolled to bring it into view.</summary>
+   public static bool IsReturning { get; private set; }
+
+   /// <summary>Puts the focus back on <paramref name="component"/> - a row a list shows again - with the ring only if it
+   /// had one. A return is not a move: nothing is scrolled to it.</summary>
+   public static bool Return(IInputComponent component, bool ringVisible)
+   {
+      IsReturning = true;
+      try
+      {
+         return Focus(component, ringVisible ? NavigationMethod.Directional : NavigationMethod.Unspecified);
+      }
+      finally
+      {
+         IsReturning = false;
+      }
+   }
 
    // One place that tells everyone the focus moved: the two elements themselves, and every element that gained or lost
    // "the focus is somewhere inside me" (the same ancestor-chain machinery IsMouseOver runs on - a composite control has
