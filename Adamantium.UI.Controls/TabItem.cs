@@ -467,13 +467,21 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
 
         if (!_dragging && Owner is { AllowTabDrag: false }) return;
 
-        if (!_dragging && PlatformSettings.ExceedsDragThreshold(e.GetPosition(this) - _pressPos, this))
+        // Inside a scroll area a finger can scroll, a finger carries a tab only once it has held it: until then its move
+        // is a scroll.
+        if (!_dragging && PlatformSettings.ExceedsDragThreshold(e.GetPosition(this) - _pressPos, this) &&
+            ScrollContentPresenter.LetsFingerCarry(e.Pointer, this))
         {
             _dragging = true;
             e.Pointer.Capture(this);
             Owner?.BeginDrag(this, e);
         }
-        if (_dragging) Owner?.UpdateDrag(this, e);
+
+        if (_dragging)
+        {
+            Owner?.UpdateDrag(this, e);
+            e.Handled = true;   // the carried tab's, so a scroll area around the strip does not take the finger
+        }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)

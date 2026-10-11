@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The long-press cue: a soft accent disc with its ring, the live accent like the drop cue's wash. -->
+    <Style Selector="HoldIndicator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="HoldIndicator">
+                    <Grid Width="52" Height="52">
+                        <Border CornerRadius="26" Background="{ThemeResource AccentFillColorDefault}" Opacity="0.22"/>
+                        <Border CornerRadius="26" BorderThickness="1.5" BorderBrush="{ThemeResource AccentFillColorDefault}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</StyleSet>

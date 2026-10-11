@@ -66,6 +66,8 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
             new RawMouseEventHandler((sender, e) => (sender as InputUIComponent)?.OnRawMouseMove(e)));
 
         PointerEvents.PointerReleasedEvent.RegisterClassHandler<IInputComponent>(new PointerReleasedEventHandler(OpenContextMenuHandler));
+        Gestures.HoldingEvent.RegisterClassHandler<IInputComponent>(new HoldingEventHandler(ShowHoldHandler), true);
+        Gestures.HoldingEvent.RegisterClassHandler<IInputComponent>(new HoldingEventHandler(OpenContextMenuByHoldHandler));
         Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OpenContextMenuByKeyHandler));
 
         // The one place guaranteed to run before any element exists.
@@ -76,13 +78,47 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
 
     private static void OpenContextMenuHandler(object sender, PointerReleasedEventArgs e)
     {
-        if (e.Handled || e.ChangedButton != MouseButtons.Right || ContextMenuHost(sender as IUIComponent) is not { } host)
+        if (!e.Handled && e.ChangedButton == MouseButtons.Right && OpenContextMenuAt(sender, e)) e.Handled = true;
+    }
+
+    // The cue a held contact wears while it holds: one per pointer, in the window it is held in. The class handler runs
+    // on every element of the route, so the first one shows the cue and the first one after the hold takes it down.
+    private static readonly Dictionary<uint, (AdornerLayer Layer, HoldIndicator Cue)> HoldCues = new();
+
+    private static void ShowHoldHandler(object sender, HoldingEventArgs e)
+    {
+        var id = e.Pointer.Id;
+        if (e.HoldingState != HoldingState.Started)
+        {
+            if (HoldCues.Remove(id, out var shown)) shown.Layer.Remove(shown.Cue);
+            return;
+        }
+
+        if (HoldCues.ContainsKey(id) || (sender as IUIComponent)?.RootVisual is not IInputComponent root ||
+            root is not IAdornerHost host)
         {
             return;
         }
 
+        var cue = new HoldIndicator(root, e.GetPosition(root));
+        host.AdornerLayer.Add(cue);
+        HoldCues[id] = (host.AdornerLayer, cue);
+    }
+
+    // A finger or a pen held still and lifted: the touch way of the right button.
+    private static void OpenContextMenuByHoldHandler(object sender, HoldingEventArgs e)
+    {
+        if (!e.Handled && e.HoldingState == HoldingState.Completed && OpenContextMenuAt(sender, e)) e.Handled = true;
+    }
+
+    // The context menu of the element a pointer asks it from, or of the nearest one above that has one, where the
+    // pointer is.
+    private static bool OpenContextMenuAt(object sender, PointerEventArgs e)
+    {
+        if (ContextMenuHost(sender as IUIComponent) is not { } host) return false;
+
         host.ContextMenu.Open(host, e.GetPosition(host));
-        e.Handled = true;
+        return true;
     }
 
     // The menu key, or Shift+F10.

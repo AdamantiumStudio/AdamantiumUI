@@ -13,6 +13,9 @@ public sealed class PointerDevice
 
     private readonly Dictionary<uint, Pointer> _pointers = new();
 
+    // The finger lifted last, whose taps the next finger's are counted on from.
+    private Pointer _lastTap;
+
     private PointerDevice()
     {
         MousePointer = new Pointer(MouseId, PointerType.Mouse, true);
@@ -23,6 +26,9 @@ public sealed class PointerDevice
 
     /// <summary>The mouse. It is always there, whether or not anything moved it.</summary>
     public Pointer MousePointer { get; }
+
+    /// <summary>Watches fingers and pens for a long press.</summary>
+    internal HoldingRecognizer Holding { get; } = new();
 
     /// <summary>The pointers in use: the mouse, and every finger down and pen in range.</summary>
     public IReadOnlyCollection<Pointer> Pointers => _pointers.Values;
@@ -212,6 +218,15 @@ public sealed class PointerDevice
         }
 
         pointer = new Pointer(e.PointerId, e.PointerType, e.IsPrimary);
+        if (e.PointerType == PointerType.Touch && _lastTap != null)
+        {
+            // Every touch is a new pointer, so a double tap is counted from the finger lifted just before.
+            pointer.ClickCount = _lastTap.ClickCount;
+            pointer.LastClickTime = _lastTap.LastClickTime;
+            pointer.LastClicked = _lastTap.LastClicked;
+            pointer.LastClickPosition = _lastTap.LastClickPosition;
+        }
+
         _pointers[e.PointerId] = pointer;
         return pointer;
     }
@@ -236,6 +251,7 @@ public sealed class PointerDevice
             pointer.HoverRoot = null;
         }
 
+        Holding.Cancel(pointer, timestamp);
         ChangePointerOver(pointer, null, modifiers, timestamp);
         if (pointer.Type != PointerType.Mouse && pointer.Captured == null)
         {
@@ -283,6 +299,7 @@ public sealed class PointerDevice
         source.RaiseEvent(args);
         args.RoutedEvent = PointerEvents.PointerMovedEvent;
         source.RaiseEvent(args);
+        Holding.Move(pointer, timestamp);
     }
 
     private void Down(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
@@ -319,6 +336,7 @@ public sealed class PointerDevice
         hit.RaiseEvent(args);
         args.RoutedEvent = PointerEvents.PointerPressedEvent;
         hit.RaiseEvent(args);
+        Holding.Down(pointer, hit, button, modifiers, timestamp);
     }
 
     private void Up(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
@@ -335,6 +353,8 @@ public sealed class PointerDevice
             hit.RaiseEvent(args);
         }
 
+        // After the release, so what answers it still sees the pointer holding and takes the lift for a long press.
+        Holding.Up(pointer, timestamp);
         if (pointer.Type == PointerType.Touch)
         {
             Lift(pointer, modifiers, timestamp);
@@ -345,6 +365,7 @@ public sealed class PointerDevice
     {
         (pointer.Captured ?? pointer.DirectlyOver)?.RaiseEvent(
             new PointerEventArgs(pointer, modifiers, timestamp) { RoutedEvent = PointerEvents.PointerCanceledEvent });
+        Holding.Cancel(pointer, timestamp);
 
         if (pointer.Type == PointerType.Mouse)
         {
@@ -360,6 +381,10 @@ public sealed class PointerDevice
         pointer.Capture(null);
         ChangePointerOver(pointer, null, modifiers, timestamp);
         _pointers.Remove(pointer.Id);
+        if (pointer.Type == PointerType.Touch)
+        {
+            _lastTap = pointer;
+        }
     }
 
     private void Wheel(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp, int delta,

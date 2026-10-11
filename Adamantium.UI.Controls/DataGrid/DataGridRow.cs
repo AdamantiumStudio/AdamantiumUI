@@ -131,10 +131,18 @@ public class DataGridRow : Panel
     public int Number { get; private set; }
     private readonly Stack<DataGridCell> _pool = new();
     private readonly List<int> _leaving = new();
+    private readonly TouchTap _tap = new();
+    private int _tapColumn;
+
+    public DataGridRow()
+    {
+        AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+    }
 
     /// <summary>Points the row at a flat row and refreshes its cells. Called on creation and on every reuse.</summary>
     internal void Attach(TreeDataGrid owner, TreeRow row, int alternationIndex, int number = 0)
     {
+        _tap.Cancel();   // a finger's tap waiting on the row's old data does not land on its new data
         Owner = owner;
         FollowItem(row?.Node);
         Row = row;
@@ -674,24 +682,48 @@ public class DataGridRow : Panel
         // not commit the edit and open it again underneath the pointer.
         if (CellAt(columnIndex) is { IsEditing: true }) return;
 
-        // The modifiers carried BY THE EVENT, captured when it was raised - handlers run later on the loop thread, and
-        // re-reading the keyboard there misses the Ctrl or Shift that was actually held.
-        var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
-        var control = (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
-        Owner.SelectCellFromRow(this, columnIndex, extend: shift, add: control);
+        e.Handled = true;
+
+        // A finger picks a cell on its tap, so scrolling the table through this row selects nothing; a finger's second
+        // tap still opens the cell. Dragging a finger scrolls - it does not sweep a selection.
+        if (e.ClickCount < 2 && _tap.Begin(e, this))
+        {
+            _tapColumn = columnIndex;
+            return;
+        }
+
+        var control = SelectCell(columnIndex, e.Modifiers);
 
         // A double-click opens the cell for editing - the gesture every table uses, and the one that makes the editing
         // machinery reachable at all. A check box column is the exception: one click IS the edit.
         if (Owner.Columns[columnIndex].TogglesOnClick) Owner.ToggleFromRow(this, columnIndex);
         else if (e.ClickCount >= 2) Owner.BeginEditFromRow(this, columnIndex);
         else Owner.BeginDragSelect(control);
+    }
 
-        e.Handled = true;
+    // The modifiers carried BY THE EVENT, captured when it was raised - handlers run later on the loop thread, and
+    // re-reading the keyboard there misses the Ctrl or Shift that was actually held. True when Ctrl was held.
+    private bool SelectCell(int columnIndex, InputModifiers modifiers)
+    {
+        var shift = (modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+        var control = (modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+        Owner.SelectCellFromRow(this, columnIndex, extend: shift, add: control);
+        return control;
+    }
+
+    // A finger held on a cell picks it before the lift opens the menu, so the menu is about the cell it was held on.
+    private void OnHolding(object sender, HoldingEventArgs e)
+    {
+        if (e.HoldingState == HoldingState.Started && _tap.End(e) && Owner != null && _tapColumn < Owner.Columns.Count)
+        {
+            SelectCell(_tapColumn, e.Modifiers);
+        }
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
+        _tap.Move(e);
         if (Owner is not { IsDragSelecting: true })
         {
             return;
@@ -710,6 +742,13 @@ public class DataGridRow : Panel
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (_tap.End(e) && Owner != null && _tapColumn < Owner.Columns.Count)
+        {
+            SelectCell(_tapColumn, e.Modifiers);
+            if (Owner.Columns[_tapColumn].TogglesOnClick) Owner.ToggleFromRow(this, _tapColumn);
+            return;
+        }
+
         if (e.ChangedButton == MouseButtons.Left)
         {
             Owner?.EndDragSelect();

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -214,6 +216,106 @@ public class PointerDeviceTests
 
         Assert.That(held, Is.False);
         Send(RawPointerEventType.LeaveWindow, 34, PointerType.Touch, Vector2.Zero, 0, MouseButtons.None);
+    }
+
+    // A finger held still on a button holds: the hold starts, the button lets go of the press, and the lift completes
+    // the hold instead of clicking.
+    [Test]
+    public void AFingerHeldOnAButton_HoldsInsteadOfClicking()
+    {
+        var button = HostedButton();
+        var clicks = 0;
+        var states = new List<HoldingState>();
+        button.Click += (_, _) => clicks++;
+        button.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 40, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+            PointerDevice.Current.Holding.Elapsed(40, 600);
+            Assert.That(button.IsPressed, Is.False, "the held button let go of the press");
+            Send(RawPointerEventType.Up, 40, PointerType.Touch, new Vector2(50, 50), 700, MouseButtons.None);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Completed }));
+            Assert.That(clicks, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void AFingerThatMovesOff_IsNoHold()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 41, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Move, 41, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+            PointerDevice.Current.Holding.Elapsed(41, 600);
+            Send(RawPointerEventType.Up, 41, PointerType.Touch, new Vector2(60, 50), 700, MouseButtons.None);
+        }
+
+        Assert.That(states, Is.Empty);
+    }
+
+    // A started hold that then moves off is canceled, so what waits for its completion - a context menu - does not come.
+    [Test]
+    public void AStartedHoldThatMovesOff_IsCanceled()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 42, PointerType.Pen, new Vector2(20, 50), 0, MouseButtons.None);
+            PointerDevice.Current.Holding.Elapsed(42, 600);
+            Send(RawPointerEventType.Move, 42, PointerType.Pen, new Vector2(60, 50), 650, MouseButtons.None);
+            Send(RawPointerEventType.Up, 42, PointerType.Pen, new Vector2(60, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.LeaveWindow, 42, PointerType.Pen, Vector2.Zero, 700, MouseButtons.None);
+        }
+
+        Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Canceled }));
+    }
+
+    [Test]
+    public void TheMouse_NeverHolds()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 0);
+        PointerDevice.Current.Holding.Elapsed(PointerDevice.MouseId, 600);
+        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 700);
+
+        Assert.That(states, Is.Empty);
+    }
+
+    private Adamantium.UI.Controls.Buttons.Button HostedButton()
+    {
+        var button = new Adamantium.UI.Controls.Buttons.Button { Width = 100, Height = 100 };
+        _window.Content = button;
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        return button;
+    }
+
+    // The hold time for a test that says itself when the contact has rested: a real timer must not race it.
+    private static IDisposable HoldingTimeOf(TimeSpan time)
+    {
+        var was = Gestures.HoldingTime;
+        Gestures.HoldingTime = time;
+        return new Restore(() => Gestures.HoldingTime = was);
+    }
+
+    private sealed class Restore(Action undo) : IDisposable
+    {
+        public void Dispose() => undo();
     }
 
     private static Pointer Finger(uint id) => PointerDevice.Current.Pointers.Single(p => p.Id == id);

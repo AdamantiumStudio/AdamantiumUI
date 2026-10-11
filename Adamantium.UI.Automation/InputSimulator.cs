@@ -66,8 +66,20 @@ internal static class InputSimulator
     /// </summary>
     public static void Tap(UIComponent element, string label, Vector2 local, Contact contact)
     {
+        var (window, point) = PutDown(element, label, local, contact);
+        Lift(window, point, contact);
+    }
+
+    /// <summary>A finger or a pen put down at <paramref name="local"/> and left there; <see cref="Lift"/> ends it.</summary>
+    public static (IWindow Window, Vector2 Point) PutDown(UIComponent element, string label, Vector2 local, Contact contact)
+    {
         var (window, point) = ContactAt(element, label, local);
         Send(RawPointerEventType.Down, window, point, contact);
+        return (window, point);
+    }
+
+    public static void Lift(IWindow window, Vector2 point, Contact contact)
+    {
         Send(RawPointerEventType.Up, window, point, contact);
         OutOfRange(window, contact);
     }
@@ -91,11 +103,15 @@ internal static class InputSimulator
         OutOfRange(window, contact);
     }
 
-    /// <summary>A tap (no <paramref name="to"/>) or a stroke as desktop frames for the system's own input. Refused
+    // How far apart the system's frames come, as ISyntheticPointerInput plays them.
+    private static readonly TimeSpan SystemFrameGap = TimeSpan.FromMilliseconds(16);
+
+    /// <summary>A tap (no <paramref name="to"/>) or a stroke as desktop frames for the system's own input; a tap that
+    /// rests <paramref name="hold"/> before it lifts is a long press. Refused
     /// unless the element is this application's and on top of the desktop where the contact lands: the system presses
     /// whatever window is there, and that must never be someone else's.</summary>
     public static (IWindow Window, SyntheticPointerFrame[] Frames) SystemFrames(UIComponent element, string label,
-        Vector2 from, Vector2? to, Contact contact)
+        Vector2 from, Vector2? to, Contact contact, TimeSpan hold = default)
     {
         const int steps = 8;
         var (window, start) = ContactAt(element, label, from);
@@ -109,7 +125,9 @@ internal static class InputSimulator
                 $"{label} is not on top of the desktop at ({landing.X:0}, {landing.Y:0}): the system would press whatever is there.");
         }
 
+        // A held contact keeps reporting where it rests, a frame apart, as a digitizer does.
         var points = new List<Vector2> { start };
+        points.AddRange(Enumerable.Repeat(start, (int)Math.Ceiling(hold / SystemFrameGap)));
         if (to is { } local)
         {
             var end = InWindow(element, local);

@@ -285,7 +285,8 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (HasItems && IsSubmenuOpen) StartCloseTimer();
+        // Only once nothing is over the row: one finger lifting off it while another stays is not leaving it.
+        if (HasItems && IsSubmenuOpen && !IsPointerOver) StartCloseTimer();
     }
 
     private void StartCloseTimer()

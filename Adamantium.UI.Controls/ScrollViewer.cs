@@ -77,6 +77,10 @@ public class ScrollViewer : ContentControl
         nameof(PanningMode), typeof(PanningMode), typeof(ScrollViewer),
         new PropertyMetadata(PanningMode.None, OnPanningModeChanged));
 
+    public static readonly AdamantiumProperty IsTouchScrollEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsTouchScrollEnabled), typeof(bool), typeof(ScrollViewer),
+        new PropertyMetadata(true, OnIsTouchScrollEnabledChanged));
+
     public static readonly AdamantiumProperty CanContentScrollProperty = AdamantiumProperty.Register(
         nameof(CanContentScroll), typeof(bool), typeof(ScrollViewer),
         new PropertyMetadata(false, OnCanContentScrollChanged));
@@ -157,6 +161,22 @@ public class ScrollViewer : ContentControl
         if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.PanningMode = sv.PanningMode;
     }
 
+    /// <summary>Whether a finger scrolls the content, along the axes that have somewhere to go, with a flick at the
+    /// end. On by default: on a touch screen a finger is the only way to scroll there is. A press that a finger began on
+    /// a button turns into scrolling once it moves past the drag threshold, and the button is not clicked; what takes
+    /// the finger's moves itself - a slider's thumb, a text selection - keeps them. <see cref="PanningMode"/> is the
+    /// mouse's.</summary>
+    public bool IsTouchScrollEnabled
+    {
+        get => GetValue<bool>(IsTouchScrollEnabledProperty);
+        set => SetValue(IsTouchScrollEnabledProperty, value);
+    }
+
+    private static void OnIsTouchScrollEnabledChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.IsTouchScrollEnabled = sv.IsTouchScrollEnabled;
+    }
+
     /// <summary>When true, scrolling is delegated to a virtualizing panel inside the content (item scrolling) rather
     /// than pixel-translating the whole content. Set by item controls whose panel virtualizes.</summary>
     public bool CanContentScroll
@@ -232,6 +252,7 @@ public class ScrollViewer : ContentControl
             _presenter.CanScrollHorizontally = HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled;
             _presenter.CanScrollVertically = VerticalScrollBarVisibility != ScrollBarVisibility.Disabled;
             _presenter.PanningMode = PanningMode;
+            _presenter.IsTouchScrollEnabled = IsTouchScrollEnabled;
             _presenter.CanContentScroll = CanContentScroll;
             PushInertiaSettings();
             _presenter.ScrollMetricsChanged += OnScrollMetricsChanged;

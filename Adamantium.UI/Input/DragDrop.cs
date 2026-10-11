@@ -138,7 +138,11 @@ public static partial class DragDrop
 
     // ------------------------------------------------------------------ session state (one drag at a time, app-global)
     private static IInputComponent _source;      // the pressed source; armed until the threshold, then dragging
+    private static Pointer _pointer;             // the pointer that pressed it: the mouse, a finger or a pen
     private static PixelPoint _startScreen;
+
+    // What carries the drag: the pointer that pressed the source, or the mouse for a drag started from code.
+    private static Pointer DragPointer => _pointer ?? Mouse.Pointer;
     private static bool _dragging;
     private static IDataPackage _data;
     private static byte[] _ghostBgra;
@@ -217,9 +221,25 @@ public static partial class DragDrop
     private static void OnSourceDown(object sender, PointerPressedEventArgs e)
     {
         if (e.ChangedButton != MouseButtons.Left || IsDragActive || sender is not IInputComponent input) return;
-        if (!PressedOnDragHandle(input)) return;   // the source has a grip and this press missed it
+
+        // One gesture at a time: a second pointer's press waits while the first still presses. A first one that is no
+        // longer pressing - its release went elsewhere, a finger that scrolled the list instead - is let go of here.
+        if (_source != null)
+        {
+            if (_pointer != null && !ReferenceEquals(_pointer, e.Pointer) && _pointer.Properties.Buttons != MouseButtons.None)
+            {
+                return;
+            }
+
+            Detach(_source);
+            _source = null;
+        }
+
+        if (!PressedOnDragHandle(input, e.Pointer)) return;   // the source has a grip and this press missed it
+
+        _pointer = e.Pointer;
         _source = input;
-        _startScreen = Mouse.ScreenCoordinates;
+        _startScreen = DragPointer.GetScreenPosition();
         // Track move/up only while a press is live - added here, removed on up. Move keeps arriving after capture.
         Attach(input);
     }
@@ -239,10 +259,10 @@ public static partial class DragDrop
     // whole-body behavior everything had before handles existed. ONE walk answers both questions, so the common case
     // (no handles) costs a scan of a single item template and nothing else.
     // The handle's BOUNDS decide, not a hit-test: a press between the strokes of a ≡ glyph is still a press on the grip.
-    private static bool PressedOnDragHandle(IInputComponent input)
+    private static bool PressedOnDragHandle(IInputComponent input, Pointer pointer)
     {
         if (input is not IUIComponent source) return true;
-        var local = Mouse.Pointer.GetPosition(input);
+        var local = pointer.GetPosition(input);
         var declared = false;
         foreach (var handle in GetDragHandles(source))
         {
@@ -269,12 +289,15 @@ public static partial class DragDrop
 
     private static void OnMove(object sender, PointerEventArgs e)
     {
-        if (_source == null) return;
+        if (_source == null || !ReferenceEquals(e.Pointer, DragPointer)) return;
         if (!_dragging)
         {
-            if (!PlatformSettings.ExceedsDragThreshold(Mouse.ScreenCoordinates - _startScreen)) return;
+            if (!PlatformSettings.ExceedsDragThreshold(DragPointer.GetScreenPosition() - _startScreen)) return;
+            // A finger in a list it can scroll carries a row only once it has held it: until then its move is a scroll.
+            if (!ScrollContentPresenter.LetsFingerCarry(e.Pointer, (IUIComponent)_source)) return;
             BeginDrag();
         }
+        e.Handled = true;   // the carried thing's, so a scroll area around it does not take the finger
         if (_externalCapable) return;   // the gesture belongs to the OS from here - it draws the ghost and reports the drop
         ShowOrMoveGhost();
         UpdateDragOver();
@@ -344,7 +367,7 @@ public static partial class DragDrop
     // react to the drag without a view-model. OriginalSource is the element actually under the pointer (the target is only
     // the nearest AllowDrop ancestor of it), which is how a handler tells WHICH row the drag is over.
     private static DragDropEventArgs DragArgs(IUIComponent target, RoutedEvent routedEvent) =>
-        new(_data, _source, Mouse.Pointer.GetPosition((IInputComponent)target))
+        new(_data, _source, DragPointer.GetPosition((IInputComponent)target))
         {
             Effects = DefaultEffects(),
             RoutedEvent = routedEvent,
@@ -448,7 +471,7 @@ public static partial class DragDrop
         // The gap's index comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the
         // containers, and the gap moves them, so feeding it back would make the gap chase itself between two slots.
         if (hostPanel is { SupportsDropGap: true } &&
-            hostPanel.TryGetDropSlot(Mouse.Pointer.GetPosition((IInputComponent)hostPanel), out var slot))
+            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), out var slot))
         {
             ClearIndicatorVisual();
             _insertIndex = slot;
@@ -485,9 +508,9 @@ public static partial class DragDrop
         }
 
         const double thickness = 8.0;
-        var pItem = Mouse.Pointer.GetPosition((IInputComponent)container);
-        var top = new Vector2(Mouse.Pointer.GetPosition((IInputComponent)tree).X - pItem.X,
-                              Mouse.Pointer.GetPosition((IInputComponent)tree).Y - pItem.Y);   // container top-left in tree coords
+        var pItem = DragPointer.GetPosition((IInputComponent)container);
+        var top = new Vector2(DragPointer.GetPosition((IInputComponent)tree).X - pItem.X,
+                              DragPointer.GetPosition((IInputComponent)tree).Y - pItem.Y);   // container top-left in tree coords
         var size = container.RenderSize;
         _dropTarget = container.DataContext;   // the node (BindRow sets DataContext = node)
 
@@ -569,7 +592,7 @@ public static partial class DragDrop
         var horizontal = flow == Orientation.Horizontal;
         var listSize = list.RenderSize;
         var count = list.Items?.Count ?? 0;
-        var pList = Mouse.Pointer.GetPosition((IInputComponent)list);
+        var pList = DragPointer.GetPosition((IInputComponent)list);
 
         IUIComponent nearest = null;
         var nearestIndex = -1;
@@ -579,7 +602,7 @@ public static partial class DragDrop
         foreach (var i in list.ItemContainerGenerator.RealizedIndices)
         {
             if (list.ItemContainerGenerator.ContainerFromIndex(i) is not { } c) continue;
-            var pItem = Mouse.Pointer.GetPosition((IInputComponent)c);
+            var pItem = DragPointer.GetPosition((IInputComponent)c);
             var size = c.RenderSize;
             // Squared distance from the cursor to this container's rect (0 while inside it).
             var dx = pItem.X < 0 ? -pItem.X : pItem.X > size.Width ? pItem.X - size.Width : 0;
@@ -716,7 +739,7 @@ public static partial class DragDrop
         {
             if (node is not Controls.TabStripScroller strip) continue;
 
-            var at = Mouse.Pointer.GetPosition(strip);
+            var at = DragPointer.GetPosition(strip);
             var along = strip.Orientation == Controls.Panels.Orientation.Horizontal ? at.X : at.Y;
             if (strip.PanNear(along, band, strip.AutoScrollRate)) return;
         }
@@ -725,7 +748,7 @@ public static partial class DragDrop
         // (ScrollViewer.ScrollChaining="False" opts out).
         foreach (var sv in ScrollablesUnder(hit, window, screen))
         {
-            var local = Mouse.Pointer.GetPosition((IInputComponent)sv);
+            var local = DragPointer.GetPosition((IInputComponent)sv);
             var size = sv.RenderSize;
             // Both axes: an area that scrolls sideways (a wrap flow, a tab strip) needs the edge to pull just as much as
             // a vertical list does. Each axis is measured on its own, so a corner drags diagonally.
@@ -882,7 +905,7 @@ public static partial class DragDrop
     {
         if (IsDragActive || source == null || allowedEffects == DragDropEffects.None) return false;
         _source = source;
-        _startScreen = Mouse.ScreenCoordinates;
+        _startScreen = DragPointer.GetScreenPosition();
         _allowedEffects = allowedEffects;
         // The same two subscriptions a press makes, so the gesture ends through exactly one code path.
         Attach(source);
@@ -897,8 +920,10 @@ public static partial class DragDrop
         // Decided ONCE, here: an external-capable source runs the whole gesture through the OS drag loop (so it can be
         // dropped into other applications), everything else stays on our own loop with its live CLR payload. Never
         // switched mid-drag - the platform loop is modal and has to own the gesture from the start.
-        _externalCapable = GetAllowExternalDrag((AdamantiumComponent)_source) && Native is { IsAvailable: true };
-        Mouse.Pointer.Capture(_source);   // so move/up keep coming once the cursor leaves the source
+        // The OS's drag loop follows the mouse; a finger or a pen carries the drag on our own loop.
+        _externalCapable = GetAllowExternalDrag((AdamantiumComponent)_source) && Native is { IsAvailable: true } &&
+                           DragPointer.Type == PointerType.Mouse;
+        DragPointer.Capture(_source);   // so move/up keep coming once the pointer leaves the source
         // An external overlay (a screenshot tool) stealing capture must not hang the drag.
         _source.AddHandler(PointerEvents.PointerCaptureLostEvent, LostCaptureHandler, handledEventsToo: true);
 
@@ -1113,7 +1138,7 @@ public static partial class DragDrop
     private static void ShowOrMoveGhost()
     {
         if (_ghostBgra == null) return;
-        var s = Mouse.ScreenCoordinates;
+        var s = DragPointer.GetScreenPosition();
         int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
         if (_ghostShown)
         {
@@ -1135,7 +1160,7 @@ public static partial class DragDrop
         if (!_ghostShown || _ghostBgra == null) return;
         var scale = dpi / 96.0;
         if (Math.Abs(scale - _presentedScale) < 0.001) return;
-        var s = Mouse.ScreenCoordinates;
+        var s = DragPointer.GetScreenPosition();
         int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
         var (bgra, w, h) = ScaleGhost(scale);
         Ghost?.Show(bgra, w, h, x, y);
@@ -1153,7 +1178,7 @@ public static partial class DragDrop
 
     private static void OnUp(object sender, PointerReleasedEventArgs e)
     {
-        if (e.ChangedButton != MouseButtons.Left) return;
+        if (e.ChangedButton != MouseButtons.Left || !ReferenceEquals(e.Pointer, DragPointer)) return;
 
         var wasDragging = _dragging;
         // Unsubscribe BEFORE Reset releases capture - releasing raises PointerCaptureLost, and we must not re-enter OnLostCapture.
@@ -1293,7 +1318,8 @@ public static partial class DragDrop
 
     private static void Reset()
     {
-        if (_dragging && ReferenceEquals(Mouse.Pointer.Captured, _source)) Mouse.Pointer.Capture(null);
+        if (_dragging && ReferenceEquals(DragPointer.Captured, _source)) DragPointer.Capture(null);
+        _pointer = null;
         Mouse.OverrideCursor = null;   // restore normal per-element cursors
         ResetDropFeedback();
         _allowedEffects = DragDropEffects.Copy | DragDropEffects.Move;   // the gesture default; DoDragDrop sets its own

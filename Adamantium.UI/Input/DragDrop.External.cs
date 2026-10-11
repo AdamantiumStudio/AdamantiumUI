@@ -73,8 +73,9 @@ public static partial class DragDrop
     private static bool IsDragActive => _dragging || _externalActive;
 
     /// <summary>The drag point in PHYSICAL screen coordinates. During an OS-driven drag it is the point the platform
-    /// reported (authoritative, and the one the device position was published from), otherwise the live cursor.</summary>
-    private static PixelPoint DragScreenPoint => _externalActive ? ExternalPoint : Mouse.ScreenCoordinates;
+    /// reported (authoritative, and the one the device position was published from), otherwise where the pointer
+    /// carrying the drag is - the mouse, a finger or a pen.</summary>
+    private static PixelPoint DragScreenPoint => _externalActive ? ExternalPoint : DragPointer.GetScreenPosition();
 
     private static PixelPoint ExternalPoint
     {
