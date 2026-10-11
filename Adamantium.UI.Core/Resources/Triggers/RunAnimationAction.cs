@@ -4,14 +4,24 @@ using System.Collections.Generic;
 namespace Adamantium.UI.Core.Resources.Triggers;
 
 /// <summary>
-/// A trigger action that starts a keyframe <see cref="Media.Animation.Animation"/> on the trigger's target - the host
-/// component by default, or a named element/part via <see cref="TargetName"/> (a template trigger reaches its parts).
-/// The WPF <c>BeginStoryboard</c> analog.
+/// A trigger action that starts an animation - a keyframe <see cref="Media.Animation.Animation"/>, or a property
+/// animation such as <see cref="Media.Animation.DoubleAnimation"/> naming its <c>Property</c> - on the trigger's target:
+/// the host component by default, or a named element/part via <see cref="TargetName"/> (a template trigger reaches its
+/// parts). The WPF <c>BeginStoryboard</c> analog. In a style's trigger an animation with bindings runs as a copy of its
+/// own on every element the style applies to, so its bindings resolve against that element.
 /// </summary>
 public class RunAnimationAction : IUndoableTriggerAction, ITargetedTriggerAction
 {
+    private readonly ConditionalWeakTable<IFundamentalUIComponent, Copy> _copies = new();
+
+    private sealed class Copy
+    {
+        public Media.Animation.Timeline Of;
+        public Media.Animation.Timeline Animation;
+    }
+
     [Content]
-    public Media.Animation.Animation Animation { get; set; }
+    public Media.Animation.Timeline Animation { get; set; }
 
     /// <summary>Name of the element/part to animate; empty means the trigger's host component.</summary>
     public string TargetName { get; set; }
@@ -51,7 +61,25 @@ public class RunAnimationAction : IUndoableTriggerAction, ITargetedTriggerAction
         // Claim the target for this trigger's HOST before starting: a SHARED target (a keyed theme brush every loading
         // list pulses) must keep running until the last host stops it (see AnimationManager.Retain/Release).
         Media.Animation.AnimationManager.Retain(animTarget, context.HostComponent);
-        Animation.Apply(animTarget, resumeElapsed: resume);
+        AnimationFor(context).Apply(animTarget, resumeElapsed: resume);
+    }
+
+    private Media.Animation.Timeline AnimationFor(ITriggerExecutionContext context)
+    {
+        if (context is not StyleTriggerExecutionContext || context.HostComponent == null
+            || !Data.BindingEngine.HasBindings(Animation))
+        {
+            return Animation;
+        }
+
+        var copy = _copies.GetValue(context.HostComponent, static _ => new Copy());
+        if (!ReferenceEquals(copy.Of, Animation))
+        {
+            copy.Of = Animation;
+            copy.Animation = Animation.Clone();
+        }
+
+        return copy.Animation;
     }
 
     /// <summary>The trigger is going away while it still held (a theme/template swap): drop this host's claim, which

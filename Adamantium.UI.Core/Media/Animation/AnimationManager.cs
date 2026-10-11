@@ -168,15 +168,16 @@ public static class AnimationManager
         foreach (var start in starts) start();
     }
 
-    internal static void Begin(AdamantiumComponent target, AdamantiumProperty property, PropertyAnimation animation, Action completed)
+    internal static void Begin(AdamantiumComponent target, AdamantiumProperty property, PropertyAnimation animation, Action completed,
+        double resumeElapsed = 0)
     {
-        if (DeferIfOutOfTree(target, target, () => Begin(target, property, animation, completed))) return;
+        if (DeferIfOutOfTree(target, target, () => Begin(target, property, animation, completed, resumeElapsed))) return;
 
         // Re-animating the same property restarts from the new animation - drop the in-flight one once this one has taken
         // its place on the render thread.
         IRunningAnimation running = animation.Curve(property) is { } curve
-            ? new RunningKeyFrameAnimation(target, curve, animation.FillBehavior, false, completed)
-            : new RunningAnimation(target, property, animation, completed);
+            ? new RunningKeyFrameAnimation(target, curve, animation.FillBehavior, false, completed, resumeElapsed, animation)
+            : new RunningAnimation(target, property, animation, completed, resumeElapsed);
         RemoveWhere(a => a.Animates(target, property));
         if (!running.Advance(0))   // apply the From value immediately so there is no one-frame flash before the first tick
         {
@@ -204,20 +205,35 @@ public static class AnimationManager
     internal static double? GetElapsed(AdamantiumComponent target)
     {
         foreach (var a in Active)
+        {
             if (a is RunningKeyFrameAnimation rk && rk.AnimatesTarget(target))
+            {
                 return rk.CurrentElapsed;
+            }
+
+            if (a is RunningAnimation ra && ra.AnimatesTarget(target))
+            {
+                return ra.CurrentElapsed;
+            }
+        }
+
         return null;
     }
 
     /// <summary>The elapsed time of <paramref name="animation"/> running on <paramref name="target"/>, or null if it is not
     /// running there. Loop thread.</summary>
-    internal static double? ElapsedOf(Animation animation, AdamantiumComponent target)
+    internal static double? ElapsedOf(Timeline animation, AdamantiumComponent target)
     {
         foreach (var a in Active)
         {
             if (a is RunningKeyFrameAnimation rk && ReferenceEquals(rk.Source, animation) && rk.AnimatesTarget(target))
             {
                 return rk.CurrentElapsed;
+            }
+
+            if (a is RunningAnimation ra && ReferenceEquals(ra.Source, animation) && ra.AnimatesTarget(target))
+            {
+                return ra.CurrentElapsed;
             }
         }
 

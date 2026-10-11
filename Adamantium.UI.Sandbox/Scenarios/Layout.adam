@@ -20,18 +20,18 @@ expect id=TilePager enabled=False
 # Back as the page opens: the smallest cell.
 set id=CellWidth 24
 set id=CellHeight 24
-# The skeleton stand: held, the list shows loading cards however long it is left; tuned while they pulse; released, the
-# tiles load.
+# The skeleton stand: shown, the list is loading cards however long it is left; tuned while they pulse; hidden, the
+# list is empty.
 select id=SkeletonsStand
-wait id=HoldSkeletons
-toggle id=HoldSkeletons
+wait id=ShowSkeletons
+toggle id=ShowSkeletons
 wait id=SkeletonGrid IsLoadingItems=True
 set id=PulseMax 0.4
 set id=SkeletonStagger 150
 expect id=SkeletonGrid IsLoadingItems=True
 set id=PulseMax 0.15
 set id=SkeletonStagger 80
-toggle id=HoldSkeletons
-wait id=SkeletonGrid IsLoadingItems=False --timeout 30s
+toggle id=ShowSkeletons
+wait id=SkeletonGrid IsLoadingItems=False
 select id=TilesStand
 wait id=CellWidth

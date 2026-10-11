@@ -17,14 +17,19 @@ All packages share one version.
 - `VirtualizingPanel.HoldSkeletons`: while on, the panel binds no item and every slot in the window still without a
   container shows a skeleton card, for as long as the data behind the list is not ready.
 
-- `Animation` and `PulseAnimation` are components: `Duration`, `Delay`, `IterationCount`, `AutoReverse`, `Easing`,
-  `Min`, `Max` and the pulsed `Property` are registered properties and can be bound in markup. The bindings resolve
-  against the element the animation runs on, and a change while it runs restarts it at the same point of its cycle.
-  In a style's trigger the animation is one object shared by every styled element, so bind it to a resource there,
-  not to an element's data.
+- `Timeline`: the base of every animation, a component. `Duration`, `Delay`, `IterationCount`, `AutoReverse` and
+  `Easing` are registered properties and can be bound in markup.
+  - `Animation` (keyframes) and `PropertyAnimation` derive from it. `DoubleAnimation` and
+    `FontVariationListAnimation` have bindable `From` and `To`, `PulseAnimation` bindable `Min`, `Max` and `Property`.
+  - A property animation names the property it drives in `Property`, as a pulse does, so a trigger can run one from
+    markup: `<RunAnimationAction><DoubleAnimation Property="Opacity" From="0" To="1"/></RunAnimationAction>`.
+  - Bindings resolve against the element the animation runs on, also when its data arrives after the start. A change
+    while it runs restarts it at the same point of its cycle.
+  - In a style's trigger every element the style applies to runs a copy of its own, so a binding reads that element's
+    data. `Timeline.Clone` makes the copy, values and bindings included.
 
-- The sandbox's Layout tab has a Skeletons stand: a list held on its skeleton cards with the stagger, the pulse's low
-  and high ends, its half-cycle and the cell on sliders.
+- The sandbox's Layout tab has a Skeletons stand: nothing but loading cards, shown and hidden by a switch, with the
+  stagger, the pulse's low and high ends, its half-cycle and the cell on sliders.
 
 - `VisualTreeNotifications.PaintMirrored`: an element's opacity changed while the render thread draws it - nothing on
   screen needs a re-paint, but a copy baked elsewhere (a visual brush) does.

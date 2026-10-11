@@ -25,7 +25,6 @@ public partial class LayoutViewModel : TabPageViewModel
         // both places is a size stated twice, and the one written here would simply be overwritten on attach.
         Paged = new CollectionView(Rectangles);
         TileSource = Rectangles;
-        SkeletonSource = Rectangles;
         ShowStand(_stand);
     }
 
@@ -37,24 +36,20 @@ public partial class LayoutViewModel : TabPageViewModel
         => _ = _regions.GetOrCreateRegion(RegionNames.LayoutStand).NavigateToInstanceAsync(this, stand.ToString());
 
     // ── THE SKELETON STAND ─────────────────────────────────────────────────────────────────────────────────────────
-    // The cards a list shows where items are not bound yet, held on screen for as long as the switch is on, with the
-    // garland's numbers on sliders. The same 60 000 items as the tiles, in a list of its own.
+    // Nothing but the loading cards: a list that never binds an item, shown and hidden by a switch, with the garland's
+    // numbers on sliders.
 
-    /// <summary>What the skeleton list shows. A new list of the same items each time the hold goes on, so every slot in
-    /// the window starts unbound and shows a card - bindings apply once a frame, so handing back the same list would be
-    /// no change at all.</summary>
+    /// <summary>How many slots the skeleton list has - enough to scroll through.</summary>
+    public int SkeletonSlots => 60000;
+
+    /// <summary>What the skeleton list holds: placeholders it never binds while the cards are on, nothing while off.</summary>
     [Bindable] private object _skeletonSource;
 
-    /// <summary>On: the list binds nothing and every slot shows a skeleton card. Off: the tiles load.</summary>
-    [Bindable] private bool _holdSkeletons;
+    /// <summary>On: every slot of the list shows a skeleton card. Off: the list is empty.</summary>
+    [Bindable] private bool _showSkeletons;
 
-    partial void OnHoldSkeletonsChanged(bool value)
-    {
-        if (value)
-        {
-            SkeletonSource = Rectangles.ToList();
-        }
-    }
+    partial void OnShowSkeletonsChanged(bool value) =>
+        SkeletonSource = value ? Enumerable.Range(0, SkeletonSlots).ToList() : null;
 
     /// <summary>How far behind the card before it each card pulses, in milliseconds. 0 pulses them all together.</summary>
     [Bindable] private double _skeletonStaggerMs = 80;

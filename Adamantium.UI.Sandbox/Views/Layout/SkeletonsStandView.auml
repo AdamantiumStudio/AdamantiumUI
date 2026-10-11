@@ -1,16 +1,15 @@
 <View xmlns="http://adamantium/ui"
-      xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- One of the layout tab's stands, navigated into its region under the key "Skeletons": the loading cards a list
-         shows where its items are not bound yet, held on screen by the switch and tuned by the sliders. The card is the
-         theme's, written out here so its numbers can be bound. Readouts have a fixed width: a changing string would
-         re-measure the row, and the list under it. -->
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- One of the layout tab's stands, navigated into its region under the key "Skeletons": nothing but the loading
+         cards. The list never binds an item - its panel holds every slot on a card - so the switch shows the cards or
+         empties the list, and the sliders tune them. The card is the theme's, written out here so its numbers can be
+         bound. Readouts have a fixed width: a changing string would re-measure the row, and the list under it. -->
     <Grid RowDefinitions="Auto,*">
         <WrapPanel Grid.Row="0"
                    Orientation="Horizontal">
-            <ToggleButton AutomationProperties.AutomationId="HoldSkeletons"
-                          Content="{Localize LayoutStrings.Hold}"
-                          IsChecked="{Binding HoldSkeletons, Mode=TwoWay}"
+            <ToggleButton AutomationProperties.AutomationId="ShowSkeletons"
+                          Content="{Localize LayoutStrings.Show}"
+                          IsChecked="{Binding ShowSkeletons, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           MarginRight="24"/>
 
@@ -109,18 +108,13 @@
                  AutomationProperties.Name="{Localize LayoutStrings.Skeletons}"
                  MarginTop="14"
                  ItemsSource="{Binding SkeletonSource}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Rectangle Fill="{Binding Color, Converter={conv:StringToBrushConverter}}"
-                               CornerRadius="10"
-                               Margin="3"/>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-            <!-- The theme's card, with its numbers bound. The pulse binds against the fill it runs on, whose data is this
-                 tab's view-model, and a slider moved while it runs restarts it where it was. -->
+            <!-- The theme's card, with its numbers bound, and a gap around it: no item is ever bound here, so there is
+                 no real tile whose margin the panel could copy. The pulse binds against the fill it runs on, whose data
+                 is this tab's view-model, and a slider moved while it runs restarts it where it was. -->
             <ListBox.ItemSkeletonTemplate>
                 <DataTemplate>
                     <Grid IsHitTestVisible="False"
+                          Margin="3"
                           RenderCloneStagger="{Binding SkeletonStagger}">
                         <Border x:Name="SkeletonFill"
                                 CornerRadius="4"
@@ -149,20 +143,12 @@
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </ListBox.ItemSkeletonTemplate>
-            <ListBox.ItemContainerStyle>
-                <Style Selector="ListBoxItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Padding" Value="0"/>
-                    <Setter Property="Margin" Value="0"/>
-                </Style>
-            </ListBox.ItemContainerStyle>
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <WrapPanel Orientation="Horizontal"
                                ItemWidth="{Binding SkeletonCell}"
                                ItemHeight="{Binding SkeletonCell}"
-                               HoldSkeletons="{Binding HoldSkeletons}"/>
+                               HoldSkeletons="True"/>
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
         </ListBox>

@@ -319,6 +319,126 @@ public class AnimationTests
         Assert.That(pulse.IterationCount, Is.EqualTo(3.0));
     }
 
+    [Test]
+    public void ADoubleAnimationInATrigger_AnimatesThePropertyItNames()
+    {
+        AnimationManager.Reset();
+        var border = OnScreen();
+        var trigger = new PropertyTrigger { Property = "Width", Value = 200.0 };
+        trigger.EnterActions.Add(new RunAnimationAction
+        {
+            Animation = new DoubleAnimation
+            {
+                Property = "Height", From = 0, To = 100, Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing()
+            }
+        });
+        trigger.Apply(new SelfTriggerContext(border));
+
+        border.Width = 200;
+        AnimationManager.Tick(0.5);
+        Assert.That(border.Height, Is.EqualTo(50).Within(1.0));
+    }
+
+    [Test]
+    public void AStylesTrigger_GivesEveryElementAnAnimationOfItsOwn()
+    {
+        // One action for every element the style applies to: each runs a copy, so a binding reads that element's data.
+        AnimationManager.Reset();
+        var first = OnScreen();
+        var second = OnScreen();
+        first.DataContext = new Range { Low = 10, High = 20 };
+        second.DataContext = new Range { Low = 70, High = 80 };
+        var pulse = new PulseAnimation { Property = "Height", Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
+        pulse.SetBinding(PulseAnimation.MinProperty, new Binding(nameof(Range.Low)));
+        pulse.SetBinding(PulseAnimation.MaxProperty, new Binding(nameof(Range.High)));
+        var run = new RunAnimationAction { Animation = pulse };
+
+        run.Invoke(new StyleTriggerExecutionContext(first, null));
+        run.Invoke(new StyleTriggerExecutionContext(second, null));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.Height, Is.EqualTo(10).Within(0.001), "the first element pulses from its own low end");
+            Assert.That(second.Height, Is.EqualTo(70).Within(0.001), "and the second from its own");
+            Assert.That(AnimationManager.ActiveCount, Is.EqualTo(2), "two animations, one per element");
+            Assert.That(pulse.InheritanceParent, Is.Null, "the style's own animation runs on no element");
+        });
+    }
+
+    [Test]
+    public void AStylesTrigger_WithNothingBound_RunsTheOneAnimationOnEveryElement()
+    {
+        // Nothing to read from an element, so nothing to copy: one object, as many runs.
+        AnimationManager.Reset();
+        var first = OnScreen();
+        var second = OnScreen();
+        var grow = new DoubleAnimation { Property = "Height", From = 0, To = 100, Duration = TimeSpan.FromSeconds(1) };
+        var run = new RunAnimationAction { Animation = grow };
+
+        run.Invoke(new StyleTriggerExecutionContext(first, null));
+        run.Invoke(new StyleTriggerExecutionContext(second, null));
+
+        Assert.That(AnimationManager.ActiveCount, Is.EqualTo(2));
+        Assert.That(grow.InheritanceParent, Is.Null, "an animation with no bindings takes no element as its parent");
+    }
+
+    [Test]
+    public void ChangingAFinishedAnimation_DoesNotRunItAgain()
+    {
+        // A completion handler that edits its own animation must not restart it - and so complete it - once more.
+        AnimationManager.Reset();
+        var border = OnScreen();
+        var completions = 0;
+        DoubleAnimation grow = null;
+        grow = new DoubleAnimation { Property = "Height", From = 0, To = 100, Duration = TimeSpan.FromSeconds(1) };
+        grow.Apply(border, () =>
+        {
+            completions++;
+            grow.To = 200;
+        });
+
+        AnimationManager.Tick(1.5);
+        Assert.That(completions, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ACopy_HasTheSameValuesAndBindings()
+    {
+        var original = new DoubleAnimation { Property = "Opacity", From = 0.2, Duration = TimeSpan.FromSeconds(3) };
+        original.SetBinding(DoubleAnimation.ToProperty, new Binding(nameof(Range.High)));
+
+        var copy = (DoubleAnimation)original.Clone();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(copy, Is.Not.SameAs(original));
+            Assert.That(copy.Property, Is.EqualTo("Opacity"));
+            Assert.That(copy.From, Is.EqualTo(0.2));
+            Assert.That(copy.Duration, Is.EqualTo(TimeSpan.FromSeconds(3)));
+            Assert.That(BindingEngine.GetBindingExpression(copy, DoubleAnimation.ToProperty), Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public void ABoundDoubleAnimation_ChangedWhileItRuns_RestartsWhereItWas()
+    {
+        AnimationManager.Reset();
+        var border = OnScreen();
+        var range = new Range { Low = 0, High = 100 };
+        border.DataContext = range;
+        var grow = new DoubleAnimation { Property = "Height", From = 0, Duration = TimeSpan.FromSeconds(1), Easing = new LinearEasing() };
+        grow.SetBinding(DoubleAnimation.ToProperty, new Binding(nameof(Range.High)));
+        grow.Apply(border);
+        AnimationManager.Tick(0.25);
+        Assert.That(border.Height, Is.EqualTo(25).Within(1.0));
+
+        range.High = 200;
+        BindingUpdateQueue.Flush();
+        AnimationManager.Tick(0.0);
+        Assert.That(border.Height, Is.EqualTo(50).Within(1.0), "the new end, at the same point");
+        Assert.That(AnimationManager.ActiveCount, Is.EqualTo(1));
+    }
+
     private sealed class Range : System.ComponentModel.INotifyPropertyChanged
     {
         private double _high;
