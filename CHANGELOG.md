@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ItemsControl.CanReuseContainer(container, item)`: a control whose containers differ by item says which recycled
+  container may show which item; the most recently parked one that fits is handed out, and only when none does is a
+  new container made.
+
 - `FundamentalUIComponent.Follow`: a control listens to something that outlives it - a view model's collection or
   object, a shared resource - under a key; replacing what is followed under that key lets go of the old one, and a
   discarded element lets go of everything it follows.
@@ -753,6 +757,21 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- A two-way binding whose converter answers `UnsetValue` on the way back writes nothing to the source. It used to write
+  the marker, which threw inside the target's change report, and every listener after the binding missed the change:
+  ribbon tools bound to one choice (`EnumToBoolConverter`) all kept their checked look as the choice moved between them.
+
+- A ribbon group filled from data (`ItemsSource` + `ItemTemplate`) behaves as the same commands written out: each item's
+  command is the control its template builds, bound to the item, rather than a presenter around it. The size the group
+  chooses, the quick-access key and menu reach the command, its own `MaxSize` and collapse limits are the ones obeyed,
+  and automation sees it by its name - before, all of it stopped at the presenter, and the group went from its roomiest
+  straight to collapsed. A command given back by a removed item goes only to an item its template builds (a
+  `DataTemplateSet` with several), and without the item's data, quick-access identity, or a check a press left on it
+  that no binding holds. That identity stays with the
+  item, so a command rebuilt on a move or reset is still the one in the quick-access bar. `RibbonRadioButton`s from data
+  are one of a set too: a press clears the other tools of the group, where before it looked for them among the items,
+  which are data, and left two checked. Sandbox: the ribbon's Mesh group is now data.
 
 - Zooming an infinite canvas no longer makes its shapes jump and fly past the canvas's edge for a frame or two (or for
   good). Which controls left the tree is now decided where the frame is recorded and carried on its packet; the render

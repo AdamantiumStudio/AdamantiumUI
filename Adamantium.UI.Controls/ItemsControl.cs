@@ -315,6 +315,10 @@ public class ItemsControl : Control, IContainer
         return presenter;
     }
 
+    /// <summary>Whether a recycled <paramref name="container"/> can show <paramref name="item"/>. A control whose containers
+    /// differ by item says no to one that does not fit, and a new container is made for the item.</summary>
+    protected internal virtual bool CanReuseContainer(IUIComponent container, object item) => true;
+
     /// <summary>Binds a (new or recycled) container to <paramref name="item"/>: DataContext + content + item template.
     /// <para>A container that IS its own item has nothing to bind - it carries what its author wrote - and binding it
     /// would make it its own content. Subclasses hooking their containers still get the call, and should guard only the

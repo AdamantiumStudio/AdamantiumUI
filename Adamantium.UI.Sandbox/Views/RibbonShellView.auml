@@ -1834,16 +1834,16 @@
                                   DataContext="{Binding Commands.Plane}"/>
                 </RibbonGroup>
 
-                <RibbonGroup Header="{Localize RibbonShellStrings.Mesh}" Icon="{ObservableResource MeshIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Extrude}"
-                                  MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Bevel}"
-                                  MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Subdivide}"
-                                  MaxSize="Medium"/>
+                <!-- Commands as DATA: the group sizes the button each item's template builds, within its own MaxSize. -->
+                <RibbonGroup Header="{Localize RibbonShellStrings.Mesh}"
+                             Icon="{ObservableResource MeshIcon}"
+                             ItemsSource="{Binding Commands.MeshTools}">
+                    <RibbonGroup.ItemTemplate>
+                        <DataTemplate>
+                            <RibbonButton Classes="Shell"
+                                          MaxSize="Medium"/>
+                        </DataTemplate>
+                    </RibbonGroup.ItemTemplate>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Snapping}"

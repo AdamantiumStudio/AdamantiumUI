@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -48,6 +49,8 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 
     private IReadOnlyList<RibbonGroupVariant> _variants = [];
     private double[] _widths;
+    private readonly ConditionalWeakTable<IUIComponent, DataTemplate> _builtBy = new();
+    private readonly ConditionalWeakTable<object, RibbonCommandIdentity> _identities = new();
 
     /// <summary>The ways this group can be drawn, roomiest first; empty until it has been templated.</summary>
     public IReadOnlyList<RibbonGroupVariant> Variants
@@ -106,11 +109,69 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         return size;
     }
 
+    /// <summary>A command from data is the control its item template builds, not a presenter around it: the group sizes
+    /// that control, and the quick-access menu and key go on it.</summary>
+    protected internal override IUIComponent GetContainerForItem(object item)
+    {
+        var template = TemplateFor(item);
+        if (template is not HierarchicalDataTemplate && template?.Build(null).RootComponent is Base.UIComponent command)
+        {
+            if (ItemContainerStyle != null) command.Styles.Add(ItemContainerStyle);
+            _builtBy.AddOrUpdate(command, template);
+            return command;
+        }
+
+        return base.GetContainerForItem(item);
+    }
+
+    /// <summary>A recycled command goes only to an item its template builds; a presenter only to an item that builds none.</summary>
+    protected internal override bool CanReuseContainer(IUIComponent container, object item)
+    {
+        var template = TemplateFor(item);
+        return _builtBy.TryGetValue(container, out var builtBy)
+            ? ReferenceEquals(builtBy, template)
+            : template is null or HierarchicalDataTemplate;
+    }
+
+    /// <summary>A recycled command lets go of its item, of the quick-access identity it was given for it, and of a check a
+    /// press left on it that no binding holds.</summary>
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        base.ClearContainer(container);
+
+        if (!_builtBy.TryGetValue(container, out _) || container is not Base.UIComponent command)
+        {
+            return;
+        }
+
+        command.DataContext = null;
+        if (Ribbon.GetQuickAccessKey(command) is RibbonCommandIdentity)
+        {
+            command.ClearValue(Ribbon.QuickAccessKeyProperty);
+        }
+
+        if (command is Primitives.ToggleButton toggle
+            && Core.Data.BindingEngine.GetBindingExpression(toggle, Primitives.ToggleButton.IsCheckedProperty) == null)
+        {
+            toggle.ClearValue(Primitives.ToggleButton.IsCheckedProperty, ValuePriority.Binding);
+        }
+    }
+
+    private DataTemplate TemplateFor(object item) => ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(item, this);
+
+    private RibbonCommandIdentity IdentityFor(IUIComponent container, object item) =>
+        item != null && _builtBy.TryGetValue(container, out _) ? _identities.GetValue(item, _ => new()) : new();
+
     /// <summary>Gives each command without its own context menu one built from
     /// <see cref="Ribbon.CommandContextMenuTemplateProperty"/>; an author's menu is left as written.</summary>
     protected internal override void PrepareContainer(IUIComponent container, object item)
     {
         base.PrepareContainer(container, item);
+
+        if (!ReferenceEquals(container, item) && container is Base.UIComponent built and not ContentPresenter)
+        {
+            built.DataContext = item;
+        }
 
         if (container is not Base.InputUIComponent command) return;
         if (!Ribbon.GetCanAddToQuickAccess(command)) return;
@@ -121,7 +182,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         // command that RUNS something is matched by that too, so this only fills the gap where there is neither.
         if (Ribbon.GetQuickAccessKey(command) == null)
         {
-            Ribbon.SetQuickAccessKey(command, new RibbonCommandIdentity());
+            Ribbon.SetQuickAccessKey(command, IdentityFor(command, item));
         }
 
         if (command.ContextMenu != null) return;

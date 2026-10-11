@@ -326,7 +326,12 @@ public sealed class ShellCommands
             NewMaterial, Albedo, Normal, Roughness,
             Unwrap
         ];
+
+        MeshTools = [Extrude, Bevel, Subdivide];
     }
+
+    /// <summary>The mesh group's commands, given to it as data rather than written out as buttons.</summary>
+    public IReadOnlyList<ShellCommand> MeshTools { get; }
 
     public ShellCommand Save { get; }
 
