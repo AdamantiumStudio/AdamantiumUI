@@ -594,7 +594,7 @@ public class CanvasNodeThemeTests
         });
 
         // The rows that step aside SLIDE there, so they are read once the slide is over.
-        Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.5);
+        AnimationTime.Pass(0.5);
 
         Assert.Multiple(() =>
         {
@@ -615,7 +615,7 @@ public class CanvasNodeThemeTests
         });
 
         // The rows settle, and that is what says the move happened - the picture is finished before the graph changes.
-        Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.5);
+        AnimationTime.Pass(0.5);
 
         Assert.Multiple(() =>
         {

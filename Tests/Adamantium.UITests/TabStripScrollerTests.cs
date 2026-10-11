@@ -206,7 +206,7 @@ public class TabStripScrollerTests
         tc.BeginDrag(tabs[0], 5.0);      // grab 5px into tab 0
         tc.UpdateDrag(tabs[0], 100.0);   // dragged center = 115 -> past tab1 center (90), before tab2 center (170)
         tc.EndDrag(tabs[0]);
-        AnimationManager.Tick(10);       // finish the settle -> the reorder commits
+        AnimationTime.Pass(0.5);         // finish the settle -> the reorder commits
 
         Assert.Multiple(() =>
         {
@@ -239,7 +239,7 @@ public class TabStripScrollerTests
         tc.BeginDrag(tabs[0], 5.0);
         tc.UpdateDrag(tabs[0], 30.0);    // center = 45 -> short of tab1 center (90)
         tc.EndDrag(tabs[0]);
-        AnimationManager.Tick(10);
+        AnimationTime.Pass(0.5);
 
         Assert.That(tc.Items.IndexOf(tabs[0]), Is.EqualTo(0), "no midpoint crossed -> order unchanged");
     }
@@ -478,7 +478,7 @@ public class TabStripScrollerTests
         tc.BeginDrag(tabs[0], 5.0);       // grabbed 5px in
         tc.UpdateDrag(tabs[0], 160.0);    // dragged center = 175 -> past slot 1's center (150), short of slot 2's (250)
         tc.EndDrag(tabs[0]);
-        AnimationManager.Tick(10);
+        AnimationTime.Pass(0.5);
 
         Assert.Multiple(() =>
         {

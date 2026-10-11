@@ -61,6 +61,7 @@ public class DeferredAnimationTests
             "the request waited for the element to go up - it must be running now");
 
         var opacity = border.Opacity;
+        Compositor.StartPending();   // the frame that put it up is over
         AnimationManager.Tick(0.3);
         Assert.That(border.Opacity, Is.Not.EqualTo(opacity), "...and running means advancing");
     }

@@ -13,6 +13,7 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
 {
     private readonly AdamantiumComponent _target;
     private readonly AnimationCurve _curve;
+    private readonly FillBehavior _fillBehavior;
     private readonly Action _completed;
     private double _elapsedSeconds;
 
@@ -22,12 +23,24 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
     private readonly Compositor.Entry _composited;
 
     public RunningKeyFrameAnimation(AdamantiumComponent target, Animation animation, Action completed, double resumeElapsed = 0)
+        : this(target, BuildCurve(target, animation), FillBehavior.HoldEnd, true, completed, resumeElapsed)
+    {
+    }
+
+    /// <summary>Plays a ready curve. <paramref name="paintComposited"/> false keeps a paint curve on the loop thread, where
+    /// the property it drives goes on changing as the animation plays.</summary>
+    public RunningKeyFrameAnimation(AdamantiumComponent target, AnimationCurve curve, FillBehavior fillBehavior,
+        bool paintComposited, Action completed, double resumeElapsed = 0)
     {
         _target = target;
         _completed = completed;
         _elapsedSeconds = resumeElapsed;
-        _curve = BuildCurve(target, animation);
-        _composited = Compositor.TryTakeOver(target, _curve, resumeElapsed);
+        _curve = curve;
+        _fillBehavior = fillBehavior;
+        if (paintComposited || AnimationChannels.Of(target, curve) != CompositorChannel.Paint)
+        {
+            _composited = Compositor.TryTakeOver(target, curve, resumeElapsed);
+        }
     }
 
     /// <summary>Where this animation is right now (composited: the render clock; else the local one) - what a re-templated
@@ -48,7 +61,7 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
 
     public bool AnimatesTarget(AdamantiumComponent target) => ReferenceEquals(_target, target);
 
-    public IUIComponent DirtyTarget => _target as IUIComponent;
+    public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Owner;
 
     public bool IsEndless => _curve.IsEndless;
 
@@ -58,18 +71,42 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
         // thread was stalled for 300 ms, the animation on screen moved on by 300 ms, and anything the loop thread does with
         // this animation must agree with what the user is looking at, not lag it.
         _elapsedSeconds = _composited?.Elapsed ?? _elapsedSeconds + deltaSeconds;
+        var finished = _curve.IsFinished(_elapsedSeconds);
 
         // Mirror the value into the property system except for composited paint, which the render thread applies alone;
         // transforms are mirrored for hit-testing.
         if (_composited is not { Channel: CompositorChannel.Paint })
+        {
             foreach (var track in _curve.Tracks)
-                _target.SetValue(track.Property, _curve.Evaluate(track, _elapsedSeconds), ValuePriority.Animation);
+            {
+                if (finished && _fillBehavior == FillBehavior.Stop)
+                {
+                    _target.ClearValue(track.Property, ValuePriority.Animation);
+                }
+                else
+                {
+                    _target.SetValue(track.Property, _curve.Evaluate(track, _elapsedSeconds), ValuePriority.Animation);
+                }
+            }
+        }
 
-        if (!_curve.IsFinished(_elapsedSeconds)) return false;
+        if (!finished)
+        {
+            return false;
+        }
 
-        if (_composited != null) Compositor.Release(_target);
+        ReleaseComposited();
         _completed?.Invoke();
         return true;
+    }
+
+    /// <summary>Hands what the render thread plays of this animation back to the loop thread.</summary>
+    public void ReleaseComposited()
+    {
+        if (_composited != null)
+        {
+            Compositor.Release(_composited);
+        }
     }
 
     private static AnimationCurve BuildCurve(AdamantiumComponent target, Animation animation)

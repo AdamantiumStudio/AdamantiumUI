@@ -17,6 +17,8 @@ public struct TransformValues
     public double RotationCenterY;
     public double TranslateX;
     public double TranslateY;
+    public double ShiftX;
+    public double ShiftY;
     public double SkewX;
     public double SkewY;
 
@@ -37,11 +39,14 @@ public struct TransformValues
         else if (property == Transform.RotationCenterYProperty) RotationCenterY = value;
         else if (property == Transform.TranslateXProperty) TranslateX = value;
         else if (property == Transform.TranslateYProperty) TranslateY = value;
+        else if (property == Transform.ShiftXProperty) ShiftX = value;
+        else if (property == Transform.ShiftYProperty) ShiftY = value;
         else if (property == Transform.SkewXProperty) SkewX = value;
         else if (property == Transform.SkewYProperty) SkewY = value;
     }
 
-    /// <summary>Compose these values into the transform matrix. Pure: no property reads, no shared state.</summary>
+    /// <summary>Compose these values into the transform matrix. Pure: no property reads, no shared state.
+    /// <see cref="ShiftX"/>/<see cref="ShiftY"/> are left out: they need the owner's size.</summary>
     public readonly Matrix4x4 ToMatrix()
     {
         // Z scale MUST be 1: the two-arg ctor left it 0, which zeroed the matrix's Z row (M33 = 0) - harmless for the

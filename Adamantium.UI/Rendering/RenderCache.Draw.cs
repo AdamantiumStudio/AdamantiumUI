@@ -1971,7 +1971,10 @@ public partial class RenderCache
         if (entry.Owner is not { } owner || _transformTable == null) return;
 
         var slot = OpacitySlotOf(device, owner);
-        if (slot < 0) return;   // not drawing, or its slot is not in this frame's buffer yet - the next walk links it
+        if (slot < 0 || !_transformTable.TryGetOpacitySlot(owner.RenderId, out var own) || own != slot)
+        {
+            return;
+        }
 
         _transformTable.SetAlpha(device, slot, entry.Alpha);
 

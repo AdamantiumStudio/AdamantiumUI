@@ -451,6 +451,7 @@ public sealed class DesignerSession : IDisposable
             return RenderResult.Fail("no live session to advance", null);
 
         const double dt = 1.0 / 60.0;
+        Compositor.StartPending();
         AnimationManager.Tick(dt);
         DesignTimeMediaClock.Tick(dt);                     // advance animated images by virtual time
         _lastWindow.Update(_app.ThemeManager, new AppTime());   // re-run layout for any animation-driven size change

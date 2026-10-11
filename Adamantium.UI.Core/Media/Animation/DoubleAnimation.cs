@@ -19,4 +19,8 @@ public sealed class DoubleAnimation : PropertyAnimation
         var to = To;
         return progress => from + (to - from) * progress;
     }
+
+    internal override AnimationCurve Curve(AdamantiumProperty property) =>
+        new([new AnimationCurve.Track(property, [0.0, 1.0], [From, To])], Duration.TotalSeconds, Delay.TotalSeconds,
+            IterationCount, AutoReverse, Easing);
 }

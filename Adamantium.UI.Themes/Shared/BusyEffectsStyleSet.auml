@@ -298,52 +298,41 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
-                    <!-- One rounded card painted by a gradient with traveling stops, so no rectangular clip squares its
-                         corners. Stop colors are themed resources. -->
-                    <Rectangle CornerRadius="{ResourceReference BusyShimmerRadius}" Stroke="Transparent">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop x:Name="ShimmerLead" Color="{ResourceReference ShimmerTrackColor}" Offset="0"/>
-                                <GradientStop x:Name="ShimmerPeak" Color="{ResourceReference ShimmerPeakColor}" Offset="0.15"/>
-                                <GradientStop x:Name="ShimmerTrail" Color="{ResourceReference ShimmerTrackColor}" Offset="0.3"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
+                    <!-- A band two cards wide (scaled about its right edge, so it spans -1..1 card widths) with the glare in
+                         its middle, sliding under the card's rounded clip. It always covers the whole card, so the track
+                         color stays even; it moves by ShiftX, in card widths, which the render thread plays by itself. -->
+                    <Border CornerRadius="{ResourceReference BusyShimmerRadius}" ClipToBounds="True">
+                        <Rectangle RenderTransformOrigin="1,0">
+                            <Rectangle.RenderTransform>
+                                <Transform x:Name="ShimmerBand" ScaleX="2"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="{ResourceReference ShimmerTrackColor}" Offset="0.5"/>
+                                    <GradientStop Color="{ResourceReference ShimmerPeakColor}" Offset="0.575"/>
+                                    <GradientStop Color="{ResourceReference ShimmerTrackColor}" Offset="0.65"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- The three stops travel together, keeping the 0.3-wide highlight rigid as it crosses. They stay INSIDE 0..1 for the
-         whole sweep on purpose: gradient offsets are clamped to that range, so a stop that ran past an edge would stall
-         there and the glare would pile up in the corner instead of gliding. AutoReverse so it comes back rather than
-         snapping to the left edge each loop. Offset is a PAINT property - measured as the channel that costs nothing. -->
+    <!-- The glare crosses from 0.15 to 0.85 of the card and comes back (AutoReverse) rather than snapping home. -->
     <Style Selector="BusyIndicator.Shimmer">
         <PropertyTrigger Property="IsActive" Value="True">
             <PropertyTrigger.EnterActions>
-                <RunAnimationAction TargetName="ShimmerLead">
+                <RunAnimationAction TargetName="ShimmerBand">
                     <Animation Duration="0:0:2.0" IterationCount="Infinity" AutoReverse="True" Easing="CubicInOut">
-                        <KeyFrame Cue="0"><Setter Property="Offset" Value="0"/></KeyFrame>
-                        <KeyFrame Cue="1"><Setter Property="Offset" Value="0.7"/></KeyFrame>
-                    </Animation>
-                </RunAnimationAction>
-                <RunAnimationAction TargetName="ShimmerPeak">
-                    <Animation Duration="0:0:2.0" IterationCount="Infinity" AutoReverse="True" Easing="CubicInOut">
-                        <KeyFrame Cue="0"><Setter Property="Offset" Value="0.15"/></KeyFrame>
-                        <KeyFrame Cue="1"><Setter Property="Offset" Value="0.85"/></KeyFrame>
-                    </Animation>
-                </RunAnimationAction>
-                <RunAnimationAction TargetName="ShimmerTrail">
-                    <Animation Duration="0:0:2.0" IterationCount="Infinity" AutoReverse="True" Easing="CubicInOut">
-                        <KeyFrame Cue="0"><Setter Property="Offset" Value="0.3"/></KeyFrame>
-                        <KeyFrame Cue="1"><Setter Property="Offset" Value="1"/></KeyFrame>
+                        <KeyFrame Cue="0"><Setter Property="ShiftX" Value="0"/></KeyFrame>
+                        <KeyFrame Cue="1"><Setter Property="ShiftX" Value="0.7"/></KeyFrame>
                     </Animation>
                 </RunAnimationAction>
             </PropertyTrigger.EnterActions>
             <PropertyTrigger.ExitActions>
-                <StopAnimationAction TargetName="ShimmerLead"/>
-                <StopAnimationAction TargetName="ShimmerPeak"/>
-                <StopAnimationAction TargetName="ShimmerTrail"/>
+                <StopAnimationAction TargetName="ShimmerBand"/>
             </PropertyTrigger.ExitActions>
         </PropertyTrigger>
     </Style>
