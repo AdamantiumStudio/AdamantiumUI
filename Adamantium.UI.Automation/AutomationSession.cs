@@ -127,6 +127,31 @@ public sealed class AutomationSession : IAsyncDisposable
     public async Task<IReadOnlyList<ErrorEntry>> ErrorsSinceAsync(long mark) =>
         (await RunAsync(new AutomationRequest { Command = AutomationCommand.Errors, Since = mark })).Errors;
 
+    /// <summary>A finger in the middle of each of <paramref name="targets"/> - up to ten - put down together and lifted
+    /// together, by input simulated inside the application; or, with <paramref name="throughSystem"/>, handed to the
+    /// system's own pointer input, refused unless every one lands on its element's window on top of the desktop.</summary>
+    public Task TapTogetherAsync(IReadOnlyList<AutomationElement> targets, bool throughSystem = false) =>
+        FingersAsync(targets, null, [], throughSystem);
+
+    /// <summary>A finger on each of <paramref name="targets"/> held still past the holding time and lifted, as
+    /// <see cref="TapTogetherAsync"/> puts them down.</summary>
+    public Task HoldTogetherAsync(IReadOnlyList<AutomationElement> targets, bool throughSystem = false) =>
+        FingersAsync(targets, null, [AutomationExecutor.HoldGesture], throughSystem);
+
+    /// <summary>A finger on each of <paramref name="targets"/> drawn from its middle by <paramref name="dx"/>,
+    /// <paramref name="dy"/> of its own units, all at once, as <see cref="TapTogetherAsync"/> puts them down.</summary>
+    public Task TouchDragTogetherAsync(IReadOnlyList<AutomationElement> targets, double dx, double dy, bool throughSystem = false) =>
+        FingersAsync(targets, FormattableString.Invariant($"{dx},{dy}"), [], throughSystem);
+
+    private Task FingersAsync(IReadOnlyList<AutomationElement> targets, string offset, string[] options, bool throughSystem) =>
+        RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Touches,
+            Targets = [.. targets.Select(target => target.Selector)],
+            Value = offset,
+            Properties = [.. options, .. throughSystem ? [AutomationExecutor.SystemInput] : Array.Empty<string>()]
+        });
+
     /// <summary>The element with keyboard focus, the windows and their open popups, as text.</summary>
     public async Task<string> StateAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.State })).Text;
 

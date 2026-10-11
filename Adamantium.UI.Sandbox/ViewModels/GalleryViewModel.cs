@@ -30,6 +30,7 @@ public partial class GalleryViewModel
         new MarkupViewModel(),
         new ScrollBarViewModel(),
         new ListsViewModel(),
+        new MultiTouchViewModel(),
         new ShapesViewModel(),
         new LoadersViewModel(),
         new AnimationsViewModel(),

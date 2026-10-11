@@ -33,6 +33,7 @@
     <Phrase Key="Markup" Text="Разметка"/>
     <Phrase Key="ScrollBar" Text="Полоса прокрутки"/>
     <Phrase Key="Lists" Text="Списки"/>
+    <Phrase Key="MultiTouch" Text="Мультитач"/>
     <Phrase Key="Shapes" Text="Фигуры"/>
     <Phrase Key="Loaders" Text="Индикаторы загрузки"/>
     <Phrase Key="Animations" Text="Анимации"/>

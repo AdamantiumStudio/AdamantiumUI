@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="Hint" Text="Put up to ten fingers down at once: each column's button counts its own taps and each list scrolls under its own finger. Every contact that is down is ringed, as big as it presses."/>
+    <Phrase Key="Now" Text="Contacts down: {count}"/>
+    <Phrase Key="Most" Text="Most at once:"/>
+    <Phrase Key="Reset" Text="Reset"/>
+    <Phrase Key="Tap" Text="Tap {number}"/>
+</Language>

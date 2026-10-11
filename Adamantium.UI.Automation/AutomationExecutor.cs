@@ -33,6 +33,8 @@ public sealed class AutomationExecutor
 
     // A little past the holding time, so the hold has certainly started before the contact lifts.
     private static readonly TimeSpan HoldMargin = TimeSpan.FromMilliseconds(150);
+
+    private const int MostFingers = 10;
     private const char LineSeparator = (char)0x2028;
 
     private readonly IAutomationHost _host;
@@ -70,9 +72,11 @@ public sealed class AutomationExecutor
                     return new AutomationReply { Ok = true, Errors = ErrorJournal.Since(request.Since) };
                 case AutomationCommand.Shot:
                     return await ShotAsync(request, timeout);
-                case AutomationCommand.Touch or AutomationCommand.Pen when request.Properties?.Contains(SystemInput) == true:
+                case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches
+                    when request.Properties?.Contains(SystemInput) == true:
                     return await SystemContactAsync(request, timeout);
-                case AutomationCommand.Touch or AutomationCommand.Pen when request.Properties?.Contains(HoldGesture) == true:
+                case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches
+                    when request.Properties?.Contains(HoldGesture) == true:
                     return await HoldAsync(request, timeout);
                 case AutomationCommand.Windows:
                 case AutomationCommand.Tree:
@@ -139,48 +143,69 @@ public sealed class AutomationExecutor
         return await SettledAsync(request, mark, timeout);
     }
 
-    // A finger or a pen put down, held still past the holding time and lifted. Pressed and let go on the loop with the
-    // real hold timer running between, so the hold starts as it would under a hand.
+    // Contacts put down, held still past the holding time and lifted. Pressed and let go on the loop with the real hold
+    // timers running between, so each hold starts as it would under a hand.
     private async Task<AutomationReply> HoldAsync(AutomationRequest request, TimeSpan timeout)
     {
         var mark = ErrorJournal.Mark();
-        var contact = ContactOf(request);
-        var (window, point) = await _host.RunOnLoopAsync(() =>
+        var (down, contacts) = await _host.RunOnLoopAsync(() =>
         {
-            var peer = Resolve(request.Target);
-            var (element, from, _) = ContactPlace(peer, request);
-            return InputSimulator.PutDown(element, Label(peer), from, contact);
+            var (paths, contacts) = Contacts(request);
+            return (InputSimulator.PutDown(paths, contacts), contacts);
         }, timeout);
 
         await Task.Delay(Gestures.HoldingTime + HoldMargin);
         await _host.RunOnLoopAsync(() =>
         {
-            InputSimulator.Lift(window, point, contact);
+            InputSimulator.Lift(down, contacts);
             return true;
         }, timeout);
 
         return await SettledAsync(request, mark, timeout);
     }
 
-    private static Contact ContactOf(AutomationRequest request) =>
-        request.Command == AutomationCommand.Touch ? Contact.Finger() : PenOf(request.Properties);
+    private (ContactPath[] Paths, Contact[] Contacts) Contacts(AutomationRequest request)
+    {
+        if (request.Command != AutomationCommand.Touches)
+        {
+            var peer = Enabled(Resolve(request.Target));
+            var (element, from, to) = ContactPlace(peer, request);
+            var contact = request.Command == AutomationCommand.Touch ? Contact.Finger() : PenOf(request.Properties);
+            return ([new ContactPath(element, Label(peer), from, to)], [contact]);
+        }
 
-    // A finger or a pen through the system's own input. The frames are worked out on the loop and played by the system
-    // on a worker; the reply waits for the contact's release to reach the window - the proof that the platform's own
-    // pointer path delivered it.
+        if (request.Targets is not { Length: > 0 and <= MostFingers })
+        {
+            throw new AutomationException($"Fingers go on 1 to {MostFingers} elements, not {request.Targets?.Length ?? 0}.");
+        }
+
+        Vector2? offset = string.IsNullOrEmpty(request.Value) ? null : Point(request.Value);
+        var paths = request.Targets.Select(target =>
+        {
+            var peer = Enabled(Resolve(target));
+            var (element, middle) = TapPoint(peer);
+            return new ContactPath(element, Label(peer), middle, middle + offset);
+        }).ToArray();
+        return (paths, [.. Enumerable.Range(0, paths.Length).Select(Contact.Finger)]);
+    }
+
+    // Contacts through the system's own input. The frames are worked out on the loop and played by the system on a
+    // worker; the reply waits for every contact's release to reach the window - the proof that the platform's own
+    // pointer path delivered them.
     private async Task<AutomationReply> SystemContactAsync(AutomationRequest request, TimeSpan timeout)
     {
         var mark = ErrorJournal.Mark();
         var input = UIApplication.Current?.Container is { } container && container.IsRegistered<ISyntheticPointerInput>()
             ? container.Resolve<ISyntheticPointerInput>()
             : throw new AutomationException("This platform has no synthetic pointer input to hand the contact to.");
-        var contact = ContactOf(request);
         var hold = request.Properties.Contains(HoldGesture) ? Gestures.HoldingTime + HoldMargin : TimeSpan.Zero;
 
+        var type = PointerType.Touch;
+        var unreleased = 0;
         var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var onReleased = new PointerReleasedEventHandler((_, e) =>
         {
-            if (e.Pointer.Type == contact.Type) released.TrySetResult();
+            if (e.Pointer.Type == type && --unreleased == 0) released.TrySetResult();
         });
 
         // Added and taken off on the loop, in its order: should the planning outlast the timeout and run late, the
@@ -191,21 +216,22 @@ public sealed class AutomationExecutor
         {
             var frames = await _host.RunOnLoopAsync(() =>
             {
-                var peer = Resolve(request.Target);
-                var (element, from, to) = ContactPlace(peer, request);
-                var plan = InputSimulator.SystemFrames(element, Label(peer), from, to, contact, hold);
+                var (paths, contacts) = Contacts(request);
+                var plan = InputSimulator.SystemFrames(paths, contacts, hold);
+                type = contacts[0].Type;
+                unreleased = contacts.Length;
                 window = (IInputComponent)plan.Window;
                 window.AddHandler(PointerEvents.PointerReleasedEvent, onReleased, handledEventsToo: true);
                 return plan.Frames;
             }, timeout);
 
-            await Task.Run(() => input.Inject(contact.Type, frames));
+            await Task.Run(() => input.Inject(type, frames));
             injected = true;
             await released.Task.WaitAsync(timeout);
         }
         catch (TimeoutException) when (injected)
         {
-            throw new AutomationException("The system took the contact, but its release never reached the window.");
+            throw new AutomationException("The system took the contacts, but not every release reached the window.");
         }
         finally
         {
@@ -290,11 +316,22 @@ public sealed class AutomationExecutor
             return true;
         }
 
-        var peer = Resolve(request.Target);
-        if (!peer.IsEnabled)
+        if (request.Command is AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches)
         {
-            throw new AutomationException($"{Label(peer)} is disabled.");
+            var (paths, contacts) = Contacts(request);
+            if (paths[0].To != null)
+            {
+                InputSimulator.Stroke(paths, contacts);
+            }
+            else
+            {
+                InputSimulator.Tap(paths, contacts);
+            }
+
+            return true;
         }
+
+        var peer = Enabled(Resolve(request.Target));
 
         switch (request.Command)
         {
@@ -383,12 +420,6 @@ public sealed class AutomationExecutor
                 break;
             case AutomationCommand.Wheel:
                 InputSimulator.Wheel(OwnerOf(peer), Label(peer), Notches(request.Value));
-                break;
-            case AutomationCommand.Touch:
-                PutDown(peer, request, Contact.Finger());
-                break;
-            case AutomationCommand.Pen:
-                PutDown(peer, request, PenOf(request.Properties));
                 break;
             case AutomationCommand.Pan:
                 var offset = Point(request.Value);
@@ -543,19 +574,6 @@ public sealed class AutomationExecutor
         return (Point(points[0]), Point(points[1]));
     }
 
-    private static void PutDown(AutomationPeer peer, AutomationRequest request, Contact contact)
-    {
-        var (element, from, to) = ContactPlace(peer, request);
-        if (to is { } end)
-        {
-            InputSimulator.Stroke(element, Label(peer), from, end, contact);
-        }
-        else
-        {
-            InputSimulator.Tap(element, Label(peer), from, contact);
-        }
-    }
-
     // Where a contact goes, the same for the application's input and the system's: a tap in the middle - of a part
     // where the part stands - or a stroke between two points in the target's own units.
     private static (UIComponent Element, Vector2 From, Vector2? To) ContactPlace(AutomationPeer peer, AutomationRequest request)
@@ -566,14 +584,23 @@ public sealed class AutomationExecutor
             return (OwnerOf(peer), from, to);
         }
 
+        var (element, middle) = TapPoint(peer);
+        return (element, middle, null);
+    }
+
+    private static (UIComponent Element, Vector2 Middle) TapPoint(AutomationPeer peer)
+    {
         if (peer is IElementPartPeer part)
         {
-            return (part.Element, MiddleOf(part, peer), null);
+            return (part.Element, MiddleOf(part, peer));
         }
 
         var owner = OwnerOf(peer);
-        return (owner, InputSimulator.Middle(owner), null);
+        return (owner, InputSimulator.Middle(owner));
     }
+
+    private static AutomationPeer Enabled(AutomationPeer peer) =>
+        peer.IsEnabled ? peer : throw new AutomationException($"{Label(peer)} is disabled.");
 
     private static Contact PenOf(string[] options)
     {

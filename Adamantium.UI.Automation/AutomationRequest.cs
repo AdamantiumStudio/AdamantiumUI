@@ -9,6 +9,10 @@ public sealed class AutomationRequest
     /// <summary>The selector path of the element the command is about - see <see cref="By"/>.</summary>
     public string Target { get; set; }
 
+    /// <summary>The selector paths of the elements a command about several is about - one finger each for
+    /// <see cref="AutomationCommand.Touches"/>.</summary>
+    public string[] Targets { get; set; }
+
     public string Value { get; set; }
 
     /// <summary>How deep <see cref="AutomationCommand.Tree"/> goes; 0 for all the way.</summary>

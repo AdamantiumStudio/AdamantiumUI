@@ -33,6 +33,7 @@
     <Phrase Key="Markup" Text="Markup"/>
     <Phrase Key="ScrollBar" Text="ScrollBar"/>
     <Phrase Key="Lists" Text="Lists"/>
+    <Phrase Key="MultiTouch" Text="Multitouch"/>
     <Phrase Key="Shapes" Text="Shapes"/>
     <Phrase Key="Loaders" Text="Loaders"/>
     <Phrase Key="Animations" Text="Animations"/>

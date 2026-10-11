@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.Mathematics;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
@@ -146,6 +150,113 @@ public class AutomationDriverTests
         await session.Find(By.Id("Pad")).PenTapAsync(barrel: true);
 
         Assert.That(pressed, Is.EqualTo(MouseButtons.Right));
+    }
+
+    private static StackPanel Pads(int count, out Button[] buttons)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        buttons = new Button[count];
+        for (var i = 0; i < count; i++)
+        {
+            buttons[i] = new Button { Name = $"Pad{i}", Content = $"{i}", Width = 60, Height = 60 };
+            row.Children.Add(buttons[i]);
+        }
+
+        return row;
+    }
+
+    private static AutomationElement[] Found(AutomationSession session, int count) =>
+        [.. Enumerable.Range(0, count).Select(i => session.Find(By.Id($"Pad{i}")))];
+
+    // Fingers on buttons of their own, down together: every button is clicked once, by a finger of its own, all of
+    // them down at once, and only the first is the primary one.
+    [Test]
+    public async Task FingersTappedTogether_ClickEachButton_AllDownAtOnce([Range(2, 10)] int fingers)
+    {
+        var row = Pads(fingers, out var buttons);
+        var clicks = new int[fingers];
+        for (var i = 0; i < fingers; i++)
+        {
+            var at = i;
+            buttons[i].Click += (_, _) => clicks[at]++;
+        }
+
+        var down = 0;
+        var most = 0;
+        var ids = new HashSet<uint>();
+        var primaries = 0;
+        row.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler((_, e) =>
+        {
+            most = Math.Max(most, ++down);
+            ids.Add(e.Pointer.Id);
+            if (e.Pointer.IsPrimary) primaries++;
+        }), handledEventsToo: true);
+        row.AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler((_, _) => down--),
+            handledEventsToo: true);
+        await using var session = await Driving(row);
+
+        await session.TapTogetherAsync(Found(session, fingers));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clicks, Is.All.EqualTo(1));
+            Assert.That(most, Is.EqualTo(fingers), "all down at once");
+            Assert.That(ids, Has.Count.EqualTo(fingers), "a pointer each");
+            Assert.That(primaries, Is.EqualTo(1));
+            Assert.That(down, Is.Zero, "all lifted");
+        });
+    }
+
+    [Test]
+    public async Task FingersHeldTogether_ClickNothing([Values(2, 10)] int fingers)
+    {
+        var row = Pads(fingers, out var buttons);
+        var clicks = 0;
+        foreach (var button in buttons)
+        {
+            button.Click += (_, _) => clicks++;
+        }
+
+        await using var session = await Driving(row);
+
+        await session.HoldTogetherAsync(Found(session, fingers));
+
+        Assert.That(clicks, Is.Zero);
+    }
+
+    // Drawn together, every finger ends its own offset away from where it went down.
+    [Test]
+    public async Task FingersDrawnTogether_EachEndsByTheOffset([Values(2, 10)] int fingers)
+    {
+        var row = Pads(fingers, out _);
+        var travel = new Dictionary<uint, Vector2>();
+        var from = new Dictionary<uint, Vector2>();
+        row.AddHandler(PointerEvents.PointerPressedEvent,
+            new PointerPressedEventHandler((_, e) => from[e.Pointer.Id] = e.GetPosition(row)), handledEventsToo: true);
+        row.AddHandler(PointerEvents.PointerReleasedEvent,
+            new PointerReleasedEventHandler((_, e) => travel[e.Pointer.Id] = e.GetPosition(row) - from[e.Pointer.Id]),
+            handledEventsToo: true);
+        await using var session = await Driving(row);
+
+        await session.TouchDragTogetherAsync(Found(session, fingers), 0, 20);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(travel, Has.Count.EqualTo(fingers));
+            Assert.That(travel.Values, Is.All.EqualTo(new Vector2(0, 20)));
+        });
+    }
+
+    [Test]
+    public async Task ElevenFingers_AreRefused()
+    {
+        var row = Pads(10, out _);
+        await using var session = await Driving(row);
+
+        var refusal = Assert.ThrowsAsync<AutomationException>(() =>
+            session.TapTogetherAsync([.. Found(session, 10), session.Find(By.Id("Pad0"))]));
+
+        Assert.That(refusal.Message, Does.Contain("1 to 10"));
     }
 
     [Test]

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Adamantium.Mathematics;
@@ -18,7 +19,7 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
     // About a frame apart, as a hand's reports come: the system coalesces frames that arrive closer.
     private static readonly TimeSpan FrameGap = TimeSpan.FromMilliseconds(16);
 
-    public void Inject(PointerType type, IReadOnlyList<SyntheticPointerFrame> frames)
+    public void Inject(PointerType type, IReadOnlyList<IReadOnlyList<SyntheticPointerFrame>> frames)
     {
         var inputType = type switch
         {
@@ -27,7 +28,8 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
             _ => throw new ArgumentException("Only a finger or a pen is a contact the system can be handed.", nameof(type))
         };
 
-        var device = Win32Interop.CreateSyntheticPointerDevice(inputType, 1, PointerFeedbackMode.Default);
+        var contacts = (uint)Math.Max(1, frames.Max(frame => frame.Count));
+        var device = Win32Interop.CreateSyntheticPointerDevice(inputType, contacts, PointerFeedbackMode.Default);
         if (device == IntPtr.Zero)
         {
             throw new InvalidOperationException(
@@ -38,8 +40,10 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
         {
             foreach (var frame in frames)
             {
-                var info = inputType == PointerInputType.Touch ? Touch(frame) : Pen(frame);
-                if (!Win32Interop.InjectSyntheticPointerInput(device, [info], 1))
+                var infos = frame.Select((contact, index) => inputType == PointerInputType.Touch
+                    ? Touch(contact, (uint)index)
+                    : Pen(contact, (uint)index)).ToArray();
+                if (!Win32Interop.InjectSyntheticPointerInput(device, infos, (uint)infos.Length))
                 {
                     throw new InvalidOperationException(
                         $"The system refused a synthetic {type} frame (error {Marshal.GetLastWin32Error()}).");
@@ -54,14 +58,14 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
         }
     }
 
-    private static POINTER_TYPE_INFO Touch(SyntheticPointerFrame frame) => POINTER_TYPE_INFO.OfTouch(new POINTER_TOUCH_INFO
+    private static POINTER_TYPE_INFO Touch(SyntheticPointerFrame frame, uint id) => POINTER_TYPE_INFO.OfTouch(new POINTER_TOUCH_INFO
     {
-        pointerInfo = Info(PointerInputType.Touch, frame),
+        pointerInfo = Info(PointerInputType.Touch, frame, id),
         touchMask = TouchMask.Pressure,
         pressure = (uint)(frame.Properties.Pressure * FullPressure)
     });
 
-    private static POINTER_TYPE_INFO Pen(SyntheticPointerFrame frame)
+    private static POINTER_TYPE_INFO Pen(SyntheticPointerFrame frame, uint id)
     {
         // The side button and the eraser end press only while the tip touches; a pen held upside down says so in range.
         var touching = frame.Kind is RawPointerEventType.Down or RawPointerEventType.Move;
@@ -71,17 +75,17 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
 
         return POINTER_TYPE_INFO.OfPen(new POINTER_PEN_INFO
         {
-            pointerInfo = Info(PointerInputType.Pen, frame),
+            pointerInfo = Info(PointerInputType.Pen, frame, id),
             penMask = PenMask.Pressure,
             pressure = touching ? (uint)(frame.Properties.Pressure * FullPressure) : 0,
             penFlags = flags
         });
     }
 
-    private static POINTER_INFO Info(PointerInputType type, SyntheticPointerFrame frame) => new()
+    private static POINTER_INFO Info(PointerInputType type, SyntheticPointerFrame frame, uint id) => new()
     {
         pointerType = type,
-        pointerId = 0,
+        pointerId = id,
         pointerFlags = Flags(type, frame.Kind),
         ptPixelLocation = new NativePoint((int)frame.Screen.X, (int)frame.Screen.Y)
     };
