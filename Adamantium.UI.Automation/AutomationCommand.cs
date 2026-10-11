@@ -144,5 +144,13 @@ public enum AutomationCommand
 
     /// <summary>Turns the mouse wheel over the target's middle by <see cref="AutomationRequest.Value"/> notches, inside
     /// the application: positive away from the user, scrolling up, as the system counts it.</summary>
-    Wheel
+    Wheel,
+
+    /// <summary>A finger on the target, inside the application: a tap in its middle, or, when
+    /// <see cref="AutomationRequest.Value"/> is <c>x1,y1 x2,y2</c>, a stroke between those points in its own units.</summary>
+    Touch,
+
+    /// <summary>A pen on the target, as <see cref="Touch"/> puts a finger there. <see cref="AutomationRequest.Properties"/>
+    /// may hold <c>pressure=0..1</c>, <c>barrel</c> (the side button held: the right button) and <c>eraser</c>.</summary>
+    Pen
 }

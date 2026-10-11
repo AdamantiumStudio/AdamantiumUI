@@ -35,6 +35,12 @@ public static class Program
           select <selector> --add | unselect <selector>       add to a selection of many, or take out of it
           click | rclick | hover <selector>                   or by input made inside the application
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
+          touch <selector> tap | drag <x1,y1> <x2,y2>         a finger on it, inside the application
+          pen <selector> tap | drag <x1,y1> <x2,y2> [--pressure <0..1>] [--barrel] [--eraser]
+                                                              a pen on it; --barrel holds its side button
+          touch | pen ... --os                                the same through the system's own pointer input: it
+                                                              presses whatever is on top of the desktop there, so
+                                                              only while nobody uses the computer
           drop <selector> <target> [--before|--after]         carry it onto another element and let it go there
           scroll <selector>                                   bring a list's item into view, making its element
           scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents

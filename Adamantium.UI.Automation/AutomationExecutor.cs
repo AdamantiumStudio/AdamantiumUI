@@ -24,6 +24,9 @@ public sealed class AutomationExecutor
     private static readonly TimeSpan WaitStep = TimeSpan.FromMilliseconds(20);
 
     private const int ClosestShown = 5;
+
+    // The option of a touch or pen command that hands the contact to the system instead of the application.
+    internal const string SystemInput = "os";
     private const char LineSeparator = (char)0x2028;
 
     private readonly IAutomationHost _host;
@@ -61,6 +64,8 @@ public sealed class AutomationExecutor
                     return new AutomationReply { Ok = true, Errors = ErrorJournal.Since(request.Since) };
                 case AutomationCommand.Shot:
                     return await ShotAsync(request, timeout);
+                case AutomationCommand.Touch or AutomationCommand.Pen when request.Properties?.Contains(SystemInput) == true:
+                    return await SystemContactAsync(request, timeout);
                 case AutomationCommand.Windows:
                 case AutomationCommand.Tree:
                 case AutomationCommand.Find:
@@ -123,6 +128,66 @@ public sealed class AutomationExecutor
     {
         var mark = ErrorJournal.Mark();
         await _host.RunOnLoopAsync(() => Act(request), timeout);
+        return await SettledAsync(request, mark, timeout);
+    }
+
+    // A finger or a pen through the system's own input. The frames are worked out on the loop and played by the system
+    // on a worker; the reply waits for the contact's release to reach the window - the proof that the platform's own
+    // pointer path delivered it.
+    private async Task<AutomationReply> SystemContactAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        var mark = ErrorJournal.Mark();
+        var input = UIApplication.Current?.Container is { } container && container.IsRegistered<ISyntheticPointerInput>()
+            ? container.Resolve<ISyntheticPointerInput>()
+            : throw new AutomationException("This platform has no synthetic pointer input to hand the contact to.");
+        var contact = request.Command == AutomationCommand.Touch ? Contact.Finger() : PenOf(request.Properties);
+
+        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var onReleased = new PointerReleasedEventHandler((_, e) =>
+        {
+            if (e.Pointer.Type == contact.Type) released.TrySetResult();
+        });
+
+        // Added and taken off on the loop, in its order: should the planning outlast the timeout and run late, the
+        // handler is still taken off after it was added rather than left on the window.
+        IInputComponent window = null;
+        var injected = false;
+        try
+        {
+            var frames = await _host.RunOnLoopAsync(() =>
+            {
+                var peer = Resolve(request.Target);
+                var (element, from, to) = ContactPlace(peer, request);
+                var plan = InputSimulator.SystemFrames(element, Label(peer), from, to, contact);
+                window = (IInputComponent)plan.Window;
+                window.AddHandler(PointerEvents.PointerReleasedEvent, onReleased, handledEventsToo: true);
+                return plan.Frames;
+            }, timeout);
+
+            await Task.Run(() => input.Inject(contact.Type, frames));
+            injected = true;
+            await released.Task.WaitAsync(timeout);
+        }
+        catch (TimeoutException) when (injected)
+        {
+            throw new AutomationException("The system took the contact, but its release never reached the window.");
+        }
+        finally
+        {
+            // Not awaited: a busy loop must not turn the outcome above into a timeout of its own.
+            _ = _host.RunOnLoopAsync(() =>
+            {
+                window?.RemoveHandler(PointerEvents.PointerReleasedEvent, onReleased);
+                return true;
+            }, timeout).ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        return await SettledAsync(request, mark, timeout);
+    }
+
+    // The application settled after an action, with what the action left in the error journal.
+    private async Task<AutomationReply> SettledAsync(AutomationRequest request, long mark, TimeSpan timeout)
+    {
         await _host.WaitForIdleAsync(timeout);
         var reply = await _host.RunOnLoopAsync(() => Describe(request.Target), timeout);
 
@@ -284,6 +349,12 @@ public sealed class AutomationExecutor
             case AutomationCommand.Wheel:
                 InputSimulator.Wheel(OwnerOf(peer), Label(peer), Notches(request.Value));
                 break;
+            case AutomationCommand.Touch:
+                PutDown(peer, request, Contact.Finger());
+                break;
+            case AutomationCommand.Pen:
+                PutDown(peer, request, PenOf(request.Properties));
+                break;
             case AutomationCommand.Pan:
                 var offset = Point(request.Value);
                 Pattern<IPanProvider>(peer, PatternId.Pan).Pan(offset.X, offset.Y);
@@ -435,6 +506,73 @@ public sealed class AutomationExecutor
         }
 
         return (Point(points[0]), Point(points[1]));
+    }
+
+    private static void PutDown(AutomationPeer peer, AutomationRequest request, Contact contact)
+    {
+        var (element, from, to) = ContactPlace(peer, request);
+        if (to is { } end)
+        {
+            InputSimulator.Stroke(element, Label(peer), from, end, contact);
+        }
+        else
+        {
+            InputSimulator.Tap(element, Label(peer), from, contact);
+        }
+    }
+
+    // Where a contact goes, the same for the application's input and the system's: a tap in the middle - of a part
+    // where the part stands - or a stroke between two points in the target's own units.
+    private static (UIComponent Element, Vector2 From, Vector2? To) ContactPlace(AutomationPeer peer, AutomationRequest request)
+    {
+        if (!string.IsNullOrEmpty(request.Value))
+        {
+            var (from, to) = DragPoints(request.Value);
+            return (OwnerOf(peer), from, to);
+        }
+
+        if (peer is IElementPartPeer part)
+        {
+            return (part.Element, MiddleOf(part, peer), null);
+        }
+
+        var owner = OwnerOf(peer);
+        return (owner, InputSimulator.Middle(owner), null);
+    }
+
+    private static Contact PenOf(string[] options)
+    {
+        var pressure = PointerPointProperties.DefaultPressure;
+        var barrel = false;
+        var eraser = false;
+        foreach (var option in options ?? [])
+        {
+            if (option == SystemInput)
+            {
+                continue;
+            }
+
+            if (option == "barrel")
+            {
+                barrel = true;
+            }
+            else if (option == "eraser")
+            {
+                eraser = true;
+            }
+            else if (option.StartsWith("pressure=", StringComparison.Ordinal) &&
+                     float.TryParse(option["pressure=".Length..], NumberStyles.Float, CultureInfo.InvariantCulture, out var value) &&
+                     value is >= 0 and <= 1)
+            {
+                pressure = value;
+            }
+            else
+            {
+                throw new AutomationException($"'{option}' is not a pen option: pressure=0..1, barrel or eraser.");
+            }
+        }
+
+        return Contact.Pen(pressure, barrel, eraser);
     }
 
     private static int Notches(string text) =>

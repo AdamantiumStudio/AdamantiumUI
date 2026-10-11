@@ -210,6 +210,47 @@ public sealed class AutomationElement
     public Task DragAsync(double fromX, double fromY, double toX, double toY) =>
         RunAsync(AutomationCommand.Drag, FormattableString.Invariant($"{fromX},{fromY} {toX},{toY}"));
 
+    /// <summary>A finger tapped in its middle, by input simulated inside the application - or, with
+    /// <paramref name="throughSystem"/>, handed to the system's own pointer input, which presses whatever is on top of
+    /// the desktop there; refused unless that is this element's window.</summary>
+    public Task TapAsync(bool throughSystem = false) => ContactAsync(AutomationCommand.Touch, null, [], throughSystem);
+
+    /// <summary>A finger drawn across it from one point to another, in its own units, as <see cref="TapAsync"/> puts it
+    /// down.</summary>
+    public Task TouchDragAsync(double fromX, double fromY, double toX, double toY, bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Touch, Stroke(fromX, fromY, toX, toY), [], throughSystem);
+
+    /// <summary>A pen tapped in its middle, as <see cref="TapAsync"/> puts a finger there: pressed as hard as
+    /// <paramref name="pressure"/> (0 to 1), with its side button held when <paramref name="barrel"/> - the right
+    /// button - or upside down when <paramref name="eraser"/>.</summary>
+    public Task PenTapAsync(float pressure = 0.5f, bool barrel = false, bool eraser = false, bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Pen, null, PenOptions(pressure, barrel, eraser), throughSystem);
+
+    /// <summary>A pen drawn across it from one point to another, in its own units, as <see cref="PenTapAsync"/> puts it
+    /// down.</summary>
+    public Task PenDragAsync(double fromX, double fromY, double toX, double toY, float pressure = 0.5f, bool barrel = false,
+        bool eraser = false, bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Pen, Stroke(fromX, fromY, toX, toY), PenOptions(pressure, barrel, eraser), throughSystem);
+
+    private Task ContactAsync(AutomationCommand command, string stroke, string[] options, bool throughSystem) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = command,
+            Target = Selector,
+            Value = stroke,
+            Properties = [.. options, .. throughSystem ? [AutomationExecutor.SystemInput] : Array.Empty<string>()]
+        });
+
+    private static string Stroke(double fromX, double fromY, double toX, double toY) =>
+        FormattableString.Invariant($"{fromX},{fromY} {toX},{toY}");
+
+    private static string[] PenOptions(float pressure, bool barrel, bool eraser) =>
+    [
+        FormattableString.Invariant($"pressure={pressure}"),
+        .. barrel ? ["barrel"] : Array.Empty<string>(),
+        .. eraser ? ["eraser"] : Array.Empty<string>()
+    ];
+
     /// <summary>A right click in its middle, by input simulated inside the application.</summary>
     public Task RightClickAsync() => RunAsync(AutomationCommand.RightClick);
 

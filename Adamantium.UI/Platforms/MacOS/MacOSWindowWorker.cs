@@ -136,6 +136,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
     }
 
+    // TODO(macOS): [NSWindow convertPointFromScreen:] and convertPointToScreen:, flipped from Cocoa's bottom-left
+    // origin. The point passes through until the macOS window pipeline lands.
+    public Adamantium.UI.Core.PixelPoint ScreenToClient(Adamantium.UI.Core.PixelPoint screen) => screen;
+
+    public Adamantium.UI.Core.PixelPoint ClientToScreen(Adamantium.UI.Core.PixelPoint client) => client;
+
     // TODO(macOS): relative mouse mode (CGAssociateMouseAndMouseCursorPosition + hide cursor) for mouse-look.
     public void SetRelativeMouseMode(bool enabled, Adamantium.UI.Core.PixelPoint restoreScreen)
     {

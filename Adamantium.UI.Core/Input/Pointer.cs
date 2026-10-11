@@ -10,6 +10,10 @@ public sealed class Pointer
     internal IInputComponent PositionRoot;
     internal IInputComponent HoverRoot;
     internal int ClickCount;
+
+    // The button a finger or a pen pressed when it touched, kept until it lifts: its moves and its lift say the same
+    // button, whatever changes on the way.
+    internal MouseButtons ContactButton;
     internal uint LastClickTime;
     internal IInputComponent LastClicked;
     internal Vector2 LastClickPosition;

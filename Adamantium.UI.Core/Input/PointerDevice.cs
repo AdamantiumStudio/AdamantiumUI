@@ -27,13 +27,16 @@ public sealed class PointerDevice
     /// <summary>The pointers in use: the mouse, and every finger down and pen in range.</summary>
     public IReadOnlyCollection<Pointer> Pointers => _pointers.Values;
 
-    /// <summary>Hands a platform's pointer event to the element it reaches.</summary>
+    /// <summary>Hands a platform's pointer event to the element it reaches. A finger and a pen's tip press the left
+    /// button and a pen's barrel the right one, whatever the platform said: controls answer the left button, and a
+    /// platform that forgot this would leave every one of them deaf to touch.</summary>
     public void ProcessEvent(RawPointerEventArgs e)
     {
         var pointer = PointerFor(e);
+        var (button, properties) = ContactButton(e, pointer);
         pointer.ScreenPosition = e.RootComponent.PointToScreen(e.Position);
         pointer.PositionRoot = e.RootComponent;
-        pointer.Properties = e.Properties;
+        pointer.Properties = properties;
         pointer.IsPrimary = e.IsPrimary;
 
         switch (e.EventType)
@@ -48,11 +51,11 @@ public sealed class PointerDevice
                 break;
 
             case RawPointerEventType.Down:
-                Down(pointer, e.RootComponent, e.Position, e.ChangedButton, e.InputModifiers, e.Timestamp);
+                Down(pointer, e.RootComponent, e.Position, button, e.InputModifiers, e.Timestamp);
                 break;
 
             case RawPointerEventType.Up:
-                Up(pointer, e.RootComponent, e.Position, e.ChangedButton, e.InputModifiers, e.Timestamp);
+                Up(pointer, e.RootComponent, e.Position, button, e.InputModifiers, e.Timestamp);
                 break;
 
             case RawPointerEventType.Wheel:
@@ -158,6 +161,47 @@ public sealed class PointerDevice
         }
 
         return pixel;
+    }
+
+    // The button a contact presses, and the buttons it holds. A mouse says its own. A finger presses the left button as
+    // it touches; a pen's tip the left one, or the right one with its side button held as it touches. The pointer
+    // keeps that button until the contact lifts, so a press and its lift agree and a hovering contact holds none.
+    private static (MouseButtons Button, PointerPointProperties Properties) ContactButton(RawPointerEventArgs e, Pointer pointer)
+    {
+        if (e.PointerType == PointerType.Mouse)
+        {
+            return (e.ChangedButton, e.Properties);
+        }
+
+        var button = MouseButtons.None;
+        switch (e.EventType)
+        {
+            case RawPointerEventType.Down:
+                pointer.ContactButton = e.PointerType == PointerType.Pen && e.Properties.IsBarrelButtonPressed
+                    ? MouseButtons.Right
+                    : MouseButtons.Left;
+                button = pointer.ContactButton;
+                break;
+            case RawPointerEventType.Up:
+                button = pointer.ContactButton == MouseButtons.None ? MouseButtons.Left : pointer.ContactButton;
+                pointer.ContactButton = MouseButtons.None;
+                break;
+            case RawPointerEventType.Cancel or RawPointerEventType.LeaveWindow:
+                pointer.ContactButton = MouseButtons.None;
+                break;
+        }
+
+        var held = pointer.ContactButton;
+        var properties = e.Properties with
+        {
+            IsLeftButtonPressed = held == MouseButtons.Left,
+            IsRightButtonPressed = held == MouseButtons.Right,
+            IsMiddleButtonPressed = false,
+            IsXButton1Pressed = false,
+            IsXButton2Pressed = false
+        };
+
+        return (button, properties);
     }
 
     private Pointer PointerFor(RawPointerEventArgs e)

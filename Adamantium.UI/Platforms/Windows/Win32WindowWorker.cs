@@ -100,6 +100,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         messageTable[(uint)WindowMessages.MouseWheel] = HandleMouseWheel;
         messageTable[(uint)WindowMessages.MouseHwheel] = HandleMouseWheel;   // horizontal (tilt) wheel
+
+        messageTable[(uint)WindowMessages.PointerDown] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerUpdate] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerUp] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerLeave] = HandlePointer;
+        messageTable[(uint)WindowMessages.PointerCaptureChanged] = HandlePointer;
         messageTable[(uint)WindowMessages.Setcursor] = HandleSetCursor;
         messageTable[(uint)WindowMessages.Getobject] = HandleGetObject;
         messageTable[BeginMoveDragMessage] = HandleBeginMoveDrag;
@@ -1249,6 +1255,34 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         if (capture) Win32Interop.SetCapture(window.Handle);
         else Win32Interop.ReleaseCapture();
+    }
+
+    // A finger or a pen. Handled, the system makes no mouse messages of it; the mouse and a touchpad are left to
+    // WM_MOUSE*, which the default handling makes of them.
+    private IntPtr HandlePointer(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        var eventArgs = WindowsPointerInput.Read(windowMessage, wParam, window, GetTimeStamp());
+        handled = eventArgs != null;
+        if (handled)
+        {
+            DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
+        }
+
+        return IntPtr.Zero;
+    }
+
+    public PixelPoint ScreenToClient(PixelPoint screen)
+    {
+        var point = new NativePoint((int)screen.X, (int)screen.Y);
+        Win32Interop.ScreenToClient(window.Handle, ref point);
+        return new PixelPoint(point.X, point.Y);
+    }
+
+    public PixelPoint ClientToScreen(PixelPoint client)
+    {
+        var point = new NativePoint((int)client.X, (int)client.Y);
+        Win32Interop.ClientToScreen(window.Handle, ref point);
+        return new PixelPoint(point.X, point.Y);
     }
 
     // Called on the LOOP thread (from RenderTargetPanel via the window). Posts the enter/exit to the pump thread (cursor
