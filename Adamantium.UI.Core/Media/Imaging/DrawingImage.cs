@@ -81,6 +81,20 @@ public class DrawingImage : ImageSource
         Drawing?.Attach(this);
     }
 
+    /// <summary>Let go of <paramref name="owner"/> when it stops showing this image, so a shared icon resource does not
+    /// keep it - and everything around it - alive. The next component to show the image takes it over.</summary>
+    public void Detach(AdamantiumComponent owner)
+    {
+        if (!ReferenceEquals(_owner, owner))
+        {
+            return;
+        }
+
+        _owner = null;
+        _dataContext = null;
+        InheritanceParent = null;
+    }
+
     private AdamantiumComponent _owner;
 
     private object _dataContext;

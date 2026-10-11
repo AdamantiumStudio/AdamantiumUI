@@ -291,6 +291,26 @@ internal sealed class CanvasGraphHost
         return at >= 0 && at < pins.Count ? pins[at] : null;
     }
 
+    /// <summary>Stops listening to the application's nodes, sockets and wires, and changes nothing on the plane or in the
+    /// model - for a canvas that has been destroyed, which the model outlives.</summary>
+    public void StopFollowing()
+    {
+        if (_nodes is INotifyCollectionChanged was)
+        {
+            was.CollectionChanged -= OnNodesChanged;
+        }
+
+        if (_scene is CanvasScene scene)
+        {
+            scene.Changed -= OnSceneChanged;
+        }
+
+        foreach (var model in _placed.Keys)
+        {
+            Unfollow(model);
+        }
+    }
+
     private void Clear()
     {
         foreach (var (model, item) in _placed)

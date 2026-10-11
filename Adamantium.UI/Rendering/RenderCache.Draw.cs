@@ -755,6 +755,7 @@ public partial class RenderCache
             _fractalKindByUnit.Clear();
             _fillSlotByUnit.Clear();
             _haloRunsByUnit.Clear();
+            _matSegNode.Clear();
             _unitsByBrush.Clear();
             _brushPaintBaked.Clear();
             _walkGroup = null;

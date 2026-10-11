@@ -62,6 +62,25 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         }
     }
 
+    internal void LetGoOfSource()
+    {
+        if (_source is INotifyCollectionChanged observable)
+        {
+            observable.CollectionChanged -= OnSourceCollectionChanged;
+        }
+
+        foreach (var item in _subscribed.Keys)
+        {
+            if (item is INotifyPropertyChanged record)
+            {
+                record.PropertyChanged -= OnItemPropertyChanged;
+            }
+        }
+
+        _subscribed.Clear();
+        _source = null;
+    }
+
     /// <summary>Which items are shown; null shows all. Setting it raises a Reset; item changes are tracked by
     /// <see cref="IsLiveFiltering"/>.</summary>
     public Predicate<object> Filter

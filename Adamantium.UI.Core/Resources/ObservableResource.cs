@@ -83,6 +83,23 @@ public class ObservableResource : MarkupExtension
         target.ClearValue(propertyName, priority);
     }
 
+    /// <summary>Closes every expression applied to <paramref name="target"/>, for an element that has been destroyed: no
+    /// setter or trigger will undo them, and the resource manager they listen to outlives it.</summary>
+    public static void CloseAll(IAdamantiumComponent target)
+    {
+        if (!_applied.TryGetValue(target, out var map))
+        {
+            return;
+        }
+
+        foreach (var expression in map.Values)
+        {
+            expression.CloseConnection();
+        }
+
+        map.Clear();
+    }
+
     public override object ProvideObject(MarkupContext context)
     {
         if (context?.TargetObject is IAdamantiumComponent target && !string.IsNullOrEmpty(context.TargetPropertyName))

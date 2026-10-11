@@ -51,6 +51,21 @@ internal sealed class CanvasDrawingHost
         Fill();
     }
 
+    /// <summary>Stops listening to the application's collection, and changes nothing on the plane - for a canvas that has
+    /// been destroyed, which the collection outlives.</summary>
+    public void StopFollowing()
+    {
+        if (_objects is INotifyCollectionChanged was)
+        {
+            was.CollectionChanged -= OnObjectsChanged;
+        }
+
+        foreach (var model in _placed.Keys)
+        {
+            model.PropertyChanged -= OnModelChanged;
+        }
+    }
+
     public void SetScene(ICanvasScene scene)
     {
         if (ReferenceEquals(_scene, scene)) return;

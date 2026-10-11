@@ -155,12 +155,14 @@ public class ItemsControl : Control, IContainer
         _presenter?.Connect(this);
     }
 
-    /// <summary>Releases the items source, whose collection may outlive this control and would otherwise keep it
-    /// alive.</summary>
+    /// <summary>Releases the items source, whose collection may outlive this control and would otherwise keep it alive,
+    /// and has each container let go of its item. Quietly: a reset would run the selection and the containers of a control
+    /// nobody shows any more, and could write its emptied selection into the view model.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
-        Items?.SetSource(null);
+        ItemContainerGenerator.Clear();
+        Items?.LetGoOfSource();
     }
 
     /// <summary>Drops the presenter with its template; it holds the panel, every container and the recycle pool, which a

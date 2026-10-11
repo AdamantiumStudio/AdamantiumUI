@@ -230,10 +230,7 @@ public class ListBox : Selector
     private static void OnSelectedItemsChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var listBox = (ListBox)a;
-        if (e.OldValue is INotifyCollectionChanged oldObservable)
-            oldObservable.CollectionChanged -= listBox.OnSelectedItemsCollectionChanged;
-        if (e.NewValue is INotifyCollectionChanged newObservable)
-            newObservable.CollectionChanged += listBox.OnSelectedItemsCollectionChanged;
+        listBox.Follow(SelectedItemsProperty, e.NewValue as INotifyCollectionChanged, listBox.OnSelectedItemsCollectionChanged);
         if (listBox.SyncingSelection) return;   // our own create-on-demand, not an external (re)bind - don't re-read it
         listBox.AdoptBoundSelection();
     }

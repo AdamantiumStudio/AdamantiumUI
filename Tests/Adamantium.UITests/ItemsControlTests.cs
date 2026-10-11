@@ -511,6 +511,50 @@ public class ItemsControlTests
         }
     }
 
+    // A reset drops the containers for good, so whatever was built for them is discarded - parked ones in the pool too.
+    // An item that is an element of its own is not: the list hands it back and shows it again.
+    [Test]
+    public void ClearingTheContainers_DiscardsWhatWasBuilt_ButNotTheItemsOwnElements()
+    {
+        var containerStyle = new Style { Selector = new StyleSelector { Types = { typeof(ListBoxItem) } } };
+        containerStyle.Setters.Add(new Setter("Template", ListBoxItemChromeTemplate()));
+        var label = new TextBlock { Text = "own" };
+        var lb = new ListBox { ItemContainerStyle = containerStyle, Template = ItemsPresenterTemplate() };
+        lb.Items.Add(label);
+        lb.Items.Add("b");
+        lb.Items.Add("c");
+        lb.Measure(new Size(200, 200));
+        lb.Arrange(new Rect(0, 0, 200, 200));
+
+        var generator = lb.ItemContainerGenerator;
+        var wrapper = (ListBoxItem)generator.ContainerFromIndex(0);
+        Assume.That(Descendants(wrapper).Contains(label), "the element item is shown inside its container");
+
+        generator.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wrapper.IsDiscarded, Is.True, "the container is gone for good");
+            Assert.That(label.IsDiscarded, Is.False, "the item is the list's to show again");
+        });
+        DiscardedVisuals.Drain(int.MaxValue);
+    }
+
+    [Test]
+    public void ClearingTheContainers_DiscardsTheParkedOnesToo()
+    {
+        var lb = new ListBox { ItemsSource = new[] { "a", "b", "c", "d", "e" } };
+        var generator = lb.ItemContainerGenerator;
+        generator.SetWindow(0, 4);
+        var tail = (ListBoxItem)generator.ContainerFromIndex(4);
+        generator.SetWindow(0, 1);   // the window shrank: the containers past it wait in the pool
+
+        generator.Clear();
+
+        Assert.That(tail.IsDiscarded, Is.True);
+        DiscardedVisuals.Drain(int.MaxValue);
+    }
+
     [Test]
     public void ListBox_WrapPanelBothPinned_CellGrows_ContentFillsCell()
     {
