@@ -540,7 +540,7 @@ public partial class RenderCache
         ClearOrder();   // the walk re-derives the whole order; whoever it does not visit is simply not in it any more
         foreach (var draw in packet.Draws)
             ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid, draw.Order, draw.Clones);
-        ReconcileDetachedControls();
+        ReconcileDetachedControls(packet);
     }
 
     // Empties the paint order. Every group must learn it is out - a group whose InOrder stayed true would never be
@@ -675,8 +675,8 @@ public partial class RenderCache
 
     private void ProcessRenderCommands(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, Matrix4x4F projectionMatrix, bool wasGeometryValid, long order, IReadOnlyList<Matrix4x4F> clones = null)
     {
-        // A subtree that left the tree after being walked takes no place in the paint order.
-        if (LeftTheTree(component)) return;
+        // A part destroyed after being walked takes no place in the paint order; one that merely left is the next packet's.
+        if (component is Core.FundamentalUIComponent { IsDiscarded: true }) return;
 
         // A CLONE HOST takes its place in the paint order even when it draws nothing of its own: the clone run
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
@@ -719,10 +719,6 @@ public partial class RenderCache
         }
     }
 
-    // Out of the tree and not parked. Read off the group's own component, since a group can hold no units.
-    private static bool LeftTheTree(ControlGroup group)
-        => LeftTheTree(group.Component ?? (group.Units.Count > 0 ? group.Units[0].Component : null));
-
     // Whether a control left the visual tree for good (parked visuals have not); the single rule for the paint order.
     private static bool LeftTheTree(IUIComponent component)
     {
@@ -746,14 +742,28 @@ public partial class RenderCache
         return true;
     }
 
-    // Frees units of controls neither attached nor parked. Runs during the build (EndDraw), since disposal is deferred
-    // and an earlier call could free a unit still in flight.
-    private int ReconcileDetachedControls()
+    private readonly HashSet<IUIComponent> _departed = [];
+
+    private bool Departed(ControlGroup group)
+        => Departed(group.Component ?? (group.Units.Count > 0 ? group.Units[0].Component : null));
+
+    private bool Departed(IUIComponent component)
+        => component != null && (component is Core.FundamentalUIComponent { IsDiscarded: true } || _departed.Contains(component));
+
+    // Frees units of controls the recorder found neither attached nor parked. Runs during the build (EndDraw), since
+    // disposal is deferred and an earlier call could free a unit still in flight.
+    private int ReconcileDetachedControls(RenderPacket packet)
     {
+        _departed.Clear();
+        foreach (var component in packet.Departed)
+        {
+            _departed.Add(component);
+        }
+
         List<Guid> detached = null;
         foreach (var pair in _groupById)
         {
-            if (!LeftTheTree(pair.Value)) continue;
+            if (!Departed(pair.Value)) continue;
             (detached ??= new List<Guid>()).Add(pair.Key);
         }
 
@@ -763,7 +773,7 @@ public partial class RenderCache
         for (var i = _groups.Count - 1; i >= 0; i--)
         {
             var group = _groups[i];
-            if (!LeftTheTree(group)) continue;
+            if (!Departed(group)) continue;
             // Through RemoveFromOrder, not by hand: leaving the order is not just a flag and a list entry, it is also the
             // one moment the sweep can be told that this group's instances are now nobody's. Dropped here, they keep
             // being issued with the range they sit in - a scrollbar the window outgrew, still painting at the size it had.
@@ -786,13 +796,18 @@ public partial class RenderCache
         List<IUIComponent> stale = null;
         foreach (var component in _applySnap.Keys)
         {
-            if (component is Core.FundamentalUIComponent { IsDiscarded: true } || LeftTheTree(component))
+            if (Departed(component) || _readLive.Contains(component))
                 (stale ??= new List<IUIComponent>()).Add(component);
         }
 
         if (stale != null)
         {
-            foreach (var component in stale) _applySnap.Remove(component);
+            foreach (var component in stale)
+            {
+                _applySnap.Remove(component);
+                _readLive.Remove(component);
+            }
+
             removed += stale.Count;
         }
 
@@ -803,7 +818,7 @@ public partial class RenderCache
         List<IUIComponent> staleNodes = null;
         foreach (var node in _nodeRefreshed.Keys)
         {
-            if (LeftTheTree(node)) (staleNodes ??= new List<IUIComponent>()).Add(node);
+            if (Departed(node)) (staleNodes ??= new List<IUIComponent>()).Add(node);
         }
 
         if (staleNodes != null)
@@ -817,6 +832,7 @@ public partial class RenderCache
             removed += staleNodes.Count;
         }
 
+        _departed.Clear();
         return removed;
     }
 
@@ -825,7 +841,7 @@ public partial class RenderCache
         List<IUIComponent> gone = null;
         foreach (var owner in owners.Keys)
         {
-            if (LeftTheTree(owner))
+            if (Departed(owner))
             {
                 (gone ??= []).Add(owner);
             }

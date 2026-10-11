@@ -339,6 +339,22 @@ public static class Compositor
         }
     }
 
+    /// <summary>Adds every element whose transform or opacity the render thread is playing to <paramref name="into"/>:
+    /// what it draws with runs ahead of the element's own values by design.</summary>
+    public static void CollectOwners(ISet<IUIComponent> into)
+    {
+        lock (Gate)
+        {
+            foreach (var entry in Entries)
+            {
+                if (entry.Owner != null)
+                {
+                    into.Add(entry.Owner);
+                }
+            }
+        }
+    }
+
     /// <summary>The entry playing <paramref name="target"/>, or null if the render thread isn't playing it.</summary>
     public static Entry EntryFor(AdamantiumComponent target)
     {

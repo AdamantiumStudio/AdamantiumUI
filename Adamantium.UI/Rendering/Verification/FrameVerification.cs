@@ -4,8 +4,8 @@ using System.Threading;
 
 namespace Adamantium.UI.Rendering.Verification;
 
-/// <summary>The frame verifier: while on, a window's frames are compared with a fresh full build of the same tree, and
-/// each one that differs is written to <see cref="SessionFolder"/> with a report. Off, it costs one read per frame.</summary>
+/// <summary>The frame verifier: while on, what a window's render cache draws with is checked against what its tree says,
+/// and every part that differs is logged to <see cref="LogPath"/>. Off, it costs one read per frame.</summary>
 public sealed class FrameVerification
 {
     private static volatile FrameVerification active;
@@ -15,11 +15,11 @@ public sealed class FrameVerification
     private int _verified;
     private int _mismatched;
     private int _skipped;
-    private int _dumps;
+    private int _reports;
 
     internal static FrameVerification Active => active;
 
-    /// <summary>Whether frames are verified; on starts a new session, off frees everything the verifier holds.</summary>
+    /// <summary>Whether frames are verified; on starts a new log, off drops the verifier.</summary>
     public bool IsEnabled
     {
         get => _enabled;
@@ -37,28 +37,31 @@ public sealed class FrameVerification
 
             _enabled = value;
             active = value ? this : null;
+            Log(value
+                ? "verifying"
+                : $"stopped: {VerifiedFrames} frames checked, {MismatchedFrames} with alarms, {SkippedFrames} skipped");
         }
     }
 
     /// <summary>Verifies every Nth recorded frame; 1 verifies them all.</summary>
     public int Every { get; set; } = 1;
 
-    /// <summary>Where sessions are written; a session is a subfolder named by the time it started.</summary>
+    /// <summary>Where the logs are written, one per session, named by the time it started.</summary>
     public string Folder { get; set; } = Path.Combine(AppContext.BaseDirectory, "verify");
 
-    /// <summary>How many differing frames a session writes out in full; later ones are counted and logged.</summary>
-    public int MaxDumps { get; set; } = 20;
+    /// <summary>How many differing frames a session describes in its log; later ones are only counted.</summary>
+    public int MaxReports { get; set; } = 500;
 
-    /// <summary>The folder of the current session.</summary>
-    public string SessionFolder { get; private set; }
+    /// <summary>The log of the current session.</summary>
+    public string LogPath { get; private set; }
 
-    /// <summary>Frames compared this session.</summary>
+    /// <summary>Frames checked this session.</summary>
     public int VerifiedFrames => Volatile.Read(ref _verified);
 
-    /// <summary>Frames that differed from the full walk this session.</summary>
+    /// <summary>Frames in which the cache and the tree parted this session.</summary>
     public int MismatchedFrames => Volatile.Read(ref _mismatched);
 
-    /// <summary>Frames that could not be compared this session; <c>verify.log</c> says why.</summary>
+    /// <summary>Frames that could not be checked this session: the window drew a later record, or held the frame back.</summary>
     public int SkippedFrames => Volatile.Read(ref _skipped);
 
     internal void CountVerified() => Interlocked.Increment(ref _verified);
@@ -67,21 +70,18 @@ public sealed class FrameVerification
 
     internal void CountSkipped() => Interlocked.Increment(ref _skipped);
 
-    internal bool TakeDump() => Interlocked.Increment(ref _dumps) <= MaxDumps;
+    internal bool TakeReport() => Interlocked.Increment(ref _reports) <= MaxReports;
 
-    internal void Log(string line)
+    internal void Log(string text)
     {
         lock (_logLock)
         {
             try
             {
-                Directory.CreateDirectory(SessionFolder);
-                File.AppendAllText(Path.Combine(SessionFolder, "verify.log"), $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+                Directory.CreateDirectory(Folder);
+                File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss.fff} {text}{Environment.NewLine}");
             }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
+            catch (Exception)
             {
             }
         }
@@ -92,7 +92,7 @@ public sealed class FrameVerification
         Interlocked.Exchange(ref _verified, 0);
         Interlocked.Exchange(ref _mismatched, 0);
         Interlocked.Exchange(ref _skipped, 0);
-        Interlocked.Exchange(ref _dumps, 0);
-        SessionFolder = Path.Combine(Folder, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+        Interlocked.Exchange(ref _reports, 0);
+        LogPath = Path.Combine(Folder, $"verify-{DateTime.Now:yyyyMMdd-HHmmss}.log");
     }
 }

@@ -169,8 +169,11 @@ public partial class RenderCache
     /// <para>Defaults to the window-content scope, which is where everything marks until a stage claims a subtree.</para></summary>
     public Core.RenderDirtyScope Dirty { get; set; } = Core.RenderDirtyRouter.Default;
 
-    // The detach generation this cache has already reconciled (see ApplyPacket).
+    // The detach generation the recorder has already reconciled (see CollectDeparted).
     private long _reconciledDetachGen;
+
+    private readonly HashSet<IUIComponent> _knownToApplier = [];
+    private readonly HashSet<IUIComponent> _departedScratch = [];
 
     private readonly IRenderUnitFactory _renderUnitFactory;
 
@@ -334,6 +337,7 @@ public partial class RenderCache
         CaptureSnapshot();
         Core.Diagnostics.RuntimeStats.LastRecordSnapMs = System.Diagnostics.Stopwatch.GetElapsedTime(snapStart).TotalMilliseconds;
         Core.Diagnostics.RuntimeStats.LastSnapBytes = System.GC.GetAllocatedBytesForCurrentThread() - snapBytes0;
+        CollectDeparted();
         DropRecordScratch();
         Observer?.Recorded(_packet);
         _published.Enqueue(_packet);   // hand it over; the applier drains the queue (see ApplyFrame)
@@ -493,6 +497,56 @@ public partial class RenderCache
         Dirty.SnapshotNodesInto(_movedNodesCapture);
 
         RecordFullWalk(visualRoot, _packet);   // device-free: walk + component.Render + copy commands into the packet
+    }
+
+    private void CollectDeparted()
+    {
+        foreach (var entry in _packet.SnapDelta)
+        {
+            _knownToApplier.Add(entry.Key);
+        }
+
+        var generation = Dirty.DetachGeneration;
+        if (_packet.Kind != RenderBuildKind.Full && generation == _reconciledDetachGen)
+        {
+            return;
+        }
+
+        _reconciledDetachGen = generation;
+        _packet.Reconcile = true;
+
+        _departedScratch.Clear();
+        foreach (var component in _packet.Departed)
+        {
+            _departedScratch.Add(component);
+        }
+
+        foreach (var component in _recordedUnits.Keys)
+        {
+            AddIfDeparted(component);
+        }
+
+        foreach (var component in _knownToApplier)
+        {
+            AddIfDeparted(component);
+        }
+
+        foreach (var component in _packet.Departed)
+        {
+            _knownToApplier.Remove(component);
+            _snap.Remove(component);
+            _recordedUnits.Remove(component);
+        }
+
+        _departedScratch.Clear();
+    }
+
+    private void AddIfDeparted(IUIComponent component)
+    {
+        if (LeftTheTree(component) && _departedScratch.Add(component))
+        {
+            _packet.Departed.Add(component);
+        }
     }
 
     private bool HasRank(IUIComponent component) => _orderByControl.ContainsKey(component);
