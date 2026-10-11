@@ -687,6 +687,11 @@ public partial class RenderCache
         DrawPaintMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
         phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
 
+        if (device != null && FitTextBands(fullScissor))
+        {
+            StreamStaleBecause("textBand");
+        }
+
         // Clean-frame replay: re-issue the last recorded walk's op stream and skip the per-unit loop (the retained buffers
         // still hold its bytes). Only a fully-Clean build qualifies; a Partial/Full re-walks and re-records.
         if (device != null && !ReplayDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Clean && OpsMatchTransforms
@@ -889,6 +894,11 @@ public partial class RenderCache
 
             // Text bakes from its component's brush snapshot, so refresh it once here for every bake path below.
             if (unit is TextRenderUnit walkText) walkText.RefreshColors();
+
+            if (_cloneMatrix.HasValue && unit is TextRenderUnit { HasBand: true } copied)
+            {
+                copied.BuildWhole();
+            }
 
             // World transform read ONCE (frame-memoized): the bounds-cull below and the GPU re-bake use the SAME value, so
             // the cull can't approve "inside" while the GPU draws the element elsewhere (the spill).

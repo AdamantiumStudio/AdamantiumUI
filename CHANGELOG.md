@@ -645,6 +645,10 @@ All packages share one version.
 
 ### Changed
 
+- A text block of 2048 glyphs or more builds quads only for the part its window shows and a window's height and width
+  around it, instead of for the whole text. Scrolled past that band, the frame builds the new band and draws again;
+  a copy of the block drawn by `RenderClones` builds the whole text, as before.
+
 - The Editor Pro theme is called Graphite now, so its name no longer reads as the paid controls': the class is
   `Adamantium.UI.Themes.GraphiteTheme.Graphite`, its variants `GraphiteDark` and `GraphiteLight`, its name
   (`StartupTheme`, `IThemeManager`) `"Graphite"`, and the templates' `--theme Graphite`. Nothing else changed in it.

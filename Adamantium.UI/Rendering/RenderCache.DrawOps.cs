@@ -650,6 +650,11 @@ public partial class RenderCache
             units.RemoveRange(drawCommands.Count, units.Count - drawCommands.Count);
         }
 
+        foreach (var unit in units)
+        {
+            NoteBandedText(unit);
+        }
+
         // The group's units have been rebuilt - added to, replaced in place, or dropped. Anything keeping a list derived
         // from them (the pre-render sweep) has to know, and this is the one place that mutates them.
         ControlGroup.BumpMembership();
@@ -665,6 +670,11 @@ public partial class RenderCache
 
         ForgetSlots(unit);
         _copiesByUnit.Remove(unit);
+        if (unit is TextRenderUnit text)
+        {
+            _bandedText.Remove(text);
+        }
+
         unit.DeferDispose();
     }
 

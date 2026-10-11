@@ -1074,11 +1074,64 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
 
 public class TextRenderUnit : RenderUnit<TextPayload>
 {
+    private const int LongFrom = 2048;
+
+    private RectangleF? _band;
+    private bool _drawnByCopies;
+
     // The text batch aggregator (RenderCache) reaches the block's TextLayout / params / foreground / FontRenderer
     // through this. Null only transiently before the component is built.
     public TextRenderComponent TextComponent => GeometryRenderer as TextRenderComponent;
 
     public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
+
+    internal bool HasBand => _band != null;
+
+    internal bool FitBand(Matrix4x4F world, Rect shown, Rect band)
+    {
+        if (_band is not { } held)
+        {
+            return false;
+        }
+
+        var toLayout = Matrix4x4F.Invert(Place(world));
+        var visible = ToLayout(shown, toLayout);
+        if (!(visible.Width > 0) || !(visible.Height > 0) || held.Contains(visible))
+        {
+            return false;
+        }
+
+        Rebuild(ToLayout(band, toLayout));
+        return true;
+    }
+
+    internal void BuildWhole()
+    {
+        _drawnByCopies = true;
+        if (_band != null)
+        {
+            Rebuild(null);
+        }
+    }
+
+    private RectangleF ToLayout(Rect world, Matrix4x4F toLayout)
+    {
+        var local = world.TransformToAABB(toLayout);
+        var area = Payload.TextRenderingParameters.TextArea;
+        return new RectangleF((float)(local.X - area.X), (float)(local.Y - area.Y), (float)local.Width, (float)local.Height);
+    }
+
+    private void Rebuild(RectangleF? band)
+    {
+        _band = band;
+        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, band);
+    }
+
+    private RectangleF? BandFor(Adamantium.Graphics.Fonts.TextLayout layout)
+    {
+        _band = layout.GlyphCount < LongFrom || _drawnByCopies ? null : _band ?? default(RectangleF);
+        return _band;
+    }
 
     /// <summary>Letters this block was waiting on have landed in the atlas: lay its quads out again and re-freeze the
     /// glyph run the batch bakes from. Costs nothing for a block whose glyphs were all there (the version check), which
@@ -1089,8 +1142,8 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     {
         if (Payload?.TextLayout is not { NeedsGlyphRefresh: true } layout) return false;
 
-        layout.RefreshGlyphs(GraphicsDevice);
-        if (TextComponent != null) TextComponent.GlyphRun = layout.SnapshotGlyphs();
+        var run = layout.BuildGlyphRun(GraphicsDevice, _band);
+        if (TextComponent != null) TextComponent.GlyphRun = run;
         // The frozen run is what the batch reads, so the element has to be re-recorded for the new one to be drawn.
         DrawCommand?.Component?.InvalidateRender(false);
         return true;
@@ -1114,7 +1167,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     public TextRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
-        Payload.TextLayout.Update(GraphicsDevice);
+        var run = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(Payload.TextLayout));
         // Pad the text quad/RT so glyph effects (outline/glow) that reach beyond the body aren't clipped at
         // the block edges. The body stays put: the rect is grown symmetrically (origin shifted by -pad), so
         // its center - and thus mesh-local (0,0) where the text is anchored - is unchanged.
@@ -1134,7 +1187,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
             BufferManager);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
-        TextComponent.GlyphRun = Payload.TextLayout.SnapshotGlyphs();   // freeze the shaped glyphs for the render-thread batch bake
+        TextComponent.GlyphRun = run;   // freeze the shaped glyphs for the render-thread batch bake
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
@@ -1143,7 +1196,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         
         if (Payload.RequiresBufferRebuild(inputPayload))
         {
-            inputPayload.TextLayout.Update(GraphicsDevice);   // re-upload the (re-shaped) glyph buffer either way
+            var run = inputPayload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(inputPayload.TextLayout));   // re-upload the (re-shaped) glyph buffer either way
 
             // Same size, same params, same (re-shaped-in-place) layout instance: only the text content changed, so the
             // render target is the same size - reuse it and just re-rasterize, instead of disposing the component and
@@ -1175,7 +1228,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
                     BufferManager);
             }
             // Glyphs were re-shaped in place (reuse) or a new component was built - refresh the frozen snapshot either way.
-            TextComponent.GlyphRun = inputPayload.TextLayout.SnapshotGlyphs();
+            TextComponent.GlyphRun = run;
         }
         else if (!Equals(Payload.Background, inputPayload.Background) ||
                  !Equals(Payload.Foreground, inputPayload.Foreground) ||

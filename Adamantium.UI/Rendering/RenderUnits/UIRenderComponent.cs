@@ -444,7 +444,7 @@ public class TextRenderComponent : ImageRenderComponent
     public FrozenGlyphRun GlyphRun
     {
         get => _glyphRun;
-        set { _glyphRun = value; _glyphVtxDirty = true; }
+        set { _glyphRun = value; _glyphVtxDirty = true; _textRendered = false; }
     }
 
     // Per-block vertex buffer for the DIRECT/composite draw, uploaded from the FROZEN glyph run (never the live layout).
