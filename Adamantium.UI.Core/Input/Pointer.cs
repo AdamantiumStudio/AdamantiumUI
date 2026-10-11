@@ -38,6 +38,14 @@ public sealed class Pointer
     /// long press rather than a tap.</summary>
     public bool IsHolding { get; internal set; }
 
+    /// <summary>Whether this finger belongs to a gesture (<see cref="Gestures.ManipulationEvent"/>): its moves and its
+    /// lift go to no element.</summary>
+    public bool IsManipulating { get; internal set; }
+
+    /// <summary>Whether this finger rests on an element that takes gestures together with another finger: a gesture may
+    /// be about to start, so what follows one finger alone - a scroll, a drag - holds still meanwhile.</summary>
+    public bool IsInGesture { get; internal set; }
+
     /// <summary>The element this pointer's events go to whatever is under it, or null.</summary>
     public IInputComponent Captured { get; private set; }
 

@@ -307,6 +307,14 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             return;
         }
 
+        if (e.Pointer.IsInGesture)
+        {
+            _fingerStart = e.GetPosition(this);
+            _fingerStartOffset = Offset;
+            _hasLastMove = false;
+            return;
+        }
+
         if (!_fingerScrolling)
         {
             // What takes the finger's moves itself - a slider's thumb, a text selection, a carried row, a scroll area

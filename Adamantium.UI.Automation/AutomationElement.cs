@@ -243,6 +243,23 @@ public sealed class AutomationElement
         ContactAsync(AutomationCommand.Pen, null, [.. PenOptions(pressure, false, false), AutomationExecutor.HoldGesture],
             throughSystem);
 
+    /// <summary>Two fingers either side of its middle drawn until they are <paramref name="scale"/> times as far apart,
+    /// turned by <paramref name="rotate"/> degrees and their middle moved by <paramref name="panX"/>,
+    /// <paramref name="panY"/> of its own units, as <see cref="TapAsync"/> puts a finger down.</summary>
+    public Task PinchAsync(double scale, double rotate = 0, double panX = 0, double panY = 0, bool throughSystem = false) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Pinch,
+            Target = Selector,
+            Value = scale.ToString(CultureInfo.InvariantCulture),
+            Properties =
+            [
+                FormattableString.Invariant($"rotate={rotate}"),
+                FormattableString.Invariant($"pan={panX},{panY}"),
+                .. throughSystem ? [AutomationExecutor.SystemInput] : Array.Empty<string>()
+            ]
+        });
+
     private Task ContactAsync(AutomationCommand command, string stroke, string[] options, bool throughSystem) =>
         _session.RunAsync(new AutomationRequest
         {

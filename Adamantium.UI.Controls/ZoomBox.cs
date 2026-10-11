@@ -93,10 +93,16 @@ public class ZoomBox : ContentControl
     /// <summary>Which axes a content drag pans. Default <see cref="PanningMode.Both"/>.</summary>
     public PanningMode PanningMode { get => GetValue<PanningMode>(PanningModeProperty); set => SetValue(PanningModeProperty, value); }
 
+    static ZoomBox()
+    {
+        Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(ZoomBox), new PropertyMetadata(true));
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
         PreviewPointerWheelChanged += OnWheel;
+        AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
 
         _scroll = GetTemplateChild("PART_Scroll") as ScrollViewer;
         _surface = GetTemplateChild("PART_Surface") as ContentPresenter;
@@ -114,7 +120,36 @@ public class ZoomBox : ContentControl
     {
         base.OnRemoveTemplate();
         PreviewPointerWheelChanged -= OnWheel;
+        RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
         if (_scroll != null) _scroll.ScrollChanged -= OnScrollChanged;
+    }
+
+    private void OnManipulation(object sender, ManipulationEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, this) || _scroll == null || _surface == null || e.State != ManipulationState.Delta) return;
+        e.Handled = true;
+
+        _zoomActive = false;
+        var anchor = this.TranslatePoint(e.Origin - e.Translation, _scroll);
+        var next = Math.Clamp(ScaleX * e.Scale, MinScale, MaxScale);
+        var target = ((_pendingOffset ?? _scroll.ScrollOffset) + anchor) * (float)(next / ScaleX) - anchor - e.Translation;
+        if (next == ScaleX)
+        {
+            if (_pendingOffset != null)
+            {
+                _pendingOffset = target;
+            }
+            else
+            {
+                _scroll.SetScrollOffset(target);
+            }
+
+            return;
+        }
+
+        _pendingOffset = target;
+        SetCurrentValue(ScaleXProperty, next);
+        SetCurrentValue(ScaleYProperty, next);
     }
 
     private static void OnScaleChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) => (d as ZoomBox)?.ApplyScale();
