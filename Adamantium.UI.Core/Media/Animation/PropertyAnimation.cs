@@ -3,32 +3,59 @@ using System;
 namespace Adamantium.UI.Core.Media.Animation;
 
 /// <summary>
-/// An animation of one property from a start value to an end value over <see cref="Duration"/>, shaped by
-/// <see cref="Easing"/>; what the values are and how they are passed through is the derived type's. Start it with
-/// <see cref="AnimatableUIComponent.BeginAnimation"/>.
+/// An animation of one property from a start value to an end value over <see cref="Timeline.Duration"/>, shaped by
+/// <see cref="Timeline.Easing"/>; what the values are and how they are passed through is the derived type's. Start it
+/// from code with <see cref="AnimatableUIComponent.BeginAnimation"/>, or from markup in a trigger's
+/// <c>RunAnimationAction</c>, naming the animated property in <see cref="Property"/>.
 /// </summary>
-public abstract class PropertyAnimation
+public abstract class PropertyAnimation : Timeline
 {
-    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(250);
+    public static readonly AdamantiumProperty PropertyProperty = AdamantiumProperty.Register(nameof(Property),
+        typeof(string), typeof(PropertyAnimation), new PropertyMetadata(null, OnTimingChanged));
 
-    /// <summary>Wait this long before the first iteration starts (the start value is held during the delay).</summary>
-    public TimeSpan Delay { get; set; } = TimeSpan.Zero;
+    public static readonly AdamantiumProperty FillBehaviorProperty = AdamantiumProperty.Register(nameof(FillBehavior),
+        typeof(FillBehavior), typeof(PropertyAnimation), new PropertyMetadata(FillBehavior.HoldEnd, OnTimingChanged));
 
-    /// <summary>How many times to play; <see cref="double.PositiveInfinity"/> loops forever. Default 1.</summary>
-    public double IterationCount { get; set; } = 1;
+    private AdamantiumProperty _property;
 
-    /// <summary>When true, every other iteration plays backwards (end to start), i.e. ping-pong.</summary>
-    public bool AutoReverse { get; set; }
+    /// <summary>The NAME of the property this animation drives, resolved against the element it runs on (like
+    /// <c>Setter.Property</c>) - what markup says. Code that starts it with <see cref="AnimatableUIComponent.BeginAnimation"/>
+    /// names the property there instead.</summary>
+    public string Property
+    {
+        get => GetValue(PropertyProperty) as string;
+        set => SetValue(PropertyProperty, value);
+    }
 
-    /// <summary>Easing curve; null means linear.</summary>
-    public IEasingFunction Easing { get; set; }
-
-    /// <summary>What the finished animation leaves behind: <see cref="FillBehavior.HoldEnd"/> (default) keeps the final
-    /// value applied at Animation priority; <see cref="FillBehavior.Stop"/> clears it, releasing the property back to
-    /// its underlying value and to direct sets (an ease-back tilt must not mask later hover writes).</summary>
-    public FillBehavior FillBehavior { get; set; } = FillBehavior.HoldEnd;
+    /// <summary>What the finished animation leaves behind: <see cref="Media.Animation.FillBehavior.HoldEnd"/> (default) keeps
+    /// the final value applied at Animation priority; <see cref="Media.Animation.FillBehavior.Stop"/> clears it, releasing the
+    /// property back to its underlying value and to direct sets (an ease-back tilt must not mask later hover writes).</summary>
+    public FillBehavior FillBehavior
+    {
+        get => GetValue<FillBehavior>(FillBehaviorProperty);
+        set => SetValue(FillBehaviorProperty, value);
+    }
 
     internal abstract Func<double, object> Interpolation();
 
     internal virtual AnimationCurve Curve(AdamantiumProperty property) => null;
+
+    internal void Start(AdamantiumComponent target, AdamantiumProperty property, Action completed)
+    {
+        _property = property;
+        Apply(target, completed);
+    }
+
+    /// <inheritdoc />
+    protected override void Begin(AdamantiumComponent target, Action completed, double resumeElapsed)
+    {
+        var property = _property ?? target.GetProperty(Property);
+        if (property == null)
+        {
+            Diagnostics.PropertyTrace.Log($"{target.GetType().Name} has no property {Property} for {GetType().Name}; nothing was animated.");
+            return;
+        }
+
+        AnimationManager.Begin(target, property, this, completed, resumeElapsed);
+    }
 }

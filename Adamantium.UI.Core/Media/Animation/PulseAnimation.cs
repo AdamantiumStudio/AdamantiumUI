@@ -6,20 +6,46 @@ namespace Adamantium.UI.Core.Media.Animation;
 /// <see cref="Max"/> and back, e.g. <c>&lt;PulseAnimation Property="Opacity" Min="0.05" Max="0.16"/&gt;</c>.</summary>
 public class PulseAnimation : Animation
 {
+    public static readonly AdamantiumProperty PropertyProperty = AdamantiumProperty.Register(nameof(Property),
+        typeof(string), typeof(PulseAnimation), new PropertyMetadata(null, OnTimingChanged));
+
+    public static readonly AdamantiumProperty MinProperty = AdamantiumProperty.Register(nameof(Min),
+        typeof(double), typeof(PulseAnimation), new PropertyMetadata(0.0, OnTimingChanged));
+
+    public static readonly AdamantiumProperty MaxProperty = AdamantiumProperty.Register(nameof(Max),
+        typeof(double), typeof(PulseAnimation), new PropertyMetadata(0.0, OnTimingChanged));
+
+    static PulseAnimation()
+    {
+        AutoReverseProperty.OverrideMetadata(typeof(PulseAnimation), new PropertyMetadata(true, OnTimingChanged));
+        IterationCountProperty.OverrideMetadata(typeof(PulseAnimation),
+            new PropertyMetadata(double.PositiveInfinity, OnTimingChanged));
+    }
+
     /// <summary>Name of the double property to pulse on the animation's target (e.g. <c>Opacity</c>).</summary>
-    public string Property { get; set; }
+    public string Property
+    {
+        get => GetValue(PropertyProperty) as string;
+        set => SetValue(PropertyProperty, value);
+    }
 
     /// <summary>The low end of the pulse.</summary>
-    public double Min { get; set; }
+    public double Min
+    {
+        get => GetValue<double>(MinProperty);
+        set => SetValue(MinProperty, value);
+    }
 
     /// <summary>The high end of the pulse.</summary>
-    public double Max { get; set; }
+    public double Max
+    {
+        get => GetValue<double>(MaxProperty);
+        set => SetValue(MaxProperty, value);
+    }
 
     protected override void Prepare()
     {
-        // Bake the pulse: Min -> Max over the duration (eased), AutoReverse brings it back, loop forever.
-        AutoReverse = true;
-        IterationCount = double.PositiveInfinity;
+        // Min -> Max over the duration (eased); the type's AutoReverse and endless count defaults bring it back forever.
         KeyFrames.Clear();
         KeyFrames.Add(Frame(0, Min));
         KeyFrames.Add(Frame(1, Max));

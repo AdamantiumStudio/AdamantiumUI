@@ -33,6 +33,8 @@ public partial class RenderCache
         // The clone set as it was RECORDED with this group's contribution - never read live off the component at
         // draw time, which is layout's to write while the render thread draws.
         public IReadOnlyList<Matrix4x4F> Clones;
+        public IReadOnlyList<int> CloneSteps;
+        public TimeSpan CloneStagger;
 
         // Paint rank - _groups is kept sorted by it. Carried on the group (not a shared map) so the applier can place a
         // spliced group by comparison.

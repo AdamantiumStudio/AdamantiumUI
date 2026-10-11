@@ -16,6 +16,7 @@ public partial class RenderCache
     {
         public bool Holds;
         public bool Culled;
+        public int Fade;
         public int? Rect;
         public (SdfSlotKind Kind, int Slot)? Sdf;
         public (int First, int Count, Graphics.Fonts.FontAtlas Atlas)? TextRun;
@@ -53,6 +54,7 @@ public partial class RenderCache
 
                 var copy = CaptureSlots(u);
                 copy.Culled = _culledThisCopy.Contains(u);
+                copy.Fade = u.FadeSlot;
                 ledger.Copies.Add(copy);
                 if (!last)
                 {
@@ -175,6 +177,7 @@ public partial class RenderCache
         }
 
         var current = CaptureSlots(u);
+        var fade = OpacitySlotOf(device, u.Component);
         try
         {
             for (var k = 0; k < ledger.Copies.Count; k++)
@@ -185,6 +188,7 @@ public partial class RenderCache
                 }
 
                 InstallSlots(u, ledger.Copies[k]);
+                u.SetFadeSlot(IsCopyFade(ledger.Copies[k].Fade) ? ledger.Copies[k].Fade : fade);
                 _cloneMatrix = ledger.Clones[k];
                 var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
                 if (!PatchSlot(device, u, bakeWorld, slot))
@@ -198,6 +202,7 @@ public partial class RenderCache
         finally
         {
             _cloneMatrix = null;
+            u.SetFadeSlot(fade);
             InstallSlots(u, current);
         }
     }

@@ -37,7 +37,6 @@ public partial class GalleryViewModel
         new SlidePanelViewModel(),
         new ImageViewModel(),
         new VectorIconsViewModel(),
-        new LayoutViewModel(),
         new ClippingViewModel(),
         new OpacityViewModel(),
         new ViewboxViewModel(),
@@ -77,6 +76,7 @@ public partial class GalleryViewModel
         // after Animations: Brushes, then Text, just ahead of the slide panel.
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is SlidePanelViewModel)), resolver.Resolve<TextViewModel>());
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is TextViewModel)), resolver.Resolve<BrushesViewModel>());
+        Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is ClippingViewModel)), resolver.Resolve<LayoutViewModel>());
         SelectedTab = Tabs[2];
     }
 }

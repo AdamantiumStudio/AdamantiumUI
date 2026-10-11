@@ -36,12 +36,13 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         typeof(DataTemplateSelector), typeof(ItemsControl), new PropertyMetadata(null, OnRegenerateContainers));
 
     /// <summary>Visual shown in a virtualized slot whose real item hasn't been (re)bound yet this frame (a fast fling or a
-    /// big fill exceeds the per-frame bind budget). Null = the panel's built-in themed skeleton (a muted rounded tile).</summary>
+    /// big fill exceeds the per-frame bind budget). One card is built and drawn at every such slot; its DataContext is
+    /// the list's, since it stands for items that are not there yet. Null shows no skeleton.</summary>
     public static readonly AdamantiumProperty ItemSkeletonTemplateProperty = AdamantiumProperty.Register(nameof(ItemSkeletonTemplate),
         typeof(DataTemplate), typeof(ItemsControl), new PropertyMetadata(null));
 
-    /// <summary>True while the panel shows skeleton placeholders for binds deferred past the frame budget; a theme keys
-    /// one shared skeleton shimmer per list off it.</summary>
+    /// <summary>True while the panel shows skeleton placeholders for binds deferred past the frame budget, or held
+    /// (VirtualizingPanel.HoldSkeletons).</summary>
     public static readonly AdamantiumProperty IsLoadingItemsProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsLoadingItems),
         typeof(bool), typeof(ItemsControl), new PropertyMetadata(false));
 

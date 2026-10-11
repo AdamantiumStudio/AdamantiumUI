@@ -198,6 +198,7 @@ internal static class VisualBrushRaster
         _listening = true;
         VisualTreeNotifications.ContentInvalidated += OnSourceChanged;
         VisualTreeNotifications.PaintInvalidated += OnSourceChanged;
+        VisualTreeNotifications.PaintMirrored += OnSourceChanged;
     }
 
     // The element that changed is rarely the SOURCE itself - it is usually something inside it - so the walk goes up

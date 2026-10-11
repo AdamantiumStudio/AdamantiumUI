@@ -25,6 +25,33 @@ All packages share one version.
     the most contacts down at once.
   - **Its scenario.** `Scenarios/MultiTouch.adam` drives the page with two to ten fingers.
 
+- `UIComponent.RenderCloneStagger`: each copy drawn by `RenderClones` plays the endless composited opacity animations
+  of the elements it draws this much later than the one before it, so one animation runs along the copies like a
+  garland. Copies in the same phase of the cycle share one opacity slot, written by the render thread, so a screenful
+  of thousands of copies costs a few dozen slots. A finite animation plays on every copy together. `RenderCloneSteps`
+  says which step of the stagger each copy takes, so a copy keeps its phase while the list of copies shrinks or grows
+  around it. The stagger is a registered property, so markup can bind it.
+
+- `VirtualizingPanel.HoldSkeletons`: while on, the panel binds no item and every slot in the window still without a
+  container shows a skeleton card, for as long as the data behind the list is not ready.
+
+- `Timeline`: the base of every animation, a component. `Duration`, `Delay`, `IterationCount`, `AutoReverse` and
+  `Easing` are registered properties and can be bound in markup.
+  - `Animation` (keyframes) and `PropertyAnimation` derive from it. `DoubleAnimation` and
+    `FontVariationListAnimation` have bindable `From` and `To`, `PulseAnimation` bindable `Min`, `Max` and `Property`.
+  - A property animation names the property it drives in `Property`, as a pulse does, so a trigger can run one from
+    markup: `<RunAnimationAction><DoubleAnimation Property="Opacity" From="0" To="1"/></RunAnimationAction>`.
+  - Bindings resolve against the element the animation runs on, also when its data arrives after the start. A change
+    while it runs restarts it at the same point of its cycle.
+  - In a style's trigger every element the style applies to runs a copy of its own, so a binding reads that element's
+    data. `Timeline.Clone` makes the copy, values and bindings included.
+
+- The sandbox's Layout tab has a Skeletons stand: nothing but loading cards, shown and hidden by a switch, with the
+  stagger, the pulse's low and high ends, its half-cycle and the cell on sliders.
+
+- `VisualTreeNotifications.PaintMirrored`: an element's opacity changed while the render thread draws it - nothing on
+  screen needs a re-paint, but a copy baked elsewhere (a visual brush) does.
+
 - A finger scrolls a `ScrollViewer`, along the axes it has room to move on, and a flick carries on with inertia.
   - **From a button.** A finger that began on a button scrolls once it moves past the drag threshold; the button lets
     go and is not clicked.
@@ -767,6 +794,10 @@ All packages share one version.
   last segment instead of stopping at its key.
 
 - An element's own `Opacity` animation is composited: the render thread writes it into the element's opacity slot.
+  While the render thread is drawing it, the loop's mirrored value no longer re-paints the element every tick.
+
+- The loading skeleton cards of every theme pulse their fill's opacity, started and stopped by the card's own
+  visibility, with each card a little behind the one before it, instead of all pulsing one shared brush at once.
 
 - `BusyIndicator.Shimmer` moves a glare band by `ShiftX` under the card's rounded clip instead of sliding three gradient
   stops, so the render thread plays it and it keeps gliding while the loop thread is busy; it looks the same.

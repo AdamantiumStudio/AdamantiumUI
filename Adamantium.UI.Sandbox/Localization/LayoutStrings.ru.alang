@@ -6,4 +6,11 @@
     <Phrase Key="Opacity" Text="Непрозрачность:"/>
     <Phrase Key="PageTiles" Text="Разбить плитки на страницы вместо виртуализации"/>
     <Phrase Key="Tiles" Text="Плитки"/>
+    <Phrase Key="Skeletons" Text="Скелетоны"/>
+    <Phrase Key="Show" Text="Показать скелетоны"/>
+    <Phrase Key="StaggerMs" Text="Задержка, мс:"/>
+    <Phrase Key="PulseMin" Text="Минимум:"/>
+    <Phrase Key="PulseMax" Text="Максимум:"/>
+    <Phrase Key="PulseSeconds" Text="Полцикла, с:"/>
+    <Phrase Key="Cell" Text="Ячейка:"/>
 </Language>

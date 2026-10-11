@@ -39,7 +39,7 @@ internal sealed class TransformTable
     private int _count;
     private readonly Stack<int> _free = new();
     private readonly Dictionary<Guid, int> _slotByNode = new();   // motion node (component RenderId) -> slot
-    private readonly Dictionary<Guid, int> _opacitySlotByOwner = new();   // fade root (component RenderId) -> opacity slot
+    private readonly Dictionary<(Guid Owner, int Key), int> _opacitySlotByOwner = new();   // fade root (RenderId, shared key or -1) -> opacity slot
 
     // The element's OWN opacity, kept apart from the composed value the shader reads: re-composing a subtree needs both,
     // and the slot record has room for one.
@@ -222,9 +222,13 @@ internal sealed class TransformTable
 
     /// <summary>The opacity slot for <paramref name="ownerId"/>, allocated if needed; separate from transform slots,
     /// which a whole subtree shares.</summary>
-    public int AcquireOpacitySlot(Guid ownerId)
+    public int AcquireOpacitySlot(Guid ownerId) => AcquireOpacitySlot(ownerId, -1);
+
+    /// <summary>One of the opacity slots the drawn copies of <paramref name="ownerId"/> share (see RenderClones),
+    /// allocated if needed; <paramref name="key"/> -1 is the element's own.</summary>
+    public int AcquireOpacitySlot(Guid ownerId, int key)
     {
-        if (_opacitySlotByOwner.TryGetValue(ownerId, out var slot)) return slot;
+        if (_opacitySlotByOwner.TryGetValue((ownerId, key), out var slot)) return slot;
 
         slot = AcquireFreeSlot();
 
@@ -236,11 +240,11 @@ internal sealed class TransformTable
         _cpu[slot].Params.Y = -1f;
         _version[slot]++;
 
-        _opacitySlotByOwner[ownerId] = slot;
+        _opacitySlotByOwner[(ownerId, key)] = slot;
         return slot;
     }
 
-    public bool TryGetOpacitySlot(Guid ownerId, out int slot) => _opacitySlotByOwner.TryGetValue(ownerId, out slot);
+    public bool TryGetOpacitySlot(Guid ownerId, out int slot) => _opacitySlotByOwner.TryGetValue((ownerId, -1), out slot);
 
     /// <summary>The alpha a slot carries RIGHT NOW, chain already folded in - the same number the shaders read. For the
     /// draws that cannot read the table themselves: a per-unit overlay (a stroke, a fringe) is re-issued by the CPU on
@@ -255,9 +259,13 @@ internal sealed class TransformTable
     public bool IsSlotLive(int slot) => _gpu != null && slot >= 0 && slot < _gpuCapacity;
 
     /// <summary>Releases an element's opacity slot (it stopped being a fade root, or left the tree).</summary>
-    public void ReleaseOpacitySlot(Guid ownerId)
+    public void ReleaseOpacitySlot(Guid ownerId) => ReleaseOpacitySlot(ownerId, -1);
+
+    /// <summary>Releases one of the opacity slots the drawn copies of <paramref name="ownerId"/> share; -1 is the
+    /// element's own.</summary>
+    public void ReleaseOpacitySlot(Guid ownerId, int key)
     {
-        if (!_opacitySlotByOwner.Remove(ownerId, out var slot)) return;
+        if (!_opacitySlotByOwner.Remove((ownerId, key), out var slot)) return;
 
         var parent = (int)_cpu[slot].Params.Y;
         if (parent >= 0 && _fadeChildren.TryGetValue(parent, out var siblings)) siblings.Remove(slot);

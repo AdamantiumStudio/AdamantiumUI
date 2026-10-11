@@ -94,6 +94,16 @@ public interface IUIComponent : IFundamentalUIComponent
     /// layout, hit-test or state. Null or empty means a single draw.</summary>
     IReadOnlyList<Matrix4x4F> RenderClones { get; }
 
+    /// <summary>How much later each copy in <see cref="RenderClones"/> plays the endless composited opacity animations of
+    /// the elements it draws than the one before it: copy i runs i times this behind. Copies one cycle apart share one
+    /// opacity slot, so the cost follows the number of phases, not of copies. A finite animation, and zero, play on every
+    /// copy together.</summary>
+    TimeSpan RenderCloneStagger { get; }
+
+    /// <summary>Which step of <see cref="RenderCloneStagger"/> each copy in <see cref="RenderClones"/> takes, so a copy keeps
+    /// its phase while the ones around it come and go. Null takes each copy's position in the list.</summary>
+    IReadOnlyList<int> RenderCloneSteps { get; }
+
     /// <summary>A motion node: its subtree is baked in its own space, so moving it is one matrix write. Set by virtualizing
     /// hosts and by the compositor for transforms it animates.</summary>
     bool IsRenderMotionNode { get; set; }

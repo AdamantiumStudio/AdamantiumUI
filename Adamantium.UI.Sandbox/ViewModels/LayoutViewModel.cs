@@ -1,17 +1,23 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Adamantium.MVVM;
+using Adamantium.Navigation;
 using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Layout tab: a large virtualized wrap grid with adjustable cell width and height and a toggle between rounded
-/// rect and ellipse tiles, both SDF-batched.</summary>
+/// rect and ellipse tiles, both SDF-batched; and a stand that holds the loading skeleton cards on screen and tunes their
+/// pulse.</summary>
 [ViewModel]
 public partial class LayoutViewModel : TabPageViewModel
 {
-    public LayoutViewModel() : base("Layout")
+    private readonly IRegionManager _regions;
+
+    public LayoutViewModel(IRegionManager regions) : base("Layout")
     {
+        _regions = regions;
         Rectangles = new(Enumerable.Range(0, 60000)
             .Select(i => new ColorRect { Number = i + 1, Color = Palette[i % Palette.Length] }));
 
@@ -19,7 +25,56 @@ public partial class LayoutViewModel : TabPageViewModel
         // both places is a size stated twice, and the one written here would simply be overwritten on attach.
         Paged = new CollectionView(Rectangles);
         TileSource = Rectangles;
+        ShowStand(_stand);
     }
+
+    [Bindable] private LayoutStand _stand = LayoutStand.Tiles;
+
+    partial void OnStandChanged(LayoutStand value) => ShowStand(value);
+
+    private void ShowStand(LayoutStand stand)
+        => _ = _regions.GetOrCreateRegion(RegionNames.LayoutStand).NavigateToInstanceAsync(this, stand.ToString());
+
+    // ── THE SKELETON STAND ─────────────────────────────────────────────────────────────────────────────────────────
+    // Nothing but the loading cards: a list that never binds an item, shown and hidden by a switch, with the garland's
+    // numbers on sliders.
+
+    /// <summary>How many slots the skeleton list has - enough to scroll through.</summary>
+    public int SkeletonSlots => 60000;
+
+    /// <summary>What the skeleton list holds: placeholders it never binds while the cards are on, nothing while off.</summary>
+    [Bindable] private object _skeletonSource;
+
+    /// <summary>On: every slot of the list shows a skeleton card. Off: the list is empty.</summary>
+    [Bindable] private bool _showSkeletons;
+
+    partial void OnShowSkeletonsChanged(bool value) =>
+        SkeletonSource = value ? Enumerable.Range(0, SkeletonSlots).ToList() : null;
+
+    /// <summary>How far behind the card before it each card pulses, in milliseconds. 0 pulses them all together.</summary>
+    [Bindable] private double _skeletonStaggerMs = 80;
+
+    partial void OnSkeletonStaggerMsChanged(double value) => RaisePropertyChanged(nameof(SkeletonStagger));
+
+    /// <summary>The stagger as the cards take it.</summary>
+    public TimeSpan SkeletonStagger => TimeSpan.FromMilliseconds(_skeletonStaggerMs);
+
+    /// <summary>The fill's opacity at the low end of the pulse.</summary>
+    [Bindable] private double _pulseMin = 0.05;
+
+    /// <summary>The fill's opacity at the high end of the pulse.</summary>
+    [Bindable] private double _pulseMax = 0.15;
+
+    /// <summary>Seconds from the low end to the high one; the way back takes as long again.</summary>
+    [Bindable] private double _pulseSeconds = 1.2;
+
+    partial void OnPulseSecondsChanged(double value) => RaisePropertyChanged(nameof(PulseDuration));
+
+    /// <summary>The half-cycle as the pulse takes it.</summary>
+    public TimeSpan PulseDuration => TimeSpan.FromSeconds(_pulseSeconds);
+
+    /// <summary>The skeleton list's cell, square. Opens at the smallest, which puts the most cards on screen.</summary>
+    [Bindable] private double _skeletonCell = 24;
 
     // ── VIRTUALIZED, OR PAGED - the same 60 000 tiles either way ───────────────────────────────────────────────────
     // Opens virtualized; the switch pages the same data for comparison.
@@ -65,7 +120,7 @@ public partial class LayoutViewModel : TabPageViewModel
     [Bindable] private double _cellWidth = 24;
     [Bindable] private double _cellHeight = 24;
 
-    // False = rounded rectangles (RectBatch SDF), true = ellipses (EllipseBatch SDF). A DataTrigger in LayoutView.auml
+    // False = rounded rectangles (RectBatch SDF), true = ellipses (EllipseBatch SDF). A DataTrigger in Layout/TilesStandView.auml
     // swaps ItemTemplate between the two AUML templates (LayoutResources) off this flag.
     [Bindable] private bool _showEllipses;
 

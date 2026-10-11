@@ -214,7 +214,25 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         // Field mirror, read in the hot bake/snapshot-capture path instead of GetValue (a lock + a box - see
         // hot-paths-must-not-use-property-system). Resolved value, NOT e.NewValue: a trigger-exit writes UnsetValue.
         component._opacity = component.GetValue<Double>(OpacityProperty);
-        component.InvalidatePaint();
+        if (!Core.Media.Animation.Compositor.DrawsOpacity(component, OpacityProperty))
+        {
+            component.InvalidatePaint();
+        }
+    }
+
+    public static readonly AdamantiumProperty RenderCloneStaggerProperty = AdamantiumProperty.Register(nameof(RenderCloneStagger),
+        typeof(TimeSpan), typeof(UIComponent), new PropertyMetadata(TimeSpan.Zero, OnRenderCloneStaggerChanged));
+
+    private static void OnRenderCloneStaggerChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        component._renderCloneStagger = component.GetValue<TimeSpan>(RenderCloneStaggerProperty);
+        component.InvalidateRender(false);
+        RenderDirty.MarkGeometry(component);
     }
 
     public static readonly AdamantiumProperty SelfOpacityProperty = AdamantiumProperty.Register(nameof(SelfOpacity),
@@ -280,6 +298,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private double _opacity = 1.0;       // hot-path mirror of Opacity (see OnOpacityChanged)
     private double _selfOpacity = 1.0;   // hot-path mirror of SelfOpacity
+    private TimeSpan _renderCloneStagger;
 
     // Font family is INHERITED (like DataContext): set it on any element (a window, a panel) and every descendant's text
     // picks it up unless it sets its own. Default null = "inherit"; at the root a null resolves to DefaultFontFamily.
@@ -1295,6 +1314,18 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <summary>Draw this subtree once per matrix instead of once at its own place - see <see cref="IUIComponent.RenderClones"/>.
     /// A plain field, deliberately not a registered property: the draw walk reads it per group, per frame.</summary>
     public IReadOnlyList<Matrix4x4F> RenderClones { get; set; }
+
+    /// <summary>How much later each copy plays the endless composited opacity animations it draws - see
+    /// <see cref="IUIComponent.RenderCloneStagger"/>. Bindable; the getter reads a mirror, so the draw walk pays no lookup.</summary>
+    public TimeSpan RenderCloneStagger
+    {
+        get => _renderCloneStagger;
+        set => SetValue(RenderCloneStaggerProperty, value);
+    }
+
+    /// <summary>Which stagger step each copy takes - see <see cref="IUIComponent.RenderCloneSteps"/>. A plain field, set
+    /// together with <see cref="RenderClones"/>.</summary>
+    public IReadOnlyList<int> RenderCloneSteps { get; set; }
 
     /// <summary>See <see cref="IUIComponent.RenderScope"/>. Inherited from the parent at attach; a stage sets its own on
     /// the root of what it draws (<see cref="ClaimRenderScope"/>).</summary>

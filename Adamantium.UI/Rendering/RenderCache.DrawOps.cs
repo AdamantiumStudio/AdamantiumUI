@@ -34,6 +34,11 @@ public partial class RenderCache
                         // Per-unit draws bake their world at record time while batches follow slots live, so re-point the
                         // ones whose batched half moved this frame (see RepointIfItMoved).
                         RepointIfItMoved(op.Unit);
+                        if (IsCopyFade(op.Fade))
+                        {
+                            op.Unit.SetFadeSlot(op.Fade);
+                        }
+
                         RefreshOverlayFade(op.Unit);
                         op.Unit.Render();
                         break;
@@ -513,7 +518,7 @@ public partial class RenderCache
             var commands = hidden
                 ? CopyCommands(System.Array.Empty<IDrawCommand>())   // holds its place, draws nothing
                 : CopyCommands(_drawingContextInternal.GetDrawCommands());
-            packet.Draws.Add(new ComponentDraw(component, commands, hidden ? false : wasGeometryValid, order, component.RenderClones));
+            packet.Draws.Add(new ComponentDraw(component, commands, hidden ? false : wasGeometryValid, order, true));
             MirrorUnits(component, commands.Count, hidden ? false : wasGeometryValid);
             // Same rule as the other two record paths: believe the command count only when this walk actually re-recorded
             // it (a clean component's Render is a no-op, and a hidden one's commands were dropped on purpose).
@@ -539,7 +544,8 @@ public partial class RenderCache
     {
         ClearOrder();   // the walk re-derives the whole order; whoever it does not visit is simply not in it any more
         foreach (var draw in packet.Draws)
-            ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid, draw.Order, draw.Clones);
+            ProcessRenderCommands(draw.Component, draw.Commands, packet.ProjectionMatrix, draw.WasGeometryValid, draw.Order, draw.Clones,
+                draw.CloneSteps, draw.CloneStagger);
         ReconcileDetachedControls(packet);
     }
 
@@ -678,7 +684,8 @@ public partial class RenderCache
         unit.DeferDispose();
     }
 
-    private void ProcessRenderCommands(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, Matrix4x4F projectionMatrix, bool wasGeometryValid, long order, IReadOnlyList<Matrix4x4F> clones = null)
+    private void ProcessRenderCommands(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, Matrix4x4F projectionMatrix, bool wasGeometryValid, long order, IReadOnlyList<Matrix4x4F> clones = null,
+        IReadOnlyList<int> cloneSteps = null, TimeSpan cloneStagger = default)
     {
         // A part destroyed after being walked takes no place in the paint order; one that merely left is the next packet's.
         if (component is Core.FundamentalUIComponent { IsDiscarded: true }) return;
@@ -690,6 +697,8 @@ public partial class RenderCache
         {
             var hostGroup = BuildUnitsFor(component, drawCommands, projectionMatrix);
             hostGroup.Clones = clones;
+            hostGroup.CloneSteps = cloneSteps;
+            hostGroup.CloneStagger = cloneStagger;
             hostGroup.Order = order;
             _groups.Add(hostGroup);
             hostGroup.InOrder = true;
@@ -700,6 +709,8 @@ public partial class RenderCache
         {
             var group = BuildUnitsFor(component, drawCommands, projectionMatrix);
             group.Clones = clones;
+            group.CloneSteps = cloneSteps;
+            group.CloneStagger = cloneStagger;
             group.Order = order;   // _groups stays sorted by rank - a later structural splice merges into it
             _groups.Add(group);
             group.InOrder = true;
@@ -794,7 +805,11 @@ public partial class RenderCache
         }
 
         removed += ReleaseSlotsOfDeparted(_clipOwners, owner => _transformTable?.ReleaseClipSlot(owner.RenderId));
-        removed += ReleaseSlotsOfDeparted(_fadeOwners, owner => _transformTable?.ReleaseOpacitySlot(owner.RenderId));
+        removed += ReleaseSlotsOfDeparted(_fadeOwners, owner =>
+        {
+            _transformTable?.ReleaseOpacitySlot(owner.RenderId);
+            ReleaseCopyFades(owner);
+        });
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
         // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.

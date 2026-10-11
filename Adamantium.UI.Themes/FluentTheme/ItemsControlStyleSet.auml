@@ -36,40 +36,48 @@
         </Setter>
     </Style>
 
-    <!-- The loading skeleton card for budget-deferred slots: muted, rounded, hit-transparent, painted with the shared
-         SkeletonPulseFill via {ObservableResource}, so one animation serves every card. -->
+    <!-- The loading skeleton card for budget-deferred slots: muted, rounded, hit-transparent. The panel draws this one
+         card at every pending slot as a copy, and each copy pulses a little after the one before it (RenderCloneStagger),
+         so the pulse runs along the cards like a garland. -->
     <Style Selector="ItemsControl">
         <Setter Property="ItemSkeletonTemplate">
             <Setter.Value>
                 <DataTemplate>
                     <!-- No margin here: the PANEL insets the card by the REAL item's margin (read from a realized tile) so
-                         cards line up exactly with the real tiles and keep the same inter-tile gaps for any list. A faint
-                         static border outlines the card even at the pulse's low point. -->
-                    <!-- The outline comes from the PALETTE, like every other hairline. It used to be a literal white at
-                         a tenth opacity, which is a dark-theme assumption written into a shared file: on the light theme
-                         it is white on near-white, so the card had no outline at all at the pulse's low point - exactly
-                         the moment the outline exists for. {ObservableResource}, so a palette swap re-points it. -->
-                    <Border CornerRadius="4" BorderThickness="1" IsHitTestVisible="False"
-                                     Background="{ObservableResource SkeletonPulseFill}"
-                                     BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                         cards line up exactly with the real tiles and keep the same inter-tile gaps for any list. The
+                         fill pulses; the outline over it stays, so the card is outlined even at the pulse's low point. -->
+                    <Grid IsHitTestVisible="False"
+                          RenderCloneStagger="0:0:0.08">
+                        <Border x:Name="SkeletonFill"
+                                CornerRadius="4"
+                                Opacity="0.05"
+                                Background="{ObservableResource SkeletonPulseFill}"/>
+                        <Border CornerRadius="4"
+                                BorderThickness="1"
+                                BorderBrush="{ObservableResource ControlStrokeColorDefault}"/>
+                    </Grid>
+                    <!-- The card is shown while the list is loading and collapsed once it is done: the pulse runs exactly
+                         as long, played by the render thread. -->
+                    <DataTemplate.Triggers>
+                        <PropertyTrigger Property="Visibility"
+                                         Value="Visible">
+                            <PropertyTrigger.EnterActions>
+                                <RunAnimationAction TargetName="SkeletonFill">
+                                    <PulseAnimation Property="Opacity"
+                                                    Min="0.05"
+                                                    Max="0.15"
+                                                    Duration="0:0:1.2"
+                                                    Easing="CubicInOut"/>
+                                </RunAnimationAction>
+                            </PropertyTrigger.EnterActions>
+                            <PropertyTrigger.ExitActions>
+                                <StopAnimationAction TargetName="SkeletonFill"/>
+                            </PropertyTrigger.ExitActions>
+                        </PropertyTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
-
-    <!-- The list pulses the shared skeleton brush's Opacity while IsLoadingItems (TargetName resolves the keyed resource);
-         AnimationManager holds keep one list from stopping another's pulse. -->
-    <Style Selector="ItemsControl">
-        <PropertyTrigger Property="IsLoadingItems" Value="True">
-            <PropertyTrigger.EnterActions>
-                <RunAnimationAction TargetName="SkeletonPulseFill">
-                    <PulseAnimation Property="Opacity" Min="0.05" Max="0.15" Duration="0:0:1.2" Easing="CubicInOut"/>
-                </RunAnimationAction>
-            </PropertyTrigger.EnterActions>
-            <PropertyTrigger.ExitActions>
-                <StopAnimationAction TargetName="SkeletonPulseFill"/>
-            </PropertyTrigger.ExitActions>
-        </PropertyTrigger>
     </Style>
 
 </StyleSet>

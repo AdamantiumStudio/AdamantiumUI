@@ -57,7 +57,7 @@ public class AnimatableUIComponent : AdamantiumComponent, IAnimatableUIComponent
     {
         ArgumentNullException.ThrowIfNull(property);
         ArgumentNullException.ThrowIfNull(animation);
-        Media.Animation.AnimationManager.Begin(this, property, animation, completed);
+        animation.Start(this, property, completed);
     }
 
     /// <summary>Drives implicit transitions: a base-value change on a property with a matching transition becomes a

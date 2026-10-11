@@ -1069,7 +1069,14 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // changed AND only the color changed", which is a contradiction; the stronger (geometry) claim wins.
         else if (metadata.AffectsPaint)
         {
-            element?.InvalidatePaint();
+            if (element != null && Media.Animation.Compositor.DrawsOpacity(this, property))
+            {
+                VisualTreeNotifications.RaisePaintMirrored(element);
+            }
+            else
+            {
+                element?.InvalidatePaint();
+            }
         }
 
         // oldReadValue, NOT the raw slot: a container never written holds UnsetValue, and reporting THAT as OldValue told

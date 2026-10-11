@@ -23,15 +23,19 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
     private readonly Compositor.Entry _composited;
 
     public RunningKeyFrameAnimation(AdamantiumComponent target, Animation animation, Action completed, double resumeElapsed = 0)
-        : this(target, BuildCurve(target, animation), FillBehavior.HoldEnd, true, completed, resumeElapsed)
+        : this(target, BuildCurve(target, animation), FillBehavior.HoldEnd, true, completed, resumeElapsed, animation)
     {
     }
+
+    /// <summary>The animation this was started from; null for a curve played directly.</summary>
+    public Timeline Source { get; }
 
     /// <summary>Plays a ready curve. <paramref name="paintComposited"/> false keeps a paint curve on the loop thread, where
     /// the property it drives goes on changing as the animation plays.</summary>
     public RunningKeyFrameAnimation(AdamantiumComponent target, AnimationCurve curve, FillBehavior fillBehavior,
-        bool paintComposited, Action completed, double resumeElapsed = 0)
+        bool paintComposited, Action completed, double resumeElapsed = 0, Timeline source = null)
     {
+        Source = source;
         _target = target;
         _completed = completed;
         _elapsedSeconds = resumeElapsed;
