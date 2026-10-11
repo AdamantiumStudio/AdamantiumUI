@@ -15,6 +15,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private Classes _classNames;
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
+    private Dictionary<object, Action> _follows;
     
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
@@ -358,7 +359,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         if (IsDiscarded || IsAwaitingReturn) return;
 
         Lifecycle = VisualLifecycle.Discarded;
-        lock (Discarded) Discarded.Add(new WeakReference<FundamentalUIComponent>(this));
 
         // Release is queued for idle time rather than done inside the frame; anything that comes back meanwhile is
         // skipped.
@@ -374,6 +374,69 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         OnDiscarded();
     }
 
+    /// <summary>Listens to <paramref name="source"/> under <paramref name="key"/>, letting go of whatever was followed under
+    /// that key first; a null source only lets go. Everything followed is let go of when this element is discarded, so a
+    /// control following something that outlives it - a view model's collection - needs nothing else.</summary>
+    protected internal void Follow(object key, INotifyCollectionChanged source, NotifyCollectionChangedEventHandler handler)
+    {
+        if (source == null)
+        {
+            Follow(key, null);
+            return;
+        }
+
+        source.CollectionChanged += handler;
+        Follow(key, () => source.CollectionChanged -= handler);
+    }
+
+    /// <inheritdoc cref="Follow(object, INotifyCollectionChanged, NotifyCollectionChangedEventHandler)"/>
+    protected internal void Follow(object key, System.ComponentModel.INotifyPropertyChanged source,
+        System.ComponentModel.PropertyChangedEventHandler handler)
+    {
+        if (source == null)
+        {
+            Follow(key, null);
+            return;
+        }
+
+        source.PropertyChanged += handler;
+        Follow(key, () => source.PropertyChanged -= handler);
+    }
+
+    /// <summary>Remembers how to let go of something this element already listens to, under <paramref name="key"/>: what
+    /// was remembered under that key is let go of now, and <paramref name="letGo"/> runs when this element is discarded.
+    /// For subscriptions the typed overloads cannot express (an event of the application's own type).</summary>
+    protected internal void Follow(object key, Action letGo)
+    {
+        if (_follows != null && _follows.Remove(key, out var previous))
+        {
+            previous();
+        }
+
+        if (letGo == null)
+        {
+            return;
+        }
+
+        _follows ??= new Dictionary<object, Action>();
+        _follows[key] = letGo;
+    }
+
+    private void LetGoOfFollowed()
+    {
+        var follows = _follows;
+        if (follows == null)
+        {
+            return;
+        }
+
+        _follows = null;
+        foreach (var letGo in follows.Values)
+        {
+            letGo();
+        }
+    }
+
     /// <summary>This element has been destroyed - let go of anything OUTSIDE it that would otherwise keep it. Overridden
     /// by whoever subscribes to something longer-lived than itself: a control bound to a view model's collection is the
     /// case that made this necessary - the subscription is undone only when the SOURCE is replaced, which never happens
@@ -384,6 +447,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         // alive.
         var bindings = Data.BindingEngine.GetBindings(this);
         foreach (var binding in bindings) binding.CloseConnection();
+        Resources.ObservableResource.CloseAll(this);
+        LetGoOfFollowed();
 
         // ...and the BEHAVIORS, which carry bindings of their own. A binding is keyed by its TARGET, and a behavior is
         // not a component, so the sweep above cannot see one: a DragSourceBehavior's {Ancestor} binding stayed open, its
@@ -398,47 +463,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         behaviors.Clear();
     }
-
-    // TEMP (leak hunt): every part the teardown has destroyed, held WEAKLY. After a forced collection the ones still
-    // alive are exactly the retained set - not inferred from a dump, not a path gcroot happened to walk, but the parts
-    // that are provably dead and provably still here.
-    private static readonly List<WeakReference<FundamentalUIComponent>> Discarded = new();
-
-    /// <summary>TEMP: of the parts that were destroyed, how many survive a collection - and WHO their visual parent is.
-    /// A survivor whose parent is NOT itself discarded is held by a live control, and that names the holder outright.</summary>
-    public static string SurvivingDiscarded()
-    {
-        var byParent = new Dictionary<string, int>();
-        var alive = 0;
-
-        lock (Discarded)
-        {
-            for (var i = Discarded.Count - 1; i >= 0; i--)
-            {
-                if (!Discarded[i].TryGetTarget(out var part))
-                {
-                    Discarded.RemoveAt(i);
-                    continue;
-                }
-
-                alive++;
-                var parent = (part as IUIComponent)?.VisualParent;
-                var key = parent == null
-                    // A survivor with no visual parent is the ROOT of a retained subtree - the thing actually being
-                    // held. Its own type names whose template leaked, which is what the next fix needs.
-                    ? "ROOT: " + part.GetType().Name
-                    : parent.GetType().Name +
-                      (parent is FundamentalUIComponent { IsDiscarded: true } ? " (also discarded)" : " *** LIVE ***");
-                byParent[key] = byParent.TryGetValue(key, out var had) ? had + 1 : 1;
-            }
-        }
-
-        var rows = new List<string>();
-        foreach (var pair in byParent) rows.Add($"{pair.Value,6}  {pair.Key}");
-        rows.Sort((a, b) => int.Parse(b.Trim().Split(' ')[0]).CompareTo(int.Parse(a.Trim().Split(' ')[0])));
-        return $"surviving discarded parts: {alive}\n  " + string.Join("\n  ", rows.GetRange(0, Math.Min(12, rows.Count)));
-    }
-
 
     public void AttachStyles(params ReadOnlySpan<Style> styles)
     {

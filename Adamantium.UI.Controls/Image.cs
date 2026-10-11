@@ -182,24 +182,32 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       if (a is not Image img) return;
 
-      img.WatchDrawing(e.OldValue, e.NewValue);
+      img.WatchDrawing(img.IsAttachedToVisualTree ? e.NewValue as DrawingImage : null);
+      if (e.OldValue is DrawingImage previous)
+      {
+         previous.Detach(img);
+      }
+
       img.ProcessImageSource();
    }
 
    // A DRAWING source only. It is MUTABLE and nobody else is watching it: the property system re-renders when a
    // BRUSH-valued property changes, but Source is an ImageSource, so recoloring a shape three levels down inside the
    // drawing would otherwise never reach this element. Every other source kind is immutable and needs none of this.
-   private void WatchDrawing(object oldSource, object newSource)
+   private void WatchDrawing(DrawingImage drawing)
    {
-      if (oldSource is DrawingImage previous)
+      if (drawing == null)
       {
-         previous.Changed -= OnDrawingChanged;
+         Follow(SourceProperty, null);
+         return;
       }
 
-      if (newSource is DrawingImage current)
+      drawing.Changed += OnDrawingChanged;
+      Follow(SourceProperty, () =>
       {
-         current.Changed += OnDrawingChanged;
-      }
+         drawing.Changed -= OnDrawingChanged;
+         drawing.Detach(this);
+      });
    }
 
    // A drawing changing is a SHAPE change, not a recolor of the same commands - the replay emits different geometry -
@@ -401,17 +409,15 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       // Resume playback after a re-attach; the ticker removed itself on detach. Off-screen bakes and the designer host
       // attach without an application, so there may be no dispatcher.
       UIAppContext.Current?.Dispatcher?.Post(StartRuntimePlayback);
-
-      // ...and watch the drawing again. See OnDetachedFromVisualTree for why the watch does not simply stay.
-      WatchDrawing(null, Source);
+      WatchDrawing(Source as DrawingImage);
    }
 
-   /// <summary>Stops watching the drawing while out of the tree: a DrawingImage theme resource outlives this element and
-   /// would otherwise keep it and its subtree alive.</summary>
+   /// <summary>Stops watching the drawing, and gives up owning it, while out of the tree: a DrawingImage theme resource
+   /// outlives this element, and an element taken out of a panel is not announced as discarded.</summary>
    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
    {
       base.OnDetachedFromVisualTree(e);
-      WatchDrawing(Source, null);
+      WatchDrawing(null);
    }
 
    // Playback rides the loop heartbeat (AnimationManager), so frames advance on the thread that renders them. The ticker

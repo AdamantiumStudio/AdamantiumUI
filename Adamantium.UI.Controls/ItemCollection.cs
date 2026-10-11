@@ -56,6 +56,17 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
         Raise(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
     }
 
+    internal void LetGoOfSource()
+    {
+        if (_source is INotifyCollectionChanged observable)
+        {
+            observable.CollectionChanged -= OnSourceCollectionChanged;
+        }
+
+        _source = null;
+        _sourceSnapshot = null;
+    }
+
     // Mirror the source's change into the snapshot (so indexing stays correct), then forward the SAME args so the
     // ItemsControl can update containers incrementally with the source's own indices.
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

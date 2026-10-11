@@ -624,17 +624,19 @@ public partial class InfiniteCanvas : Control
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        if (e.OldValue is PropertyGrid was)
+        if (e.NewValue is not PropertyGrid now)
         {
-            was.ValueChanging -= canvas.OnInspectorWriting;
-            was.ValueChanged -= canvas.OnInspectorWritten;
+            canvas.Follow(InspectorProperty, null);
+            return;
         }
 
-        if (e.NewValue is PropertyGrid now)
+        now.ValueChanging += canvas.OnInspectorWriting;
+        now.ValueChanged += canvas.OnInspectorWritten;
+        canvas.Follow(InspectorProperty, () =>
         {
-            now.ValueChanging += canvas.OnInspectorWriting;
-            now.ValueChanged += canvas.OnInspectorWritten;
-        }
+            now.ValueChanging -= canvas.OnInspectorWriting;
+            now.ValueChanged -= canvas.OnInspectorWritten;
+        });
     }
 
     // What the objects held before the write happening right now. Filled as it starts and turned into a step as it
@@ -685,8 +687,15 @@ public partial class InfiniteCanvas : Control
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        if (e.OldValue is CanvasHistory was) was.Changed -= canvas.OnHistoryMoved;
-        if (e.NewValue is CanvasHistory now) now.Changed += canvas.OnHistoryMoved;
+        if (e.NewValue is CanvasHistory now)
+        {
+            now.Changed += canvas.OnHistoryMoved;
+            canvas.Follow(HistoryProperty, () => now.Changed -= canvas.OnHistoryMoved);
+        }
+        else
+        {
+            canvas.Follow(HistoryProperty, null);
+        }
 
         canvas.Refresh();
     }
@@ -843,6 +852,8 @@ public partial class InfiniteCanvas : Control
 
         _graph = new CanvasGraphHost(this);
         _drawing = new CanvasDrawingHost();
+        Follow(_graph, _graph.StopFollowing);
+        Follow(_drawing, _drawing.StopFollowing);
 
         // Empty collections at Default priority, so a {Binding} can still replace them; a Local write would mask it.
         SetValue(ToolsProperty, new CanvasTools(), ValuePriority.Default);
@@ -1763,11 +1774,8 @@ public partial class InfiniteCanvas : Control
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        if (canvas._tools != null) canvas._tools.CollectionChanged -= canvas.OnToolsEdited;
-
         canvas._tools = e.NewValue as CanvasTools;
-
-        if (canvas._tools != null) canvas._tools.CollectionChanged += canvas.OnToolsEdited;
+        canvas.Follow(ToolsProperty, canvas._tools, canvas.OnToolsEdited);
 
         canvas.ToolsChanged?.Invoke(canvas, EventArgs.Empty);
     }
@@ -1830,8 +1838,15 @@ public partial class InfiniteCanvas : Control
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        if (e.OldValue is ICanvasScene previous) previous.Changed -= canvas.OnSceneEdited;
-        if (e.NewValue is ICanvasScene current) current.Changed += canvas.OnSceneEdited;
+        if (e.NewValue is ICanvasScene current)
+        {
+            current.Changed += canvas.OnSceneEdited;
+            canvas.Follow(SceneProperty, () => current.Changed -= canvas.OnSceneEdited);
+        }
+        else
+        {
+            canvas.Follow(SceneProperty, null);
+        }
 
         canvas._graph.SetScene(e.NewValue as ICanvasScene);
         canvas._drawing.SetScene(e.NewValue as ICanvasScene);

@@ -179,6 +179,29 @@ public class ObservableResourceTests
         Assert.That(Listeners(), Is.EqualTo(before));
     }
 
+    // A trigger can put an {ObservableResource} back on an element that has already been unloaded - a page leaving
+    // flips the states its controls show. Nothing unloads it again, so the discard is what has to let it go.
+    [Test]
+    public void ObservableResource_AppliedAfterUnload_LeavesTheResourceManagerOnDiscard()
+    {
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
+        var changed = typeof(ResourceManager).GetField(nameof(ResourceManager.ResourcesChanged),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        int Listeners() => (changed.GetValue(_rm) as Delegate)?.GetInvocationList().Length ?? 0;
+
+        var before = Listeners();
+        var button = new Button();
+        Unload(button);
+        new ObservableResource("AccentColor").Apply(button, "Tag", ValuePriority.Trigger, new object());
+        Assert.That(Listeners(), Is.EqualTo(before + 1));
+
+        DiscardedVisuals.Publish(button);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(Listeners(), Is.EqualTo(before));
+    }
+
     // An icon of the application's own dictionary is no element of any tree, and nothing re-creates it with the theme:
     // only the live marker can repaint it when the palette changes.
     [Test]

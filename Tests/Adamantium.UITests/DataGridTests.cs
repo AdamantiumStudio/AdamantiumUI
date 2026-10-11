@@ -1472,6 +1472,75 @@ public class DataGridTests
         Assert.That(items.Count(RowsListeningTo), Is.Zero, "and every one of them let go");
     }
 
+    private sealed class WatchedRows : ObservableCollection<Row>
+    {
+        private readonly List<System.Collections.Specialized.NotifyCollectionChangedEventHandler> _listeners = new();
+
+        public override event System.Collections.Specialized.NotifyCollectionChangedEventHandler CollectionChanged
+        {
+            add
+            {
+                _listeners.Add(value);
+                base.CollectionChanged += value;
+            }
+            remove
+            {
+                _listeners.Remove(value);
+                base.CollectionChanged -= value;
+            }
+        }
+
+        public int HeardBy<T>() => _listeners.Count(l => l.Target is T);
+    }
+
+    // The application's collection outlives the page that shows it. A table thrown away with its page has to stop
+    // listening to it, or the collection keeps the table - and the page - for as long as the application runs.
+    [Test]
+    public void ADiscardedTable_LetsGoOfItsSourceCollection()
+    {
+        var items = new WatchedRows { new() { Name = "one" }, new() { Name = "two" } };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ItemsSource = items;
+        Relayout(grid);
+
+        Assert.That(items.HeardBy<TreeDataGrid>(), Is.EqualTo(1), "the table follows the collection while it is shown");
+
+        DiscardedVisuals.Publish(grid);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(items.HeardBy<TreeDataGrid>(), Is.Zero, "a discarded table stops listening");
+    }
+
+    private sealed class ReportingRow : System.ComponentModel.INotifyDataErrorInfo
+    {
+        public string Name { get; init; }
+
+        public bool HasErrors => false;
+
+        public System.Collections.IEnumerable GetErrors(string propertyName) => Array.Empty<string>();
+
+        public event EventHandler<System.ComponentModel.DataErrorsChangedEventArgs> ErrorsChanged;
+
+        public bool HeardByARow => ErrorsChanged?.GetInvocationList().Any(d => d.Target is DataGridRow) == true;
+    }
+
+    // The same, for an item that reports its errors and nothing else: the row's release asked only whether it was still
+    // following value changes, so an item that never had any kept the row - and the page - alive.
+    [Test]
+    public void ADroppedRow_LetsGoOfAnItemThatOnlyReportsErrors()
+    {
+        var items = new List<ReportingRow> { new() { Name = "one" }, new() { Name = "two" } };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ItemsSource = items;
+        Relayout(grid);
+
+        Assert.That(items.Count(i => i.HeardByARow), Is.EqualTo(2), "the realized rows are listening to their items");
+
+        grid.ItemContainerGenerator.Clear();
+
+        Assert.That(items.Count(i => i.HeardByARow), Is.Zero, "and every one of them let go");
+    }
+
     // A state is read PER ROW: the rows that mean nothing must come back with nothing. A state that leaked to every
     // cell of the column would paint the whole column as an error, which is worse than not marking it at all.
     [Test]

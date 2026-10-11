@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `FundamentalUIComponent.Follow`: a control listens to something that outlives it - a view model's collection or
+  object, a shared resource - under a key; replacing what is followed under that key lets go of the old one, and a
+  discarded element lets go of everything it follows.
+
 - The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`), every frame a window
   records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on a device of
   its own. Each frame that differs is written to a session folder: the live and reference pictures, their difference,
@@ -748,6 +752,26 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- A page that was closed - a gallery tab switched away from, content replaced - stayed in memory for the life of the
+  application, and every page visited added to it. What kept it:
+  - a control following a collection or an object of the view model it was given (`TreeDataGrid`, `TreeView`,
+    `ListBox.SelectedItems`, `PropertyGrid`, `Ribbon`, `DataPager`, `InfiniteCanvas`, `Polygon`, `Polyline`, a table
+    row and its record): they now follow through `FundamentalUIComponent.Follow`, and a discarded element lets go of
+    everything it follows, changing nothing in it;
+  - the containers a list dropped on a reset: they are announced discarded now, so what is inside lets go too;
+  - a navigation region shown in a `ContentControl` or an `ItemsControl`: the region lives as long as the application,
+    and its host stayed among its listeners;
+  - a table row following a record that reports only its errors (`INotifyDataErrorInfo` without
+    `INotifyPropertyChanged`);
+  - an `Image` showing a shared `DrawingImage` (a theme icon): the icon kept the first image that showed it;
+  - an `{ObservableResource}` that a trigger set after the element was unloaded;
+  - the render cache: units of a removed control in its pre-render list, the stroked shapes of a longer earlier frame
+    in the instanced fill's records, the motion nodes of the last scroll, and the node of every material (acrylic,
+    mica) any earlier frame drew.
+
+- A `ListBox` thrown away with its page emptied the view model's collection bound to its `SelectedItems`, and any list
+  thrown away ran its selection logic once more, raising `SelectionChanged` for nobody.
 
 - The designer preview: a value-type element with its value as text (`<Color x:Key="Accent">#FF0000FF</Color>`,
   `<Thickness>1,2,3,4</Thickness>`) is the value its text says - `Color` no longer resolves to a nested type of the

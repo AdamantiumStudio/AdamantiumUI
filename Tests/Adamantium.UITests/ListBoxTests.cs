@@ -349,4 +349,71 @@ public class ListBoxTests
             Assert.That(((ListBoxItem)g.ContainerFromIndex(1)).IsSelected, Is.True);
         });
     }
+
+    private sealed class WatchedSelection : ObservableCollection<object>
+    {
+        public int ListBoxes;
+
+        public override event System.Collections.Specialized.NotifyCollectionChangedEventHandler CollectionChanged
+        {
+            add
+            {
+                if (value.Target is ListBox)
+                {
+                    ListBoxes++;
+                }
+
+                base.CollectionChanged += value;
+            }
+            remove
+            {
+                if (value.Target is ListBox)
+                {
+                    ListBoxes--;
+                }
+
+                base.CollectionChanged -= value;
+            }
+        }
+    }
+
+    private sealed class SelectionHolder
+    {
+        public string[] Items { get; } = ["a", "b", "c"];
+
+        public WatchedSelection Selection { get; } = new();
+    }
+
+    // Letting go is not undoing: the page is gone, the user's selection in the view-model is not.
+    [Test]
+    public void ADiscardedList_LeavesTheViewModelsSelectionAsItWas()
+    {
+        var holder = new SelectionHolder();
+        holder.Selection.Add("b");
+        var lb = new ListBox { DataContext = holder, SelectionMode = SelectionMode.Multiple };
+        lb.SetBinding("ItemsSource", new Binding("Items"));
+        lb.SetBinding("SelectedItems", new Binding("Selection"));
+        Assert.That(lb.SelectedItem, Is.EqualTo("b"), "the list took the bound selection");
+
+        DiscardedVisuals.Publish(lb);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(holder.Selection, Is.EqualTo(new[] { "b" }));
+    }
+
+    // The view-model's selection outlives the page that shows it. A list thrown away with its page has to stop listening
+    // to it, or the view-model keeps the list - and the whole page - for as long as the application runs.
+    [Test]
+    public void ADiscardedList_LetsGoOfTheBoundSelection()
+    {
+        var holder = new SelectionHolder();
+        var lb = new ListBox { ItemsSource = new[] { "a", "b" }, DataContext = holder };
+        lb.SetBinding("SelectedItems", new Binding("Selection"));
+        Assert.That(holder.Selection.ListBoxes, Is.EqualTo(1), "the list follows the bound selection");
+
+        DiscardedVisuals.Publish(lb);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(holder.Selection.ListBoxes, Is.Zero, "a discarded list stops listening");
+    }
 }

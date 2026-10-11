@@ -779,6 +779,18 @@ public partial class RenderCache
     // lazily O(dirty). Returns false when ANY moved node has non-aware retained content - the caller full-walks.
     private bool RefreshMovedNodes(IGraphicsDevice device)
     {
+        try
+        {
+            return RefreshMovedNodesCore(device);
+        }
+        finally
+        {
+            _nestedMovedNodes.Clear();
+        }
+    }
+
+    private bool RefreshMovedNodesCore(IGraphicsDevice device)
+    {
         if (_movedNodesBuf.Count == 0)
         {
             _movedNodeOwners.Clear();   // nothing moved this frame - the replay re-points nothing

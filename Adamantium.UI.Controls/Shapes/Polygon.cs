@@ -1,6 +1,4 @@
 using System.Collections.Specialized;
-using Adamantium.Core.Collections;
-using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Graphics;
@@ -30,26 +28,16 @@ public class Polygon : Shape
 
     private static void PointsChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        if (a is Polygon polygon && e.NewValue != null)
+        if (a is not Polygon polygon)
         {
-            if (e.OldValue is TrackingCollection<Vector2> oldCollection)
-            {
-                polygon.UnsubscribeFromPointEvents(oldCollection);
-            }
+            return;
+        }
 
-            polygon.SubscribeToPointEvents();
+        polygon.Follow(PointsProperty, e.NewValue as INotifyCollectionChanged, polygon.PointsOnCollectionChanged);
+        if (e.NewValue != null)
+        {
             polygon.InvalidateMeasure();
         }
-    }
-
-    private void UnsubscribeFromPointEvents(TrackingCollection<Vector2> collection)
-    {
-        collection.CollectionChanged -= PointsOnCollectionChanged;
-    }
-
-    private void SubscribeToPointEvents()
-    {
-        Points.CollectionChanged += PointsOnCollectionChanged;
     }
 
     private  void PointsOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

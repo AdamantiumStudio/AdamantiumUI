@@ -861,6 +861,7 @@ public partial class RenderCache
         foreach (var unit in group.Units)
             Retire(unit);
         RemoveFromOrder(group, "disposed");
+        group.ClearUnits();
 
         // ...and the tag map, after _leftTheOrder (which reads the tag to blank instances).
         if (group.Tag != 0) _groupByTag.Remove(group.Tag);
