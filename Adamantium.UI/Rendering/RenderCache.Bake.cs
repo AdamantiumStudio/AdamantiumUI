@@ -167,9 +167,8 @@ public partial class RenderCache
 
     /// <summary>The record half of an overlay build, device-free, on the thread that lays the components out: renders the
     /// flat list into a packet and freezes their layout with it, so <see cref="ApplyComponents"/> never reads a live
-    /// component. <see cref="BuildFromComponents"/> does both halves at once. <paramref name="readOnly"/> records through
-    /// <c>RenderReadOnly</c>, leaving the components' render state as it was.</summary>
-    public void RecordComponents(IReadOnlyList<IUIComponent> components, Matrix4x4F projectionMatrix, bool readOnly = false)
+    /// component. <see cref="BuildFromComponents"/> does both halves at once.</summary>
+    public void RecordComponents(IReadOnlyList<IUIComponent> components, Matrix4x4F projectionMatrix)
     {
         _packet = RentPacket();
         _packet.Reset(RenderBuildKind.Full);
@@ -188,18 +187,9 @@ public partial class RenderCache
 
                 var wasGeometryValid = component.IsGeometryValid;
                 _drawingContextInternal.Clear();
-                if (readOnly)
-                {
-                    component.RenderReadOnly(_drawingContext);
-                }
-                else
-                {
-                    component.Render(_drawingContext);
-                }
-
+                component.Render(_drawingContext);
                 var commands = CopyCommands(_drawingContextInternal.GetDrawCommands());
-                _packet.Draws.Add(new ComponentDraw(component, commands, !readOnly && wasGeometryValid, order,
-                    component.RenderClones));
+                _packet.Draws.Add(new ComponentDraw(component, commands, wasGeometryValid, order, component.RenderClones));
                 order += OrderGap;
             }
         }
@@ -233,34 +223,6 @@ public partial class RenderCache
         }
 
         return applied;
-    }
-
-    /// <summary>Applies only the newest packet <see cref="RecordComponents"/> recorded: each is a whole record, so the older
-    /// ones go back to the pool unapplied.</summary>
-    internal void ApplyLatestComponents()
-    {
-        AdoptReadyGlyphs();
-
-        RenderPacket latest = null;
-        while (_published.TryDequeue(out var packet))
-        {
-            if (latest != null)
-            {
-                latest.Reset(RenderBuildKind.Clean);
-                _spare.Add(latest);
-            }
-
-            latest = packet;
-        }
-
-        if (latest == null)
-        {
-            return;
-        }
-
-        ApplyComponentsPacket(latest);
-        latest.Reset(RenderBuildKind.Clean);
-        _spare.Add(latest);
     }
 
     private void ApplyComponentsPacket(RenderPacket packet)

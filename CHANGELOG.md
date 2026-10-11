@@ -7,14 +7,13 @@ All packages share one version.
 
 ### Added
 
-- The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`), every frame a window
-  records, full rebuilds apart, is compared with a fresh full build of the same tree, drawn off screen on the window's
-  device once the window has presented. A frame that differs gets a report in a session folder - how the frame was
-  drawn, what it changed (motion nodes included), which groups of the two caches meet the difference and how they
-  differ, and the frozen ancestor chain of a group whose place differs (a link read live rather than carried by a packet
-  is marked) - up to `MaxReports`, and the live and reference pictures, their difference, a close-up and the frame
-  before, up to `MaxDumps`. Counts of verified, differing and skipped frames; off, it costs one read per frame.
-  Sandbox: "Verify frames" in the diagnostics panel, counts on the plate.
+- The frame verifier, `UIApplication.FrameVerification`: switched on at run time (`IsEnabled`) to hunt a rendering bug,
+  it checks what a window's render cache draws with against what the tree says. On each record it notes every
+  component's offset, size, clip, parent, opacity and world transform; after the window draws that record it compares
+  the cache's frozen layouts and their parent chains, the world transforms it composed and the groups in its paint
+  order, and logs each part that differs - the component, the field, both values, how the frame was drawn and its
+  motion nodes - to a session log, up to `MaxReports` frames. No GPU work; off, it costs one read per frame. Sandbox:
+  "Verify frames" in the diagnostics panel, counts on the plate.
 
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.

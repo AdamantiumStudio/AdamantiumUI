@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Collections.Concurrent;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
@@ -16,8 +15,6 @@ public class ForwardWindowRenderer : WindowRendererBase
 {
     private readonly RenderCache _renderCache;
     private volatile FrameVerifier _verifier;
-    private readonly ConcurrentQueue<FrameVerifier> _retiredVerifiers = new();
-    private IRenderTarget _drawnTarget;
 
     public ForwardWindowRenderer(IGraphicsDevice device, IRenderUnitFactory renderUnitFactory) : base(device, renderUnitFactory)
     {
@@ -98,7 +95,7 @@ public class ForwardWindowRenderer : WindowRendererBase
         base.Retarget(window);
         if (!another || window is not Controls.Base.UIComponent root) return;
 
-        RetireVerifier();
+        DropVerifier();
 
         Core.RenderDirtyRouter.Forget(_renderCache.Dirty);
         _renderCache.Dirty = Core.RenderDirtyRouter.NewScope();
@@ -130,7 +127,6 @@ public class ForwardWindowRenderer : WindowRendererBase
 
         GraphicsDevice.SetViewports(Viewport);
         GraphicsDevice.SetScissors(Scissor);
-        _drawnTarget = Presenter.RenderTarget;
         var t0 = Stopwatch.GetTimestamp();
         _renderCache.Render(GraphicsDevice, Scissor);
         RuntimeStats.LastRenderDrawMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
@@ -146,6 +142,8 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastDrawAnimMs = _renderCache.DrawAnimMs;
         RuntimeStats.LastDrawArenaPaintMs = _renderCache.DrawArenaPaintMs;
         RuntimeStats.LastDrawBrushRepaintMs = _renderCache.DrawBrushRepaintMs;
+
+        _verifier?.FrameDrawn(_renderCache);
     }
 
     public override void PreRender()
@@ -201,37 +199,21 @@ public class ForwardWindowRenderer : WindowRendererBase
     private void TrackVerification()
     {
         var settings = FrameVerification.Active;
-        if (settings != null && _verifier == null && _retiredVerifiers.IsEmpty)
+        if (settings != null && _verifier == null)
         {
-            _verifier = new FrameVerifier(settings, Window, GraphicsDevice, Window.UIContext.Resolve<IResourceFactory>());
+            _verifier = new FrameVerifier(settings, Window);
             _renderCache.Observer = _verifier;
         }
         else if (settings == null)
         {
-            RetireVerifier();
+            DropVerifier();
         }
     }
 
-    private void RetireVerifier()
+    private void DropVerifier()
     {
-        if (_verifier == null)
-        {
-            return;
-        }
-
         _renderCache.Observer = null;
-        _retiredVerifiers.Enqueue(_verifier);
         _verifier = null;
-    }
-
-    public override void Present()
-    {
-        base.Present();
-        _verifier?.FramePresented(_renderCache, Presenter, _drawnTarget, GraphicsDevice, RenderScale);
-        while (_retiredVerifiers.TryDequeue(out var retired))
-        {
-            retired.Dispose();
-        }
     }
 
     // Inline record+apply, unchanged externally: the headless designer's one-shot render and a single-threaded BeginDraw
@@ -250,13 +232,7 @@ public class ForwardWindowRenderer : WindowRendererBase
     // (swapchain) via the base. The owning render device is disposed by WindowRenderService.UnloadContent after this.
     public override void Dispose()
     {
-        _renderCache.Observer = null;
-        _verifier?.Dispose();
-        _verifier = null;
-        while (_retiredVerifiers.TryDequeue(out var retired))
-        {
-            retired.Dispose();
-        }
+        DropVerifier();
         _renderCache.DisposeUnits();
         _renderCache.DisposeDeviceResources();   // the batch rings + transform table: nothing else owns them
         Core.RenderDirtyRouter.Forget(_renderCache.Dirty);   // ...and this window's marks: nobody records from them now

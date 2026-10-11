@@ -1,91 +1,82 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
-using Adamantium.Graphics.Core;
-using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Graphics;
-using Adamantium.Vulkan.Core;
+using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Rendering.Verification;
 
-internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
+/// <summary>Checks one window's render cache against its tree. On each record it notes what the tree says about every
+/// component in it; after the window draws that record, it compares what the cache drew with - the frozen layouts and
+/// their parent chains, the composed world transforms, the groups in the paint order - and raises an alarm naming the
+/// component, the field and both values when they part.</summary>
+internal sealed class FrameVerifier : IRenderCacheObserver
 {
-    private const int PopupShadow = 64;
-    private const int AdornerReach = 8;
-
     private const int Idle = 0;
     private const int Armed = 1;
     private const int Matched = 2;
     private const int Spoiled = 3;
 
+    private const int AlarmsPerFrame = 40;
+    private const float Tolerance = 0.01f;
+
     private readonly FrameVerification _settings;
     private readonly IRootVisualComponent _root;
-    private readonly IGraphicsDevice _device;
-    private readonly RenderUnitFactory _factory;
-    private readonly RenderCache _reference;
-    private readonly List<IUIComponent> _flat = [];
-    private readonly HashSet<IUIComponent> _visited = [];
+    private readonly Dictionary<IUIComponent, TreeFact> _facts = new();
     private readonly Stack<(IUIComponent Node, bool Hidden)> _stack = new();
-    private readonly List<Rect> _masks = [];
+    private readonly HashSet<IUIComponent> _checked = [];
+    private readonly List<string> _alarms = [];
+    private readonly HashSet<IUIComponent> _animated = [];
 
     private int _state;
+    private int _alarmCount;
     private long _frame;
     private int _recorded;
     private RenderPacket _armedPacket;
     private RecordSummary _summary;
-    private Matrix4x4F _projection;
-    private Rect[] _maskSnapshot = [];
-    private GraphicsPresenter _target;
-    private byte[] _previous;
-    private int _previousWidth;
-    private int _previousHeight;
+    private string _lastAlarms = string.Empty;
 
-    /// <summary>Draws the reference on the window's own device, once the window has presented.</summary>
-    public FrameVerifier(FrameVerification settings, IRootVisualComponent root, IGraphicsDevice windowDevice, IResourceFactory resourceFactory)
+    public FrameVerifier(FrameVerification settings, IRootVisualComponent root)
     {
         _settings = settings;
         _root = root;
-        _device = windowDevice;
-        _factory = new RenderUnitFactory(_device, resourceFactory);
-        _reference = new RenderCache(new DrawingContext(), _factory);
     }
 
+    /// <summary>The loop records faster than the window draws, so the facts follow the newest record until the window
+    /// applies it, and are kept from then on for that frame's check.</summary>
     public void Recorded(RenderPacket packet)
     {
         _frame++;
         var state = Volatile.Read(ref _state);
-        if (state >= Matched || state == Armed && Interlocked.Exchange(ref _armedPacket, null) == null)
+        if (state >= Matched || ++_recorded % Math.Max(1, _settings.Every) != 0)
         {
             return;
         }
 
-        if (packet.Kind == RenderBuildKind.Full || ++_recorded % Math.Max(1, _settings.Every) != 0)
+        if (state == Armed && Interlocked.Exchange(ref _armedPacket, null) == null)
         {
             return;
         }
 
         try
         {
-            var summary = new RecordSummary(_frame, packet);
-            Flatten();
-            CollectMasks();
-            _projection = packet.ProjectionMatrix;
-            _reference.RecordComponents(_flat, _projection, readOnly: true);
-            _summary = summary;
+            _summary = new RecordSummary(_frame, packet);
+            NoteTheTree();
             Volatile.Write(ref _armedPacket, packet);
             Volatile.Write(ref _state, Armed);
         }
         catch (Exception e)
         {
+            Volatile.Write(ref _state, Idle);
             _settings.CountSkipped();
-            _settings.Log($"frame {_frame}: the reference could not be recorded - {e}");
+            _settings.Log($"frame {_frame}: the tree could not be noted - {e}");
         }
     }
 
+    /// <summary>Packets are pooled, so the noted packet is the first application of that object after it was recorded;
+    /// anything applied after it means the frame drew a later record than the facts describe.</summary>
     public void Applied(RenderPacket packet)
     {
         var state = Volatile.Read(ref _state);
@@ -99,8 +90,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
         }
     }
 
-    public void FramePresented(RenderCache live, GraphicsPresenter presenter, IRenderTarget drawn, IGraphicsDevice windowDevice,
-        double scale)
+    /// <summary>Checks what the window just drew against the facts noted at its record, on the drawing thread.</summary>
+    public void FrameDrawn(RenderCache live)
     {
         var state = Volatile.Read(ref _state);
         if (state < Matched)
@@ -110,26 +101,23 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
 
         try
         {
-            _reference.ApplyLatestComponents();
             if (state == Spoiled)
             {
                 _settings.CountSkipped();
-                _settings.Log($"frame {_summary.Frame}: skipped - the window drew a later record than the reference");
             }
             else if (live.LastFrameWithheld)
             {
                 _settings.CountSkipped();
-                _settings.Log($"frame {_summary.Frame}: skipped - the window held the frame back for want of batch room");
             }
             else
             {
-                Verify(live, presenter, drawn, windowDevice, scale);
+                Check(live);
             }
         }
         catch (Exception e)
         {
             _settings.CountSkipped();
-            _settings.Log($"frame {_summary.Frame}: verifier failed - {e}");
+            _settings.Log($"frame {_summary.Frame}: the check failed - {e}");
         }
         finally
         {
@@ -137,200 +125,173 @@ internal sealed class FrameVerifier : IRenderCacheObserver, IDisposable
         }
     }
 
-    public void Dispose()
+    private void NoteTheTree()
     {
-        _device.DeviceWaitIdle();
-        _reference.DisposeUnits();
-        _reference.DisposeDeviceResources();
-        _target?.Dispose();
-        _target = null;
-        _factory.Dispose();
-    }
-
-    private void Verify(RenderCache live, GraphicsPresenter presenter, IRenderTarget drawn, IGraphicsDevice windowDevice,
-        double scale)
-    {
-        var clear = windowDevice.ClearColor;
-        windowDevice.DeviceWaitIdle();
-
-        var width = (int)drawn.Width;
-        var height = (int)drawn.Height;
-        var format = drawn.ResolveTexture.SurfaceFormat;
-        var livePixels = Read(drawn);
-        var walkPixels = Read(DrawReference(presenter, drawn, scale, clear));
-
-        var blueFirst = format.ToString().StartsWith("B8G8R8", StringComparison.OrdinalIgnoreCase);
-        var comparison = FrameComparison.Compare(livePixels, walkPixels, width, height, MaskPixels(width, height, scale),
-            Pack(clear, blueFirst));
-
-        _settings.CountVerified();
-
-        if (comparison.HasDifference)
-        {
-            _settings.CountMismatched();
-            var line = $"frame {_summary.Frame}: {comparison.Different} px differ ({comparison.Extra} extra, {comparison.Missing} missing) " +
-                       $"in [{comparison.Left},{comparison.Top}..{comparison.Right},{comparison.Bottom}] - {_summary.Kind}, drawn by {live.LastDrawPath}";
-            if (_settings.TakeReport())
-            {
-                var folder = Path.Combine(_settings.SessionFolder, $"{_summary.Frame:D6}");
-                FrameReport.Write(folder, _summary, live, _reference, comparison, livePixels, walkPixels, _previous,
-                    _previousWidth, _previousHeight, format, blueFirst, scale, presenter.MSAALevel, _maskSnapshot,
-                    _settings.TakeDump());
-                line += $" -> {folder}";
-            }
-
-            _settings.Log(line);
-        }
-
-        _previous = livePixels;
-        _previousWidth = width;
-        _previousHeight = height;
-    }
-
-    private IRenderTarget DrawReference(GraphicsPresenter live, IRenderTarget drawn, double scale, Color clear)
-    {
-        var width = drawn.Width;
-        var height = drawn.Height;
-        var format = drawn.ResolveTexture.SurfaceFormat;
-        if (_target == null || _target.Width != width || _target.Height != height || _target.MSAALevel != live.MSAALevel ||
-            _target.SurfaceFormat != format)
-        {
-            _target?.Dispose();
-            var parameters = new PresentationParameters(PresenterType.RenderTarget, width, height, IntPtr.Zero, live.MSAALevel)
-            {
-                ImageFormat = format,
-                DepthFormat = live.DepthFormat
-            };
-            _target = GraphicsPresenter.Create(_device, parameters, "FrameVerifier_reference");
-        }
-
-        _reference.ProcessCommands(_projection, scale);
-
-        var target = _target.RenderTarget;
-        _device.ClearColor = clear;
-        _device.SetRenderTargets(target);
-        _device.SetDepthBuffer(_target.DepthBuffer);
-        _device.MSAALevel = _target.MSAALevel;
-        _device.Presenter = _target;
-
-        var viewport = new Viewport { Width = width, Height = height, MinDepth = 0, MaxDepth = 1 };
-        var scissor = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = width, Height = height } };
-
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            if (!_device.BeginDraw(beforeRenderPass: _ => _reference.PreRender()))
-            {
-                throw new InvalidOperationException("the reference frame could not begin");
-            }
-
-            _device.SetViewports(viewport);
-            _device.SetScissors(scissor);
-            _reference.Render(_device, scissor);
-            _device.EndDraw();
-            _device.Submit();
-            _target.Present();
-            _device.FrameEnded();
-            _device.DeviceWaitIdle();
-            if (!_device.FrameWithheld)
-            {
-                break;
-            }
-        }
-
-        return target;
-    }
-
-    private static byte[] Read(IRenderTarget target)
-    {
-        using var image = target.ResolveTexture.ReadbackToImage();
-        var pixels = new byte[(int)image.TotalSizeInBytes];
-        Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
-        return pixels;
-    }
-
-    private static uint Pack(Color color, bool blueFirst) => blueFirst
-        ? (uint)(color.B | color.G << 8 | color.R << 16 | color.A << 24)
-        : (uint)(color.R | color.G << 8 | color.B << 16 | color.A << 24);
-
-    private void Flatten()
-    {
-        _flat.Clear();
-        _visited.Clear();
+        _facts.Clear();
         _stack.Clear();
+        _animated.Clear();
+        Compositor.CollectOwners(_animated);
         _stack.Push((_root, false));
 
         while (_stack.Count > 0)
         {
             var (component, hiddenByAncestor) = _stack.Pop();
-            if (component.Visibility == Visibility.Collapsed || !_visited.Add(component))
+            if (component.Visibility == Visibility.Collapsed || _facts.ContainsKey(component))
             {
                 continue;
             }
 
             var hidden = hiddenByAncestor || component.Visibility != Visibility.Visible;
-            if (!hidden)
+            var local = component.LocalTransform;
+            var parent = component.RenderParent;
+            var animated = _animated.Contains(component);
+            Matrix4x4F world;
+            var carried = animated;
+            if (parent != null && _facts.TryGetValue(parent, out var above))
             {
-                _flat.Add(component);
+                world = local * above.World;
+                carried |= above.Carried;
+            }
+            else
+            {
+                world = component.WorldTransform;
             }
 
+            _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds, parent,
+                (float)component.Opacity, world, animated, carried);
             RenderCache.PushChildrenInPaintOrder(_stack, component.VisualChildren, hidden);
         }
     }
 
-    private void CollectMasks()
+    private void Check(RenderCache live)
     {
-        _masks.Clear();
-        if (_root is IWindow window)
+        _alarms.Clear();
+        _alarmCount = 0;
+        _checked.Clear();
+
+        foreach (var group in live.DescribeGroups())
         {
-            foreach (var popup in window.PopupRoots)
+            var component = group.Component;
+            if (!_facts.TryGetValue(component, out var fact))
             {
-                AddMask(popup, PopupShadow);
+                Alarm($"{ComponentText.Of(component)}: in the paint order ({group.Units} units), but not in the tree");
+                continue;
             }
 
-            foreach (var adorner in window.Adorners)
+            CheckChain(live, component);
+
+            if (!fact.Carried && live.TryGetComposedWorld(component, out var world) && !SamePlace(world, fact.World))
             {
-                AddMask(adorner, AdornerReach);
+                Alarm($"{ComponentText.Of(component)}: drawn at {Place(world)}, the tree has it at {Place(fact.World)}");
             }
         }
 
-        _maskSnapshot = _masks.ToArray();
-    }
+        _settings.CountVerified();
+        if (_alarms.Count == 0)
+        {
+            _lastAlarms = string.Empty;
+            return;
+        }
 
-    private void AddMask(IUIComponent component, double reach)
-    {
-        if (component == null || component.Visibility != Visibility.Visible)
+        _settings.CountMismatched();
+        var alarms = string.Join(Environment.NewLine, _alarms);
+        if (alarms == _lastAlarms)
         {
             return;
         }
 
-        var size = component.RenderSize;
-        var world = new Rect(0, 0, size.Width, size.Height).TransformToAABB(component.WorldTransform);
-        _masks.Add(new Rect(world.X - reach, world.Y - reach, world.Width + reach * 2, world.Height + reach * 2));
+        _lastAlarms = alarms;
+        if (_settings.TakeReport())
+        {
+            _settings.Log(Report(live));
+        }
     }
 
-    private bool[] MaskPixels(int width, int height, double scale)
+    private void CheckChain(RenderCache live, IUIComponent component)
     {
-        if (_maskSnapshot.Length == 0)
+        for (var link = component; link != null && _checked.Add(link);)
         {
-            return null;
-        }
-
-        var mask = new bool[width * height];
-        foreach (var rect in _maskSnapshot)
-        {
-            var left = Math.Max(0, (int)Math.Floor(rect.X * scale));
-            var top = Math.Max(0, (int)Math.Floor(rect.Y * scale));
-            var right = Math.Min(width, (int)Math.Ceiling((rect.X + rect.Width) * scale));
-            var bottom = Math.Min(height, (int)Math.Ceiling((rect.Y + rect.Height) * scale));
-            for (var y = top; y < bottom; y++)
+            if (!live.TryGetFrozen(link, out var frozen))
             {
-                for (var x = left; x < right; x++)
-                {
-                    mask[y * width + x] = true;
-                }
+                Alarm($"{ComponentText.Of(link)}: drawn, but the cache holds no layout for it");
+                return;
             }
+
+            var readLive = live.IsReadLive(link) ? " (read live: no packet carried it)" : string.Empty;
+            if (!_facts.TryGetValue(link, out var fact))
+            {
+                Alarm($"{ComponentText.Of(link)}: the cache composes a place through it, but it is not in the tree{readLive}");
+                return;
+            }
+
+            if (!ReferenceEquals(frozen.RenderParent, fact.Parent))
+            {
+                Alarm($"{ComponentText.Of(link)}: parent in the cache {ComponentText.Of(frozen.RenderParent)}, " +
+                      $"in the tree {ComponentText.Of(fact.Parent)}{readLive}");
+            }
+
+            if (!fact.Animated && !SamePlace(frozen.LocalTransform, fact.Local))
+            {
+                Alarm($"{ComponentText.Of(link)}: offset in the cache {Place(frozen.LocalTransform)}, " +
+                      $"in the tree {Place(fact.Local)}{readLive}");
+            }
+
+            if (Math.Abs(frozen.RenderSize.Width - fact.Size.Width) > Tolerance ||
+                Math.Abs(frozen.RenderSize.Height - fact.Size.Height) > Tolerance)
+            {
+                Alarm($"{ComponentText.Of(link)}: size in the cache {Dims(frozen.RenderSize)}, in the tree {Dims(fact.Size)}{readLive}");
+            }
+
+            if (frozen.ClipToBounds != fact.Clips)
+            {
+                Alarm($"{ComponentText.Of(link)}: clips in the cache {frozen.ClipToBounds}, in the tree {fact.Clips}{readLive}");
+            }
+
+            if (!fact.Animated && Math.Abs(frozen.Opacity - fact.Opacity) > 1e-3f)
+            {
+                Alarm($"{ComponentText.Of(link)}: opacity in the cache {frozen.Opacity:0.###}, in the tree {fact.Opacity:0.###}{readLive}");
+            }
+
+            link = frozen.RenderParent;
+        }
+    }
+
+    private void Alarm(string line)
+    {
+        _alarmCount++;
+        if (_alarms.Count < AlarmsPerFrame)
+        {
+            _alarms.Add(line);
+        }
+    }
+
+    private string Report(RenderCache live)
+    {
+        var text = new StringBuilder();
+        text.AppendLine($"frame {_summary.Frame}: {_alarmCount} alarm(s) - record {_summary.Kind}, drawn by {live.LastDrawPath}," +
+                        $" dirty {_summary.DirtyCount}, moved {_summary.MovedCount}, motion nodes {_summary.MotionNodeCount}");
+        foreach (var line in _alarms)
+        {
+            text.AppendLine($"  {line}");
         }
 
-        return mask;
+        foreach (var node in _summary.MotionNodes)
+        {
+            text.AppendLine($"  motion node: {node}");
+        }
+
+        return text.ToString().TrimEnd();
     }
+
+    private static bool SamePlace(Matrix4x4F a, Matrix4x4F b) =>
+        Math.Abs(a.M41 - b.M41) <= Tolerance && Math.Abs(a.M42 - b.M42) <= Tolerance &&
+        Math.Abs(a.M11 - b.M11) <= 1e-4f && Math.Abs(a.M22 - b.M22) <= 1e-4f &&
+        Math.Abs(a.M12 - b.M12) <= 1e-4f && Math.Abs(a.M21 - b.M21) <= 1e-4f;
+
+    private static string Place(Matrix4x4F m) =>
+        m.M11 == 1 && m.M22 == 1 && m.M12 == 0 && m.M21 == 0
+            ? $"({m.M41:0.##}, {m.M42:0.##})"
+            : $"({m.M41:0.##}, {m.M42:0.##}) [{m.M11:0.###} {m.M12:0.###}; {m.M21:0.###} {m.M22:0.###}]";
+
+    private static string Dims(Size size) => $"{size.Width:0.##}x{size.Height:0.##}";
 }

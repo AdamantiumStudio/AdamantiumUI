@@ -86,8 +86,8 @@
                 <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
                               IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
-                <!-- The frame verifier: checks every fast-path frame against a full walk while a rendering bug is hunted;
-                     the plate shows its counts, the verify folder its reports. -->
+                <!-- The frame verifier: checks what the render cache draws with against the tree while a rendering bug
+                     is hunted; the plate shows its counts, the verify folder its log. -->
                 <ToggleSwitch Content="{Localize MainStrings.VerifyFrames}"
                               AutomationProperties.AutomationId="VerifyFrames"
                               IsChecked="{Binding VerifyFrames, Mode=TwoWay}"
