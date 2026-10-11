@@ -46,7 +46,6 @@ public sealed class LayoutManager
     public LayoutManager(IUIComponent root)
     {
         _root = root ?? throw new ArgumentNullException(nameof(root));
-        lock (AllManagers) AllManagers.Add(new WeakReference<LayoutManager>(this));
     }
 
     /// <summary>Gets (creating once) the manager that owns the given root (a window at runtime, a subtree root in tests).</summary>
@@ -57,79 +56,6 @@ public sealed class LayoutManager
     // under it: a node enqueued and never drained is held for the life of the window, and the read has to cover the
     // managers nobody happens to be holding a reference to.
     public static long QueuedNow;
-
-    // WEAK, and that is the whole point: a REGISTRY of managers would keep alive exactly the managers whose retention is
-    // the question. A manager abandoned with a loaded queue is collected with it and holds nothing - which a counter of
-    // enqueues-minus-drains cannot tell apart from a manager that is alive and holding.
-    private static readonly List<WeakReference<LayoutManager>> AllManagers = new();
-
-    /// <summary>TEMP (leak hunt): a CENSUS, not a counter - how many components the queues of the managers that are
-    /// still ALIVE are holding right now, and how many managers there are.</summary>
-    public static (int Nodes, int Managers, int Deferred) LayoutHeld
-    {
-        get
-        {
-            int nodes = 0, live = 0;
-            lock (AllManagers)
-            {
-                for (var i = AllManagers.Count - 1; i >= 0; i--)
-                {
-                    if (!AllManagers[i].TryGetTarget(out var manager))
-                    {
-                        AllManagers.RemoveAt(i);
-                        continue;
-                    }
-
-                    live++;
-                    var counts = manager.QueuedCounts();
-                    nodes += counts.Style + counts.Measure + counts.Arrange + counts.NextPass;
-                }
-            }
-
-            return (nodes, live, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
-        }
-    }
-
-    /// <summary>TEMP (leak hunt): the root each LIVE manager was made for. A manager is made per ROOT and, for an element
-    /// with no root/owner/parent, per that ELEMENT - so after a theme swap this is a HANDLE on the retained orphans
-    /// themselves, which is what nothing else in-process gives. Sampling them says what they are and where their parent
-    /// chain leads; a dump can only say which single path gcroot happened to walk.</summary>
-    public static List<IUIComponent> LiveManagerRoots()
-    {
-        var roots = new List<IUIComponent>();
-        lock (AllManagers)
-        {
-            foreach (var handle in AllManagers)
-            {
-                if (handle.TryGetTarget(out var manager) && manager._root != null) roots.Add(manager._root);
-            }
-        }
-
-        return roots;
-    }
-
-    /// <summary>TEMP experiment, NOT a fix: empty every live manager's queues so a collection can tell whether those
-    /// queues are what HOLDS the departed controls, or merely list them while something else does.</summary>
-    public static void DropAllQueuesForTheExperiment()
-    {
-        lock (AllManagers)
-        {
-            foreach (var handle in AllManagers)
-            {
-                if (!handle.TryGetTarget(out var manager)) continue;
-                manager._toStyle = null;
-                manager._toMeasure = null;
-                manager._toArrange = null;
-                manager._toMeasureNextPass = null;
-                manager._passBuffer = null;
-                manager._promoteBuffer = null;
-            }
-        }
-
-        while (DeferredStyle.TryDequeue(out _)) { }
-        while (DeferredMeasure.TryDequeue(out _)) { }
-        while (DeferredArrange.TryDequeue(out _)) { }
-    }
 
     // TEMP (leak hunt): what THIS manager's queues are holding. They hold components strongly and the manager lives with
     // its root, so a node enqueued and never drained is retained for the life of the window.
@@ -266,6 +192,7 @@ public sealed class LayoutManager
             ToMeasureNextPass.Clear();
             foreach (var node in PromoteBuffer)
                 if (node is IMeasurableComponent measurable) measurable.InvalidateMeasure();
+            PromoteBuffer.Clear();
         }
 
         // Forward-progress safety net: if the root is dirty but was never enqueued (invalidated during construction, before
@@ -354,6 +281,7 @@ public sealed class LayoutManager
         queue.DrainInto(PassBuffer);
         for (var i = 0; i < PassBuffer.Count; i++)
             process(PassBuffer[i]);
+        PassBuffer.Clear();
     }
 
     private static void ApplyTheme(IUIComponent node)

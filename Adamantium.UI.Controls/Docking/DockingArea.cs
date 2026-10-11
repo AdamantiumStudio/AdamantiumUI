@@ -349,14 +349,27 @@ public class DockingArea : Panel
         if (window == null || !_watchedWindows.Add(window)) return;
 
         // The main window only: closing it closes the layout; a floating one's panes are not lost with it.
-        if (_owner == null) window.Closing += OnHostWindowClosing;
+        var closes = _owner == null;
+        if (closes) window.Closing += OnHostWindowClosing;
 
-        window.PropertyChanged += (_, e) =>
+        EventHandler<AdamantiumPropertyChangedEventArgs> raised = (_, e) =>
         {
             if (e.Property != WindowBase.IsActiveProperty || !window.IsActive) return;
 
             MakeActive(ActivePaneOf(_root ?? Layout.Main));
         };
+        window.PropertyChanged += raised;
+
+        Follow((nameof(FollowWindowActivation), window), () =>
+        {
+            if (closes)
+            {
+                window.Closing -= OnHostWindowClosing;
+            }
+
+            window.PropertyChanged -= raised;
+            _watchedWindows.Remove(window);
+        });
     }
 
     // Which pane of a window wears the accent when that window is raised: the one last worked in there, or - the first

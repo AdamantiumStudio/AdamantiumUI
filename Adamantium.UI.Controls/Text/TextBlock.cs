@@ -594,6 +594,30 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         InvalidateMeasure();
     }
 
+    /// <summary>Discards the inlines with the block: they are not in the visual tree, so nothing else reaches them.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        DiscardInlines(_inlines);
+    }
+
+    private static void DiscardInlines(InlineCollection inlines)
+    {
+        if (inlines == null)
+        {
+            return;
+        }
+
+        foreach (var inline in inlines)
+        {
+            DiscardedVisuals.Publish(inline);
+            if (inline is Span span)
+            {
+                DiscardInlines(span.Inlines);
+            }
+        }
+    }
+
     private void HostChildren()
     {
         List<IMeasurableComponent> children = [];

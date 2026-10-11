@@ -28,8 +28,8 @@ internal static class DrawingImageRaster
     private static readonly HashSet<DrawingImage> _watched = [];
 
     // Who asked for a bake - the elements to re-record when the palette is repainted. Concurrent: Get runs on the
-    // render thread.
-    private static readonly ConcurrentDictionary<IUIComponent, byte> _owners = new();
+    // render thread. Weak: an element thrown away with its page must not be kept for the sake of a repaint.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IUIComponent, object> _owners = new();
 
     // The palette the current bakes were drawn under.
     private static int _bakedPalette = -1;
@@ -54,9 +54,9 @@ internal static class DrawingImageRaster
         // Dropping the pixels is not enough: whoever DREW them holds the texture, and its Source is the same drawing
         // object it always was - no property changed, so nothing would ask again. Tell the elements that asked for a
         // bake to re-record; they are the few that draw icons, not the scene.
-        foreach (var owner in _owners.Keys)
+        foreach (var pair in _owners)
         {
-            owner.InvalidateRender(false);
+            pair.Key.InvalidateRender(false);
         }
     }
 
@@ -65,7 +65,7 @@ internal static class DrawingImageRaster
     public static BitmapSource Get(DrawingImage image, Size size, IUIComponent owner, Vector4F slice = default)
     {
         DropStaleBakes();
-        if (owner != null) _owners[owner] = 0;
+        if (owner != null) _owners.AddOrUpdate(owner, null);
 
         if (slice == default) slice = WholePicture;
         var key = KeyOf(image, size, DeviceScaleOf(owner), slice);

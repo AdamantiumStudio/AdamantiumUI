@@ -19,6 +19,8 @@ disconnect "id=Canvas>name=Mix/type=Thumb,name=Amount"
 expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value=""
 invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
 expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value="Number: Out"
+# The page keeps the camera the last run left, and a node far out of view is not built: the whole graph into view.
+key F --into id=Canvas
 expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Scale: Out"
 connect "id=Canvas>name=Mix/type=Thumb,name=Out" "id=Canvas>name=Output/type=Thumb,name=Color"
 expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Mix: Out"

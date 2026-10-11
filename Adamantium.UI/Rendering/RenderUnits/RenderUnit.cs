@@ -714,7 +714,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
         }
         else
         {
-            GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.Brush, BufferManager, ResourceFactory);
+            GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         }
 
         GeometryRenderer.RenderData = DrawCommand.RenderData;
@@ -858,7 +858,7 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         if (GeometryRenderer != null) return;
         var g = EllipseShape(Payload);
         g.ProcessGeometry(GeometryType.Both);
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.Brush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
     }
@@ -1260,7 +1260,7 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         if (GeometryRenderer != null) return;
         var g = PolygonShape(Payload);
         g.ProcessGeometry(GeometryType.Both);
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.Brush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
     }

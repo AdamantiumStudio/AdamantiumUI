@@ -31,10 +31,10 @@ public sealed class ContentControlRegionAdapter : IRegionAdapter
         if (host is not ContentControl content) return;
         region.SingleActiveView = true;
         var shown = new Shown();
-        region.PropertyChanged += (sender, e) =>
+        content.Follow((this, region), region, (sender, e) =>
         {
             if (e.PropertyName is nameof(IRegion.CurrentViewModel) or nameof(IRegion.CurrentViewKey)) Render(region, content, shown);
-        };
+        });
         Render(region, content, shown);
     }
 

@@ -101,4 +101,44 @@ public class RibbonTabSetsTests
             Assert.That(TabOf(ribbon, surface), Is.Not.Null, "hidden, not gone: the tabs come back with the switch");
         });
     }
+
+    private sealed class WatchedModules : ObservableCollection<Module>
+    {
+        public int Listeners;
+
+        public override event System.Collections.Specialized.NotifyCollectionChangedEventHandler CollectionChanged
+        {
+            add
+            {
+                Listeners++;
+                base.CollectionChanged += value;
+            }
+            remove
+            {
+                Listeners--;
+                base.CollectionChanged -= value;
+            }
+        }
+    }
+
+    // The modules belong to the document, which outlives the ribbon's page. A discarded ribbon stops listening to them -
+    // its ledges included, which it watches one by one - and leaves them as they were.
+    [Test]
+    public void ADiscardedRibbon_LetsGoOfTheModules_AndLeavesThemAlone()
+    {
+        var surface = new Module { Name = "Surface" };
+        var modules = new WatchedModules { surface, new Module { Name = "Space" } };
+        var ribbon = new Ribbon { TabSetTemplate = ModuleTabs(), TabSetsSource = modules };
+        Assume.That(modules.Listeners, Is.EqualTo(1), "the ribbon follows the modules");
+
+        Adamantium.UI.Core.DiscardedVisuals.Publish(ribbon);
+        Adamantium.UI.Core.DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(modules.Listeners, Is.Zero, "a discarded ribbon stops listening");
+            Assert.That(modules, Has.Count.EqualTo(2));
+            Assert.That(surface.IsShown, Is.True, "the module is left as it was");
+        });
+    }
 }

@@ -663,13 +663,8 @@ public partial class RenderCache
             return;
         }
 
-        _rectSlotByUnit.Remove(unit);
-        _sdfSlotByUnit.Remove(unit);
-        _textRunByUnit.Remove(unit);
-        _texRunByUnit.Remove(unit);
-        _fractalKindByUnit.Remove(unit);
-        _fillSlotByUnit.Remove(unit);
-        _haloRunsByUnit.Remove(unit);
+        ForgetSlots(unit);
+        _copiesByUnit.Remove(unit);
         unit.DeferDispose();
     }
 
@@ -861,6 +856,7 @@ public partial class RenderCache
         foreach (var unit in group.Units)
             Retire(unit);
         RemoveFromOrder(group, "disposed");
+        group.ClearUnits();
 
         // ...and the tag map, after _leftTheOrder (which reads the tag to blank instances).
         if (group.Tag != 0) _groupByTag.Remove(group.Tag);

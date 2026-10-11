@@ -187,13 +187,6 @@ public sealed class BitmapImage : BitmapSource
       {
          try
          {
-            var layers = new byte[FrameCount][];
-            for (uint i = 0; i < FrameCount; i++)
-            {
-               layers[i] = _rawBitmap.GetRawPixels(i);
-               if (layers[i] == null) return;
-            }
-
             var description = new TextureDescription
             {
                Width = PixelWidth,
@@ -208,8 +201,9 @@ public sealed class BitmapImage : BitmapSource
                ArrayLayers = FrameCount
             };
 
-            if (SurfaceLayout == SurfaceFormat.R8G8B8A8.UNorm &&
-                IndexedFrames.TryIndex(layers, out var palette, out var indices))
+            byte[] palette = null;
+            var indices = SurfaceLayout == SurfaceFormat.R8G8B8A8.UNorm ? IndexFrames(out palette) : null;
+            if (indices != null)
             {
                _framePalette = factory.CreateTexture(new TextureDescription
                {
@@ -229,6 +223,13 @@ public sealed class BitmapImage : BitmapSource
             }
             else
             {
+               var layers = new byte[FrameCount][];
+               for (uint i = 0; i < FrameCount; i++)
+               {
+                  layers[i] = _rawBitmap.GetRawPixels(i);
+                  if (layers[i] == null) return;
+               }
+
                _frameArrayTexture = factory.CreateTextureArray(description, layers);
             }
 
@@ -245,6 +246,26 @@ public sealed class BitmapImage : BitmapSource
             // A failed build must leave the animation on the single-image path, not kill the loader thread.
          }
       });
+   }
+
+   private byte[][] IndexFrames(out byte[] palette)
+   {
+      palette = null;
+      var indexer = new IndexedFrames();
+      var indices = new byte[FrameCount][];
+      var frame = new byte[_rawBitmap.TotalSizeInBytes];
+      for (uint i = 0; i < FrameCount; i++)
+      {
+         _rawBitmap.CopyFrame(i, frame);
+         indices[i] = indexer.TryIndex(frame);
+         if (indices[i] == null)
+         {
+            return null;
+         }
+      }
+
+      palette = indexer.Palette();
+      return indices;
    }
 
    public BitmapFrame GetFrame(uint frameIndex)

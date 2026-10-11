@@ -1096,6 +1096,8 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         RaiseEvent(new RoutedEventArgs(UnloadedEvent, this));
     }
 
+    /// <summary>Also lets go of the context menu, which is not in the visual tree: one of its own goes with it, and one a
+    /// style shares among elements is only unhooked from this one.</summary>
     protected override void OnDiscarded()
     {
         if (_isLoaded)
@@ -1104,6 +1106,20 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         }
 
         base.OnDiscarded();
+
+        if (ContextMenu is not { } menu || !ReferenceEquals(menu.LogicalParent, this))
+        {
+            return;
+        }
+
+        if (GetBaseValuePriority(ContextMenuProperty) == ValuePriority.Local)
+        {
+            DiscardedVisuals.Publish(menu);
+        }
+        else
+        {
+            RemoveLogicalChild(menu);
+        }
     }
 
     public IWindow GetWindow()
