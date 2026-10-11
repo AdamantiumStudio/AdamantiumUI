@@ -47,7 +47,7 @@ public class ConnectGesture
         }
 
         _at = world;
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         return true;
     }
 
@@ -113,7 +113,7 @@ public class ConnectGesture
 
         _fromItem = null;
         _fromPin = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         canvas.InvalidateRender(false);
 
         // LET GO OVER NOTHING. Offered to the application before it is thrown away: this is the gesture a graph is
@@ -199,7 +199,7 @@ public class ConnectGesture
 
         _fromItem = null;
         _fromPin = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         canvas.InvalidateRender(false);
     }
 

@@ -43,10 +43,9 @@ public class MenuItemHeaderButtonTests
     }
 
     private static void ReleaseOver(MenuItem row, IUIComponent over) =>
-        row.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left, MouseButtonState.Released,
-            InputModifiers.None, 0)
+        row.RaiseEvent(new PointerReleasedEventArgs(Mouse.Pointer, MouseButtons.Left, InputModifiers.None, 0)
         {
-            RoutedEvent = InputUIComponent.MouseLeftButtonUpEvent,
+            RoutedEvent = PointerEvents.PointerReleasedEvent,
             OriginalSource = over
         });
 

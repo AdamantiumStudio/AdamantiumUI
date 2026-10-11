@@ -65,10 +65,13 @@ public class RibbonGalleryItem : ContentControl, ISelectable
         if (Owner is { } owner) IsSelected = owner.IsItemSelectedFor(this);
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (!IsEnabled || e.Handled) return;
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.Handled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         e.Handled = true;
         Focus();

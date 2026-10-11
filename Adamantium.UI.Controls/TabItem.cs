@@ -435,28 +435,31 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     /// and you can drop into its content.</summary>
     public void SpringLoad() => Owner?.SelectTab(this);
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (!IsEnabled || e.Handled) return;   // e.Handled -> the close button (or other child) took the click
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.Handled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         e.Handled = true;
         Focus();
         Owner?.SelectTab(this);
         _pressPos = e.GetPosition(this);
         _pressed = true;
         _dragging = false;
-        // Do NOT capture the mouse here: capturing on press swallows a plain click meant for an interactive child (the
-        // close button) - the up would route to this captured tab, not the button. Capture only once a drag actually
-        // starts (below), which is when we truly need to track the pointer past this tab's bounds.
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!_pressed) return;
+        base.OnPointerMoved(e);
+        if (!_pressed)
+        {
+            return;
+        }
 
-        // Ask the device whether the button is down: the flag goes stale if the button-up lands in a re-templated tree.
-        if (e.MouseDevice.LeftButton != MouseButtonState.Pressed)
+        if (!e.Properties.IsLeftButtonPressed)
         {
             AbandonDrag();
             return;
@@ -467,16 +470,25 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         if (!_dragging && PlatformSettings.ExceedsDragThreshold(e.GetPosition(this) - _pressPos, this))
         {
             _dragging = true;
-            CaptureMouse();   // now the drag must keep tracking even as the pointer leaves this tab
+            e.Pointer.Capture(this);
             Owner?.BeginDrag(this, e);
         }
         if (_dragging) Owner?.UpdateDrag(this, e);
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (_dragging) Owner?.EndDrag(this);
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
+        if (_dragging)
+        {
+            Owner?.EndDrag(this);
+        }
+
         AbandonDrag();
     }
 
@@ -486,7 +498,7 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     /// over it, with nothing pressed, walks straight into the drag path and tears it out again.</para></summary>
     internal void AbandonDrag()
     {
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        ReleasePointerCaptures();
         _pressed = false;
         _dragging = false;
     }

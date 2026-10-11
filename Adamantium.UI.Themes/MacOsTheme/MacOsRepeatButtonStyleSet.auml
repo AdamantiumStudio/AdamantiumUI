@@ -65,7 +65,7 @@
         <Setter Property="BackgroundDisabled" Value="Transparent"/>
     </Style>
 
-    <!-- No IsMouseOver trigger, deliberately - see the header. -->
+    <!-- No IsPointerOver trigger, deliberately - see the header. -->
     <Style Selector="RepeatButton">
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>

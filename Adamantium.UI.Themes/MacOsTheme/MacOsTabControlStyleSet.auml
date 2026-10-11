@@ -30,7 +30,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="CloseBg" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
                             <Setter TargetName="CloseGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>
@@ -52,7 +52,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PinBg" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
                             <Setter TargetName="PinGlyph" Property="Stroke" Value="{ResourceReference TextFillColorPrimary}"/>
                         </PropertyTrigger>
@@ -89,7 +89,7 @@
                              pin discs, the dock caption's two. A wash of a few percent was measured here first and is
                              the weaker answer: it is barely a step off the groove, and consistency between chrome
                              buttons is worth more than a private nuance. -->
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="ChevronBg" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
                         </PropertyTrigger>
                         <!-- Pressed and OPEN are the same picture on purpose: the flyout being up is the button still

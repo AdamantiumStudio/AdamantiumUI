@@ -19,12 +19,12 @@ internal static class InputSimulator
     {
         using var pointer = SimulatedPointer.Install();
         var (window, point) = HoverAt(element, label, local);
-        var (down, up, held) = button == MouseButtons.Right
-            ? (RawMouseEventType.RightButtonDown, RawMouseEventType.RightButtonUp, InputModifiers.RightMouseButton)
-            : (RawMouseEventType.LeftButtonDown, RawMouseEventType.LeftButtonUp, InputModifiers.LeftMouseButton);
+        var (changed, held) = button == MouseButtons.Right
+            ? (MouseButtons.Right, InputModifiers.RightMouseButton)
+            : (MouseButtons.Left, InputModifiers.LeftMouseButton);
 
-        Send(down, window, point, held);
-        Send(up, window, point, InputModifiers.None);
+        Send(RawPointerEventType.Down, window, point, held, changed);
+        Send(RawPointerEventType.Up, window, point, InputModifiers.None, changed);
     }
 
     public static void Hover(UIComponent element, string label) => Hover(element, label, Middle(element));
@@ -44,11 +44,10 @@ internal static class InputSimulator
         using var pointer = SimulatedPointer.Install();
         var (window, point) = HoverAt(element, label, Middle(element));
         var layout = LayoutManager.GetOrCreate((IUIComponent)window);
-        var device = MouseDevice.CurrentDevice;
         for (var i = 0; i < Math.Abs(notches); i++)
         {
-            device.ProcessEvent(new RawMouseWheelEventArgs(Math.Sign(notches) * notch, RawMouseEventType.MouseWheel,
-                (IInputComponent)window, point, InputModifiers.None, device, Now()));
+            PointerDevice.Current.ProcessEvent(new RawPointerWheelEventArgs(Math.Sign(notches) * notch,
+                (IInputComponent)window, point, InputModifiers.None, Now()));
             layout.ExecuteLayoutPass();
         }
     }
@@ -94,17 +93,17 @@ internal static class InputSimulator
             : window;
 
         var layout = LayoutManager.GetOrCreate(root);
-        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
-        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Down, window, start, InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             // A layout pass between moves, as a frame would come between them.
             layout.ExecuteLayoutPass();
             var point = start + (end - start) * (step / (double)steps);
-            Send(RawMouseEventType.MouseMove, window, point, InputModifiers.LeftMouseButton, Over(point));
+            Send(RawPointerEventType.Move, window, point, InputModifiers.LeftMouseButton, over: Over(point));
         }
 
-        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None, Over(end));
+        Send(RawPointerEventType.Up, window, end, InputModifiers.None, MouseButtons.Left, Over(end));
     }
 
     private static bool Holds(IWindow window, PixelPoint screen)
@@ -125,15 +124,15 @@ internal static class InputSimulator
     private static void Stroke(IWindow window, Vector2 start, Vector2 end)
     {
         const int steps = 8;
-        Send(RawMouseEventType.LeftButtonDown, window, start, InputModifiers.LeftMouseButton);
-        Send(RawMouseEventType.MouseMove, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Down, window, start, InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, window, LeadIn(start, end), InputModifiers.LeftMouseButton);
         for (var step = 1; step <= steps; step++)
         {
             var at = start + (end - start) * (step / (double)steps);
-            Send(RawMouseEventType.MouseMove, window, at, InputModifiers.LeftMouseButton);
+            Send(RawPointerEventType.Move, window, at, InputModifiers.LeftMouseButton);
         }
 
-        Send(RawMouseEventType.LeftButtonUp, window, end, InputModifiers.None);
+        Send(RawPointerEventType.Up, window, end, InputModifiers.None, MouseButtons.Left);
     }
 
     /// <summary>Whether a pointer at <paramref name="local"/> of <paramref name="element"/> would be on
@@ -170,8 +169,8 @@ internal static class InputSimulator
         }
 
         var point = InWindow(element, local);
-        Send(RawMouseEventType.MouseMove, window, point, InputModifiers.None);
-        var over = MouseDevice.CurrentDevice.DirectlyOver;
+        Send(RawPointerEventType.Move, window, point, InputModifiers.None);
+        var over = Mouse.Pointer.DirectlyOver;
         if (!IsWithin(over, element))
         {
             throw new AutomationException(
@@ -271,16 +270,19 @@ internal static class InputSimulator
     }
 
     // The event goes to window; the pointer is over the window named, another one only while a captured gesture is over it.
-    private static void Send(RawMouseEventType type, IWindow window, Vector2 point, InputModifiers modifiers, IWindow over = null)
+    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, InputModifiers modifiers,
+        MouseButtons changed = MouseButtons.None, IWindow over = null)
     {
-        var device = MouseDevice.CurrentDevice;
         if (Mouse.Platform is SimulatedPointer pointer)
         {
             pointer.Position = window.PointToScreen(point);
             pointer.Window = over ?? window;
         }
 
-        device.ProcessEvent(new RawMouseEventArgs(type, (IInputComponent)window, point, modifiers, device, Now()));
+        PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, modifiers, Now())
+        {
+            ChangedButton = changed
+        });
     }
 
     private static Vector2 Middle(UIComponent element) =>

@@ -672,7 +672,7 @@
               StartLineCap="ConvexRound" EndLineCap="ConvexRound" StrokeDashStartCap="ConvexRound" StrokeDashEndCap="ConvexRound"
               HorizontalAlignment="Left">
             <Line.Triggers>
-                <PropertyTrigger Property="IsMouseOver" Value="true">
+                <PropertyTrigger Property="IsPointerOver" Value="true">
                     <PropertyTrigger.EnterActions>
                         <RunAnimationAction>
                             <Animation Duration="0:0:2.2" Easing="CubicOut">

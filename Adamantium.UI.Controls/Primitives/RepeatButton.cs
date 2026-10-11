@@ -43,28 +43,46 @@ public class RepeatButton : ButtonBase
         set => SetValue(IntervalProperty, value);
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);   // immediate click (ClickMode.Press) + capture + IsPressed
-        if (IsPressed) StartTimer();
+        base.OnPointerPressed(e);
+        if (IsPressed)
+        {
+            StartTimer();
+        }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
+        base.OnPointerReleased(e);
+        if (!IsPressed)
+        {
+            StopTimer();
+        }
+    }
+
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        if (IsPressed)
+        {
+            StartTimer();
+        }
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (!IsPressed)
+        {
+            StopTimer();
+        }
+    }
+
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
         StopTimer();
-    }
-
-    protected override void OnMouseEnter(MouseEventArgs e)
-    {
-        base.OnMouseEnter(e);                     // re-arms IsPressed if the pointer returns while still held
-        if (IsPressed) StartTimer();
-    }
-
-    protected override void OnMouseLeave(MouseEventArgs e)
-    {
-        base.OnMouseLeave(e);                     // disarms IsPressed (keeps capture) - pause repeating
-        if (!IsPressed) StopTimer();
     }
 
     private void StartTimer()

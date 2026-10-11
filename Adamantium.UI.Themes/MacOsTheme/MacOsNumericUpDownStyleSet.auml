@@ -124,7 +124,7 @@
         </MultiTrigger>
     </Style>
 
-    <!-- States. No IsMouseOver among them, deliberately - see the head of this file. Read-only and "no typing allowed"
+    <!-- States. No IsPointerOver among them, deliberately - see the head of this file. Read-only and "no typing allowed"
          both mean the editor must refuse a keystroke, so both project onto its IsReadOnly. -->
     <Style Selector="NumericUpDown">
         <PropertyTrigger Property="AreButtonsVisible" Value="false">

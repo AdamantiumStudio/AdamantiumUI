@@ -418,7 +418,7 @@
     </Style>
 
     <Style Selector="PaneSplitter">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
         </PropertyTrigger>
         <!-- And it STAYS lit while dragging: the pointer leaves the band the moment the boundary starts moving, so

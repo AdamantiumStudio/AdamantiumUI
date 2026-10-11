@@ -111,13 +111,13 @@ public class RibbonApplicationMenu : Selector
         Unwire(row);
 
         row.Click += OnRowClick;
-        row.MouseEnter += OnRowMouseEnter;
+        row.PointerEntered += OnRowPointerEntered;
     }
 
     private void Unwire(RibbonApplicationMenuItem row)
     {
         row.Click -= OnRowClick;
-        row.MouseEnter -= OnRowMouseEnter;
+        row.PointerEntered -= OnRowPointerEntered;
     }
 
     public object Header
@@ -222,7 +222,7 @@ public class RibbonApplicationMenu : Selector
 
     // Only ANOTHER row replaces the preview. Dropping it when the pointer leaves a row would take the page away while
     // someone is walking towards it - the pane is where the buttons are, and the way there is off the rail.
-    private void OnRowMouseEnter(object sender, Core.Input.MouseEventArgs e)
+    private void OnRowPointerEntered(object sender, Core.Input.PointerEventArgs e)
     {
         if (IsBackstage || sender is not RibbonApplicationMenuItem { PageContent: not null } row) return;
 

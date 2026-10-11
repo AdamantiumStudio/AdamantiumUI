@@ -178,7 +178,7 @@
                                     Value="{ObservableResource TextFillColorDisabled}"/>
                             <Setter TargetName="PART_Reset" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
-                        <PropertyTrigger Property="IsMouseOver" Value="true">
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="RowBorder" Property="Background"
                                     Value="{ResourceReference SubtleFillColorSecondary}"/>
                         </PropertyTrigger>

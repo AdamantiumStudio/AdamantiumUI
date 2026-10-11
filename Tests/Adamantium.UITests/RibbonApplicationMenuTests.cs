@@ -22,13 +22,9 @@ public class RibbonApplicationMenuTests
         ((IObservableComponent)row).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, row)
         { RoutedEvent = ButtonBase.ClickEvent });
 
-    private static void PointAt(RibbonApplicationMenuItem row) =>
-        ((IObservableComponent)row).RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
-        { RoutedEvent = Mouse.MouseEnterEvent });
+    private static void PointAt(RibbonApplicationMenuItem row) => PointerInput.Enter(row);
 
-    private static void PointAway(RibbonApplicationMenuItem row) =>
-        ((IObservableComponent)row).RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.None, 0)
-        { RoutedEvent = Mouse.MouseLeaveEvent });
+    private static void PointAway(RibbonApplicationMenuItem row) => PointerInput.Exit(row);
 
     // The rail, reduced to the one part the containers come out of - a selection only reaches a row that exists.
     private static ControlTemplate RailTemplate() => new(() =>

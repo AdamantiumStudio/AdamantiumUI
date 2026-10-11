@@ -140,7 +140,7 @@
         <PropertyTrigger Property="IsManualEntryEnabled" Value="false">
             <Setter TargetName="PART_TextBox" Property="IsReadOnly" Value="true"/>
         </PropertyTrigger>
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">

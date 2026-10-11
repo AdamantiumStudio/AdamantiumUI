@@ -97,7 +97,7 @@
     </Style>
 
     <Style Selector="DropDown">
-        <!-- No IsMouseOver trigger - see the header. -->
+        <!-- No IsPointerOver trigger - see the header. -->
         <PropertyTrigger Property="IsDropDownOpen" Value="true">
             <Setter TargetName="PART_Header" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
         </PropertyTrigger>

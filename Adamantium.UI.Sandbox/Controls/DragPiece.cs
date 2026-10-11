@@ -19,20 +19,24 @@ public class DragPiece : ContentControl
         if (newContent is IUIComponent visual) visual.IsHitTestVisible = false;
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left) return;
+
         _dragging = true;
         _pressedAt = PointerInRoot(e);
         _startLeft = Canvas.GetLeft(this);
         _startTop = Canvas.GetTop(this);
-        CaptureMouse();   // the move is routed to the CAPTURED element; without it the piece stops following at its edge
+        e.Pointer.Capture(this);   // the move is routed to the CAPTURED element; without it the piece stops following at its edge
         e.Handled = true;
     }
 
     // Measured from the PRESS in the ROOT's space, not step by step: the piece moves as it is dragged, so a delta taken
     // against its own position would chase itself.
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
+        base.OnPointerMoved(e);
         if (!_dragging) return;
 
         var delta = PointerInRoot(e) - _pressedAt;
@@ -41,16 +45,17 @@ public class DragPiece : ContentControl
         e.Handled = true;
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        if (!_dragging) return;
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left || !_dragging) return;
 
         _dragging = false;
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
         e.Handled = true;
     }
 
-    private Vector2 PointerInRoot(MouseEventArgs e)
+    private Vector2 PointerInRoot(PointerEventArgs e)
     {
         IUIComponent root = this;
         while (root.VisualParent is { } parent) root = parent;

@@ -103,8 +103,8 @@ public class TextBoxBidiTests
         tb.CaretIndex = 0;
         var caret = tb.CaretRect(0);
         var y = caret.Y + caret.Height / 2;
-        tb.SurfaceMouseDown(tb.CaretRect(3).X - 1, y, extend: false);
-        tb.SurfaceMouseMove(tb.CaretRect(6).X - 1, y);
+        tb.SurfacePointerDown(tb.CaretRect(3).X - 1, y, extend: false);
+        tb.SurfacePointerMove(tb.CaretRect(6).X - 1, y);
         return tb;
     }
 }

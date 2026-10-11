@@ -989,8 +989,8 @@ public class PropertyGridTests
     }
 
     // The WHOLE LINE opens a composite, not only the fourteen pixels of chevron beside it. Raised on the LABEL inside
-    // the name presenter, which is where a press actually lands - and the point of the test: MouseLeftButtonDown is
-    // DIRECT, so a handler on the presenter heard nothing at all, and only a bubbling event reaches the row from
+    // the name presenter, which is where a press actually lands - and the point of the test: the old left-button
+    // event was DIRECT, so a handler on the presenter heard nothing at all, and only a bubbling event reaches the row from
     // whatever the template put under the pointer.
     [Test]
     public void PressingTheNameOpensAComposite()
@@ -1017,8 +1017,7 @@ public class PropertyGridTests
         row.Measure(new Size(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
-        ((IObservableComponent)label).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = Mouse.MouseDownEvent });
+        PointerInput.Press(label);
 
         Assert.Multiple(() =>
         {
@@ -1052,8 +1051,7 @@ public class PropertyGridTests
         row.Measure(new Size(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
-        ((IObservableComponent)value).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = Mouse.MouseDownEvent });
+        PointerInput.Press(value);
 
         Assert.That(composite.IsExpanded, Is.True);
     }
@@ -1083,8 +1081,7 @@ public class PropertyGridTests
         row.Measure(new Size(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
-        ((IObservableComponent)button).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = Mouse.MouseDownEvent });
+        PointerInput.Press(button);
 
         Assert.That(composite.IsExpanded, Is.False, "the press went through the button and folded the row");
     }

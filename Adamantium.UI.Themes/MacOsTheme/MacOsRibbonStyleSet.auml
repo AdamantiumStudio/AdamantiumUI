@@ -207,7 +207,7 @@
     </Style>
 
     <Style Selector="ToggleButton.RibbonMinimizeButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -264,7 +264,7 @@
     </Style>
 
     <Style Selector="RibbonTabHeader">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsSelected" Value="true">
@@ -405,7 +405,7 @@
          already visibly a control). A FLAT GLYPH has no border to say that with, so it has to answer the pointer, or it
          reads as an ornament painted on the strip. -->
     <Style Selector="RepeatButton.RibbonScrollButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>
@@ -652,13 +652,13 @@
          whole set. Same rule as every flat glyph in this theme: no border to say it is a control, so the pointer has
          to be answered. -->
     <Style Selector="RepeatButton.GalleryArrow">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>
 
     <Style Selector="Button.GalleryArrow">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>
@@ -712,7 +712,7 @@
     </Style>
 
     <Style Selector="RibbonGalleryItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsSelected" Value="true">
@@ -737,7 +737,7 @@
     <!-- A group that gave up its layout stands as one flat chip; the same rule applies to it. Checked is its own
          question and stays where it is. -->
     <Style Selector="ToggleButton.CollapsedGroupButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>
@@ -817,7 +817,7 @@
     </Style>
 
     <Style Selector="RibbonButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1079,7 +1079,7 @@
     </Style>
 
     <Style Selector="ToggleButton.RibbonFileTab">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Overlay" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1125,7 +1125,7 @@
     </Style>
 
     <Style Selector="Button.RibbonBackstageBack">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1193,7 +1193,7 @@
     </Style>
 
     <Style Selector="RibbonApplicationMenuItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
@@ -1458,7 +1458,7 @@
         </PropertyTrigger>
         <MultiTrigger>
             <MultiTrigger.Conditions>
-                <Condition Property="IsMouseOver" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
                 <Condition Property="IsPointerOverDropDown" Value="false"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="ActionArea" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
@@ -1610,7 +1610,7 @@
          decision (see MacOsButtonStyleSet), so a chip that names a hover brush and no trigger names a color nothing
          ever reads. Checked stays in its own style below - the two states are separate questions. -->
     <Style Selector="ToggleButton.QuickAccessButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>
@@ -1642,7 +1642,7 @@
     </Style>
 
     <Style Selector="Button.QuickAccessButton">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
     </Style>

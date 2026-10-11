@@ -45,15 +45,15 @@ public sealed class TextPresenter : InputUIComponent
     // Non-input geometry still needs to be hit for the click-to-place-caret / drag-select gestures.
     public override bool HitTestCore(Vector2 localPoint) => true;
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (Owner == null) return;
-        var p = e.GetPosition(this);
+        base.OnPointerPressed(e);
+        if (Owner == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
-        // A repeat click SELECTS rather than places: the word under it, then the lot. Dragging is not the only way to
-        // select, and in a box where the drag is spoken for - a NumericUpDown scrubbing its value on that same press -
-        // it is the only way left.
+        var p = e.GetPosition(this);
         if (e.ClickCount >= 3)
         {
             Owner.SurfaceSelectAll();
@@ -68,9 +68,9 @@ public sealed class TextPresenter : InputUIComponent
         }
 
         var shift = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
-        Owner.SurfaceMouseDown(p.X, p.Y, shift);
+        Owner.SurfacePointerDown(p.X, p.Y, shift);
         _selecting = true;
-        CaptureMouse();
+        e.Pointer.Capture(this);
         e.Handled = true;
     }
 
@@ -80,20 +80,31 @@ public sealed class TextPresenter : InputUIComponent
     internal void CancelSelection()
     {
         _selecting = false;
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        ReleasePointerCaptures();
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (_selecting) { var p = e.GetPosition(this); Owner?.SurfaceMouseMove(p.X, p.Y); }
+        base.OnPointerMoved(e);
+        if (_selecting)
+        {
+            var p = e.GetPosition(this);
+            Owner?.SurfacePointerMove(p.X, p.Y);
+        }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (!_selecting) return;
+        base.OnPointerReleased(e);
+        if (!_selecting || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         _selecting = false;
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        if (ReferenceEquals(e.Pointer.Captured, this))
+        {
+            e.Pointer.Capture(null);
+        }
     }
 }

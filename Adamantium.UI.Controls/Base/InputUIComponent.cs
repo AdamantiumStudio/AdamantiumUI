@@ -23,81 +23,11 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     public static readonly RoutedEvent InitializedEvent = EventManager.RegisterRoutedEvent(nameof(Initialized),
         RoutingStrategy.Direct, typeof(RoutedEventHandler), typeof(UIComponent));
 
-    public static readonly RoutedEvent MouseLeftButtonDownEvent =
-        EventManager.RegisterRoutedEvent( nameof(MouseLeftButtonDown),
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseLeftButtonDownEvent =
-        EventManager.RegisterRoutedEvent("RawMouseLeftButtonDownEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseLeftButtonUpEvent =
-        EventManager.RegisterRoutedEvent("RawMouseLeftButtonUpEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseRightButtonDownEvent =
-        EventManager.RegisterRoutedEvent("RawMouseRightButtonDownEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseRightButtonUpEvent =
-        EventManager.RegisterRoutedEvent("RawMouseRightButtonUpEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseMiddleButtonDownEvent =
-        EventManager.RegisterRoutedEvent("RawMouseMiddleButtonDownEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent RawMouseMiddleButtonUpEvent =
-        EventManager.RegisterRoutedEvent("RawMouseMiddleButtonUpEvent",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent MouseLeftButtonUpEvent = 
-        EventManager.RegisterRoutedEvent("MouseLeftButtonUp",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent MouseRightButtonDownEvent =
-        EventManager.RegisterRoutedEvent("MouseRightButtonDown",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent MouseRightButtonUpEvent = EventManager.RegisterRoutedEvent(
-        "MouseRightButtonUp",
-        RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent MouseMiddleButtonDownEvent =
-        EventManager.RegisterRoutedEvent("MouseMiddleButtonDown",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent MouseMiddleButtonUpEvent = EventManager.RegisterRoutedEvent(
-        "MouseMiddleButtonUp",
-        RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-
-
-    public static readonly RoutedEvent PreviewMouseLeftButtonDownEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseLeftButtonDown",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent PreviewMouseLeftButtonUpEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseLeftButtonUp",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent PreviewMouseRightButtonDownEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseRightButtonDown",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent PreviewMouseRightButtonUpEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseRightButtonUp",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent PreviewMouseMiddleButtonDownEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseMiddleButtonDown",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
-    public static readonly RoutedEvent PreviewMouseMiddleButtonUpEvent =
-        EventManager.RegisterRoutedEvent("PreviewMouseMiddleButtonUp",
-            RoutingStrategy.Direct, typeof(MouseButtonEventHandler), typeof(UIComponent));
-
     #endregion
+
+    // The ids of the pointers over this element, so an enter told twice for one pointer still takes one exit to undo.
+    private List<uint> _pointersOver;
+    private List<uint> _pointersDirectlyOver;
     
     static InputUIComponent()
     {
@@ -112,46 +42,30 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         Keyboard.KeyUpEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(KeyUpHandler));
         Keyboard.PreviewKeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(PreviewKeyDownHandler));
         Keyboard.PreviewKeyUpEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(PreviewKeyUpHandler));
-        Mouse.MouseEnterEvent.RegisterClassHandler<IInputComponent>(new MouseEventHandler(MouseEnterHandler));
-        Mouse.MouseLeaveEvent.RegisterClassHandler<IInputComponent>(new MouseEventHandler(MouseLeaveHandler));
-        Mouse.DirectlyOverEnterEvent.RegisterClassHandler<IInputComponent>(new MouseEventHandler(DirectlyOverEnterHandler));
-        Mouse.DirectlyOverLeaveEvent.RegisterClassHandler<IInputComponent>(new MouseEventHandler(DirectlyOverLeaveHandler));
+        PointerEvents.PointerEnteredEvent.RegisterClassHandler<IInputComponent>(new PointerEventHandler(PointerEnteredHandler));
+        PointerEvents.PointerExitedEvent.RegisterClassHandler<IInputComponent>(new PointerEventHandler(PointerExitedHandler));
+        PointerEvents.DirectlyOverEnteredEvent.RegisterClassHandler<IInputComponent>(new PointerEventHandler(DirectlyOverEnteredHandler));
+        PointerEvents.DirectlyOverExitedEvent.RegisterClassHandler<IInputComponent>(new PointerEventHandler(DirectlyOverExitedHandler));
         Keyboard.GotKeyboardFocusEvent.RegisterClassHandler<IInputComponent>(
             new KeyboardGotFocusEventHandler(GotKeyboardFocusHandler));
         Keyboard.LostKeyboardFocusEvent.RegisterClassHandler<IInputComponent>(
             new KeyboardFocusChangedEventHandler(LostKeyboardFocusHandler));
-        Mouse.PreviewMouseDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseDownHandler));
-        Mouse.MouseDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseDownHandler));
-        Mouse.PreviewMouseUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseUpHandler));
-        Mouse.MouseUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseUpHandler));
-        Mouse.RawMouseDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseDownHandler));
-        Mouse.RawMouseUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseUpHandler));
-        Mouse.MouseMoveEvent.RegisterClassHandler<IInputComponent>(new MouseEventHandler(MouseMoveHandler));
-        Mouse.RawMouseMoveEvent.RegisterClassHandler<IInputComponent>(new RawMouseEventHandler(RawMouseMoveHandler));
+        PointerEvents.PreviewPointerPressedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerPressedEventHandler((sender, e) => (sender as InputUIComponent)?.OnPreviewPointerPressed(e)));
+        PointerEvents.PointerPressedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerPressedEventHandler((sender, e) => (sender as InputUIComponent)?.OnPointerPressed(e)));
+        PointerEvents.PreviewPointerReleasedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerReleasedEventHandler((sender, e) => (sender as InputUIComponent)?.OnPreviewPointerReleased(e)));
+        PointerEvents.PointerReleasedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerReleasedEventHandler((sender, e) => (sender as InputUIComponent)?.OnPointerReleased(e)));
+        PointerEvents.PointerMovedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerEventHandler((sender, e) => (sender as InputUIComponent)?.OnPointerMoved(e)));
+        PointerEvents.PointerCaptureLostEvent.RegisterClassHandler<IInputComponent>(
+            new PointerEventHandler((sender, e) => (sender as InputUIComponent)?.OnPointerCaptureLost(e)));
+        Mouse.RawMouseMoveEvent.RegisterClassHandler<IInputComponent>(
+            new RawMouseEventHandler((sender, e) => (sender as InputUIComponent)?.OnRawMouseMove(e)));
 
-        PreviewMouseLeftButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseLeftButtonDownHandler));
-        PreviewMouseLeftButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseLeftButtonUpHandler));
-        MouseLeftButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseLeftButtonDownHandler));
-        MouseLeftButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseLeftButtonUpHandler));
-
-        PreviewMouseRightButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseRightButtonDownHandler));
-        PreviewMouseRightButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseRightButtonUpHandler));
-        MouseRightButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseRightButtonDownHandler));
-        MouseRightButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseRightButtonUpHandler));
-
-        PreviewMouseMiddleButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseMiddleButtonDownHandler));
-        PreviewMouseMiddleButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(PreviewMouseMiddleButtonUpHandler));
-        MouseMiddleButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseMiddleButtonDownHandler));
-        MouseMiddleButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(MouseMiddleButtonUpHandler));
-
-        RawMouseLeftButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseLeftButtonDownHandler));
-        RawMouseLeftButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseLeftButtonUpHandler));
-        RawMouseRightButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseRightButtonDownHandler));
-        RawMouseRightButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseRightButtonUpHandler));
-        RawMouseMiddleButtonDownEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseMiddleButtonDownHandler));
-        RawMouseMiddleButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(RawMouseMiddleButtonUpHandler));
-
-        MouseRightButtonUpEvent.RegisterClassHandler<IInputComponent>(new MouseButtonEventHandler(OpenContextMenuHandler));
+        PointerEvents.PointerReleasedEvent.RegisterClassHandler<IInputComponent>(new PointerReleasedEventHandler(OpenContextMenuHandler));
         Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OpenContextMenuByKeyHandler));
 
         // The one place guaranteed to run before any element exists.
@@ -160,10 +74,12 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         KeyboardNavigation.HostOf = element => Popup.HostOf(element);
     }
 
-    // Right-button-up is Direct, so the walk up finds the nearest ContextMenu.
-    private static void OpenContextMenuHandler(object sender, MouseButtonEventArgs e)
+    private static void OpenContextMenuHandler(object sender, PointerReleasedEventArgs e)
     {
-        if (e.Handled || ContextMenuHost(sender as IUIComponent) is not { } host) return;
+        if (e.Handled || e.ChangedButton != MouseButtons.Right || ContextMenuHost(sender as IUIComponent) is not { } host)
+        {
+            return;
+        }
 
         host.ContextMenu.Open(host, e.GetPosition(host));
         e.Handled = true;
@@ -239,8 +155,9 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         AdamantiumProperty.RegisterReadOnly(nameof(IsKeyboardFocused),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
     
-    public static readonly AdamantiumProperty IsMouseOverProperty =
-        AdamantiumProperty.RegisterReadOnly(nameof(IsMouseOver),
+    /// <summary>A pointer is over the element or one of its descendants: the mouse or a pen in range, or a finger down.</summary>
+    public static readonly AdamantiumProperty IsPointerOverProperty =
+        AdamantiumProperty.RegisterReadOnly(nameof(IsPointerOver),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
 
     /// <summary>The focus is on this element or inside it - what a composite control, whose editor holds the focus, asks.</summary>
@@ -268,8 +185,9 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         set => SetValue(FocusVisualStyleProperty, value);
     }
 
-    public static readonly AdamantiumProperty IsMouseDirectlyOverProperty =
-        AdamantiumProperty.RegisterReadOnly(nameof(IsMouseDirectlyOver),
+    /// <summary>A pointer is over the element itself, not one of its descendants.</summary>
+    public static readonly AdamantiumProperty IsPointerDirectlyOverProperty =
+        AdamantiumProperty.RegisterReadOnly(nameof(IsPointerDirectlyOver),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
     
     public static readonly AdamantiumProperty IsInitializedProperty =
@@ -286,10 +204,10 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         private set => SetValue(IsInitializedProperty, value);
     }
     
-    public bool IsMouseOver
+    public bool IsPointerOver
     {
-        get => GetValue<bool>(IsMouseOverProperty);
-        private set => SetValue(IsMouseOverProperty, value);
+        get => GetValue<bool>(IsPointerOverProperty);
+        private set => SetValue(IsPointerOverProperty, value);
     }
 
     public bool IsKeyboardFocusWithin
@@ -304,10 +222,10 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         private set => SetValue(IsFocusVisibleProperty, value);
     }
 
-    public bool IsMouseDirectlyOver
+    public bool IsPointerDirectlyOver
     {
-        get => GetValue<bool>(IsMouseDirectlyOverProperty);
-        private set => SetValue(IsMouseDirectlyOverProperty, value);
+        get => GetValue<bool>(IsPointerDirectlyOverProperty);
+        private set => SetValue(IsPointerDirectlyOverProperty, value);
     }
 
     
@@ -361,74 +279,6 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         remove => RemoveHandler(Mouse.RawMouseMoveEvent, value);
     }
 
-    public event MouseButtonEventHandler RawMouseDown
-    {
-        add => AddHandler(Mouse.RawMouseDownEvent, value);
-        remove => RemoveHandler(Mouse.RawMouseDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseUp
-    {
-        add => AddHandler(Mouse.RawMouseUpEvent, value);
-        remove => RemoveHandler(Mouse.RawMouseUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseLeftButtonDown
-    {
-        add => AddHandler(RawMouseLeftButtonDownEvent, value);
-        remove => RemoveHandler(RawMouseLeftButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseLeftButtonUp
-    {
-        add => AddHandler(RawMouseLeftButtonUpEvent, value);
-        remove => RemoveHandler(RawMouseLeftButtonUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseRightButtonDown
-    {
-        add => AddHandler(RawMouseRightButtonDownEvent, value);
-        remove => RemoveHandler(RawMouseRightButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseRightButtonUp
-    {
-        add => AddHandler(RawMouseRightButtonUpEvent, value);
-        remove => RemoveHandler(RawMouseRightButtonUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseMiddleButtonDown
-    {
-        add => AddHandler(RawMouseMiddleButtonDownEvent, value);
-        remove => RemoveHandler(RawMouseMiddleButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler RawMouseMiddleButtonUp
-    {
-        add => AddHandler(RawMouseMiddleButtonUpEvent, value);
-        remove => RemoveHandler(RawMouseMiddleButtonUpEvent, value);
-    }
-
-    
-
-    public event MouseButtonEventHandler MouseDoubleClick
-    {
-        add => AddHandler(Mouse.MouseDoubleClickEvent, value);
-        remove => RemoveHandler(Mouse.MouseDoubleClickEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseMiddleButtonDown
-    {
-        add => AddHandler(MouseMiddleButtonDownEvent, value);
-        remove => RemoveHandler(MouseMiddleButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseMiddleButtonUp
-    {
-        add => AddHandler(MouseMiddleButtonUpEvent, value);
-        remove => RemoveHandler(MouseMiddleButtonUpEvent, value);
-    }
-
     public event RoutedEventHandler GotFocus
     {
         add => AddHandler(FocusManager.GotFocusEvent, value);
@@ -465,40 +315,46 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         remove => RemoveHandler(Keyboard.LostKeyboardFocusEvent, value);
     }
 
-    public event MouseEventHandler GotMouseCapture
+    public event PointerEventHandler GotPointerCapture
     {
-        add => AddHandler(Mouse.GotMouseCaptureEvent, value);
-        remove => RemoveHandler(Mouse.GotMouseCaptureEvent, value);
+        add => AddHandler(PointerEvents.GotPointerCaptureEvent, value);
+        remove => RemoveHandler(PointerEvents.GotPointerCaptureEvent, value);
     }
 
-    public event MouseEventHandler LostMouseCapture
+    public event PointerEventHandler PointerCaptureLost
     {
-        add => AddHandler(Mouse.LostMouseCaptureEvent, value);
-        remove => RemoveHandler(Mouse.LostMouseCaptureEvent, value);
+        add => AddHandler(PointerEvents.PointerCaptureLostEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerCaptureLostEvent, value);
     }
 
-    public event MouseEventHandler MouseEnter
+    public event PointerEventHandler PointerEntered
     {
-        add => AddHandler(Mouse.MouseEnterEvent, value);
-        remove => RemoveHandler(Mouse.MouseEnterEvent, value);
+        add => AddHandler(PointerEvents.PointerEnteredEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerEnteredEvent, value);
     }
 
-    public event MouseEventHandler MouseLeave
+    public event PointerEventHandler PointerExited
     {
-        add => AddHandler(Mouse.MouseLeaveEvent, value);
-        remove => RemoveHandler(Mouse.MouseLeaveEvent, value);
+        add => AddHandler(PointerEvents.PointerExitedEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerExitedEvent, value);
     }
 
-    public event MouseEventHandler MouseMove
+    public event PointerEventHandler PointerMoved
     {
-        add => AddHandler(Mouse.MouseMoveEvent, value);
-        remove => RemoveHandler(Mouse.MouseMoveEvent, value);
+        add => AddHandler(PointerEvents.PointerMovedEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerMovedEvent, value);
     }
 
-    public event MouseWheelEventHandler MouseWheel
+    public event PointerWheelEventHandler PointerWheelChanged
     {
-        add => AddHandler(Mouse.MouseWheelEvent, value);
-        remove => RemoveHandler(Mouse.MouseWheelEvent, value);
+        add => AddHandler(PointerEvents.PointerWheelChangedEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerWheelChangedEvent, value);
+    }
+
+    public event PointerEventHandler PointerCanceled
+    {
+        add => AddHandler(PointerEvents.PointerCanceledEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerCanceledEvent, value);
     }
 
     public event DragDropEventHandler DragEnter
@@ -549,40 +405,16 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         remove => RemoveHandler(DragDropEvents.PreviewDropEvent, value);
     }
 
-    public event MouseButtonEventHandler MouseDown
+    public event PointerPressedEventHandler PointerPressed
     {
-        add => AddHandler(Mouse.MouseDownEvent, value);
-        remove => RemoveHandler(Mouse.MouseDownEvent, value);
+        add => AddHandler(PointerEvents.PointerPressedEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerPressedEvent, value);
     }
 
-    public event MouseButtonEventHandler MouseUp
+    public event PointerReleasedEventHandler PointerReleased
     {
-        add => AddHandler(Mouse.MouseUpEvent, value);
-        remove => RemoveHandler(Mouse.MouseUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseLeftButtonDown
-    {
-        add => AddHandler(MouseLeftButtonDownEvent, value);
-        remove => RemoveHandler(MouseLeftButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseLeftButtonUp
-    {
-        add => AddHandler(MouseLeftButtonUpEvent, value);
-        remove => RemoveHandler(MouseLeftButtonUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseRightButtonDown
-    {
-        add => AddHandler(MouseRightButtonDownEvent, value);
-        remove => RemoveHandler(MouseRightButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler MouseRightButtonUp
-    {
-        add => AddHandler(MouseRightButtonUpEvent, value);
-        remove => RemoveHandler(MouseRightButtonUpEvent, value);
+        add => AddHandler(PointerEvents.PointerReleasedEvent, value);
+        remove => RemoveHandler(PointerEvents.PointerReleasedEvent, value);
     }
 
     public event TextInputEventHandler TextInput
@@ -616,64 +448,28 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         remove => RemoveHandler(Keyboard.PreviewLostKeyboardFocusEvent, value);
     }
 
-    public event MouseEventHandler PreviewGotMouseCapture
+    public event PointerPressedEventHandler PreviewPointerPressed
     {
-        add => AddHandler(Mouse.PreviewGotMouseCaptureEvent, value);
-        remove => RemoveHandler(Mouse.PreviewGotMouseCaptureEvent, value);
+        add => AddHandler(PointerEvents.PreviewPointerPressedEvent, value);
+        remove => RemoveHandler(PointerEvents.PreviewPointerPressedEvent, value);
     }
 
-    public event MouseEventHandler PreviewLostMouseCapture
+    public event PointerReleasedEventHandler PreviewPointerReleased
     {
-        add => AddHandler(Mouse.PreviewLostMouseCaptureEvent, value);
-        remove => RemoveHandler(Mouse.PreviewLostMouseCaptureEvent, value);
+        add => AddHandler(PointerEvents.PreviewPointerReleasedEvent, value);
+        remove => RemoveHandler(PointerEvents.PreviewPointerReleasedEvent, value);
     }
 
-    public event MouseButtonEventHandler PreviewMouseDown
+    public event PointerWheelEventHandler PreviewPointerWheelChanged
     {
-        add => AddHandler(Mouse.PreviewMouseDownEvent, value);
-        remove => RemoveHandler(Mouse.PreviewMouseDownEvent, value);
+        add => AddHandler(PointerEvents.PreviewPointerWheelChangedEvent, value);
+        remove => RemoveHandler(PointerEvents.PreviewPointerWheelChangedEvent, value);
     }
 
-    public event MouseButtonEventHandler PreviewMouseUp
+    public event PointerEventHandler PreviewPointerMoved
     {
-        add => AddHandler(Mouse.PreviewMouseUpEvent, value);
-        remove => RemoveHandler(Mouse.PreviewMouseUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler PreviewMouseLeftButtonDown
-    {
-        add => AddHandler(PreviewMouseLeftButtonDownEvent, value);
-        remove => RemoveHandler(PreviewMouseLeftButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler PreviewMouseLeftButtonUp
-    {
-        add => AddHandler(PreviewMouseLeftButtonUpEvent, value);
-        remove => RemoveHandler(PreviewMouseLeftButtonUpEvent, value);
-    }
-
-    public event MouseButtonEventHandler PreviewMouseRightButtonDown
-    {
-        add => AddHandler(PreviewMouseRightButtonDownEvent, value);
-        remove => RemoveHandler(PreviewMouseRightButtonDownEvent, value);
-    }
-
-    public event MouseButtonEventHandler PreviewMouseRightButtonUp
-    {
-        add => AddHandler(PreviewMouseRightButtonUpEvent, value);
-        remove => RemoveHandler(PreviewMouseRightButtonUpEvent, value);
-    }
-
-    public event MouseWheelEventHandler PreviewMouseWheel
-    {
-        add => AddHandler(Mouse.PreviewMouseWheelEvent, value);
-        remove => RemoveHandler(Mouse.PreviewMouseWheelEvent, value);
-    }
-
-    public event MouseEventHandler PreviewMouseMove
-    {
-        add => AddHandler(Mouse.PreviewMouseMoveEvent, value);
-        remove => RemoveHandler(Mouse.PreviewMouseMoveEvent, value);
+        add => AddHandler(PointerEvents.PreviewPointerMovedEvent, value);
+        remove => RemoveHandler(PointerEvents.PreviewPointerMovedEvent, value);
     }
 
     public event TextInputEventHandler PreviewTextInput
@@ -682,12 +478,6 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         remove => RemoveHandler(Keyboard.PreviewTextInputEvent, value);
     }
 
-    public event MouseButtonEventHandler PreviewMouseDoubleClick
-    {
-        add => AddHandler(Mouse.PreviewMouseDoubleClickEvent, value);
-        remove => RemoveHandler(Mouse.PreviewMouseDoubleClickEvent, value);
-    }
-    
     private static void GotFocusHandler(object sender, RoutedEventArgs e)
     {
         var ui = sender as InputUIComponent;
@@ -769,36 +559,54 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         }
     }
 
-    private static void MouseEnterHandler(object sender, MouseEventArgs e)
+    private static void PointerEnteredHandler(object sender, PointerEventArgs e)
     {
-        if (sender is InputUIComponent ui && !ui.IsMouseOver)
+        if (sender is not InputUIComponent ui || !Add(ref ui._pointersOver, e.Pointer.Id))
         {
-            ui.OnMouseEnter(e);
+            return;
+        }
+
+        ui.IsPointerOver = true;
+        ui.OnPointerEntered(e);
+    }
+
+    private static void PointerExitedHandler(object sender, PointerEventArgs e)
+    {
+        if (sender is not InputUIComponent ui || ui._pointersOver?.Remove(e.Pointer.Id) != true)
+        {
+            return;
+        }
+
+        ui.IsPointerOver = ui._pointersOver.Count > 0;
+        ui.OnPointerExited(e);
+    }
+
+    private static void DirectlyOverEnteredHandler(object sender, PointerEventArgs e)
+    {
+        if (sender is InputUIComponent ui && Add(ref ui._pointersDirectlyOver, e.Pointer.Id))
+        {
+            ui.IsPointerDirectlyOver = true;
         }
     }
 
-    private static void MouseLeaveHandler(object sender, MouseEventArgs e)
+    private static void DirectlyOverExitedHandler(object sender, PointerEventArgs e)
     {
-        if (sender is InputUIComponent ui && ui.IsMouseOver)
+        if (sender is InputUIComponent ui && ui._pointersDirectlyOver?.Remove(e.Pointer.Id) == true)
         {
-            ui.OnMouseLeave(e);
+            ui.IsPointerDirectlyOver = ui._pointersDirectlyOver.Count > 0;
         }
     }
 
-    private static void DirectlyOverEnterHandler(object sender, MouseEventArgs e)
+    private static bool Add(ref List<uint> ids, uint id)
     {
-        if (sender is InputUIComponent ui)
+        ids ??= new List<uint>(1);
+        if (ids.Contains(id))
         {
-            ui.IsMouseDirectlyOver = true;
+            return false;
         }
-    }
 
-    private static void DirectlyOverLeaveHandler(object sender, MouseEventArgs e)
-    {
-        if (sender is InputUIComponent ui)
-        {
-            ui.IsMouseDirectlyOver = false;
-        }
+        ids.Add(id);
+        return true;
     }
 
     private static void GotKeyboardFocusHandler(object sender, KeyboardGotFocusEventArgs e)
@@ -815,280 +623,6 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         {
             ui.IsKeyboardFocused = false;
         }
-    }
-
-    private static void PreviewMouseDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = PreviewMouseLeftButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = PreviewMouseRightButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = PreviewMouseMiddleButtonDownEvent;
-            }
-            input.RaiseEvent(args);
-
-            RaiseDoubleClick(input, e, Mouse.PreviewMouseDoubleClickEvent);
-        }
-    }
-
-    private static void PreviewMouseUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = PreviewMouseLeftButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = PreviewMouseRightButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = PreviewMouseMiddleButtonUpEvent;
-            }
-            input.RaiseEvent(args);
-        }
-    }
-
-    private static void MouseDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = MouseLeftButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = MouseRightButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = MouseMiddleButtonDownEvent;
-            }
-
-            input.RaiseEvent(args);
-
-            RaiseDoubleClick(input, e, Mouse.MouseDoubleClickEvent);
-        }
-    }
-
-    // Its own args: handling the double click does not mark the press handled.
-    private static void RaiseDoubleClick(IInputComponent input, MouseButtonEventArgs e, RoutedEvent routedEvent)
-    {
-        // Exactly two: a third press is not another double click.
-        if (e.ClickCount != 2) return;
-
-        input.RaiseEvent(new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp)
-        {
-            ClickCount = e.ClickCount,
-            OriginalSource = e.OriginalSource,
-            RoutedEvent = routedEvent
-        });
-    }
-
-    private static void MouseUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = MouseLeftButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = MouseRightButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = MouseMiddleButtonUpEvent;
-            }
-
-            input.RaiseEvent(args);
-        }
-    }
-
-    private static void RawMouseDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = RawMouseLeftButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = RawMouseRightButtonDownEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = RawMouseMiddleButtonDownEvent;
-            }
-
-            if (e.ChangedButton != MouseButtons.None)
-            {
-                input.RaiseEvent(args);
-            }
-        }
-    }
-
-    private static void RawMouseUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputComponent input)
-        {
-            var args = new MouseButtonEventArgs(e.MouseDevice, e.ChangedButton, e.ButtonState, e.Modifiers, e.Timestamp) { ClickCount = e.ClickCount, OriginalSource = e.OriginalSource };
-            if (e.ChangedButton == MouseButtons.Left)
-            {
-                args.RoutedEvent = RawMouseLeftButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Right)
-            {
-                args.RoutedEvent = RawMouseRightButtonUpEvent;
-            }
-            else if (e.ChangedButton == MouseButtons.Middle)
-            {
-                args.RoutedEvent = RawMouseMiddleButtonUpEvent;
-            }
-
-            if (e.ChangedButton != MouseButtons.None)
-            {
-                input.RaiseEvent(args);
-            }
-        }
-    }
-
-    private static void RawMouseMoveHandler(object sender, UnboundMouseEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseMove(ui, e);
-    }
-
-    private static void MouseMoveHandler(object sender, MouseEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseMove(ui, e);
-    }
-
-    private static void PreviewMouseLeftButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseLeftButtonDown(ui, e);
-    }
-
-    private static void PreviewMouseLeftButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseLeftButtonUp(ui, e);
-    }
-
-    private static void MouseLeftButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseLeftButtonDown(ui, e);
-    }
-
-    private static void MouseLeftButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseLeftButtonUp(ui, e);
-    }
-
-    private static void PreviewMouseRightButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseRightButtonDown(ui, e);
-    }
-
-    private static void PreviewMouseRightButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseRightButtonUp(ui, e);
-    }
-
-    private static void MouseRightButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseRightButtonDown(ui, e);
-    }
-
-    private static void MouseRightButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseRightButtonUp(ui, e);
-    }
-
-    private static void PreviewMouseMiddleButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseMiddleButtonDown(ui, e);
-    }
-
-    private static void PreviewMouseMiddleButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnPreviewMouseMiddleButtonUp(ui, e);
-    }
-
-    private static void MouseMiddleButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseMiddleButtonDown(ui, e);
-    }
-
-    private static void MouseMiddleButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnMouseMiddleButtonUp(ui, e);
-    }
-
-    private static void RawMouseLeftButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseLeftButtonDown(ui, e);
-    }
-
-    private static void RawMouseLeftButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseLeftButtonUp(ui, e);
-    }
-
-    private static void RawMouseRightButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseRightButtonDown(ui, e);
-    }
-
-    private static void RawMouseRightButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseRightButtonUp(ui, e);
-    }
-
-    private static void RawMouseMiddleButtonDownHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseMiddleButtonDown(ui, e);
-    }
-
-    private static void RawMouseMiddleButtonUpHandler(object sender, MouseButtonEventArgs e)
-    {
-        var ui = sender as InputUIComponent;
-        ui?.OnRawMouseMiddleButtonUp(ui, e);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -1162,107 +696,43 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         
     }
 
-    protected virtual void OnRawMouseMove(object sender, UnboundMouseEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnMouseMove(object sender, MouseEventArgs e)
+    /// <summary>The mouse itself moved while this element has the focus, unbound by the screen's edges.</summary>
+    protected virtual void OnRawMouseMove(UnboundMouseEventArgs e)
     {
     }
 
-    protected virtual void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    /// <summary>A pointer moved over this element, or anywhere while this element holds it.</summary>
+    protected virtual void OnPointerMoved(PointerEventArgs e)
     {
-
     }
 
-    protected virtual void OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    /// <summary>A pointer is pressing, on the way down to the element it hit.</summary>
+    protected virtual void OnPreviewPointerPressed(PointerPressedEventArgs e)
     {
-
     }
 
-    protected virtual void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    /// <summary>A pointer pressed on this element or inside it: a mouse button (see
+    /// <see cref="PointerPressedEventArgs.ChangedButton"/>), a finger or a pen tip. Not called once an element inside
+    /// has handled the press; an element that must see it anyway adds a handler with handledEventsToo.</summary>
+    protected virtual void OnPointerPressed(PointerPressedEventArgs e)
     {
-
     }
 
-    protected virtual void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    /// <summary>A pointer is letting go, on the way down to the element it hit.</summary>
+    protected virtual void OnPreviewPointerReleased(PointerReleasedEventArgs e)
     {
-
     }
 
-    protected virtual void OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    /// <summary>A pointer let go over this element or inside it, or anywhere while this element holds it.</summary>
+    protected virtual void OnPointerReleased(PointerReleasedEventArgs e)
     {
-
     }
 
-    protected virtual void OnPreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    /// <summary>This element no longer holds a pointer it held.</summary>
+    protected virtual void OnPointerCaptureLost(PointerEventArgs e)
     {
-
     }
 
-    protected virtual void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnPreviewMouseMiddleButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnPreviewMouseMiddleButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnMouseMiddleButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnMouseMiddleButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-
-
-    protected virtual void OnRawMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnRawMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnRawMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnRawMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnRawMouseMiddleButtonDown(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-
-    protected virtual void OnRawMouseMiddleButtonUp(object sender, MouseButtonEventArgs e)
-    {
-
-    }
-    
     protected virtual void OnGotFocus(RoutedEventArgs e)
     {
         IsFocused = e.OriginalSource == this;
@@ -1337,50 +807,60 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         FocusManager.Release(this);
     }
 
-    protected virtual void OnMouseEnter(MouseEventArgs e)
+    /// <summary>A pointer came over this element or one of its descendants. The mouse and a pen show this element's
+    /// cursor.</summary>
+    protected virtual void OnPointerEntered(PointerEventArgs e)
     {
-        IsMouseOver = true;
-        Mouse.Cursor = Cursor;
+        if (e.Pointer.Type != PointerType.Touch)
+        {
+            Mouse.Cursor = Cursor;
+        }
     }
 
-    protected virtual void OnMouseLeave(MouseEventArgs e)
+    /// <summary>A pointer is no longer over this element or any of its descendants. Back over the parent, which raises
+    /// no enter, the parent's cursor returns; a captured drag dresses the pointer itself.</summary>
+    protected virtual void OnPointerExited(PointerEventArgs e)
     {
-        IsMouseOver = false;
-
-        // Back over the parent, which raises no enter: it restores its cursor. A captured drag dresses the pointer itself.
-        if (IsMouseCaptured || VisualParent is not UIComponent parent) return;
+        if (e.Pointer.Type == PointerType.Touch || ReferenceEquals(e.Pointer.Captured, this) || VisualParent is not UIComponent parent)
+        {
+            return;
+        }
 
         Mouse.Cursor = parent.Cursor;
     }
-    
-    public bool IsMouseCaptured => Mouse.Captured == this;
 
-    public bool CaptureMouse()
+    /// <summary>True while this element holds a pointer.</summary>
+    public bool IsPointerCaptured
     {
-        return Mouse.Capture(this);
+        get
+        {
+            foreach (var pointer in PointerDevice.Current.Pointers)
+            {
+                if (ReferenceEquals(pointer.Captured, this))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
-    public bool CaptureStylus()
+    /// <summary>Lets go of every pointer this element holds.</summary>
+    public void ReleasePointerCaptures()
     {
-        throw new NotImplementedException();
+        foreach (var pointer in PointerDevice.Current.Pointers.ToArray())
+        {
+            if (ReferenceEquals(pointer.Captured, this))
+            {
+                pointer.Capture(null);
+            }
+        }
     }
 
     public bool Focus()
     {
         return FocusManager.Focus(this);
-    }
-    
-    public void ReleaseMouseCapture()
-    {
-        if (IsMouseCaptured)
-        {
-            Mouse.Capture(null);
-        }
-    }
-
-    public void ReleaseStylusCapture()
-    {
-        throw new NotImplementedException();
     }
 
     protected override void OnRenderCompleted()

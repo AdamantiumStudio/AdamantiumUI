@@ -11,6 +11,16 @@ All packages share one version.
   `TranslateX`/`TranslateY` for a render transform. The render thread composes it too, so an animation of it is
   composited: a band can travel a fraction of its card whatever size the card is.
 
+- Pointer input, one model for the mouse, a finger and a pen: `Pointer` (each with its own position, capture and element
+  under it, so two fingers drag two things at once), `PointerType`, `PointerPoint` and `PointerPointProperties` (buttons,
+  pressure, tilt, twist, eraser, barrel button, contact size), and the events of `PointerEvents`: `PointerPressed`,
+  `PointerReleased`, `PointerMoved`, `PointerEntered`, `PointerExited`, `PointerWheelChanged`, `GotPointerCapture`,
+  `PointerCaptureLost`, `PointerCanceled`, with `Preview` tunnels for press, release, move and wheel.
+  `PointerDevice.Current` turns a platform's `RawPointerEventArgs` into them. A control overrides
+  `OnPointerPressed(PointerPressedEventArgs)` and the like, reads the button from `ChangedButton` and what is held from
+  `Properties`, and captures with `e.Pointer.Capture(this)`. `IsPointerOver` and `IsPointerDirectlyOver` count every
+  pointer over an element. The mouse is `Mouse.Pointer`.
+
 - `FocusManager.Reveal()` and `FocusManager.FocusRevealedEvent`: shows where the focus is without moving it. The first
   Tab after a click now lights the ring on the clicked control instead of jumping to the next one; the next Tab moves on.
 
@@ -685,6 +695,16 @@ All packages share one version.
 - `BusyIndicator.Shimmer` moves a glare band by `ShiftX` under the card's rounded clip instead of sliding three gradient
   stops, so the render thread plays it and it keeps gliding while the loop thread is busy; it looks the same.
 
+- A pointer event is one event along its whole route, as in WPF: an element that handles a press handles it for every
+  element after it, and their `OnPointerPressed` is not called. The left-button-down event used to be raised again,
+  unhandled, on every element of the route. So a press that a button, a check box or a text field inside a list row,
+  a tree row, a grid row or a tab takes no longer selects that row or tab, and a universe hosted in a window or a
+  `RenderTargetPanel` no longer gets a press, release or wheel a control in front of it handled. Something that must
+  see a gesture whatever handled it subscribes with `AddHandler(..., handledEventsToo: true)`, as drag and drop, a
+  list's double click, a `NumericUpDown`'s drag to scrub, an `OverlayWindow` coming to the front and the canvas's grips
+  now do.
+- Themes and triggers watch `IsPointerOver` instead of `IsMouseOver`.
+
 - A text block of 2048 glyphs or more builds quads only for the part its window shows and a window's height and width
   around it, instead of for the whole text. Scrolled past that band, the frame builds the new band and draws again;
   a copy of the block drawn by `RenderClones` builds the whole text, as before.
@@ -797,6 +817,14 @@ All packages share one version.
 
 ### Removed
 
+- The mouse events and their device, replaced by pointer input: `MouseDevice`, `MouseEventArgs`, `MouseButtonEventArgs`,
+  `MouseWheelEventArgs` and their handlers, `MouseButtonState`, `RawMouseEventArgs`, `RawMouseWheelEventArgs`,
+  `RawInputMouseEventArgs` and `RawMouseEventType`; `MouseDown`, `MouseUp`, `MouseMove`, `MouseWheel`, `MouseEnter`,
+  `MouseLeave`, `MouseDoubleClick`, `GotMouseCapture`, `LostMouseCapture`, the per-button events (`MouseLeftButtonDown`
+  and the rest, left, middle and right, down and up, with their `Preview` and `Raw` forms) and their `On...` methods;
+  `IsMouseOver`, `IsMouseDirectlyOver`, `IsMouseCaptured`, `CaptureMouse`, `ReleaseMouseCapture`, `CaptureStylus` and
+  `ReleaseStylusCapture`. `Mouse` keeps the cursor, the desktop position and `RawMouseMove`; a double click is
+  `PointerPressedEventArgs.ClickCount`.
 - `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 

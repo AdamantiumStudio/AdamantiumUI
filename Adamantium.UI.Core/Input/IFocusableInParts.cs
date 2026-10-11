@@ -5,5 +5,5 @@ namespace Adamantium.UI.Core.Input;
 public interface IFocusableInParts
 {
     /// <summary>Whether the press lands on a part that takes the keyboard.</summary>
-    bool TakesFocusAt(MouseButtonEventArgs e);
+    bool TakesFocusAt(PointerPressedEventArgs e);
 }

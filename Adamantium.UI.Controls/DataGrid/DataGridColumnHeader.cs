@@ -163,14 +163,14 @@ public class DataGridColumnHeader : ContentControl
     {
         base.OnApplyTemplate();
 
-        if (_filterButton != null) _filterButton.MouseLeftButtonDown -= OnFilterPressed;
+        if (_filterButton != null) _filterButton.PointerPressed -= OnFilterPressed;
         if (_view != null) _view.Closed -= OnFilterClosed;
         _view = null;
 
         _popup = GetTemplateChild("PART_FilterPopup") as Popup;
         _filterButton = GetTemplateChild("PART_FilterButton") as IInputComponent;
 
-        if (_filterButton != null) _filterButton.MouseLeftButtonDown += OnFilterPressed;
+        if (_filterButton != null) _filterButton.PointerPressed += OnFilterPressed;
         if (_filterButton is UIComponent funnel) funnel.Cursor = Cursors.Hand;
 
         if (_popup != null)
@@ -187,7 +187,7 @@ public class DataGridColumnHeader : ContentControl
     {
         base.OnRemoveTemplate();
 
-        if (_filterButton != null) _filterButton.MouseLeftButtonDown -= OnFilterPressed;
+        if (_filterButton != null) _filterButton.PointerPressed -= OnFilterPressed;
         if (_view != null) _view.Closed -= OnFilterClosed;
 
         _popup = null;
@@ -221,8 +221,8 @@ public class DataGridColumnHeader : ContentControl
         if (owner?.GridLinesBrush is { } brush) GridLineBrush = brush;
     }
 
-    // A press on the funnel is NOT a press on the header: mouse-down is raised per element, so without this the strip's
-    // own handler would sort the column on the way past.
+    // A press on the funnel is NOT a press on the header, even one the funnel did not take: without this the strip's own
+    // handler would sort the column on the way past.
     internal bool PressedFilter(object source)
     {
         for (var node = source as IUIComponent; node != null; node = node.VisualParent)
@@ -233,9 +233,12 @@ public class DataGridColumnHeader : ContentControl
         return false;
     }
 
-    private void OnFilterPressed(object sender, MouseButtonEventArgs e)
+    private void OnFilterPressed(object sender, PointerPressedEventArgs e)
     {
-        if (PressFilter()) e.Handled = true;
+        if (e.ChangedButton == MouseButtons.Left && PressFilter())
+        {
+            e.Handled = true;
+        }
     }
 
     /// <summary>The funnel, while the column can be filtered.</summary>

@@ -167,9 +167,9 @@ public class GraphiteThemeTests
         graphite.Initialize();
         fluent.Initialize();
 
-        // "TabItem watches IsMouseOver" - the type, its classes, and one property the theme reacts to. A MultiTrigger
+        // "TabItem watches IsPointerOver" - the type, its classes, and one property the theme reacts to. A MultiTrigger
         // contributes each of its conditions: reacting to ShowCloseButton alone is not reacting to
-        // ShowCloseButton+IsMouseOver, but a theme that never mentions the property at all is the case worth catching.
+        // ShowCloseButton+IsPointerOver, but a theme that never mentions the property at all is the case worth catching.
         static HashSet<string> WatchedStates(ITheme theme)
         {
             var watched = new HashSet<string>();
@@ -206,7 +206,7 @@ public class GraphiteThemeTests
             // Fluent fades its scrollbars in on hover. Graphite's are ALWAYS visible - in a dense editor a bar that
             // appears only once you are already pointing at it cannot be used to see where you are in a long file - so
             // there is no hover state to have.
-            "Adamantium.UI.Controls.ScrollViewer -> IsMouseOver",
+            "Adamantium.UI.Controls.ScrollViewer -> IsPointerOver",
         };
 
         var covered = WatchedStates(graphite);

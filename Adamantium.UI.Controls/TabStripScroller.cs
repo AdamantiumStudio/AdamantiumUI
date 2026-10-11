@@ -49,7 +49,7 @@ public class TabStripScroller : InputUIComponent, IContainer
     public TabStripScroller()
     {
         ClipToBounds = true;
-        MouseWheel += OnMouseWheel;
+        PointerWheelChanged += OnWheel;
 
         // A drag crossing the strip pans it - but that is driven by the drag itself (DragDrop.AutoScroll), not by a
         // handler here: drop events only reach a DROP TARGET, and a strip that declared itself one would start
@@ -300,7 +300,7 @@ public class TabStripScroller : InputUIComponent, IContainer
         return finalSize;
     }
 
-    private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, PointerWheelEventArgs e)
     {
         var max = Math.Max(0, _extent - _viewport);
         if (max <= 0) return;   // nothing to pan

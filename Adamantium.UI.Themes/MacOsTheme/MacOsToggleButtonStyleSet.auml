@@ -58,7 +58,7 @@
     </Style>
 
     <Style Selector="ToggleButton">
-        <!-- No IsMouseOver trigger, in either state - see the head of this file. -->
+        <!-- No IsPointerOver trigger, in either state - see the head of this file. -->
         <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="InnerBorder" Property="Background" Value="{TemplateBinding BackgroundChecked}"/>
             <Setter TargetName="InnerBorder" Property="BorderBrush" Value="{TemplateBinding BorderBrushChecked}"/>

@@ -71,15 +71,20 @@ public class DataGridHeadersPresenter : Panel
         if (_corner == null)
         {
             _corner = new DataGridRowHeader { IsCorner = true, ZIndex = 2 };
-            _corner.MouseLeftButtonDown += OnCornerPressed;
+            _corner.PointerPressed += OnCornerPressed;
             Children.Add(_corner);
         }
 
         _corner.Visibility = Visibility.Visible;
     }
 
-    private void OnCornerPressed(object sender, MouseButtonEventArgs e)
+    private void OnCornerPressed(object sender, PointerPressedEventArgs e)
     {
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         Owner?.SelectAllCells();
         e.Handled = true;
     }
@@ -203,10 +208,13 @@ public class DataGridHeadersPresenter : Panel
         return -1;
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (Owner == null) return;
+        base.OnPointerPressed(e);
+        if (Owner == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         var x = e.GetPosition(this).X;
         var separator = SeparatorAt(x);
@@ -225,15 +233,13 @@ public class DataGridHeadersPresenter : Panel
             _resizing = separator;
             _resizeFrom = x;
             _startWidth = Owner.Columns[separator].ActualWidth;
-            CaptureMouse();
+            e.Pointer.Capture(this);
             e.Handled = true;
             return;
         }
 
         var header = HeaderAt(x);
 
-        // The funnel answers for itself. Mouse-down is raised per element and does NOT share its Handled flag, so
-        // without this check the press that opened the filter would sort the column on its way past.
         if (header >= 0 && _headers.TryGetValue(header, out var pressed) && pressed.PressedFilter(e.OriginalSource)) return;
 
         if (header < 0) return;
@@ -243,18 +249,17 @@ public class DataGridHeadersPresenter : Panel
         _pressed = header;
         _pressAt = e.GetPosition(this);
 
-        // CAPTURED from the press, not from the threshold: a header carried UP into the grouping strip leaves this
-        // strip before it has traveled far enough to count as a drag, and without the capture the moves that would
-        // have started it go to whatever is up there instead. Measured - eight moves, then LEAVE, and the gesture
-        // simply stopped until the pointer came back.
-        CaptureMouse();
+        e.Pointer.Capture(this);
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (Owner == null) return;
+        base.OnPointerMoved(e);
+        if (Owner == null)
+        {
+            return;
+        }
 
         if (_resizing < 0)
         {
@@ -290,14 +295,18 @@ public class DataGridHeadersPresenter : Panel
         Owner.InvalidateColumns();
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         if (_resizing >= 0)
         {
             _resizing = -1;
-            ReleaseMouseCapture();
+            e.Pointer.Capture(null);
             return;
         }
 
@@ -311,8 +320,10 @@ public class DataGridHeadersPresenter : Panel
             Owner.SortByHeader(Owner.Columns[_pressed]);
         }
 
-        // The press took the capture, so the press gives it back - whether it turned into a drag or stayed a click.
-        if (_pressed >= 0) ReleaseMouseCapture();
+        if (_pressed >= 0 && ReferenceEquals(e.Pointer.Captured, this))
+        {
+            e.Pointer.Capture(null);
+        }
         _pressed = -1;
     }
 

@@ -4,7 +4,7 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Input;
 
-// Drives self-or-descendant states (IsMouseOver, IsKeyboardFocusWithin): when the focal leaf moves, raises leave/enter
+// Drives self-or-descendant states (IsPointerOver, IsKeyboardFocusWithin): when the focal leaf moves, raises leave/enter
 // only on elements that left or joined its ancestor chain.
 internal static class AncestorState
 {

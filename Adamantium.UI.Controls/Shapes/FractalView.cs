@@ -34,7 +34,7 @@ public class FractalView : Rectangle
 
     public FractalView()
     {
-        MouseWheel += OnWheel;   // no OnMouseWheel virtual on the base, so hook the routed event
+        PointerWheelChanged += OnWheel;
     }
 
     public static readonly AdamantiumProperty CenterXProperty = AdamantiumProperty.Register(nameof(CenterX),
@@ -105,20 +105,29 @@ public class FractalView : Rectangle
         return (Span / Math.Pow(10, ZoomExp)) / minHalf;
     }
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         var p = e.GetPosition(this);
         _lastX = p.X;
         _lastY = p.Y;
-        CaptureMouse();
+        e.Pointer.Capture(this);
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!IsMouseCaptured) return;
+        base.OnPointerMoved(e);
+        if (!ReferenceEquals(e.Pointer.Captured, this))
+        {
+            return;
+        }
+
         var p = e.GetPosition(this);
         PanBy(p.X - _lastX, p.Y - _lastY);
         _lastX = p.X;
@@ -142,19 +151,19 @@ public class FractalView : Rectangle
         CenterY = hiY; CenterYFine = loY;
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (IsMouseCaptured)
+        base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left && ReferenceEquals(e.Pointer.Captured, this))
         {
-            ReleaseMouseCapture();
+            e.Pointer.Capture(null);
             e.Handled = true;
         }
     }
 
     // Wheel = zoom toward the cursor, SMOOTHLY: accumulate a target exponent and anchor the complex point currently under
     // the cursor; the ticker eases the live zoom to the target, re-deriving the center so that point stays under the cursor.
-    private void OnWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, PointerWheelEventArgs e)
     {
         var minHalf = Math.Min(ActualWidth, ActualHeight) * 0.5;
         if (minHalf < 1.0) return;

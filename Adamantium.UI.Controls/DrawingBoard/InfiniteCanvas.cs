@@ -72,6 +72,7 @@ public partial class InfiniteCanvas : Control
     private Thickness _inset;
     private bool _draggingOverlay;
     private bool _overlayCaptured;
+    private Pointer _activePointer;
     private bool _overlayMoved;
     private Vector2 _overlayFrom;
     private Vector2 _overlayAt;
@@ -874,11 +875,11 @@ public partial class InfiniteCanvas : Control
 
         // Its OWN events, so nothing is unsubscribed: the canvas outlives none of these, and there is no template here
         // whose parts could come and go.
-        MouseWheel += OnWheel;
-        MouseDown += OnPointerDown;
-        MouseMove += OnPointerMove;
-        MouseUp += OnPointerUp;
-        MouseLeave += OnPointerLeft;
+        PointerWheelChanged += OnWheel;
+        PointerPressed += OnPointerDown;
+        PointerMoved += OnPointerMove;
+        PointerReleased += OnPointerUp;
+        PointerExited += OnPointerLeft;
         KeyDown += OnKeyPressed;
         KeyUp += OnKeyReleased;
         TextInput += OnTextTyped;
@@ -2015,7 +2016,7 @@ public partial class InfiniteCanvas : Control
     /// <summary>A press that began on a hosted control but MEANS the plane - a node taken by its title strip. The layer
     /// hands it here, and from here on it is an ordinary press: the tool picks, the gesture begins, one undo step opens.
     /// </summary>
-    internal void PressFromElement(MouseButtonEventArgs e)
+    internal void PressFromElement(PointerPressedEventArgs e)
     {
         _pressIsPlane = true;
         try

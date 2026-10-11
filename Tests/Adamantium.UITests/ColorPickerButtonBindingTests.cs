@@ -45,9 +45,7 @@ public class ColorPickerButtonBindingTests
         }
     }
 
-    private static void Press(ColorPickerButton button) =>
-        ((IObservableComponent)button).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent });
+    private static void Press(ColorPickerButton button) => PointerInput.Press(button);
 
     [Test]
     public void AClick_LeavesTheBindingOnIsOpenInCharge()

@@ -540,9 +540,9 @@ public class DataGridCell : ContentControl
     {
         base.OnApplyTemplate();
 
-        if (_expander != null) _expander.MouseLeftButtonDown -= OnExpanderPressed;
+        if (_expander != null) _expander.PointerPressed -= OnExpanderPressed;
         _expander = GetTemplateChild("PART_Expander") as IInputComponent;
-        if (_expander != null) _expander.MouseLeftButtonDown += OnExpanderPressed;
+        if (_expander != null) _expander.PointerPressed += OnExpanderPressed;
 
         _indent = GetTemplateChild("PART_Indent") as MeasurableUIComponent;
         ApplyIndent();   // a fresh template starts flat, and the depth it is standing at is already known
@@ -553,9 +553,12 @@ public class DataGridCell : ContentControl
     private IInputComponent _editor;
     private bool _pendingEditorFocus;
 
-    private void OnExpanderPressed(object sender, MouseButtonEventArgs e)
+    private void OnExpanderPressed(object sender, PointerPressedEventArgs e)
     {
-        if (!ShowsExpander || !HasChildren) return;
+        if (!ShowsExpander || !HasChildren || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         for (IUIComponent node = this; node != null; node = node.VisualParent)
         {

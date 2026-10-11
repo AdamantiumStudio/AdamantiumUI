@@ -65,7 +65,7 @@
     </Style>
 
     <Style Selector="CheckBox">
-        <!-- No IsMouseOver trigger, deliberately - see the header. -->
+        <!-- No IsPointerOver trigger, deliberately - see the header. -->
         <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="Box" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="Box" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>

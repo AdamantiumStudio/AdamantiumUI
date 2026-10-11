@@ -87,10 +87,14 @@ public class ListBoxItem : ContentControl, ISelectable
 
     private ListBox OwnerListBox => this.GetVisualAncestors().OfType<ListBox>().FirstOrDefault();
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
-        if (!IsEnabled) return;
+        base.OnPointerPressed(e);
+        if (!IsEnabled || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         e.Handled = true;
         Focus();
         IsPressed = true;
@@ -114,30 +118,41 @@ public class ListBoxItem : ContentControl, ISelectable
         owner?.SelectFromContainer(this, e.Modifiers);
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!_deferSelect) return;
+        base.OnPointerMoved(e);
+        if (!_deferSelect)
+        {
+            return;
+        }
+
         var owner = OwnerListBox;
-        // Past the OS drag threshold this is a DRAG, not a click - keep the selection intact for it to carry.
-        if (owner != null && PlatformSettings.ExceedsDragThreshold(e.GetPosition(owner) - _downPoint, owner)) _deferSelect = false;
+        if (owner != null && PlatformSettings.ExceedsDragThreshold(e.GetPosition(owner) - _downPoint, owner))
+        {
+            _deferSelect = false;
+        }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
         e.Handled = true;
         IsPressed = false;
-        if (_deferSelect)   // released without dragging -> apply the deferred collapse now
+        if (_deferSelect)
         {
             _deferSelect = false;
             OwnerListBox?.SelectFromContainer(this, e.Modifiers);
         }
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseLeave(e);
+        base.OnPointerExited(e);
         IsPressed = false;
     }
 

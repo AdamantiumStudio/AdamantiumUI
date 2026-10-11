@@ -79,7 +79,7 @@ internal static class ElementInspector
     {
         var text = new StringBuilder();
         text.Append("focus: ").AppendLine(Named(KeyboardDevice.CurrentDevice.FocusedComponent) ?? "nothing");
-        text.Append("mouse over: ").AppendLine(Describe(MouseDevice.CurrentDevice.DirectlyOver) ?? "nothing");
+        text.Append("mouse over: ").AppendLine(Describe(Mouse.Pointer.DirectlyOver) ?? "nothing");
         foreach (var window in windows)
         {
             text.Append("window: ").Append(Describe(window)).Append(" \"").Append(window.Title).Append('"');

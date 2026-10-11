@@ -61,7 +61,7 @@
         <PropertyTrigger Property="IsHighlighted" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">

@@ -1,4 +1,4 @@
-﻿using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core;
@@ -12,21 +12,17 @@ public interface IInputComponent: IMeasurableComponent
    /// Define is element could receive focus
    /// </summary>
    bool Focusable { get; set; }
-   
-   bool IsFocused { get; }
-   
-   Cursor Cursor { get; set; }
-      
-   /// <summary>
-   /// Returns true if mouse cursor is over element
-   /// </summary>
-   bool IsMouseOver { get; }
 
-   /// <summary>
-   /// Returns true if mouse cursor directly over element
-   /// </summary>
-   bool IsMouseDirectlyOver { get; }
-      
+   bool IsFocused { get; }
+
+   Cursor Cursor { get; set; }
+
+   /// <summary>True while a pointer is over the element or one of its descendants.</summary>
+   bool IsPointerOver { get; }
+
+   /// <summary>True while a pointer is over the element itself, not one of its descendants.</summary>
+   bool IsPointerDirectlyOver { get; }
+
    /// <summary>
    /// Return true if Keyboard focused on element
    /// </summary>
@@ -36,11 +32,6 @@ public interface IInputComponent: IMeasurableComponent
    /// Occurs when the keyboard is focused on this element.
    /// </summary>
    event KeyboardGotFocusEventHandler GotKeyboardFocus;
-
-   /// <summary>
-   /// Occurs when the element captures the mouse.
-   /// </summary>
-   event MouseEventHandler GotMouseCapture;
 
    /// <summary>
    /// Occurs when a key is pressed while the keyboard is focused on this element.
@@ -57,58 +48,32 @@ public interface IInputComponent: IMeasurableComponent
    /// </summary>
    event KeyboardFocusChangedEventHandler LostKeyboardFocus;
 
-   /// <summary>
-   /// Occurs when this element loses mouse capture.
-   /// </summary>
-   event MouseEventHandler LostMouseCapture;
+   /// <summary>Occurs when the element takes a pointer's capture.</summary>
+   event PointerEventHandler GotPointerCapture;
 
-   /// <summary>
-   /// Occurs when the mouse pointer enters the bounds of this element.
-   /// </summary>
-   event MouseEventHandler MouseEnter;
+   /// <summary>Occurs when the element no longer holds a pointer's capture.</summary>
+   event PointerEventHandler PointerCaptureLost;
 
-   /// <summary>
-   /// Occurs when the mouse pointer leaves the bounds of this element.
-   /// </summary>
-   event MouseEventHandler MouseLeave;
+   /// <summary>Occurs when a pointer comes over the element or one of its descendants.</summary>
+   event PointerEventHandler PointerEntered;
 
-   /// <summary>
-   /// Occurs when the left mouse button is pressed while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler MouseLeftButtonDown;
+   /// <summary>Occurs when a pointer is no longer over the element or any of its descendants.</summary>
+   event PointerEventHandler PointerExited;
 
-   /// <summary>
-   /// Occurs when the left mouse button is released while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler MouseLeftButtonUp;
+   /// <summary>Occurs when a pointer moves over the element, or anywhere while the element holds its capture.</summary>
+   event PointerEventHandler PointerMoved;
 
-   /// <summary>
-   /// Occurs when the mouse pointer moves while the mouse pointer is over the element.
-   /// </summary>
-   event MouseEventHandler MouseMove;
+   /// <summary>Occurs when a pointer presses on the element: a mouse button, a finger or a pen tip.</summary>
+   event PointerPressedEventHandler PointerPressed;
 
-   /// <summary>
-   /// Occurs when the right mouse button is pressed while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler MouseRightButtonDown;
+   /// <summary>Occurs when a pointer lets go over the element.</summary>
+   event PointerReleasedEventHandler PointerReleased;
 
-   /// <summary>
-   /// Occurs when the right mouse button is released while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler MouseRightButtonUp;
+   /// <summary>Occurs when the wheel turns over the element.</summary>
+   event PointerWheelEventHandler PointerWheelChanged;
 
-   event MouseButtonEventHandler MouseDown;
-
-   event MouseButtonEventHandler MouseUp;
-
-   /// <summary>
-   /// Occurs when the mouse wheel moves while the mouse pointer is over this element.
-   /// </summary>
-   event MouseWheelEventHandler MouseWheel;
+   /// <summary>Occurs when the OS takes a pointer away mid-press - a system gesture claimed the finger.</summary>
+   event PointerEventHandler PointerCanceled;
 
    /// <summary>
    /// Occurs when a drag enters this element. Requires <c>DragDrop.AllowDrop="True"</c> - see <see cref="DragDropEvents"/>.
@@ -150,29 +115,8 @@ public interface IInputComponent: IMeasurableComponent
    /// </summary>
    event DragDropEventHandler PreviewDrop;
 
+   /// <summary>Occurs on the focused element when the mouse itself moves, unbound by the screen's edges.</summary>
    event RawMouseEventHandler RawMouseMove;
-
-   event MouseButtonEventHandler RawMouseDown;
-
-   event MouseButtonEventHandler RawMouseUp;
-
-   event MouseButtonEventHandler RawMouseLeftButtonDown;
-
-   event MouseButtonEventHandler RawMouseLeftButtonUp;
-
-   event MouseButtonEventHandler RawMouseRightButtonDown;
-
-   event MouseButtonEventHandler RawMouseRightButtonUp;
-
-   event MouseButtonEventHandler RawMouseMiddleButtonDown;
-
-   event MouseButtonEventHandler RawMouseMiddleButtonUp;
-
-   event MouseButtonEventHandler MouseDoubleClick;
-
-   public event MouseButtonEventHandler MouseMiddleButtonDown;
-
-   public event MouseButtonEventHandler MouseMiddleButtonUp;
 
    public event RoutedEventHandler GotFocus;
 
@@ -204,39 +148,17 @@ public interface IInputComponent: IMeasurableComponent
    /// </summary>
    event KeyboardFocusChangedEventHandler PreviewLostKeyboardFocus;
 
-   /// <summary>
-   /// Occurs when the left mouse button is pressed while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler PreviewMouseLeftButtonDown;
+   /// <summary>Tunnels ahead of <see cref="PointerPressed"/>.</summary>
+   event PointerPressedEventHandler PreviewPointerPressed;
 
-   /// <summary>
-   /// Occurs when the left mouse button is released while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler PreviewMouseLeftButtonUp;
+   /// <summary>Tunnels ahead of <see cref="PointerReleased"/>.</summary>
+   event PointerReleasedEventHandler PreviewPointerReleased;
 
-   /// <summary>
-   /// Occurs when the mouse pointer moves while the mouse pointer is over the element.
-   /// </summary>
-   event MouseEventHandler PreviewMouseMove;
+   /// <summary>Tunnels ahead of <see cref="PointerMoved"/>.</summary>
+   event PointerEventHandler PreviewPointerMoved;
 
-   /// <summary>
-   /// Occurs when the right mouse button is pressed while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler PreviewMouseRightButtonDown;
-
-   /// <summary>
-   /// Occurs when the right mouse button is released while the mouse pointer is over
-   /// the element.
-   /// </summary>
-   event MouseButtonEventHandler PreviewMouseRightButtonUp;
-
-   /// <summary>
-   /// Occurs when the mouse wheel moves while the mouse pointer is over this element.
-   /// </summary>
-   event MouseWheelEventHandler PreviewMouseWheel;
+   /// <summary>Tunnels ahead of <see cref="PointerWheelChanged"/>.</summary>
+   event PointerWheelEventHandler PreviewPointerWheelChanged;
 
    /// <summary>
    /// Occurs when this element gets text in a device-independent manner.
@@ -248,42 +170,10 @@ public interface IInputComponent: IMeasurableComponent
    /// </summary>
    event TextInputEventHandler PreviewTextInput;
 
-   event MouseEventHandler PreviewGotMouseCapture;
-
-   public event MouseEventHandler PreviewLostMouseCapture;
-
-   public event MouseButtonEventHandler PreviewMouseDown;
-
-   public event MouseButtonEventHandler PreviewMouseUp;
-
-   event MouseButtonEventHandler PreviewMouseDoubleClick;
-
-   /// <summary>
-   /// Attempts to force capture of the mouse to this element.
-   /// </summary>
-   /// <returns>true if the mouse is successfully captured; otherwise, false.</returns>
-   bool CaptureMouse();
-
-   /// <summary>
-   /// Attempts to force capture of the stylus to this element.
-   /// </summary>
-   /// <returns>true if the stylus is successfully captured; otherwise, false.</returns>
-   bool CaptureStylus();
-
    /// <summary>
    /// Attempts to focus the keyboard on this element.
    /// </summary>
    /// <returns>true if keyboard focus is moved to this element or already was on this element;
    /// otherwise, false.</returns>
    bool Focus();
-
-   /// <summary>
-   /// Releases the mouse capture, if this element holds the capture.
-   /// </summary>
-   void ReleaseMouseCapture();
-
-   /// <summary>
-   /// Releases the stylus capture, if this element holds the capture.
-   /// </summary>
-   void ReleaseStylusCapture();
 }

@@ -127,7 +127,7 @@
     </Style>
 
     <Style Selector="NumericUpDown">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Rule" Property="Background" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>
         <!-- Focus WITHIN, not IsFocused: clicking a spin box puts the caret in its EMBEDDED editor, so the control

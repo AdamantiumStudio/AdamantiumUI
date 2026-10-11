@@ -541,12 +541,13 @@ public class CanvasNodeThemeTests
 
         var grip = Grips(node)[0];
 
-        var press = new Adamantium.UI.Core.Input.MouseButtonEventArgs(
-            Adamantium.UI.Core.Input.Mouse.PrimaryDevice, Adamantium.UI.Core.Input.MouseButtons.Left,
-            Adamantium.UI.Core.Input.MouseButtonState.Pressed,
+        var press = new Adamantium.UI.Core.Input.PointerPressedEventArgs(
+            Adamantium.UI.Core.Input.Mouse.Pointer, Adamantium.UI.Core.Input.MouseButtons.Left,
             Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton, 0)
         {
-            RoutedEvent = Adamantium.UI.Core.Input.Mouse.MouseDownEvent
+            RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerPressedEvent,
+            Properties = Adamantium.UI.Core.Input.PointerPointProperties.FromMouse(
+                Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton)
         };
 
         ((IObservableComponent)grip).RaiseEvent(press);
@@ -576,21 +577,24 @@ public class CanvasNodeThemeTests
 
         var grip = Grips(node)[0];
 
+        var held = Adamantium.UI.Core.Input.PointerPointProperties.FromMouse(
+            Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton);
         Point(window, 0);
-        ((IObservableComponent)grip).RaiseEvent(new Adamantium.UI.Core.Input.MouseButtonEventArgs(
-            Adamantium.UI.Core.Input.Mouse.PrimaryDevice, Adamantium.UI.Core.Input.MouseButtons.Left,
-            Adamantium.UI.Core.Input.MouseButtonState.Pressed,
+        ((IObservableComponent)grip).RaiseEvent(new Adamantium.UI.Core.Input.PointerPressedEventArgs(
+            Adamantium.UI.Core.Input.Mouse.Pointer, Adamantium.UI.Core.Input.MouseButtons.Left,
             Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton, 0)
         {
-            RoutedEvent = Adamantium.UI.Core.Input.Mouse.MouseDownEvent
+            RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerPressedEvent,
+            Properties = held
         });
 
         // Well past the last row: a socket cannot be drawn off its own side, so this is the bottom of the list.
         Point(window, 1000);
-        ((IObservableComponent)node).RaiseEvent(new Adamantium.UI.Core.Input.MouseEventArgs(
-            Adamantium.UI.Core.Input.Mouse.PrimaryDevice, Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton, 0)
+        ((IObservableComponent)node).RaiseEvent(new Adamantium.UI.Core.Input.PointerEventArgs(
+            Adamantium.UI.Core.Input.Mouse.Pointer, Adamantium.UI.Core.Input.InputModifiers.LeftMouseButton, 0)
         {
-            RoutedEvent = Adamantium.UI.Core.Input.Mouse.MouseMoveEvent
+            RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerMovedEvent,
+            Properties = held
         });
 
         // The rows that step aside SLIDE there, so they are read once the slide is over.
@@ -606,12 +610,12 @@ public class CanvasNodeThemeTests
             Assert.That(Shifted(Grips(node)[1]), Is.LessThan(0), "the rows it passed did not step aside");
         });
 
-        ((IObservableComponent)node).RaiseEvent(new Adamantium.UI.Core.Input.MouseButtonEventArgs(
-            Adamantium.UI.Core.Input.Mouse.PrimaryDevice, Adamantium.UI.Core.Input.MouseButtons.Left,
-            Adamantium.UI.Core.Input.MouseButtonState.Released,
+        ((IObservableComponent)node).RaiseEvent(new Adamantium.UI.Core.Input.PointerReleasedEventArgs(
+            Adamantium.UI.Core.Input.Mouse.Pointer, Adamantium.UI.Core.Input.MouseButtons.Left,
             Adamantium.UI.Core.Input.InputModifiers.None, 0)
         {
-            RoutedEvent = Adamantium.UI.Core.Input.Mouse.MouseUpEvent
+            RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerReleasedEvent,
+            Properties = default
         });
 
         // The rows settle, and that is what says the move happened - the picture is finished before the graph changes.
@@ -639,7 +643,7 @@ public class CanvasNodeThemeTests
     }
 
     private static void Point(Window window, double y) =>
-        Adamantium.UI.Core.Input.Mouse.PrimaryDevice.SetExternalPosition(window, new PixelPoint(20, y));
+        Adamantium.UI.Core.Input.PointerDevice.Current.SetExternalMousePosition(window, new PixelPoint(20, y));
 
     private static List<IUIComponent> Grips(IUIComponent within)
     {

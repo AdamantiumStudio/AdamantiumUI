@@ -67,7 +67,7 @@ public class DataGridNewRowPresenter : Panel
         foreach (var index in _leaving)
         {
             var leaving = _cells[index];
-            leaving.MouseLeftButtonDown -= OnCellPressed;
+            leaving.PointerPressed -= OnCellPressed;
             Children.Remove(leaving);
             _cells.Remove(index);
         }
@@ -79,7 +79,7 @@ public class DataGridNewRowPresenter : Panel
             if (!_cells.TryGetValue(i, out var cell))
             {
                 cell = new DataGridCell();
-                cell.MouseLeftButtonDown += OnCellPressed;
+                cell.PointerPressed += OnCellPressed;
                 _cells[i] = cell;
                 Children.Add(cell);
             }
@@ -139,9 +139,12 @@ public class DataGridNewRowPresenter : Panel
         return true;
     }
 
-    private void OnCellPressed(object sender, MouseButtonEventArgs e)
+    private void OnCellPressed(object sender, PointerPressedEventArgs e)
     {
-        if (sender is not DataGridCell cell || Owner == null) return;
+        if (sender is not DataGridCell cell || Owner == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         // ONE click, where the table wants two. There is nothing here to select, so the only thing a press can mean is
         // "I am filling this in" - asking for a second click would be asking twice for one intention.

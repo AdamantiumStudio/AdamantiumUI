@@ -71,15 +71,17 @@ public class FluentColorPickerRingTests
         var onRing = Origin(ring, picker);
         Assert.That(onRing.X + 2, Is.LessThan(Origin(area, picker).X), "the press point is not outside the square");
 
-        Mouse.PrimaryDevice.SetExternalPosition(picker, new PixelPoint(onRing.X + 2, onRing.Y + ring.ActualHeight / 2));
-        ((IObservableComponent)picker).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, InputModifiers.LeftMouseButton, 0) { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent });
+        var held = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton);
+        PointerDevice.Current.SetExternalMousePosition(picker, new PixelPoint(onRing.X + 2, onRing.Y + ring.ActualHeight / 2));
+        ((IObservableComponent)picker).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
+            InputModifiers.LeftMouseButton, 0) { RoutedEvent = PointerEvents.PointerPressedEvent, Properties = held });
 
         var corner = Origin(area, picker);
-        Mouse.PrimaryDevice.SetExternalPosition(picker, new PixelPoint(corner.X + area.ActualWidth, corner.Y));
-        ((IObservableComponent)picker).RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, InputModifiers.LeftMouseButton, 0)
+        PointerDevice.Current.SetExternalMousePosition(picker, new PixelPoint(corner.X + area.ActualWidth, corner.Y));
+        ((IObservableComponent)picker).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.LeftMouseButton, 0)
         {
-            RoutedEvent = Mouse.MouseMoveEvent
+            RoutedEvent = PointerEvents.PointerMovedEvent,
+            Properties = held
         });
 
         Assert.That(picker.SelectedColor, Is.Not.EqualTo(gray), "the press on the ring did not start a drag");

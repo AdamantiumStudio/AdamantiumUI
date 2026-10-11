@@ -64,7 +64,7 @@ public class EraseTool : ICanvasTool
 
         Rub(canvas, e.Pointer);
 
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         e.Handled = true;
     }
 
@@ -95,7 +95,7 @@ public class EraseTool : ICanvasTool
         if (!_erasing) return;
 
         _erasing = false;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         e.Handled = true;
     }
 
@@ -111,7 +111,7 @@ public class EraseTool : ICanvasTool
 
     public void Cancel(InfiniteCanvas canvas)
     {
-        if (_erasing) canvas.ReleaseMouseCapture();
+        if (_erasing) canvas.ReleasePointer();
 
         _erasing = false;
         _over = false;

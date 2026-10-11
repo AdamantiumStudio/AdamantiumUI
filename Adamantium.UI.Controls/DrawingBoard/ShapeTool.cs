@@ -76,7 +76,7 @@ public class ShapeTool : ICanvasTool
             EndHead = EndHead
         };
 
-        canvas.CaptureMouse();
+        canvas.CapturePointer();
         canvas.Repaint();
         e.Handled = true;
     }
@@ -96,7 +96,7 @@ public class ShapeTool : ICanvasTool
 
         var made = _making;
         _making = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
 
         Stretch(e.World, made);
 
@@ -120,7 +120,7 @@ public class ShapeTool : ICanvasTool
         if (_making == null) return;
 
         _making = null;
-        canvas.ReleaseMouseCapture();
+        canvas.ReleasePointer();
         canvas.Repaint();
     }
 

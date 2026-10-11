@@ -2589,9 +2589,7 @@ public class DataGridTests
         (grid.ItemContainerGenerator.ContainerFromIndex(row) as DataGridRow)?.NumberHeader;
 
     private static void Press(DataGridRowHeader header, InputModifiers modifiers = InputModifiers.None) =>
-        ((IObservableComponent)header).RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, MouseButtons.Left,
-            MouseButtonState.Pressed, modifiers | InputModifiers.LeftMouseButton, 0)
-        { RoutedEvent = InputUIComponent.MouseLeftButtonDownEvent });
+        PointerInput.Press(header, modifiers: modifiers);
 
     // The number is the row's place among what is VISIBLE, not its place in the source: after a sort the strip still
     // reads 1, 2, 3 down the screen, because that is the number a person points at when they say "row 2".

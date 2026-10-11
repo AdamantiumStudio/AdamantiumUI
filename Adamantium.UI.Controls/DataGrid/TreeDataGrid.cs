@@ -1988,9 +1988,12 @@ public partial class TreeDataGrid : Selector
         return chooser;
     }
 
-    private void OnChooserButtonPressed(object sender, MouseButtonEventArgs e)
+    private void OnChooserButtonPressed(object sender, PointerPressedEventArgs e)
     {
-        if (!CanUserChooseColumns) return;
+        if (!CanUserChooseColumns || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         OpenColumnChooser();
         e.Handled = true;
@@ -2049,9 +2052,9 @@ public partial class TreeDataGrid : Selector
         if (GetTemplateChild("PART_SearchPanel") is DataGridSearchPanel searchPanel) searchPanel.Owner = this;
 
         _chooserPopup = GetTemplateChild("PART_ChooserPopup") as Popup;
-        if (_chooserButton != null) _chooserButton.MouseLeftButtonDown -= OnChooserButtonPressed;
+        if (_chooserButton != null) _chooserButton.PointerPressed -= OnChooserButtonPressed;
         _chooserButton = GetTemplateChild("PART_ChooserButton") as InputUIComponent;
-        if (_chooserButton != null) _chooserButton.MouseLeftButtonDown += OnChooserButtonPressed;
+        if (_chooserButton != null) _chooserButton.PointerPressed += OnChooserButtonPressed;
 
         // Said HERE rather than in the template: a flyout with no target is placed against whatever slot the template
         // gave the Popup itself, which put the list in the middle of the table. The handle is what it belongs to.
@@ -2070,7 +2073,7 @@ public partial class TreeDataGrid : Selector
         if (_scroll != null) _scroll.ScrollChanged -= OnScrolled;
         _scroll = null;
 
-        if (_chooserButton != null) _chooserButton.MouseLeftButtonDown -= OnChooserButtonPressed;
+        if (_chooserButton != null) _chooserButton.PointerPressed -= OnChooserButtonPressed;
         _chooserButton = null;
         _chooserPopup = null;
         _columnChooser = null;

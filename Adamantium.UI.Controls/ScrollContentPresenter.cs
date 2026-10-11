@@ -195,22 +195,30 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     // --- Pan: drag the content itself to scroll (the no-scrollbars / touch path) ---
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        if (e.Handled || PanningMode == PanningMode.None) return;   // pan off, or interactive content took the press
-        StopInertia();   // grabbing the content halts any in-flight inertia
+        base.OnPointerPressed(e);
+        if (e.Handled || PanningMode == PanningMode.None || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
+        StopInertia();
         _isPanning = false;
-        _panStartPoint = e.GetPosition(this);   // the presenter is the fixed viewport, so this space is stable
+        _panStartPoint = e.GetPosition(this);
         _panStartOffset = Offset;
         _lastMoveTimestamp = 0;
         _panVelocity = default;
-        // Capture so the drag keeps tracking once the pointer leaves the content (raw moves only honor capture).
-        CaptureMouse();
+        e.Pointer.Capture(this);
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        if (!IsMouseCaptured) return;
+        base.OnPointerMoved(e);
+        if (!ReferenceEquals(e.Pointer.Captured, this))
+        {
+            return;
+        }
 
         var raw = e.GetPosition(this) - _panStartPoint;
         if (!_isPanning)
@@ -245,9 +253,19 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         e.Handled = true;
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        if (IsMouseCaptured) ReleaseMouseCapture();
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(e.Pointer.Captured, this))
+        {
+            e.Pointer.Capture(null);
+        }
+
         if (_isPanning)
         {
             e.Handled = true;   // it was a pan, not a click

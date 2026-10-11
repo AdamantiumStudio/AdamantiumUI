@@ -71,9 +71,7 @@ public class PropertyRow : Control
 
     public PropertyRow()
     {
-        // The whole line toggles a composite. MouseDown because it bubbles (MouseLeftButtonDown is direct); rows without
-        // children ignore it.
-        MouseDown += OnRowPressed;
+        PointerPressed += OnRowPressed;
     }
 
     /// <summary>What this row draws.</summary>
@@ -263,7 +261,7 @@ public class PropertyRow : Control
 
         if (_grip != null)
         {
-            _grip.MouseLeftButtonDown += OnGripPressed;
+            _grip.PointerPressed += OnGripPressed;
             if (_grip is UIComponent grip) grip.Cursor = Cursors.SizeEWE;
         }
 
@@ -471,7 +469,7 @@ public class PropertyRow : Control
 
     private void Unhook()
     {
-        if (_grip != null) _grip.MouseLeftButtonDown -= OnGripPressed;
+        if (_grip != null) _grip.PointerPressed -= OnGripPressed;
         if (_action != null) _action.Click -= OnActionPressed;
         if (_reset != null) _reset.Click -= OnResetPressed;
         UnhookEditor();
@@ -729,14 +727,12 @@ public class PropertyRow : Control
         if (ResetToDefault()) e.Handled = true;
     }
 
-    private void OnRowPressed(object sender, MouseButtonEventArgs e)
+    private void OnRowPressed(object sender, PointerPressedEventArgs e)
     {
-        if (!HasChildren || e.ChangedButton != MouseButtons.Left || Owner == null) return;
-
-        // ...unless the press landed on a BUTTON standing in the line. The whole line opens the row, and the buttons a
-        // line offers sit on that line, so without this one press both does the thing and folds away what it was done
-        // to. A button takes MouseLeftButtonDown, which is Direct, so nothing it marks handled is ever seen here.
-        if (OnAButton(e.OriginalSource as IUIComponent)) return;
+        if (!HasChildren || e.ChangedButton != MouseButtons.Left || Owner == null || OnAButton(e.OriginalSource as IUIComponent))
+        {
+            return;
+        }
 
         Owner.ToggleComposite(this);
         e.Handled = true;
@@ -754,32 +750,41 @@ public class PropertyRow : Control
         return false;
     }
 
-    private void OnGripPressed(object sender, MouseButtonEventArgs e)
+    private void OnGripPressed(object sender, PointerPressedEventArgs e)
     {
-        if (Owner == null) return;
+        if (Owner == null || e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         _draggingGrip = true;
         _gripFrom = e.GetPosition(this).X;
         _widthFrom = Owner.NameColumnWidth;
-        CaptureMouse();
+        e.Pointer.Capture(this);
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (!_draggingGrip || Owner == null) return;
+        base.OnPointerMoved(e);
+        if (!_draggingGrip || Owner == null)
+        {
+            return;
+        }
 
         Owner.NameColumnWidth = _widthFrom + (e.GetPosition(this).X - _gripFrom);
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
-        if (!_draggingGrip) return;
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left || !_draggingGrip)
+        {
+            return;
+        }
 
         _draggingGrip = false;
-        ReleaseMouseCapture();
+        e.Pointer.Capture(null);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PropertyRowAutomationPeer(this);

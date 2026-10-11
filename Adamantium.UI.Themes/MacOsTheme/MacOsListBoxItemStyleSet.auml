@@ -55,7 +55,7 @@
     <!-- Hover FIRST, then pressed, then selected: the trigger value stack is ordered by ACTIVATION, so the plate
          declared last is the one that stands once the others are gone. -->
     <Style Selector="ListBoxItem">
-        <PropertyTrigger Property="IsMouseOver" Value="true">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">

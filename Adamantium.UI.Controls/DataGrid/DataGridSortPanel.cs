@@ -78,12 +78,19 @@ public class DataGridSortPanel : Control
 
     private void OnClear(object sender, RoutedEventArgs e) => Owner?.ClearSorting();
 
-    protected override void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        base.OnMouseLeftButtonDown(sender, e);
+        base.OnPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         var chip = ChipAt(e.GetPosition(this));
-        if (chip < 0) return;
+        if (chip < 0)
+        {
+            return;
+        }
 
         // The × is the way OUT of the sort, and the only one: a chip pressed anywhere else is being turned around or
         // picked up, and neither must unsort anything.
@@ -101,10 +108,13 @@ public class DataGridSortPanel : Control
         e.Handled = true;
     }
 
-    protected override void OnMouseMove(object sender, MouseEventArgs e)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        base.OnMouseMove(sender, e);
-        if (Owner == null) return;
+        base.OnPointerMoved(e);
+        if (Owner == null)
+        {
+            return;
+        }
 
         var x = ChipPoint(e.GetPosition(this)).X;
 
@@ -116,19 +126,23 @@ public class DataGridSortPanel : Control
 
         if (_pressed >= 0 && System.Math.Abs(x - _pressFrom) > DragThreshold)
         {
-            CaptureMouse();
+            e.Pointer.Capture(this);
             BeginCarry(_pressed, x);
         }
     }
 
-    protected override void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnMouseLeftButtonUp(sender, e);
+        base.OnPointerReleased(e);
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
 
         if (_dragging >= 0)
         {
             EndCarry(ChipPoint(e.GetPosition(this)).X);
-            ReleaseMouseCapture();
+            e.Pointer.Capture(null);
         }
         else if (_pressed >= 0 && _pressed < _live.Count)
         {
