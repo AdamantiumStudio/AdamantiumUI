@@ -11,14 +11,9 @@ internal sealed class RecordSummary
     {
         Frame = frame;
         Kind = packet.Kind;
-        TransformDirty = packet.IsTransformDirty;
-        TransformUnknown = packet.TransformUnknown;
         DirtyCount = packet.PartialDirty.Count;
         MovedCount = packet.Moved.Count;
         MotionNodeCount = packet.MovedNodes.Count;
-        DrawCount = packet.Draws.Count;
-        Dirty = Describe(packet.PartialDirty);
-        Moved = Describe(packet.Moved);
         MotionNodes = Describe(packet.MovedNodes);
     }
 
@@ -26,21 +21,11 @@ internal sealed class RecordSummary
 
     public RenderBuildKind Kind { get; }
 
-    public bool TransformDirty { get; }
-
-    public bool TransformUnknown { get; }
-
     public int DirtyCount { get; }
 
     public int MovedCount { get; }
 
     public int MotionNodeCount { get; }
-
-    public int DrawCount { get; }
-
-    public IReadOnlyList<string> Dirty { get; }
-
-    public IReadOnlyList<string> Moved { get; }
 
     public IReadOnlyList<string> MotionNodes { get; }
 

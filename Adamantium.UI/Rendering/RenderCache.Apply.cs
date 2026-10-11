@@ -179,7 +179,11 @@ public partial class RenderCache
 
         // Fold this packet's layout delta into the applier's snapshot replica - the only thing the draw pass reads for a
         // component's transform/size/clip. A full walk resets it and carries the whole scene.
-        if (packet.SnapReset) _applySnap.Clear();
+        if (packet.SnapReset)
+        {
+            _applySnap.Clear();
+            _readLive.Clear();
+        }
 
         // Layout changes invalidate the retained stream unless a patch can carry them: moves of nodes and components are
         // slot writes and scissors are re-derived (RefreshMovedScissors); a resize under a clip cannot add culled draws.
@@ -215,6 +219,7 @@ public partial class RenderCache
             if (entry.Key is Core.FundamentalUIComponent { IsDiscarded: true })
             {
                 _applySnap.Remove(entry.Key);
+                _readLive.Remove(entry.Key);
                 continue;
             }
 
@@ -225,15 +230,15 @@ public partial class RenderCache
                     StreamStaleBecause(known ? $"moved<{entry.Key.GetType().Name}>" : $"new<{entry.Key.GetType().Name}>");
             }
             _applySnap[entry.Key] = entry.Value;
+            _readLive.Remove(entry.Key);
         }
 
         // Something left the tree since the last build. Withdrawing what it drew is the reconcile's job, and it used to
         // ride on a FULL walk - which the redesign made rare, so a detached view kept its place in the order and the
         // retained op stream went on re-issuing it, frozen at the size it had when it left.
-        if (_reconciledDetachGen != Dirty.DetachGeneration && packet.Kind != RenderBuildKind.Full)
+        if (packet.Reconcile && packet.Kind != RenderBuildKind.Full)
         {
-            _reconciledDetachGen = Dirty.DetachGeneration;
-            if (ReconcileDetachedControls() > 0)
+            if (ReconcileDetachedControls(packet) > 0)
             {
                 // Those units are gone, so the op stream and the recorded slots no longer describe the scene: the draw
                 // pass must re-walk instead of replaying, exactly as after a splice.
@@ -300,7 +305,6 @@ public partial class RenderCache
 
             case RenderBuildKind.Full:
                 ApplyFullWalk(packet);   // GPU: rebuild the paint-order groups from the packet (reconciles as it goes)
-                _reconciledDetachGen = Dirty.DetachGeneration;
                 _built = true;
                 // A full walk re-records the whole scene, so earlier packets' dirty entries are covered - and their unit
                 // sets are gone (groups rebuilt), which would mis-patch the batch. Drop them.

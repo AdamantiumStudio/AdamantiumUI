@@ -73,6 +73,13 @@ internal sealed class RenderPacket
     /// <summary>Structural only: the reranks are a renumber (fresh gaps, same relative order), not a reorder.</summary>
     public bool Renumbered;
 
+    /// <summary>Something left the tree since the last record: the applier frees exactly <see cref="Departed"/>, decided by
+    /// the recorder on the thread that changes the tree.</summary>
+    public bool Reconcile;
+
+    /// <summary>Components the recorder found out of the tree and not parked, when <see cref="Reconcile"/> is set.</summary>
+    public readonly List<IUIComponent> Departed = new();
+
     /// <summary>Reset for reuse (the packet is pooled per cache; a Clean frame produces an empty one).</summary>
     public void Reset(RenderBuildKind kind)
     {
@@ -85,6 +92,8 @@ internal sealed class RenderPacket
         Undrawn.Clear();
         Reranks.Clear();
         Renumbered = false;
+        Reconcile = false;
+        Departed.Clear();
         SnapReset = false;
         IsTransformDirty = false;
         TransformUnknown = false;

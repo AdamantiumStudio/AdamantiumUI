@@ -77,8 +77,8 @@ public partial class MainViewModel
     // of an edge artifact possible at all.
     [Bindable] private bool _analyticAa = true;
 
-    /// <summary>The application's frame verifier: while on, every fast-path frame is checked against a full walk and each
-    /// one that differs is written under the application's <c>verify</c> folder.</summary>
+    /// <summary>The application's frame verifier: while on, what the render cache draws with is checked against the tree,
+    /// and every part that differs is logged under the application's <c>verify</c> folder.</summary>
     public bool VerifyFrames
     {
         get => UIApplication.Current?.FrameVerification.IsEnabled ?? false;
