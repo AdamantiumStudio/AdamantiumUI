@@ -55,9 +55,10 @@ public class RibbonRadioButton : RibbonToggleButton
       }
 
       var pending = new Stack<object>();
-      foreach (var item in group.Items)
+      var items = group.Items;
+      for (var i = 0; i < items.Count; i++)
       {
-         pending.Push(item);
+         pending.Push(items[i] as IUIComponent ?? group.ItemContainerGenerator.ContainerFromIndex(i));
       }
 
       while (pending.Count > 0)

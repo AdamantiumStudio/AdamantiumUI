@@ -103,6 +103,33 @@ public class RibbonAdaptiveLayoutTests
         return group;
     }
 
+    // The same commands, written out or given as data through ItemsSource + ItemTemplate.
+    private static RibbonGroup Written(int commands, RibbonSize max)
+    {
+        var group = Group(0);
+        for (var i = 0; i < commands; i++)
+        {
+            var command = new SizedCommand();
+            Ribbon.SetMaxSize(command, max);
+            group.Items.Add(command);
+        }
+
+        return group;
+    }
+
+    private static RibbonGroup FromData(int commands, RibbonSize max)
+    {
+        var group = Group(0);
+        group.ItemTemplate = new DataTemplate(() =>
+        {
+            var command = new SizedCommand();
+            Ribbon.SetMaxSize(command, max);
+            return new TemplateResult { RootComponent = command };
+        });
+        group.ItemsSource = Enumerable.Range(0, commands).Select(i => $"command {i}").ToList();
+        return group;
+    }
+
     private static (RibbonGroupsPanel Panel, RibbonGroup[] Groups) Row(params RibbonGroup[] groups)
     {
         var panel = new RibbonGroupsPanel();
@@ -127,6 +154,211 @@ public class RibbonAdaptiveLayoutTests
         if (next >= group.Variants.Count) return true;
 
         return group.Variants[next].IsCollapsed && group.WidthAt(next) >= group.WidthAt(group.CurrentVariant);
+    }
+
+    // A command from data is the control its template builds, bound to its item - not a presenter around it, which took
+    // the size the group chose and the quick-access menu and key, and kept them from the command.
+    [Test]
+    public void ACommandFromData_IsTheControlItsTemplateBuilds()
+    {
+        var (panel, groups) = Row(FromData(2, RibbonSize.Medium));
+        LayoutAt(panel, 2000);
+        var group = groups[0];
+
+        var containers = Enumerable.Range(0, 2).Select(i => group.ItemContainerGenerator.ContainerFromIndex(i)).ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(containers, Is.All.InstanceOf<SizedCommand>());
+            Assert.That(containers.Select(c => ((SizedCommand)c).DataContext), Is.EqualTo(group.ItemsSource));
+            Assert.That(containers.Select(c => Ribbon.GetSize((SizedCommand)c)), Is.All.EqualTo(RibbonSize.Medium),
+                "the roomiest variant draws a command no larger than its own MaxSize");
+        });
+    }
+
+    // ...and the group costs and shrinks exactly as the same commands written out. Before, a tighter variant looked as
+    // wide as the roomiest, and the group went from Medium straight to collapsed.
+    [Test]
+    public void AGroupFromData_ShrinksAsTheSameCommandsWrittenOut()
+    {
+        var (writtenPanel, written) = Row(Written(3, RibbonSize.Medium));
+        var (dataPanel, data) = Row(FromData(3, RibbonSize.Medium));
+        LayoutAt(writtenPanel, 2000);
+        LayoutAt(dataPanel, 2000);
+
+        var writtenWidths = Enumerable.Range(0, written[0].Variants.Count).Select(written[0].WidthAt).ToArray();
+        var dataWidths = Enumerable.Range(0, data[0].Variants.Count).Select(data[0].WidthAt).ToArray();
+        Assert.That(dataWidths, Is.EqualTo(writtenWidths), "every variant costs the same");
+
+        foreach (var width in new double[] { 80, 60, 40, 30 })
+        {
+            LayoutAt(writtenPanel, width);
+            LayoutAt(dataPanel, width);
+            Assert.That(data[0].CurrentVariant, Is.EqualTo(written[0].CurrentVariant), $"the same variant at {width}");
+        }
+    }
+
+    private sealed class OtherCommand : Border
+    {
+    }
+
+    // Words become SizedCommands, numbers OtherCommands: two templates in one group, as a DataTemplateSet picks them.
+    private sealed class ByKind : DataTemplateSelector
+    {
+        public readonly DataTemplate Words = new(() => new TemplateResult { RootComponent = new SizedCommand() });
+        public readonly DataTemplate Numbers = new(() => new TemplateResult { RootComponent = new OtherCommand() });
+
+        public override DataTemplate SelectTemplate(object item, AdamantiumComponent container) =>
+            item is string ? Words : Numbers;
+    }
+
+    private static object ContainerOf(RibbonGroup group, int index) => group.ItemContainerGenerator.ContainerFromIndex(index);
+
+    // A command given back by a removed item goes only to an item its template builds: handed to an item another
+    // template draws, it showed that item as the wrong control.
+    [Test]
+    public void ARecycledCommand_GoesOnlyToAnItemItsTemplateBuilds()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "first", "second" };
+        var group = Group(0);
+        group.ItemTemplateSelector = new ByKind();
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+
+        items.RemoveAt(0);
+        items.Add(3);
+        LayoutAt(panel, 2000);
+
+        Assert.That(ContainerOf(group, 1), Is.InstanceOf<OtherCommand>(), "the number is drawn by its own template");
+    }
+
+    // ...and it comes back without the item it served: neither its data nor the quick-access identity made for it.
+    [Test]
+    public void ARecycledCommand_ForgetsTheItemItServed()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "first" };
+        var group = Group(0);
+        group.ItemTemplate = new ByKind().Words;
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var firstKey = Ribbon.GetQuickAccessKey((SizedCommand)ContainerOf(group, 0));
+
+        items.RemoveAt(0);
+        items.Add("second");
+        LayoutAt(panel, 2000);
+        var command = (SizedCommand)ContainerOf(group, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(command.DataContext, Is.EqualTo("second"));
+            Assert.That(Ribbon.GetQuickAccessKey(command), Is.Not.Null.And.Not.SameAs(firstKey),
+                "a new item is a new command to the quick-access bar");
+        });
+    }
+
+    // A slot switching between two templates takes back the command it showed before: a misfit parked on top of the
+    // pool hid it, and every switch made one more command that was never let go.
+    [Test]
+    public void ASlotSwitchingTemplates_TakesBackItsCommand()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "word" };
+        var group = Group(0);
+        group.ItemTemplateSelector = new ByKind();
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var word = ContainerOf(group, 0);
+
+        items[0] = 1;
+        LayoutAt(panel, 2000);
+        items[0] = "again";
+        LayoutAt(panel, 2000);
+
+        Assert.That(ContainerOf(group, 0), Is.SameAs(word));
+    }
+
+    // The identity the quick-access bar knows a command by stays with its item: rebuilt on a move, the command is still
+    // the one in the bar, not a stranger the menu offers to add again.
+    [Test]
+    public void ACommandFromData_KeepsItsQuickAccessIdentityWhenRebuilt()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "first", "second" };
+        var group = Group(0);
+        group.ItemTemplate = new ByKind().Words;
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var key = Ribbon.GetQuickAccessKey((SizedCommand)ContainerOf(group, 0));
+
+        items.Move(0, 1);
+        LayoutAt(panel, 2000);
+
+        Assert.That(Ribbon.GetQuickAccessKey((SizedCommand)ContainerOf(group, 1)), Is.Not.Null.And.SameAs(key));
+    }
+
+    // Written out, a command has no templated parent; built from data it must not get the group as one either, or the
+    // focus ring of a one-command group climbed to the whole group.
+    [Test]
+    public void ACommandFromData_HasNoTemplatedParent()
+    {
+        var (panel, groups) = Row(FromData(1, RibbonSize.Large));
+        LayoutAt(panel, 2000);
+
+        Assert.That(((SizedCommand)ContainerOf(groups[0], 0)).TemplatedParent, Is.Null);
+    }
+
+    // Tools given as data are one of a set as written ones are: a tool looked for the others among the group's items,
+    // which are data, found none, and a press left two tools checked.
+    [Test]
+    public void ToolsFromData_AreOneOfASet()
+    {
+        var group = Group(0);
+        group.ItemTemplate = new DataTemplate(() =>
+            new TemplateResult { RootComponent = new RibbonRadioButton { GroupName = "Tool" } });
+        group.ItemsSource = new List<string> { "select", "move" };
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var select = (RibbonRadioButton)ContainerOf(group, 0);
+        var move = (RibbonRadioButton)ContainerOf(group, 1);
+        select.IsChecked = true;
+
+        move.PerformClick();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(move.IsChecked, Is.True);
+            Assert.That(select.IsChecked, Is.False, "the tool picked before stayed checked");
+        });
+    }
+
+    // A tool given back by a removed item comes back unchecked, as one built for the new item would: it kept the press
+    // of the item it served, and the new tool showed checked beside the one picked since.
+    [Test]
+    public void ARecycledTool_ForgetsThePressOfTheItemItServed()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "select", "move" };
+        var group = Group(0);
+        group.ItemTemplate = new DataTemplate(() =>
+            new TemplateResult { RootComponent = new RibbonRadioButton { GroupName = "Tool" } });
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var select = (RibbonRadioButton)ContainerOf(group, 0);
+        select.PerformClick();
+
+        items.RemoveAt(0);
+        ((RibbonRadioButton)ContainerOf(group, 0)).PerformClick();
+        items.Add("rotate");
+        LayoutAt(panel, 2000);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ContainerOf(group, 1), Is.SameAs(select), "the removed item's tool is the one given back");
+            Assert.That(select.IsChecked, Is.False, "the new tool came back checked");
+            Assert.That(((RibbonRadioButton)ContainerOf(group, 0)).IsChecked, Is.True);
+        });
     }
 
     // The width a group is laid out at has to be the GROUP's, not its commands'. Missing the chrome, every group is

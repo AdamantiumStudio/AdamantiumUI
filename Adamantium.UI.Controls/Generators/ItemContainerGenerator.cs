@@ -10,9 +10,9 @@ public class ItemContainerGenerator
     private readonly ItemsControl _owner;
     private readonly Dictionary<int, IUIComponent> _byIndex = new();
     private readonly Dictionary<IUIComponent, int> _indexByContainer = new();
-    private readonly Stack<IUIComponent> _recyclePool = new();
+    private readonly List<IUIComponent> _recyclePool = new();   // a stack: the most recently parked is last
 
-    // Membership mirror of _recyclePool: Stack<T>.Contains is a linear re-read, and the pool is unbounded, so the
+    // Membership mirror of _recyclePool: List<T>.Contains is a linear re-read, and the pool is unbounded, so the
     // duplicate guard in ReclaimDetached was quadratic in the pool depth. Written only through PoolPush/PoolPop/PoolClear.
     private readonly HashSet<IUIComponent> _pooledSet = new();
 
@@ -45,16 +45,31 @@ public class ItemContainerGenerator
     {
         if (_pooledSet.Add(container))
         {
-            _recyclePool.Push(container);
+            _recyclePool.Add(container);
             // Out of the tree, but waiting to be re-bound to another item - not dead. Saying so is what keeps a
             // teardown from releasing a container that is about to be handed straight back out.
             (container as Core.FundamentalUIComponent)?.MarkRecycled();
         }
     }
 
-    private IUIComponent PoolPop()
+    private IUIComponent PoolPop() => PoolTake(_recyclePool.Count - 1);
+
+    // The most recently parked container the owner can show the item in, or -1. Searching past a misfit is what keeps the
+    // pool bounded: one that never fits would otherwise sit on top and every item after it would get a new container.
+    private int PoolFitFor(object item)
     {
-        var container = _recyclePool.Pop();
+        for (var i = _recyclePool.Count - 1; i >= 0; i--)
+        {
+            if (_owner.CanReuseContainer(_recyclePool[i], item)) return i;
+        }
+
+        return -1;
+    }
+
+    private IUIComponent PoolTake(int at)
+    {
+        var container = _recyclePool[at];
+        _recyclePool.RemoveAt(at);
         _pooledSet.Remove(container);
         (container as Core.FundamentalUIComponent)?.Revive();
         ReactivateBindings(container);
@@ -317,7 +332,8 @@ public class ItemContainerGenerator
             return own;
         }
 
-        var container = _pooledSet.Count > 0 ? PoolPop() : _owner.GetContainerForItem(item);
+        var fit = PoolFitFor(item);
+        var container = fit >= 0 ? PoolTake(fit) : _owner.GetContainerForItem(item);
         _generated.Add(container);
         _owner.PrepareContainer(container, item);
         return container;
