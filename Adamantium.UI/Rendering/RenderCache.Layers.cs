@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
 
@@ -52,8 +54,94 @@ public partial class RenderCache
         }
 
         var scissor = ResolveScissor(layer, World(layer), fullScissor, out _, out _);
-        _offscreenLayers.End(device, LayerAlpha(layer), scissor);
+        var alpha = LayerAlpha(layer);
+        var mask = MaskOf(layer, fullScissor, ref alpha);
+        _offscreenLayers.End(device, alpha, scissor, mask);
     }
+
+    private LayerMask MaskOf(IUIComponent layer, Rect2D fullScissor, ref float alpha)
+    {
+        var brush = layer.OpacityMask?.Snapshot;
+        if (brush == null)
+        {
+            return default;
+        }
+
+        alpha *= (float)brush.Opacity;
+        if (brush is SolidColorBrush solid)
+        {
+            alpha *= solid.Color.ToVector4().W;
+            return default;
+        }
+
+        if (brush is not GradientBrush gradient)
+        {
+            return default;
+        }
+
+        if (!MaskBox(layer, fullScissor, out var toBox))
+        {
+            return default;
+        }
+
+        var type = GradientBake.PackGeometry(gradient, out var geom0, out var geom1);
+        Span<Vector4F> colors = stackalloc Vector4F[GradientBake.MaxStops];
+        Span<float> offsets = stackalloc float[GradientBake.MaxStops];
+        var count = GradientBake.PackStops(gradient, 1f, colors, offsets);
+
+        return new LayerMask(
+            type,
+            geom0,
+            geom1,
+            new Vector4F(toBox.M11, toBox.M21, toBox.M31, 0f),
+            new Vector4F(toBox.M12, toBox.M22, toBox.M32, 0f),
+            new Vector4F(toBox.M13, toBox.M23, toBox.M33, 0f),
+            new Vector4F(colors[0].W, colors[1].W, colors[2].W, colors[3].W),
+            new Vector4F(colors[4].W, colors[5].W, colors[6].W, colors[7].W),
+            new Vector4F(offsets[0], offsets[1], offsets[2], offsets[3]),
+            new Vector4F(offsets[4], offsets[5], offsets[6], offsets[7]),
+            new Vector4F(count, (float)gradient.SpreadMethod, 0f, 0f));
+    }
+
+    // From a window pixel (x, y, 1) to the mask's box, homogeneous: (u, v, q), the box point at (u / q, v / q). The box is
+    // the element's own; an element of no size has its subtree's drawing instead.
+    private bool MaskBox(IUIComponent layer, Rect2D fullScissor, out Matrix3x3F toBox)
+    {
+        toBox = default;
+        var size = ApplySnap(layer).RenderSize;
+        if (size.Width > 0 && size.Height > 0)
+        {
+            var world = World(layer);
+            var scale = (float)_renderScale;
+            var plane = new Matrix3x3F(
+                world.M11 * scale, world.M12 * scale, world.M14,
+                world.M21 * scale, world.M22 * scale, world.M24,
+                world.M41 * scale, world.M42 * scale, world.M44);
+            var unit = new Matrix3x3F(
+                1f / (float)size.Width, 0f, 0f,
+                0f, 1f / (float)size.Height, 0f,
+                0f, 0f, 1f);
+            toBox = Matrix3x3F.Invert(plane) * unit;
+            return true;
+        }
+
+        var start = GroupIndexOf(layer);
+        var region = LayerRegion(layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start));
+        if (region.Extent.Width == 0 || region.Extent.Height == 0)
+        {
+            return false;
+        }
+
+        var width = (float)region.Extent.Width;
+        var height = (float)region.Extent.Height;
+        toBox = new Matrix3x3F(
+            1f / width, 0f, 0f,
+            0f, 1f / height, 0f,
+            -region.Offset.X / width, -region.Offset.Y / height, 1f);
+        return true;
+    }
+
+    private static bool WantsLayer(IUIComponent component) => component.IsLayer || component.OpacityMask != null;
 
     private void RecordLayerMark(RenderOpKind kind, IUIComponent layer, long order)
     {
@@ -187,7 +275,7 @@ public partial class RenderCache
 
     private bool OpensLayer(IUIComponent component)
     {
-        if (!component.IsLayer)
+        if (!WantsLayer(component))
         {
             return false;
         }

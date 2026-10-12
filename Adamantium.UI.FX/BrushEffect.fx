@@ -10,6 +10,7 @@
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
+#include "Includes/GradientMath.fxh"
 
 // GPU-resident FRACTAL REFERENCE ORBITS (perturbation deep-zoom): a flat float2[] holding every deep-zoom fractal
 // instance's reference orbit Z_n concatenated. Each FractalRectData.Ref.x is this instance's START INDEX into it and
@@ -36,46 +37,6 @@ struct GradientRectData
     float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
 };
 
-// Apply the spread mode to a raw gradient parameter t: pad = clamp, reflect = mirror-tile, repeat = tile.
-float GradSpread(float t, int spread)
-{
-    if (spread == 1) { float m = fmod(abs(t), 2.0); return m > 1.0 ? 2.0 - m : m; }   // reflect
-    if (spread == 2) { return frac(t); }                                              // repeat
-    return saturate(t);                                                               // pad
-}
-
-// The gradient parameter t at fragment `uv` (0..1 across the bounds). Linear = projection onto the start->end axis.
-// Radial = SVG focal formula: the fraction of the way from the focal point (origin) to the ellipse boundary, so an
-// off-center origin gives a real "spotlight". Coordinates are normalized by the radius so an ellipse becomes a unit circle.
-float GradParam(GradientRectData it, float2 uv)
-{
-    if (int(it.Params.y) == 2)
-    {
-        float2 center = it.Geom0.xy;
-        float2 radius = max(it.Geom0.zw, float2(1e-4, 1e-4));
-        float2 focal = (it.Geom1.xy - center) / radius;   // focal in unit-circle space
-        float2 q = (uv - center) / radius;
-        float2 dir = q - focal;
-        float dlen = length(dir);
-        if (dlen < 1e-6) return 0.0;
-        float2 dn = dir / dlen;
-        float b = dot(focal, dn);
-        float c = dot(focal, focal) - 1.0;
-        float sEdge = -b + sqrt(max(b * b - c, 0.0));      // dist focal->unit-circle along the ray
-        return (sEdge > 1e-6) ? (dlen / sEdge) : 0.0;
-    }
-    if (int(it.Params.y) == 3)   // conic: angular sweep around Geom0.xy; Geom0.z = start angle in turns
-    {
-        float2 d = uv - it.Geom0.xy;
-        float ang = atan2(d.x, -d.y);                    // 0 at top (12 o'clock), + is clockwise (screen y is down)
-        return frac(ang * 0.15915494309 - it.Geom0.z);   // * 1/(2*pi), rotated by the start angle
-    }
-    float2 start = it.Geom0.xy;
-    float2 axis = it.Geom0.zw - start;
-    float denom = dot(axis, axis);
-    if (denom < 1e-9) return 0.0;
-    return dot(uv - start, axis) / denom;
-}
 
 // ---- sRGB <-> OKLab (Bjorn Ottosson) for PERCEPTUAL gradient interpolation. Blending in sRGB muddies midpoints (a gray
 // dead-zone between complements) and bands; OKLab is perceptually uniform, so the blend keeps even brightness + hue. Used
@@ -234,7 +195,7 @@ float4 GradientPS(GradPSInput input) : SV_Target
     // Params.w packs spread (low 3 bits), interp mode (bit 3) and the opacity slot above them; the slot is unpacked in
     // the vertex stage (o.Fade).
     int packedW = int(it.Params.w + 0.5);
-    float gt = GradSpread(GradParam(it, uv), packedW & 7);
+    float gt = GradientSpread(GradientParam(int(it.Params.y), it.Geom0, it.Geom1, uv), packedW & 7);
     // Wrap-aware AA width: at a conic/repeat seam gt jumps 1->0 so fwidth(gt) spikes to ~1 (the whole gradient collapses to
     // hard-stop ramps -> a colored line). Shifting by half a turn moves the discontinuity to the far side, so min() picks
     // the TRUE small derivative everywhere. Harmless for linear/radial (min keeps the real value).
@@ -335,7 +296,7 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 // this, so the ring is colored by exactly the same gradient as the body it feathers.
 float4 GradGeomColor(GradGeomData it, float2 local)
 {
-    // Reconstruct a GradientRectData for the shared GradParam/GradColor (Bounds/stroke fields unused by the fill eval).
+    // Reconstruct a GradientRectData for the shared GradientParam/GradColor (Bounds/stroke fields unused by the fill eval).
     GradientRectData gd;
     gd.Bounds = float4(0.0, 0.0, 0.0, 0.0);
     gd.Params = float4(0.0, it.Params.x, it.Params.z, it.Params.y);   // (_, type, stopCount, spread)
@@ -348,7 +309,7 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     gd.Offsets0 = it.Offsets0; gd.Offsets1 = it.Offsets1;
 
     float2 uv = (local - it.LocalBounds.xy) / max(it.LocalBounds.zw, float2(1e-4, 1e-4));
-    float gt = GradSpread(GradParam(gd, uv), int(gd.Params.w));
+    float gt = GradientSpread(GradientParam(int(gd.Params.y), gd.Geom0, gd.Geom1, uv), int(gd.Params.w));
     // Widened in THIS stage's own body - see GradColor.
     float4 meshCols[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
                            float4(it.Stop2) * (1.0 / 255.0), float4(it.Stop3) * (1.0 / 255.0),

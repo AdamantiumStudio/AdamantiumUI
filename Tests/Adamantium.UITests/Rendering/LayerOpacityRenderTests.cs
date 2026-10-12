@@ -338,6 +338,249 @@ public class LayerOpacityRenderTests
         });
     }
 
+    // A 40x20 red bar at (4,4) under a mask; the bar's left edge is x 4, its right edge x 44.
+    private static (TestRoot Root, TestControl Bar) Masked(Brush mask)
+    {
+        var root = new TestRoot(64, 64);
+        var bar = new TestControl
+        {
+            OpacityMask = mask,
+            RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20))
+        };
+        bar.Bounds = new Rect(4, 4, 40, 20);
+        bar.RenderSize = new Size(40, 20);
+        root.Add(bar);
+        return (root, bar);
+    }
+
+    private static LinearGradientBrush FadeIn() => new([
+        new GradientStop(Colors.Transparent, 0),
+        new GradientStop(Colors.Black, 1)
+    ])
+    {
+        StartPoint = new Vector2(0, 0.5),
+        EndPoint = new Vector2(1, 0.5)
+    };
+
+    [Test]
+    public void ALinearMask_FadesTheElementAcrossItsBox()
+    {
+        var (left, right) = Render(Masked(FadeIn()).Root, (6, 14), (42, 14));
+        var (middle, _) = Render(Masked(FadeIn()).Root, (24, 14), (24, 14));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(left), Is.LessThan(30), "almost nothing at the transparent end");
+            Assert.That(Red(middle), Is.InRange(110, 145), "half way across, half");
+            Assert.That(Red(right), Is.GreaterThan(225), "almost all of it at the opaque end");
+        });
+    }
+
+    [Test]
+    public void AMask_FollowsTheElementsTransform()
+    {
+        // A 20x10 bar scaled by 2 covers the same 40x20 as the plain one; the mask stretches with it.
+        var root = new TestRoot(64, 64);
+        var bar = new TestControl
+        {
+            OpacityMask = FadeIn(),
+            RenderTransform = new Transform { ScaleX = 2, ScaleY = 2 },
+            RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 10))
+        };
+        bar.Bounds = new Rect(4, 4, 20, 10);
+        bar.RenderSize = new Size(20, 10);
+        root.Add(bar);
+
+        var (left, right) = Render(root, (6, 14), (42, 14));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(left), Is.LessThan(30), "transparent at the left of the scaled bar");
+            Assert.That(Red(right), Is.GreaterThan(225), "opaque at its right");
+        });
+    }
+
+    [Test]
+    public void AMaskOnATurnedElement_FollowsThePerspective()
+    {
+        // Red left half, green right half, turned about Y around the left edge with perspective, so the middle is pushed
+        // in depth; the mask keeps exactly the left half of the element's box, so all the green goes and all the red stays.
+        var halfMask = new LinearGradientBrush([
+            new GradientStop(Colors.Black, 0),
+            new GradientStop(Colors.Black, 0.5),
+            new GradientStop(Colors.Transparent, 0.5),
+            new GradientStop(Colors.Transparent, 1)
+        ])
+        {
+            StartPoint = new Vector2(0, 0.5),
+            EndPoint = new Vector2(1, 0.5)
+        };
+
+        var unmasked = CountColors(Turned(null));
+        var masked = CountColors(Turned(halfMask));
+
+        Assume.That(unmasked.Red, Is.GreaterThan(80), "the turned bar shows its red half");
+        Assume.That(unmasked.Green, Is.GreaterThan(80), "and its green half");
+        Assert.Multiple(() =>
+        {
+            Assert.That(masked.Green, Is.LessThan(unmasked.Green / 10), "the green half is masked away");
+            Assert.That(masked.Red, Is.GreaterThan(unmasked.Red * 9 / 10), "the red half is kept");
+        });
+    }
+
+    private static TestRoot Turned(Brush mask)
+    {
+        var root = new TestRoot(64, 64);
+        var bar = new TestControl
+        {
+            OpacityMask = mask,
+            IsLayer = true,
+            RenderTransform = new Transform { RotationY = 45, Perspective = 120, RotationCenterX = 0, RotationCenterY = 10 },
+            RenderAction = s => s
+                .DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20))
+                .DrawRectangle(Brushes.Lime, new Rect(20, 0, 20, 20))
+        };
+        bar.Bounds = new Rect(12, 20, 40, 20);
+        bar.RenderSize = new Size(40, 20);
+        root.Add(bar);
+        return root;
+    }
+
+    private (int Red, int Green) CountColors(TestRoot root)
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"layer_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var pixels = Image.Load(path).GetPixelBuffer(0, 0);
+            var red = 0;
+            var green = 0;
+            for (var y = 0; y < 64; y++)
+            {
+                for (var x = 0; x < 64; x++)
+                {
+                    var pixel = pixels.GetPixel<uint>(x, y);
+                    if (Red(pixel) > 160 && Green(pixel) < 60)
+                    {
+                        red++;
+                    }
+                    else if (Green(pixel) > 160 && Red(pixel) < 60)
+                    {
+                        green++;
+                    }
+                }
+            }
+
+            return (red, green);
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    private static int Green(uint pixel) => (int)((pixel >> 8) & 0xFF);
+
+    [Test]
+    public void AMaskOnAnElementOfNoSize_IsLaidOverWhatItsChildrenDraw()
+    {
+        var root = new TestRoot(64, 64);
+        var holder = new TestControl { OpacityMask = FadeIn() };
+        holder.Bounds = new Rect(4, 4, 0, 0);
+        holder.RenderSize = new Size(0, 0);
+        var bar = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20)) };
+        bar.Bounds = new Rect(0, 0, 40, 20);
+        bar.RenderSize = new Size(40, 20);
+        holder.Add(bar);
+        root.Add(holder);
+
+        var (left, right) = Render(root, (6, 14), (42, 14));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(left), Is.LessThan(40), "faded at the left of what the children draw");
+            Assert.That(Red(right), Is.GreaterThan(200), "kept at its right");
+        });
+    }
+
+    [Test]
+    public void AGradientMaskWithNoStops_ShowsNothing()
+    {
+        var (root, _) = Masked(new LinearGradientBrush());
+
+        var (middle, _) = Render(root, (24, 14), (24, 14));
+
+        Assert.That(Red(middle), Is.LessThan(10), "a gradient with nothing in it masks everything away");
+    }
+
+    [Test]
+    public void ARadialMask_KeepsTheMiddleAndMeltsTheCorners()
+    {
+        var mask = new RadialGradientBrush([
+            new GradientStop(Colors.Black, 0),
+            new GradientStop(Colors.Transparent, 1)
+        ]);
+        var (root, _) = Masked(mask);
+
+        var (middle, corner) = Render(root, (24, 14), (5, 5));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(middle), Is.GreaterThan(225), "opaque in the middle");
+            Assert.That(Red(corner), Is.LessThan(10), "gone past the ellipse, in the corner");
+        });
+    }
+
+    [Test]
+    public void ASolidMask_FadesByItsAlpha()
+    {
+        var (root, _) = Masked(new SolidColorBrush(Color.FromRgba(0, 0, 0, 128)));
+
+        var (inside, _) = Render(root, (24, 14), (24, 14));
+
+        Assert.That(Red(inside), Is.InRange(110, 145));
+    }
+
+    [Test]
+    public void AMask_MakesALayerOfItsOwn()
+    {
+        // No IsLayer: the mask alone must draw the group as one, so the overlap is a single coat.
+        var (root, group) = Overlap(layer: false);
+        group.Opacity = 1;
+        group.OpacityMask = new SolidColorBrush(Color.FromRgba(0, 0, 0, 128));
+
+        var (single, both) = Render(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(single), Is.InRange(110, 145));
+            Assert.That(Red(both), Is.EqualTo(Red(single)).Within(3), "one coat where the squares overlap");
+        });
+    }
+
+    [Test]
+    public void AMaskChangedInPlace_ShowsOnTheNextFrame()
+    {
+        var mask = FadeIn();
+        var (root, _) = Masked(mask);
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        mask.GradientStops[0].Color = Colors.Black;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        var (left, _) = Pixels(renderer, (6, 14), (6, 14));
+        Assert.That(Red(left), Is.GreaterThan(225), "both ends are opaque now");
+    }
+
     [Test]
     public void ALayerWithinALayer_IsLaidDownOnceInEach()
     {

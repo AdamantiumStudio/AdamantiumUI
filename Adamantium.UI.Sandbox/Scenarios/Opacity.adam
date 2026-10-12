@@ -13,3 +13,6 @@ set id=GroupOpacity 0.3
 expect id=LayeredGroup Opacity=0.3
 expect id=PlainGroup Opacity=0.3
 set id=GroupOpacity 0.5
+# The list under a melting mask scrolls end to end, and back.
+scroll id=MaskedList --vertical 100
+scroll id=MaskedList --vertical 0

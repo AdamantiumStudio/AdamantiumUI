@@ -15,7 +15,7 @@ public class UniverseService : IUniverseService
 {
     private readonly object _locker = new object();
 
-    private List<UniverseKey> _universes;
+    private readonly List<UniverseKey> _universes;
 
     private readonly List<IUniverse> _retired = [];
 

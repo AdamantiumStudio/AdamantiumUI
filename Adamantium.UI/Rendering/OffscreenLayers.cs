@@ -58,8 +58,9 @@ internal sealed class OffscreenLayers : IDisposable
     }
 
     /// <summary>Closes the innermost layer, goes back to the target it was opened over and lays the layer down there with
-    /// <paramref name="alpha"/>, cut by <paramref name="scissor"/> (device pixels of the window).</summary>
-    public void End(IGraphicsDevice device, float alpha, Rect2D scissor)
+    /// <paramref name="alpha"/> and <paramref name="mask"/>, cut by <paramref name="scissor"/> (device pixels of the
+    /// window).</summary>
+    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask)
     {
         if (device is not GraphicsDevice gd || _open.Count == 0)
         {
@@ -87,11 +88,11 @@ internal sealed class OffscreenLayers : IDisposable
 
         if (alpha > 0f)
         {
-            Composite(gd, open, alpha, scissor);
+            Composite(gd, open, alpha, scissor, mask);
         }
     }
 
-    private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor)
+    private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -119,6 +120,18 @@ internal sealed class OffscreenLayers : IDisposable
             region.Extent.Width / (float)open.TextureWidth, region.Extent.Height / (float)open.TextureHeight, 0, 0));
         _composite.LayerAlpha.SetValue(alpha);
         _composite.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
+        _composite.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
+        _composite.MaskType.SetValue(mask.Type);
+        _composite.MaskGeom0.SetValue(mask.Geom0);
+        _composite.MaskGeom1.SetValue(mask.Geom1);
+        _composite.MaskU.SetValue(mask.U);
+        _composite.MaskV.SetValue(mask.V);
+        _composite.MaskW.SetValue(mask.W);
+        _composite.MaskAlpha0.SetValue(mask.Alpha0);
+        _composite.MaskAlpha1.SetValue(mask.Alpha1);
+        _composite.MaskOffsets0.SetValue(mask.Offsets0);
+        _composite.MaskOffsets1.SetValue(mask.Offsets1);
+        _composite.MaskParams.SetValue(mask.Params);
         _composite.SourceTexture.SetResource(open.Color);
         _composite.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
         _composite.LayerCompositeDrawPass.Apply();
