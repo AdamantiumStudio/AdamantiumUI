@@ -48,6 +48,11 @@ public interface ICanvasTool
     /// button announces itself nowhere at all. The pointer is the one place a person is already looking.</summary>
     Cursor Cursor => Cursors.Arrow;
 
+    /// <summary>Whether this tool lays ink. Ink takes every finger and pen at once, each its own stroke told apart by
+    /// <see cref="CanvasPointerEventArgs.PointerId"/>, and <see cref="InfiniteCanvas.FingerInk"/> says whether a finger
+    /// may lay it. False by default: a tool works one pointer at a time.</summary>
+    bool IsInk => false;
+
     void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e);
 
     void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e);
@@ -74,4 +79,8 @@ public interface ICanvasTool
 
     /// <summary>Finish or abandon whatever is in progress - the tool is being put down, or the pointer is gone.</summary>
     void Cancel(InfiniteCanvas canvas);
+
+    /// <summary>Abandon what one pointer was doing - a finger a gesture took - and leave the others' work alone. Cancels
+    /// everything by default, which is the same for a tool that works one pointer at a time.</summary>
+    void CancelPointer(InfiniteCanvas canvas, uint pointerId) => Cancel(canvas);
 }

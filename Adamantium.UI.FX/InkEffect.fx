@@ -13,7 +13,8 @@ struct InkRecord
     float4 Segment;
     // HEADER: .x half width (node-local), .y transform slot, .z opacity slot, .w 1 = header. POINT: .w 0.
     float4 Params;
-    // HEADER: .x rounded-clip slot or -1, .y how many points, .z how far past THIS record the first of them is, .w spare.
+    // HEADER: .x rounded-clip slot or -1, .y how many points, .z how far past THIS record the first of them is.
+    // Every record: .w the half width at its point (node-local).
     float4 Clip;
     float4 Color;     // straight RGBA, opacity folded into the alpha
 };
@@ -76,14 +77,35 @@ InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_Instan
     return o;
 }
 
-// Distance from a point to a SEGMENT - the whole shape, in one expression. The clamp is what makes the ends round.
-float DistanceToSegment(float2 p, float2 a, float2 b)
+// Signed distance from a point to a segment whose width runs from ra at a to rb at b. The width is taken where the point
+// falls along the segment, and each end is its own round cap - a short segment between very different widths would
+// otherwise cut the wider cap off.
+float DistanceToSegment(float2 p, float2 a, float2 b, float ra, float rb)
 {
     float2 pa = p - a;
     float2 ba = b - a;
     float t = saturate(dot(pa, ba) / max(dot(ba, ba), 1e-12));
+    float along = length(pa - ba * t) - lerp(ra, rb, t);
 
-    return length(pa - ba * t);
+    return min(along, min(length(pa) - ra, length(p - b) - rb));
+}
+
+// The fragment's node-local position, rebuilt from its pixel. Interpolated, each segment's quad arrives at its own
+// rounding of the same pixel, and where two segments are all but equally near they name different owners - the pixel is
+// then drawn twice or not at all. From the pixel and the node's matrix every quad computes bit-identical numbers. A
+// matrix in perspective (a 3D flip) has no such flat inverse, and keeps the interpolated position.
+float2 PixelToLocal(float2 fragment, float2 interpolated, float4x4 nodeWorld)
+{
+    float4x4 m = mul(nodeWorld, Projection);
+    bool flat = abs(m[0].w) + abs(m[1].w) + abs(m[3].w - 1.0) < 1e-6;
+    if (ViewportSize.x < 1.0 || !flat) return interpolated;
+
+    float2 halfVp = ViewportSize * 0.5;
+    float2 ax = mul(float4(1.0, 0.0, 0.0, 0.0), m).xy * halfVp;
+    float2 ay = mul(float4(0.0, 1.0, 0.0, 0.0), m).xy * halfVp;
+    float2 d = SurfacePixel(fragment) - (mul(float4(0.0, 0.0, 0.0, 1.0), m).xy + 1.0) * halfVp;
+    float det = ax.x * ay.y - ax.y * ay.x;
+    return float2(d.x * ay.y - d.y * ay.x, ax.x * d.y - ax.y * d.x) / det;
 }
 
 [shader("pixel")]
@@ -103,32 +125,31 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
     float nearest = 1e30;
     uint owner = 0u;
 
-    // NEARER BY A MARGIN, not merely nearer: each segment's quad interpolates its own position for the pixel it
-    // covers, and those agree only to floating-point - so two fragments comparing all-but-equal distances could name
-    // different owners, and the pixel would be drawn twice or not at all. A thousandth of a device pixel is far above
-    // that error and far below anything the coverage can express.
-    float tie = 1e-3 / max(i.Shape.y, 1e-6);
-    float2 at = i.Local;
+    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    float2 at = PixelToLocal(i.Position.xy, i.Local, nodes[(uint)it.Params.y].World);
     float2 previous = items[first].Segment.xy;
+    float previousHalf = items[first].Clip.w;
 
     // A stroke of one point is a dot: the loop below does not execute and the distance is to that point alone.
-    if (count == 1u) nearest = length(at - previous);
+    if (count == 1u) nearest = length(at - previous) - previousHalf;
 
     for (uint s = 1u; s < count; s++)
     {
         float2 current = items[first + s].Segment.xy;
-        float away = DistanceToSegment(at, previous, current);
+        float currentHalf = items[first + s].Clip.w;
+        float away = DistanceToSegment(at, previous, current, previousHalf, currentHalf);
 
         // STRICTLY nearer, so a tie goes to the earlier segment. Every segment's fragment measures from the same
         // rebuilt position and walks the same points in the same order, so they all name the same winner - which is
         // what makes `exactly one of us draws` true rather than likely.
-        if (away < nearest - tie)
+        if (away < nearest)
         {
             nearest = away;
             owner = s - 1u;
         }
 
         previous = current;
+        previousHalf = currentHalf;
     }
 
     // NOT MINE: some other segment of this stroke is nearer to this pixel, and that one is drawing it.
@@ -136,7 +157,7 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
 
     // In DEVICE pixels, so the fade is one pixel wide however far the camera is zoomed - which keeps the edge of the
     // ink the same softness at every scale instead of blurring as it grows.
-    float distance = (nearest - i.Shape.x) * i.Shape.y;
+    float distance = nearest * i.Shape.y;
     float coverage = saturate(0.5 - distance);
     if (coverage <= 0.0) discard;
 
