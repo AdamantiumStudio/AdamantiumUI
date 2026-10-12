@@ -699,7 +699,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
 
         if (GetBaseValuePriority(ContextMenuProperty) == ValuePriority.Local)
         {
-            DiscardedVisuals.Publish(menu);
+            DiscardedVisuals.PublishSubtree(menu);
         }
         else
         {

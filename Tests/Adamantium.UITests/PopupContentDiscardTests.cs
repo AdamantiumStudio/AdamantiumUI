@@ -3,7 +3,6 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Templates;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -32,29 +31,22 @@ public class PopupContentDiscardTests
         });
     }
 
-    // A menu's own items sit in its popup: they are the application's, shown again when the menu, re-templated by a
-    // theme swap, opens its new popup.
+    // A menu's items sit in its popup, shown by a presenter there, but they are the menu's: re-templated by a theme swap,
+    // the menu shows them again in its new popup.
     [Test]
-    public void ADiscardedPopup_LeavesTheItemsAListInItShows()
+    public void ADiscardedPopup_LeavesTheItemsItShowsForAnotherControl()
     {
         var item = new Border();
-        var list = new ListBox
-        {
-            Template = new ControlTemplate(() =>
-            {
-                var presenter = new ItemsPresenter();
-                var result = new TemplateResult { RootComponent = presenter };
-                result.RegisterName("PART_ItemsPresenter", presenter);
-                return result;
-            })
-        };
-        list.Items.Add(item);
-        list.Measure(new Size(200, 200));
-        list.Arrange(new Rect(0, 0, 200, 200));
-        Assume.That(item.VisualParent, Is.Not.Null, "the item is shown inside the list");
+        var menu = new ListBox();
+        menu.Items.Add(item);
 
+        var presenter = new ItemsPresenter();
         var content = new Grid();
-        content.Children.Add(list);
+        content.Children.Add(presenter);
+        presenter.Connect(menu);
+        content.Measure(new Size(200, 200));
+        content.Arrange(new Rect(0, 0, 200, 200));
+        Assume.That(item.VisualParent, Is.Not.Null, "the item is shown in the popup");
         var popup = new Popup { Child = content };
 
         DiscardedVisuals.Publish(popup);
@@ -62,8 +54,8 @@ public class PopupContentDiscardTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(list.IsDiscarded, Is.True, "the list is the popup's");
-            Assert.That(item.IsDiscarded, Is.False, "the item is the application's");
+            Assert.That(content.IsDiscarded, Is.True, "the content is the popup's");
+            Assert.That(item.IsDiscarded, Is.False, "the item is the menu's");
         });
     }
 }

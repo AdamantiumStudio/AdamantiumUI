@@ -722,6 +722,13 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         if (_skeletonPrototype != null)
         {
             RemoveLogicalChild(_skeletonPrototype);
+            DiscardedVisuals.PublishSubtree(_skeletonPrototype);
+        }
+
+        if (_gapCard is { VisualParent: null })
+        {
+            DiscardedVisuals.PublishSubtree(_gapCard);
+            _gapCard = null;
         }
 
         _skeletonPrototype = null;

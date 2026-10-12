@@ -1037,7 +1037,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             }
             Languages.Changed -= OnLanguageChanged;
             Closed?.Invoke(this, EventArgs.Empty);
+            LoopSignal.Post(DiscardClosed);
         }
+    }
+
+    private void DiscardClosed()
+    {
+        AdornerLayer.Clear();
+        AdornerLayer.SetFocus(null);
+        DiscardedVisuals.PublishSubtree(this);
     }
 
     public event EventHandler<WindowClosingEventArgs> Closing;

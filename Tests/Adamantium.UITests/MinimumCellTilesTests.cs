@@ -80,6 +80,23 @@ public class MinimumCellTilesTests
         return ic;
     }
 
+    // The card is the panel's own, built from the theme's template. Dropped on a regenerate without being discarded, it
+    // lived on out of the tree, its localized and themed values listening to the resources and naming the panel as its
+    // templated parent - and the panel held the whole list a page had thrown away.
+    [Test]
+    public void ARegenerate_DiscardsTheSkeletonCardItDrops()
+    {
+        var ic = TiledList(budgetMs: 0, hold: true);
+        LayoutManager.GetOrCreate(ic).ExecuteLayoutPass();
+        var panel = (VirtualizingPanel)ic.ItemsHostPanel;
+        var card = ((IUIComponent)panel).VisualChildren.OfType<Border>().First();
+
+        panel.Revirtualize();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(card.IsDiscarded, Is.True);
+    }
+
     /// <summary>With no bind budget the panel must realize a full window of tiles, each one cell big. If this fails the
     /// arithmetic is at fault; if it passes, the panel is not what makes them vanish.</summary>
     [Test]

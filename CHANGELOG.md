@@ -1083,6 +1083,25 @@ All packages share one version.
     and everything under it.
   - **Overlay stages record again once released elements are all let go of**, so their caches drop what they kept for
     them; an idle stage recorded nothing and kept it.
+  - **A closed window is discarded with everything in it**, its focus ring and other adorners among them, and its
+    entity leaves the application's world. Kept alive, it stayed an owner of every theme brush it painted with - a
+    window is its own root, so to a brush it never leaves a tree - and its renderer queued frames nobody drew, about
+    14,000 a run of the sandbox's scenarios.
+  - **The pointers let go of released elements** - what they were over, hovered, clicked last or were captured by. The
+    window the pointer last touched stayed alive after it closed.
+  - **An adorner layer discards the focus ring, hover frame and selection frames it replaces.**
+  - **A render scope whose surface is gone takes no marks and drops those it held** (`RenderDirtyRouter.Forget`). A
+    context menu a style shares among windows still named the scope of the one it was last shown in, and kept what was
+    marked there.
+  - **A discarded items control discards its own items** - elements put in it, not from a source - shown or not: the
+    tabs of a closed ribbon that were never selected stayed alive. **An element discards the whole of its own context
+    menu**, its template with it.
+  - **A virtualizing panel discards the skeleton card it drops on a regenerate**, and the drop placeholder with it. Built
+    from the theme's template with the panel as its templated parent, the card lived on out of the tree, listening to
+    the resources and holding the panel - and with it each list the Layout page threw away, about 60 MB a visit. A
+    placeholder dropped that way was also never shown again; it is built anew.
+  - **An items control's automation peer lets go of the stand-ins of items it no longer holds.** It kept one for every
+    item the control ever held while automation looked at it.
   - The render cache clears the buffers of its structural pass after each frame.
   - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
     released. A released element is final; nothing brings it back.

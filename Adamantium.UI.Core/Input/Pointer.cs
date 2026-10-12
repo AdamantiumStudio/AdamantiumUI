@@ -55,6 +55,37 @@ public sealed class Pointer
     /// <summary>What the pointer last reported: buttons, pressure, tilt.</summary>
     public PointerPointProperties Properties { get; internal set; }
 
+    internal void ForgetReleased()
+    {
+        if (IsReleased(PositionRoot))
+        {
+            PositionRoot = null;
+        }
+
+        if (IsReleased(HoverRoot))
+        {
+            HoverRoot = null;
+        }
+
+        if (IsReleased(LastClicked))
+        {
+            LastClicked = null;
+        }
+
+        if (IsReleased(DirectlyOver))
+        {
+            DirectlyOver = null;
+        }
+
+        if (IsReleased(Captured))
+        {
+            Captured = null;
+        }
+    }
+
+    private static bool IsReleased(IInputComponent component) =>
+        component is FundamentalUIComponent { ReleasedInBatch: > 0 };
+
     /// <summary>Gives this pointer's events to <paramref name="component"/> whatever is under it; null releases it. The
     /// element that had it is told it lost it.</summary>
     public bool Capture(IInputComponent component)

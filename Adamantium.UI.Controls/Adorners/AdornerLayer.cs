@@ -35,6 +35,7 @@ public class AdornerLayer
     {
         if (element == null)
         {
+            Drop(_focus);
             _focus = null;
             return;
         }
@@ -42,6 +43,7 @@ public class AdornerLayer
         if (_focus != null && ReferenceEquals(_focus.AdornedElement, element))
             return;
 
+        Drop(_focus);
         _focus = new FocusAdorner(element);
         // The control's own ring, where it asked for one. Attached here rather than left to the stage's ApplyTheme:
         // attached styles are applied AFTER the theme, so a control's FocusVisualStyle overrides the theme's ring
@@ -60,6 +62,7 @@ public class AdornerLayer
         {
             if (ReferenceEquals(node, root))
             {
+                Drop(_focus);
                 _focus = null;
                 return;
             }
@@ -79,7 +82,7 @@ public class AdornerLayer
     /// Null/empty clears the selection.</summary>
     public void SetSelection(IEnumerable<UIComponent> elements)
     {
-        _selection.Clear();
+        DropSelection();
         if (elements == null) return;
         foreach (var element in elements)
             if (element != null) _selection.Add(new SelectionAdorner(element));
@@ -89,6 +92,7 @@ public class AdornerLayer
     /// element is already selected, so a hovered+selected element isn't double-framed.</summary>
     public void SetHover(UIComponent element)
     {
+        Drop(_hover);
         _hover = element != null && !IsSelected(element) ? new HoverAdorner(element) : null;
     }
 
@@ -96,8 +100,27 @@ public class AdornerLayer
     /// decoration but where the keyboard currently is, and that does not stop being true when a selection changes.</summary>
     public void Clear()
     {
-        _selection.Clear();
+        DropSelection();
+        Drop(_hover);
         _hover = null;
+    }
+
+    private void DropSelection()
+    {
+        foreach (var adorner in _selection)
+        {
+            Drop(adorner);
+        }
+
+        _selection.Clear();
+    }
+
+    private static void Drop(Adorner adorner)
+    {
+        if (adorner != null)
+        {
+            DiscardedVisuals.PublishSubtree(adorner);
+        }
     }
 
     private bool IsSelected(UIComponent element)
