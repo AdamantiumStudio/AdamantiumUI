@@ -31,6 +31,16 @@ uint64_t InstancesAddress;
 
 float2 ViewportSize;      // render target size in DEVICE pixels - the NDC <-> pixel basis for the fringe offset
 
+// Where the target's top-left corner lies in the window's device pixels (GraphicsDevice.TargetOrigin): zero for the
+// window itself, the region's corner for a layer's texture. Clip boxes and capture rects are in the window's pixels.
+float2 TargetOrigin;
+
+// A fragment's SV_Position in the window's device pixels, whatever target it is drawn into.
+float2 SurfacePixel(float2 fragment)
+{
+    return fragment + TargetOrigin;
+}
+
 float FringePixels;       // fringe width in DEVICE pixels
 
 // The transform table (Rendering/TransformTable.cs): one world matrix per motion node, by instance slot; slot 0 is

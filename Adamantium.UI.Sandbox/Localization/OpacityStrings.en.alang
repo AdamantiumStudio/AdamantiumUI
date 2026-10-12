@@ -21,4 +21,9 @@
 
     <Phrase Key="SubtreeTitle" Text="Opacity (whole subtree) vs SelfOpacity (this element only)"/>
     <Phrase Key="Baseline" Text="baseline"/>
+
+    <Phrase Key="LayerTitle" Text="Opacity on a group of overlapping shapes: as is, and as a layer (IsLayer)"/>
+    <Phrase Key="GroupOpacity" Text="Group opacity:"/>
+    <Phrase Key="AsIs" Text="as is"/>
+    <Phrase Key="AsLayer" Text="as a layer"/>
 </Language>

@@ -32,6 +32,7 @@ internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
         Effect = Own(new ArrowEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
+        TargetOriginParam = Effect.TargetOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }

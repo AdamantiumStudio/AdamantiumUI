@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `UIComponent.IsLayer`: the element and its subtree are drawn at full strength into a texture of their own, which is
+  then laid down once with the element's opacity, multiplied by its ancestors'. Where children overlap, the background
+  shows through as much as anywhere else, instead of each child being faded on its own. The texture covers everything
+  the subtree draws, within its ancestors' clip: strokes, auras and children outside the element are included. There is
+  one texture per frame in flight. A composited opacity animation on the element fades the laid-down texture. Clips,
+  materials and text inside the layer work in window pixels as outside it.
+  - **The stand.** The sandbox's Opacity page shows two identical groups of overlapping circles, one as is and one as
+    a layer, under one opacity slider.
+  - **Not yet.**
+    - A layer inside copies drawn by `RenderClones` fades as a plain group, without a texture of its own.
+    - Copies drawn by `RenderClones` inside a layer make its texture as large as its ancestors' clip.
+    - A backdrop material inside a layer sees only what the layer has drawn so far.
+
 - Several fingers at once in automation.
   - **The command.** `adam-auto touches <selector>... tap | hold | drag <dx,dy>` puts a finger in the middle of each
     element, up to ten, down together and lifted together. A drag draws each finger by the same offset, in its

@@ -188,6 +188,87 @@
                     <TextBlock Text="SelfOpacity 0.35" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
             </WrapPanel>
+
+            <!-- The same faded group twice. As is, the opacity reaches every shape on its own, so where they overlap the
+                 background shows through less; as a layer, the group is drawn whole and laid down once. -->
+            <TextBlock Text="{Localize OpacityStrings.LayerTitle}"
+                       FontSize="18"
+                       MarginTop="24"
+                       MarginBottom="10"/>
+            <StackPanel Orientation="Horizontal"
+                        MarginBottom="10">
+                <TextBlock x:Name="GroupOpacityLabel"
+                           Text="{Localize OpacityStrings.GroupOpacity}"
+                           VerticalAlignment="Center"
+                           MinWidth="140"
+                           MarginRight="8"/>
+                <Slider AutomationProperties.AutomationId="GroupOpacity"
+                        AutomationProperties.LabeledBy="{Binding ElementName=GroupOpacityLabel}"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="{Binding GroupOpacity, Mode=TwoWay}"
+                        Width="260"/>
+            </StackPanel>
+            <WrapPanel Orientation="Horizontal">
+                <StackPanel Orientation="Vertical"
+                            MarginRight="40">
+                    <Grid AutomationProperties.AutomationId="PlainGroup"
+                          Width="130"
+                          Height="120"
+                          Opacity="{Binding GroupOpacity}">
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 Fill="#FFEF4444"/>
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 MarginLeft="50"
+                                 Fill="#FF22C55E"/>
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 MarginLeft="25"
+                                 MarginTop="40"
+                                 Fill="#FF3B82F6"/>
+                    </Grid>
+                    <TextBlock Text="{Localize OpacityStrings.AsIs}"
+                               HorizontalAlignment="Center"
+                               Foreground="{ResourceReference TextFillColorSecondary}"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <Grid AutomationProperties.AutomationId="LayeredGroup"
+                          Width="130"
+                          Height="120"
+                          IsLayer="True"
+                          Opacity="{Binding GroupOpacity}">
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 Fill="#FFEF4444"/>
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 MarginLeft="50"
+                                 Fill="#FF22C55E"/>
+                        <Ellipse Width="80"
+                                 Height="80"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top"
+                                 MarginLeft="25"
+                                 MarginTop="40"
+                                 Fill="#FF3B82F6"/>
+                    </Grid>
+                    <TextBlock Text="{Localize OpacityStrings.AsLayer}"
+                               HorizontalAlignment="Center"
+                               Foreground="{ResourceReference TextFillColorSecondary}"/>
+                </StackPanel>
+            </WrapPanel>
         </StackPanel>
     </ScrollViewer>
 </View>

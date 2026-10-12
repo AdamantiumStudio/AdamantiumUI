@@ -197,9 +197,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _brush.TransformsAddress.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
         if (vp is { Length: > 0 }) _brush.ViewportSize.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
+        _brush.TargetOrigin.SetValue(TargetOrigin());
         _brush.FringePixels.SetValue(DeviceFringePx);
         return _brush;
     }
+
+    private Vector2F TargetOrigin() => new(_device.TargetOrigin.X, _device.TargetOrigin.Y);
 
     private Adamantium.UI.FX.MaterialEffect _material;
 
@@ -212,6 +215,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _material.TransformsAddress.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
         if (vp is { Length: > 0 }) _material.ViewportSize.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
+        _material.TargetOrigin.SetValue(TargetOrigin());
         return _material;
     }
 
@@ -1318,6 +1322,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _effect.TransformsAddress.SetValue(TransformsAddress);
         if (_brush != null) _brush.Projection.SetValue(projection);
         if (_brush != null) _brush.TransformsAddress.SetValue(TransformsAddress);
+        var origin = TargetOrigin();
+        _effect.TargetOrigin.SetValue(origin);
+        _brush?.TargetOrigin.SetValue(origin);
+        _material?.TargetOrigin.SetValue(origin);
 
         _device.VertexType = typeof(UIVertex);
         _device.PolygonMode = PolygonMode.Fill;

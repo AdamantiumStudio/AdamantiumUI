@@ -140,6 +140,20 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         VisualTreeNotifications.RaiseClipChanged(component);
     }
 
+    public static readonly AdamantiumProperty IsLayerProperty = AdamantiumProperty.Register(nameof(IsLayer),
+        typeof(bool), typeof(UIComponent), new PropertyMetadata(false, OnIsLayerChanged));
+
+    private static void OnIsLayerChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        component._isLayer = component.GetValue<bool>(IsLayerProperty);
+        RenderDirty.MarkStructural(component);
+    }
+
     /// <summary>The clip's corner rounding when <see cref="ClipToBounds"/> is on. Unset takes the container's own corners, so
     /// a rounded Border clips the way it looks.</summary>
     public static readonly AdamantiumProperty ClipCornerRadiusProperty = AdamantiumProperty.Register(
@@ -775,6 +789,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     public Guid RenderId { get; }
 
     private bool _clipToBounds;
+    private bool _isLayer;
 
     /// <summary>Field mirror (see <see cref="ZIndex"/>): read by every layout SNAPSHOT and every draw command - ~10000 of
     /// each per frame on a tile grid.</summary>
@@ -782,6 +797,13 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get => _clipToBounds;
         set => SetValue(ClipToBoundsProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.IsLayer"/>. The getter reads a mirror, so the draw walk pays no lookup.</summary>
+    public bool IsLayer
+    {
+        get => _isLayer;
+        set => SetValue(IsLayerProperty, value);
     }
 
     public Double Opacity

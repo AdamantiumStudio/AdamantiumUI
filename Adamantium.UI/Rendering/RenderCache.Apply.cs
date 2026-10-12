@@ -539,7 +539,8 @@ public partial class RenderCache
                     }
                 }
 
-                if (draw.Clones is { Count: > 0 } && (emptied == null || !emptied.InOrder || emptied.Order != draw.Order))
+                if ((draw.Clones is { Count: > 0 } || draw.Component.IsLayer)
+                    && (emptied == null || !emptied.InOrder || emptied.Order != draw.Order))
                 {
                     var host = emptied ?? BuildUnitsFor(draw.Component, draw.Commands, packet.ProjectionMatrix);
                     host.Clones = draw.Clones;

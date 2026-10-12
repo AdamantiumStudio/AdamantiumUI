@@ -21,4 +21,9 @@
 
     <Phrase Key="SubtreeTitle" Text="Opacity (всё поддерево) против SelfOpacity (только этот элемент)"/>
     <Phrase Key="Baseline" Text="эталон"/>
+
+    <Phrase Key="LayerTitle" Text="Прозрачность группы налезающих фигур: как есть и слоем (IsLayer)"/>
+    <Phrase Key="GroupOpacity" Text="Прозрачность группы:"/>
+    <Phrase Key="AsIs" Text="как есть"/>
+    <Phrase Key="AsLayer" Text="слоем"/>
 </Language>

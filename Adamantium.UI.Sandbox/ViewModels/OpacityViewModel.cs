@@ -19,6 +19,9 @@ public partial class OpacityViewModel : TabPageViewModel
     /// reach the screen; a family that reads the slot AND keeps the chain in its color shows here as too dark.</summary>
     [Bindable] private double _elementOpacity = 1;
 
+    /// <summary>Fades the two groups of overlapping circles: one drawn as is, one as a layer.</summary>
+    [Bindable] private double _groupOpacity = 0.5;
+
     /// <summary>The MESH family's swatch - tessellated triangles rather than a shader-side shape, which is a different
     /// path to the same question. Sized to the swatch so the piece and its bounds agree.</summary>
     public PointsCollection Star { get; } = MakeStar(84, 56);

@@ -12,6 +12,12 @@ public interface IUIComponent : IFundamentalUIComponent
     Guid RenderId { get; }
     Boolean ClipToBounds { get; set; }
 
+    /// <summary>Whether this element and its subtree are drawn into a layer of their own, which is then laid down once
+    /// with the element's <c>Opacity</c>. Without it the group opacity reaches every drawing in the subtree separately,
+    /// so where children overlap the background shows through less. Costs an off-screen pass; ask only where children
+    /// overlap under a fade.</summary>
+    bool IsLayer { get; }
+
     /// <summary>How this clip's corners are rounded (TL, TR, BR, BL). A scissor is square, so rounding is applied by the
     /// shaders; zero means the plain rectangular clip. Unset falls back to the container's own CornerRadius, where it
     /// has one - see UIComponent.ClipCornerRadius.</summary>

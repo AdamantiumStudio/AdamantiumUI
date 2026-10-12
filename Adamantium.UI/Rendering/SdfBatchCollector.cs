@@ -19,7 +19,7 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
     // through BrushEffect (see BrushEffect.fx - two effects because one parameter block could not hold both). What the
     // draw needs is the four parameters BOTH declare, held as fields rather than looked up by name: a dictionary hit per
     // parameter per draw is exactly the cost the batch exists to remove.
-    protected EffectParameter ProjectionParam, ViewportSizeParam, InstancesAddressParam, TransformsAddressParam;
+    protected EffectParameter ProjectionParam, ViewportSizeParam, TargetOriginParam, InstancesAddressParam, TransformsAddressParam;
 
     /// <summary>Create the effect if it is not there yet and point the four parameters above at it. Called at the start
     /// of every frame, so it must be cheap once the effect exists.</summary>
@@ -103,6 +103,7 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         // shape's edge along its long axis.
         var vp = ((GraphicsDevice)device).CurrentViewports;
         if (vp is { Length: > 0 }) ViewportSizeParam.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
+        TargetOriginParam.SetValue(new Vector2F(device.TargetOrigin.X, device.TargetOrigin.Y));
         device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
 
         device.VertexType = null;
