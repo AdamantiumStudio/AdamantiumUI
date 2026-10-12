@@ -20,6 +20,7 @@ internal abstract class BrushSdfCollector<TItem> : SdfBatchCollector<TItem> wher
         Effect = Own(new BrushEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
+        TargetOriginParam = Effect.TargetOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }

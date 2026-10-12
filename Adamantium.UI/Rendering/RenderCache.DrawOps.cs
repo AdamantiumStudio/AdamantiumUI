@@ -30,6 +30,12 @@ public partial class RenderCache
                     case RenderOpKind.Scissor:
                         device.SetScissors(op.Scissor);
                         break;
+                    case RenderOpKind.LayerBegin:
+                        BeginOffscreenLayer(device, op.Layer, fullScissor);
+                        break;
+                    case RenderOpKind.LayerEnd:
+                        EndOffscreenLayer(device, op.Layer, fullScissor);
+                        break;
                     case RenderOpKind.Unit:
                         // Per-unit draws bake their world at record time while batches follow slots live, so re-point the
                         // ones whose batched half moved this frame (see RepointIfItMoved).
@@ -692,8 +698,9 @@ public partial class RenderCache
 
         // A CLONE HOST takes its place in the paint order even when it draws nothing of its own: the clone run
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
-        // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once.
-        if (drawCommands.Count == 0 && clones is { Count: > 0 })
+        // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once. A
+        // LAYER is the same: its group is where the walk opens the layer.
+        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || component.IsLayer))
         {
             var hostGroup = BuildUnitsFor(component, drawCommands, projectionMatrix);
             hostGroup.Clones = clones;

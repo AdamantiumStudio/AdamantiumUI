@@ -490,11 +490,11 @@ MaterialPSInput MaterialRectInstancedVS(uint vertexId : SV_VertexID, uint instan
     return o;
 }
 
-// A fragment's position in the source, 0..1. Position.xy is already the frame's device pixel, which is the space
-// SourceUv was built for - so this is one multiply-add, with no matrices and no divide.
+// A fragment's position in the source, 0..1. SourceUv was built for the window's device pixels, which is what
+// SurfacePixel gives - so this is one multiply-add, with no matrices and no divide.
 float2 CaptureUv(float2 fragment, float4 sourceUv)
 {
-    return fragment * sourceUv.xy + sourceUv.zw;
+    return SurfacePixel(fragment) * sourceUv.xy + sourceUv.zw;
 }
 
 // A blur is ONE SAMPLE from a level of the capture's MIP PYRAMID - the levels are built by halving blits, so level N
@@ -537,7 +537,7 @@ float4 MaterialFrostedPS(MaterialPSInput input) : SV_Target
     // Tint over the capture, then grain. The grain is what keeps a large pane from banding - the capture came from an
     // 8-bit target and was smoothed twice, so its gradients are flatter than the eye tolerates at this size.
     float3 color = lerp(behind.rgb, it.Tint.rgb, saturate(it.Tint.a));
-    float grain = (Hash21(input.Position.xy) - 0.5) * it.Knobs.y;
+    float grain = (Hash21(SurfacePixel(input.Position.xy)) - 0.5) * it.Knobs.y;
     color = saturate(color + grain);
 
     // Fill and pen composited by the shared helper, exactly as the gradient and pattern passes do it - which is also
@@ -621,7 +621,7 @@ float4 MaterialGlassPS(MaterialPSInput input) : SV_Target
     float facing = saturate(dot(slope, normalize(float2(-0.7, -0.7))));
     color += curve * curve * facing * 0.35;
 
-    float grain = (Hash21(input.Position.xy) - 0.5) * it.Knobs.y;
+    float grain = (Hash21(SurfacePixel(input.Position.xy)) - 0.5) * it.Knobs.y;
     color = saturate(color + grain);
 
     // Params.z is the element's own alpha, Fade the slot chain above it. The pen already carries the element's alpha
@@ -761,7 +761,7 @@ float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
     float4 behind = BlurCapture(uv, BlurLevelOf(it.Color3.x, 1.0));
 
     float3 color = lerp(behind.rgb, it.Color1.rgb, saturate(it.Color1.a));
-    float grain = (Hash21(input.Position.xy) - 0.5) * it.Color3.y;
+    float grain = (Hash21(SurfacePixel(input.Position.xy)) - 0.5) * it.Color3.y;
     color = saturate(color + grain);
 
     return float4(color, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
@@ -803,7 +803,7 @@ float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
     float facing = saturate(dot(slope, normalize(float2(-0.7, -0.7))));
     color += curve * curve * facing * 0.35;
 
-    float grain = (Hash21(input.Position.xy) - 0.5) * it.Color3.y;
+    float grain = (Hash21(SurfacePixel(input.Position.xy)) - 0.5) * it.Color3.y;
     color = saturate(color + grain);
 
     return float4(color, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));

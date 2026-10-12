@@ -31,6 +31,7 @@ internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
         Effect = Own(new GridEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
+        TargetOriginParam = Effect.TargetOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }

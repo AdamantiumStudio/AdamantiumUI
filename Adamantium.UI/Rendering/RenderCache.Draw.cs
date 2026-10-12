@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd }
 
 public partial class RenderCache
 {
@@ -107,6 +107,7 @@ public partial class RenderCache
         public IUIComponent Clip;
         public IRenderUnit Unit;  // Unit
         public int Fade;          // Unit: the opacity slot it drew with - a copy's phase slot, replayed as recorded
+        public IUIComponent Layer;   // LayerBegin/LayerEnd: the element whose subtree is drawn into a layer of its own
         public byte Batch;        // Segment: which collector (0 rect, 1 ellipse, 2 text, 3 gradient-rect, 4 gradient-ellipse, 5 pattern, 6 fractal, 7 textured)
                                   // InstancedFlush: InstancedFillCollector.ArenaBatchId, so a patch finds the flush it edits
         // Segment: the collector's STABLE segment id (see BatchCollector.Segment.Id) - never an index, so a split that
@@ -873,6 +874,19 @@ public partial class RenderCache
                 if (_recording)
                 {
                     _clonedWhenRecorded.Add(group);
+                }
+            }
+
+            if (device != null && !_cloneMatrix.HasValue && OpensLayer(group.Component))
+            {
+                var layer = group.Component;
+                var layerEnd = CloneSubtreeEnd(groupIndex);
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd);
+                _layerWalk.Push((layerEnd, layer));
+                if (_recording)
+                {
+                    RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
                 }
             }
 
@@ -1774,6 +1788,16 @@ public partial class RenderCache
                     _recording = recordingBeforeClones;
                 }
             }
+
+            while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)
+            {
+                CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+            }
+        }
+
+        while (_layerWalk.Count > 0)
+        {
+            CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
         }
 
         _cloneMatrix = null;   // a run that ended on the last group leaves it set otherwise
@@ -1994,15 +2018,22 @@ public partial class RenderCache
     {
         if (entry.Owner is not { } owner || _transformTable == null) return;
 
-        var slot = OpacitySlotOf(device, owner);
-        if (slot < 0 || !_transformTable.TryGetOpacitySlot(owner.RenderId, out var own) || own != slot)
+        if (OpensLayer(owner))
         {
-            return;
+            entry.MarkApplied();
         }
+        else
+        {
+            var slot = OpacitySlotOf(device, owner);
+            if (slot < 0 || !_transformTable.TryGetOpacitySlot(owner.RenderId, out var own) || own != slot)
+            {
+                return;
+            }
 
-        _transformTable.SetAlpha(device, slot, entry.Alpha);
-        ApplyCopyFades(device, owner, entry);
-        entry.MarkApplied();
+            _transformTable.SetAlpha(device, slot, entry.Alpha);
+            ApplyCopyFades(device, owner, entry);
+            entry.MarkApplied();
+        }
 
         // Keep the snapshot's own value in step, so EffectiveOpacity (which the slot-blind families still bake with)
         // reads the alpha the compositor just applied.

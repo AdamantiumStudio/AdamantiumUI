@@ -78,7 +78,7 @@ float ClipCoverageBySlot(float2 fragment, float slotIndex)
     if (clip.Params.x < 0.5) return 1.0;
 
     float2 halfSize = max(clip.World[0].zw * 0.5, float2(1.0, 1.0));
-    float2 local = fragment - (clip.World[0].xy + halfSize);
+    float2 local = SurfacePixel(fragment) - (clip.World[0].xy + halfSize);
     float lim = min(halfSize.x, halfSize.y);
     float4 r4 = min(clip.World[1], float4(lim, lim, lim, lim));
 
@@ -93,7 +93,7 @@ float ClipCoverage(float2 fragment, float4 box, float4 radii)
     if (box.z <= 0.0) return 1.0;   // no clip
 
     float2 halfSize = max(box.zw * 0.5, float2(1.0, 1.0));
-    float2 local = fragment - (box.xy + halfSize);
+    float2 local = SurfacePixel(fragment) - (box.xy + halfSize);
     float lim = min(halfSize.x, halfSize.y);
     float4 r4 = min(radii, float4(lim, lim, lim, lim));
 

@@ -49,11 +49,13 @@ internal sealed class BackdropCapture : IDisposable
         if (source == null) return false;
 
         // Clamp to the target: a region grown by the blur margin can hang off the edge, and a blit past the source
-        // bounds is a GPU fault, not a clipped copy.
-        var x = (int)Math.Clamp(region.Offset.X, 0, (int)source.Width);
-        var y = (int)Math.Clamp(region.Offset.Y, 0, (int)source.Height);
-        var right = (int)Math.Clamp(region.Offset.X + region.Extent.Width, 0, source.Width);
-        var bottom = (int)Math.Clamp(region.Offset.Y + region.Extent.Height, 0, source.Height);
+        // bounds is a GPU fault, not a clipped copy. A layer's target holds one region of the window, so the window's
+        // pixels move into its own first.
+        var origin = gd.TargetOrigin;
+        var x = (int)Math.Clamp(region.Offset.X - origin.X, 0, (int)source.Width);
+        var y = (int)Math.Clamp(region.Offset.Y - origin.Y, 0, (int)source.Height);
+        var right = (int)Math.Clamp(region.Offset.X - origin.X + region.Extent.Width, 0, source.Width);
+        var bottom = (int)Math.Clamp(region.Offset.Y - origin.Y + region.Extent.Height, 0, source.Height);
         if (right - x < downscale || bottom - y < downscale) return false;
 
         var w = (uint)Math.Max(1, (right - x) / downscale);
@@ -70,7 +72,7 @@ internal sealed class BackdropCapture : IDisposable
 
         Region = new Rect2D
         {
-            Offset = new Offset2D { X = x, Y = y },
+            Offset = new Offset2D { X = x + origin.X, Y = y + origin.Y },
             Extent = new Extent2D { Width = (uint)(right - x), Height = (uint)(bottom - y) }
         };
 
@@ -180,6 +182,8 @@ internal sealed class BackdropCapture : IDisposable
         // the material away: the pane appeared and the panel beside it did not.
         var viewport = gd.CurrentViewports.Length > 0 ? gd.CurrentViewports[0] : default;
         var scissor = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : default;
+        var origin = gd.TargetOrigin;
+        gd.TargetOrigin = default;
 
         var w = width;
         var h = height;
@@ -238,6 +242,7 @@ internal sealed class BackdropCapture : IDisposable
             h = nh;
         }
 
+        gd.TargetOrigin = origin;
         gd.SetViewports(viewport);
         gd.SetScissors(scissor);
     }

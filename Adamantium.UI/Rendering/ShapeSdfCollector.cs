@@ -20,6 +20,7 @@ internal abstract class ShapeSdfCollector<TItem> : SdfBatchCollector<TItem> wher
         Effect = Own(new BatchEffect(device));
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
+        TargetOriginParam = Effect.TargetOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }

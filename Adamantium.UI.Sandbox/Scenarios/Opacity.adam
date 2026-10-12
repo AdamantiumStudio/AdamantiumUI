@@ -8,3 +8,8 @@ expect id=ElementOpacity value=0.25
 # Back as the page opens: the container half through, the element whole.
 set id=ContainerOpacity 0.5
 set id=ElementOpacity 1
+# The overlapping circles, faded as is and as a layer, by one slider.
+set id=GroupOpacity 0.3
+expect id=LayeredGroup Opacity=0.3
+expect id=PlainGroup Opacity=0.3
+set id=GroupOpacity 0.5

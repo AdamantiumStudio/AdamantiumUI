@@ -293,6 +293,7 @@ public partial class RenderCache
         _arrowBatch?.DisposeGpuResources(device);
         _instancedFill?.Dispose();
         _transformTable?.Dispose();
+        _offscreenLayers?.Dispose();
 
         _rectBatch = null;
         _ellipseBatch = null;
@@ -313,6 +314,7 @@ public partial class RenderCache
         _arrowBatch = null;
         _instancedFill = null;
         _transformTable = null;
+        _offscreenLayers = null;
     }
 
     /// <summary>Disposes every cached unit (GPU idle first); the off-screen designer resets with it between renders, since
@@ -555,7 +557,15 @@ public partial class RenderCache
     {
         if (_opacityChain.TryGetValue(c, out var v)) return v;
         var s = ApplySnap(c);
-        v = s.RenderParent != null ? s.Opacity * OpacityChain(s.RenderParent) : s.Opacity;
+        if (OpensLayer(c))
+        {
+            v = 1f;
+        }
+        else
+        {
+            v = s.RenderParent != null ? s.Opacity * OpacityChain(s.RenderParent) : s.Opacity;
+        }
+
         _opacityChain[c] = v;
         return v;
     }
@@ -568,11 +578,13 @@ public partial class RenderCache
         if (_opacitySlotCache.TryGetValue(c, out var cached)) return cached;
 
         var s = ApplySnap(c);
-        var parent = s.RenderParent != null ? OpacitySlotOf(device, s.RenderParent) : -1;
+        var layer = OpensLayer(c);
+        var parent = s.RenderParent != null && !layer ? OpacitySlotOf(device, s.RenderParent) : -1;
+        var alpha = layer ? 1f : s.Opacity;
 
         int slot;
         var had = _transformTable.TryGetOpacitySlot(c.RenderId, out _);
-        if (!had && s.Opacity >= 1f)
+        if (!had && alpha >= 1f)
         {
             slot = parent;   // draws at its parent's alpha - no link of its own
         }
@@ -583,8 +595,8 @@ public partial class RenderCache
 
             slot = _transformTable.AcquireOpacitySlot(c.RenderId);
             _fadeOwners[c] = slot;
-            _transformTable.SetAlpha(device, slot, s.Opacity);
-            SettleCopyFades(device, c, s.Opacity);
+            _transformTable.SetAlpha(device, slot, alpha);
+            SettleCopyFades(device, c, alpha);
             _transformTable.SetOpacityParent(device, slot, parent);
 
             // Just allocated, and the buffer this frame draws from was sized BEFORE that: an instance carrying this

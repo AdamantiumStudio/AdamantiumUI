@@ -54,6 +54,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         SourceUvParam = Effect.SourceUv;
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
+        TargetOriginParam = Effect.TargetOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }
@@ -302,7 +303,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         var sharpness = _boundTreatment == MaterialTreatment.Glass ? BackdropCapture.Sharp : BackdropCapture.Downscale;
         if (!_capture.Capture(device, region, sharpness) || _capture.Image == null) return false;
 
-        uv.SetValue(ToUv(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width, region.Extent.Height)));
+        var copied = _capture.Region;
+        uv.SetValue(ToUv(new Vector4F(copied.Offset.X, copied.Offset.Y, copied.Extent.Width, copied.Extent.Height)));
         texture.SetResource(_capture.Image);
         sampler.SetResource(SamplerStates.LinearClampToEdge);
         return true;
