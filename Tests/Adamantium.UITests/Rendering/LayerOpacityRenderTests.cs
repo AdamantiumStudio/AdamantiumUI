@@ -629,6 +629,195 @@ public class LayerOpacityRenderTests
     }
 
     [Test]
+    public void AStillLayer_IsDrawnOnce_AndThenLaidDownFromItsTexture()
+    {
+        var (root, _) = Overlap(layer: true);
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renderer.Cache.LastDrawPath, Is.EqualTo(DrawPath.Replay));
+            Assert.That(renderer.Cache.LayersRedrawn, Is.Zero, "nothing in it changed, so nothing is drawn into it");
+            Assert.That(renderer.Cache.LayersReused, Is.EqualTo(1), "and its texture is laid down as it is");
+        });
+        var (single, both) = Pixels(renderer);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(single), Is.InRange(110, 145));
+            Assert.That(Red(both), Is.EqualTo(Red(single)).Within(3));
+        });
+    }
+
+    [Test]
+    public void ALayersOwnFade_IsPlayedOnItsTexture_WithoutDrawingItAgain()
+    {
+        var (root, group) = Overlap(layer: true);
+        group.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
+            new DoubleAnimation { From = 0.1, To = 0.9, Duration = TimeSpan.FromSeconds(2) });
+        var entry = Compositor.EntryFor(group);
+        Compositor.StartPending();
+
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var early = Pixels(renderer);
+
+        WaitForElapsed(entry, 1.5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var later = Pixels(renderer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renderer.Cache.LayersReused, Is.EqualTo(1), "the fade is the layer's own, laid down from its texture");
+            Assert.That(Red(later.Single), Is.GreaterThan(Red(early.Single) + 40), "and the layer still grew more opaque");
+        });
+    }
+
+    [Test]
+    public void AChildFadingInsideTheLayer_DrawsItAgainEachFrame()
+    {
+        var (root, group) = Overlap(layer: true);
+        var child = (TestControl)System.Linq.Enumerable.First(group.VisualChildren);
+        child.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
+            new DoubleAnimation { From = 0.1, To = 1.0, Duration = TimeSpan.FromSeconds(2) });
+        var entry = Compositor.EntryFor(child);
+        Assume.That(entry?.Channel, Is.EqualTo(CompositorChannel.Opacity), "the child's fade is composited");
+        Compositor.StartPending();
+
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var early = Pixels(renderer);
+
+        WaitForElapsed(entry, 1.5);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var later = Pixels(renderer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renderer.Cache.LayersRedrawn, Is.EqualTo(1), "a child changed, so the layer is drawn again");
+            Assert.That(Red(later.Single), Is.GreaterThan(Red(early.Single) + 30), "and shows the child's new fade");
+        });
+    }
+
+    private static void WaitForElapsed(Compositor.Entry entry, double seconds)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(seconds + 10);
+        while (entry.Elapsed < seconds)
+        {
+            Assert.That(DateTime.UtcNow, Is.LessThan(deadline), "the animation's clock runs");
+            System.Threading.Thread.Sleep(5);
+        }
+    }
+
+    [Test]
+    public void AnInnerLayersMaskRepainted_DrawsTheOuterLayerAgain()
+    {
+        var mask = new SolidColorBrush(Colors.Black);
+        var root = new TestRoot(64, 64);
+        var outer = new TestControl { IsLayer = true };
+        outer.Bounds = new Rect(4, 4, 40, 30);
+        outer.RenderSize = new Size(40, 30);
+        var inner = new TestControl { OpacityMask = mask };
+        inner.Bounds = new Rect(0, 0, 20, 20);
+        inner.RenderSize = new Size(20, 20);
+        var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
+        square.Bounds = new Rect(0, 0, 20, 20);
+        square.RenderSize = new Size(20, 20);
+        inner.Add(square);
+        outer.Add(inner);
+        root.Add(outer);
+
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        for (var frame = 0; frame < 3; frame++)
+        {
+            Assert.That(renderer.RenderFrame(root), Is.True);
+            RenderDirty.Clear();
+        }
+
+        mask.Color = Color.FromRgba(0, 0, 0, 128);
+        for (var frame = 0; frame < 3; frame++)
+        {
+            Assert.That(renderer.RenderFrame(root), Is.True);
+            RenderDirty.Clear();
+        }
+
+        var (inside, _) = Pixels(renderer, (12, 12), (12, 12));
+        Assert.That(Red(inside), Is.InRange(110, 145), "the inner layer's new mask shows through the outer one");
+    }
+
+    [Test]
+    public void AChildRepaintedInPlace_DrawsTheLayerAgain()
+    {
+        var paint = new SolidColorBrush(Colors.Red);
+        var root = new TestRoot(64, 64);
+        var group = new TestControl { Opacity = 0.5, IsLayer = true };
+        group.Bounds = new Rect(4, 4, 40, 30);
+        group.RenderSize = new Size(40, 30);
+        var square = new TestControl { RenderAction = s => s.DrawRectangle(paint, new Rect(0, 0, 20, 20)) };
+        square.Bounds = new Rect(0, 0, 20, 20);
+        square.RenderSize = new Size(20, 20);
+        group.Add(square);
+        root.Add(group);
+
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        paint.Color = Colors.Lime;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var (inside, _) = Pixels(renderer, (8, 14), (8, 14));
+        Assert.Multiple(() =>
+        {
+            Assert.That(Green(inside), Is.InRange(110, 145), "the new color shows, at the layer's opacity");
+            Assert.That(Red(inside), Is.LessThan(20), "the old one is gone");
+        });
+    }
+
+    [Test]
+    public void ALayerWithChangingPaint_IsNeverLaidDownFromAnOldTexture()
+    {
+        // A noise brush moves with time on its own; nothing marks the element when it does.
+        var (root, group) = Overlap(layer: true);
+        var noisy = new TestControl
+        {
+            RenderAction = s => s.DrawRectangle(new NoiseBrush(), new Rect(0, 0, 10, 10))
+        };
+        noisy.Bounds = new Rect(30, 0, 10, 10);
+        noisy.RenderSize = new Size(10, 10);
+        group.Add(noisy);
+
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renderer.Cache.LayersReused, Is.Zero);
+            Assert.That(renderer.Cache.LayersRedrawn, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void ALayersFade_IsPlayedByTheRenderThread()
     {
         // A composited opacity animation on the layer: the frames change while the loop thread never ticks.

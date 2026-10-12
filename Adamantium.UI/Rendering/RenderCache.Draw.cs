@@ -653,6 +653,8 @@ public partial class RenderCache
         // below write matrices, and the replay paths below draw without ever reaching the walk's setup block.
         var phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
         BeginTransformFrame(device);
+        _offscreenLayers?.BeginFrame(device);
+        _framePaintEpoch = Core.Media.Brush.PaintEpoch;
 
         // Both memos are WITHIN-frame and must drop together: a clip recomputed against a stale world is worse than a
         // stale clip. Only a full rebuild dropped them otherwise, so a viewport that travels without announcing a move -
@@ -882,7 +884,7 @@ public partial class RenderCache
                 var layer = group.Component;
                 var layerEnd = CloneSubtreeEnd(groupIndex);
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
-                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd);
+                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false);
                 _layerWalk.Push((layerEnd, layer));
                 if (_recording)
                 {

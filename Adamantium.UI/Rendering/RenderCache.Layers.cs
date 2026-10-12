@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -15,21 +16,29 @@ public partial class RenderCache
     private const int FringePixels = 2;
     private const double MiterReach = 2.0;
     private const double TextOverhang = 0.25;
+    private const ulong PrintSeed = 0xCBF29CE484222325UL;
 
     private readonly Stack<(int End, IUIComponent Layer)> _layerWalk = new();
     private OffscreenLayers _offscreenLayers;
+    private long _framePaintEpoch;
 
-    private void BeginOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
+    private bool ReplayOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
     {
         var start = GroupIndexOf(layer);
-        BeginOffscreenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start));
+        return BeginOffscreenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start), true);
     }
 
-    private void BeginOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end)
+    private bool BeginOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end,
+        bool allowReuse)
     {
         _offscreenLayers ??= new OffscreenLayers();
-        _offscreenLayers.Begin(device, LayerRegion(layer, fullScissor, start, end));
+        var region = ScanLayer(layer, fullScissor, start, end, out var print, out var reusable);
+        return _offscreenLayers.Begin(device, layer, region, print, reusable, allowReuse);
     }
+
+    internal int LayersRedrawn => _offscreenLayers?.Redrawn ?? 0;
+
+    internal int LayersReused => _offscreenLayers?.Reused ?? 0;
 
     private void CloseOffscreenLayer(IGraphicsDevice device, Rect2D fullScissor, ref bool scissorNarrowed)
     {
@@ -150,14 +159,25 @@ public partial class RenderCache
         CloseLayer();
     }
 
-    private Rect2D LayerRegion(IUIComponent layer, Rect2D fullScissor, int start, int end)
+    private Rect2D LayerRegion(IUIComponent layer, Rect2D fullScissor, int start, int end) =>
+        ScanLayer(layer, fullScissor, start, end, out _, out _);
+
+    private Rect2D ScanLayer(IUIComponent layer, Rect2D fullScissor, int start, int end, out ulong print, out bool reusable)
     {
-        var clip = ResolveScissor(layer, World(layer), fullScissor, out _, out _);
+        print = PrintSeed;
+        reusable = false;
+        var layerWorld = World(layer);
+        var clip = ResolveScissor(layer, layerWorld, fullScissor, out _, out _);
         if (start < 0)
         {
             return clip;
         }
 
+        Mix(ref print, (float)_renderScale);
+        MixMatrix(ref print, layerWorld);
+
+        reusable = Core.Media.Brush.PaintEpoch == _framePaintEpoch && !MovedByTheCompositor(layer);
+        var hasText = false;
         var left = double.MaxValue;
         var top = double.MaxValue;
         var right = double.MinValue;
@@ -167,26 +187,191 @@ public partial class RenderCache
             var group = _groups[i];
             if (group.Clones is { Count: > 0 })
             {
+                reusable = false;
                 return clip;
+            }
+
+            if (i > start && reusable && OpensLayer(group.Component))
+            {
+                Mix(ref print, Identity(group.Component.OpacityMask?.Snapshot));
+                MixMatrix(ref print, World(group.Component));
             }
 
             foreach (var unit in group.Units)
             {
-                var ink = LocalInk(unit, ApplySnap(unit.Component).RenderSize).TransformToAABB(World(unit.Component));
+                var world = World(unit.Component);
+                var ink = LocalInk(unit, ApplySnap(unit.Component).RenderSize).TransformToAABB(world);
                 left = System.Math.Min(left, ink.X);
                 top = System.Math.Min(top, ink.Y);
                 right = System.Math.Max(right, ink.Right);
                 bottom = System.Math.Max(bottom, ink.Bottom);
+                if (!reusable)
+                {
+                    continue;
+                }
+
+                reusable = MixContent(ref print, unit, ref hasText);
+                MixMatrix(ref print, world);
+                Mix(ref print, FadeWithin(unit.Component, layer));
+                var scissor = ResolveScissor(unit.Component, world, fullScissor, out _, out var cull);
+                Mix(ref print, cull ? 1 : 0);
+                Mix(ref print, scissor.Offset.X);
+                Mix(ref print, scissor.Offset.Y);
+                Mix(ref print, scissor.Extent.Width);
+                Mix(ref print, scissor.Extent.Height);
+                MixRoundedClip(ref print, unit.Component, fullScissor);
             }
         }
 
         if (left > right || top > bottom)
         {
+            reusable = false;
             return new Rect2D { Offset = new Offset2D(), Extent = new Extent2D() };
         }
 
-        var region = ToFramebufferScissor(new Rect(left, top, right - left, bottom - top), fullScissor);
-        return Intersect(Grow(region, FringePixels), clip);
+        if (hasText)
+        {
+            reusable &= !FontAtlasStore.HasPendingGlyphs;
+            Mix(ref print, FontAtlasStore.LandedVersion);
+        }
+
+        var region = Intersect(Grow(ToFramebufferScissor(new Rect(left, top, right - left, bottom - top), fullScissor),
+            FringePixels), clip);
+        Mix(ref print, region.Offset.X);
+        Mix(ref print, region.Offset.Y);
+        Mix(ref print, region.Extent.Width);
+        Mix(ref print, region.Extent.Height);
+        return region;
+    }
+
+    private bool MovedByTheCompositor(IUIComponent layer)
+    {
+        foreach (var owner in _compositedOwners)
+        {
+            if (ReferenceEquals(owner, layer) || IsVisualDescendantOf(owner, layer) || IsVisualDescendantOf(layer, owner))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void MixRoundedClip(ref ulong print, IUIComponent component, Rect2D fullScissor)
+    {
+        for (var owner = component; owner != null; owner = ApplySnap(owner).RenderParent)
+        {
+            var s = ApplySnap(owner);
+            if (!s.ClipToBounds || s.ClipRadii == Vector4F.Zero)
+            {
+                continue;
+            }
+
+            var box = ToFramebufferScissor(new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height)
+                .TransformToAABB(World(owner)), fullScissor);
+            Mix(ref print, box.Offset.X);
+            Mix(ref print, box.Offset.Y);
+            Mix(ref print, box.Extent.Width);
+            Mix(ref print, box.Extent.Height);
+            Mix(ref print, s.ClipRadii.X);
+            Mix(ref print, s.ClipRadii.Y);
+            Mix(ref print, s.ClipRadii.Z);
+            Mix(ref print, s.ClipRadii.W);
+            return;
+        }
+
+        Mix(ref print, 0);
+    }
+
+    private float FadeWithin(IUIComponent component, IUIComponent layer)
+    {
+        var snapshot = ApplySnap(component);
+        var fade = snapshot.SelfOpacity;
+        for (var c = component; c != null && !ReferenceEquals(c, layer); c = ApplySnap(c).RenderParent)
+        {
+            fade *= ApplySnap(c).Opacity;
+        }
+
+        return fade;
+    }
+
+    private static bool MixContent(ref ulong print, IRenderUnit unit, ref bool hasText)
+    {
+        if (unit.RenderData is { } data)
+        {
+            if (data.LivingHalo != null)
+            {
+                return false;
+            }
+
+            Mix(ref print, Identity(data.Halo));
+        }
+
+        Mix(ref print, Identity(unit));
+        switch (unit)
+        {
+            case RectangleRenderUnit { Payload: { } rectangle }:
+                Mix(ref print, Identity(rectangle));
+                return Still(ref print, rectangle.Brush) & Still(ref print, rectangle.BorderBrush)
+                       & Still(ref print, rectangle.Pen);
+            case EllipseRenderUnit { Payload: { } ellipse }:
+                Mix(ref print, Identity(ellipse));
+                return Still(ref print, ellipse.Brush) & Still(ref print, ellipse.Pen);
+            case RegularPolygonRenderUnit { Payload: { } polygon }:
+                Mix(ref print, Identity(polygon));
+                return Still(ref print, polygon.Brush) & Still(ref print, polygon.Pen);
+            case GeometryRenderUnit { Payload: { } shape }:
+                Mix(ref print, Identity(shape));
+                return Still(ref print, shape.Brush) & Still(ref print, shape.Pen);
+            case LineRenderUnit { Payload: { } line }:
+                Mix(ref print, Identity(line));
+                return Still(ref print, line.Pen);
+            case TextRenderUnit { Payload: { } text }:
+                hasText = true;
+                Mix(ref print, Identity(text));
+                Mix(ref print, text.Revision);
+                return Still(ref print, text.Foreground) & Still(ref print, text.Background)
+                       & Still(ref print, text.Stroke);
+            default:
+                return false;
+        }
+    }
+
+    private static bool Still(ref ulong print, Brush brush)
+    {
+        Mix(ref print, Identity(brush));
+        return brush is null or SolidColorBrush or GradientBrush;
+    }
+
+    private static bool Still(ref ulong print, Pen pen)
+    {
+        if (pen == null)
+        {
+            Mix(ref print, 0);
+            return true;
+        }
+
+        Mix(ref print, Identity(pen));
+        return Still(ref print, pen.Brush);
+    }
+
+    private static long Identity(object value) => ObjectIds.Of(value);
+
+    private static void Mix(ref ulong print, long value)
+    {
+        print ^= (ulong)value;
+        print *= 0x100000001B3UL;
+        print ^= print >> 29;
+    }
+
+    private static void Mix(ref ulong print, float value) => Mix(ref print, BitConverter.SingleToInt32Bits(value));
+
+    private static void MixMatrix(ref ulong print, Matrix4x4F m)
+    {
+        for (var i = 0; i < 16; i++)
+        {
+            Mix(ref print, m[i]);
+        }
     }
 
     private int GroupIndexOf(IUIComponent component)
