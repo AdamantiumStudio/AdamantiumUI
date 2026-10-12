@@ -15,6 +15,10 @@ expect id=LiveFractal zoom=110
 zoom id=LiveFractal 1000
 expect id=LiveFractal zoom=1000
 zoom id=LiveFractal 110
+# Two fingers drawn apart pinch it in about their middle, less the few pixels that go to recognizing the pinch.
+pinch id=LiveFractal 3
+expect id=LiveFractal zoom=312.7
+zoom id=LiveFractal 110
 pan id=LiveFractal 120 -40
 pan id=LiveFractal -120 40
 select id=BrushesView/name=Image

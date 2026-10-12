@@ -16,7 +16,7 @@ internal sealed class ScriptInterpreter
     [
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
-        "hover", "wheel", "drag", "touch", "touches", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
+        "hover", "wheel", "drag", "touch", "touches", "pinch", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
         "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
     ];
 
@@ -106,6 +106,7 @@ internal sealed class ScriptInterpreter
             "wheel" => SendAsync(Second(AutomationCommand.Wheel, arguments, allowErrors)),
             "touch" => SendAsync(Contact(AutomationCommand.Touch, arguments, allowErrors)),
             "touches" => SendAsync(Fingers(arguments, allowErrors)),
+            "pinch" => SendAsync(Pinch(arguments, allowErrors)),
             "pen" => SendAsync(Contact(AutomationCommand.Pen, arguments, allowErrors)),
             "context-menu" => SendAsync(Target(AutomationCommand.ShowContextMenu, arguments, allowErrors)),
             "drop" => SendAsync(new AutomationRequest
@@ -245,6 +246,23 @@ internal sealed class ScriptInterpreter
             Command = AutomationCommand.Touches,
             Targets = [.. words.Take(at)],
             Value = gesture == "drag" ? words[^1] : null,
+            Properties = options.Count > 0 ? [.. options] : null,
+            AllowErrors = allowErrors
+        };
+    }
+
+    private static AutomationRequest Pinch(ScriptArguments arguments, bool allowErrors)
+    {
+        var options = new List<string>();
+        if (arguments.Option("rotate") is { } rotate) options.Add($"rotate={rotate}");
+        if (arguments.Option("pan") is { } pan) options.Add($"pan={pan}");
+        if (arguments.Flag(AutomationExecutor.SystemInput)) options.Add(AutomationExecutor.SystemInput);
+
+        return new AutomationRequest
+        {
+            Command = AutomationCommand.Pinch,
+            Target = arguments.At(0),
+            Value = arguments.At(1),
             Properties = options.Count > 0 ? [.. options] : null,
             AllowErrors = allowErrors
         };

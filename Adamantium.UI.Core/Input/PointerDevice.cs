@@ -20,6 +20,8 @@ public sealed class PointerDevice
     {
         MousePointer = new Pointer(MouseId, PointerType.Mouse, true);
         _pointers[MouseId] = MousePointer;
+        Manipulations = new ManipulationRecognizer(Holding,
+            (pointer, modifiers, timestamp) => ChangePointerOver(pointer, null, modifiers, timestamp));
     }
 
     public static PointerDevice Current { get; } = new();
@@ -29,6 +31,9 @@ public sealed class PointerDevice
 
     /// <summary>Watches fingers and pens for a long press.</summary>
     internal HoldingRecognizer Holding { get; } = new();
+
+    /// <summary>Watches fingers for gestures.</summary>
+    internal ManipulationRecognizer Manipulations { get; }
 
     /// <summary>The pointers in use: the mouse, and every finger down and pen in range.</summary>
     public IReadOnlyCollection<Pointer> Pointers => _pointers.Values;
@@ -255,6 +260,7 @@ public sealed class PointerDevice
         ChangePointerOver(pointer, null, modifiers, timestamp);
         if (pointer.Type != PointerType.Mouse && pointer.Captured == null)
         {
+            Manipulations.Up(pointer, modifiers, timestamp);
             _pointers.Remove(pointer.Id);
         }
     }
@@ -284,6 +290,12 @@ public sealed class PointerDevice
 
     private void Move(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp)
     {
+        if (pointer.IsManipulating)
+        {
+            Manipulations.Move(pointer, modifiers, timestamp);
+            return;
+        }
+
         IInputComponent source;
         if (pointer.Captured == null)
         {
@@ -300,16 +312,22 @@ public sealed class PointerDevice
         args.RoutedEvent = PointerEvents.PointerMovedEvent;
         source.RaiseEvent(args);
         Holding.Move(pointer, timestamp);
+        Manipulations.Move(pointer, modifiers, timestamp);
     }
 
     private void Down(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
+        var hit = pointer.Captured ?? HitTestTopmost(root, p);
+        if (hit != null && Manipulations.Join(pointer, hit, modifiers, timestamp))
+        {
+            return;
+        }
+
         if (pointer.Type == PointerType.Touch && pointer.Captured == null)
         {
             SetPointerOver(pointer, root, p, modifiers, timestamp);
         }
 
-        var hit = pointer.Captured ?? HitTestTopmost(root, p);
         if (hit == null)
         {
             return;
@@ -337,10 +355,18 @@ public sealed class PointerDevice
         args.RoutedEvent = PointerEvents.PointerPressedEvent;
         hit.RaiseEvent(args);
         Holding.Down(pointer, hit, button, modifiers, timestamp);
+        Manipulations.Down(pointer, hit, timestamp);
     }
 
     private void Up(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
+        if (pointer.IsManipulating)
+        {
+            Manipulations.Up(pointer, modifiers, timestamp);
+            Lift(pointer, modifiers, timestamp, tapped: false);
+            return;
+        }
+
         var hit = pointer.Captured ?? HitTestTopmost(root, p);
         if (hit != null)
         {
@@ -357,14 +383,19 @@ public sealed class PointerDevice
         Holding.Up(pointer, timestamp);
         if (pointer.Type == PointerType.Touch)
         {
-            Lift(pointer, modifiers, timestamp);
+            Manipulations.Up(pointer, modifiers, timestamp);
+            Lift(pointer, modifiers, timestamp, tapped: true);
         }
     }
 
     private void Cancel(Pointer pointer, InputModifiers modifiers, uint timestamp)
     {
-        (pointer.Captured ?? pointer.DirectlyOver)?.RaiseEvent(
-            new PointerEventArgs(pointer, modifiers, timestamp) { RoutedEvent = PointerEvents.PointerCanceledEvent });
+        if (!pointer.IsManipulating)
+        {
+            (pointer.Captured ?? pointer.DirectlyOver)?.RaiseEvent(
+                new PointerEventArgs(pointer, modifiers, timestamp) { RoutedEvent = PointerEvents.PointerCanceledEvent });
+        }
+
         Holding.Cancel(pointer, timestamp);
 
         if (pointer.Type == PointerType.Mouse)
@@ -373,15 +404,17 @@ public sealed class PointerDevice
             return;
         }
 
-        Lift(pointer, modifiers, timestamp);
+        var tapped = !pointer.IsManipulating;
+        Manipulations.Up(pointer, modifiers, timestamp);
+        Lift(pointer, modifiers, timestamp, tapped);
     }
 
-    private void Lift(Pointer pointer, InputModifiers modifiers, uint timestamp)
+    private void Lift(Pointer pointer, InputModifiers modifiers, uint timestamp, bool tapped)
     {
         pointer.Capture(null);
         ChangePointerOver(pointer, null, modifiers, timestamp);
         _pointers.Remove(pointer.Id);
-        if (pointer.Type == PointerType.Touch)
+        if (pointer.Type == PointerType.Touch && tapped)
         {
             _lastTap = pointer;
         }

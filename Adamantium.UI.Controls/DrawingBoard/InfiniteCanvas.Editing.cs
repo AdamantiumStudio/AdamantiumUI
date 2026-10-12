@@ -1065,6 +1065,7 @@ public partial class InfiniteCanvas
     // on for a run nobody is measuring.
     static InfiniteCanvas()
     {
+        Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(InfiniteCanvas), new PropertyMetadata(true));
         if (PressLog == null) return;
 
         Core.Diagnostics.LayoutTrace.Counting = true;
@@ -1459,6 +1460,50 @@ public partial class InfiniteCanvas
         {
             EndEdit();
         }
+    }
+
+    private void OnPointerCanceled(object sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(e.Pointer, _activePointer)) return;
+
+        LetGo();
+        EndEdit();
+    }
+
+    private void LetGo()
+    {
+        _draggingPoint = -1;
+        _panning = false;
+        _frame.End();
+        Tool?.Cancel(this);
+    }
+
+    private void OnManipulation(object sender, ManipulationEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, this)) return;
+
+        if (e.State == ManipulationState.Started)
+        {
+            LetGo();
+            while (_editDepth > 0 && History != null && Scene != null)
+            {
+                EndEdit();
+            }
+
+            return;
+        }
+
+        if (e.State == ManipulationState.Completed)
+        {
+            RememberLayout();
+            return;
+        }
+
+        if (e.State != ManipulationState.Delta) return;
+
+        if (e.Scale != 1) SetScaleAt(e.Origin - e.Translation, Scale * e.Scale);
+        if (e.Translation != Vector2.Zero) SetCurrentValue(OffsetProperty, Offset + e.Translation);
+        e.Handled = true;
     }
 
     // Whether an event came from something the canvas CARRIES rather than from the plane. Their events bubble through

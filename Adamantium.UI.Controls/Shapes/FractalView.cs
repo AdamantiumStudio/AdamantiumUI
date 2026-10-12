@@ -17,6 +17,7 @@ public class FractalView : Rectangle
     private const double ZoomStep = 0.2;      // ZoomExp added per standard wheel notch (accumulated into the target)
     private const double SmoothRate = 12.0;   // ease-to-target rate per second - higher snaps sooner, lower glides longer
 
+    private Pointer _dragging;
     private double _lastX;
     private double _lastY;
 
@@ -32,9 +33,15 @@ public class FractalView : Rectangle
     private double _anchorOffX;
     private double _anchorOffY;
 
+    static FractalView()
+    {
+        Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(FractalView), new PropertyMetadata(true));
+    }
+
     public FractalView()
     {
         PointerWheelChanged += OnWheel;
+        AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
     }
 
     public static readonly AdamantiumProperty CenterXProperty = AdamantiumProperty.Register(nameof(CenterX),
@@ -108,7 +115,7 @@ public class FractalView : Rectangle
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (e.ChangedButton != MouseButtons.Left)
+        if (e.ChangedButton != MouseButtons.Left || _dragging != null)
         {
             return;
         }
@@ -116,6 +123,7 @@ public class FractalView : Rectangle
         var p = e.GetPosition(this);
         _lastX = p.X;
         _lastY = p.Y;
+        _dragging = e.Pointer;
         e.Pointer.Capture(this);
         e.Handled = true;
     }
@@ -123,13 +131,17 @@ public class FractalView : Rectangle
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (!ReferenceEquals(e.Pointer.Captured, this))
+        if (!ReferenceEquals(e.Pointer, _dragging) || !ReferenceEquals(e.Pointer.Captured, this))
         {
             return;
         }
 
         var p = e.GetPosition(this);
-        PanBy(p.X - _lastX, p.Y - _lastY);
+        if (!e.Pointer.IsInGesture)
+        {
+            PanBy(p.X - _lastX, p.Y - _lastY);
+        }
+
         _lastX = p.X;
         _lastY = p.Y;
     }
@@ -154,10 +166,20 @@ public class FractalView : Rectangle
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
-        if (e.ChangedButton == MouseButtons.Left && ReferenceEquals(e.Pointer.Captured, this))
+        if (e.ChangedButton == MouseButtons.Left && ReferenceEquals(e.Pointer, _dragging))
         {
+            _dragging = null;
             e.Pointer.Capture(null);
             e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        if (ReferenceEquals(e.Pointer, _dragging))
+        {
+            _dragging = null;
         }
     }
 
@@ -189,6 +211,33 @@ public class FractalView : Rectangle
             _zoomTicker = true;
             AnimationManager.AddTicker(AdvanceZoom);   // heartbeat: no dirty target, so it keeps the loop presenting while it eases
         }
+    }
+
+    private void OnManipulation(object sender, ManipulationEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, this)) return;
+        if (e.State == ManipulationState.Started) _dragging = null;
+        if (e.State != ManipulationState.Delta) return;
+        e.Handled = true;
+
+        if (e.Scale != 1) ZoomAt(e.Origin.X - e.Translation.X, e.Origin.Y - e.Translation.Y, e.Scale);
+        PanBy(e.Translation.X, e.Translation.Y);
+    }
+
+    private void ZoomAt(double x, double y, double factor)
+    {
+        var before = UnitsPerPixel();
+        if (before <= 0.0) return;
+
+        _zoomActive = false;
+        SetCurrentValue(ZoomExpProperty, Math.Clamp(ZoomExp + Math.Log10(factor), MinExp, MaxExp));
+        var shift = before - UnitsPerPixel();
+        var hiX = CenterX; var loX = CenterXFine + (x - ActualWidth * 0.5) * shift;
+        var hiY = CenterY; var loY = CenterYFine + (y - ActualHeight * 0.5) * shift;
+        Renormalize(ref hiX, ref loX);
+        Renormalize(ref hiY, ref loY);
+        CenterX = hiX; CenterXFine = loX;
+        CenterY = hiY; CenterYFine = loY;
     }
 
     /// <summary>The zoom, as log10, the view goes from and to.</summary>
