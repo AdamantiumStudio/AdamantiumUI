@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Automation.Cl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.LanguageServer.Package", "Adamantium.UI.LanguageServer.Package\Adamantium.UI.LanguageServer.Package.csproj", "{2ECB73FA-E8B0-4391-91F5-476FBD25AE2C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Sandbox.Content", "Adamantium.UI.Sandbox.Content\Adamantium.UI.Sandbox.Content.csproj", "{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,18 @@ Global
 		{ECE234A6-202E-461A-A287-192596EB4361}.Release|x64.Build.0 = Release|Any CPU
 		{ECE234A6-202E-461A-A287-192596EB4361}.Release|x86.ActiveCfg = Release|Any CPU
 		{ECE234A6-202E-461A-A287-192596EB4361}.Release|x86.Build.0 = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|x64.Build.0 = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Debug|x86.Build.0 = Debug|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|x64.ActiveCfg = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|x64.Build.0 = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|x86.ActiveCfg = Release|Any CPU
+		{FE728FB2-C352-4C90-8B3D-76D6B73B1D91}.Release|x86.Build.0 = Release|Any CPU
 		{F760C201-9516-4D39-971C-0D41A44F1786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F760C201-9516-4D39-971C-0D41A44F1786}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F760C201-9516-4D39-971C-0D41A44F1786}.Debug|x64.ActiveCfg = Debug|Any CPU

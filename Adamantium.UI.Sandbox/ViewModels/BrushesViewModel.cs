@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.Navigation;
 using Adamantium.MVVM;
@@ -7,6 +8,7 @@ using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Media.Drawings;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -16,6 +18,13 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class BrushesViewModel : TabPageViewModel
 {
+    private static readonly string[] MaterialPictures =
+    [
+        SandboxContentAssets.Textures.Tile_sample, SandboxContentAssets.Textures.Elephant,
+        SandboxContentAssets.Textures.ColoredImage, SandboxContentAssets.Textures.Texture2,
+        SandboxContentAssets.Textures.Texture_jpg
+    ];
+
     // The stands are navigated into a region the VIEW declares (nav:RegionManager.RegionName) and this addresses by
     // NAME - see RegionNames.BrushStand, which both sides quote. A view-model holding the IRegion itself would be
     // holding a piece of the view's layout.
@@ -196,7 +205,7 @@ public partial class BrushesViewModel : TabPageViewModel
     public ImageBrush LiveImage { get; } = new ImageBrush
     {
         Source = BitmapImageCache.GetOrCreate(
-            System.IO.Path.Combine(AppContext.BaseDirectory, "Textures", "tile-sample.png"))
+            System.IO.Path.Combine(AppContext.BaseDirectory, SandboxContentAssets.Textures.Tile_sample))
     };
 
     public TileMode[] TileModes { get; } = Enum.GetValues<TileMode>();
@@ -429,10 +438,10 @@ public partial class BrushesViewModel : TabPageViewModel
     /// a source anti-aliased there repeats its blurred row at every tile seam.</summary>
     public NineSliceSkin[] Skins { get; } =
     [
-        new NineSliceSkin("Studded panel", "nine-slice-frame.png"),
-        new NineSliceSkin("Stone blocks", "nine-slice-stone.png"),
-        new NineSliceSkin("Sci-fi plating", "nine-slice-scifi.png"),
-        new NineSliceSkin("Gilded parchment", "nine-slice-parchment.png"),
+        new NineSliceSkin("Studded panel", SandboxContentAssets.Textures.Nine_slice_frame),
+        new NineSliceSkin("Stone blocks", SandboxContentAssets.Textures.Nine_slice_stone),
+        new NineSliceSkin("Sci-fi plating", SandboxContentAssets.Textures.Nine_slice_scifi),
+        new NineSliceSkin("Gilded parchment", SandboxContentAssets.Textures.Nine_slice_parchment),
         // ...and one that is NOT a picture: a drawing, rasterized to order before it is cut. The brush stays raster, so
         // what this one is for is checking that the raster it gets is made at the resolution the FRAME needs.
         NineSliceSkin.Vector()
@@ -539,9 +548,7 @@ public partial class BrushesViewModel : TabPageViewModel
     /// twice. Chosen to differ in DETAIL: tile-sample is 64x64 across the whole desktop, texture.jpg is 1920x1200.
     /// </summary>
     public string[] MaterialSources { get; } =
-    {
-        DesktopWallpaperSource, "tile-sample.png", "elephant.png", "ColoredImage.jpg", "texture2.jpg", "texture.jpg"
-    };
+        [DesktopWallpaperSource, ..MaterialPictures.Select(System.IO.Path.GetFileName)];
 
     /// <summary>The desktop's own wallpaper among the file names, as the key of the phrase the view says it with.</summary>
     private const string DesktopWallpaperSource = nameof(Localization.BrushesStrings.DesktopWallpaper);
@@ -593,7 +600,8 @@ public partial class BrushesViewModel : TabPageViewModel
     {
         LiveMaterial.Source = value == DesktopWallpaperSource
             ? null
-            : BitmapImageCache.GetOrCreate(System.IO.Path.Combine(AppContext.BaseDirectory, "Textures", value));
+            : BitmapImageCache.GetOrCreate(System.IO.Path.Combine(AppContext.BaseDirectory,
+                MaterialPictures.First(picture => System.IO.Path.GetFileName(picture) == value)));
         RaisePropertyChanged(nameof(HasOwnSource));
     }
 
@@ -673,7 +681,7 @@ public partial class BrushesViewModel : TabPageViewModel
     public ImageBrush MaterialPicture { get; } = new ImageBrush
     {
         Source = BitmapImageCache.GetOrCreate(
-            System.IO.Path.Combine(AppContext.BaseDirectory, "Textures", "tile-sample.png")),
+            System.IO.Path.Combine(AppContext.BaseDirectory, SandboxContentAssets.Textures.Tile_sample)),
         Stretch = Stretch.UniformToFill
     };
 

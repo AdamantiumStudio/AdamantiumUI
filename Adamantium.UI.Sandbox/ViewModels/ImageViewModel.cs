@@ -3,6 +3,7 @@ using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -17,10 +18,10 @@ public partial class ImageViewModel : TabPageViewModel
     /// blocks: adding one is adding a line here.</summary>
     public ObservableCollection<AnimatedImageViewModel> Animations { get; } =
     [
-        new("PNG (APNG animated)", "Textures/APNG-cube.png", 16),
-        new("GIF (infinity)", "Textures/infinity.gif", 25),
-        new("GIF (earth)", "Textures/RotatingEarth2.gif", 25),
-        new("PNG (elephant)", "Textures/elephant.png", 40)
+        new("PNG (APNG animated)", SandboxContentAssets.Textures.APNG_cube, 16),
+        new("GIF (infinity)", SandboxContentAssets.Textures.Infinity, 25),
+        new("GIF (earth)", SandboxContentAssets.Textures.RotatingEarth2, 25),
+        new("PNG (elephant)", SandboxContentAssets.Textures.Elephant, 40)
     ];
 
     [Bindable] private double _opacity = 1;

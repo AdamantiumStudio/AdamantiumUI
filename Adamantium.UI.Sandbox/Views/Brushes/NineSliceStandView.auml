@@ -73,18 +73,18 @@
         <WrapPanel Orientation="Horizontal">
             <Border Width="90" Height="90" Margin="10">
                 <Border.Background>
-                    <NineSliceBrush Source="Textures/nine-slice-frame.png" Slice="0.25"/>
+                    <NineSliceBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png" Slice="0.25"/>
                 </Border.Background>
             </Border>
             <Border Width="240" Height="90" Margin="10">
                 <Border.Background>
-                    <NineSliceBrush Source="Textures/nine-slice-frame.png" Slice="0.25"/>
+                    <NineSliceBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png" Slice="0.25"/>
                 </Border.Background>
                 <TextBlock Text="{Localize BrushesStrings.StretchedEdges}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <Border Width="240" Height="90" Margin="10">
                 <Border.Background>
-                    <NineSliceBrush Source="Textures/nine-slice-frame.png"
+                    <NineSliceBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"
                                     Slice="0.25"
                                     EdgeMode="Repeat"/>
                 </Border.Background>
@@ -92,7 +92,7 @@
             </Border>
             <Border Width="240" Height="140" Margin="10">
                 <Border.Background>
-                    <NineSliceBrush Source="Textures/nine-slice-frame.png"
+                    <NineSliceBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"
                                     Slice="0.25"
                                     EdgeMode="Repeat"
                                     DrawCenter="False"/>
@@ -108,17 +108,17 @@
         <WrapPanel Orientation="Horizontal">
             <Border Width="90" Height="90" Margin="10">
                 <Border.Background>
-                    <ImageBrush Source="Textures/nine-slice-frame.png"/>
+                    <ImageBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"/>
                 </Border.Background>
             </Border>
             <Border Width="240" Height="90" Margin="10">
                 <Border.Background>
-                    <ImageBrush Source="Textures/nine-slice-frame.png"/>
+                    <ImageBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"/>
                 </Border.Background>
             </Border>
             <Border Width="240" Height="90" Margin="10">
                 <Border.Background>
-                    <ImageBrush Source="Textures/nine-slice-frame.png" Tint="#66FF88"/>
+                    <ImageBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png" Tint="#66FF88"/>
                 </Border.Background>
                 <TextBlock Text="{Localize BrushesStrings.Tinted}" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>

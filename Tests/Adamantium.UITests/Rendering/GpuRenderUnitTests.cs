@@ -732,13 +732,13 @@ public class GpuRenderUnitTests
         };
 
         var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
-        while (!System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", "RotatingEarth2.gif")))
+        while (!System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")))
         {
             dir = dir.Parent;
         }
 
         var picture = new Adamantium.UI.Core.Media.Imaging.BitmapImage(
-            BitmapLoader.Load(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", "RotatingEarth2.gif")));
+            BitmapLoader.Load(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")));
         var destination = new Rect(3, 5, 311, 147);
 
         var fullColorRoot = new TestRoot(width, height);

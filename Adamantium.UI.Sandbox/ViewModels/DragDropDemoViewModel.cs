@@ -9,6 +9,7 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -204,16 +205,16 @@ public partial class DragDropDemoViewModel : TabPageViewModel
             // drag that goes nowhere never touches the disk.
             var file = item switch
             {
-                "A picture, JPEG" => "texture.jpg",
-                "A picture, GIF" => "infinity.gif",
-                "A picture, BMP" => "AplhaTestBitmap.bmp",
+                "A picture, JPEG" => SandboxContentAssets.Textures.Texture_jpg,
+                "A picture, GIF" => SandboxContentAssets.Textures.Infinity,
+                "A picture, BMP" => SandboxContentAssets.Textures.AplhaTestBitmap,
                 // TGA is the interesting one: no target on the desktop accepts it, so every rendering the engine hands
                 // over - the bitmap, the PNG, the file - is a conversion. If this drops, the conversion path works.
-                "A picture, TGA" => "luxfon.tga",
-                _ => "texture.png",
+                "A picture, TGA" => SandboxContentAssets.Textures.Luxfon,
+                _ => SandboxContentAssets.Textures.Texture_png,
             };
             e.Data.SetDeferred(DataFormats.Image,
-                () => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Textures", file)));
+                () => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, file)));
             return;
         }
 

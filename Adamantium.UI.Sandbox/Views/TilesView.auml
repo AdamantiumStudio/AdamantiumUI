@@ -20,7 +20,7 @@
                        Width="1092" 
                        Height="637" 
                        HorizontalAlignment="Center"
-                       Photo="Textures/luxfon.tga"
+                       Photo="Content/SandboxContent/Textures/luxfon.tga"
                        IsFlipped="{Binding AllFlipped}">
                 <TilesHost.ItemTemplate>
                     <DataTemplate>

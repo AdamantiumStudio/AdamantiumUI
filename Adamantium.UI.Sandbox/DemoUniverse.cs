@@ -15,6 +15,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Content;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox
 {
@@ -187,7 +188,7 @@ namespace Adamantium.UI.Sandbox
         {
             try
             {
-                await LoadAndAddModel(SandboxAssets.Models.F15C.F_15C_Eagle_dae);
+                await LoadAndAddModel(SandboxContentAssets.Models.F15C.F_15C_Eagle_dae);
             }
             catch (Exception exception)
             {
