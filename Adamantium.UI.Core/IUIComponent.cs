@@ -18,6 +18,11 @@ public interface IUIComponent : IFundamentalUIComponent
     /// overlap under a fade.</summary>
     bool IsLayer { get; }
 
+    /// <summary>A brush whose alpha fades this element and its subtree point by point, laid over the element's own box:
+    /// a gradient from transparent to opaque melts an edge away. It draws the element as a layer, as <see cref="IsLayer"/>
+    /// does. A solid color and every gradient brush mask by their alpha; any other brush masks by its Opacity alone.</summary>
+    Media.Brush OpacityMask { get; }
+
     /// <summary>How this clip's corners are rounded (TL, TR, BR, BL). A scissor is square, so rounding is applied by the
     /// shaders; zero means the plain rectangular clip. Unset falls back to the container's own CornerRadius, where it
     /// has one - see UIComponent.ClipCornerRadius.</summary>

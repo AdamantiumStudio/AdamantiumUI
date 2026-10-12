@@ -154,6 +154,21 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         RenderDirty.MarkStructural(component);
     }
 
+    public static readonly AdamantiumProperty OpacityMaskProperty = AdamantiumProperty.Register(nameof(OpacityMask),
+        typeof(Brush), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnOpacityMaskChanged));
+
+    private static void OnOpacityMaskChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        component._opacityMask = component.GetValue<Brush>(OpacityMaskProperty)?.ForRendering();
+        RenderDirty.MarkStructural(component);
+    }
+
     /// <summary>The clip's corner rounding when <see cref="ClipToBounds"/> is on. Unset takes the container's own corners, so
     /// a rounded Border clips the way it looks.</summary>
     public static readonly AdamantiumProperty ClipCornerRadiusProperty = AdamantiumProperty.Register(
@@ -790,6 +805,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private bool _clipToBounds;
     private bool _isLayer;
+    private Brush _opacityMask;
 
     /// <summary>Field mirror (see <see cref="ZIndex"/>): read by every layout SNAPSHOT and every draw command - ~10000 of
     /// each per frame on a tile grid.</summary>
@@ -804,6 +820,13 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get => _isLayer;
         set => SetValue(IsLayerProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.OpacityMask"/>.</summary>
+    public Brush OpacityMask
+    {
+        get => _opacityMask;
+        set => SetValue(OpacityMaskProperty, value);
     }
 
     public Double Opacity

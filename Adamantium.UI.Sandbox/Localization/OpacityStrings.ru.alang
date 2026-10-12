@@ -26,4 +26,6 @@
     <Phrase Key="GroupOpacity" Text="Прозрачность группы:"/>
     <Phrase Key="AsIs" Text="как есть"/>
     <Phrase Key="AsLayer" Text="слоем"/>
+
+    <Phrase Key="MaskTitle" Text="OpacityMask: список, у которого верх и низ растворяются"/>
 </Language>

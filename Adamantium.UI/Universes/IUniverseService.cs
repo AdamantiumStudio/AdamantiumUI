@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Core;
 using Adamantium.ECS;
 using Adamantium.Multiverse;
-using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
-using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Universes;

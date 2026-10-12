@@ -1,6 +1,8 @@
 // Analytic AA for fills: a coverage ring around a closed contour, drawn over the solid body. The ring (FringeGeometry.cs)
 // is scale-free; the VS builds a screen-space miter from edge directions, so width holds at any transform.
 
+#include "Includes/GradientMath.fxh"
+
 float4x4 Projection;
 float4 FillColor;
 float2 ViewportSize;      // render target size in DEVICE pixels - the NDC <-> pixel basis for the fringe offset
@@ -8,44 +10,15 @@ float FringePixels;       // fringe width in DEVICE pixels (1 = the analytic-AA 
 
 // Gradient-aware fringe: when IsGradient != 0 the ring is colored by the SAME linear/radial gradient as the fill (so the
 // feathered edge matches the fill color there, not one flat color) - the fix for aliased gradient-shape edges. The
-// gradient is passed as plain uniforms (per-draw, no BDA / heavy interpolators). Mirrors BatchEffect's GradParam/GradColor.
+// gradient is passed as plain uniforms (per-draw, no BDA / heavy interpolators). The parameter is GradientMath's; the
+// ramp mirrors BrushEffect's GradColor.
 int IsGradient;
-float4 GParams;       // (_, type[1 linear/2 radial], stopCount, spread)
+float4 GParams;       // (_, type[1 linear/2 radial/3 conic], stopCount, spread)
 float4 GGeom0;        // LOCAL 0..1: linear (startXY,endXY) | radial (centerXY,radiusXY)
 float4 GGeom1;        // radial focal (originXY,_,_)
 float4 GLocalBounds;  // shape local bounds: minXY, sizeXY (uv = (local-min)/size)
 float4 GS0; float4 GS1; float4 GS2; float4 GS3; float4 GS4; float4 GS5; float4 GS6; float4 GS7;
 float4 GOff0; float4 GOff1;
-
-float FringeGradSpread(float t, int spread)
-{
-    if (spread == 1) { float m = fmod(abs(t), 2.0); return m > 1.0 ? 2.0 - m : m; }   // reflect
-    if (spread == 2) { return frac(t); }                                              // repeat
-    return saturate(t);                                                               // pad
-}
-
-float FringeGradParam(float2 uv)
-{
-    if (int(GParams.y) == 2)
-    {
-        float2 center = GGeom0.xy;
-        float2 radius = max(GGeom0.zw, float2(1e-4, 1e-4));
-        float2 focal = (GGeom1.xy - center) / radius;
-        float2 q = (uv - center) / radius;
-        float2 dir = q - focal;
-        float dlen = length(dir);
-        if (dlen < 1e-6) return 0.0;
-        float2 dn = dir / dlen;
-        float b = dot(focal, dn);
-        float c = dot(focal, focal) - 1.0;
-        float sEdge = -b + sqrt(max(b * b - c, 0.0));
-        return (sEdge > 1e-6) ? (dlen / sEdge) : 0.0;
-    }
-    float2 axis = GGeom0.zw - GGeom0.xy;
-    float denom = dot(axis, axis);
-    if (denom < 1e-9) return 0.0;
-    return dot(uv - GGeom0.xy, axis) / denom;
-}
 
 float4 FringeGradColor(float t)
 {
@@ -110,7 +83,7 @@ float4 FillFringePS(PSInput input) : SV_Target
     if (IsGradient != 0)
     {
         float2 uv = (input.Local - GLocalBounds.xy) / max(GLocalBounds.zw, float2(1e-4, 1e-4));
-        c = FringeGradColor(FringeGradSpread(FringeGradParam(uv), int(GParams.w)));
+        c = FringeGradColor(GradientSpread(GradientParam(int(GParams.y), GGeom0, GGeom1, uv), int(GParams.w)));
     }
     else
     {
