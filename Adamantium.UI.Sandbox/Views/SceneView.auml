@@ -6,7 +6,8 @@
     <!-- DataContext is the SceneViewModel. The RenderTargetPanel runs the 3D universe as the backdrop; an overlay
          menu sits on top, shown/hidden via the view-model (a DataTrigger collapses it), and its buttons load models. -->
     <Grid>
-        <RenderTargetPanel Background="#0B0E14" MouseLookMode="Drag" IsMouseLookEnabled="{Binding MouseLookEnabled}">
+        <RenderTargetPanel AutomationProperties.AutomationId="Viewport" Background="#0B0E14" MouseLookMode="Drag"
+                           IsMouseLookEnabled="{Binding MouseLookEnabled}">
             <RenderTargetPanel.Behaviors>
                 <behaviors:DemoUniverseBehavior/>
             </RenderTargetPanel.Behaviors>
