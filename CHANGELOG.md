@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `UIComponent.OpacityMask`: a brush whose alpha fades the element and its subtree point by point, laid over the
+  element's own box, so a gradient from transparent to opaque melts an edge away. The element is drawn as a layer
+  whether `IsLayer` is set or not, and the mask scales the layer as it is laid down.
+  - **Brushes.** A solid color masks by its alpha. Linear, radial, conic and four-corner gradients mask by the alpha of
+    their stops, with their spread method. Any other brush masks by its `Opacity` alone.
+  - **Changes.** A mask changed in place, a stop recolored or animated for example, shows on the next frame.
+  - **The stand.** The sandbox's Opacity page has a list whose top and bottom edges melt into a gradient behind it.
+
 - `UIComponent.IsLayer`: the element and its subtree are drawn at full strength into a texture of their own, which is
   then laid down once with the element's opacity, multiplied by its ancestors'. Where children overlap, the background
   shows through as much as anywhere else, instead of each child being faded on its own. The texture covers everything
@@ -972,6 +980,10 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- The antialiased edge of a shape filled with a conic gradient took the gradient's colors as if it were linear. The
+  gradient's parameter now comes from one shader header, `GradientMath.fxh`, for the fills, their edges and the
+  opacity mask.
 
 - `FractalView` follows only the pointer that began a drag. Two fingers on it used to pan by the distance between
   them.

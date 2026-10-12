@@ -269,6 +269,102 @@
                                Foreground="{ResourceReference TextFillColorSecondary}"/>
                 </StackPanel>
             </WrapPanel>
+            <TextBlock Text="{Localize OpacityStrings.MaskTitle}"
+                       FontSize="18"
+                       MarginTop="24"
+                       MarginBottom="10"/>
+            <Border Width="260"
+                    Height="220"
+                    HorizontalAlignment="Left"
+                    CornerRadius="8">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="1,1">
+                        <GradientStop Color="#FF1E3A8A"
+                                      Offset="0"/>
+                        <GradientStop Color="#FF9D174D"
+                                      Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <ScrollViewer AutomationProperties.AutomationId="MaskedList">
+                    <ScrollViewer.OpacityMask>
+                        <LinearGradientBrush StartPoint="0.5,0"
+                                             EndPoint="0.5,1">
+                            <GradientStop Color="#00000000"
+                                          Offset="0"/>
+                            <GradientStop Color="#FF000000"
+                                          Offset="0.2"/>
+                            <GradientStop Color="#FF000000"
+                                          Offset="0.8"/>
+                            <GradientStop Color="#00000000"
+                                          Offset="1"/>
+                        </LinearGradientBrush>
+                    </ScrollViewer.OpacityMask>
+                    <StackPanel Orientation="Vertical"
+                                MarginTop="12"
+                                MarginBottom="12">
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FFEF4444"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FFF97316"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FFEAB308"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FF22C55E"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FF14B8A6"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FF3B82F6"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FF8B5CF6"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FFEC4899"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                MarginBottom="6"
+                                CornerRadius="6"
+                                Background="#FFF8FAFC"/>
+                        <Border Height="36"
+                                MarginLeft="12"
+                                MarginRight="12"
+                                CornerRadius="6"
+                                Background="#FF64748B"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </View>

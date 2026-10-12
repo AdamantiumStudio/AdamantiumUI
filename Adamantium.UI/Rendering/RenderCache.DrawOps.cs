@@ -700,7 +700,7 @@ public partial class RenderCache
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
         // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once. A
         // LAYER is the same: its group is where the walk opens the layer.
-        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || component.IsLayer))
+        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || WantsLayer(component)))
         {
             var hostGroup = BuildUnitsFor(component, drawCommands, projectionMatrix);
             hostGroup.Clones = clones;

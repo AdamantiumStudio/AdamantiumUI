@@ -26,4 +26,6 @@
     <Phrase Key="GroupOpacity" Text="Group opacity:"/>
     <Phrase Key="AsIs" Text="as is"/>
     <Phrase Key="AsLayer" Text="as a layer"/>
+
+    <Phrase Key="MaskTitle" Text="OpacityMask: a list whose top and bottom edges melt away"/>
 </Language>
