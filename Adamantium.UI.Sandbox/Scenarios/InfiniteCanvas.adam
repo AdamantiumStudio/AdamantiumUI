@@ -6,6 +6,12 @@ select id=GalleryTabs/id=InfiniteCanvas
 wait id=Canvas
 select id=PART_Inspector/name="Graph - nodes and the wires between them"
 zoom id=Canvas 100
+# Two fingers drawn apart pinch the camera in about their middle; drawn together, out again.
+pinch id=Canvas 2
+expect id=Canvas zoom=185.7
+pinch id=Canvas 0.5
+expect id=Canvas zoom=99
+zoom id=Canvas 100
 expect id=PART_MiniMap/type=Image name="The whole plane, the part in view framed"
 scroll "id=Canvas>name=Mix"
 expect "id=Canvas>name=Mix" offscreen=False

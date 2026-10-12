@@ -158,5 +158,11 @@ public enum AutomationCommand
     /// <see cref="AutomationRequest.Targets"/>, up to ten, put down together and lifted together - or, when
     /// <see cref="AutomationRequest.Value"/> is <c>dx,dy</c>, each drawn that far across its element, in its own units.
     /// </summary>
-    Touches
+    Touches,
+
+    /// <summary>Two fingers on the target, inside the application: put down either side of its middle and drawn apart or
+    /// together until they are <see cref="AutomationRequest.Value"/> times as far apart. <see cref="AutomationRequest.Properties"/>
+    /// may hold <c>rotate=degrees</c>, to turn them as they go, and <c>pan=dx,dy</c>, to move their middle that far in
+    /// the target's own units. The first few pixels go to recognizing the gesture, as under a hand.</summary>
+    Pinch
 }

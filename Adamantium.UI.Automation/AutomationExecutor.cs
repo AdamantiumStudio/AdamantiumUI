@@ -72,7 +72,7 @@ public sealed class AutomationExecutor
                     return new AutomationReply { Ok = true, Errors = ErrorJournal.Since(request.Since) };
                 case AutomationCommand.Shot:
                     return await ShotAsync(request, timeout);
-                case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches
+                case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches or AutomationCommand.Pinch
                     when request.Properties?.Contains(SystemInput) == true:
                     return await SystemContactAsync(request, timeout);
                 case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches
@@ -166,6 +166,11 @@ public sealed class AutomationExecutor
 
     private (ContactPath[] Paths, Contact[] Contacts) Contacts(AutomationRequest request)
     {
+        if (request.Command == AutomationCommand.Pinch)
+        {
+            return (Pinch(Enabled(Resolve(request.Target)), request), [Contact.Finger(0), Contact.Finger(1)]);
+        }
+
         if (request.Command != AutomationCommand.Touches)
         {
             var peer = Enabled(Resolve(request.Target));
@@ -190,8 +195,8 @@ public sealed class AutomationExecutor
     }
 
     // Contacts through the system's own input. The frames are worked out on the loop and played by the system on a
-    // worker; the reply waits for every contact's release to reach the window - the proof that the platform's own
-    // pointer path delivered them.
+    // worker; the reply waits for every contact to press in the window and to be gone again - the proof that the
+    // platform's own pointer path delivered them, a gesture's fingers included, whose lifts reach no element.
     private async Task<AutomationReply> SystemContactAsync(AutomationRequest request, TimeSpan timeout)
     {
         var mark = ErrorJournal.Mark();
@@ -201,11 +206,11 @@ public sealed class AutomationExecutor
         var hold = request.Properties.Contains(HoldGesture) ? Gestures.HoldingTime + HoldMargin : TimeSpan.Zero;
 
         var type = PointerType.Touch;
-        var unreleased = 0;
-        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var onReleased = new PointerReleasedEventHandler((_, e) =>
+        var count = 0;
+        var pressed = new HashSet<uint>();
+        var onPressed = new PointerPressedEventHandler((_, e) =>
         {
-            if (e.Pointer.Type == type && --unreleased == 0) released.TrySetResult();
+            if (e.Pointer.Type == type) pressed.Add(e.Pointer.Id);
         });
 
         // Added and taken off on the loop, in its order: should the planning outlast the timeout and run late, the
@@ -219,26 +224,37 @@ public sealed class AutomationExecutor
                 var (paths, contacts) = Contacts(request);
                 var plan = InputSimulator.SystemFrames(paths, contacts, hold);
                 type = contacts[0].Type;
-                unreleased = contacts.Length;
+                count = contacts.Length;
                 window = (IInputComponent)plan.Window;
-                window.AddHandler(PointerEvents.PointerReleasedEvent, onReleased, handledEventsToo: true);
+                window.AddHandler(PointerEvents.PreviewPointerPressedEvent, onPressed, handledEventsToo: true);
                 return plan.Frames;
             }, timeout);
 
             await Task.Run(() => input.Inject(type, frames));
             injected = true;
-            await released.Task.WaitAsync(timeout);
+
+            var watch = Stopwatch.StartNew();
+            while (!await _host.RunOnLoopAsync(() => pressed.Count >= count &&
+                       !PointerDevice.Current.Pointers.Any(pointer => pressed.Contains(pointer.Id)), timeout))
+            {
+                if (watch.Elapsed >= timeout)
+                {
+                    throw new TimeoutException();
+                }
+
+                await Task.Delay(WaitStep);
+            }
         }
         catch (TimeoutException) when (injected)
         {
-            throw new AutomationException("The system took the contacts, but not every release reached the window.");
+            throw new AutomationException("The system took the contacts, but not every one reached the window and lifted.");
         }
         finally
         {
             // Not awaited: a busy loop must not turn the outcome above into a timeout of its own.
             _ = _host.RunOnLoopAsync(() =>
             {
-                window?.RemoveHandler(PointerEvents.PointerReleasedEvent, onReleased);
+                window?.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, onPressed);
                 return true;
             }, timeout).ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
         }
@@ -316,7 +332,8 @@ public sealed class AutomationExecutor
             return true;
         }
 
-        if (request.Command is AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches)
+        if (request.Command is AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches
+            or AutomationCommand.Pinch)
         {
             var (paths, contacts) = Contacts(request);
             if (paths[0].To != null)
@@ -597,6 +614,47 @@ public sealed class AutomationExecutor
 
         var owner = OwnerOf(peer);
         return (owner, InputSimulator.Middle(owner));
+    }
+
+    private static ContactPath[] Pinch(AutomationPeer peer, AutomationRequest request)
+    {
+        if (!double.TryParse(request.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var scale) || scale <= 0)
+        {
+            throw new FormatException($"'{request.Value}' is not a scale above 0, as 2 or 0.5.");
+        }
+
+        var turn = 0.0;
+        var pan = Vector2.Zero;
+        foreach (var option in request.Properties ?? [])
+        {
+            if (option == SystemInput)
+            {
+                continue;
+            }
+
+            if (option.StartsWith("rotate=", StringComparison.Ordinal) &&
+                double.TryParse(option["rotate=".Length..], NumberStyles.Float, CultureInfo.InvariantCulture, out var degrees))
+            {
+                turn = degrees * Math.PI / 180;
+            }
+            else if (option.StartsWith("pan=", StringComparison.Ordinal))
+            {
+                pan = Point(option["pan=".Length..]);
+            }
+            else
+            {
+                throw new AutomationException($"'{option}' is not a pinch option: rotate=degrees or pan=dx,dy.");
+            }
+        }
+
+        var element = OwnerOf(peer);
+        var middle = InputSimulator.Middle(element);
+        var reach = Math.Min(element.RenderSize.Width, element.RenderSize.Height) / 4;
+        return
+        [
+            .. new[] { -1, 1 }.Select(side => new ContactPath(element, Label(peer), middle + new Vector2(side * reach, 0),
+                middle + pan + new Vector2(Math.Cos(turn), Math.Sin(turn)) * (side * reach * scale)))
+        ];
     }
 
     private static AutomationPeer Enabled(AutomationPeer peer) =>

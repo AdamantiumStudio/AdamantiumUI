@@ -50,6 +50,11 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
         set => SetValue(ViewBrushProperty, value);
     }
 
+    static CanvasMiniMap()
+    {
+        Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(CanvasMiniMap), new PropertyMetadata(true));
+    }
+
     public CanvasMiniMap()
     {
         PointerPressed += OnPressed;

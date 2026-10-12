@@ -35,6 +35,11 @@ public class CanvasPane : ContentControl
     private Vector2 _from;
     private Vector2 _at;
 
+    static CanvasPane()
+    {
+        Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(CanvasPane), new PropertyMetadata(true));
+    }
+
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(CanvasPanePlacement), typeof(CanvasPane),
         new PropertyMetadata(CanvasPanePlacement.TopLeft,

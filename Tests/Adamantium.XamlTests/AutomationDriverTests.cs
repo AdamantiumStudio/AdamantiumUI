@@ -247,6 +247,30 @@ public class AutomationDriverTests
         });
     }
 
+    // Two fingers drawn apart about the middle: a pinch, about the middle, close to the scale asked for - the first few
+    // pixels go to recognizing it.
+    [Test]
+    public async Task APinch_ScalesAboutTheMiddle([Values(0.5, 2.0)] double scale)
+    {
+        var pad = new ContentControl { Name = "Pad", Width = 400, Height = 300, Background = Adamantium.UI.Core.Media.Brushes.Gray };
+        Gestures.SetIsManipulationEnabled(pad, true);
+        var events = new List<ManipulationEventArgs>();
+        pad.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler((_, e) => events.Add(e)));
+        await using var session = await Driving(pad);
+
+        await session.Find(By.Id("Pad")).PinchAsync(scale);
+
+        var last = events.Last(e => e.State == ManipulationState.Delta);
+        Assert.Multiple(() =>
+        {
+            Assert.That(last.Recognized, Is.EqualTo(ManipulationKinds.Pinch));
+            Assert.That(last.TotalScale, Is.EqualTo(scale).Within(scale * 0.15));
+            Assert.That(last.Origin.X, Is.EqualTo(200).Within(1));
+            Assert.That(last.Origin.Y, Is.EqualTo(150).Within(1));
+            Assert.That(events.Count(e => e.State == ManipulationState.Completed), Is.EqualTo(1));
+        });
+    }
+
     [Test]
     public async Task ElevenFingers_AreRefused()
     {

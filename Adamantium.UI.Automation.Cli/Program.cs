@@ -41,7 +41,8 @@ public static class Program
                                                               a pen on it; --barrel holds its side button
           touches <selector>... tap | hold | drag <dx,dy>     a finger on each, up to ten, down and up together;
                                                               drag draws each by dx,dy of its own units
-          touch | touches | pen ... --os                      the same through the system's own pointer input: it
+          pinch <selector> <scale> [--rotate <deg>] [--pan <dx,dy>]   two fingers drawn apart or together on it
+          touch | touches | pinch | pen ... --os              the same through the system's own pointer input: it
                                                               presses whatever is on top of the desktop there, so
                                                               only while nobody uses the computer
           drop <selector> <target> [--before|--after]         carry it onto another element and let it go there

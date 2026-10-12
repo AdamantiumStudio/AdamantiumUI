@@ -7,6 +7,25 @@ All packages share one version.
 
 ### Added
 
+- Gestures of two fingers or more, `Gestures.ManipulationEvent`.
+  - **What it says.** Each step carries what the gesture was recognized as, `Pan`, `Pinch` and `Rotate` in any mix,
+    and only those parts move. Each part counts once it passes its own threshold: the drag threshold for a pan,
+    `Gestures.PinchThreshold` for a pinch, `Gestures.RotationThreshold` for a rotation. A step gives the move, the
+    scale, the turn and the middle of the fingers, and the totals so far.
+  - **Where it goes.** To the nearest element with `Gestures.IsManipulationEnabled` on, from the first finger up.
+    `ZoomBox`, `InfiniteCanvas` and `FractalView` have it on and zoom about the fingers' middle and pan with them.
+  - **Taking the fingers.** Until a gesture is recognized the fingers are plain pointers. Once it is, what they
+    pressed is told `PointerCanceled` and loses them, so a button under one is not clicked and a stroke begun on the
+    canvas is given up. Their moves and lifts go to no element from then on (`Pointer.IsManipulating`). A finger that
+    lands later joins the gesture, and it goes on while one finger is left.
+  - **Fingers of one frame.** A step is taken once every finger has reported, so the middle of a pinch does not
+    wander between one finger's report and the next.
+  - **Before it is recognized.** While two fingers rest together on an element that takes gestures
+    (`Pointer.IsInGesture`), what follows one finger alone holds still: a finger's scroll and a fractal's drag. A
+    canvas's panels and its minimap take gestures themselves, so two fingers over them leave the canvas's camera alone.
+  - **Automation.** `adam-auto pinch <selector> <scale> [--rotate <deg>] [--pan <dx,dy>] [--os]` and
+    `AutomationElement.PinchAsync`.
+
 - Several fingers at once in automation.
   - **The command.** `adam-auto touches <selector>... tap | hold | drag <dx,dy>` puts a finger in the middle of each
     element, up to ten, down together and lifted together. A drag draws each finger by the same offset, in its
@@ -936,6 +955,9 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- `FractalView` follows only the pointer that began a drag. Two fingers on it used to pan by the distance between
+  them.
 
 - A flick of scrolled content carries on at the speed the hand moved. That speed is now measured by the times the
   moves were made, not by when the loop handled them. Several moves handled in one frame read as a speed no hand

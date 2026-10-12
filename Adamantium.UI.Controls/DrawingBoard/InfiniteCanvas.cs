@@ -880,6 +880,8 @@ public partial class InfiniteCanvas : Control
         PointerMoved += OnPointerMove;
         PointerReleased += OnPointerUp;
         PointerExited += OnPointerLeft;
+        PointerCanceled += OnPointerCanceled;
+        AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
         KeyDown += OnKeyPressed;
         KeyUp += OnKeyReleased;
         TextInput += OnTextTyped;
