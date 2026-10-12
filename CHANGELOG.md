@@ -815,6 +815,19 @@ All packages share one version.
 
 ### Changed
 
+- A layer (`IsLayer` or `OpacityMask`) keeps its texture between frames. On a frame where nothing it draws has changed,
+  the texture is laid down as it is, and the subtree is not drawn again. So a group fading or masked by a composited
+  animation of its own costs one textured quad a frame, however much it holds.
+  - **What counts as a change.** Each frame a print is taken of everything the subtree's drawing depends on: where each
+    unit and the layer sit, how each fades and is clipped, the brushes it paints with, the masks of layers inside it, and
+    the glyphs landed in the font atlas. A layer that moves, or whose subtree the compositor moves, is drawn again, as
+    is one in a frame where a brush was repainted after the frame began.
+  - **What is never kept.** A subtree with anything that changes with time or loads later is drawn every frame:
+    images, tile and pattern brushes, noise, materials, living auras, copies drawn by `RenderClones`, text whose glyphs
+    are still being rasterized. A frame that walks the tree draws every layer again.
+  - Each layer has one texture more than there are frames in flight, so the one written is never one an earlier frame
+    still reads. A layer not drawn for 120 frames gives its textures up.
+
 - `PointerDevice` decides which button a finger or a pen presses, whatever its platform said. A finger is the left
   button for as long as it lies on the surface, and a pen's tip is the left button. With its side button held, a pen
   is the right button. Controls answer the left button, so a platform that reported a finger otherwise would have left

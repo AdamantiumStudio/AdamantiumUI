@@ -14,4 +14,9 @@ internal readonly record struct OpenOffscreenLayer(
     IRenderTarget Color,
     uint TextureWidth,
     uint TextureHeight,
-    Rect2D Region);
+    Rect2D Region,
+    CachedLayer Entry,
+    int Slot,
+    ulong Print,
+    bool Reusable,
+    bool Reused);

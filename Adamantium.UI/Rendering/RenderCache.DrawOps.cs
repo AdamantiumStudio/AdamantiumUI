@@ -21,17 +21,36 @@ public partial class RenderCache
         // LAYER by layer, and inside a layer in the order it was recorded. The two are the same sequence - a layer owns a
         // contiguous range of the stream - and saying it this way is what makes the structure of a recorded frame legible:
         // the stream is a flat list, the layers are what it MEANS.
+        var reusedDepth = 0;
         foreach (var layer in _layers)
             for (var i = layer.OpFirst; i < layer.OpFirst + layer.OpCount; i++)
             {
                 var op = _ops[i];
+                if (reusedDepth > 0)
+                {
+                    if (op.Kind == RenderOpKind.LayerBegin)
+                    {
+                        reusedDepth++;
+                    }
+                    else if (op.Kind == RenderOpKind.LayerEnd && --reusedDepth == 0)
+                    {
+                        EndOffscreenLayer(device, op.Layer, fullScissor);
+                    }
+
+                    continue;
+                }
+
                 switch (op.Kind)
                 {
                     case RenderOpKind.Scissor:
                         device.SetScissors(op.Scissor);
                         break;
                     case RenderOpKind.LayerBegin:
-                        BeginOffscreenLayer(device, op.Layer, fullScissor);
+                        if (ReplayOffscreenLayer(device, op.Layer, fullScissor))
+                        {
+                            reusedDepth = 1;
+                        }
+
                         break;
                     case RenderOpKind.LayerEnd:
                         EndOffscreenLayer(device, op.Layer, fullScissor);
