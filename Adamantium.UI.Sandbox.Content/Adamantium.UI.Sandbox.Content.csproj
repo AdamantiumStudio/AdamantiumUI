@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The sandbox's content: its models, pictures and fonts. Every file here is cooked or copied into
+	     Content/SandboxContent/ of the sandbox, and SandboxContentAssets has a constant for each. -->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Platforms>AnyCPU</Platforms>
+		<Configurations>Debug;Release</Configurations>
+		<AdamantiumContentName>SandboxContent</AdamantiumContentName>
+	</PropertyGroup>
+
+	<Import Project="$(AdamantiumEngineDir)Adamantium.Content.Build\Adamantium.Content.Build.Source.targets"
+	        Condition="'$(UseEngineSource)' == 'true'" />
+
+	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+		<PackageReference Include="Adamantium.Content.Build" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!-- The variable font the UI tests keep, one copy for both. -->
+	<ItemGroup>
+		<AdamantiumContent Include="..\Tests\Adamantium.UITests\Fonts\RobotoFlex-Variable.ttf" Link="Fonts\RobotoFlex-Variable.ttf" />
+		<AdamantiumContent Include="..\Tests\Adamantium.UITests\Fonts\LICENSE-RobotoFlex.txt" Link="Fonts\LICENSE-RobotoFlex.txt" />
+	</ItemGroup>
+
+</Project>

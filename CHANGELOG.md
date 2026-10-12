@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- The language server completes a picture of a content project the markup's project references under
+  `Content/{Name}/`, where the build puts it: `Content/` offers the content projects by name, and each its folders and
+  files.
+
 - The pen and several fingers on `InfiniteCanvas`.
   - **Pressure.** A pen's pressure sets the ink's width point by point along the stroke: a pen's usual pressure (and
     a pen with no pressure to report) draws `InkThickness`, lighter narrower, harder up to twice as wide; never under a
@@ -840,6 +844,12 @@ All packages share one version.
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
 
 ### Changed
+
+- The sandbox's models, pictures and fonts live in a content project of their own, `Adamantium.UI.Sandbox.Content`
+  (the engine's `Adamantium.Content.Build`). The build cooks the models and puts all of it in
+  `Content/SandboxContent/` beside the sandbox; the code finds each file by a constant of `SandboxContentAssets`, the
+  markup by its path from there. The hand-cooked `Models/F-15C_Eagle/` copy, the unused `swordman.dae` (whose textures
+  were never in the repository), `SandboxAssets` and the manifest `Content.acontent` are gone.
 
 - A layer (`IsLayer` or `OpacityMask`) keeps its texture between frames. On a frame where nothing it draws has changed,
   the texture is laid down as it is, and the subtree is not drawn again. So a group fading or masked by a composited

@@ -25,6 +25,7 @@ public sealed class CompletionEngine
 {
     private const string FallbackXmlns = "http://adamantium/ui";
     private const string LocalizeExtension = "Localize";
+    private const string ContentFolder = "Content";
 
     private readonly AumlTypeModel _model;
 
@@ -927,7 +928,9 @@ public sealed class CompletionEngine
     /// Completes a (possibly sub-foldered) file path written in an attribute value against the project root — the
     /// directory relative paths load against (the nearest <c>.csproj</c> ancestor of the edited file). The value
     /// so far is split into an already-typed directory part and a final-segment prefix; folders are offered with a
-    /// trailing '/' so the path can be drilled into. Returns nothing without a known document/project.
+    /// trailing '/' so the path can be drilled into. Returns nothing without a known document/project. A path under
+    /// <c>Content/{Name}/</c> is completed in the content project of that name the project references, which the build
+    /// puts there.
     /// </summary>
     private IReadOnlyList<AumlCompletionItem> CompletePaths(string partial, string documentPath, IReadOnlyList<string> extensions)
     {
@@ -939,15 +942,41 @@ public sealed class CompletionEngine
         var dirPart = slash >= 0 ? partial[..(slash + 1)] : "";          // "Textures/" (kept, never re-inserted)
         var namePrefix = slash >= 0 ? partial[(slash + 1)..] : partial;  // the segment being typed
 
-        string lookupDir;
-        try { lookupDir = Path.GetFullPath(Path.Combine(root, dirPart)); }
-        catch { return []; }
-        if (!Directory.Exists(lookupDir)) return [];
-
         // Replace only the segment typed after the last '/' (so the client filters/replaces on the segment, not the
         // whole "Textures/..." value — otherwise bare file names get filtered out and nothing shows).
         var replaceBack = namePrefix.Length;
         var items = new List<AumlCompletionItem>();
+        var contentProjects = ContentProjects(root);
+        var segments = dirPart.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var underContent = segments.Length > 0 && segments[0] == ContentFolder && contentProjects.Count > 0;
+
+        if (underContent && segments.Length == 1)
+        {
+            foreach (var name in contentProjects.Keys.Where(name => Matches(name, namePrefix)).Order(StringComparer.OrdinalIgnoreCase))
+            {
+                items.Add(new AumlCompletionItem(name + "/", AumlCompletionItemKind.Value, ServerMessages.Folder(), ReplaceBack: replaceBack));
+            }
+
+            return items;
+        }
+
+        string lookupDir;
+        try
+        {
+            lookupDir = underContent && contentProjects.TryGetValue(segments[1], out var contentDir)
+                ? Path.GetFullPath(Path.Combine(contentDir, string.Join('/', segments.Skip(2))))
+                : Path.GetFullPath(Path.Combine(root, dirPart));
+        }
+        catch { return []; }
+
+        if (dirPart.Length == 0 && contentProjects.Count > 0 && Matches(ContentFolder, namePrefix)
+            && !Directory.Exists(Path.Combine(root, ContentFolder)))
+        {
+            items.Add(new AumlCompletionItem(ContentFolder + "/", AumlCompletionItemKind.Value, ServerMessages.Folder(), ReplaceBack: replaceBack));
+        }
+
+        if (!Directory.Exists(lookupDir)) return items;
+
         var below = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         foreach (var dir in Directory.GetDirectories(lookupDir).OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
@@ -971,6 +1000,42 @@ public sealed class CompletionEngine
             items.Add(new AumlCompletionItem(name, AumlCompletionItemKind.Value, ServerMessages.File(), ReplaceBack: replaceBack));
         }
         return items;
+    }
+
+    private static Dictionary<string, string> ContentProjects(string projectDir)
+    {
+        var found = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var project in Directory.GetFiles(projectDir, "*.csproj"))
+        {
+            foreach (Match reference in Regex.Matches(ReadText(project), "<ProjectReference\\s+Include=\"([^\"$]+)\""))
+            {
+                var referenced = Path.GetFullPath(Path.Combine(projectDir, reference.Groups[1].Value));
+                var referencedText = ReadText(referenced);
+                if (!referencedText.Contains("Adamantium.Content.Build"))
+                {
+                    continue;
+                }
+
+                var named = Regex.Match(referencedText, "<AdamantiumContentName>([^<]+)</AdamantiumContentName>");
+                var projectName = Path.GetFileNameWithoutExtension(referenced);
+                var name = named.Success ? named.Groups[1].Value.Trim() : projectName[(projectName.LastIndexOf('.') + 1)..];
+                found[name] = Path.GetDirectoryName(referenced);
+            }
+        }
+
+        return found;
+    }
+
+    private static string ReadText(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+        }
+        catch (IOException)
+        {
+            return string.Empty;
+        }
     }
 
     private static bool HasExtension(string file, IReadOnlyList<string> extensions) =>

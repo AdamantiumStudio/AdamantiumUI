@@ -87,9 +87,9 @@ internal static class LspSelfTest
         // Path-typed property (Image.Source : ImageSource) -> complete files/folders under the project root.
         var (imagePathText, ipLine, ipChar) = Caret(
             """<Window xmlns="http://adamantium/ui"><Image Source="|"/></Window>""");
-        // Drilling into a folder ("Textures/") -> complete the files inside it.
+        // Drilling into a folder of the sandbox's content project ("Content/SandboxContent/Textures/") -> its files.
         var (imageDirText, idLine, idChar) = Caret(
-            """<Window xmlns="http://adamantium/ui"><Image Source="Textures/|"/></Window>""");
+            """<Window xmlns="http://adamantium/ui"><Image Source="Content/SandboxContent/Textures/|"/></Window>""");
         // Markup-extension named args: after a comma in {Binding} -> the binding's settable property NAMES.
         var (bindNameText, bnLine, bnChar) = Caret(
             """<StyleSet xmlns="http://adamantium/ui" xmlns:controls="http://adamantium/ui"><controls:Border Width="{Binding Foo, |}"/></StyleSet>""");

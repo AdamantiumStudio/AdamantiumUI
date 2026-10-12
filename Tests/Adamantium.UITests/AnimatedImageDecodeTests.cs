@@ -20,7 +20,7 @@ public class AnimatedImageDecodeTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)
         {
-            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures");
+            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures");
             if (Directory.Exists(candidate))
             {
                 return candidate + Path.DirectorySeparatorChar;
@@ -29,7 +29,7 @@ public class AnimatedImageDecodeTests
             dir = dir.Parent;
         }
 
-        throw new DirectoryNotFoundException("could not find Adamantium.UI.Sandbox/Textures above " + AppContext.BaseDirectory);
+        throw new DirectoryNotFoundException("could not find Adamantium.UI.Sandbox.Content/Textures above " + AppContext.BaseDirectory);
     }
 
     [Test]

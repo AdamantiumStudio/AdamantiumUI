@@ -30,7 +30,7 @@
                             BorderThickness="1"
                             BorderBrush="{ResourceReference ControlStrokeColorDefault}">
                         <Image x:Name="Showcase"
-                               Source="Textures/luxfon.tga"
+                               Source="Content/SandboxContent/Textures/luxfon.tga"
                                Stretch="{Binding Stretch}"
                                StretchDirection="{Binding StretchDirection}"
                                HorizontalAlignment="{Binding HorizontalAlignment}"
@@ -104,15 +104,15 @@
             <WrapPanel Orientation="Horizontal" ItemWidth="212" ItemHeight="200">
                 <StackPanel Margin="8">
                     <TextBlock Text="TGA (luxfon)"/>
-                    <Image Width="188" Height="150" Source="Textures/luxfon.tga" Opacity="{Binding Opacity}"/>
+                    <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/luxfon.tga" Opacity="{Binding Opacity}"/>
                 </StackPanel>
                 <StackPanel Margin="8">
                     <TextBlock Text="JPG + CornerRadius"/>
-                    <Image Width="188" Height="150" Source="Textures/ColoredImage.jpg" CornerRadius="14" Opacity="{Binding Opacity}"/>
+                    <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/ColoredImage.jpg" CornerRadius="14" Opacity="{Binding Opacity}"/>
                 </StackPanel>
                 <StackPanel Margin="8">
                     <TextBlock Text="{Localize ImageStrings.MipLevel}"/>
-                    <Image Width="188" Height="150" Source="Textures/elephant.png" MipLevel="2" Opacity="{Binding Opacity}"/>
+                    <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/elephant.png" MipLevel="2" Opacity="{Binding Opacity}"/>
                 </StackPanel>
             </WrapPanel>
 

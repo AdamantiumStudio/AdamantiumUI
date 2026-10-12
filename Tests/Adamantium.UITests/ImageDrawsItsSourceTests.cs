@@ -29,7 +29,7 @@ public class ImageDrawsItsSourceTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)
         {
-            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox", "Textures", name);
+            var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", name);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -38,7 +38,7 @@ public class ImageDrawsItsSourceTests
             dir = dir.Parent;
         }
 
-        throw new FileNotFoundException("could not find Adamantium.UI.Sandbox/Textures/" + name);
+        throw new FileNotFoundException("could not find Adamantium.UI.Sandbox.Content/Textures/" + name);
     }
 
     private static ImageSource DrawnPicture(Image image)

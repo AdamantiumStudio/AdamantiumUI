@@ -32,7 +32,7 @@
                           Width="520" Height="320"
                           PanningMode="Both" IsInertiaEnabled="true"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Image Source="Textures/luxfon.tga"/>
+                <Image Source="Content/SandboxContent/Textures/luxfon.tga"/>
             </ScrollViewer>
         </StackPanel>
     </StackPanel>

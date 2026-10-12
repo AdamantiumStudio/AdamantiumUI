@@ -12,12 +12,12 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// show and something to hand back - the brush wants an ImageSource, the list wants a name.</summary>
 public sealed class NineSliceSkin
 {
-    public NineSliceSkin(string name, string file)
+    public NineSliceSkin(string name, string path)
     {
         Name = name;
         // Rooted against the app's base directory and taken through the cache, the same route the markup form takes:
         // a bare relative path resolves against the WORKING directory and silently fails to decode from an IDE.
-        Source = BitmapImageCache.GetOrCreate(Path.Combine(AppContext.BaseDirectory, "Textures", file));
+        Source = BitmapImageCache.GetOrCreate(Path.Combine(AppContext.BaseDirectory, path));
     }
 
     private NineSliceSkin(string name, ImageSource source)

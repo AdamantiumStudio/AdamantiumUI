@@ -31,22 +31,11 @@
 		<ProjectReference Include="..\Adamantium.UI.Automation\Adamantium.UI.Automation.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Sandbox.Modules\Adamantium.UI.Sandbox.Modules.csproj" />
+		<ProjectReference Include="..\Adamantium.UI.Sandbox.Content\Adamantium.UI.Sandbox.Content.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Content Include="window-icon.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Models\swordman.dae">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Textures\texture.jpg">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Textures\texture.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Textures\texture2.jpg">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<None Remove="AumlResources\FluentDarkRepository.xml" />
@@ -54,218 +43,12 @@
 		<None Remove="ControlTemplate.auml" />
 		<None Remove="FluentDark.xml" />
 		<None Remove="FontData.aff" />
-		<None Remove="Models\F-15C_Eagle\F-15C_Eagle.aemf" />
-		<Content Include="Models\F-15C_Eagle\F-15C_Eagle.aemf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\F-15C_Eagle.dae" />
-		<Content Include="Models\F15C\F-15C_Eagle.dae">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\F-15C_Eagle.3ds" />
-		<Content Include="Models\F15C\F-15C_Eagle.3ds">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\F-15C_Eagle.obj" />
-		<None Remove="Models\F15C\Body 1.png" />
-		<Content Include="Models\F15C\Body 1.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Body 2.png" />
-		<Content Include="Models\F15C\Body 2.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Body 3.png" />
-		<Content Include="Models\F15C\Body 3.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Body 4.png" />
-		<Content Include="Models\F15C\Body 4.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Body 5.png" />
-		<Content Include="Models\F15C\Body 5.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Body 6.png" />
-		<Content Include="Models\F15C\Body 6.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Parts 1.png" />
-		<Content Include="Models\F15C\Parts 1.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\panel.png" />
-		<Content Include="Models\F15C\panel.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\panel1.png" />
-		<Content Include="Models\F15C\panel1.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\pilot.png" />
-		<Content Include="Models\F15C\pilot.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey.dae" />
-		<Content Include="Models\monkey\monkey.dae">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey_diffuse.png" />
-		<Content Include="Models\monkey\monkey_diffuse.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey_height.png" />
-		<Content Include="Models\monkey\monkey_height.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey_metallic.png" />
-		<Content Include="Models\monkey\monkey_metallic.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey_normals.png" />
-		<Content Include="Models\monkey\monkey_normals.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\monkey\monkey_roughness.png" />
-		<Content Include="Models\monkey\monkey_roughness.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\Glass.png" />
-		<Content Include="Models\F15C\Glass.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Models\F15C\weapons.png" />
-		<Content Include="Models\F15C\weapons.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\WoffFonts\Sarabun-Regular.woff2" />
-		<Content Include="Fonts\WoffFonts\Sarabun-Regular.woff2">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\TTFFonts\Sarabun-Regular.ttf" />
-		<Content Include="Fonts\TTFFonts\Sarabun-Regular.ttf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\OTFFonts\CFF2\SourceHanSerifVFProtoJP.otf" />
-		<Content Include="Fonts\OTFFonts\CFF2\SourceHanSerifVFProtoJP.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\OTFFonts\CFF2\AdobeVFPrototype.otf" />
-		<Content Include="Fonts\OTFFonts\CFF2\AdobeVFPrototype.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\OTFFonts\SourceSans3-Regular.otf" />
-		<Content Include="Fonts\OTFFonts\SourceSans3-Regular.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\sdf.png" />
-		<None Remove="Fonts\OTFFonts\Japan\NotoSansCJKjp-Light.otf" />
-		<Content Include="Fonts\OTFFonts\Japan\NotoSansCJKjp-Light.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\OTFFonts\GlametrixLight-0zjo.otf" />
-		<Content Include="Fonts\OTFFonts\GlametrixLight-0zjo.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Fonts\OTFFonts\CFF\Quicksand-Regular.otf" />
-		<Content Include="Fonts\OTFFonts\CFF\Quicksand-Regular.otf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Fonts\NotoColorEmoji.subset.ttf;Fonts\samples-sbix.ttf;Fonts\test_glyphs-glyf_colr_1.ttf;Fonts\samples-picosvg.ttf;Fonts\samples-glyf_colr_1.ttf;Fonts\LICENSE-NotoColorEmoji.txt;Fonts\LICENSE-color-fonts.txt">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="Fonts\PonomarUnicode.otf;Fonts\MonomakhUnicode.otf;Fonts\VertogradUnicode.otf;Fonts\LICENSE-ChurchSlavonic.txt;Fonts\NotoNastaliqUrdu-Regular.ttf;Fonts\LICENSE-NotoNastaliqUrdu.txt">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\Tests\Adamantium.UITests\Fonts\RobotoFlex-Variable.ttf" Link="Fonts\RobotoFlex-Variable.ttf">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\Tests\Adamantium.UITests\Fonts\LICENSE-RobotoFlex.txt" Link="Fonts\LICENSE-RobotoFlex.txt">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 		<Content Update="Effects\structs.hlsl">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\infinity.gif" />
-		<Content Include="Textures\infinity.gif">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\APNG-cube.png" />
-		<Content Include="Textures\APNG-cube.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\ball.png" />
-		<Content Include="Textures\ball.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\elephant.png" />
-		<Content Include="Textures\elephant.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\nine-slice-frame.png" />
-		<Content Include="Textures\nine-slice-frame.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\nine-slice-stone.png" />
-		<Content Include="Textures\nine-slice-stone.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\nine-slice-scifi.png" />
-		<Content Include="Textures\nine-slice-scifi.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\nine-slice-parchment.png" />
-		<Content Include="Textures\nine-slice-parchment.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\tile-sample.png" />
-		<Content Include="Textures\tile-sample.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\RotatingEarth2.gif" />
-		<Content Include="Textures\RotatingEarth2.gif">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\balls.dds" />
-		<Content Include="Textures\balls.dds">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\TextureCube.dds" />
-		<Content Include="Textures\TextureCube.dds">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\ai.ico" />
-		<Content Include="Textures\ai.ico">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\SharpDoc.ico" />
-		<Content Include="Textures\SharpDoc.ico">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\PDF-Document.ico" />
-		<Content Include="Textures\PDF-Document.ico">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\ColoredImage.jpg" />
-		<Content Include="Textures\ColoredImage.jpg">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\luxfon.tga" />
-		<Content Include="Textures\luxfon.tga">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<None Remove="Textures\AplhaTestBitmap.bmp" />
-		<Content Include="Textures\AplhaTestBitmap.bmp">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<AdditionalFiles Update="ControlTemplate.auml">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</AdditionalFiles>
-		<None Remove="Fonts\OTFFonts\Crimson-Italic.otf" />
-		<Content Include="Fonts\OTFFonts\Crimson-Italic.otf">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 		<AdditionalFiles Remove="obj\**" />
 		<None Remove="obj\**" />
 	</ItemGroup>
@@ -281,7 +64,6 @@
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine.Generators\Adamantium.Engine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" SetTargetFramework="TargetFramework=netstandard2.0"/>
@@ -293,7 +75,6 @@
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
-	<!-- The engine generator package carries the assemblies the generators load: Core, Mathematics, Fonts, EffectsCompiler. -->
 	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
 		<PackageReference Include="Adamantium.Engine" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
@@ -303,18 +84,11 @@
 		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
-		<PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<AdditionalFiles Include="$(ProjectDir)**\*.auml" />
-		<AdditionalFiles Include="$(ProjectDir)**\*.fx" />
-		<AdditionalFiles Include="$(ProjectDir)**\*.fxh" />
 		<AdditionalFiles Remove="$(ProjectDir)ControlTemplate.auml" />
-		<!-- Content resources fed to AssetsGenerator (it filters by extension and skips cooked .aemf). -->
-		<AdditionalFiles Include="$(ProjectDir)Models\**\*.*" />
-		<AdditionalFiles Include="$(ProjectDir)Textures\**\*.*" />
-		<AdditionalFiles Include="$(ProjectDir)Fonts\**\*.*" />
 		<!-- The pages' words: a language table per page (Localization\*.alang). -->
 		<AdditionalFiles Include="$(ProjectDir)**\*.alang" />
 		<CompilerVisibleProperty Include="RootNamespace" />

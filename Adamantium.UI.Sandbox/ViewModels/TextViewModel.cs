@@ -7,6 +7,7 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -50,20 +51,20 @@ public partial class TextViewModel : TabPageViewModel
     [Bindable] private Brush _accentBrush = new SolidColorBrush("#22D3EE");
 
     // Fonts that draw their color glyphs as images: PNGs of Noto Color Emoji ('CBDT') and of Google's samples ('sbix').
-    public FontFamily EmbeddedBitmapFont { get; } = FromFile("NotoColorEmoji.subset.ttf");
+    public FontFamily EmbeddedBitmapFont { get; } = FromFile(SandboxContentAssets.Fonts.NotoColorEmoji_subset);
 
-    public FontFamily StandardBitmapFont { get; } = FromFile("samples-sbix.ttf");
+    public FontFamily StandardBitmapFont { get; } = FromFile(SandboxContentAssets.Fonts.Samples_sbix);
 
     // Google's samples as SVG documents ('SVG ') and, built from the same drawings, as a 'COLR' version 1 paint graph.
-    public FontFamily SvgFont { get; } = FromFile("samples-picosvg.ttf");
+    public FontFamily SvgFont { get; } = FromFile(SandboxContentAssets.Fonts.Samples_picosvg);
 
-    public FontFamily PaintFont { get; } = FromFile("samples-glyf_colr_1.ttf");
+    public FontFamily PaintFont { get; } = FromFile(SandboxContentAssets.Fonts.Samples_glyf_colr_1);
 
     // Google's 'COLR' version 1 test glyphs: a font with three palettes, the second for dark backgrounds.
-    public FontFamily PaletteFont { get; } = FromFile("test_glyphs-glyf_colr_1.ttf");
+    public FontFamily PaletteFont { get; } = FromFile(SandboxContentAssets.Fonts.Test_glyphs_glyf_colr_1);
 
     // Source Sans 3: dozens of character variants under names of their own, and 'aalt' offering several alternates.
-    public FontFamily FeatureFont { get; } = FromFile(Path.Combine("OTFFonts", "SourceSans3-Regular.otf"));
+    public FontFamily FeatureFont { get; } = FromFile(SandboxContentAssets.Fonts.OTFFonts.SourceSans3_Regular);
 
     // The features of FeatureFont that turn a glyph into another, as a panel of OpenType features lists them.
     public IReadOnlyList<FontFeatureItem> FontFeatureItems => _fontFeatureItems ??= ListFeatures(FeatureFont.Fonts[0]);
@@ -76,7 +77,7 @@ public partial class TextViewModel : TabPageViewModel
     public IReadOnlyList<GlyphAlternateItem> GlyphAlternates => ListAlternates(FeatureFont.Fonts[0], AlternateCharacter);
 
     // Roboto Flex: optical size, slant, width and nine parametric axes, its values named by 'STAT'.
-    public FontFamily VariableFont { get; } = FromFile("RobotoFlex-Variable.ttf");
+    public FontFamily VariableFont { get; } = FromFile(SandboxContentAssets.Fonts.RobotoFlex_Variable);
 
     // The axes of VariableFont, as a style panel lists them.
     public IReadOnlyList<FontAxisItem> AxisItems => _axisItems ??= ListAxes(VariableFont.Fonts[0]);
@@ -97,24 +98,24 @@ public partial class TextViewModel : TabPageViewModel
     [Bindable] private string _arabicEditable = "مرحبا world، بالعالم 42";
 
     // Urdu in Nastaliq: letters joined on a slant down to the baseline, by cursive attachment.
-    public FontFamily NastaliqFont { get; } = FromFile("NotoNastaliqUrdu-Regular.ttf");
+    public FontFamily NastaliqFont { get; } = FromFile(SandboxContentAssets.Fonts.NotoNastaliqUrdu_Regular);
 
     public string UrduSample => "بچپن سے ہی مجھے کتابیں پڑھنے کا شوق تھا۔";
 
     // Church Slavonic as the synodal books print it: breathings, accents and titla over the letters, letter-titla.
-    public FontFamily ChurchSlavonicFont { get; } = FromFile("PonomarUnicode.otf");
+    public FontFamily ChurchSlavonicFont { get; } = FromFile(SandboxContentAssets.Fonts.PonomarUnicode);
 
     public string ChurchSlavonicSample =>
         "Ѻ҆́ч҃е на́шъ, и҆́же є҆сѝ на нб҃сѣ́хъ, да ст҃и́тсѧ и҆́мѧ твоѐ. " +
         "Гдⷭ҇ь бг҃ъ і҆и҃съ хрⷭ҇то́съ, ҂аѱ҃і.";
 
     // Old Cyrillic in ustav and poluustav: the letters the modern alphabet dropped.
-    public FontFamily OldCyrillicFont { get; } = FromFile("MonomakhUnicode.otf");
+    public FontFamily OldCyrillicFont { get; } = FromFile(SandboxContentAssets.Fonts.MonomakhUnicode);
 
     public string OldCyrillicSample => "Аꙁъ ѥсмь ꙗко ꙑ ѫ ѭ ѧ ѩ ѣ ѳ ѵ ѯ ѱ ѡ ѿ ҁ ꙇ";
 
     // Decorative capitals of the liturgical books, the initials a chapter opens with.
-    public FontFamily InitialsFont { get; } = FromFile("VertogradUnicode.otf");
+    public FontFamily InitialsFont { get; } = FromFile(SandboxContentAssets.Fonts.VertogradUnicode);
 
     // Turns the bidi sample and its editor from left to right to right to left.
     [Bindable, Affects(nameof(BidiDirection))] private bool _rightToLeft;
@@ -319,8 +320,8 @@ public partial class TextViewModel : TabPageViewModel
             .ToArray();
     }
 
-    private static FontFamily FromFile(string name)
+    private static FontFamily FromFile(string path)
     {
-        return new FontFamily(new Uri(Path.Combine(AppContext.BaseDirectory, "Fonts", name)));
+        return new FontFamily(new Uri(Path.Combine(AppContext.BaseDirectory, path)));
     }
 }

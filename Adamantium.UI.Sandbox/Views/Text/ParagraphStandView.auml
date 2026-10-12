@@ -555,7 +555,7 @@
                                TextWrapping="WrapByWords"
                                FontSize="16"
                                HorizontalTextAlignment="{Binding ColumnAlignment}"/>
-                    <Image Source="Textures/luxfon.tga"
+                    <Image Source="Content/SandboxContent/Textures/luxfon.tga"
                            Width="188"
                            Height="150"
                            HorizontalAlignment="Left"

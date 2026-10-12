@@ -48,13 +48,13 @@ SOFTWARE.
 
 Not code, but files shipped beside it, unchanged, each with its licence text in the same folder:
 
-- `Adamantium.UI.Sandbox/Fonts/` and `Tests/Adamantium.UITests/Fonts/` — `NotoColorEmoji.subset.ttf`, the subset of
-  Noto Color Emoji HarfBuzz's tests carry (https://github.com/harfbuzz/harfbuzz/tree/main/test/api/fonts), copyright
-  Google LLC, under the SIL Open Font License 1.1 (`LICENSE-NotoColorEmoji.txt`).
+- `Adamantium.UI.Sandbox.Content/Fonts/` and `Tests/Adamantium.UITests/Fonts/` — `NotoColorEmoji.subset.ttf`, the
+  subset of Noto Color Emoji HarfBuzz's tests carry (https://github.com/harfbuzz/harfbuzz/tree/main/test/api/fonts),
+  copyright Google LLC, under the SIL Open Font License 1.1 (`LICENSE-NotoColorEmoji.txt`).
 - The same folders — `samples-sbix.ttf`, `samples-picosvg.ttf`, `samples-glyf_colr_1.ttf` and
   `test_glyphs-glyf_colr_1.ttf`, from https://github.com/googlefonts/color-fonts, copyright Google LLC, under the
   Apache License 2.0 (`LICENSE-color-fonts.txt`).
-- `Tests/Adamantium.UITests/Fonts/RobotoFlex-Variable.ttf`, also copied into the sandbox's `Fonts/` at build, the
+- `Tests/Adamantium.UITests/Fonts/RobotoFlex-Variable.ttf`, also linked into the sandbox's content `Fonts/`, the
   variable font from https://github.com/google/fonts/tree/main/ofl/robotoflex, copyright 2017 The Roboto Flex Project
   Authors, under the SIL Open Font License 1.1 (`LICENSE-RobotoFlex.txt`).
 
@@ -64,8 +64,8 @@ Not code, but files shipped beside it, unchanged, each with its licence text in 
 
 Shown on the sandbox's text page, unchanged, each with its licence text in the same folder:
 
-- `Adamantium.UI.Sandbox/Fonts/NotoNastaliqUrdu-Regular.ttf`, from https://github.com/notofonts/nastaliq, copyright
-  2022 The Noto Project Authors, under the SIL Open Font License 1.1 (`LICENSE-NotoNastaliqUrdu.txt`).
+- `Adamantium.UI.Sandbox.Content/Fonts/NotoNastaliqUrdu-Regular.ttf`, from https://github.com/notofonts/nastaliq,
+  copyright 2022 The Noto Project Authors, under the SIL Open Font License 1.1 (`LICENSE-NotoNastaliqUrdu.txt`).
 - The same folder — `PonomarUnicode.otf` (copyright 2013-2020), `MonomakhUnicode.otf` (2006-2020) and
   `VertogradUnicode.otf` (2019-2020), Aleksandr Andreev and Nikita Simmons, from the fonts-churchslavonic release 2.2.1
   of the Slavonic Computing Initiative (https://github.com/typiconman/fonts-cu), under the SIL Open Font License 1.1

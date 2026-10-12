@@ -80,7 +80,7 @@
                     <ctl:DragPiece Canvas.Left="524" Canvas.Top="-18" Width="130" Height="70">
                         <Rectangle CornerRadius="8">
                             <Rectangle.Fill>
-                                <ImageBrush Source="Textures/nine-slice-frame.png"/>
+                                <ImageBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"/>
                             </Rectangle.Fill>
                         </Rectangle>
                     </ctl:DragPiece>
@@ -116,7 +116,7 @@
                     <ctl:DragPiece Canvas.Left="300" Canvas.Top="120" Width="90" Height="90">
                         <RegularPolygon Corners="5">
                             <RegularPolygon.Fill>
-                                <ImageBrush Source="Textures/nine-slice-frame.png"/>
+                                <ImageBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png"/>
                             </RegularPolygon.Fill>
                         </RegularPolygon>
                     </ctl:DragPiece>
@@ -127,7 +127,7 @@
                     <ctl:DragPiece Canvas.Left="60" Canvas.Top="350" Width="120" Height="80">
                         <Rectangle>
                             <Rectangle.Fill>
-                                <NineSliceBrush Source="Textures/nine-slice-frame.png" Slice="0.25"/>
+                                <NineSliceBrush Source="Content/SandboxContent/Textures/nine-slice-frame.png" Slice="0.25"/>
                             </Rectangle.Fill>
                         </Rectangle>
                     </ctl:DragPiece>

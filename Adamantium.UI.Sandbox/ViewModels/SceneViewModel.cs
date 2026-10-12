@@ -5,6 +5,7 @@ using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Dispatcher;
+using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -272,9 +273,9 @@ public partial class SceneViewModel : TabPageViewModel
 
     [Bindable] private string _loadError;
 
-    [Command] private Task LoadF15() => Load("Models/F15C/F-15C_Eagle.dae", "F-15C Eagle");
+    [Command] private Task LoadF15() => Load(SandboxContentAssets.Models.F15C.F_15C_Eagle_dae, "F-15C Eagle");
 
-    [Command] private Task LoadMonkey() => Load("Models/monkey/monkey.dae", "Monkey");
+    [Command] private Task LoadMonkey() => Load(SandboxContentAssets.Models.Monkey.Monkey_dae, "Monkey");
 
     private async Task Load(string path, string name)
     {

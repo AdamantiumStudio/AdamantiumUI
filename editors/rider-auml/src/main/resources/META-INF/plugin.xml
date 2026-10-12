@@ -17,8 +17,9 @@
             <li><b>Language files</b> (<code>.alang</code>), the application's strings in each language: highlighting,
             completion of keys and formats, the build's checks as you type, a quick fix that adds the strings a
             translation lacks, and <b>New | Language File</b> for a table or its translation.</li>
-            <li>The <b>project templates</b> for File | New Solution: offered at startup when missing, and installed or
-            updated any time with <b>Tools | Install Adamantium UI Templates</b>.</li>
+            <li>The <b>project templates</b> for File | New Solution - UI applications and libraries, and content
+            projects: offered at startup when missing, and installed or updated any time with <b>Tools | Install
+            Adamantium Templates</b>.</li>
         </ul>
         <p><b>Requirements:</b> the .NET 10 SDK and a project that references the <code>Adamantium.UI</code> NuGet
         package. The preview runs the designer that package carries on the project's own build, so build the project
@@ -26,6 +27,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>The content project - a library of a game's or an application's assets, cooked at build - can be created from
+        File | New Solution: the templates the plugin installs now include the engine's (Adamantium.Engine.Templates),
+        and Tools | Install Adamantium Templates installs both.</p>
+        <p>Completion of a picture's path in markup offers the pictures of a content project the project references,
+        under Content/{Name}/, where the build puts them.</p>
         <p>A {TemplateBinding} on an attached property in a template - ToolTipService.ToolTip, AutomationProperties.Name
         - binds that attached property, in the build and in the preview, instead of the part's own property of the same
         name.</p>
@@ -171,8 +177,8 @@
         </action>
         <action id="Adamantium.InstallTemplates"
                 class="com.adamantium.auml.InstallAumlTemplatesAction"
-                text="Install Adamantium UI Templates"
-                description="Installs or updates the Adamantium UI project templates for File | New Solution">
+                text="Install Adamantium Templates"
+                description="Installs or updates the Adamantium project templates - UI and content - for File | New Solution">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
