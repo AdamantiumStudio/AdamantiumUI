@@ -11,6 +11,18 @@ All packages share one version.
   `Content/{Name}/`, where the build puts it: `Content/` offers the content projects by name, and each its folders and
   files.
 
+- Leak hunting in automation.
+  - **`adam-auto memory`** (`AutomationSession.MemoryAsync`) collects all garbage in the application, finalizers
+    included, then reports the managed heap left, the committed heap, private memory and handles.
+  - **`adam-auto theme [<name>] [--variant <name>]`** (`AutomationSession.ThemeAsync`) moves the application onto a
+    theme and variant and waits for the swap to settle. Alone, it says which theme and variant are in use and lists
+    every registered theme with its variants.
+  - **`adam-auto sweep --themes --memory`**: after each pass over the tabs, every theme in every variant and back to the
+    one in use, and a memory reading - so a pass tears every template down and builds it again, and the readings show
+    what each pass leaves behind. With `--memory`, a reading is also taken before the first pass.
+  - The sandbox's theme chooser, Switch and Dark / Light buttons carry automation ids (`ThemeChooser`, `SwitchTheme`,
+    `ToggleVariant`).
+
 - The pen and several fingers on `InfiniteCanvas`.
   - **Pressure.** A pen's pressure sets the ink's width point by point along the stroke: a pen's usual pressure (and
     a pen with no pressure to report) draws `InkThickness`, lighter narrower, harder up to twice as wide; never under a
@@ -1029,6 +1041,38 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- Memory held after theme swaps and tab visits.
+  - **A view's content is discarded with the view.** A theme swap rebuilds a host's template and a view's own one. The
+    view's content (a `View` written in markup) could then sit between the view's old presenter and its new one, which
+    had not taken it up yet. It stayed alive out of the tree, and a behavior on it never detached. The sandbox's 3D
+    view left a whole universe running for each swap. A `ContentControl` that is discarded now discards its content
+    element when that element is out of the tree. An item container lets go of an item that is an element of its own
+    before it is discarded, so the list can show the item again.
+  - **Layout work queued before a subtree joins the tree moves with it.** A template is built without a parent, under
+    a layout manager of its own. When the subtree joined a window, that manager kept its queue and the elements in it
+    for good, and the managers of discarded roots linked one generation of templates to the next
+    (`LayoutManager.HandOver`).
+  - **Content a presenter built is discarded with the presenter.** A label made for string content, or a view built from
+    a data template, used to be let go of and left alive, still listening to the resources.
+  - **The render cache lets go of released elements.** The adorner layer's cache never reconciled, so it kept every
+    element it had drawn. Every cache now drops the layout it froze for an element once a packet recorded after the
+    element's release has been applied.
+  - **Drawings follow their brushes weakly.** A `GeometryDrawing` or `GlyphRunDrawing` subscribed to a theme brush's
+    `Changed`, and the brush lives as long as the theme. A brush now takes only elements as owners; a run of text or a
+    drawing no longer becomes one.
+  - **A released element's animations stop.** Parking a page stopped them, discarding one did not: an endless animation
+    on a page torn down by a theme swap went on playing, and through it the whole page stayed in memory.
+  - **The render cache hands back the opacity, clip and transform slots of released elements.** The adorner layer's
+    cache never did, so each slot kept its element and everything that element reached.
+  - **A destroyed `InfiniteCanvas` discards the controls it built around the application's objects.** They were only
+    taken off the scene and stayed alive, listening to the resources.
+  - The render cache clears the buffers of its structural pass after each frame.
+  - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
+    released. A released element is final; nothing brings it back.
+
+- The sandbox's theme chooser shows the theme in use when the theme was changed some other way. It kept showing the one
+  it was opened on.
 
 - `InfiniteCanvas.BringIntoView` brings something wholly out of view to the middle. Moved only as far as the edge, a
   node not yet built - a point, having no size - stood on the edge, just outside what the plane looks up, and stayed

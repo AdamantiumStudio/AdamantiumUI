@@ -190,6 +190,31 @@ public class ContentControl : Control, IContentControl
       _outgoingVisualChild = null;
    }
 
+   protected override void OnDiscarded()
+   {
+      base.OnDiscarded();
+
+      if (Content is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } content)
+      {
+         var gone = new List<IFundamentalUIComponent>();
+         CollectForDiscard(content, gone);
+         DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
+      }
+   }
+
+   private static void CollectForDiscard(IUIComponent node, List<IFundamentalUIComponent> gone)
+   {
+      if (node is IFundamentalUIComponent fundamental)
+      {
+         gone.Add(fundamental);
+      }
+
+      foreach (var child in node.VisualChildren)
+      {
+         CollectForDiscard(child, gone);
+      }
+   }
+
    protected override Size MeasureOverride(Size availableSize)
    {
       UpdateVisualsForContent(Content);

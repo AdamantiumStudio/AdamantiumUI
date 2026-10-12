@@ -52,12 +52,18 @@ internal sealed class CanvasDrawingHost
     }
 
     /// <summary>For a canvas that has been destroyed: stops listening to the application's collection and objects, then
-    /// takes the items it made for them off the scene, which the application keeps.</summary>
+    /// takes the items it made for them off the scene, which the application keeps, and discards the controls it built
+    /// for them.</summary>
     public void StopFollowing()
     {
         if (_objects is INotifyCollectionChanged was)
         {
             was.CollectionChanged -= OnObjectsChanged;
+        }
+
+        foreach (var (_, item) in _placed)
+        {
+            Discard(item);
         }
 
         Clear();
@@ -164,6 +170,14 @@ internal sealed class CanvasDrawingHost
         }
 
         _placed.Clear();
+    }
+
+    private static void Discard(ICanvasItem item)
+    {
+        if (item is ElementItem { Element: ContentPresenter presenter })
+        {
+            DiscardedVisuals.Publish(presenter);
+        }
     }
 
     // Nothing is copied: the box a shape occupies IS the object's, read and written through. The scene is told that a

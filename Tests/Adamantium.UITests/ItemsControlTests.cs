@@ -764,6 +764,30 @@ public class ItemsControlTests
         DiscardedVisuals.Drain(int.MaxValue);
     }
 
+    // The container goes, the item it showed stays: the container must not take the item down with it when its own
+    // release runs, out of the tree as both are by then.
+    [Test]
+    public void ClearingTheContainers_LeavesTheItemsOwnElementsAliveAfterTheRelease()
+    {
+        var containerStyle = new Style { Selector = new StyleSelector { Types = { typeof(ListBoxItem) } } };
+        containerStyle.Setters.Add(new Setter("Template", ListBoxItemChromeTemplate()));
+        var label = new TextBlock { Text = "own" };
+        var lb = new ListBox { ItemContainerStyle = containerStyle, Template = ItemsPresenterTemplate() };
+        lb.Items.Add(label);
+        lb.Measure(new Size(200, 200));
+        lb.Arrange(new Rect(0, 0, 200, 200));
+        var wrapper = (ListBoxItem)lb.ItemContainerGenerator.ContainerFromIndex(0);
+
+        lb.ItemContainerGenerator.Clear();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wrapper.IsDiscarded, Is.True, "the container is gone for good");
+            Assert.That(label.IsDiscarded, Is.False, "the item is the list's to show again");
+        });
+    }
+
     [Test]
     public void ClearingTheContainers_DiscardsTheParkedOnesToo()
     {

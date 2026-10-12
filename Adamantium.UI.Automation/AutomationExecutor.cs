@@ -13,6 +13,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Automation;
 
@@ -72,6 +73,10 @@ public sealed class AutomationExecutor
                     return new AutomationReply { Ok = true, Errors = ErrorJournal.Since(request.Since) };
                 case AutomationCommand.Shot:
                     return await ShotAsync(request, timeout);
+                case AutomationCommand.Memory:
+                    return await _host.RunOnLoopAsync(Memory, timeout);
+                case AutomationCommand.Theme:
+                    return await ThemeAsync(request, timeout);
                 case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches or AutomationCommand.Pinch
                     when request.Properties?.Contains(SystemInput) == true:
                     return await SystemContactAsync(request, timeout);
@@ -104,6 +109,77 @@ public sealed class AutomationExecutor
         {
             return AutomationReply.Failed($"{e.GetType().Name}: {e.Message}");
         }
+    }
+
+    private static AutomationReply Memory()
+    {
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
+
+        using var process = Process.GetCurrentProcess();
+        var info = GC.GetGCMemoryInfo();
+        var text = FormattableString.Invariant(
+            $"managed {GC.GetTotalMemory(false) / 1048576.0:0.0} MB, committed {info.TotalCommittedBytes / 1048576.0:0.0} MB, private {process.PrivateMemorySize64 / 1048576.0:0.0} MB, handles {process.HandleCount}");
+        return new AutomationReply { Ok = true, Text = text };
+    }
+
+    private async Task<AutomationReply> ThemeAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        var variantName = request.Properties is { Length: > 0 } properties ? properties[0] : null;
+        var manager = await _host.RunOnLoopAsync(() =>
+        {
+            var themes = UIAppContext.Current?.ThemeManager
+                         ?? throw new AutomationException("The application has no themes.");
+            var theme = themes.CurrentTheme;
+            if (!string.IsNullOrWhiteSpace(request.Value))
+            {
+                theme = themes[request.Value] ?? throw new AutomationException($"No theme '{request.Value}'.");
+                if (!ReferenceEquals(theme, themes.CurrentTheme))
+                {
+                    themes.SetTheme(theme);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(variantName))
+            {
+                var variant = ThemeVariant.Parse(variantName);
+                if (theme == null || !theme.VariantsByKey.ContainsKey(variant))
+                {
+                    throw new AutomationException($"The theme has no variant '{variantName}'.");
+                }
+
+                themes.SetVariant(variant);
+            }
+
+            return themes;
+        }, timeout);
+
+        var deadline = DateTime.UtcNow + timeout;
+        while (await _host.RunOnLoopAsync(() => manager.IsThemeChanging, timeout))
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException();
+            }
+
+            await Task.Delay(20);
+        }
+
+        await _host.WaitForIdleAsync(timeout);
+        return await _host.RunOnLoopAsync(() => new AutomationReply { Ok = true, Text = DescribeThemes(manager) }, timeout);
+    }
+
+    private static string DescribeThemes(IThemeManager themes)
+    {
+        var text = new StringBuilder();
+        text.Append(themes.CurrentTheme?.Name).Append(", ").Append((themes.CurrentTheme as Theme)?.CurrentVariant);
+        foreach (var theme in themes.Themes)
+        {
+            text.AppendLine().Append(theme.Name).Append(": ").Append(string.Join(", ", theme.VariantsByKey.Keys));
+        }
+
+        return text.ToString();
     }
 
     private async Task<AutomationReply> ShotAsync(AutomationRequest request, TimeSpan timeout)

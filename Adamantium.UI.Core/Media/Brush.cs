@@ -234,6 +234,12 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
    void IRenderAttachable.AttachTo(AdamantiumComponent owner)
    {
+      if (owner is not IUIComponent)
+      {
+         Anchor(owner);
+         return;
+      }
+
       var firstOwner = false;
 
       lock (_ownersLock)

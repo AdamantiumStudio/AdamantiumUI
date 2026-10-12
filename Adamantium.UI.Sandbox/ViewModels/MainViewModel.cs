@@ -17,6 +17,7 @@ public partial class MainViewModel
     private readonly INavigationService _navigation;
     private readonly WindowDemoSettings _settings;
     private readonly IDialogService _dialogs;
+    private bool _followsThemes;
 
     public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs)
     {
@@ -121,12 +122,22 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Which theme the chooser shows. Defaults to the one the application is ON, resolved on FIRST READ rather
-    /// than in the constructor: a view-model is built while the application is still coming up, when the theme manager
-    /// has no themes yet, so a value taken there would be null for good and the chooser would open on nothing.</summary>
+    /// <summary>Which theme the chooser shows: the one the application is ON, followed whoever swaps it. Resolved on
+    /// FIRST READ rather than in the constructor: a view-model is built while the application is still coming up, when
+    /// the theme manager has no themes yet, so a value taken there would be null for good.</summary>
     public string SelectedThemeName
     {
-        get => _selectedThemeName ??= UIAppContext.Current?.ThemeManager?.CurrentTheme?.Name;
+        get
+        {
+            var themes = UIAppContext.Current?.ThemeManager;
+            if (!_followsThemes && themes != null)
+            {
+                _followsThemes = true;
+                themes.ThemeChanged += (_, e) => SelectedThemeName = e.NewTheme?.Name;
+            }
+
+            return _selectedThemeName ??= themes?.CurrentTheme?.Name;
+        }
         set
         {
             if (_selectedThemeName == value) return;

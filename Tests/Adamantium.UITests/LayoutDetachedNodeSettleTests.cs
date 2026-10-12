@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
@@ -87,5 +88,78 @@ public class LayoutDetachedNodeSettleTests
             Assert.That(((IMeasurableComponent)child).IsArrangeValid, Is.True);
             Assert.That(manager.IsSettled, Is.True);
         });
+    }
+
+    // A template is built parentless, so what is invalidated while it is built queues in a manager of its own. Once the
+    // template joins a tree, that manager is never run again - the work has to move to the tree it joined.
+    [Test]
+    public void ASubtreeBuiltOffTheTree_HandsItsQueuedWorkToTheTreeItJoins()
+    {
+        var root = new Grid();
+        var manager = LayoutManager.For(root);
+        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
+        manager.ExecuteLayoutPass();
+
+        var part = new Grid();
+        var child = new Border();
+        part.Children.Add(child);
+        ((IMeasurableComponent)part).Measure(new Size(100, 100));
+        ((IMeasurableComponent)part).Arrange(new Rect(0, 0, 100, 100));
+        var partManager = LayoutManager.For(part);
+        partManager.ExecuteLayoutPass();
+        ((IMeasurableComponent)child).InvalidateMeasure();
+        Assume.That(partManager.QueuedCounts().Measure, Is.GreaterThan(0), "precondition: the work waits in the part's own manager");
+
+        root.Children.Add(part);
+        manager.ExecuteLayoutPass();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(partManager.QueuedCounts(), Is.EqualTo((0, 0, 0, 0, 0)), "nothing waits in a manager nobody runs");
+            Assert.That(((IMeasurableComponent)child).IsMeasureValid, Is.True, "the tree it joined did the work");
+            Assert.That(manager.IsSettled, Is.True);
+        });
+    }
+
+    // The leak a theme swap showed: the part's manager held what it queued for as long as the part lived, so a node later
+    // dropped from the part - an old template's chrome - stayed reachable with everything under it.
+    [Test]
+    public void ANodeDroppedAfterItsSubtreeJoinedATree_IsNotHeldByTheManagerItWasQueuedIn()
+    {
+        var root = new Grid();
+        var manager = LayoutManager.For(root);
+        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
+        manager.ExecuteLayoutPass();
+
+        var part = new Grid();
+        var dropped = QueueAChild(part);
+        Assume.That(LayoutManager.For(part).QueuedCounts().Measure, Is.GreaterThan(0),
+            "precondition: the child waits in the part's own manager");
+        root.Children.Add(part);
+        manager.ExecuteLayoutPass();
+        part.Children.Clear();
+        manager.ExecuteLayoutPass();
+        RenderDirty.Clear();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(dropped.IsAlive, Is.False, "a node that left the tree is not held by a layout queue");
+        GC.KeepAlive(part);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference QueueAChild(Grid part)
+    {
+        var child = new Border();
+        part.Children.Add(child);
+        ((IMeasurableComponent)part).Measure(new Size(100, 100));
+        ((IMeasurableComponent)part).Arrange(new Rect(0, 0, 100, 100));
+        LayoutManager.For(part).ExecuteLayoutPass();
+        ((IMeasurableComponent)child).InvalidateMeasure();
+        return new WeakReference(child);
     }
 }

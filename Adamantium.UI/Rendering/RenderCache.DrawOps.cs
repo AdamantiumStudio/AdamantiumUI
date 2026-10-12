@@ -830,12 +830,8 @@ public partial class RenderCache
                 RemoveAndDeferDispose(id);
         }
 
-        removed += ReleaseSlotsOfDeparted(_clipOwners, owner => _transformTable?.ReleaseClipSlot(owner.RenderId));
-        removed += ReleaseSlotsOfDeparted(_fadeOwners, owner =>
-        {
-            _transformTable?.ReleaseOpacitySlot(owner.RenderId);
-            ReleaseCopyFades(owner);
-        });
+        removed += ReleaseSlotsOf(_clipOwners, Departed, ReleaseClipSlot);
+        removed += ReleaseSlotsOf(_fadeOwners, Departed, ReleaseFadeSlot);
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
         // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.
@@ -861,33 +857,29 @@ public partial class RenderCache
         // nodes are counted in ones per window - but it is keyed by the NODE, so a departed one stays, and through it
         // its whole subtree. Found by walking the object graph from the strong handles: RenderCache ->
         // Dictionary<IUIComponent, int> -> a TabStripScroller's grid -> a whole discarded view.
-        List<IUIComponent> staleNodes = null;
-        foreach (var node in _nodeRefreshed.Keys)
-        {
-            if (Departed(node)) (staleNodes ??= new List<IUIComponent>()).Add(node);
-        }
-
-        if (staleNodes != null)
-        {
-            foreach (var node in staleNodes)
-            {
-                _nodeRefreshed.Remove(node);
-                _transformTable?.ReleaseSlot(node.RenderId);
-            }
-
-            removed += staleNodes.Count;
-        }
+        removed += ReleaseSlotsOf(_nodeRefreshed, Departed, ReleaseNodeSlot);
 
         _departed.Clear();
         return removed;
     }
 
-    private int ReleaseSlotsOfDeparted(Dictionary<IUIComponent, int> owners, Action<IUIComponent> release)
+    private void ReleaseClipSlot(IUIComponent owner) => _transformTable?.ReleaseClipSlot(owner.RenderId);
+
+    private void ReleaseFadeSlot(IUIComponent owner)
+    {
+        _transformTable?.ReleaseOpacitySlot(owner.RenderId);
+        ReleaseCopyFades(owner);
+    }
+
+    private void ReleaseNodeSlot(IUIComponent node) => _transformTable?.ReleaseSlot(node.RenderId);
+
+    private static int ReleaseSlotsOf(Dictionary<IUIComponent, int> owners, Func<IUIComponent, bool> isGone,
+        Action<IUIComponent> release)
     {
         List<IUIComponent> gone = null;
         foreach (var owner in owners.Keys)
         {
-            if (Departed(owner))
+            if (isGone(owner))
             {
                 (gone ??= []).Add(owner);
             }

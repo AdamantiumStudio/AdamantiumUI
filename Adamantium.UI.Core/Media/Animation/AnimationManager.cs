@@ -24,6 +24,47 @@ public static class AnimationManager
     // Reused tick snapshot (Active.ToArray() allocated a fresh array every frame; see the iteration note in Tick).
     private static readonly List<IRunningAnimation> TickBuffer = new();
 
+    private static readonly HashSet<object> Released = new(ReferenceEqualityComparer.Instance);
+    private static readonly List<AdamantiumComponent> UnheldTargets = new();
+
+    static AnimationManager()
+    {
+        DiscardedVisuals.Discarded += StopReleased;
+    }
+
+    private static void StopReleased(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        if (Active.Count == 0 && Holders.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var component in gone)
+        {
+            Released.Add(component);
+        }
+
+        RemoveWhere(a => a.DirtyTarget is { } target && Released.Contains(target));
+
+        foreach (var (target, holders) in Holders)
+        {
+            holders.RemoveWhere(Released.Contains);
+            if (holders.Count == 0 || Released.Contains(target))
+            {
+                UnheldTargets.Add(target);
+            }
+        }
+
+        foreach (var target in UnheldTargets)
+        {
+            Holders.Remove(target);
+            Cancel(target);
+        }
+
+        UnheldTargets.Clear();
+        Released.Clear();
+    }
+
     private static void Add(IRunningAnimation animation)
     {
         Active.Add(animation);

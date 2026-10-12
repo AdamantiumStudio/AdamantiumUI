@@ -155,6 +155,20 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>The element with keyboard focus, the windows and their open popups, as text.</summary>
     public async Task<string> StateAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.State })).Text;
 
+    /// <summary>Collects all garbage in the application, then its managed heap and private memory, as text.</summary>
+    public async Task<string> MemoryAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.Memory })).Text;
+
+    /// <summary>Moves the application onto <paramref name="theme"/> and <paramref name="variant"/>, either null to keep it,
+    /// once the swap has settled. Returns the theme and variant in use on the first line, then a line per theme with its
+    /// variants.</summary>
+    public async Task<string> ThemeAsync(string theme = null, string variant = null) =>
+        (await RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Theme,
+            Value = theme,
+            Properties = variant == null ? null : [variant]
+        })).Text;
+
     /// <summary>Sends <paramref name="request"/> as it is and returns the reply as it came, a failure included.</summary>
     public Task<AutomationReply> SendAsync(AutomationRequest request) => _channel.SendAsync(request);
 

@@ -73,6 +73,10 @@ public static class Program
           wait-idle                                           wait until the application has settled
           state                                               keyboard focus, windows, open popups
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
+          memory                                              collect all garbage, then the managed heap and private
+                                                              memory left - one reading of a leak hunt
+          theme [<name>] [--variant <name>]                   move onto a theme and variant once the swap settles;
+                                                              alone, which one is in use and which there are
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
                                                               selected, expanded, min, max, hscroll, vscroll, window, zoom,
@@ -83,7 +87,9 @@ public static class Program
           run <scenario>                                      the commands of a file, one a line, up to the first failure
           run <folder>                                        every scenario in it, in name order, and a summary
           sweep [<tabs>] [--dwell 4s] [--passes <n>]          open every tab in turn (the gallery's by default): how long
-                                                              each took to settle and what it left in the error journal
+                [--themes] [--memory]                         each took to settle and what it left in the error journal;
+                                                              after each pass, every theme in every variant and back,
+                                                              and the memory left once all garbage is collected
 
           --pipe <name>     the agent's pipe (default adam-auto)
           --allow-errors    an action may leave errors in the journal; by default that fails it
@@ -210,6 +216,8 @@ public static class Program
         var tabs = arguments.At(0) ?? $"id={GalleryTabs}";
         var dwell = arguments.TimeOption("dwell") ?? TimeSpan.Zero;
         var passes = Math.Max(1, arguments.IntOption("passes"));
+        var themes = arguments.Flag("themes");
+        var memory = arguments.Flag("memory");
         await using var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout);
         var found = await session.SendAsync(new AutomationRequest { Command = AutomationCommand.Find, Target = $"{tabs}/type=TabItem" });
         if (!found.Ok)
@@ -224,6 +232,11 @@ public static class Program
         }
 
         var troubled = 0;
+        if (memory)
+        {
+            Console.WriteLine($"[0] memory: {await session.MemoryAsync()}");
+        }
+
         for (var pass = 1; pass <= passes; pass++)
         {
             foreach (var page in pages)
@@ -260,12 +273,61 @@ public static class Program
 
                 troubled += errors.Count > 0 ? 1 : 0;
             }
+
+            if (themes)
+            {
+                troubled += await SweepThemesAsync(session, pass);
+            }
+
+            if (memory)
+            {
+                Console.WriteLine($"[{pass}] memory: {await session.MemoryAsync()}");
+            }
         }
 
         Console.WriteLine(troubled == 0
             ? $"Every page opened cleanly ({pages.Count} x {passes})."
-            : $"{troubled} page visit(s) failed or left errors.");
+            : $"{troubled} page visit(s) or theme swap(s) failed or left errors.");
         return troubled == 0 ? 0 : 1;
+    }
+
+    private static async Task<int> SweepThemesAsync(AutomationSession session, int pass)
+    {
+        var listing = (await session.ThemeAsync()).Split('\n', StringSplitOptions.TrimEntries);
+        var current = listing[0].Split(", ");
+        var troubled = 0;
+        foreach (var line in listing.Skip(1))
+        {
+            var colon = line.IndexOf(':');
+            var name = line[..colon];
+            foreach (var variant in line[(colon + 1)..].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                var mark = (await session.SendAsync(new AutomationRequest { Command = AutomationCommand.Mark })).Mark;
+                var watch = Stopwatch.StartNew();
+                try
+                {
+                    await session.ThemeAsync(name, variant);
+                }
+                catch (AutomationException e)
+                {
+                    troubled++;
+                    Console.WriteLine($"[{pass}] theme {name} {variant}: {e.Message}");
+                    continue;
+                }
+
+                var errors = (await session.SendAsync(new AutomationRequest { Command = AutomationCommand.Errors, Since = mark })).Errors;
+                Console.WriteLine($"[{pass}] theme {name} {variant}: {watch.Elapsed.TotalMilliseconds:0} ms{(errors.Count == 0 ? string.Empty : $", {errors.Count} error(s)")}");
+                foreach (var error in errors)
+                {
+                    Console.WriteLine($"  {ScriptPrinter.Error(error)}");
+                }
+
+                troubled += errors.Count > 0 ? 1 : 0;
+            }
+        }
+
+        await session.ThemeAsync(current[0], current.Length > 1 ? current[1] : null);
+        return troubled;
     }
 
     private static async Task<bool> AnswersAsync(string pipe)

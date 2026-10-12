@@ -70,12 +70,19 @@
                           Margin="0,0,0,12"/>
                 <TextBlock Text="{Localize MainStrings.Theme}" Margin="0,0,0,4"/>
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                    <DropDown ItemsSource="{Binding AvailableThemes}"
+                    <DropDown AutomationProperties.AutomationId="ThemeChooser"
+                              ItemsSource="{Binding AvailableThemes}"
                               SelectedItem="{Binding SelectedThemeName, Mode=TwoWay}"/>
-                    <Button Grid.Column="1" Content="{Localize MainStrings.SwitchTheme}"
-                            Command="{Binding SwitchThemeCommand}" Margin="8,0,0,0"/>
+                    <Button AutomationProperties.AutomationId="SwitchTheme"
+                            Grid.Column="1"
+                            Content="{Localize MainStrings.SwitchTheme}"
+                            Command="{Binding SwitchThemeCommand}"
+                            Margin="8,0,0,0"/>
                 </Grid>
-                <Button Content="{Localize MainStrings.ToggleVariant}" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                <Button AutomationProperties.AutomationId="ToggleVariant"
+                        Content="{Localize MainStrings.ToggleVariant}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,16">
                     <Button.Behaviors>
                         <behaviors:ToggleThemeBehavior/>
                     </Button.Behaviors>

@@ -26,6 +26,14 @@ public abstract class Drawing : AdamantiumComponent
     /// <summary>Bubble a nested drawing's change out as this one's own.</summary>
     protected void OnChildChanged(object sender, EventArgs e) => RaiseChanged();
 
+    internal void BrushChanged() => RaiseChanged();
+
+    private protected BrushChangeRelay Follow(BrushChangeRelay current, Brush brush)
+    {
+        current?.Release();
+        return brush == null ? null : new BrushChangeRelay(brush, this);
+    }
+
     /// <summary>The picture's extent in ITS OWN coordinates. This is the viewbox a consumer maps onto its destination,
     /// so an icon authored in a 0..24 box scales by destination/24 - the drawing itself never knows its output size.</summary>
     public abstract Rect Bounds { get; }

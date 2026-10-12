@@ -55,6 +55,10 @@ internal sealed class RenderPacket
     /// <summary>Frame projection captured at record (from the root visual).</summary>
     public Matrix4x4F ProjectionMatrix;
 
+    /// <summary>How many batches of discarded elements had been released when this packet was recorded. Nothing released
+    /// by then is drawn by it, so once it is applied the applier may let go of what it kept for them.</summary>
+    public long ReleasedBatches;
+
     /// <summary>Structural only: components DETACHED from the tree - the applier frees their retained units. A Full walk needs
     /// no such list: it rebuilds the paint order from scratch and reclaims whatever it did not visit.</summary>
     public readonly List<IUIComponent> Removed = new();
