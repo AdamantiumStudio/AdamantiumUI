@@ -74,6 +74,7 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
 
         var color = Straight(ink.Color, (float)(opacity * ink.Opacity));
         var half = (float)(Math.Max(ink.Thickness, 0.1) * 0.5 * Math.Abs(sx));
+        var widths = ink.Widths;
 
         var first = Count;
 
@@ -91,18 +92,23 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
             var bx = last ? ax : ink.Points[i + 1].X * sx + tx;
             var by = last ? ay : ink.Points[i + 1].Y * sy + ty;
 
+            var here = HalfAt(widths, i, half);
+            var there = last ? here : HalfAt(widths, i + 1, half);
+
             Items[Count++] = new InkSegmentItem
             {
                 Segment = new Vector4F(ax, ay, bx, by),
-                // .w is WHICH SEGMENT this is, counted from ONE - and a non-zero .w is also what says this record
-                // draws. Zero on the last point of a stroke, which has no segment of its own; and one on a stroke of a
-                // single point, which is a dot and draws its segment from itself to itself.
-                Params = new Vector4F(half, transformSlot, fadeSlot, last && points > 1 ? 0 : i + 1),
+                // .x the wider of the segment's two ends, which is what its quad has to reach. .w is WHICH SEGMENT this
+                // is, counted from ONE - and a non-zero .w is also what says this record draws. Zero on the last point
+                // of a stroke, which has no segment of its own; and one on a stroke of a single point, which is a dot
+                // and draws its segment from itself to itself.
+                Params = new Vector4F(Math.Max(here, there), transformSlot, fadeSlot, last && points > 1 ? 0 : i + 1),
                 // RELATIVE to THIS record, never absolute - and negative for every record but the first. The draw
                 // offsets the buffer address by the first instance of the run it is flushing, so inside the shader
                 // index 0 is the run's start and not the array's; an absolute index is only right while a run happens
-                // to begin at zero, and reads somebody else's record as soon as one does not.
-                Clip = new Vector4F(clipSlot, points, first - at, 0),
+                // to begin at zero, and reads somebody else's record as soon as one does not. .w the half width at this
+                // point.
+                Clip = new Vector4F(clipSlot, points, first - at, here),
                 Color = color
             };
         }
@@ -159,6 +165,9 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
     /// the stage repairs one, so a stroke that changed is re-recorded like anything else.</summary>
     public override bool TryStage(IRenderUnit unit, Matrix4x4F world, int transformSlot, int ownerTag, int clipSlot = -1)
         => false;
+
+    private static float HalfAt(float[] widths, int index, float half) =>
+        widths != null && index < widths.Length ? half * Math.Max(widths[index], 0f) : half;
 
     private static Vector4F Straight(Color color, float opacity) =>
         new(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f * opacity);

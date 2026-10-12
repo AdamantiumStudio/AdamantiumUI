@@ -7,6 +7,32 @@ All packages share one version.
 
 ### Added
 
+- The pen and several fingers on `InfiniteCanvas`.
+  - **Pressure.** A pen's pressure sets the ink's width point by point along the stroke: a pen's usual pressure (and
+    a pen with no pressure to report) draws `InkThickness`, lighter narrower, harder up to twice as wide; never under a
+    pixel. `InkBrush.Widths` gives a width per point, and the ink pass draws each segment as a capsule that narrows
+    from one end to the other, each end its own round cap. A mouse and a finger draw at full width: a touch screen
+    rarely knows a finger's pressure. Smoothing a finished stroke keeps a point where the width changes and carries
+    the width between points; erasing keeps the pieces' widths; a saved drawing keeps them (`data-adm-pressure`).
+  - **The eraser end.** A pen held upside down erases, whatever tool is in hand.
+  - **Several fingers.** A tool that lays ink (`ICanvasTool.IsInk`) takes every finger and pen at once, a stroke for
+    each, told apart by `CanvasPointerEventArgs.PointerId`. Fingers moving side by side draw: on a canvas inking,
+    only a pinch makes a gesture of them (`Gestures.ManipulationModes`). A pinch takes back the strokes of its own
+    fingers (`ICanvasTool.CancelPointer`), and a pen drawing beside them goes on. Fingers down together are one undo
+    step.
+  - **Two people at once.** A finger already drawing goes on drawing when another lands, so two people drawing apart
+    do not pinch each other (`Gestures.StartsFromStillFingers`, on while a canvas inks): only fingers that land
+    still make a pinch.
+  - **`InfiniteCanvas.FingerInk`.** `Draw` (the default) lets fingers ink beside a pen, for several people at a large
+    screen. `WhenNoPen` lets them ink only while no pen is in reach: while the pen writes, a finger is ignored - a
+    hand resting on the screen leaves no mark and moves nothing - and while it only hovers, a finger moves the plane.
+    `Never` keeps fingers off the ink, and they move the plane. The plane follows only the pointer that took it.
+  - **`CanvasPointerEventArgs`** carries the pointer's id, kind, pressure and eraser.
+  - **Automation.** `pen <selector> drag ... --pressure a..b` presses from `a` to `b` along the drag.
+
+- `Gestures.ManipulationModes`: what a gesture on an element may start as. Until one of those is recognized, the
+  fingers stay plain pointers.
+
 - `UIComponent.IsLayer`: the element and its subtree are drawn at full strength into a texture of their own, which is
   then laid down once with the element's opacity, multiplied by its ancestors'. Where children overlap, the background
   shows through as much as anywhere else, instead of each child being faded on its own. The texture covers everything
@@ -972,6 +998,14 @@ All packages share one version.
   `SvgPathData.Walk`, the same walk SVG glyphs take.
 
 ### Fixed
+
+- `InfiniteCanvas.BringIntoView` brings something wholly out of view to the middle. Moved only as far as the edge, a
+  node not yet built - a point, having no size - stood on the edge, just outside what the plane looks up, and stayed
+  unbuilt until the camera moved again.
+
+- Ink no longer leaves single dark pixels inside a stroke. Where two of its segments were all but equally near a
+  pixel, each segment's quad measured that pixel from its own interpolated position, and the two could each leave it
+  to the other. The ink pass now measures from the pixel itself, the same numbers for every quad.
 
 - `FractalView` follows only the pointer that began a drag. Two fingers on it used to pan by the distance between
   them.

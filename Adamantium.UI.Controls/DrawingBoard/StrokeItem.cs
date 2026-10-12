@@ -20,6 +20,7 @@ public class StrokeItem : ICanvasItem
     // are kept and re-pointed rather than made per frame - a stroke being drawn hands the same array over every frame
     // and simply says a higher count.
     private Vector2F[] _screen;
+    private float[] _widths;
     private readonly InkBrush _ink = new();
 
     public StrokeItem(Vector2 origin, Brush brush, double thickness)
@@ -172,8 +173,8 @@ public class StrokeItem : ICanvasItem
         // Cut half the ink width further, so the pieces' round caps do not close the hole again.
         var reach = radius + Thickness / 2;
 
-        var runs = new List<List<Vector2>>();
-        List<Vector2> run = null;
+        var runs = new List<List<(Vector2 At, float Pressure)>>();
+        List<(Vector2 At, float Pressure)> run = null;
         var cut = false;
 
         // A stroke of ONE point is a dot: it is either under the eraser or it is not. Its own reach is what makes it
@@ -187,15 +188,15 @@ public class StrokeItem : ICanvasItem
 
         for (var i = 1; i < _points.Count; i++)
         {
-            var from = World(i - 1);
-            var to = World(i);
+            var from = (At: World(i - 1), _points[i - 1].Pressure);
+            var to = (At: World(i), _points[i].Pressure);
 
             // Where this segment is INSIDE the circle, as the piece [enter, leave] of its length. Nothing means the
             // whole segment survives.
-            var inside = Inside(from, to, center, reach);
+            var inside = Inside(from.At, to.At, center, reach);
             if (inside == null)
             {
-                run ??= new List<Vector2> { from };
+                run ??= [from];
                 run.Add(to);
                 continue;
             }
@@ -206,15 +207,15 @@ public class StrokeItem : ICanvasItem
             // The part BEFORE the hole closes off the run that was being built.
             if (enter > 0)
             {
-                run ??= new List<Vector2> { from };
-                run.Add(At(from, to, enter));
+                run ??= [from];
+                run.Add(Between(from, to, enter));
             }
 
             if (run is { Count: > 1 }) runs.Add(run);
             run = null;
 
             // ...and the part AFTER it opens a new one.
-            if (leave < 1) run = new List<Vector2> { At(from, to, leave), to };
+            if (leave < 1) run = [Between(from, to, leave), to];
         }
 
         if (run is { Count: > 1 }) runs.Add(run);
@@ -222,14 +223,17 @@ public class StrokeItem : ICanvasItem
 
         foreach (var kept in runs)
         {
-            var piece = new StrokeItem(kept[0], Brush, Thickness);
-            foreach (var point in kept) piece.Add(point);
+            var piece = new StrokeItem(kept[0].At, Brush, Thickness);
+            foreach (var point in kept) piece.Add(point.At, point.Pressure);
 
             pieces.Add(piece);
         }
 
         return true;
     }
+
+    private static (Vector2 At, float Pressure) Between((Vector2 At, float Pressure) from, (Vector2 At, float Pressure) to,
+        double t) => (At(from.At, to.At, t), from.Pressure + (to.Pressure - from.Pressure) * (float)t);
 
     // The piece of a segment that falls inside a circle, as a pair of fractions of its length, or nothing when none of
     // it does. Solving |A + t(B-A) - C| = R for t, and keeping only what lies on the segment itself.
@@ -300,7 +304,7 @@ public class StrokeItem : ICanvasItem
         if (_points.Count < 3) return;
 
         var eased = Ease(_points);
-        var kept = Simplify(eased, Math.Max(tolerance, 1e-6));
+        var kept = Simplify(eased, Math.Max(tolerance, 1e-6), Thickness / 2);
         var round = Round(kept, Math.Max(step, 1e-6));
 
         _points.Clear();
@@ -332,7 +336,9 @@ public class StrokeItem : ICanvasItem
 
             for (var s = 0; s < samples; s++)
             {
-                result.Add(new StrokePoint(CatmullRom(p0, p1, p2, p3, (float)s / samples), source[i].Pressure));
+                var t = (float)s / samples;
+                result.Add(new StrokePoint(CatmullRom(p0, p1, p2, p3, t),
+                    source[i].Pressure + (source[i + 1].Pressure - source[i].Pressure) * t));
             }
         }
 
@@ -382,16 +388,17 @@ public class StrokeItem : ICanvasItem
     // Then THIN: keep only the points the shape would miss. The furthest point from the line between the ends either
     // survives or the whole run between them is one straight piece - recursively, which is what keeps a corner sharp
     // while a gentle curve loses nine points in ten.
-    private static List<StrokePoint> Simplify(StrokePoint[] source, double tolerance)
+    private static List<StrokePoint> Simplify(StrokePoint[] source, double tolerance, double halfWidth)
     {
         var kept = new List<StrokePoint> { source[0] };
-        Walk(source, 0, source.Length - 1, tolerance, kept);
+        Walk(source, 0, source.Length - 1, tolerance, halfWidth, kept);
         kept.Add(source[^1]);
 
         return kept;
     }
 
-    private static void Walk(StrokePoint[] source, int first, int last, double tolerance, List<StrokePoint> kept)
+    private static void Walk(StrokePoint[] source, int first, int last, double tolerance, double halfWidth,
+        List<StrokePoint> kept)
     {
         if (last <= first + 1) return;
 
@@ -403,7 +410,10 @@ public class StrokeItem : ICanvasItem
 
         for (var i = first + 1; i < last; i++)
         {
-            var distance = Distance(new Vector2(source[i].At.X, source[i].At.Y), from, to);
+            var along = (double)(i - first) / (last - first);
+            var pressure = source[first].Pressure + (source[last].Pressure - source[first].Pressure) * along;
+            var distance = Math.Max(Distance(new Vector2(source[i].At.X, source[i].At.Y), from, to),
+                Math.Abs(source[i].Pressure - pressure) * halfWidth);
             if (distance <= worst) continue;
 
             worst = distance;
@@ -412,9 +422,9 @@ public class StrokeItem : ICanvasItem
 
         if (worst <= tolerance) return;
 
-        Walk(source, first, at, tolerance, kept);
+        Walk(source, first, at, tolerance, halfWidth, kept);
         kept.Add(source[at]);
-        Walk(source, at, last, tolerance, kept);
+        Walk(source, at, last, tolerance, halfWidth, kept);
     }
 
     public bool HitTest(Vector2 world, double tolerance)
@@ -461,17 +471,31 @@ public class StrokeItem : ICanvasItem
         // being drawn hands the same one over every frame and simply says a higher count.
         if (_screen == null || _screen.Length < _points.Count) Array.Resize(ref _screen, Math.Max(64, _points.Count * 2));
 
+        var pressed = false;
         for (var i = 0; i < _points.Count; i++)
         {
             var at = canvas.WorldToScreen(World(i));
             _screen[i] = new Vector2F((float)at.X, (float)at.Y);
+            pressed |= _points[i].Pressure != 1f;
+        }
+
+        // Never thinner than a pixel: ink zoomed out should thin to a hair, not disappear.
+        var thickness = Math.Max(Thickness * canvas.Scale, 1.0);
+        if (pressed)
+        {
+            if (_widths == null || _widths.Length < _screen.Length) Array.Resize(ref _widths, _screen.Length);
+            var hair = (float)(1.0 / thickness);
+            for (var i = 0; i < _points.Count; i++)
+            {
+                _widths[i] = Math.Max(_points[i].Pressure, hair);
+            }
         }
 
         _ink.Points = _screen;
+        _ink.Widths = pressed ? _widths : null;
         _ink.Count = _points.Count;
         _ink.Color = ColorOf(Brush);
-        // Never thinner than a pixel: ink zoomed out should thin to a hair, not disappear.
-        _ink.Thickness = Math.Max(Thickness * canvas.Scale, 1.0);
+        _ink.Thickness = thickness;
         // The CONTENTS of the borrowed array just changed and its reference did not, so the paint has to be told - see
         // InkBrush.Revision. Without it a stroke stays baked as whatever it was when first recorded: a single dot.
         _ink.Revision++;

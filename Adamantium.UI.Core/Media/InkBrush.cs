@@ -19,6 +19,12 @@ public sealed class InkBrush : Brush
     public static readonly AdamantiumProperty ThicknessProperty = AdamantiumProperty.Register(nameof(Thickness),
         typeof(double), typeof(InkBrush), new PropertyMetadata(2.0, PropertyMetadataOptions.AffectsPaint));
 
+    /// <summary>How wide the ink is at each point, as a share of <see cref="Thickness"/> - a pen pressed harder draws
+    /// wider. A borrowed array like <see cref="Points"/>, read for the same <see cref="Count"/>; null for ink of one width.
+    /// </summary>
+    public static readonly AdamantiumProperty WidthsProperty = AdamantiumProperty.Register(nameof(Widths),
+        typeof(float[]), typeof(InkBrush), new PropertyMetadata(null, PropertyMetadataOptions.AffectsPaint));
+
     public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
         typeof(Color), typeof(InkBrush), new PropertyMetadata(Colors.White, PropertyMetadataOptions.AffectsPaint));
 
@@ -45,6 +51,12 @@ public sealed class InkBrush : Brush
         set => SetValue(ThicknessProperty, value);
     }
 
+    public float[] Widths
+    {
+        get => GetValue<float[]>(WidthsProperty);
+        set => SetValue(WidthsProperty, value);
+    }
+
     public Color Color
     {
         get => GetValue<Color>(ColorProperty);
@@ -60,6 +72,7 @@ public sealed class InkBrush : Brush
     protected override Brush CreateClone() => new InkBrush
     {
         Points = Points,
+        Widths = Widths,
         Count = Count,
         Revision = Revision,
         Thickness = Thickness,

@@ -28,6 +28,18 @@ public sealed class CanvasPointerEventArgs
 
     public int ClickCount { get; init; }
 
+    /// <summary>Which pointer this is - the mouse, or one finger or pen of several - so a tool can keep a gesture for each.
+    /// </summary>
+    public uint PointerId { get; init; }
+
+    public PointerType PointerType { get; init; }
+
+    /// <summary>How hard a pen presses, 0 to 1; 1 for the mouse and a finger, which draw at full width.</summary>
+    public float Pressure { get; init; } = 1;
+
+    /// <summary>Whether a pen is held upside down, its eraser end on the surface.</summary>
+    public bool IsEraser { get; init; }
+
     public InputModifiers Modifiers { get; init; }
 
     /// <summary>Set by the tool when it has taken the event: the canvas then keeps it away from panning and marks the

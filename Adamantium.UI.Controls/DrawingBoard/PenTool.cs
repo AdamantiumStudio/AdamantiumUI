@@ -13,11 +13,16 @@ public class PenTool : ICanvasTool
     // whole pixels, so a hand holding still still reports movement - and every one of those would be a point.
     private const double MinimumStep = 2.5;
 
+    private const float LightestWeight = 0.15f;
+    private const float HeaviestWeight = 2f;
+
+    private readonly Dictionary<uint, (StrokeItem Stroke, Vector2 From)> _freehand = new();
     private StrokeItem _drawing;
-    private Vector2 _from;
     private bool _chaining;
 
     public bool IsBusy => _chaining;
+
+    public bool IsInk => true;
 
     /// <summary>How a rail shows this tool - see <see cref="SelectTool.Name"/>.</summary>
     public string Name { get; set; } = "Pen";
@@ -48,8 +53,6 @@ public class PenTool : ICanvasTool
             return;
         }
 
-        _from = e.Screen;
-
         if (canvas.SnapToGrid)
         {
             if (_drawing == null)
@@ -68,8 +71,9 @@ public class PenTool : ICanvasTool
             return;
         }
 
-        _drawing = new StrokeItem(e.World, canvas.Ink.Copy(), canvas.ScreenToWorldLength(canvas.InkThickness));
-        _drawing.Add(e.World);
+        var stroke = new StrokeItem(e.World, canvas.Ink.Copy(), canvas.ScreenToWorldLength(canvas.InkThickness));
+        stroke.Add(e.World, WeightOf(e));
+        _freehand[e.PointerId] = (stroke, e.Screen);
 
         canvas.CapturePointer();
         canvas.Repaint();
@@ -78,25 +82,27 @@ public class PenTool : ICanvasTool
 
     public void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e)
     {
-        if (_drawing == null) return;
-
-        // Point to point: between two clicks there is ONE vertex that follows the pointer, and a move moves it rather
-        // than recording anything.
-        if (_chaining)
+        if (!_freehand.TryGetValue(e.PointerId, out var drawing))
         {
-            _drawing.MoveLast(e.World);
-            canvas.Repaint();
-            e.Handled = true;
+            // Point to point: between two clicks there is ONE vertex that follows the pointer, and a move moves it
+            // rather than recording anything.
+            if (_chaining && _drawing != null)
+            {
+                _drawing.MoveLast(e.World);
+                canvas.Repaint();
+                e.Handled = true;
+            }
+
             return;
         }
 
         // Points closer together than this are not a shape, they are the pointer reporting whole pixels while the hand
         // holds still. Kept OUT of the stroke rather than smoothed away afterwards: a point that was never recorded
         // costs nothing to draw, to hit-test or to save.
-        if ((e.Screen - _from).Length() < MinimumStep) return;
+        if ((e.Screen - drawing.From).Length() < MinimumStep) return;
 
-        _from = e.Screen;
-        _drawing.Add(e.World);
+        _freehand[e.PointerId] = (drawing.Stroke, e.Screen);
+        drawing.Stroke.Add(e.World, WeightOf(e));
 
         canvas.Repaint();
         e.Handled = true;
@@ -104,17 +110,14 @@ public class PenTool : ICanvasTool
 
     public void OnReleased(InfiniteCanvas canvas, CanvasPointerEventArgs e)
     {
-        // A line drawn point to point spans presses, so a LIFT ends nothing - only the double click does.
-        if (_chaining)
+        if (!_freehand.Remove(e.PointerId, out var drawing))
         {
-            e.Handled = true;
+            // A line drawn point to point spans presses, so a LIFT ends nothing - only the double click does.
+            if (_chaining) e.Handled = true;
             return;
         }
 
-        if (_drawing == null) return;
-
-        var finished = _drawing;
-        _drawing = null;
+        var finished = drawing.Stroke;
 
         // Smoothed on the LIFT, which is the first moment it is known where the stroke went. While it was being drawn it
         // showed the points as they arrived, and that difference is honest: the two really are different amounts of
@@ -129,7 +132,14 @@ public class PenTool : ICanvasTool
         e.Handled = true;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas) => _drawing?.Render(session, canvas);
+    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    {
+        _drawing?.Render(session, canvas);
+        foreach (var drawing in _freehand.Values)
+        {
+            drawing.Stroke.Render(session, canvas);
+        }
+    }
 
     public void Cancel(InfiniteCanvas canvas)
     {
@@ -137,6 +147,16 @@ public class PenTool : ICanvasTool
 
         _drawing = null;
         _chaining = false;
+        _freehand.Clear();
+    }
+
+    private static float WeightOf(CanvasPointerEventArgs e) => e.PointerType == PointerType.Pen
+        ? Math.Clamp(e.Pressure / PointerPointProperties.DefaultPressure, LightestWeight, HeaviestWeight)
+        : 1f;
+
+    public void CancelPointer(InfiniteCanvas canvas, uint pointerId)
+    {
+        if (_freehand.Remove(pointerId)) canvas.Repaint();
     }
 
     private void Finish(InfiniteCanvas canvas)
