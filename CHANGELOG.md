@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- A universe shown in the UI takes gestures of fingers. The element it is shown in turns gestures on, and their steps
+  go to the engine's input as `GestureInput`. By default, two fingers moved side by side turn the camera, a pinch zooms it
+  and a turn of the fingers rolls it.
+
 - Gestures of two fingers or more, `Gestures.ManipulationEvent`.
   - **What it says.** Each step carries what the gesture was recognized as, `Pan`, `Pinch` and `Rotate` in any mix,
     and only those parts move. Each part counts once it passes its own threshold: the drag threshold for a pan,

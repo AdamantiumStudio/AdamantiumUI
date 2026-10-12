@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Core.Events;
 using Adamantium.Multiverse;
 using Adamantium.Multiverse.Input;
@@ -277,6 +278,10 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased += OnPointerReleased;
             listenedInput.PointerWheelChanged += OnPointerWheelChanged;
             listenedInput.RawMouseMove += OnMouseMove;
+            listenedInput.SetValue(Gestures.IsManipulationEnabledProperty, true, ValuePriority.Default);
+            listenedInput.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
+            listenedInput.AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled),
+                handledEventsToo: true);
         }
 
         protected override void Dispose(bool disposeManagedResources)
@@ -305,7 +310,39 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased -= OnPointerReleased;
             listenedInput.PointerWheelChanged -= OnPointerWheelChanged;
             listenedInput.RawMouseMove -= OnMouseMove;
+            listenedInput.ClearValue(Gestures.IsManipulationEnabledProperty, ValuePriority.Default);
+            listenedInput.RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
+            listenedInput.RemoveHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled));
             listenedInput = null;
+        }
+
+        private void OnPointerCanceled(object sender, PointerEventArgs e)
+        {
+            if (e.Properties.IsLeftButtonPressed)
+            {
+                OnMouseInput(new MouseInput { InputType = InputType.Up, Button = UniverseMouseButton.Left });
+            }
+
+            if (e.Properties.IsRightButtonPressed)
+            {
+                OnMouseInput(new MouseInput { InputType = InputType.Up, Button = UniverseMouseButton.Right });
+            }
+        }
+
+        private void OnManipulation(object sender, ManipulationEventArgs e)
+        {
+            if (!ReferenceEquals(e.Source, listenedInput) || e.State != ManipulationState.Delta)
+            {
+                return;
+            }
+
+            OnGestureInput(new GestureInput
+            {
+                Translation = new Vector2F((float)e.Translation.X, (float)e.Translation.Y) * PixelsPerPoint,
+                Scale = (float)e.Scale,
+                Rotation = (float)e.Rotation
+            });
+            e.Handled = true;
         }
 
         public override object NativeWindow => OutputContext.Context;
@@ -396,7 +433,8 @@ namespace Adamantium.UI.Universes
         public override bool IsKeyboardFocused => InputComponent.IsKeyboardFocused && HostWindow is { IsActive: true };
 
         public override bool IsPointerOver =>
-            InputComponent.IsPointerDirectlyOver || ReferenceEquals(Mouse.Pointer.Captured, InputComponent);
+            InputComponent.IsPointerDirectlyOver ||
+            PointerDevice.Current.Pointers.Any(pointer => ReferenceEquals(pointer.Captured, InputComponent));
 
         protected IWindow HostWindow => InputComponent as IWindow ?? InputComponent.RootVisual as IWindow;
 
