@@ -1067,6 +1067,22 @@ All packages share one version.
     cache never did, so each slot kept its element and everything that element reached.
   - **A destroyed `InfiniteCanvas` discards the controls it built around the application's objects.** They were only
     taken off the scene and stayed alive, listening to the resources.
+  - **A kept view no longer holds the presenter that built it.** A theme swap rebuilds the presenter a kept page was
+    built in; the parked page went on naming the old one as its templated parent, and through it the whole old
+    template. The presenter that takes the page up now becomes its host (`TemplateResult.Rehost`), and what a presenter
+    inside the page parked moves with it (`ParkedVisuals.MoveOwner`).
+  - **A discarded element that linked a Global dictionary is no longer kept by it.** The dictionary stays, as global
+    resources outlive what linked them, but its owners kept every copy of a page that linked one - one per visit
+    (`IResourceManager.ForgetGlobalSourceOwner`, `ResourceProvider.ForgetOwner`).
+  - **The render cache lets go of layouts it read live** from an element released since, at once. The adorner layer
+    records only when its adorners change, and until then kept every released ancestor of an adorned control.
+  - **A discarded `Popup` discards its content.** The content is not a visual child, so a template the popup is part of
+    neither reached it when torn down nor counted it among its parts. A docked group's reveal flyout outlived the group,
+    its localized buttons listening to the resources and holding the group. What the content shows for others stays: the
+    items of a list or menu in it, and anything back in a tree. `DiscardedVisuals.PublishSubtree` publishes an element
+    and everything under it.
+  - **Overlay stages record again once released elements are all let go of**, so their caches drop what they kept for
+    them; an idle stage recorded nothing and kept it.
   - The render cache clears the buffers of its structural pass after each frame.
   - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
     released. A released element is final; nothing brings it back.

@@ -26,6 +26,7 @@ public partial class RenderCache
     private readonly List<IUIComponent> _releasedSnaps = [];
     private long _appliedReleases;
     private long _releasesSeen;
+    private long _liveReadReleasesSeen;
 
     // --- The recorder -> applier seam ---
     // DOUBLE-BUFFERED: the recorder fills one packet while the applier consumes another, so the loop no longer waits for
@@ -430,7 +431,6 @@ public partial class RenderCache
 
     private readonly HashSet<IUIComponent> _readLive = [];
 
-    // Released before the applied packets were recorded, so none of them draws it.
     private bool ReleasedBeforeApplied(IUIComponent component) =>
         component is Core.FundamentalUIComponent { ReleasedInBatch: > 0 } released
         && released.ReleasedInBatch <= _releasesSeen;
@@ -456,6 +456,25 @@ public partial class RenderCache
         ReleaseSlotsOf(_clipOwners, ReleasedBeforeApplied, ReleaseClipSlot);
         ReleaseSlotsOf(_fadeOwners, ReleasedBeforeApplied, ReleaseFadeSlot);
         ReleaseSlotsOf(_nodeRefreshed, ReleasedBeforeApplied, ReleaseNodeSlot);
+    }
+
+    private void ForgetReleasedLiveReads()
+    {
+        foreach (var component in _readLive)
+        {
+            if (component is Core.FundamentalUIComponent { ReleasedInBatch: > 0 })
+            {
+                _releasedSnaps.Add(component);
+            }
+        }
+
+        foreach (var component in _releasedSnaps)
+        {
+            _readLive.Remove(component);
+            _applySnap.Remove(component);
+        }
+
+        _releasedSnaps.Clear();
     }
 
     // Freezes the layout of everything the draw will read at the end of the record, so the applier never touches a live

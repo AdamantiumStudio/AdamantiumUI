@@ -20,9 +20,21 @@ internal sealed class OverlayRebuildGate
 
     private double _seenRenderScale;
 
+    private long _seenReleases;
+
     public bool HasChanged(IReadOnlyList<IUIComponent> flat, RenderDirtyScope scope, double renderScale)
     {
         var changed = false;
+
+        // Elements released since the last record: the stage's cache lets go of what it kept for them only once it has
+        // applied a packet recorded after their release, and an idle stage would otherwise never record one. Once the
+        // queue is empty, not on every batch of a teardown that drains over many frames.
+        var releases = DiscardedVisuals.ReleasedBatches;
+        if (releases != _seenReleases && DiscardedVisuals.PendingCount == 0)
+        {
+            _seenReleases = releases;
+            changed = true;
+        }
 
         // Baked at the window's scale: a move to a monitor of another DPI changes nothing else checked here.
         if (renderScale != _seenRenderScale)

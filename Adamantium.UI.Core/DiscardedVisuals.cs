@@ -57,6 +57,25 @@ public static class DiscardedVisuals
         Publish(System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(ref gone, 1));
     }
 
+    /// <summary>Publishes <paramref name="root"/> and everything under it in the visual tree.</summary>
+    public static void PublishSubtree(IUIComponent root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        var gone = new List<IFundamentalUIComponent>();
+        Extensions.VisualTreeExtensions.TraverseVisualTree(root, component =>
+        {
+            if (component is IFundamentalUIComponent fundamental)
+            {
+                gone.Add(fundamental);
+            }
+        });
+        Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
+    }
+
     /// <summary>Releases up to <paramref name="budget"/> queued elements, skipping any that came back, and returns how
     /// many were released.</summary>
     public static int Drain(int budget)

@@ -196,22 +196,7 @@ public class ContentControl : Control, IContentControl
 
       if (Content is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } content)
       {
-         var gone = new List<IFundamentalUIComponent>();
-         CollectForDiscard(content, gone);
-         DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
-      }
-   }
-
-   private static void CollectForDiscard(IUIComponent node, List<IFundamentalUIComponent> gone)
-   {
-      if (node is IFundamentalUIComponent fundamental)
-      {
-         gone.Add(fundamental);
-      }
-
-      foreach (var child in node.VisualChildren)
-      {
-         CollectForDiscard(child, gone);
+         DiscardedVisuals.PublishSubtree(content);
       }
    }
 

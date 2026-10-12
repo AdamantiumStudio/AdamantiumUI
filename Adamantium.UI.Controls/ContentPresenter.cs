@@ -197,6 +197,11 @@ public class ContentPresenter : InputUIComponent
             if (!ParkedVisuals.IsUnchanged) ParkedSubtree.Revalidate(parkedRoot);
 
             var reTheme = ParkedVisuals.ThemeChanged;
+            if (parkedBuilt?.HostComponent is { } builtBy && !ReferenceEquals(builtBy, this))
+            {
+                parkedBuilt.Rehost(this);
+                ParkedVisuals.MoveOwner(builtBy, this);
+            }
             _currentRoot = parkedRoot;
             _currentTemplateResult = parkedBuilt;
             _currentTemplate = parkedTemplate;
