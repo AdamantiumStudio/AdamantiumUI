@@ -38,6 +38,31 @@ public static class Gestures
     public static void SetIsManipulationEnabled(IAdamantiumComponent element, bool value) =>
         element.SetValue(IsManipulationEnabledProperty, value);
 
+    /// <summary>What a gesture on this element may start as. Until one of these is recognized the fingers stay plain
+    /// pointers; once one is, the gesture moves by everything recognized. Every kind by default; a canvas that inks lets
+    /// only a pinch start one, so fingers moving side by side draw.</summary>
+    public static readonly AdamantiumProperty ManipulationModesProperty = AdamantiumProperty.RegisterAttached(
+        "ManipulationModes", typeof(ManipulationKinds), typeof(AdamantiumComponent),
+        new PropertyMetadata(ManipulationKinds.Pan | ManipulationKinds.Pinch | ManipulationKinds.Rotate));
+
+    public static ManipulationKinds GetManipulationModes(IAdamantiumComponent element) =>
+        element.GetValue<ManipulationKinds>(ManipulationModesProperty);
+
+    public static void SetManipulationModes(IAdamantiumComponent element, ManipulationKinds value) =>
+        element.SetValue(ManipulationModesProperty, value);
+
+    /// <summary>Whether only fingers that have not moved on their own yet may start a gesture here: a finger already
+    /// drawing goes on drawing when another lands, so two people at one screen do not pinch each other. Off by default;
+    /// a canvas inking turns it on.</summary>
+    public static readonly AdamantiumProperty StartsFromStillFingersProperty = AdamantiumProperty.RegisterAttached(
+        "StartsFromStillFingers", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
+
+    public static bool GetStartsFromStillFingers(IAdamantiumComponent element) =>
+        element.GetValue<bool>(StartsFromStillFingersProperty);
+
+    public static void SetStartsFromStillFingers(IAdamantiumComponent element, bool value) =>
+        element.SetValue(StartsFromStillFingersProperty, value);
+
     /// <summary>How far, in an element's units, fingers spread or close before they pinch.</summary>
     public static double PinchThreshold { get; set; } = 12;
 

@@ -25,7 +25,9 @@ disconnect "id=Canvas>name=Mix/type=Thumb,name=Amount"
 expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value=""
 invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
 expect "id=Canvas>name=Mix/type=Thumb,name=Amount" value="Number: Out"
-# The page keeps the camera the last run left, and a node far out of view is not built: the whole graph into view.
+# The page keeps the camera the last run left, and a node far out of view is not built: the whole graph into view -
+# with nothing selected, or F frames only what is.
+key Escape --into id=Canvas
 key F --into id=Canvas
 expect "id=Canvas>name=Output/type=Thumb,name=Color" value="Scale: Out"
 connect "id=Canvas>name=Mix/type=Thumb,name=Out" "id=Canvas>name=Output/type=Thumb,name=Color"
@@ -55,3 +57,29 @@ absent "id=ItemCountLabel,name=0 items"
 wait id=PART_Inspector/type=TreeItem
 toggle id=PART_ToolRail/id=Select
 expect id=PART_ToolRail/id=Rectangle toggle=Off
+# Ink from a pen and from fingers: a pen pressing harder as it goes draws one stroke, two fingers down together draw
+# one each, and a pinch over the drawing zooms rather than draws.
+toggle id=PART_ToolRail/id=Pen
+select id=PART_Inspector/name="Everything on the plane, topmost first"
+invoke "id=PART_Inspector/name=Clear the canvas"
+invoke id=PART_Yes
+expect id=ItemCountLabel name="0 items"
+pen id=Canvas drag 400,150 700,150 --pressure 0.2..1
+expect id=ItemCountLabel name="1 item"
+touches id=Canvas id=Canvas drag 0,80
+expect id=ItemCountLabel name="3 items"
+zoom id=Canvas 100
+pinch id=Canvas 2
+expect id=Canvas zoom=185.7
+expect id=ItemCountLabel name="3 items"
+# Back as the page opens: the camera at 1:1, the strokes and the clear taken back, the select tool in hand. The two
+# fingers down together were one gesture, so their strokes go back in one step.
+zoom id=Canvas 100
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+expect id=ItemCountLabel name="1 item"
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+expect id=ItemCountLabel name="0 items"
+invoke "id=PART_ViewBar/name=Undo (Ctrl+Z)"
+absent "id=ItemCountLabel,name=0 items"
+toggle id=PART_ToolRail/id=Select
+expect id=PART_ToolRail/id=Pen toggle=Off

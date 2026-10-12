@@ -663,6 +663,7 @@ public sealed class AutomationExecutor
     private static Contact PenOf(string[] options)
     {
         var pressure = PointerPointProperties.DefaultPressure;
+        float? pressureTo = null;
         var barrel = false;
         var eraser = false;
         foreach (var option in options ?? [])
@@ -681,18 +682,38 @@ public sealed class AutomationExecutor
                 eraser = true;
             }
             else if (option.StartsWith("pressure=", StringComparison.Ordinal) &&
-                     float.TryParse(option["pressure=".Length..], NumberStyles.Float, CultureInfo.InvariantCulture, out var value) &&
-                     value is >= 0 and <= 1)
+                     Pressures(option["pressure=".Length..]) is var (from, to))
             {
-                pressure = value;
+                pressure = from;
+                pressureTo = to;
             }
             else
             {
-                throw new AutomationException($"'{option}' is not a pen option: pressure=0..1, barrel or eraser.");
+                throw new AutomationException(
+                    $"'{option}' is not a pen option: pressure=0..1 (or from..to along a stroke), barrel or eraser.");
             }
         }
 
-        return Contact.Pen(pressure, barrel, eraser);
+        return Contact.Pen(pressure, barrel, eraser, pressureTo);
+    }
+
+    private static (float From, float? To)? Pressures(string text)
+    {
+        var ends = text.Split("..");
+        if (ends.Length > 2 || !TryPressure(ends[0], out var from))
+        {
+            return null;
+        }
+
+        if (ends.Length == 1)
+        {
+            return (from, null);
+        }
+
+        return TryPressure(ends[1], out var to) ? (from, to) : null;
+
+        static bool TryPressure(string part, out float value) =>
+            float.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value is >= 0 and <= 1;
     }
 
     private static int Notches(string text) =>

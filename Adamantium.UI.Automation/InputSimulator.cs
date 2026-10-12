@@ -111,11 +111,12 @@ internal static class InputSimulator
             for (var i = 0; i < down.Length; i++)
             {
                 var (start, end) = (down[i].Point, ends[i].Point);
-                Send(RawPointerEventType.Move, down[i].Window, start + (end - start) * (step / (double)steps), contacts[i], at);
+                var t = step / (double)steps;
+                Send(RawPointerEventType.Move, down[i].Window, start + (end - start) * t, contacts[i].Along(t), at);
             }
         }
 
-        Lift(ends, contacts, at);
+        Lift(ends, [.. contacts.Select(contact => contact.Along(1))], at);
     }
 
     // How far apart the system's frames come, as ISyntheticPointerInput plays them.
@@ -168,7 +169,10 @@ internal static class InputSimulator
         }
 
         SyntheticPointerFrame[] Frame(RawPointerEventType kind, int at) =>
-            [.. tracks.Select((points, i) => new SyntheticPointerFrame(kind, window.ClientToScreen(points[at]), contacts[i].Properties))];
+        [
+            .. tracks.Select((points, i) => new SyntheticPointerFrame(kind, window.ClientToScreen(points[at]),
+                contacts[i].Along(points.Count > 1 ? at / (double)(points.Count - 1) : 1).Properties))
+        ];
 
         var length = tracks[0].Count;
         var frames = new List<SyntheticPointerFrame[]>();

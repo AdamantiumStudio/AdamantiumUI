@@ -153,7 +153,7 @@ public class InfiniteCanvasTests
     }
 
     // Bringing something into view MOVES the camera and leaves the scale alone: something already the right size does
-    // not need resizing to be looked at.
+    // not need resizing to be looked at. Wholly out of view, it comes to the middle.
     [Test]
     public void BringingIntoViewMovesAndDoesNotZoom()
     {
@@ -164,11 +164,38 @@ public class InfiniteCanvasTests
 
         canvas.BringIntoView(wanted);
 
+        var middle = canvas.WorldToScreen(new Vector2(525, 25));
         Assert.Multiple(() =>
         {
             Assert.That(canvas.Scale, Is.EqualTo(1), "untouched");
-            Assert.That(canvas.WorldToScreen(new Vector2(550, 50)).X, Is.EqualTo(400).Within(1e-6), "just inside");
+            Assert.That(middle.X, Is.EqualTo(200).Within(1e-6), "in the middle");
+            Assert.That(middle.Y, Is.EqualTo(150).Within(1e-6), "in the middle");
         });
+    }
+
+    // Partly in view, it moves only as far as it takes to be whole.
+    [Test]
+    public void BringingSomethingPartlyInView_MovesItJustInside()
+    {
+        var canvas = Sized(400, 300);
+        var corner = canvas.ScreenToWorld(new Vector2(380, 100));
+
+        canvas.BringIntoView(new Rect(corner.X, corner.Y, 50, 50));
+
+        Assert.That(canvas.WorldToScreen(new Vector2(corner.X + 50, corner.Y)).X, Is.EqualTo(400).Within(1e-6));
+    }
+
+    // A thing with no size yet - a node not built - is a point; brought into view it stands inside, not on the edge,
+    // where the plane's own lookup can miss it.
+    [Test]
+    public void BringingAPointIntoView_PutsItInside()
+    {
+        var canvas = Sized(400, 300);
+
+        canvas.BringIntoView(new Rect(-5000, 3000, 0, 0));
+
+        var at = canvas.WorldToScreen(new Vector2(-5000, 3000));
+        Assert.That(at.X > 0 && at.X < 400 && at.Y > 0 && at.Y < 300, Is.True, $"at {at}");
     }
 
     [Test]

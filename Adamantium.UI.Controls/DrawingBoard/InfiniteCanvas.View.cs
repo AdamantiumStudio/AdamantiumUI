@@ -98,7 +98,9 @@ public partial class InfiniteCanvas
     }
 
     /// <summary>Moves the camera - and only the camera - so a piece of world is on screen. Does not zoom: something
-    /// already the right size does not need resizing to be looked at.</summary>
+    /// already the right size does not need resizing to be looked at. Something partly in view is moved just far
+    /// enough to be whole; something wholly out of view is brought to the middle - pressed against the edge it could
+    /// stand just outside it, a node not yet built has no size to be measured in by.</summary>
     public void BringIntoView(Rect world)
     {
         var size = RenderSize;
@@ -106,6 +108,12 @@ public partial class InfiniteCanvas
 
         var topLeft = WorldToScreen(new Vector2(world.X, world.Y));
         var bottomRight = WorldToScreen(new Vector2(world.X + world.Width, world.Y + world.Height));
+
+        if (bottomRight.X <= 0 || topLeft.X >= size.Width || bottomRight.Y <= 0 || topLeft.Y >= size.Height)
+        {
+            CenterOn(new Vector2(world.X + world.Width / 2, world.Y + world.Height / 2));
+            return;
+        }
 
         var dx = Shift(topLeft.X, bottomRight.X, size.Width);
         var dy = Shift(topLeft.Y, bottomRight.Y, size.Height);
@@ -424,7 +432,11 @@ public partial class InfiniteCanvas
 
     /// <summary>Draws what the TOOL is making but has not put on the plane yet - a stroke still under the pen, a shape
     /// being dragged out, the selection band. On top of everything, which is where it is going.</summary>
-    public void DrawInProgress(IDrawingSession session) => Tool?.Render(session, this);
+    public void DrawInProgress(IDrawingSession session)
+    {
+        Tool?.Render(session, this);
+        if (_erasing != null) _penEraser.Render(session, this);
+    }
 
     /// <summary>Whether the frame belongs straight AFTER this item - true for the topmost selected thing that a layer
     /// draws itself. Asked by the layers as they paint.</summary>

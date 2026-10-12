@@ -2,10 +2,9 @@
 
 namespace Adamantium.UI.Controls.DrawingBoard;
 
-/// <summary>One point of a stroke: where the pen was, and how hard it was pressed.
-/// <para>Pressure is here from the start and is 1 until something supplies it - there is no stylus in the engine yet, so
-/// nothing does. Recorded as a known gap rather than left out: adding a field to every point of every stroke afterwards
-/// is a different job from having had it.</para></summary>
+/// <summary>One point of a stroke: where the pen was, and how hard it was pressed, as a share of the ink's width - 1 for
+/// the width itself, which a mouse, a finger and a pen at its usual pressure draw with; a pen pressing lighter draws
+/// narrower and one pressing harder wider.</summary>
 public readonly struct StrokePoint(Vector2F at, float pressure = 1f)
 {
     /// <summary>Where the pen was, as an offset from the stroke's own <see cref="StrokeItem.Origin"/>.</summary>

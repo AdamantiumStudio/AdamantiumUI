@@ -1161,11 +1161,17 @@ public partial class InfiniteCanvas
     {
         if (e.Handled) return;
 
+        if (e.Pointer.Type == PointerType.Touch && (_panning || Tool is { IsInk: true } && !FingersInk() && PenTouches()))
+        {
+            return;
+        }
+
         _activePointer = e.Pointer;
 
         // ONE STEP per gesture: a press is where a change begins and the release is where it ends, so dragging ten
         // things across the plane is one thing to undo. Opened before the tool is asked anything.
         BeginEdit("Gesture");
+        _pressed.Add(e.Pointer.Id);
 
         // Any press takes the focus, not only one that pans: the keys the canvas answers are useless until it has the
         // focus, and nobody drags a canvas to be allowed to press Home.
@@ -1223,6 +1229,7 @@ public partial class InfiniteCanvas
         if (pans)
         {
             _panning = true;
+            _panPointer = e.Pointer;
             _panFrom = e.GetPosition(this);
             _panOffsetFrom = Offset;
 
@@ -1269,10 +1276,41 @@ public partial class InfiniteCanvas
 
         // Everything else is the TOOL's. The canvas keeps the wheel, the middle button, space and Home - how you look
         // at a drawing - and knows nothing about what the plain left button means.
-        var args = Describe(at, e.ChangedButton, e.ClickCount, e.Modifiers);
+        var args = Describe(at, e.ChangedButton, e.ClickCount, e);
+
+        if (args.IsEraser && Mode == CanvasMode.Drawing)
+        {
+            _erasing = e.Pointer.Id;
+            _penEraser.OnPressed(this, args);
+            if (args.Handled) e.Handled = true;
+            return;
+        }
+
+        if (args.PointerType == PointerType.Touch && Tool is { IsInk: true } && !FingersInk())
+        {
+            _panning = true;
+            _panPointer = e.Pointer;
+            _panFrom = at;
+            _panOffsetFrom = Offset;
+
+            e.Pointer.Capture(this);
+            e.Handled = true;
+            return;
+        }
+
         Tool?.OnPressed(this, args);
         if (args.Handled) e.Handled = true;
     }
+
+    private bool FingersInk() => FingerInk switch
+    {
+        CanvasFingerInk.Never => false,
+        CanvasFingerInk.WhenNoPen => !PointerDevice.Current.Pointers.Any(pointer => pointer.Type == PointerType.Pen),
+        _ => true
+    };
+
+    private static bool PenTouches() => PointerDevice.Current.Pointers.Any(pointer =>
+        pointer.Type == PointerType.Pen && (pointer.Properties.IsLeftButtonPressed || pointer.Properties.IsRightButtonPressed));
 
     /// <summary>Holds the pointer that is working the canvas, so a tool's drag keeps its moves and its release when the
     /// pointer leaves the canvas.</summary>
@@ -1290,14 +1328,17 @@ public partial class InfiniteCanvas
     // Whether a pointer other than the one working the canvas is still pressing: then its moves and release are not
     // this gesture's - a mouse passed over a pen's stroke must not take the stroke's release.
     private bool HeldByAnother(Pointer pointer) =>
-        _activePointer is { } held && !ReferenceEquals(held, pointer) && held.Properties.Buttons != MouseButtons.None;
+        _activePointer is { } held && !ReferenceEquals(held, pointer) && held.Properties.Buttons != MouseButtons.None &&
+        !TakesManyPointers;
+
+    private bool TakesManyPointers => Tool is { IsInk: true } && _draggingPoint < 0 && !_frame.IsActive;
 
     private void OnPointerMove(object sender, PointerEventArgs e)
     {
         if (HeldByAnother(e.Pointer)) return;
 
         _activePointer = e.Pointer;
-        if (_panning)
+        if (_panning && ReferenceEquals(e.Pointer, _panPointer))
         {
             // From where the drag STARTED, not from the last move: accumulating deltas drifts, and the camera has
             // nothing to clamp against that would hide it.
@@ -1355,8 +1396,16 @@ public partial class InfiniteCanvas
 
         ShowPointer(pointer);
 
-        var args = Describe(pointer, MouseButtons.None, 0, e.Modifiers);
-        Tool?.OnMoved(this, args);
+        var args = Describe(pointer, MouseButtons.None, 0, e);
+        if (_erasing == e.Pointer.Id)
+        {
+            _penEraser.OnMoved(this, args);
+        }
+        else
+        {
+            Tool?.OnMoved(this, args);
+        }
+
         if (args.Handled) e.Handled = true;
     }
 
@@ -1416,7 +1465,12 @@ public partial class InfiniteCanvas
 
     private void OnPointerUp(object sender, PointerReleasedEventArgs e)
     {
-        if (HeldByAnother(e.Pointer)) return;
+        var pressed = _pressed.Remove(e.Pointer.Id);
+        if (HeldByAnother(e.Pointer))
+        {
+            if (pressed) EndEdit();
+            return;
+        }
 
         _activePointer = e.Pointer;
 
@@ -1432,9 +1486,10 @@ public partial class InfiniteCanvas
                 return;
             }
 
-            if (_panning)
+            if (_panning && ReferenceEquals(e.Pointer, _panPointer))
             {
                 _panning = false;
+                _panPointer = null;
                 e.Pointer.Capture(null);
 
                 // When the gesture ends, not while it runs: a pan raises the camera on every mouse move.
@@ -1452,28 +1507,58 @@ public partial class InfiniteCanvas
                 return;
             }
 
-            var args = Describe(e.GetPosition(this), e.ChangedButton, 1, e.Modifiers);
-            Tool?.OnReleased(this, args);
+            var args = Describe(e.GetPosition(this), e.ChangedButton, 1, e);
+            if (_erasing == e.Pointer.Id)
+            {
+                _erasing = null;
+                _penEraser.OnReleased(this, args);
+            }
+            else
+            {
+                Tool?.OnReleased(this, args);
+            }
+
             if (args.Handled) e.Handled = true;
         }
         finally
         {
-            EndEdit();
+            if (pressed) EndEdit();
         }
     }
 
     private void OnPointerCanceled(object sender, PointerEventArgs e)
     {
-        if (!ReferenceEquals(e.Pointer, _activePointer)) return;
+        var id = e.Pointer.Id;
+        var pressed = _pressed.Remove(id);
+        if (_erasing == id)
+        {
+            _erasing = null;
+            _activePointer = e.Pointer;
+            _penEraser.Cancel(this);
+        }
+
+        if (TakesManyPointers)
+        {
+            Tool.CancelPointer(this, id);
+            if (pressed) EndEdit();
+            return;
+        }
+
+        if (!ReferenceEquals(e.Pointer, _activePointer))
+        {
+            if (pressed) EndEdit();
+            return;
+        }
 
         LetGo();
-        EndEdit();
+        if (pressed) EndEdit();
     }
 
     private void LetGo()
     {
         _draggingPoint = -1;
         _panning = false;
+        _panPointer = null;
         _frame.End();
         Tool?.Cancel(this);
     }
@@ -1484,6 +1569,8 @@ public partial class InfiniteCanvas
 
         if (e.State == ManipulationState.Started)
         {
+            if (TakesManyPointers) return;
+
             LetGo();
             while (_editDepth > 0 && History != null && Scene != null)
             {
@@ -1530,10 +1617,11 @@ public partial class InfiniteCanvas
 
     // The pointer as a TOOL sees it: in the world, already pulled to the grid when the grid pulls. Decided here and
     // once, so no tool has to know the setting exists and every tool obeys it the same way.
-    private CanvasPointerEventArgs Describe(Vector2 screen, MouseButtons button, int clicks, InputModifiers modifiers)
+    private CanvasPointerEventArgs Describe(Vector2 screen, MouseButtons button, int clicks, PointerEventArgs e)
     {
         var world = ScreenToWorld(screen);
         var snapped = TrySnap(world, out var pulled);
+        var pen = e.Pointer.Type == PointerType.Pen;
 
         return new CanvasPointerEventArgs
         {
@@ -1543,7 +1631,11 @@ public partial class InfiniteCanvas
             IsSnapped = snapped,
             Button = button,
             ClickCount = clicks,
-            Modifiers = modifiers
+            Modifiers = e.Modifiers,
+            PointerId = e.Pointer.Id,
+            PointerType = e.Pointer.Type,
+            Pressure = pen ? e.Properties.Pressure : 1,
+            IsEraser = pen && e.Properties.IsEraser
         };
     }
 

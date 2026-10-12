@@ -25,6 +25,7 @@ public partial class InfiniteCanvas : Control
     private Vector2 _zoomAnchorScreen;
     private Vector2 _zoomAnchorWorld;
     private bool _panning;
+    private Pointer _panPointer;
     private Vector2 _panFrom;
     private Vector2 _panOffsetFrom;
     private bool _spaceHeld;
@@ -73,6 +74,9 @@ public partial class InfiniteCanvas : Control
     private bool _draggingOverlay;
     private bool _overlayCaptured;
     private Pointer _activePointer;
+    private readonly HashSet<uint> _pressed = new();
+    private readonly EraseTool _penEraser = new();
+    private uint? _erasing;
     private bool _overlayMoved;
     private Vector2 _overlayFrom;
     private Vector2 _overlayAt;
@@ -742,6 +746,11 @@ public partial class InfiniteCanvas : Control
     public static readonly AdamantiumProperty InkThicknessProperty = AdamantiumProperty.Register(nameof(InkThickness),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(2.0));
 
+    /// <summary>Whether a finger lays ink with a tool that inks - see <see cref="CanvasFingerInk"/>. Fingers ink by
+    /// default.</summary>
+    public static readonly AdamantiumProperty FingerInkProperty = AdamantiumProperty.Register(nameof(FingerInk),
+        typeof(CanvasFingerInk), typeof(InfiniteCanvas), new PropertyMetadata(CanvasFingerInk.Draw));
+
     /// <summary>The tool a right click returns to; none by default, which leaves the right button alone.</summary>
     public static readonly AdamantiumProperty DefaultToolProperty = AdamantiumProperty.Register(nameof(DefaultTool),
         typeof(ICanvasTool), typeof(InfiniteCanvas), new PropertyMetadata(null));
@@ -1088,6 +1097,12 @@ public partial class InfiniteCanvas : Control
     {
         get => GetValue<Double>(InkThicknessProperty);
         set => SetValue(InkThicknessProperty, value);
+    }
+
+    public CanvasFingerInk FingerInk
+    {
+        get => GetValue<CanvasFingerInk>(FingerInkProperty);
+        set => SetValue(FingerInkProperty, value);
     }
 
     public ICanvasTool Tool
@@ -1764,6 +1779,12 @@ public partial class InfiniteCanvas : Control
         if (component is not InfiniteCanvas canvas) return;
 
         (e.OldValue as ICanvasTool)?.Cancel(canvas);
+
+        var inks = e.NewValue is ICanvasTool { IsInk: true };
+        canvas.SetCurrentValue(Gestures.ManipulationModesProperty, inks
+            ? ManipulationKinds.Pinch
+            : ManipulationKinds.Pan | ManipulationKinds.Pinch | ManipulationKinds.Rotate);
+        canvas.SetCurrentValue(Gestures.StartsFromStillFingersProperty, inks);
 
         // The pointer wears the tool, so it changes WITH the tool and not at the next twitch of the mouse. Put down by
         // the right button, the old tool would otherwise go on pointing at the drawing until something moved - which is

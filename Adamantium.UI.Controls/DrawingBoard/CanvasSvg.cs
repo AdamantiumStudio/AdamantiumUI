@@ -182,6 +182,12 @@ public static class CanvasSvg
             new XAttribute("stroke-linejoin", "round"),
             new XAttribute("stroke-width", Num(ink.Thickness)));
 
+        if (ink.Points.Any(point => point.Pressure != 1f))
+        {
+            element.Add(new XAttribute("data-adm-pressure",
+                string.Join(' ', ink.Points.Select(point => Num(point.Pressure)))));
+        }
+
         Paint(element, "stroke", ink.Brush);
         return element;
     }
@@ -601,8 +607,15 @@ public static class CanvasSvg
         }
 
         var ink = new StrokeItem(points[0], stroke, width);
+        var pressures = ((string)element.Attribute("data-adm-pressure"))?
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(text => float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : 1f)
+            .ToArray();
 
-        foreach (var point in points) ink.Add(point);
+        for (var i = 0; i < points.Count; i++)
+        {
+            ink.Add(points[i], pressures != null && i < pressures.Length ? pressures[i] : 1f);
+        }
 
         return ink;
     }

@@ -67,13 +67,14 @@ internal sealed class ManipulationRecognizer
         }
 
         var step = gesture.Advance();
-        if (!gesture.Started && gesture.Fingers.Count < 2)
+        if (!gesture.Started && (gesture.Fingers.Count < 2 || gesture.Blocked))
         {
             return;
         }
 
         gesture.Recognize();
-        if (gesture.Recognized == ManipulationKinds.None)
+        if (gesture.Recognized == ManipulationKinds.None ||
+            !gesture.Started && (gesture.Recognized & Gestures.GetManipulationModes(gesture.Target)) == 0)
         {
             return;
         }
@@ -167,6 +168,7 @@ internal sealed class ManipulationRecognizer
     private sealed class Manipulation(IInputComponent target)
     {
         private readonly HashSet<Pointer> _reported = new();
+        private readonly Dictionary<Pointer, PixelPoint> _landed = new();
         private Vector2 _middle;
         private double _spread;
         private double _angle;
@@ -186,9 +188,18 @@ internal sealed class ManipulationRecognizer
 
         public Vector2 Origin => _middle;
 
+        public bool Blocked { get; private set; }
+
         public void Add(Pointer finger)
         {
+            if (!Started && Fingers.Count > 0 && Gestures.GetStartsFromStillFingers(Target) &&
+                Fingers.Any(moved => PlatformSettings.ExceedsDragThreshold(moved.ScreenPosition - _landed[moved])))
+            {
+                Blocked = true;
+            }
+
             Fingers.Add(finger);
+            _landed[finger] = finger.ScreenPosition;
             Mark();
             Rebase();
         }
@@ -196,8 +207,14 @@ internal sealed class ManipulationRecognizer
         public void Remove(Pointer finger)
         {
             Fingers.Remove(finger);
+            _landed.Remove(finger);
             finger.IsManipulating = false;
             finger.IsInGesture = false;
+            if (Fingers.Count < 2)
+            {
+                Blocked = false;
+            }
+
             Mark();
             if (Fingers.Count > 0)
             {
