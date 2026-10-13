@@ -7,6 +7,48 @@ All packages share one version.
 
 ### Added
 
+- Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
+  steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
+  `<Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1"/>`.
+  - **Tests.** The build of a test project turns each scenario into a test of the fixture `Scenarios`, named after the
+    file or the root's `Name`, with the root's `Description`. Each step becomes a plain call of `AutomationSession` and
+    `AutomationElement`. Selector paths are read at build time and written as `By` chains, so nothing is parsed at run
+    time. The test starts the application named in the project's `AdamantiumScenarioApplication` afresh
+    (`LaunchOptions.FreshData`) and closes it again. `#line` maps each step to its scenario line, so a failure's stack
+    trace, and a compile error in a step, point at the `.ascenario` line.
+  - **Checks at build.** The build checks the schema, every selector path and steps that cannot run (a drag without
+    its points, an `Expect` with nothing to check). It also refuses two scenarios of one name, a project without the
+    application, and scenarios kept outside a test project. Each is an error at the file's line (`AUS000`-`AUS010`).
+  - **Where the tests run.** They are in the category `Scenario` and run one at a time. They need a desktop and a GPU,
+    so CI leaves them out: run them with `dotnet test --filter TestCategory=Scenario`. The sandbox's 40 scenarios
+    are in `Tests/Adamantium.UI.Sandbox.Tests/Scenarios`.
+  - **Explicit scenarios.** A scenario whose root carries `Explicit="<why>"` runs only when asked for by name. The
+    sandbox's `TouchThroughSystem` is one: it drives the system's real pointer input.
+  - **Editor support.** The language server completes a scenario's steps, their attributes and values, a selector
+    path's keys, and the AutomationIds the markup of the referenced projects declares. Hovering a step or attribute
+    shows its description, and the build's problems are shown as the file is typed. The Rider plugin (1.11.0) and the
+    VS Code extension (0.3.0) open `.ascenario` files, and Rider's New | Scenario creates one. The uitest template
+    ships a scenario.
+- What an automation test checks, in the typed API:
+  - `AutomationElement.ExpectAsync`, `WaitUntilAsync` with `Expectation`s (an element key such as `name`, `value` or
+    `toggle`, or a control property by name), `ExpectAbsentAsync`, `TreeAsync` and `FindAllAsync`;
+  - `AutomationSession.Find(string)` for a selector path written as text, plus `PressKeysAsync`, `TypeAsync`,
+    `ShotAsync` and `UnnamedAsync`;
+  - `PenDragAsync` with pressure that changes along the stroke.
+- Leak hunting in automation.
+  - **`adam-auto memory`** (`AutomationSession.MemoryAsync`) collects all garbage in the application, finalizers
+    included, then reports the managed heap left, the committed heap, private memory and handles.
+  - **`adam-auto theme [<name>] [--variant <name>]`** (`AutomationSession.ThemeAsync`) moves the application onto a
+    theme and variant and waits for the swap to settle. Alone, it says which theme and variant are in use and lists
+    every registered theme with its variants.
+  - **`adam-auto sweep --themes --memory`**: after each pass over the tabs, every theme in every variant and back to the
+    one in use, and a memory reading - so a pass tears every template down and builds it again, and the readings show
+    what each pass leaves behind. With `--memory`, a reading is also taken before the first pass.
+- `ApplicationData.Folder`: the one folder where an application keeps what it remembers between runs. It defaults to
+  the user's local application data, under the application's name, and the environment variable
+  `ADAMANTIUM_APP_DATA` moves it for one run. `LaunchOptions.FreshData` starts an application with a fresh folder of
+  its own and deletes the folder afterwards, so one run leaves nothing behind for the next.
+
 - The language server completes a picture of a content project the markup's project references under
   `Content/{Name}/`, where the build puts it: `Content/` offers the content projects by name, and each its folders and
   files.
@@ -845,6 +887,18 @@ All packages share one version.
 
 ### Changed
 
+- Window places (`FileWindowPlacementStore`) and the sandbox's canvas and docking layouts are kept in
+  `ApplicationData.Folder`. The sandbox's layouts move there from `%LocalAppData%\Adamantium`, so the sandbox opens
+  once with its default layout.
+- `adam-auto`'s one-off commands go through the same typed API as tests do. Some input used to crash the tool; it now
+  reports an error instead:
+  - a malformed selector path;
+  - a command missing its selector;
+  - a wheel count that is not a whole number;
+  - an unknown dock position.
+
+  `AutomationSession.Find(string)` reports a malformed path as an `AutomationException`.
+
 - The sandbox's models, pictures and fonts live in a content project of their own, `Adamantium.UI.Sandbox.Content`
   (the engine's `Adamantium.Content.Build`). The build cooks the models and puts all of it in
   `Content/SandboxContent/` beside the sandbox; the code finds each file by a constant of `SandboxContentAssets`, the
@@ -1017,6 +1071,12 @@ All packages share one version.
 
 ### Removed
 
+- The text scenario language:
+  - `.adam` files;
+  - `adam-auto run`;
+  - `AutomationSession.RunScenarioAsync` and `RunCommandAsync`.
+
+  Scenarios are `.ascenario` files, built into tests.
 - The mouse events and their device, replaced by pointer input: `MouseDevice`, `MouseEventArgs`, `MouseButtonEventArgs`,
   `MouseWheelEventArgs` and their handlers, `MouseButtonState`, `RawMouseEventArgs`, `RawMouseWheelEventArgs`,
   `RawInputMouseEventArgs` and `RawMouseEventType`; `MouseDown`, `MouseUp`, `MouseMove`, `MouseWheel`, `MouseEnter`,
@@ -1030,6 +1090,8 @@ All packages share one version.
 
 ### Fixed
 
+- Deleting an `.auml`, `.alang` or `.ascenario` file rebuilds the project: the build counted these files only by their
+  dates, so with one gone it stayed "up to date" and kept the class, table or test generated from it.
 - `InfiniteCanvas.BringIntoView` brings something wholly out of view to the middle. Moved only as far as the edge, a
   node not yet built - a point, having no size - stood on the edge, just outside what the plane looks up, and stayed
   unbuilt until the camera moved again.

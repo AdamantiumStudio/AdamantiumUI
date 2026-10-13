@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The PropertyGrid page: properties written as their editors write them, converted to their type, a flag toggled, a composite opened to its parts, a value taken back by its reset button, and both inspectors pointed at both objects.">
+  <Select Target="id=GalleryTabs/id=PropertyGrid" />
+  <Wait Target="id=Inspector/name=Name" />
+  <Set Target="id=Inspector/name=Name" Value="Hero" />
+  <Expect Target="id=Inspector/name=Name" Value="Hero" />
+  <Invoke Target="id=Inspector/name=Name/id=PART_Reset" />
+  <Expect Target="id=Inspector/name=Name" Value="Player" />
+  <Set Target="id=Inspector/name=Mass" Value="12.5" />
+  <Expect Target="id=Inspector/name=Mass" Value="12.5" />
+  <Invoke Target="id=Inspector/name=Mass/id=PART_Reset" />
+  <Expect Target="id=Inspector/name=Mass" Value="80" />
+  <Toggle Target="id=Inspector/name=Enabled" />
+  <Expect Target="id=Inspector/name=Enabled" Toggle="Off" />
+  <Toggle Target="id=Inspector/name=Enabled" />
+  <Expect Target="id=Inspector/name=Enabled" Toggle="On" />
+  <Expand Target="id=Inspector/name=Position" />
+  <Wait Target="id=Inspector/name=X" />
+  <Collapse Target="id=Inspector/name=Position" />
+  <Absent Target="id=Inspector/name=X" />
+  <Expect Target="id=GeneratedInspector/name=Name" Value="Enemy" />
+  <Toggle Target="id=PropertyGridView/name=Point both at both objects" />
+  <Expect Target="id=Inspector/name=Name" Value="" />
+  <Toggle Target="id=PropertyGridView/name=Point both at both objects" />
+  <Expect Target="id=Inspector/name=Name" Value="Player" />
+</Scenario>

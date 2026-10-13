@@ -64,6 +64,13 @@ public sealed class AutomationElement
     public async Task<string> VisualAsync(int depth = 0) =>
         (await _session.RunAsync(new AutomationRequest { Command = AutomationCommand.Visual, Target = Selector, Depth = depth })).Text;
 
+    /// <summary>The automation tree under the element as indented text; <paramref name="depth"/> 0 for all of it.</summary>
+    public async Task<string> TreeAsync(int depth = 0) =>
+        (await _session.RunAsync(new AutomationRequest { Command = AutomationCommand.Tree, Target = Selector, Depth = depth })).Text;
+
+    /// <summary>Every element the path finds, not only the first.</summary>
+    public async Task<IReadOnlyList<ElementInfo>> FindAllAsync() => (await RunAsync(AutomationCommand.Find)).Elements;
+
     public async Task<bool> ExistsAsync() => (await RunAsync(AutomationCommand.Find)).Elements.Count > 0;
 
     /// <summary>Waits until the element is there, for <paramref name="timeout"/> at most.</summary>
@@ -101,6 +108,68 @@ public sealed class AutomationElement
             await _session.WaitForIdleAsync();
             await Task.Delay(WaitStep);
         }
+    }
+
+    /// <summary>Checks that the element reads as <paramref name="expected"/> says: each key - <c>name</c>, <c>value</c>,
+    /// <c>zoom</c>... or a property of its control - with the text it should show.</summary>
+    /// <exception cref="AutomationException">Something differs; the message lists what was expected and what was there.</exception>
+    public async Task<ElementDetails> ExpectAsync(params Expectation[] expected)
+    {
+        var (details, misses) = await CompareAsync(expected);
+        return misses.Count == 0
+            ? details
+            : throw new AutomationException($"{details.Element} does not match:{Environment.NewLine}{string.Join(Environment.NewLine, misses)}");
+    }
+
+    /// <summary>Waits until the element is there and reads as <paramref name="expected"/> says, checking each time the
+    /// application settles, for <paramref name="timeout"/> at most (ten seconds).</summary>
+    /// <exception cref="AutomationException">It did not come to that in time; the message says how it was last seen.</exception>
+    public async Task<ElementDetails> WaitUntilAsync(Expectation[] expected, TimeSpan? timeout = null)
+    {
+        var limit = timeout ?? DefaultWait;
+        var clock = Stopwatch.StartNew();
+        var last = "it never appeared";
+        while (true)
+        {
+            if (await ExistsAsync())
+            {
+                var (details, misses) = await CompareAsync(expected);
+                if (misses.Count == 0)
+                {
+                    return details;
+                }
+
+                last = $"{details.Element}{Environment.NewLine}{string.Join(Environment.NewLine, misses)}";
+            }
+
+            if (clock.Elapsed > limit)
+            {
+                throw new AutomationException(
+                    $"'{Selector}' did not come to that within {limit.TotalSeconds:0.#} s; last seen: {last}");
+            }
+
+            await _session.WaitForIdleAsync();
+            await Task.Delay(WaitStep);
+        }
+    }
+
+    /// <summary>Checks that nothing matches the element's selector.</summary>
+    /// <exception cref="AutomationException">Something does; the message lists where.</exception>
+    public async Task ExpectAbsentAsync()
+    {
+        var found = await RunAsync(AutomationCommand.Find);
+        if (found.Elements.Count > 0)
+        {
+            throw new AutomationException($"'{Selector}' should match nothing, and matches:{Environment.NewLine}" +
+                                          string.Join(Environment.NewLine, found.Elements.Select(element => $"  {element.Path}")));
+        }
+    }
+
+    private async Task<(ElementDetails Details, List<string> Misses)> CompareAsync(IEnumerable<Expectation> expected)
+    {
+        var all = expected.ToList();
+        var details = await InspectAsync([.. all.Select(expectation => expectation.Key).Where(key => !Expectation.IsElementKey(key))]);
+        return (details, Expectation.Misses(details, all));
     }
 
     /// <summary>A picture of the element, drawn by the application's renderer and written to <paramref name="path"/> as
@@ -232,6 +301,13 @@ public sealed class AutomationElement
         bool eraser = false, bool throughSystem = false) =>
         ContactAsync(AutomationCommand.Pen, Stroke(fromX, fromY, toX, toY), PenOptions(pressure, barrel, eraser), throughSystem);
 
+    /// <summary>A pen drawn across it as <see cref="PenDragAsync(double, double, double, double, float, bool, bool, bool)"/>
+    /// draws it, pressing from <paramref name="pressureFrom"/> to <paramref name="pressureTo"/> along the stroke.</summary>
+    public Task PenDragAsync(double fromX, double fromY, double toX, double toY, float pressureFrom, float pressureTo,
+        bool barrel = false, bool eraser = false, bool throughSystem = false) =>
+        ContactAsync(AutomationCommand.Pen, Stroke(fromX, fromY, toX, toY),
+            [FormattableString.Invariant($"pressure={pressureFrom}..{pressureTo}"), .. PenOptions(barrel, eraser)], throughSystem);
+
     /// <summary>A finger held still in its middle past the holding time and lifted: a long press, the touch way of a
     /// right click.</summary>
     public Task HoldAsync(bool throughSystem = false) =>
@@ -273,8 +349,10 @@ public sealed class AutomationElement
         FormattableString.Invariant($"{fromX},{fromY} {toX},{toY}");
 
     private static string[] PenOptions(float pressure, bool barrel, bool eraser) =>
+        [FormattableString.Invariant($"pressure={pressure}"), .. PenOptions(barrel, eraser)];
+
+    private static string[] PenOptions(bool barrel, bool eraser) =>
     [
-        FormattableString.Invariant($"pressure={pressure}"),
         .. barrel ? ["barrel"] : Array.Empty<string>(),
         .. eraser ? ["eraser"] : Array.Empty<string>()
     ];

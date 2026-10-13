@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The workspace: a second window opened from the caption, its tabs opened and closed through the navigation region, and the window closed again.">
+  <Invoke Target="id=OpenWorkspace" />
+  <Wait Target="id=WorkspaceWindow/id=WorkspaceShellView" Timeout="30s" />
+  <Invoke Target="id=WorkspaceShellView/name=Open Doc" />
+  <Invoke Target="id=WorkspaceShellView/name=Open Chart" />
+  <Expect Target="id=WorkspaceTabs/name=Chart 1" Selected="True" />
+  <Invoke Target="id=WorkspaceShellView/name=Close tab" />
+  <Absent Target="id=WorkspaceTabs/name=Chart 1" />
+  <Expect Target="id=WorkspaceTabs/name=Doc 1" Selected="True" />
+  <Window Target="id=WorkspaceWindow" Action="Close" />
+  <Absent Target="id=WorkspaceWindow" />
+</Scenario>

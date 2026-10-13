@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Splitter page: the column splitter dragged to the right and back, by input made inside the application, then moved there and back without input, as a screen reader moves it.">
+  <Select Target="id=GalleryTabs/id=Splitter" />
+  <Wait Target="id=ColumnSplitter" />
+  <Drag Target="id=ColumnSplitter" From="3,90" To="103,90" />
+  <Drag Target="id=ColumnSplitter" From="3,90" To="-97,90" />
+  <Move Target="id=ColumnSplitter" By="100,0" />
+  <Move Target="id=ColumnSplitter" By="-100,0" />
+</Scenario>

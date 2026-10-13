@@ -91,6 +91,10 @@ public sealed class LspServer
                 {
                     PublishLanguageFiles();
                 }
+                else if (IsScenarioFile(uri))
+                {
+                    PublishDiagnostics(uri);
+                }
                 else
                 {
                     PublishDiagnostics(uri);
@@ -110,6 +114,10 @@ public sealed class LspServer
                 if (IsLanguageFile(uri))
                 {
                     PublishLanguageFiles();
+                }
+                else if (IsScenarioFile(uri))
+                {
+                    PublishDiagnostics(uri);
                 }
                 else
                 {
@@ -284,6 +292,10 @@ public sealed class LspServer
         {
             items = LanguageFileCompletion.Complete(LanguageContext(uri, text), text, offset);
         }
+        else if (IsScenarioFile(uri))
+        {
+            items = ScenarioFileAssist.Complete(UriToLocalPath(uri), text, offset, OpenText, ResolveModel(uri));
+        }
         else
         {
             var model = ResolveModel(uri);
@@ -343,6 +355,10 @@ public sealed class LspServer
     private static bool IsLanguageFile(string uri) =>
         uri.EndsWith(Adamantium.UI.Generators.Localization.LanguageFileParser.Extension, StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsScenarioFile(string uri) => ScenarioFileAssist.IsScenario(uri);
+
+    private static bool IsMarkup(string uri) => !IsLanguageFile(uri) && !IsScenarioFile(uri);
+
     // A language file is read without a build; the build only adds the tables of referenced assemblies.
     private LanguageFileContext LanguageContext(string uri, string text) =>
         LanguageFileContext.Of(UriToLocalPath(uri), text, OpenText, ResolveModel(uri));
@@ -388,6 +404,10 @@ public sealed class LspServer
         {
             hover = LanguageFileAssist.Hover(LanguageContext(uri, text), text, offset);
         }
+        else if (IsScenarioFile(uri))
+        {
+            hover = ScenarioFileAssist.Hover(text, offset);
+        }
         else
         {
             var model = ResolveModel(uri);
@@ -407,7 +427,7 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var pos = @params["position"];
-        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out var text)) return null;
+        if (!IsMarkup(uri) || !_documents.TryGetValue(uri, out var text)) return null;
 
         var model = ResolveModel(uri);
         if (model is null) return null;
@@ -513,7 +533,7 @@ public sealed class LspServer
         offset = 0;
         usages = null;
         var uri = @params["textDocument"]["uri"].GetValue<string>();
-        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out text))
+        if (!IsMarkup(uri) || !_documents.TryGetValue(uri, out text))
         {
             text = null;
             return false;
@@ -547,7 +567,7 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var result = new JsonArray();
-        if (IsLanguageFile(uri) || !_documents.TryGetValue(uri, out var text) || ResolveModel(uri) is not { } model)
+        if (!IsMarkup(uri) || !_documents.TryGetValue(uri, out var text) || ResolveModel(uri) is not { } model)
         {
             return result;
         }
@@ -594,8 +614,8 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var data = new JsonArray();
-        // A language file is plain XML to the editor: its names are no types to colour.
-        if (!IsLanguageFile(uri) && _documents.TryGetValue(uri, out var text))
+        // A language file and a scenario are plain XML to the editor: their names are no types to color.
+        if (IsMarkup(uri) && _documents.TryGetValue(uri, out var text))
         {
             var model = ResolveModel(uri);
 
@@ -627,7 +647,7 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var result = new JsonArray();
-        if (!_documents.TryGetValue(uri, out var text)) return result;
+        if (IsScenarioFile(uri) || !_documents.TryGetValue(uri, out var text)) return result;
 
         IReadOnlyList<AumlCodeAction> actions;
         if (IsLanguageFile(uri))
@@ -677,7 +697,7 @@ public sealed class LspServer
     {
         var uri = @params["textDocument"]["uri"].GetValue<string>();
         var result = new JsonArray();
-        if (!_documents.TryGetValue(uri, out var text))
+        if (IsScenarioFile(uri) || !_documents.TryGetValue(uri, out var text))
         {
             return result;
         }
@@ -784,18 +804,18 @@ public sealed class LspServer
         var diagnostics = new JsonArray();
         if (_documents.TryGetValue(uri, out var text))
         {
-            var found = IsLanguageFile(uri)
-                ? LanguageFileValidator.Validate(UriToLocalPath(uri), text, OpenText, ResolveModel(uri))
+            var found = IsLanguageFile(uri) ? LanguageFileValidator.Validate(UriToLocalPath(uri), text, OpenText, ResolveModel(uri))
+                : IsScenarioFile(uri) ? ScenarioFileAssist.Diagnostics(UriToLocalPath(uri), text)
                 : ResolveModel(uri) is { } model ? CheckMarkup(UriToLocalPath(uri), text, model) : AumlValidator.ValidateReading(text);
             foreach (var d in found)
                 diagnostics.Add(Diagnostic(d));
 
-            if (!IsLanguageFile(uri) && ApplicationBlueprintCheck.Check(UriToLocalPath(uri), text) is { } blueprint)
+            if (IsMarkup(uri) && ApplicationBlueprintCheck.Check(UriToLocalPath(uri), text) is { } blueprint)
             {
                 diagnostics.Add(Diagnostic(blueprint));
             }
 
-            if (!IsLanguageFile(uri))
+            if (IsMarkup(uri))
             {
                 foreach (var shadowed in ResourceKeyShadowCheck.Check(UriToLocalPath(uri), text, ResolveModel(uri)))
                 {
@@ -803,7 +823,7 @@ public sealed class LspServer
                 }
             }
 
-            if (!IsLanguageFile(uri) && _workspace.WhyNoModel(UriToLocalPath(uri)) is { } noModel)
+            if (IsMarkup(uri) && _workspace.WhyNoModel(UriToLocalPath(uri)) is { } noModel)
             {
                 diagnostics.Add(Diagnostic(new AumlDiagnostic(0, 0, 1, noModel, IsWarning: true)));
             }

@@ -1,0 +1,7 @@
+{
+  "name": "Adamantium Scenario",
+  "scopeName": "text.xml.ascenario",
+  "patterns": [
+    { "include": "text.xml" }
+  ]
+}

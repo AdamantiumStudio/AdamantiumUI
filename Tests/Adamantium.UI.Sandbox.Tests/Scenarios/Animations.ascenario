@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Animations page: animated items added in batches of every kind and cleared again, without an error left behind.">
+  <Select Target="id=GalleryTabs/id=Animations" />
+  <Wait Target="id=AnimationsView/name=+1" />
+  <Invoke Target="id=AnimationsView/name=+1" />
+  <Expect Target="id=RingIndicator" Type="ProgressBar" Name="Ring" />
+  <Invoke Target="id=AnimationsView/name=+5" />
+  <Invoke Target="id=AnimationsView/name=+25" />
+  <Expect Target="id=RingIndicator[30]" Name="Ring" />
+  <Invoke Target="id=AnimationsView/name=Clear" />
+  <Absent Target="id=RingIndicator" />
+  <Invoke Target="id=AnimationsView/name=+25 of EVERY kind" />
+  <Invoke Target="id=AnimationsView/name=+25 Shimmer" />
+  <Expect Target="id=DotsIndicator[24]" Name="Dots" />
+  <Expect Target="id=ShimmerIndicator[49]" Name="Shimmer" />
+  <Absent Target="id=ShimmerIndicator[50]" />
+  <Invoke Target="id=AnimationsView/name=Clear all" />
+  <Absent Target="id=DotsIndicator" />
+</Scenario>

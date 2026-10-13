@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Lists page: a single-select list picked by what it can do and by a click, the large list filtered live by the search box and turned a page by its pager.">
+  <Select Target="id=GalleryTabs/id=Lists" />
+  <Wait Target="id=ListsView/id=SingleList" Timeout="20s" />
+  <Select Target="id=SingleList/name=Mars" />
+  <Expect Target="id=SelectedPlanet" Name="Mars" />
+  <Click Target="id=SingleList/name=Venus" />
+  <Expect Target="id=SelectedPlanet" Name="Venus" />
+  <Expect Target="id=SingleList/name=Venus" Selected="True" />
+  <!-- The list of many: one selected, two more added, one taken out - and selecting one again keeps it selected. -->
+  <Select Target="id=MultipleList/name=Mercury" />
+  <Select Target="id=MultipleList/name=Earth" Add="true" />
+  <Select Target="id=MultipleList/name=Mars" Add="true" />
+  <Expect Target="id=MultipleList/name=Earth" Selected="True" />
+  <Unselect Target="id=MultipleList/name=Earth" />
+  <Expect Target="id=MultipleList/name=Earth" Selected="False" />
+  <Expect Target="id=MultipleList/name=Mars" Selected="True" />
+  <Select Target="id=MultipleList/name=Mercury" />
+  <Select Target="id=MultipleList/name=Mercury" />
+  <Expect Target="id=MultipleList/name=Mercury" Selected="True" />
+  <Expect Target="id=MultipleList/name=Mars" Selected="False" />
+  <Unselect Target="id=MultipleList/name=Mercury" />
+  <Set Target="id=Search" Value="00042" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00042" />
+  <Set Target="id=Search" Value="" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00001" />
+  <Invoke Target="id=ListsView/name=Next page" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00031" />
+  <Invoke Target="id=ListsView/name=First page" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00001" />
+  <!-- The pager: a page chosen by its number, the page size chosen from its list - the first row shown stays shown - and
+       the page number typed. -->
+  <Select Target="id=LargePager/type=RadioButton,name=3" />
+  <Expect Target="id=LargePager/type=RadioButton,name=3" Selected="True" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00061" />
+  <Select Target="id=LargePager/id=PART_PageSizeSelector/name=60" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00061" />
+  <Expect Target="id=LargePager/id=PART_PageBox" Value="2" />
+  <Set Target="id=LargePager/id=PART_PageBox" Value="1" />
+  <Expect Target="id=LargeList/type=ListItem" Name="Item 00001" />
+  <Select Target="id=LargePager/id=PART_PageSizeSelector/name=30" />
+  <!-- Back as the page opens. -->
+  <Select Target="id=SingleList/name=Earth" />
+</Scenario>

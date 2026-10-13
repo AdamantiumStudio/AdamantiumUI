@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Markup page: an element held back by x:Load built when its binding says so and taken away again, and one held back for good built when it is asked for by name. Both are borders, found by what they say.">
+  <Select Target="id=GalleryTabs/id=Markup" />
+  <Wait Target="id=MarkupView/name=Ask for it" />
+  <Absent Target="id=MarkupView/name=built on demand" />
+  <Toggle Target="id=MarkupView/type=CheckBox" />
+  <Wait Target="id=MarkupView/name=built on demand" />
+  <Expect Target="id=MarkupView/name=times constructed: 1" Type="Text" />
+  <Toggle Target="id=MarkupView/type=CheckBox" />
+  <Absent Target="id=MarkupView/name=built on demand" />
+  <Absent Target='id=MarkupView/name="asked for by name, built on the spot"' />
+  <Invoke Target="id=MarkupView/name=Ask for it" />
+  <Wait Target='id=MarkupView/name="asked for by name, built on the spot"' />
+</Scenario>

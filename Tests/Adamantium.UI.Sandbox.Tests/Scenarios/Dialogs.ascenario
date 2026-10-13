@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The main window's caption commands: the confirm dialog in the window's overlay and in a window of its own, About, and the overflow menu that holds the commands - each dialog called by its own title and closed by its answer.">
+  <Invoke Target="id=ShowConfirm" />
+  <Wait Target="id=ConfirmDialogView" />
+  <Expect Target="id=OverlayWindow" Name="Confirm" />
+  <Invoke Target="id=ConfirmDialogView/name=OK" />
+  <Absent Target="id=ConfirmDialogView" />
+  <Expect Target="id=LastDialog" Name="Dialog: OK" />
+  <!-- The same dialog as a window of its own, by the Navigation page's switch. -->
+  <Select Target="id=GalleryTabs/id=Navigation" />
+  <Toggle Target="id=NavigationDemoView/name=Show dialogs as separate windows" />
+  <Invoke Target="id=ShowConfirm" />
+  <Wait Target="id=ConfirmDialogView" />
+  <Expect Target="id=Window" Name="Confirm" />
+  <Invoke Target="id=ConfirmDialogView/name=Cancel" />
+  <Absent Target="id=ConfirmDialogView" />
+  <Expect Target="id=LastDialog" Name="Dialog: Cancel" />
+  <Invoke Target="id=ShowAbout" />
+  <Wait Target="id=AboutDialogView" />
+  <Expect Target="id=Window" Name="About" />
+  <Expect Target="id=Product" Name="Adamantium Engine Sandbox" />
+  <Invoke Target="id=AboutDialogView/name=OK" />
+  <Absent Target="id=AboutDialogView" />
+  <Toggle Target="id=NavigationDemoView/name=Show dialogs as separate windows" />
+  <!-- The overflow menu lists the caption's commands by their labels. -->
+  <Invoke Target="id=MoreWindowCommands" />
+  <Wait Target="id=PART_RightOverflowMenu/name=Help" />
+  <Expect Target="id=PART_RightOverflowMenu/id=ShowAbout" Name="Help" />
+  <Key Keys="Escape" Into="id=MainWindow" />
+  <Expect Target="id=PART_RightOverflowMenu" Offscreen="True" />
+</Scenario>

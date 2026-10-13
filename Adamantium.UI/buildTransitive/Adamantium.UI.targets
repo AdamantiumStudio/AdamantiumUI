@@ -16,6 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AdditionalFiles Include="**\*.ascenario"
+                     Exclude="@(AdditionalFiles);bin\**;obj\**;$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="AdamantiumScenarioApplication" />
     <CompilerVisibleProperty Include="RootNamespace" />
     <CompilerVisibleProperty Include="ProjectDir" />
     <CompilerVisibleProperty Include="NeutralLanguage" />
@@ -27,15 +33,16 @@
   <!-- AdditionalFiles are not inputs of the compile or of Visual Studio's up-to-date check, so an edited view would
        leave the build "up to date" running the code generated before. Added inside targets, so an IDE does not list
        every .auml again under each extra item type. -->
-  <Target Name="AdamantiumAumlAreCompileInputs" BeforeTargets="CoreCompile">
+  <Target Name="AdamantiumAumlAreCompileInputs" BeforeTargets="_GenerateCompileDependencyCache">
     <ItemGroup>
-      <CustomAdditionalCompileInputs Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang'" />
+      <CustomAdditionalCompileInputs Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang' Or '%(Extension)' == '.ascenario'" />
+      <CoreCompileCache Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang' Or '%(Extension)' == '.ascenario'" />
     </ItemGroup>
   </Target>
 
   <Target Name="AdamantiumAumlAreUpToDateInputs" BeforeTargets="CollectUpToDateCheckInputDesignTime">
     <ItemGroup>
-      <UpToDateCheckInput Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang'" />
+      <UpToDateCheckInput Include="@(AdditionalFiles)" Condition="'%(Extension)' == '.auml' Or '%(Extension)' == '.alang' Or '%(Extension)' == '.ascenario'" />
     </ItemGroup>
   </Target>
 

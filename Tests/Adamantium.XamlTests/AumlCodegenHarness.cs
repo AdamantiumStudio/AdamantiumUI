@@ -29,6 +29,7 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Markup.Localization.PluralRules),   // what a counted phrase of a table calls
         typeof(Adamantium.UI.ApplicationModel.ApplicationBlueprint),   // the application and its blueprint
         typeof(Adamantium.UI.Themes.FluentTheme.Fluent),   // the themes a blueprint starts on
+        typeof(Adamantium.UI.Automation.AutomationSession),   // what a scenario's test runs on
     ];
 
     public const string WindowHeader =
@@ -106,7 +107,7 @@ internal static class AumlCodegenHarness
         return (driver, Compilation());
     }
 
-    /// <summary>Runs both generators over several files (paths relative to the project) with extra build properties, and
+    /// <summary>Runs the generators over several files (paths relative to the project) with extra build properties, and
     /// compiles the result against <paramref name="references"/> as well, together with the project's own C#
     /// <paramref name="sources"/>.</summary>
     public static GeneratedProject Project(IReadOnlyDictionary<string, string> files,
@@ -124,7 +125,11 @@ internal static class AumlCodegenHarness
         }
 
         var driver = CSharpGeneratorDriver.Create(
-            generators: [new AumlCodeBehindGenerator().AsSourceGenerator(), new LanguageTableGenerator().AsSourceGenerator()],
+            generators:
+            [
+                new AumlCodeBehindGenerator().AsSourceGenerator(), new LanguageTableGenerator().AsSourceGenerator(),
+                new Adamantium.UI.Generators.Scenarios.ScenarioTestGenerator().AsSourceGenerator()
+            ],
             additionalTexts: files.Select(f => (AdditionalText)new InMemoryAdditionalText(@"C:\Test\" + f.Key.Replace('/', '\\'), f.Value)),
             parseOptions: null,
             optionsProvider: new DictOptionsProvider(options));

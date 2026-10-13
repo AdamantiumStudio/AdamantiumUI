@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="Two to ten fingers at once, inside the application, on the multitouch stand. Each finger on a button of its own clicks it, and the stand counts the most that were down together; fingers held still hold, and click nothing. On the lists each finger picks the row it taps, and fingers drawn up the lists scroll every one of them alike.">
+  <Select Target="id=GalleryTabs/id=MultiTouch" />
+  <Wait Target="id=MultiTouchView/id=Tap10" Timeout="20s" />
+  <Invoke Target="id=ResetTouches" />
+  <Touches Gesture="Tap">
+    <Finger Target="id=Tap1" />
+    <Finger Target="id=Tap2" />
+  </Touches>
+  <Expect Target="id=MostContacts" Name="2" />
+  <Expect Target="id=Taps1" Name="1" />
+  <Expect Target="id=Taps2" Name="1" />
+  <Expect Target="id=Taps3" Name="0" />
+  <Touches Gesture="Tap">
+    <Finger Target="id=Tap1" />
+    <Finger Target="id=Tap2" />
+    <Finger Target="id=Tap3" />
+    <Finger Target="id=Tap4" />
+    <Finger Target="id=Tap5" />
+  </Touches>
+  <Expect Target="id=MostContacts" Name="5" />
+  <Expect Target="id=Taps1" Name="2" />
+  <Expect Target="id=Taps5" Name="1" />
+  <Expect Target="id=Taps6" Name="0" />
+  <Touches Gesture="Tap">
+    <Finger Target="id=Tap1" />
+    <Finger Target="id=Tap2" />
+    <Finger Target="id=Tap3" />
+    <Finger Target="id=Tap4" />
+    <Finger Target="id=Tap5" />
+    <Finger Target="id=Tap6" />
+    <Finger Target="id=Tap7" />
+    <Finger Target="id=Tap8" />
+    <Finger Target="id=Tap9" />
+    <Finger Target="id=Tap10" />
+  </Touches>
+  <Expect Target="id=MostContacts" Name="10" />
+  <Expect Target="id=Taps1" Name="3" />
+  <Expect Target="id=Taps2" Name="3" />
+  <Expect Target="id=Taps3" Name="2" />
+  <Expect Target="id=Taps4" Name="2" />
+  <Expect Target="id=Taps5" Name="2" />
+  <Expect Target="id=Taps6" Name="1" />
+  <Expect Target="id=Taps7" Name="1" />
+  <Expect Target="id=Taps8" Name="1" />
+  <Expect Target="id=Taps9" Name="1" />
+  <Expect Target="id=Taps10" Name="1" />
+  <!-- Held still past the holding time, every finger holds: no button clicks on the lift. -->
+  <Touches Gesture="Hold">
+    <Finger Target="id=Tap1" />
+    <Finger Target="id=Tap2" />
+    <Finger Target="id=Tap3" />
+    <Finger Target="id=Tap4" />
+    <Finger Target="id=Tap5" />
+    <Finger Target="id=Tap6" />
+    <Finger Target="id=Tap7" />
+    <Finger Target="id=Tap8" />
+    <Finger Target="id=Tap9" />
+    <Finger Target="id=Tap10" />
+  </Touches>
+  <Expect Target="id=Taps1" Name="3" />
+  <Expect Target="id=Taps10" Name="1" />
+  <Invoke Target="id=ResetTouches" />
+  <Expect Target="id=MostContacts" Name="0" />
+  <Expect Target="id=Taps1" Name="0" />
+  <!-- Each finger picks the row it taps, in its own list. -->
+  <Touches Gesture="Tap">
+    <Finger Target="id=List1/name=1.3" />
+    <Finger Target="id=List2/name=2.3" />
+    <Finger Target="id=List3/name=3.3" />
+    <Finger Target="id=List4/name=4.3" />
+    <Finger Target="id=List5/name=5.3" />
+    <Finger Target="id=List6/name=6.3" />
+    <Finger Target="id=List7/name=7.3" />
+    <Finger Target="id=List8/name=8.3" />
+    <Finger Target="id=List9/name=9.3" />
+    <Finger Target="id=List10/name=10.3" />
+  </Touches>
+  <Expect Target="id=MostContacts" Name="10" />
+  <Expect Target="id=List1/name=1.3" Selected="True" />
+  <Expect Target="id=List4/name=4.3" Selected="True" />
+  <Expect Target="id=List7/name=7.3" Selected="True" />
+  <Expect Target="id=List10/name=10.3" Selected="True" />
+  <!-- Drawn up together, each scrolls its own list, all alike, and picks nothing more. -->
+  <Touches Gesture="Drag" By="0,-150">
+    <Finger Target="id=List1" />
+    <Finger Target="id=List2" />
+    <Finger Target="id=List3" />
+    <Finger Target="id=List4" />
+    <Finger Target="id=List5" />
+    <Finger Target="id=List6" />
+    <Finger Target="id=List7" />
+    <Finger Target="id=List8" />
+    <Finger Target="id=List9" />
+    <Finger Target="id=List10" />
+  </Touches>
+  <Expect Target="id=List1" VScroll="22.3" />
+  <Expect Target="id=List5" VScroll="22.3" />
+  <Expect Target="id=List10" VScroll="22.3" />
+  <Expect Target="id=List10/name=10.3" Selected="True" />
+  <!-- Back as the page opens. -->
+  <Invoke Target="id=ResetTouches" />
+  <Scroll Target="id=List1" Vertical="0" />
+  <Unselect Target="id=List1/name=1.3" />
+  <Scroll Target="id=List2" Vertical="0" />
+  <Unselect Target="id=List2/name=2.3" />
+  <Scroll Target="id=List3" Vertical="0" />
+  <Unselect Target="id=List3/name=3.3" />
+  <Scroll Target="id=List4" Vertical="0" />
+  <Unselect Target="id=List4/name=4.3" />
+  <Scroll Target="id=List5" Vertical="0" />
+  <Unselect Target="id=List5/name=5.3" />
+  <Scroll Target="id=List6" Vertical="0" />
+  <Unselect Target="id=List6/name=6.3" />
+  <Scroll Target="id=List7" Vertical="0" />
+  <Unselect Target="id=List7/name=7.3" />
+  <Scroll Target="id=List8" Vertical="0" />
+  <Unselect Target="id=List8/name=8.3" />
+  <Scroll Target="id=List9" Vertical="0" />
+  <Unselect Target="id=List9/name=9.3" />
+  <Scroll Target="id=List10" Vertical="0" />
+  <Unselect Target="id=List10/name=10.3" />
+  <Expect Target="id=List10/name=10.3" Selected="False" />
+</Scenario>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Clipping page: the container's corner radius drives its clip, ClipToBounds switches it off and on, and a second radius cuts by something other than how the container is drawn.">
+  <Select Target="id=GalleryTabs/id=Clipping" />
+  <Wait Target="id=ClipRadius" />
+  <Set Target="id=ClipRadius" Value="60" />
+  <Expect Target="id=ClipRadius" Value="60" />
+  <Toggle Target="id=ClipOn" />
+  <Expect Target="id=ClipOn" Toggle="Off" />
+  <Toggle Target="id=ClipOn" />
+  <Expect Target="id=ClipOn" Toggle="On" />
+  <Set Target="id=ExplicitRadius" Value="40" />
+  <Expect Target="id=ExplicitRadius" Value="40" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=ClipRadius" Value="28" />
+  <Set Target="id=ExplicitRadius" Value="8" />
+</Scenario>

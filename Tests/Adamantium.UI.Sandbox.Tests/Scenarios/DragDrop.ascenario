@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Drag &amp; Drop page: rows carried onto other rows by input made inside the application - the pointer the drag reads is the gesture's, never the system's - down a list and back, by the grip while the list asks for it and by the whole row when it does not, along a row of tiles, into another list, within a tree and into a window of its own, each and back. Everything is put back as the page opened. The list that drags out to other applications runs its gesture through the system's own loop, which follows the real mouse; it is not driven here.">
+  <Select Target="id=GalleryTabs/id=DragDrop" />
+  <Wait Target="id=DragDropDemoView/name=Item 01" />
+  <Expect Target="id=DragDropDemoView/name=Drag by handle only" Toggle="On" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 01" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 03" Side="After" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[2]" Name="Item 01" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 01" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 02" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" Name="Item 01" />
+  <Toggle Target="id=DragDropDemoView/name=Drag by handle only" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 02" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 01" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" Name="Item 02" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 02" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 03" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[1]" Name="Item 02" />
+  <Toggle Target="id=DragDropDemoView/name=Drag by handle only" />
+  <!-- Along a row of tiles that wraps. -->
+  <Drop Target="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Red" Onto="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Blue" Side="After" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>type=ListItem[2]" Name="Red" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Red" Onto="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>name=Green" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Colors (WrapPanel)>type=ListItem[0]" Name="Red" />
+  <!-- Into another list, after its last row, and back where it was. -->
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 03" Onto="id=DragDropDemoView/type=List,name=Animals>name=Cat" Side="After" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Animals>type=ListItem[2]" Name="Item 03" />
+  <Absent Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 03" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Animals>name=Item 03" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 04" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[2]" Name="Item 03" />
+  <Absent Target="id=DragDropDemoView/type=List,name=Animals>name=Item 03" />
+  <!-- In a tree: into a folder, and back out after the last one. -->
+  <Scroll Target="id=DragDropDemoView/type=Tree>name=Loose item" />
+  <Drop Target="id=DragDropDemoView/type=Tree>name=Loose item" Onto="id=DragDropDemoView/type=Tree>name=Folder A" />
+  <Expand Target="id=DragDropDemoView/type=Tree>name=Folder A" />
+  <Wait Target="id=DragDropDemoView/type=Tree>name=Folder A>name=Loose item" />
+  <Scroll Target="id=DragDropDemoView/type=Tree>name=Folder B" />
+  <Drop Target="id=DragDropDemoView/type=Tree>name=Folder A>name=Loose item" Onto="id=DragDropDemoView/type=Tree>name=Folder B" Side="After" />
+  <Collapse Target="id=DragDropDemoView/type=Tree>name=Folder A" />
+  <Expect Target="id=DragDropDemoView/type=Tree>type=TreeItem[2]" Name="Loose item" />
+  <!-- Into the window of its own, and back. -->
+  <Invoke Target="id=DragDropDemoView/name=Open drop window (cross-window test)" />
+  <Wait Target="id=DragDropWindow" />
+  <Scroll Target="id=DragDropDemoView>type=Pane" Vertical="0" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 01" Onto="id=DragDropWindow/name=Tiger" Side="Before" />
+  <Expect Target="id=DragDropWindow/type=ListItem[1]" Name="Item 01" />
+  <Absent Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 01" />
+  <!-- The window lies over the list it came from; moved aside, the list can be reached again. -->
+  <Move Target="id=DragDropWindow" By="1400,0" />
+  <Drop Target="id=DragDropWindow/name=Item 01" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 02" Side="Before" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[0]" Name="Item 01" />
+  <Absent Target="id=DragDropWindow/name=Item 01" />
+  <Window Target="id=DragDropWindow" Action="Close" />
+  <Absent Target="id=DragDropWindow" />
+  <Scroll Target="id=DragDropDemoView>type=Pane" Vertical="0" />
+</Scenario>

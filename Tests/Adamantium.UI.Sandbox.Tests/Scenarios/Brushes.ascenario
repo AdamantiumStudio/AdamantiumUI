@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Brushes page: every brush stand opened in turn in the page's region - each must come up, and leave no error behind - and the surface the brush is painted on changed.">
+  <Select Target="id=GalleryTabs/id=Brushes" />
+  <Wait Target="id=BrushesView" />
+  <Select Target="id=BrushesView/name=Mesh gradient" />
+  <Wait Target="id=Stand/id=MeshStandView" />
+  <Select Target="id=BrushesView/name=Pattern" />
+  <Wait Target="id=Stand/id=PatternStandView" />
+  <Select Target="id=BrushesView/name=Noise" />
+  <Wait Target="id=Stand/id=NoiseStandView" />
+  <Select Target="id=BrushesView/name=Fractal" />
+  <Wait Target="id=Stand/id=FractalStandView" />
+  <!-- The live fractal zoomed and panned through automation, and back as it opened. -->
+  <Expect Target="id=LiveFractal" Zoom="110" />
+  <Zoom Target="id=LiveFractal" Percent="1000" />
+  <Expect Target="id=LiveFractal" Zoom="1000" />
+  <Zoom Target="id=LiveFractal" Percent="110" />
+  <!-- Two fingers drawn apart pinch it in about their middle, less the few pixels that go to recognizing the pinch. -->
+  <Pinch Target="id=LiveFractal" Scale="3" />
+  <Expect Target="id=LiveFractal" Zoom="312.7" />
+  <Zoom Target="id=LiveFractal" Percent="110" />
+  <Pan Target="id=LiveFractal" By="120,-40" />
+  <Pan Target="id=LiveFractal" By="-120,40" />
+  <Select Target="id=BrushesView/name=Image" />
+  <Wait Target="id=Stand/id=ImageStandView" />
+  <Select Target="id=BrushesView/name=Nine-slice" />
+  <Wait Target="id=Stand/id=NineSliceStandView" />
+  <Select Target="id=BrushesView/name=Drawing" />
+  <Wait Target="id=Stand/id=DrawingStandView" />
+  <Select Target="id=BrushesView/name=Visual" />
+  <Wait Target="id=Stand/id=VisualStandView" />
+  <Select Target="id=BrushesView/name=Material" />
+  <Wait Target="id=Stand/id=MaterialStandView" />
+  <Select Target='id=BrushesView/name="Aura / Shadow"' />
+  <Wait Target="id=Stand/id=AuraStandView" />
+  <Select Target="id=BrushesView/name=Gradients" />
+  <Wait Target="id=Stand/id=GradientStandView" />
+  <Expand Target="id=PreviewShape" />
+  <Collapse Target="id=PreviewShape" />
+</Scenario>

@@ -159,4 +159,16 @@
     <Phrase Key="BraceNotClosed" Text="У '{{' нет закрывающей '}}'; фигурная скобка пишется как '{{{{'"/>
     <Phrase Key="PlaceholderNoName" Text="'{{{text}}}' не начинается с имени: подстановка - это {{name}}, {{name:format}} или {{name,width}}"/>
     <Phrase Key="BraceNotOpened" Text="У '}}' нет открывающей '{{'; фигурная скобка пишется как '}}}}'"/>
+    <Phrase Key="ScenarioNotXml" Text="Сценарий - не правильно построенный XML: {problem}"/>
+    <Phrase Key="ScenarioNameNotIdentifier" Text="'{name}' не годится в имя теста: дайте сценарию Name из букв, цифр и _, начиная с буквы, - не ключевое слово C# и не член, который есть у любого класса"/>
+    <Phrase Key="ScenarioNameTaken" Text="Сценарий с именем '{name}' уже есть: {file}"/>
+    <Phrase Key="ScenarioNotASelector" Text="Не путь к элементу: {problem}"/>
+    <Phrase Key="ScenarioDragNeeds" Text="{step} с Gesture=&quot;Drag&quot; нужны {attributes}"/>
+    <Phrase Key="ScenarioOnlyForDrag" Text="{step}: {attribute} бывает только у Gesture=&quot;Drag&quot;"/>
+    <Phrase Key="ScenarioHeldPenButtons" Text="У удерживаемого пера нет Barrel и Eraser"/>
+    <Phrase Key="ScenarioChecksNothing" Text="{step} ничего не проверяет: добавьте ключ, например Name или Value, или свойство контрола"/>
+    <Phrase Key="ScenarioNoApplication" Text="Сценариям нужно приложение, которое они ведут: задайте в проекте AdamantiumScenarioApplication - имя его исполняемого файла"/>
+    <Phrase Key="ScenarioRootNotScenario" Text="Корень сценария - &lt;Scenario xmlns=&quot;{namespace}&quot;&gt;"/>
+    <Phrase Key="ScenarioNotOnStep" Text="У {step} нет {attribute}"/>
+    <Phrase Key="ScenarioNotInTestProject" Text="Сценарии становятся тестами NUnit: держите их в тестовом проекте со ссылками на NUnit и Adamantium.UI.Automation"/>
 </Language>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario"
+          Description="The Touch scenario through the system's own pointer input: real WM_POINTER messages from a synthetic device, read by the window as a touchscreen's or a pen's would be."
+          Explicit="It presses whatever is on top of the desktop: run it only by name, while nobody uses the computer.">
+  <Select Target="id=GalleryTabs/id=Buttons" />
+  <Wait Target="id=ButtonsView/id=ClickCount" Timeout="20s" />
+  <Touch Target="id=ButtonsView/name=Add" Gesture="Tap" ThroughSystem="true" />
+  <Expect Target="id=ClickCount" Name="1" />
+  <Pen Target="id=ButtonsView/name=Add" Gesture="Tap" Pressure="0.8" ThroughSystem="true" />
+  <Expect Target="id=ClickCount" Name="2" />
+  <Touch Target="id=ButtonsView/name=Pro" Gesture="Tap" ThroughSystem="true" />
+  <Expect Target="id=ChosenPlan" Name="Pro" />
+  <!-- Back as the page opens. -->
+  <Touch Target="id=ButtonsView/name=Reset" Gesture="Tap" ThroughSystem="true" />
+  <Expect Target="id=ClickCount" Name="0" />
+  <Touch Target="id=ButtonsView/name=Free" Gesture="Tap" ThroughSystem="true" />
+  <Select Target="id=GalleryTabs/id=Lists" />
+  <Wait Target="id=ListsView/id=SingleList" Timeout="20s" />
+  <Touch Target="id=SingleList/name=Mars" Gesture="Tap" ThroughSystem="true" />
+  <Expect Target="id=SelectedPlanet" Name="Mars" />
+  <Touch Target="id=SingleList/name=Earth" Gesture="Tap" ThroughSystem="true" />
+  <Expect Target="id=SelectedPlanet" Name="Earth" />
+  <Select Target="id=GalleryTabs/id=Ranges" />
+  <Wait Target="id=ValueSlider" />
+  <Expect Target="id=ValueSlider" Value="40" />
+  <Touch Target="id=ValueSlider" Gesture="Drag" From="120,12" To="420,12" ThroughSystem="true" />
+  <Expect Target="id=ValueSlider" Value="100" />
+  <Pen Target="id=ValueSlider" Gesture="Drag" From="290,12" To="-50,12" Pressure="0.3" ThroughSystem="true" />
+  <Expect Target="id=ValueSlider" Value="0" />
+  <Set Target="id=ValueSlider" Value="40" />
+  <Select Target="id=GalleryTabs/id=Menus" />
+  <Wait Target="id=MenusView/id=MenuSurface" Timeout="20s" />
+  <Pen Target="id=MenuSurface" Gesture="Tap" Barrel="true" ThroughSystem="true" />
+  <Wait Target="id=SurfaceMenu" Timeout="3s" />
+  <Invoke Target="id=SurfaceMenu/name=Copy" />
+  <Expect Target="id=MenuReport" Name="Picked: Copy" />
+  <Absent Target="id=SurfaceMenu" />
+  <Touch Target="id=MenuSurface" Gesture="Hold" ThroughSystem="true" />
+  <Wait Target="id=SurfaceMenu" Timeout="3s" />
+  <Invoke Target="id=SurfaceMenu/name=Cut" />
+  <Expect Target="id=MenuReport" Name="Picked: Cut" />
+  <Absent Target="id=SurfaceMenu" />
+</Scenario>

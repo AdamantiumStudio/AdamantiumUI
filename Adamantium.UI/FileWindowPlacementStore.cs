@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text.Json;
 using Adamantium.UI.Controls;
 
 namespace Adamantium.UI;
 
-/// <summary>Keeps windows' places in one JSON file in the user's local application data, in a folder named after the
-/// application. A damaged or unwritable file forgets the places; it never stops a window opening or closing.</summary>
+/// <summary>Keeps windows' places in one JSON file in <see cref="ApplicationData.Folder"/>. A damaged or unwritable file forgets the places; it never stops a window opening or closing.</summary>
 public sealed class FileWindowPlacementStore : IWindowPlacementStore
 {
     private const string FileName = "window-placement.json";
@@ -17,8 +15,7 @@ public sealed class FileWindowPlacementStore : IWindowPlacementStore
     private Dictionary<string, WindowPlacement> _placements;
 
     public FileWindowPlacementStore()
-        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Assembly.GetEntryAssembly()?.GetName().Name ?? "Adamantium", FileName))
+        : this(Path.Combine(ApplicationData.Folder, FileName))
     {
     }
 

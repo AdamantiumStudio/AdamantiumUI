@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Shapes page: one pen drives every shape - its thickness set by the slider and read back in the number beside it, and its start cap chosen.">
+  <Select Target="id=GalleryTabs/id=Shapes" />
+  <Wait Target="id=Thickness" />
+  <Set Target="id=Thickness" Value="12" />
+  <Expect Target="id=ThicknessValue" Value="12" />
+  <Set Target="id=ThicknessValue" Value="4" />
+  <Expect Target="id=Thickness" Value="4" />
+  <Select Target="id=StartCap/name=ConvexRound" />
+  <Expect Target="id=StartCap" SelectedItem="ConvexRound" />
+  <Select Target="id=StartCap/name=Flat" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=Thickness" Value="8" />
+</Scenario>

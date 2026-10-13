@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Loaders page: the busy indicators stopped and started by one switch, and scaled by the slider.">
+  <Select Target="id=GalleryTabs/id=Loaders" />
+  <Wait Target="id=LoadersView/name=Running" />
+  <Toggle Target="id=LoadersView/name=Running" />
+  <Expect Target="id=LoadersView/name=Running" Toggle="Off" />
+  <Toggle Target="id=LoadersView/name=Running" />
+  <Expect Target="id=LoadersView/name=Running" Toggle="On" />
+  <Set Target="id=LoadersView/type=Slider" Value="2" />
+  <Expect Target="id=LoadersView/type=Slider" Value="2" />
+  <Set Target="id=LoadersView/type=Slider" Value="1" />
+</Scenario>

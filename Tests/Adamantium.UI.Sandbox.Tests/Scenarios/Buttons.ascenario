@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Buttons page: a command counts its clicks, a switch and a toggle say where they stand, the plan follows the radio buttons and every drop-down says what was picked.">
+  <Select Target="id=GalleryTabs/id=Buttons" />
+  <Wait Target="id=ButtonsView/id=ClickCount" Timeout="20s" />
+  <Click Target="id=ButtonsView/name=Add" />
+  <Expect Target="id=ClickCount" Name="1" />
+  <Invoke Target="id=ButtonsView/name=Add" />
+  <Expect Target="id=ClickCount" Name="2" />
+  <Toggle Target="id=ButtonsView/name=Notify" />
+  <Expect Target="id=NotifyState" Name="Notifications OFF" />
+  <Click Target="id=ButtonsView/name=Pro" />
+  <Expect Target="id=ChosenPlan" Name="Pro" />
+  <Expand Target="id=Priority" />
+  <Select Target="id=Priority/name=High priority" />
+  <Expect Target="id=PriorityChoice" Name="Priority: high" />
+  <Expect Target="id=Priority" Expanded="Collapsed" />
+  <Expand Target="id=Priority" />
+  <Click Target="id=Priority/name=Low priority" />
+  <Expect Target="id=Priority" Expanded="Collapsed" />
+  <Expect Target="id=PriorityChoice" Name="Priority: low" />
+  <Click Target="id=ButtonsView/name=Reset" />
+  <Expect Target="id=ClickCount" Name="0" />
+  <!-- Back as the page opens. -->
+  <Toggle Target="id=ButtonsView/name=Notify" />
+  <Click Target="id=ButtonsView/name=Free" />
+  <Expand Target="id=Priority" />
+  <Select Target="id=Priority/name=Normal priority" />
+  <Expect Target="id=PriorityChoice" Name="Priority: normal" />
+</Scenario>

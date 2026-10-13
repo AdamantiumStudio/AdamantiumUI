@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Keyboard page: the first Tab shows the ring where the focus was put, then Tab walks the buttons in their stated order and steps over the one taken out of it; in a grid of tiles the arrows move by the grid - Down to the tile below, Right to the next one.">
+  <Select Target="id=GalleryTabs/id=Keyboard" />
+  <Wait Target="id=KeyboardView/name=B (1st)" />
+  <Key Keys="Tab" Into="id=KeyboardView/name=B (1st)" />
+  <Expect Target="id=KeyboardView/name=B (1st)" Focus="True" />
+  <Key Keys="Tab" />
+  <Expect Target="id=KeyboardView/name=D (2nd)" Focus="True" />
+  <Key Keys="Tab" />
+  <Expect Target="id=KeyboardView/name=A (3rd)" Focus="True" />
+  <Key Keys="Tab" />
+  <Expect Target="id=KeyboardView/name=C (4th)" Focus="True" />
+  <Key Keys="Tab" />
+  <Expect Target="id=KeyboardView/name=1" Focus="True" />
+  <Select Target="id=KeyboardView/name=Coral" />
+  <Key Keys="Down" Into="id=KeyboardView/name=Coral" />
+  <Expect Target="id=KeyboardView/name=Gold" Focus="True" />
+  <Key Keys="Right" />
+  <Expect Target="id=KeyboardView/name=Indigo" Focus="True" />
+</Scenario>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Layout page: the cell sliders size the virtualized tiles, Ellipses swaps their template, the opacity slider fades the whole grid, and paging hands the tiles to the pager.">
+  <Select Target="id=GalleryTabs/id=Layout" />
+  <Wait Target="id=CellWidth" />
+  <Set Target="id=CellWidth" Value="60" />
+  <Expect Target="id=CellWidth" Value="60" />
+  <Set Target="id=CellHeight" Value="40" />
+  <Expect Target="id=CellHeight" Value="40" />
+  <Toggle Target="id=Ellipses" />
+  <Expect Target="id=Ellipses" Toggle="On" />
+  <Toggle Target="id=Ellipses" />
+  <Set Target="id=GridOpacity" Value="0.5" />
+  <Expect Target="id=TileGrid" Opacity="0.5" />
+  <Set Target="id=GridOpacity" Value="1" />
+  <Expect Target="id=TilePager" Enabled="False" />
+  <Toggle Target="id=PageTiles" />
+  <Expect Target="id=TilePager" Enabled="True" />
+  <Toggle Target="id=PageTiles" />
+  <Expect Target="id=TilePager" Enabled="False" />
+  <!-- Back as the page opens: the smallest cell. -->
+  <Set Target="id=CellWidth" Value="24" />
+  <Set Target="id=CellHeight" Value="24" />
+  <!-- The skeleton stand: shown, the list is loading cards however long it is left; tuned while they pulse; hidden, the
+       list is empty. -->
+  <Select Target="id=SkeletonsStand" />
+  <Wait Target="id=ShowSkeletons" />
+  <Toggle Target="id=ShowSkeletons" />
+  <Wait Target="id=SkeletonGrid" IsLoadingItems="True" />
+  <Set Target="id=PulseMax" Value="0.4" />
+  <Set Target="id=SkeletonStagger" Value="150" />
+  <Expect Target="id=SkeletonGrid" IsLoadingItems="True" />
+  <Set Target="id=PulseMax" Value="0.15" />
+  <Set Target="id=SkeletonStagger" Value="80" />
+  <Toggle Target="id=ShowSkeletons" />
+  <Wait Target="id=SkeletonGrid" IsLoadingItems="False" />
+  <Select Target="id=TilesStand" />
+  <Wait Target="id=CellWidth" />
+</Scenario>

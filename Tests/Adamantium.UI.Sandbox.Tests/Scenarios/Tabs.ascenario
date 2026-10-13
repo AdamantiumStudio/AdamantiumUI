@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Tabs page: a tab of a thousand that the virtualizing strip has not built is found and selected all the same, and the capped strip closes its oldest tab to make room once the cap is lowered.">
+  <Select Target="id=GalleryTabs/id=Tabs" />
+  <Wait Target="id=TabsView/id=ManyTabs" Timeout="20s" />
+  <Select Target="id=ManyTabs/name=Document 500 - a rather long tab title" />
+  <Expect Target="id=ManyTabs/name=Document 500 - a rather long tab title" Selected="True" />
+  <Select Target="id=ManyTabs/name=Document 1 - a rather long tab title" />
+  <Expect Target="id=ManyTabs/name=Document 1 - a rather long tab title" Selected="True" />
+  <Set Target="id=MaxOpened" Value="3" />
+  <Expect Target="id=MaxOpened" Value="3" />
+  <Invoke Target="id=TabsView/name=Open a tab" />
+  <Absent Target="id=CappedTabs/name=Report 9" />
+  <Absent Target="id=CappedTabs/name=Report 10" />
+  <!-- Back as the page opens, as far as it goes: the ceiling and the report being read. What the ceiling closed stays closed. -->
+  <Set Target="id=MaxOpened" Value="5" />
+  <Select Target="id=CappedTabs/name=Report 2" />
+</Scenario>

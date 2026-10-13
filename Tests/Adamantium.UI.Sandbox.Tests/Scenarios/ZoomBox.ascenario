@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The ZoomBox page: each axis slider is bound two-way to the box's own scale, and the box is zoomed as a whole.">
+  <Select Target="id=GalleryTabs/id=ZoomBox" />
+  <Wait Target="id=ScaleX" />
+  <Set Target="id=ScaleX" Value="2" />
+  <Expect Target="id=Zoom" ScaleX="2" />
+  <Set Target="id=ScaleY" Value="0.5" />
+  <Expect Target="id=Zoom" ScaleY="0.5" />
+  <Zoom Target="id=Zoom" Percent="300" />
+  <Expect Target="id=Zoom" Zoom="300" ScaleX="3" ScaleY="3" />
+  <Expect Target="id=ScaleX" Value="3" />
+  <Zoom Target="id=Zoom" Percent="100" />
+  <!-- Two fingers drawn apart pinch it: about twice, less the few pixels that go to recognizing the pinch. Drawn together,
+       back down. -->
+  <Pinch Target="id=Zoom" Scale="2" />
+  <Expect Target="id=Zoom" Zoom="185.8" />
+  <Pinch Target="id=Zoom" Scale="0.5" />
+  <Expect Target="id=Zoom" Zoom="99.1" />
+  <!-- Back as the page opens: the box at 1:1 on both axes, scrolled to its start. -->
+  <Zoom Target="id=Zoom" Percent="100" />
+  <Scroll Target="id=Zoom" Horizontal="0" Vertical="0" />
+  <Set Target="id=ScaleX" Value="1" />
+  <Set Target="id=ScaleY" Value="1" />
+  <Expect Target="id=Zoom" ScaleX="1" ScaleY="1" Zoom="100" />
+</Scenario>

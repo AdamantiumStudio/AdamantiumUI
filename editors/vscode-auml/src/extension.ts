@@ -30,7 +30,7 @@ export function activate(context: ExtensionContext): void {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: 'file', language: 'auml' }],
+    documentSelector: [{ scheme: 'file', language: 'auml' }, { scheme: 'file', language: 'ascenario' }],
   };
 
   client = new LanguageClient('auml', 'Adamantium AUML', serverOptions, clientOptions);

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Resources page: theme and local resources cycled live, and the caption buttons moved to the left and back.">
+  <Select Target="id=GalleryTabs/id=Resources" />
+  <Wait Target="id=ResourcesView/name=Cycle critical color" />
+  <Invoke Target="id=ResourcesView/name=Cycle critical color" />
+  <Invoke Target="id=ResourcesView/name=Cycle accent" />
+  <Invoke Target="id=ResourcesView/name=Cycle local accent" />
+  <Invoke Target="id=ResourcesView/name=Cycle global accent" />
+  <Toggle Target="id=ResourcesView/name=Caption buttons left" />
+  <Expect Target="id=ResourcesView/name=Caption buttons left" Toggle="On" />
+  <Toggle Target="id=ResourcesView/name=Caption buttons left" />
+  <Expect Target="id=ResourcesView/name=Caption buttons left" Toggle="Off" />
+</Scenario>

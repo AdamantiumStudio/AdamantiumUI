@@ -12,11 +12,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <InternalsVisibleTo Include="adam-auto" />
+        <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" PrivateAssets="none" />
     </ItemGroup>
 
 </Project>

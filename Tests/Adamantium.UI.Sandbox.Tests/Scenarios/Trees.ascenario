@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Trees page: a lazily read file system - a drive opened, a folder chosen, the view model told to open what is chosen, its children read, the drive closed again. Folders every Windows has, so it runs on any machine.">
+  <Select Target="id=GalleryTabs/id=Trees" />
+  <Wait Target="id=Files/type=TreeItem" Timeout="20s" />
+  <Expand Target='id=Files/name="C:\\"' />
+  <Expect Target='id=Files/name="C:\\"' Expanded="Expanded" />
+  <!-- The view model opens a node through its row's binding, so the row is brought into view and clicked, as a person
+       would; a row with no element yet would open only once it is shown. -->
+  <Scroll Target='id=Files/name="C:\\"/name=Windows' />
+  <Click Target='id=Files/name="C:\\"/name=Windows' />
+  <Expect Target='id=Files/name="C:\\"/name=Windows' Selected="True" />
+  <Invoke Target="id=TreesView/name=Expand selected (from VM)" />
+  <Expect Target='id=Files/name="C:\\"/name=Windows' Expanded="Expanded" />
+  <Wait Target='id=Files/name="C:\\"/name=Windows/name=System32' Timeout="10s" />
+  <Collapse Target='id=Files/name="C:\\"' />
+  <Expect Target='id=Files/name="C:\\"' Expanded="Collapsed" />
+</Scenario>

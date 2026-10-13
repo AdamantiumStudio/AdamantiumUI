@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Tiles 3D page: every tile flipped at once and back again, and one tile turned over by itself and back, without an error left behind.">
+  <Select Target="id=GalleryTabs/id=Tiles3D" />
+  <Wait Target="id=Tiles" />
+  <Expect Target="id=Tiles" IsFlipped="False" />
+  <Invoke Target="id=TilesView/name=Flip all" />
+  <Expect Target="id=Tiles" IsFlipped="True" />
+  <Invoke Target="id=TilesView/name=Flip all" />
+  <Expect Target="id=Tiles" IsFlipped="False" />
+  <Toggle Target='id=Tiles>name="Tile 1, 6"' />
+  <Expect Target='id=Tiles>name="Tile 1, 6"' Toggle="On" />
+  <Expect Target='id=Tiles>name="Tile 1, 7"' Toggle="Off" />
+  <Toggle Target='id=Tiles>name="Tile 1, 6"' />
+  <Expect Target='id=Tiles>name="Tile 1, 6"' Toggle="Off" />
+</Scenario>

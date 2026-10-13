@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://adamantium/automation/scenario"
+           targetNamespace="http://adamantium/automation/scenario"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:documentation>A scenario: steps that drive an application through its automation, run in order as one test.
+      Elements are found by a selector path: id=Canvas&gt;name=Mix/type=Thumb,name=Out.</xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="Scenario">
+    <xs:annotation>
+      <xs:documentation>The steps of one test.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="Invoke" type="TargetStep">
+          <xs:annotation><xs:documentation>Invokes the element: a button's click, a menu item's command.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Toggle" type="TargetStep">
+          <xs:annotation><xs:documentation>Toggles the element: a check box, a toggle button.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Select" type="SelectStep">
+          <xs:annotation><xs:documentation>Selects the element - an item, a tab - in place of what was selected.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Unselect" type="TargetStep">
+          <xs:annotation><xs:documentation>Takes the element out of the selection.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Click" type="TargetStep">
+          <xs:annotation><xs:documentation>Clicks the middle of the element with the mouse.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="RightClick" type="TargetStep">
+          <xs:annotation><xs:documentation>Clicks the middle of the element with the right mouse button.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Hover" type="TargetStep">
+          <xs:annotation><xs:documentation>Moves the mouse over the middle of the element.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Expand" type="TargetStep">
+          <xs:annotation><xs:documentation>Expands the element: a tree item, an expander, a menu.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Collapse" type="TargetStep">
+          <xs:annotation><xs:documentation>Collapses the element.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="ContextMenu" type="TargetStep">
+          <xs:annotation><xs:documentation>Opens the element's context menu.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Set" type="SetStep">
+          <xs:annotation><xs:documentation>Sets the element's value: a field's text, a slider's number.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Caret" type="CaretStep">
+          <xs:annotation><xs:documentation>Places the caret in a text element, or selects text up to To.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Type" type="TypeStep">
+          <xs:annotation><xs:documentation>Types text where the keyboard focus is, or into an element.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Key" type="KeyStep">
+          <xs:annotation><xs:documentation>Presses keys, one after another: Ctrl+End Enter.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Scroll" type="ScrollStep">
+          <xs:annotation><xs:documentation>Scrolls the element into view, or scrolls it to a percent across or down.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Move" type="ByStep">
+          <xs:annotation><xs:documentation>Moves the element - a window, a splitter - by an offset.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Resize" type="ResizeStep">
+          <xs:annotation><xs:documentation>Resizes the element - a window - to a width and a height.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Pan" type="ByStep">
+          <xs:annotation><xs:documentation>Pans the element's view by an offset.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Zoom" type="ZoomStep">
+          <xs:annotation><xs:documentation>Zooms the element's view to a percent.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Wheel" type="WheelStep">
+          <xs:annotation><xs:documentation>Turns the mouse wheel over the element; positive turns away from the user.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Drag" type="DragStep">
+          <xs:annotation><xs:documentation>Drags the mouse across the element, between two points of its own.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Drop" type="DropStep">
+          <xs:annotation><xs:documentation>Drags the element and drops it onto another, or before or after it.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Connect" type="ConnectStep">
+          <xs:annotation><xs:documentation>Connects the element - a port - to another.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Disconnect" type="DisconnectStep">
+          <xs:annotation><xs:documentation>Removes the element's connections, or only the one to From.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Dock" type="DockStep">
+          <xs:annotation><xs:documentation>Docks the element - a pane - to a side, beside another, or floats it.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Window" type="WindowStep">
+          <xs:annotation><xs:documentation>Minimizes, maximizes, restores or closes a window.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Touch" type="TouchStep">
+          <xs:annotation><xs:documentation>Touches the element with one finger.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Pen" type="PenStep">
+          <xs:annotation><xs:documentation>Touches the element with a pen.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Touches" type="TouchesStep">
+          <xs:annotation><xs:documentation>Puts a finger on each element at once, then taps, holds or drags them all.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Pinch" type="PinchStep">
+          <xs:annotation><xs:documentation>Pinches the element with two fingers.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Wait" type="WaitStep">
+          <xs:annotation><xs:documentation>Waits until the element is there and, given keys, reads as they say.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="WaitIdle">
+          <xs:annotation><xs:documentation>Waits until the application settles.</xs:documentation></xs:annotation>
+          <xs:complexType />
+        </xs:element>
+        <xs:element name="Expect" type="ExpectStep">
+          <xs:annotation><xs:documentation>Checks the element reads as the keys say.</xs:documentation></xs:annotation>
+        </xs:element>
+        <xs:element name="Absent" type="TargetOnly">
+          <xs:annotation><xs:documentation>Checks nothing matches the selector.</xs:documentation></xs:annotation>
+        </xs:element>
+      </xs:choice>
+      <xs:attribute name="Name" type="Identifier">
+        <xs:annotation><xs:documentation>The test's name; the file's name when left out.</xs:documentation></xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Description" type="xs:string">
+        <xs:annotation><xs:documentation>What the scenario checks; the test's description.</xs:documentation></xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="Explicit" type="xs:string">
+        <xs:annotation><xs:documentation>Why the test runs only when asked for by name - real input through the system, say;
+          left out of a run of all the scenarios.</xs:documentation></xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="Identifier">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z_][A-Za-z0-9_]*" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Selector">
+    <xs:annotation>
+      <xs:documentation>A path to an element: id=, name=, type=, class= joined by commas; / looks anywhere below, &gt; among
+        the children only; [n] keeps the n-th match, [-1] the last; parent, next, previous step from the element before.</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Number">
+    <xs:annotation><xs:documentation>A number: 120, -0.5.</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="-?[0-9]+(\.[0-9]+)?" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Pair">
+    <xs:annotation><xs:documentation>Two numbers: x,y.</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="-?[0-9]+(\.[0-9]+)?,-?[0-9]+(\.[0-9]+)?" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Duration">
+    <xs:annotation><xs:documentation>Seconds or milliseconds: 30s, 500ms.</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]+(\.[0-9]+)?(ms|s)" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Pressure">
+    <xs:annotation><xs:documentation>A pen's pressure from 0 to 1, or how it changes along a drag: 0.2..1.</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]+(\.[0-9]+)?(\.\.[0-9]+(\.[0-9]+)?)?" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="TextPosition">
+    <xs:annotation><xs:documentation>A line, and a column on it if need be: 3 or 3:7.</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{1,6}(:[0-9]{1,6})?" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Gesture">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Tap" />
+      <xs:enumeration value="Hold" />
+      <xs:enumeration value="Drag" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Side">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Before" />
+      <xs:enumeration value="After" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DockPosition">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Left" />
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Right" />
+      <xs:enumeration value="Bottom" />
+      <xs:enumeration value="Fill" />
+      <xs:enumeration value="None" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="WindowAction">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Minimize" />
+      <xs:enumeration value="Maximize" />
+      <xs:enumeration value="Restore" />
+      <xs:enumeration value="Close" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="TargetOnly">
+    <xs:attribute name="Target" type="Selector" use="required">
+      <xs:annotation><xs:documentation>The path to the element.</xs:documentation></xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <xs:attributeGroup name="Step">
+    <xs:attribute name="AllowErrors" type="xs:boolean">
+      <xs:annotation><xs:documentation>The step passes even though the application reports an error.</xs:documentation></xs:annotation>
+    </xs:attribute>
+  </xs:attributeGroup>
+
+  <xs:complexType name="TargetStep">
+    <xs:complexContent>
+      <xs:extension base="TargetOnly">
+        <xs:attributeGroup ref="Step" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="SelectStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Add" type="xs:boolean">
+          <xs:annotation><xs:documentation>Adds the element to the selection instead.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="SetStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Value" type="xs:string" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="CaretStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="At" type="TextPosition" use="required" />
+        <xs:attribute name="To" type="TextPosition" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="TypeStep">
+    <xs:attribute name="Text" type="xs:string" use="required" />
+    <xs:attribute name="Into" type="Selector">
+      <xs:annotation><xs:documentation>The element to focus first.</xs:documentation></xs:annotation>
+    </xs:attribute>
+    <xs:attributeGroup ref="Step" />
+  </xs:complexType>
+
+  <xs:complexType name="KeyStep">
+    <xs:attribute name="Keys" type="xs:string" use="required">
+      <xs:annotation><xs:documentation>Keys and chords, separated by spaces: Ctrl+End Enter.</xs:documentation></xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="Into" type="Selector">
+      <xs:annotation><xs:documentation>The element to focus first.</xs:documentation></xs:annotation>
+    </xs:attribute>
+    <xs:attributeGroup ref="Step" />
+  </xs:complexType>
+
+  <xs:complexType name="ScrollStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Horizontal" type="Number">
+          <xs:annotation><xs:documentation>Percent across, 0 to 100.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="Vertical" type="Number">
+          <xs:annotation><xs:documentation>Percent down, 0 to 100.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ByStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="By" type="Pair" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ResizeStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Size" type="Pair" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ZoomStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Percent" type="Number" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="WheelStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Notches" type="xs:int" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DragStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="From" type="Pair" use="required" />
+        <xs:attribute name="To" type="Pair" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DropStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Onto" type="Selector" use="required" />
+        <xs:attribute name="Side" type="Side">
+          <xs:annotation><xs:documentation>Drops before or after Onto instead of onto it.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ConnectStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="To" type="Selector" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DisconnectStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="From" type="Selector" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DockStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Position" type="DockPosition" use="required" />
+        <xs:attribute name="Beside" type="Selector">
+          <xs:annotation><xs:documentation>The pane to dock next to.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="WindowStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Action" type="WindowAction" use="required" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:attributeGroup name="Contact">
+    <xs:attribute name="Gesture" type="Gesture" use="required" />
+    <xs:attribute name="ThroughSystem" type="xs:boolean">
+      <xs:annotation><xs:documentation>Hands the contact to the system, as a real device would.</xs:documentation></xs:annotation>
+    </xs:attribute>
+  </xs:attributeGroup>
+
+  <xs:complexType name="TouchStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attributeGroup ref="Contact" />
+        <xs:attribute name="From" type="Pair">
+          <xs:annotation><xs:documentation>Where a drag starts, in the element.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="To" type="Pair">
+          <xs:annotation><xs:documentation>Where a drag ends, in the element.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="PenStep">
+    <xs:complexContent>
+      <xs:extension base="TouchStep">
+        <xs:attribute name="Pressure" type="Pressure" />
+        <xs:attribute name="Barrel" type="xs:boolean">
+          <xs:annotation><xs:documentation>The barrel button is held.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="Eraser" type="xs:boolean">
+          <xs:annotation><xs:documentation>The pen is turned to its eraser.</xs:documentation></xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="TouchesStep">
+    <xs:sequence>
+      <xs:element name="Finger" type="TargetOnly" maxOccurs="unbounded">
+        <xs:annotation><xs:documentation>A finger on the element.</xs:documentation></xs:annotation>
+      </xs:element>
+    </xs:sequence>
+    <xs:attributeGroup ref="Contact" />
+    <xs:attribute name="By" type="Pair">
+      <xs:annotation><xs:documentation>How far a drag takes every finger.</xs:documentation></xs:annotation>
+    </xs:attribute>
+    <xs:attributeGroup ref="Step" />
+  </xs:complexType>
+
+  <xs:complexType name="PinchStep">
+    <xs:complexContent>
+      <xs:extension base="TargetStep">
+        <xs:attribute name="Scale" type="Number" use="required" />
+        <xs:attribute name="Rotate" type="Number">
+          <xs:annotation><xs:documentation>Degrees the fingers turn.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="Pan" type="Pair">
+          <xs:annotation><xs:documentation>How far the fingers' middle moves.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="ThroughSystem" type="xs:boolean" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:attributeGroup name="Keys">
+    <xs:attribute name="Name" type="xs:string" />
+    <xs:attribute name="Id" type="xs:string" />
+    <xs:attribute name="Type" type="xs:string" />
+    <xs:attribute name="Class" type="xs:string" />
+    <xs:attribute name="Value" type="xs:string" />
+    <xs:attribute name="Toggle" type="xs:string" />
+    <xs:attribute name="Selected" type="xs:string" />
+    <xs:attribute name="Expanded" type="xs:string" />
+    <xs:attribute name="Min" type="xs:string" />
+    <xs:attribute name="Max" type="xs:string" />
+    <xs:attribute name="HScroll" type="xs:string" />
+    <xs:attribute name="VScroll" type="xs:string" />
+    <xs:attribute name="Window" type="xs:string" />
+    <xs:attribute name="Zoom" type="xs:string" />
+    <xs:attribute name="Dock" type="xs:string" />
+    <xs:attribute name="Key" type="xs:string" />
+    <xs:attribute name="Left" type="xs:string" />
+    <xs:attribute name="Top" type="xs:string" />
+    <xs:attribute name="Width" type="xs:string" />
+    <xs:attribute name="Height" type="xs:string" />
+    <xs:attribute name="Enabled" type="xs:string" />
+    <xs:attribute name="Offscreen" type="xs:string" />
+    <xs:attribute name="Focus" type="xs:string" />
+    <xs:anyAttribute namespace="##local" processContents="skip">
+      <xs:annotation><xs:documentation>Any other attribute names a property of the element's control.</xs:documentation></xs:annotation>
+    </xs:anyAttribute>
+  </xs:attributeGroup>
+
+  <xs:complexType name="ExpectStep">
+    <xs:complexContent>
+      <xs:extension base="TargetOnly">
+        <xs:attributeGroup ref="Keys" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="WaitStep">
+    <xs:complexContent>
+      <xs:extension base="TargetOnly">
+        <xs:attribute name="Timeout" type="Duration">
+          <xs:annotation><xs:documentation>How long to wait at most; ten seconds by default.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attributeGroup ref="Keys" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+</xs:schema>

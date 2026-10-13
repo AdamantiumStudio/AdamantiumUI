@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Ranges page: one value shared by sliders, progress bars and spinners, a span held by two range sliders, a ceiling that rescales them all, and Reset putting everything back.">
+  <Select Target="id=GalleryTabs/id=Ranges" />
+  <Wait Target="id=ValueSlider" />
+  <Expect Target="id=ValueSlider" Value="40" Min="0" Max="100" />
+  <Set Target="id=ValueSlider" Value="65" />
+  <Expect Target="id=ValueSliderUpright" Value="65" />
+  <Expect Target="id=Progress" Value="65" />
+  <Expect Target="id=Ring" Value="65" />
+  <Expect Target="id=NumericSplit" Value="65" />
+  <Expect Target="id=ValueText" Text="65" />
+  <Set Target="id=NumericLeft" Value="30" />
+  <Expect Target="id=ValueSlider" Value="30" />
+  <!-- The span: each handle is a child of its slider, and both sliders share the bounds. -->
+  <Expect Target="id=Span/id=Lower" Value="20" />
+  <Expect Target="id=Span/id=Upper" Value="70" />
+  <Set Target="id=Span/id=Upper" Value="80" />
+  <Expect Target="id=SpanUpright/id=Upper" Value="80" />
+  <Expect Target="id=SpanEndText" Text="80" />
+  <Set Target="id=SpanUpright/id=Lower" Value="10" />
+  <Expect Target="id=Span/id=Lower" Value="10" />
+  <!-- A lower ceiling rescales every control on it. -->
+  <Set Target="id=MaximumSlider" Value="50" />
+  <Expect Target="id=ValueSlider" Max="50" />
+  <Expect Target="id=Progress" Max="50" />
+  <Expect Target="id=NumericRight" Max="50" />
+  <Invoke Target="id=ResetAll" />
+  <Expect Target="id=ValueSlider" Value="40" Max="100" />
+  <Expect Target="id=Span/id=Lower" Value="20" />
+  <Expect Target="id=Span/id=Upper" Value="70" />
+  <Expect Target="id=ReadOnlyNumber" Value="42" />
+  <!-- The ring's arc and direction come from the drop-downs. -->
+  <Select Target="id=Direction/name=CounterClockwise" />
+  <Expect Target="id=Direction" Value="Counterclockwise" />
+  <Expect Target="id=Ring" Direction="CounterClockwise" />
+  <Select Target="id=Direction/name=Clockwise" />
+  <!-- The page scrolls to its end and back. -->
+  <Scroll Target="id=RangesScroll" Vertical="100" />
+  <Expect Target="id=RangesScroll" VScroll="100" />
+  <Scroll Target="id=RangesScroll" Vertical="0" />
+  <Expect Target="id=RangesScroll" VScroll="0" />
+</Scenario>

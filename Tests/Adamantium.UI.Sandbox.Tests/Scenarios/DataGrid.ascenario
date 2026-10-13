@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The DataGrid page: ten thousand rows - sorted by a header, a cell written and taken back, a far row selected, a branch opened, a record's details opened on one of their tabs.">
+  <Select Target="id=GalleryTabs/id=DataGrid" />
+  <Wait Target="id=Table/name=P-00001" />
+  <!-- A header sorts as a click does: ascending, then the other way round. -->
+  <Invoke Target="id=Table/name=Code" />
+  <Invoke Target="id=Table/name=Code" />
+  <Expect Target="id=Table/type=DataItem" Name="P-10000" />
+  <Invoke Target="id=Table/name=Code" />
+  <Expect Target="id=Table/type=DataItem" Name="P-00001" />
+  <!-- A cell takes a value the way committing an edit does, and the table's own history takes it back. -->
+  <Set Target="id=Table/name=P-00001/name=Grace" Value="Alice" />
+  <Expect Target="id=Table/name=P-00001/name=Alice" Value="Alice" />
+  <Invoke Target="id=DataGridView/name=Undo" />
+  <Expect Target="id=Table/name=P-00001/name=Grace" Value="Grace" />
+  <!-- A row no element has been made for yet is brought into view and selected. -->
+  <Scroll Target="id=Table/name=P-05000" />
+  <Select Target="id=Table/name=P-05000" />
+  <Expect Target="id=Table/name=P-05000" Selected="True" />
+  <!-- A branch opens and closes. -->
+  <Scroll Target="id=Table/name=P-00005" />
+  <Expand Target="id=Table/name=P-00005" />
+  <Wait Target="id=Table/name=P-00005.1" />
+  <Collapse Target="id=Table/name=P-00005" />
+  <Absent Target="id=Table/name=P-00005.1" />
+  <!-- A record's details open on their tabs. -->
+  <Scroll Target="id=Table/name=P-00001" />
+  <Expand Target="id=Table/name=P-00001/type=Button" />
+  <Select Target="id=Table/type=Tab/name=Note" />
+  <Expect Target="id=Table/type=Tab/name=Note" Selected="True" />
+  <Collapse Target="id=Table/name=P-00001/type=Button" />
+  <Absent Target="id=Table/type=Tab" />
+  <!-- The strips above the table. The search box finds a row and its × puts the strip away; a header sorts, its key's
+       chip turns the key around, and the chip's × takes it out. -->
+  <Toggle Target="id=DataGridView/name=Search panel" />
+  <Set Target="id=PART_SearchPanel/id=PART_Text" Value="P-00042" />
+  <Invoke Target="id=PART_SearchPanel/id=PART_Find" />
+  <Expect Target="id=MatchesLabel" Name="1 of 1" />
+  <Set Target="id=PART_SearchPanel/id=PART_Text" Value="" />
+  <Invoke Target="id=PART_SearchPanel/id=PART_Close" />
+  <Expect Target="id=DataGridView/name=Search panel" Toggle="Off" />
+  <Toggle Target="id=DataGridView/name=Sorting panel" />
+  <Invoke Target="id=PART_SortPanel/id=PART_Clear" />
+  <Invoke Target="id=Table/type=HeaderItem,name=Code" />
+  <Expect Target="id=PART_SortPanel/name=Code" Toggle="Off" />
+  <Toggle Target="id=PART_SortPanel/name=Code" />
+  <Expect Target="id=PART_SortPanel/name=Code" Toggle="On" />
+  <Invoke Target="id=PART_SortPanel/name=Code/type=Button" />
+  <Absent Target="id=PART_SortPanel/type=DataItem" />
+  <!-- A header carried onto a strip: onto the sorting strip it becomes a key, onto the grouping strip it groups the rows.
+       Carried before another header it moves there. Each is taken back. -->
+  <Drop Target="id=Table/type=HeaderItem,name=Size" Onto="id=PART_SortPanel" />
+  <Expect Target="id=PART_SortPanel/type=DataItem" Name="Size" />
+  <Invoke Target="id=PART_SortPanel/name=Size/type=Button" />
+  <Absent Target="id=PART_SortPanel/type=DataItem" />
+  <Toggle Target="id=DataGridView/name=Sorting panel" />
+  <Toggle Target="id=DataGridView/name=Grouping panel" />
+  <Drop Target="id=Table/type=HeaderItem,name=Region" Onto="id=PART_GroupPanel" />
+  <Expect Target="id=PART_GroupPanel/type=DataItem" Name="Region" />
+  <Invoke Target="id=PART_GroupPanel/name=Region/type=Button" />
+  <Absent Target="id=PART_GroupPanel/type=DataItem" />
+  <Toggle Target="id=DataGridView/name=Grouping panel" />
+  <Drop Target="id=Table/type=HeaderItem,name=Name" Onto="id=Table/type=HeaderItem,name=Owner" Side="Before" />
+  <Expect Target="id=Table/type=HeaderItem[2]" Name="Name" />
+  <Drop Target="id=Table/type=HeaderItem,name=Name" Onto="id=Table/type=HeaderItem,name=Owner" Side="After" />
+  <Expect Target="id=Table/type=HeaderItem[3]" Name="Name" />
+  <!-- A header's funnel opens the column's filter, and closes it again. -->
+  <Invoke Target="id=Table/type=HeaderItem,name=Size/name=Filter" />
+  <Wait Target="id=PART_FilterView" />
+  <Invoke Target="id=Table/type=HeaderItem,name=Size/name=Filter" />
+  <Absent Target="id=PART_FilterView" />
+</Scenario>

@@ -18,6 +18,7 @@ class AumlResourceProvider : StandardResourceProvider {
             "http://adamantium/ui",
             "http://adamantium/ui/resources",
             "http://adamantium/ui/xaml/extensions",
+            "http://adamantium/automation/scenario",
         )
     }
 }

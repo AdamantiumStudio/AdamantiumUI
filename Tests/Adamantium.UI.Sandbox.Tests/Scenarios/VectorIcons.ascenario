@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Vector icons page: one drawing at every size - the showcase size and the group rotation are sliders, the accent a color picker.">
+  <Select Target="id=GalleryTabs/id=VectorIcons" />
+  <Wait Target="id=ShowcaseSize" />
+  <Set Target="id=ShowcaseSize" Value="200" />
+  <Expect Target="id=ShowcaseSize" Value="200" />
+  <Set Target="id=GroupRotation" Value="90" />
+  <Expect Target="id=GroupRotation" Value="90" />
+  <Set Target="id=Accent" Value="#FFEF4444" />
+  <Expect Target="id=Accent" Value="#FFEF4444" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=ShowcaseSize" Value="220" />
+  <Set Target="id=GroupRotation" Value="0" />
+  <Set Target="id=Accent" Value="#FF00BFFF" />
+</Scenario>

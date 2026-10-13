@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The ScrollBar page: two bars on one value, and a picture larger than its viewer, scrolled both ways.">
+  <Select Target="id=GalleryTabs/id=ScrollBar" />
+  <Wait Target="id=VerticalBar" />
+  <Expect Target="id=VerticalBar" Value="20" Min="0" Max="100" />
+  <Set Target="id=HorizontalBar" Value="55" />
+  <Expect Target="id=VerticalBar" Value="55" />
+  <Expect Target="id=OffsetText" Text="55" />
+  <Scroll Target="id=Picture" Horizontal="50" Vertical="100" />
+  <Expect Target="id=Picture" VScroll="100" HScroll="50" />
+  <Scroll Target="id=Picture" Vertical="0" />
+  <Expect Target="id=Picture" VScroll="0" HScroll="50" />
+  <Scroll Target="id=Picture" Horizontal="0" />
+  <Expect Target="id=Picture" HScroll="0" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=HorizontalBar" Value="20" />
+</Scenario>

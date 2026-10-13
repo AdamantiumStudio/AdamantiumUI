@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Text page: every topic opened in turn in the page's region, the message typed in one box read back in the read-only one, the font size set, a line added to the notes and taken out again, and the floating watermark switched.">
+  <Select Target="id=GalleryTabs/id=Text" />
+  <Wait Target="id=TextView" />
+  <Select Target="id=TextView/name=Editing" />
+  <Wait Target="id=Topic/id=EditingStandView" />
+  <Set Target="id=Message" Value="Hello, automation" />
+  <Expect Target="id=ReadOnlyMessage" Value="Hello, automation" />
+  <Key Keys="End" Into="id=Message" />
+  <Type Text=" again" Into="id=Message" />
+  <Expect Target="id=ReadOnlyMessage" Value="Hello, automation again" />
+  <Key Keys="Ctrl+End Enter" Into="id=Notes" />
+  <Type Text="added line" Into="id=Notes" />
+  <Key Keys="Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace" Into="id=Notes" />
+  <Toggle Target="id=TextView/name=Floating watermark" />
+  <Toggle Target="id=TextView/name=Floating watermark" />
+  <Set Target="id=Message" Value="The quick brown fox jumps over the lazy dog" />
+  <Select Target="id=TextView/name=Faces" />
+  <Wait Target="id=Topic/id=FacesStandView" />
+  <Select Target="id=TextView/name=Color and emoji" />
+  <Wait Target="id=Topic/id=ColorStandView" />
+  <Select Target="id=TextView/name=OpenType" />
+  <Wait Target="id=Topic/id=OpenTypeStandView" />
+  <Select Target="id=TextView/name=Variable fonts" />
+  <Wait Target="id=Topic/id=VariableStandView" />
+  <Select Target="id=TextView/name=Scripts" />
+  <Wait Target="id=Topic/id=ScriptsStandView" />
+  <Select Target="id=TextView/name=Paragraph" />
+  <Wait Target="id=Topic/id=ParagraphStandView" />
+  <Select Target="id=GreedyRadio" />
+  <Select Target="id=ParagraphRadio" />
+  <Toggle Target="id=OpticalMarginsToggle" />
+  <Toggle Target="id=OpticalMarginsToggle" />
+  <Set Target="id=ColumnWidthSlider" Value="160" />
+  <Expect Target="id=ColumnWidthSlider" Value="160" />
+  <Set Target="id=ColumnWidthSlider" Value="220" />
+  <Set Target="id=WordSpacingRange/id=Upper" Value="200" />
+  <Expect Target="id=WordSpacingRange/id=Upper" Value="200" />
+  <Set Target="id=WordSpacingRange/id=Upper" Value="133" />
+  <Set Target="id=LetterSpacingRange/id=Upper" Value="20" />
+  <Set Target="id=LetterSpacingRange/id=Upper" Value="0" />
+  <Select Target="id=LastLineCenterRadio" />
+  <Select Target="id=SingleWordJustifyRadio" />
+  <Select Target="id=SingleWordStartRadio" />
+  <Select Target="id=LastLineStartRadio" />
+  <Toggle Target="id=KashidasToggle" />
+  <Toggle Target="id=KashidasToggle" />
+  <Select Target="id=TextView/name=Vertical" />
+  <Wait Target="id=Topic/id=VerticalStandView" />
+  <Set Target="id=LineLengthSlider" Value="200" />
+  <Expect Target="id=LineLengthSlider" Value="200" />
+  <Set Target="id=TiersSlider" Value="2" />
+  <Select Target="id=LineMiddleRadio" />
+  <Select Target="id=LineTopRadio" />
+  <Set Target="id=TiersSlider" Value="1" />
+  <Set Target="id=LineLengthSlider" Value="300" />
+  <Select Target="id=TextView/name=Decorations &amp; Effects" />
+  <Wait Target="id=Topic/id=DecorationsStandView" />
+  <Wait Target="id=DecorationLinesSample" />
+  <Select Target="id=TextView/name=Basics" />
+  <Wait Target="id=Topic/id=BasicsStandView" />
+  <Set Target="id=FontSizeSlider" Value="24" />
+  <Expect Target="id=FontSizeSlider" Value="24" />
+  <Set Target="id=RunShiftSlider" Value="-6" />
+  <Expect Target="id=RunShiftSlider" Value="-6" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=RunShiftSlider" Value="6" />
+  <Set Target="id=FontSizeSlider" Value="22" />
+</Scenario>

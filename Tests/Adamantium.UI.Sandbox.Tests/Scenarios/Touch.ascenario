@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="A finger and a pen, inside the application. A finger presses the left button whatever its platform says, so a tap clicks a button, picks a radio button and a list row, and focuses a text box, and a drag moves a slider's thumb. A pen's tip does the same; held with its side button it is the right button, and opens a context menu. Held still, either one long-presses: no click, and the lift opens the context menu.">
+  <Select Target="id=GalleryTabs/id=Buttons" />
+  <Wait Target="id=ButtonsView/id=ClickCount" Timeout="20s" />
+  <Touch Target="id=ButtonsView/name=Add" Gesture="Tap" />
+  <Expect Target="id=ClickCount" Name="1" />
+  <Pen Target="id=ButtonsView/name=Add" Gesture="Tap" Pressure="0.8" />
+  <Expect Target="id=ClickCount" Name="2" />
+  <Touch Target="id=ButtonsView/name=Pro" Gesture="Tap" />
+  <Expect Target="id=ChosenPlan" Name="Pro" />
+  <!-- A finger held on a button holds rather than clicks. -->
+  <Touch Target="id=ButtonsView/name=Add" Gesture="Hold" />
+  <Expect Target="id=ClickCount" Name="2" />
+  <!-- Back as the page opens. -->
+  <Touch Target="id=ButtonsView/name=Reset" Gesture="Tap" />
+  <Expect Target="id=ClickCount" Name="0" />
+  <Touch Target="id=ButtonsView/name=Free" Gesture="Tap" />
+  <Select Target="id=GalleryTabs/id=Lists" />
+  <Wait Target="id=ListsView/id=SingleList" Timeout="20s" />
+  <Touch Target="id=SingleList/name=Mars" Gesture="Tap" />
+  <Expect Target="id=SelectedPlanet" Name="Mars" />
+  <Touch Target="id=SingleList/name=Earth" Gesture="Tap" />
+  <Expect Target="id=SelectedPlanet" Name="Earth" />
+  <!-- A finger scrolls the list it is in, not the page around it. -->
+  <Wait Target="id=ListsView/id=LargeList" />
+  <Touch Target="id=LargeList" Gesture="Drag" From="100,60" To="100,5" />
+  <Expect Target="id=LargeList" VScroll="8.7" />
+  <Expect Target="id=ListsView>type=Pane" VScroll="0" />
+  <!-- ...and the row it began on is not selected: a finger picks a row on its tap. -->
+  <Expect Target="id=LargeList/type=ListItem,name=Item 00001" Selected="False" />
+  <Scroll Target="id=LargeList" Vertical="0" />
+  <!-- A finger held on a row picks it as the hold starts. -->
+  <Touch Target="id=SingleList/name=Mars" Gesture="Hold" />
+  <Expect Target="id=SelectedPlanet" Name="Mars" />
+  <Touch Target="id=SingleList/name=Earth" Gesture="Tap" />
+  <Expect Target="id=SelectedPlanet" Name="Earth" />
+  <Select Target="id=GalleryTabs/id=Text" />
+  <Wait Target="id=TextView" />
+  <Select Target="id=TextView/name=Editing" />
+  <Wait Target="id=Topic/id=EditingStandView" />
+  <Touch Target="id=Message" Gesture="Tap" />
+  <Expect Target="id=Message" Focus="True" />
+  <Select Target="id=GalleryTabs/id=Ranges" />
+  <Wait Target="id=ValueSlider" />
+  <Expect Target="id=ValueSlider" Value="40" />
+  <Touch Target="id=ValueSlider" Gesture="Drag" From="120,12" To="420,12" />
+  <Expect Target="id=ValueSlider" Value="100" />
+  <Pen Target="id=ValueSlider" Gesture="Drag" From="290,12" To="-50,12" Pressure="0.3" />
+  <Expect Target="id=ValueSlider" Value="0" />
+  <Set Target="id=ValueSlider" Value="40" />
+  <Select Target="id=GalleryTabs/id=Menus" />
+  <Wait Target="id=MenusView/id=MenuSurface" Timeout="20s" />
+  <Pen Target="id=MenuSurface" Gesture="Tap" Barrel="true" />
+  <Wait Target="id=SurfaceMenu" Timeout="3s" />
+  <Invoke Target="id=SurfaceMenu/name=Copy" />
+  <Expect Target="id=MenuReport" Name="Picked: Copy" />
+  <Absent Target="id=SurfaceMenu" />
+  <!-- A long press is the touch way of the right button: a finger held and lifted opens the menu, and so does a pen. -->
+  <Touch Target="id=MenuSurface" Gesture="Hold" />
+  <Wait Target="id=SurfaceMenu" Timeout="3s" />
+  <Invoke Target="id=SurfaceMenu/name=Cut" />
+  <Expect Target="id=MenuReport" Name="Picked: Cut" />
+  <Pen Target="id=MenuSurface" Gesture="Hold" />
+  <Wait Target="id=SurfaceMenu" Timeout="3s" />
+  <Invoke Target="id=SurfaceMenu/name=Copy" />
+  <Expect Target="id=MenuReport" Name="Picked: Copy" />
+  <Absent Target="id=SurfaceMenu" />
+</Scenario>
