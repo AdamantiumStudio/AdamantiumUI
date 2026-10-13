@@ -21,6 +21,7 @@ public partial class RenderCache
         public (SdfSlotKind Kind, int Slot)? Sdf;
         public (int First, int Count, Graphics.Fonts.FontAtlas Atlas)? TextRun;
         public (int First, int Count)? TexRun;
+        public (ITexture Texture, int Key, Core.Media.Brush Brush)? Bound;
         public int? FractalKind;
         public (BatchArena Arena, int Slot)? Fill;
         public HaloRuns? Halo;
@@ -86,6 +87,7 @@ public partial class RenderCache
             Sdf = _sdfSlotByUnit.TryGetValue(u, out var sdf) ? sdf : null,
             TextRun = _textRunByUnit.TryGetValue(u, out var text) ? text : null,
             TexRun = _texRunByUnit.TryGetValue(u, out var tex) ? tex : null,
+            Bound = _boundByUnit.TryGetValue(u, out var bound) ? bound : null,
             FractalKind = _fractalKindByUnit.TryGetValue(u, out var fractal) ? fractal : null,
             Fill = _fillSlotByUnit.TryGetValue(u, out var fill) ? fill : null,
             Halo = _haloRunsByUnit.TryGetValue(u, out var halo) ? halo : null
@@ -101,6 +103,7 @@ public partial class RenderCache
         Put(_sdfSlotByUnit, u, copy.Sdf);
         Put(_textRunByUnit, u, copy.TextRun);
         Put(_texRunByUnit, u, copy.TexRun);
+        Put(_boundByUnit, u, copy.Bound);
         Put(_fractalKindByUnit, u, copy.FractalKind);
         Put(_fillSlotByUnit, u, copy.Fill);
         Put(_haloRunsByUnit, u, copy.Halo);
@@ -120,6 +123,7 @@ public partial class RenderCache
         _sdfSlotByUnit.Remove(u);
         _textRunByUnit.Remove(u);
         _texRunByUnit.Remove(u);
+        _boundByUnit.Remove(u);
         _fractalKindByUnit.Remove(u);
         _fillSlotByUnit.Remove(u);
         _haloRunsByUnit.Remove(u);

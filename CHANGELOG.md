@@ -1216,6 +1216,18 @@ All packages share one version.
     when it is put on screen again. A canvas handed another scene leaves the items of the first behind without its
     controls. An item no canvas has given a control - one an undo put back for an object the application has let go
     of since - cannot be pointed at, framed or selected.
+  - **A picture swapped for another of the same size is drawn as the new one, and no longer takes the application
+    down.** Nothing but the texture changed, so the frame patched the element's record in place - and the recorded
+    segment binds one texture, the old one. The window kept showing the old picture (a second live snapshot on the
+    Visual -> Image page showed the first), and once nothing held that picture and its texture was freed, the next
+    replay drew a freed texture and the process died. A textured, material or pattern fill now patches only while what
+    its segment binds - the texture, a material's pass, source and mapping, a pattern's kind - is what it was recorded
+    with, and the render cache keeps the brush of what it recorded, so nothing it paints from is finalized under it. A
+    pattern turned into another kind used to keep drawing the old one the same way.
+  - **A vector picture's bake is no longer freed under the elements drawing it.** A bake thrown away when its drawing
+    changed, or when the drawing was baked at too many sizes, re-records the elements that draw bakes. A
+    `BitmapSource` thrown away while the render thread is about to draw it has no texture to give
+    (`GetOrCreateTexture` answers null, as for a picture still decoding) rather than throwing on that thread.
   - **An element a `VisualBrush` painted from is no longer kept for good.** The raster kept every source it had ever
     watched in a set of its own and never took one out, and a source that lived on kept the elements thrown away after
     drawing with it.

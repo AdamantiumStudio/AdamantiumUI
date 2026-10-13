@@ -773,6 +773,7 @@ public partial class RenderCache
             _sdfSlotByUnit.Clear();
             _textRunByUnit.Clear();
             _texRunByUnit.Clear();
+            _boundByUnit.Clear();
             _fractalKindByUnit.Clear();
             _fillSlotByUnit.Clear();
             _haloRunsByUnit.Clear();
@@ -1241,6 +1242,7 @@ public partial class RenderCache
                     if (_recording)
                     {
                         _sdfSlotByUnit[unit] = (SdfSlotKind.Pattern, _patternBatch.LastSlot);   // so a MOVE re-points it
+                        Bind(unit, null, ppru.PolygonPayload.Brush);
                         group.NotBatchable("patternPolygon");
                     }
                     _batchScissor = scissor;
@@ -1276,6 +1278,7 @@ public partial class RenderCache
                     if (_recording)
                     {
                         if (_texRectBatch.LastCount == 1) _sdfSlotByUnit[unit] = (SdfSlotKind.Texture, _texRectBatch.LastFirst);
+                        Bind(unit, texPolyTexture, tpru.PolygonPayload.Brush);
                         group.NotBatchable("texturedPolygon");
                     }
                     _batchScissor = scissor;
@@ -1332,6 +1335,7 @@ public partial class RenderCache
                     if (_recording)
                     {
                         _sdfSlotByUnit[unit] = (SdfSlotKind.Pattern, _patternBatch.LastSlot);   // so a MOVE re-points it
+                        Bind(unit, null, peru.EllipsePayload.Brush);
                         group.NotBatchable("patternEllipse");
                     }
                     _batchScissor = scissor;
@@ -1355,7 +1359,12 @@ public partial class RenderCache
                     if (_materialBatch.TryAdd(mru.RectPayload, matBakeWorld, mru.FillOpacity, scissor, materialBounds,
                             slot4Mat, mru.FadeSlot, matSource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
-                        if (_recording) _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);   // see the pattern branch
+                        if (_recording)
+                        {
+                            _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);   // see the pattern branch
+                            Bind(unit, matSource, mru.RectPayload.Brush);
+                        }
+
                         CloseMaterialSegment(group, unit.Component, scissor);
                         continue;
                     }
@@ -1381,7 +1390,12 @@ public partial class RenderCache
                     if (_materialBatch.TryAddEllipse(meru.EllipsePayload, bake, meru.FillOpacity, scissor, bounds,
                             slot, meru.FadeSlot, elSource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
-                        if (_recording) _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);
+                        if (_recording)
+                        {
+                            _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);
+                            Bind(unit, elSource, meru.EllipsePayload.Brush);
+                        }
+
                         CloseMaterialSegment(group, unit.Component, scissor);
                         continue;
                     }
@@ -1404,7 +1418,12 @@ public partial class RenderCache
                     if (_materialBatch.TryAddPolygon(mpru.PolygonPayload, bake, mpru.FillOpacity, scissor, bounds,
                             slot, mpru.FadeSlot, polySource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
-                        if (_recording) _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);
+                        if (_recording)
+                        {
+                            _sdfSlotByUnit[unit] = (SdfSlotKind.Material, _materialBatch.LastSlot);
+                            Bind(unit, polySource, mpru.PolygonPayload.Brush);
+                        }
+
                         CloseMaterialSegment(group, unit.Component, scissor);
                         continue;
                     }
@@ -1438,6 +1457,7 @@ public partial class RenderCache
                         // which it is not: a dragged pattern stayed put until an unrelated full walk caught up. The
                         // same defect the polygon had, and the same cure.
                         _sdfSlotByUnit[unit] = (SdfSlotKind.Pattern, _patternBatch.LastSlot);
+                        Bind(unit, null, pru.RectPayload.Brush);
                         group.NotBatchable("patternRect");
                     }
                     _batchScissor = scissor;
@@ -1515,6 +1535,7 @@ public partial class RenderCache
                         // the RUN, exactly as a text block remembers its glyph run.
                         _sdfSlotByUnit[unit] = (SdfSlotKind.Texture, _texRectBatch.LastFirst);
                         _texRunByUnit[unit] = (_texRectBatch.LastFirst, _texRectBatch.LastCount);
+                        Bind(unit, texture, xru.RectPayload.Brush);
                         group.NotBatchable("texturedRect");
                     }
                     _batchScissor = scissor;
@@ -1553,6 +1574,7 @@ public partial class RenderCache
                     if (_recording)
                     {
                         if (_texRectBatch.LastCount == 1) _sdfSlotByUnit[unit] = (SdfSlotKind.Texture, _texRectBatch.LastFirst);
+                        Bind(unit, texEllTexture, xeru.EllipsePayload.Brush);
                         group.NotBatchable("texturedEllipse");
                     }
                     _batchScissor = scissor;
@@ -2357,6 +2379,26 @@ public partial class RenderCache
     /// that predate the run map (or never took one) answer 1, which is what a single-slot entry means.</summary>
     private int TexRunLength(IRenderUnit u) => _texRunByUnit.TryGetValue(u, out var run) ? run.Count : 1;
 
+    // What the unit's segment was recorded binding - see _boundByUnit.
+    private void Bind(IRenderUnit unit, ITexture texture, Core.Media.Brush brush) =>
+        _boundByUnit[unit] = (texture, SegmentKeyOf(brush, texture), brush);
+
+    // A patch can only keep drawing what the segment binds: the same texture and the same pass.
+    private bool BoundAsRecorded(IRenderUnit u, ITexture texture, Core.Media.Brush brush) =>
+        _boundByUnit.TryGetValue(u, out var bound) && ReferenceEquals(texture, bound.Texture)
+                                                   && SegmentKeyOf(brush, texture) == bound.Key;
+
+    // A material's pass, wallpaper and picture mapping, a pattern's kind; -1 for a plain picture, whose segment binds
+    // nothing but its texture.
+    private static int SegmentKeyOf(Core.Media.Brush brush, ITexture texture) => brush switch
+    {
+        Core.Media.MaterialBrush material =>
+            (MaterialRectCollector.IsWallpaper(material.Material) ? 1 : 0)
+            | ((int)MaterialRectCollector.TreatmentOf(material.Material) << 1)
+            | (texture == null ? 0 : ((int)material.Anchor + 1) << 8),
+        _ => PatternRectCollector.KindOf(brush)
+    };
+
     // Does THIS unit draw from a pass that reads the element's alpha from the opacity slot? The slot maps answer it: a
     // rect holds a rect-batch slot, a glyph run holds a text run, and the SDF map holds the rest - the polygon included,
     // since its record found room for the slot in the clip field.
@@ -2407,18 +2449,21 @@ public partial class RenderCache
             return gr.Kind switch
             {
                 SdfSlotKind.GradientRect => _gradientRectBatch.CanBatch(rru.RectPayload),
-                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatch(rru.RectPayload),
+                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatch(rru.RectPayload)
+                                       && BoundAsRecorded(u, null, rru.RectPayload.Brush),
                 // ...and, for a picture, the RUN must still be the same length: a nine-slice that became a plain fill
                 // (or the other way round) is a change of record COUNT, which only the walk can express.
                 SdfSlotKind.Texture => _texRectBatch != null && _texRectBatch.CanBatch(rru.RectPayload)
-                                       && TextureBatchCollector.RecordCount(rru.RectPayload.Brush) == TexRunLength(u),
+                                       && TextureBatchCollector.RecordCount(rru.RectPayload.Brush) == TexRunLength(u)
+                                       && BoundAsRecorded(u, rru.BrushTexture(), rru.RectPayload.Brush),
                 // ...and the FORMULA (deep zoom included) must still be the one the segment bound its pass for: the patch
                 // rewrites the record, not the pass. A deep one also has to still fit the reference orbit its slot owns -
                 // that is decided at the patch itself, where the baked record can be measured against the slice.
                 SdfSlotKind.Fractal => _fractalBatch != null && _fractalBatch.CanBatch(rru.RectPayload)
                                        && _fractalKindByUnit.TryGetValue(u, out var fracKind)
                                        && fracKind == FractalRectCollector.KindOf(rru.RectPayload.Brush),
-                SdfSlotKind.Material => _materialBatch != null && _materialBatch.CanBatch(rru.RectPayload),
+                SdfSlotKind.Material => _materialBatch != null && _materialBatch.CanBatch(rru.RectPayload)
+                                        && BoundAsRecorded(u, rru.BrushTexture(), rru.RectPayload.Brush),
                 _ => false
             };
         }
@@ -2448,9 +2493,12 @@ public partial class RenderCache
             {
                 SdfSlotKind.Ellipse => _ellipseBatch.CanBatch(eru.EllipsePayload),
                 SdfSlotKind.GradientEllipse => _gradientEllipseBatch.CanBatch(eru.EllipsePayload),
-                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatchEllipse(eru.EllipsePayload),
-                SdfSlotKind.Texture => _texRectBatch != null && _texRectBatch.CanBatchEllipse(eru.EllipsePayload),
-                SdfSlotKind.Material => _materialBatch != null && MaterialRectCollector.WantsBatch(eru.EllipsePayload.Brush, eru.EllipsePayload.Pen),
+                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatchEllipse(eru.EllipsePayload)
+                                       && BoundAsRecorded(u, null, eru.EllipsePayload.Brush),
+                SdfSlotKind.Texture => _texRectBatch != null && _texRectBatch.CanBatchEllipse(eru.EllipsePayload)
+                                       && BoundAsRecorded(u, eru.BrushTexture(), eru.EllipsePayload.Brush),
+                SdfSlotKind.Material => _materialBatch != null && MaterialRectCollector.WantsBatch(eru.EllipsePayload.Brush, eru.EllipsePayload.Pen)
+                                        && BoundAsRecorded(u, eru.BrushTexture(), eru.EllipsePayload.Brush),
                 _ => false
             };
 
@@ -2459,9 +2507,12 @@ public partial class RenderCache
             {
                 SdfSlotKind.Polygon => _polygonBatch.CanBatch(pru.PolygonPayload),
                 SdfSlotKind.GradientRect => _gradientRectBatch.CanBatchPolygon(pru.PolygonPayload),
-                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatchPolygon(pru.PolygonPayload),
-                SdfSlotKind.Texture => _texRectBatch != null && _texRectBatch.CanBatchPolygon(pru.PolygonPayload),
-                SdfSlotKind.Material => _materialBatch != null && MaterialRectCollector.WantsBatch(pru.PolygonPayload.Brush, pru.PolygonPayload.Pen),
+                SdfSlotKind.Pattern => _patternBatch != null && _patternBatch.CanBatchPolygon(pru.PolygonPayload)
+                                       && BoundAsRecorded(u, null, pru.PolygonPayload.Brush),
+                SdfSlotKind.Texture => _texRectBatch != null && _texRectBatch.CanBatchPolygon(pru.PolygonPayload)
+                                       && BoundAsRecorded(u, pru.BrushTexture(), pru.PolygonPayload.Brush),
+                SdfSlotKind.Material => _materialBatch != null && MaterialRectCollector.WantsBatch(pru.PolygonPayload.Brush, pru.PolygonPayload.Pen)
+                                        && BoundAsRecorded(u, pru.BrushTexture(), pru.PolygonPayload.Brush),
                 _ => false
             };
 
