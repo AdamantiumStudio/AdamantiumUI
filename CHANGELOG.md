@@ -1116,6 +1116,9 @@ All packages share one version.
   - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
     released. A released element is final; nothing brings it back.
 
+- An application whose GPU device was lost makes a new one and draws again, in a few seconds and without input. Every
+  window used to stay blank until the application was restarted.
+
 - The sandbox's theme chooser shows the theme in use when the theme was changed some other way. It kept showing the one
   it was opened on.
 

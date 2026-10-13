@@ -113,6 +113,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         UIContext =  new UIContext(Container, this);
 
         GraphicsDeviceService = new GraphicsDeviceService(Container.Resolve<IGraphicsDeviceFactory>(), EnableGraphicsDebug);
+        GraphicsDeviceService.DeviceLost += OnDeviceLost;
         Container.RegisterInstance<IGraphicsDeviceService>(GraphicsDeviceService);
         Container.RegisterSingleton<IResourceFactory, ResourceFactory>();
         Container.RegisterSingleton<IGraphicsContext, GraphicsContext>();
@@ -376,6 +377,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         MainWindow = null;
     }
     
+    private void OnDeviceLost(object sender, EventArgs e) => LoopSignal.Request();
+
     private void RecreateDevicesAndServices()
     {
         Log.Logger.Debug("======Starting recreating sequence======");
