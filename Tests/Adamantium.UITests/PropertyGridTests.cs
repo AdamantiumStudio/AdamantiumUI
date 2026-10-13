@@ -1977,6 +1977,25 @@ public class PropertyGridTests
         });
     }
 
+    // A row a pass no longer wants is gone for good: the next pass makes a new one. Only taken out of the panel, it went on
+    // holding the grid and following the theme through its reset button - each folded composite kept its whole page.
+    [Test]
+    public void TheRowsOfAFoldedComposite_AreDiscarded()
+    {
+        var part = new StringProperty { Header = "X", Binding = new Binding("Name") };
+        var composite = new CompositeProperty { Header = "Position", IsExpanded = true };
+        composite.Children.Add(part);
+        var grid = Built(Section(new Target(), composite));
+        var row = RowOf(grid, part);
+        Assume.That(row, Is.Not.Null, "the open composite shows its part");
+
+        composite.IsExpanded = false;
+        grid.Rebuild();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(row.IsDiscarded, Is.True);
+    }
+
     [Test]
     public void AddingAnObjectLeavesTheOtherSectionsAsTheyWere()
     {

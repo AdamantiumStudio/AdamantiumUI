@@ -337,7 +337,12 @@ public class PropertyGrid : Control
 
             // Whatever the last pass left beyond what this one wanted. Taken off the END, so the rows that stayed keep
             // their places and their templates.
-            while (rows.Children.Count > at) rows.Children.RemoveAt(rows.Children.Count - 1);
+            while (rows.Children.Count > at)
+            {
+                var leaving = rows.Children[^1];
+                rows.Children.RemoveAt(rows.Children.Count - 1);
+                DiscardedVisuals.PublishSubtree(leaving);
+            }
 
             // A section with nothing in it is not an empty section, it is one the search has no answer from - and a
             // column of empty headers reads as a result.

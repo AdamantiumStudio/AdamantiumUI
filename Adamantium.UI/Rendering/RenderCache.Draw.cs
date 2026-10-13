@@ -2793,6 +2793,12 @@ public partial class RenderCache
         finally
         {
             _patchBuf.Clear();
+            foreach (var arena in _stagedArenas)
+            {
+                arena.ClearStage();
+            }
+
+            _stagedArenas.Clear();
         }
     }
 

@@ -250,8 +250,10 @@ public class DataGridGroupPanel : Control
         while (_live.Count > count)
         {
             var last = _live.Count - 1;
-            _chips.Children.Remove(_live[last]);
+            var leaving = _live[last];
+            _chips.Children.Remove(leaving);
             _live.RemoveAt(last);
+            DiscardedVisuals.PublishSubtree(leaving);
         }
 
         for (var i = 0; i < count; i++)

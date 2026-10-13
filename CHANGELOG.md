@@ -1102,6 +1102,16 @@ All packages share one version.
     placeholder dropped that way was also never shown again; it is built anew.
   - **An items control's automation peer lets go of the stand-ins of items it no longer holds.** It kept one for every
     item the control ever held while automation looked at it.
+  - **Popups, adorners and live snapshots compose their transforms afresh on every record.** The memo was never cleared
+    for them, so it kept every element they had shown. A closed menu kept the whole table it had been opened over, ten
+    thousand rows in the sandbox, on every visit.
+  - **A data grid's sorting and grouping strips discard the chips that fewer keys no longer need.** Only taken out of
+    the strip, a chip went on following the theme and, through its column, held the whole table after the table itself
+    was gone.
+  - **A property grid discards the rows a pass no longer wants**, such as the parts of a composite folded again. They
+    held the grid and, through their reset buttons, stayed owners of the theme's brushes, so each kept its page.
+  - **The render cache lets go of what a splice staged once the splice is done.** The stage was kept until the same
+    family was spliced again, and with it the controls last spliced and everything they reached.
   - The render cache clears the buffers of its structural pass after each frame.
   - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
     released. A released element is final; nothing brings it back.

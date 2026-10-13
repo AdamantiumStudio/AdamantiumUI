@@ -117,6 +117,7 @@ public partial class RenderCache
         _clipShapeCache.Clear();
         _relWorldCache.Clear();
         _nodeCache.Clear();
+        _drawingContextInternal.BeginRecordFrame();
 
         // This build FUSES record and apply (an overlay renders a flat list straight into its groups - it never crosses
         // the render-thread seam), but the snapshot still flows through a packet - the only thing that fills the applier's
@@ -184,6 +185,7 @@ public partial class RenderCache
         _packet.ClearMemos = true;
         _packet.SnapReset = true;
         _snap.Clear();
+        _drawingContextInternal.BeginRecordFrame();
 
         if (components != null)
         {
