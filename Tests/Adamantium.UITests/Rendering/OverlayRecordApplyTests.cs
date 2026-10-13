@@ -2,6 +2,7 @@ using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Rendering;
 using NUnit.Framework;
@@ -114,6 +115,46 @@ public class OverlayRecordApplyTests
 
         var fill = (LiveUnitOf(control)?.Payload as Adamantium.UI.Rendering.Payloads.RectanglePayload)?.Brush as SolidColorBrush;
         Assert.That(fill?.Color, Is.EqualTo(Colors.Blue));
+    }
+
+    // The transforms a record composes are its own. Kept from one record to the next, every element a popup or an adorner
+    // ever showed stayed in memory with all it referenced - a closed menu held the whole grid it was opened over.
+    [Test]
+    public void EachRecord_StartsAFrameOfItsOwn()
+    {
+        var context = new FrameCountingContext();
+        var cache = new RenderCache(context, _factory);
+        var control = AddControlAt(0);
+
+        cache.RecordComponents([control], Matrix4x4F.Identity);
+        cache.RecordComponents([], Matrix4x4F.Identity);
+
+        Assert.That(context.Frames, Is.EqualTo(2));
+    }
+
+    // ...and so does each build that records and applies at once, as a snapshot of a live subtree does.
+    [Test]
+    public void EachFusedBuild_StartsAFrameOfItsOwn()
+    {
+        var context = new FrameCountingContext();
+        var cache = new RenderCache(context, _factory);
+        var control = AddControlAt(0);
+
+        cache.BuildFromComponents([control], Matrix4x4F.Identity);
+        cache.BuildFromComponents([], Matrix4x4F.Identity);
+
+        Assert.That(context.Frames, Is.EqualTo(2));
+    }
+
+    private sealed class FrameCountingContext : DrawingContext, IDrawingContextInternal
+    {
+        public int Frames { get; private set; }
+
+        void IDrawingContextInternal.BeginRecordFrame()
+        {
+            Frames++;
+            BeginRecordFrame();
+        }
     }
 
     [Test]

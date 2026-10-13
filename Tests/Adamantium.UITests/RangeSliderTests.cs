@@ -13,6 +13,43 @@ public class RangeSliderTests
 {
     private static RangeSlider NewSlider() => new() { Minimum = 0, Maximum = 100, LowerValue = 20, UpperValue = 70 };
 
+    // The value badges are the slider's own but not in its visual tree, so the discard of the tree did not reach them:
+    // they stayed alive, following the theme, and held the slider and its page.
+    [Test]
+    public void ADiscardedRangeSlider_DiscardsItsValueBadges()
+    {
+        var slider = NewSlider();
+        slider.IsValueToolTipEnabled = true;
+        slider.Width = 200;
+        var set = new Adamantium.UI.Themes.MacOsTheme.MacOsRangeSliderStyleSet();
+        set.Initialize(null);
+        foreach (var style in set.Styles)
+        {
+            style.Attach(slider);
+        }
+
+        var root = new Adamantium.UI.Controls.Decorators.Border { Width = 400, Height = 100, Child = slider };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        var thumb = ((RangeTrack)slider.GetTemplateChild("PART_Track")).LowerThumb;
+        thumb.RaiseEvent(new DragStartedEventArgs(Adamantium.Mathematics.Vector2.Zero) { RoutedEvent = Thumb.DragStartedEvent });
+        var badges = new System.Collections.Generic.List<Popup>();
+        foreach (var child in slider.LogicalChildren)
+        {
+            if (child is Popup popup)
+            {
+                badges.Add(popup);
+            }
+        }
+
+        Assume.That(badges, Has.Count.EqualTo(2), "a drag shows both badges");
+
+        Adamantium.UI.Core.DiscardedVisuals.PublishSubtree(root);
+        while (Adamantium.UI.Core.DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(badges.TrueForAll(badge => badge.IsDiscarded), Is.True);
+    }
+
     [Test]
     public void TheBoundsCannotCross()
     {

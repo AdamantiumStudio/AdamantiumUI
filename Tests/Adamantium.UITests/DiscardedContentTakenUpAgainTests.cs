@@ -78,6 +78,25 @@ public class DiscardedContentTakenUpAgainTests
         });
     }
 
+    // A renderer lets go of an element only after applying a packet recorded once it was released: the element says which
+    // batch released it, in the count the packet carries.
+    [Test]
+    public void AReleasedElement_NamesTheBatchThatReleasedIt()
+    {
+        var (body, label, _) = Body();
+        var before = DiscardedVisuals.ReleasedBatches;
+        Assume.That(label.ReleasedInBatch, Is.EqualTo(0));
+
+        DiscardedVisuals.Publish(new IFundamentalUIComponent[] { body, label });
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(label.ReleasedInBatch, Is.EqualTo(before + 1));
+            Assert.That(DiscardedVisuals.ReleasedBatches, Is.EqualTo(label.ReleasedInBatch), "counted the same way");
+        });
+    }
+
     [Test]
     public void ContentNobodyTakesUp_IsReleased()
     {

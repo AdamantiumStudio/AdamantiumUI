@@ -35,6 +35,15 @@ All packages share one version.
   - `AutomationSession.Find(string)` for a selector path written as text, plus `PressKeysAsync`, `TypeAsync`,
     `ShotAsync` and `UnnamedAsync`;
   - `PenDragAsync` with pressure that changes along the stroke.
+- `ApplicationData.Folder`: the one folder where an application keeps what it remembers between runs. It defaults to
+  the user's local application data, under the application's name, and the environment variable
+  `ADAMANTIUM_APP_DATA` moves it for one run. `LaunchOptions.FreshData` starts an application with a fresh folder of
+  its own and deletes the folder afterwards, so one run leaves nothing behind for the next.
+
+- The language server completes a picture of a content project the markup's project references under
+  `Content/{Name}/`, where the build puts it: `Content/` offers the content projects by name, and each its folders and
+  files.
+
 - Leak hunting in automation.
   - **`adam-auto memory`** (`AutomationSession.MemoryAsync`) collects all garbage in the application, finalizers
     included, then reports the managed heap left, the committed heap, private memory and handles.
@@ -44,14 +53,8 @@ All packages share one version.
   - **`adam-auto sweep --themes --memory`**: after each pass over the tabs, every theme in every variant and back to the
     one in use, and a memory reading - so a pass tears every template down and builds it again, and the readings show
     what each pass leaves behind. With `--memory`, a reading is also taken before the first pass.
-- `ApplicationData.Folder`: the one folder where an application keeps what it remembers between runs. It defaults to
-  the user's local application data, under the application's name, and the environment variable
-  `ADAMANTIUM_APP_DATA` moves it for one run. `LaunchOptions.FreshData` starts an application with a fresh folder of
-  its own and deletes the folder afterwards, so one run leaves nothing behind for the next.
-
-- The language server completes a picture of a content project the markup's project references under
-  `Content/{Name}/`, where the build puts it: `Content/` offers the content projects by name, and each its folders and
-  files.
+  - The sandbox's theme chooser, Switch and Dark / Light buttons carry automation ids (`ThemeChooser`, `SwitchTheme`,
+    `ToggleVariant`).
 
 - The pen and several fingers on `InfiniteCanvas`.
   - **Pressure.** A pen's pressure sets the ink's width point by point along the stroke: a pen's usual pressure (and
@@ -1092,6 +1095,105 @@ All packages share one version.
 
 - Deleting an `.auml`, `.alang` or `.ascenario` file rebuilds the project: the build counted these files only by their
   dates, so with one gone it stayed "up to date" and kept the class, table or test generated from it.
+
+- Memory held after theme swaps and tab visits.
+  - **A view's content is discarded with the view.** A theme swap rebuilds a host's template and a view's own one. The
+    view's content (a `View` written in markup) could then sit between the view's old presenter and its new one, which
+    had not taken it up yet. It stayed alive out of the tree, and a behavior on it never detached. The sandbox's 3D
+    view left a whole universe running for each swap. A `ContentControl` that is discarded now discards its content
+    element when that element is out of the tree. An item container lets go of an item that is an element of its own
+    before it is discarded, so the list can show the item again.
+  - **Layout work queued before a subtree joins the tree moves with it.** A template is built without a parent, under
+    a layout manager of its own. When the subtree joined a window, that manager kept its queue and the elements in it
+    for good, and the managers of discarded roots linked one generation of templates to the next
+    (`LayoutManager.HandOver`).
+  - **Content a presenter built is discarded with the presenter.** A label made for string content, or a view built from
+    a data template, used to be let go of and left alive, still listening to the resources.
+  - **The render cache lets go of released elements.** The adorner layer's cache never reconciled, so it kept every
+    element it had drawn. Every cache now drops the layout it froze for an element once a packet recorded after the
+    element's release has been applied.
+  - **Drawings follow their brushes weakly.** A `GeometryDrawing` or `GlyphRunDrawing` subscribed to a theme brush's
+    `Changed`, and the brush lives as long as the theme. A brush now takes only elements as owners; a run of text or a
+    drawing no longer becomes one.
+  - **A released element's animations stop.** Parking a page stopped them, discarding one did not: an endless animation
+    on a page torn down by a theme swap went on playing, and through it the whole page stayed in memory.
+  - **The render cache hands back the opacity, clip and transform slots of released elements.** The adorner layer's
+    cache never did, so each slot kept its element and everything that element reached.
+  - **A destroyed `InfiniteCanvas` discards the controls it built around the application's objects.** They were only
+    taken off the scene and stayed alive, listening to the resources.
+  - **A kept view no longer holds the presenter that built it.** A theme swap rebuilds the presenter a kept page was
+    built in; the parked page went on naming the old one as its templated parent, and through it the whole old
+    template. The presenter that takes the page up now becomes its host (`TemplateResult.Rehost`), and what a presenter
+    inside the page parked moves with it (`ParkedVisuals.MoveOwner`).
+  - **A discarded element that linked a Global dictionary is no longer kept by it.** The dictionary stays, as global
+    resources outlive what linked them, but its owners kept every copy of a page that linked one - one per visit
+    (`IResourceManager.ForgetGlobalSourceOwner`, `ResourceProvider.ForgetOwner`).
+  - **The render cache lets go of layouts it read live** from an element released since, at once. The adorner layer
+    records only when its adorners change, and until then kept every released ancestor of an adorned control.
+  - **A discarded `Popup` discards its content.** The content is not a visual child, so a template the popup is part of
+    neither reached it when torn down nor counted it among its parts. A docked group's reveal flyout outlived the group,
+    its localized buttons listening to the resources and holding the group. What the content shows for others stays: the
+    items of a list or menu in it, and anything back in a tree. `DiscardedVisuals.PublishSubtree` publishes an element
+    and everything under it.
+  - **Overlay stages record again once released elements are all let go of**, so their caches drop what they kept for
+    them; an idle stage recorded nothing and kept it.
+  - **A closed window is discarded with everything in it**, its focus ring and other adorners among them, and its
+    entity leaves the application's world. Kept alive, it stayed an owner of every theme brush it painted with - a
+    window is its own root, so to a brush it never leaves a tree - and its renderer queued frames nobody drew, about
+    14,000 a run of the sandbox's scenarios.
+  - **The pointers let go of released elements** - what they were over, hovered, clicked last or were captured by. The
+    window the pointer last touched stayed alive after it closed.
+  - **An adorner layer discards the focus ring, hover frame and selection frames it replaces.**
+  - **A render scope whose surface is gone takes no marks and drops those it held** (`RenderDirtyRouter.Forget`). A
+    context menu a style shares among windows still named the scope of the one it was last shown in, and kept what was
+    marked there.
+  - **A discarded items control discards its own items** - elements put in it, not from a source - shown or not: the
+    tabs of a closed ribbon that were never selected stayed alive. **An element discards the whole of its own context
+    menu**, its template with it.
+  - **A virtualizing panel discards the skeleton card it drops on a regenerate**, and the drop placeholder with it. Built
+    from the theme's template with the panel as its templated parent, the card lived on out of the tree, listening to
+    the resources and holding the panel - and with it each list the Layout page threw away, about 60 MB a visit. A
+    placeholder dropped that way was also never shown again; it is built anew.
+  - **An items control's automation peer lets go of the stand-ins of items it no longer holds.** It kept one for every
+    item the control ever held while automation looked at it.
+  - **Popups, adorners and live snapshots compose their transforms afresh on every record.** The memo was never cleared
+    for them, so it kept every element they had shown. A closed menu kept the whole table it had been opened over, ten
+    thousand rows in the sandbox, on every visit.
+  - **A data grid's sorting and grouping strips discard the chips that fewer keys no longer need.** Only taken out of
+    the strip, a chip went on following the theme and, through its column, held the whole table after the table itself
+    was gone.
+  - **A property grid discards the rows a pass no longer wants**, such as the parts of a composite folded again. They
+    held the grid and, through their reset buttons, stayed owners of the theme's brushes, so each kept its page. **It
+    discards the sections it built** for an object no longer inspected or for a type no longer selected, and, when it is
+    discarded itself, those out of the tree, such as the ones a search leaves out.
+  - **A `Path` lets go of its geometry when it is discarded.** It followed the geometry's changes until it was given
+    another one, so an icon a view model hands out kept every path that had drawn it, with its page.
+  - **A `Slider` and a `RangeSlider` discard their value badges with themselves.** A badge is not in its slider's visual
+    tree; it stayed alive, following the theme, and held the slider.
+  - **A discarded `Popup` closes.** One discarded while open - a slider torn down mid-drag, its badge up - stayed on the
+    window's popup layer, holding its owner. An overlay closing no longer gives the focus back to an element gone from
+    its window since, which the focus manager then held.
+  - **A canvas inspector discards the sections the theme made for it that it was not showing** when it is discarded, and
+    the whole set when a new template replaces it. Out of its tree, their rows held the panel and followed the theme, so
+    every canvas page visited stayed in memory.
+  - **An `InfiniteCanvas` discards the dialog it asks a question in once it is answered**, and closes and discards one
+    still open when the canvas itself is discarded. Closed and kept, its buttons followed the theme and, through the
+    question, held the canvas and its page.
+  - **Popups, adorners and live snapshots hand back the clip, opacity and node slots of what they no longer show.** It handed them
+    back only for elements thrown away, so a closed dialog went on holding the canvas that had asked its question, and
+    the page around it.
+  - **The render cache lets go of what a splice staged once the splice is done.** The stage was kept until the same
+    family was spliced again, and with it the controls last spliced and everything they reached.
+  - The render cache clears the buffers of its structural pass after each frame.
+  - `FundamentalUIComponent.ReleasedInBatch`: which batch of discarded elements released this one, 0 while it is not
+    released. A released element is final; nothing brings it back.
+
+- An application whose GPU device was lost makes a new one and draws again, in a few seconds and without input. Every
+  window used to stay blank until the application was restarted.
+
+- The sandbox's theme chooser shows the theme in use when the theme was changed some other way. It kept showing the one
+  it was opened on.
+
 - `InfiniteCanvas.BringIntoView` brings something wholly out of view to the middle. Moved only as far as the edge, a
   node not yet built - a point, having no size - stood on the edge, just outside what the plane looks up, and stayed
   unbuilt until the camera moved again.

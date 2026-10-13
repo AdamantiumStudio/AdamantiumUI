@@ -1436,6 +1436,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             AttachedToVisualTree(e);
         }
 
+        if (old == null && parent != null)
+        {
+            LayoutManager.HandOver(this);
+        }
+
         OnVisualParentChanged(old, parent);
     }
 

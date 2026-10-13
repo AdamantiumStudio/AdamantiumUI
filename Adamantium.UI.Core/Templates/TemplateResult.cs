@@ -61,6 +61,21 @@ public class TemplateResult
     
     public TriggerCollection Triggers { get; }
 
+    /// <summary>Hands what this template built to another host - a presenter taking up a view another one built and
+    /// parked - or to none, while it waits for one. Its parts then name the new host as their templated parent, so a
+    /// host that is gone keeps nothing alive through them.</summary>
+    public void Rehost(IUIComponent host)
+    {
+        HostComponent = host;
+        RootComponent?.TraverseVisualTree(component =>
+        {
+            if (component is FundamentalUIComponent part && part.OwningTemplateId == Id)
+            {
+                part.TemplatedParent = host;
+            }
+        });
+    }
+
     public void Destroy()
     {
         RootComponent.TraverseVisualTree(component =>

@@ -190,6 +190,16 @@ public class ContentControl : Control, IContentControl
       _outgoingVisualChild = null;
    }
 
+   protected override void OnDiscarded()
+   {
+      base.OnDiscarded();
+
+      if (Content is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } content)
+      {
+         DiscardedVisuals.PublishSubtree(content);
+      }
+   }
+
    protected override Size MeasureOverride(Size availableSize)
    {
       UpdateVisualsForContent(Content);

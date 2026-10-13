@@ -428,6 +428,11 @@ public class ItemContainerGenerator
             return;
         }
 
+        if (node is ContentControl { Content: IUIComponent item } container && handedIn.Contains(item))
+        {
+            container.Content = null;
+        }
+
         DiscardedVisuals.Publish(node);
         foreach (var child in node.VisualChildren)
         {

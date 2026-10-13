@@ -23,6 +23,11 @@ public partial class RenderCache
     // APPLIER-owned replica, built ONLY from the deltas of packets it has consumed - what the draw pass actually reads.
     private readonly Dictionary<IUIComponent, LayoutSnapshot> _applySnap = new();
 
+    private readonly List<IUIComponent> _releasedSnaps = [];
+    private long _appliedReleases;
+    private long _releasesSeen;
+    private long _liveReadReleasesSeen;
+
     // --- The recorder -> applier seam ---
     // DOUBLE-BUFFERED: the recorder fills one packet while the applier consumes another, so the loop no longer waits for
     // the GPU frame. Packets are DELTAS, so a queued one may never be DROPPED (a Partial carries only that frame's dirty
@@ -34,6 +39,7 @@ public partial class RenderCache
     private readonly Dictionary<IUIComponent, float> _opacityChain = new();   // memo of OpacityChain, like _worldCache
     private readonly Dictionary<IUIComponent, int> _opacitySlotCache = new();   // memo of OpacitySlotOf, same lifetime
     private readonly Dictionary<IUIComponent, int> _fadeOwners = new();
+    private readonly HashSet<IUIComponent> _drawnChains = [];
 
     // Set when a fade slot is handed out for the first time - the instances beneath it still carry the old index, so the
     // frame has to walk instead of patch. Cleared by the walk that acts on it.
@@ -112,6 +118,7 @@ public partial class RenderCache
         _clipShapeCache.Clear();
         _relWorldCache.Clear();
         _nodeCache.Clear();
+        _drawingContextInternal.BeginRecordFrame();
 
         // This build FUSES record and apply (an overlay renders a flat list straight into its groups - it never crosses
         // the render-thread seam), but the snapshot still flows through a packet - the only thing that fills the applier's
@@ -161,10 +168,39 @@ public partial class RenderCache
         _applySnap.Clear();
         _readLive.Clear();
         foreach (var entry in _packet.SnapDelta) _applySnap[entry.Key] = entry.Value;
+        _appliedReleases = _packet.ReleasedBatches;
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
+
+        if (components != null)
+        {
+            foreach (var component in components)
+            {
+                NoteDrawnChain(component);
+            }
+        }
+
+        ReleaseSlotsOfUndrawn();
     }
+
+    private void NoteDrawnChain(IUIComponent component)
+    {
+        for (var node = component; node != null && _drawnChains.Add(node);)
+        {
+            node = ApplySnap(node).RenderParent;
+        }
+    }
+
+    private void ReleaseSlotsOfUndrawn()
+    {
+        ReleaseSlotsOf(_clipOwners, NotDrawn, ReleaseClipSlot);
+        ReleaseSlotsOf(_fadeOwners, NotDrawn, ReleaseFadeSlot);
+        ReleaseSlotsOf(_nodeRefreshed, NotDrawn, ReleaseNodeSlot);
+        _drawnChains.Clear();
+    }
+
+    private bool NotDrawn(IUIComponent component) => !_drawnChains.Contains(component);
 
     /// <summary>The record half of an overlay build, device-free, on the thread that lays the components out: renders the
     /// flat list into a packet and freezes their layout with it, so <see cref="ApplyComponents"/> never reads a live
@@ -178,6 +214,7 @@ public partial class RenderCache
         _packet.ClearMemos = true;
         _packet.SnapReset = true;
         _snap.Clear();
+        _drawingContextInternal.BeginRecordFrame();
 
         if (components != null)
         {
@@ -230,6 +267,7 @@ public partial class RenderCache
     {
         LastBuildKind = RenderBuildKind.Full;
         _projectionMatrix = packet.ProjectionMatrix;
+        _appliedReleases = packet.ReleasedBatches;
         _commands.Clear();
         ClearOrder();
         _worldCache.Clear();
@@ -265,6 +303,13 @@ public partial class RenderCache
         {
             foreach (var id in stale) RemoveAndDeferDispose(id);
         }
+
+        foreach (var draw in packet.Draws)
+        {
+            NoteDrawnChain(draw.Component);
+        }
+
+        ReleaseSlotsOfUndrawn();
     }
 
     /// <summary>Releases the batch rings and transform table for a closing window; <see cref="DisposeUnits"/> keeps them
@@ -362,7 +407,12 @@ public partial class RenderCache
         }
     }
 
-    private RenderPacket RentPacket() => _spare.TryTake(out var packet) ? packet : new RenderPacket();
+    private RenderPacket RentPacket()
+    {
+        var packet = _spare.TryTake(out var spare) ? spare : new RenderPacket();
+        packet.ReleasedBatches = Core.DiscardedVisuals.ReleasedBatches;
+        return packet;
+    }
 
     /// <summary>Test hook: snapshot entries actually handed to the applier. It is the number a retained frame lives or
     /// dies by - the applier reads ANY entry as "the layout moved under the recorded stream" and refuses to replay it,
@@ -418,6 +468,52 @@ public partial class RenderCache
     }
 
     private readonly HashSet<IUIComponent> _readLive = [];
+
+    private bool ReleasedBeforeApplied(IUIComponent component) =>
+        component is Core.FundamentalUIComponent { ReleasedInBatch: > 0 } released
+        && released.ReleasedInBatch <= _releasesSeen;
+
+    private void ForgetReleased()
+    {
+        foreach (var component in _applySnap.Keys)
+        {
+            if (ReleasedBeforeApplied(component))
+            {
+                _releasedSnaps.Add(component);
+            }
+        }
+
+        foreach (var component in _releasedSnaps)
+        {
+            _readLive.Remove(component);
+            _applySnap.Remove(component);
+        }
+
+        _releasedSnaps.Clear();
+
+        ReleaseSlotsOf(_clipOwners, ReleasedBeforeApplied, ReleaseClipSlot);
+        ReleaseSlotsOf(_fadeOwners, ReleasedBeforeApplied, ReleaseFadeSlot);
+        ReleaseSlotsOf(_nodeRefreshed, ReleasedBeforeApplied, ReleaseNodeSlot);
+    }
+
+    private void ForgetReleasedLiveReads()
+    {
+        foreach (var component in _readLive)
+        {
+            if (component is Core.FundamentalUIComponent { ReleasedInBatch: > 0 })
+            {
+                _releasedSnaps.Add(component);
+            }
+        }
+
+        foreach (var component in _releasedSnaps)
+        {
+            _readLive.Remove(component);
+            _applySnap.Remove(component);
+        }
+
+        _releasedSnaps.Clear();
+    }
 
     // Freezes the layout of everything the draw will read at the end of the record, so the applier never touches a live
     // component. Incremental: only this frame's changes are re-frozen; a Full packet re-freezes all.

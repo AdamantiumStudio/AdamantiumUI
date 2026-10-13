@@ -38,6 +38,10 @@ public interface IResourceManager
     bool SetResourceInScope(string name, object value, ResourceScope scope = ResourceScope.Local);
 
     void RemoveSources(IAdamantiumComponent component);
+
+    /// <summary>Stops holding <paramref name="component"/> as an owner of the global dictionaries it linked, keeping the
+    /// dictionaries: global resources outlive what linked them. For an element that has been destroyed.</summary>
+    void ForgetGlobalSourceOwner(IAdamantiumComponent component);
     
     Object this[string name] { get; }
 }

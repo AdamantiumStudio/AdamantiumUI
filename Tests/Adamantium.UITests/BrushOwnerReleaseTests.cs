@@ -25,10 +25,10 @@ public class BrushOwnerReleaseTests
         Assert.That(shared.IsOwnedBy(element), Is.False);
     }
 
-    // A run is not in the visual tree, so nothing that walks it reaches the run. A text block thrown away takes its runs
-    // with it, nested ones included, or a run painting with a theme brush keeps the block and its page.
+    // A run is not in the visual tree, so nothing that walks it reaches the run, and a run painting with a theme brush
+    // would keep its block and the page. Only elements own a brush - a run never does, nested in a span or not.
     [Test]
-    public void ADiscardedTextBlock_LetsItsRunsGoOfTheirBrushes()
+    public void ARunPaintingWithABrush_NeverOwnsIt()
     {
         var shared = new SolidColorBrush(Colors.Red);
         var run = new Adamantium.UI.Controls.Text.Run { Text = "a", Foreground = shared };
@@ -38,11 +38,6 @@ public class BrushOwnerReleaseTests
         var block = new Adamantium.UI.Controls.Text.TextBlock();
         block.Inlines.Add(run);
         block.Inlines.Add(bold);
-        Assume.That(shared.IsOwnedBy(run) && shared.IsOwnedBy(nested), "a run painting with the brush owns it");
-
-        DiscardedVisuals.Publish(block);
-        DiscardedVisuals.Drain(int.MaxValue);
-        DiscardedVisuals.Drain(int.MaxValue);
 
         Assert.Multiple(() =>
         {

@@ -27,6 +27,7 @@ public class ContentPresenter : InputUIComponent
 
     private IUIComponent _outgoingRoot;
     private TemplateResult _outgoingTemplateResult;
+    private bool _outgoingIsContent;
     private bool _isContentChanged;
     private bool _transitionPending;
     private bool _transitionRunning;
@@ -159,6 +160,7 @@ public class ContentPresenter : InputUIComponent
             _outgoingRoot = _currentRoot;
             _outgoingTemplateResult = _currentTemplateResult;
             _outgoingParkedKey = parkedKey;
+            _outgoingIsContent = ReferenceEquals(_currentRoot, _builtFor);
         }
         else if (_currentRoot != null)
         {
@@ -195,6 +197,11 @@ public class ContentPresenter : InputUIComponent
             if (!ParkedVisuals.IsUnchanged) ParkedSubtree.Revalidate(parkedRoot);
 
             var reTheme = ParkedVisuals.ThemeChanged;
+            if (parkedBuilt?.HostComponent is { } builtBy && !ReferenceEquals(builtBy, this))
+            {
+                parkedBuilt.Rehost(this);
+                ParkedVisuals.MoveOwner(builtBy, this);
+            }
             _currentRoot = parkedRoot;
             _currentTemplateResult = parkedBuilt;
             _currentTemplate = parkedTemplate;
@@ -462,6 +469,9 @@ public class ContentPresenter : InputUIComponent
 
     private void DropContentHandles()
     {
+        DiscardBuilt(_currentRoot, !ReferenceEquals(_currentRoot, _builtFor));
+        DiscardBuilt(_outgoingRoot, !_outgoingIsContent);
+
         // Removed, not just forgotten: a root discarded while this presenter lives is still our child and would stay drawn.
         LetGo(_currentRoot);
         LetGo(_outgoingRoot);
@@ -471,6 +481,23 @@ public class ContentPresenter : InputUIComponent
         _currentTemplateResult = null;
         _outgoingTemplateResult = null;
         _currentTemplate = null;
+    }
+
+    private void DiscardBuilt(IUIComponent root, bool built)
+    {
+        if (root == null || !built)
+        {
+            return;
+        }
+
+        if (_discardBuf.Count > 0)
+        {
+            _discardBuf.Clear();
+        }
+
+        CollectForDiscard(root);
+        Core.DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_discardBuf));
+        _discardBuf.Clear();
     }
 
     private void LetGo(IUIComponent root)

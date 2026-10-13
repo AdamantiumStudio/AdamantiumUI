@@ -206,6 +206,21 @@ public class RangeSlider : RangeLimitsBase
         DetachParts();
     }
 
+    /// <summary>Also discards its value badges, which are its own but not in its visual tree.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        if (_lowerBadge != null)
+        {
+            DiscardedVisuals.PublishSubtree(_lowerBadge);
+        }
+
+        if (_upperBadge != null)
+        {
+            DiscardedVisuals.PublishSubtree(_upperBadge);
+        }
+    }
+
     private void DetachParts()
     {
         if (_track == null) return;

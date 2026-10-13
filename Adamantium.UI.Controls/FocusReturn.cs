@@ -20,13 +20,19 @@ public sealed class FocusReturn
     }
 
     /// <summary>Called as the overlay closes. <paramref name="content"/> is the overlay's own content - what "inside"
-    /// means for this decision.</summary>
+    /// means for this decision. An element gone from its window since - its page torn down, the row a command deleted -
+    /// is not given the focus back.</summary>
     public void Restore(IUIComponent content)
     {
         var element = _element;
         _element = null;
         if (element == null || !FocusManager.CanFocus(element))
             return;
+
+        if (element is IUIComponent { RootVisual: null } or FundamentalUIComponent { IsDiscarded: true })
+        {
+            return;
+        }
 
         var focused = FocusManager.Focused;
         if (focused != null && !IsInside(focused, content))

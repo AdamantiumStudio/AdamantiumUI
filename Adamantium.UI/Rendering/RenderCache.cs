@@ -363,6 +363,19 @@ public partial class RenderCache
         _staleUnitIds.Clear();
         _structuralBuf.Clear();
         _movedNodesCapture.Clear();
+        _placeRoots.Clear();
+        _structRecorded.Clear();
+        _addsByParent.Clear();
+        _childBuf.Clear();
+        _childBuf2.Clear();
+        _localChildBuf.Clear();
+        _subtreeBuf.Clear();
+        _subtreeStack.Clear();
+        _collectStack.Clear();
+        _plannedRanks.Clear();
+        _plannedList.Clear();
+        _plannedSet.Clear();
+        _undrawnList.Clear();
     }
 
 

@@ -11,6 +11,8 @@ namespace Adamantium.UI.Core.Media.Drawings;
 /// at rather than scaled as a picture, so an icon blown up to 512px gets glyphs shaped for 512px, not stretched ones.</summary>
 public class GlyphRunDrawing : Drawing
 {
+    private BrushChangeRelay _foregroundRelay;
+
     // ONE layout per size, not one per drawing. A drawing is a shared RESOURCE: the same run is shown by several elements
     // at once, each shaping at its own size, and each render unit snapshots the glyphs off the layout it was given. With a
     // single layout they all re-shape the SAME object and only the last shaping survives - so every other consumer draws
@@ -102,15 +104,7 @@ public class GlyphRunDrawing : Drawing
     {
         if (a is not GlyphRunDrawing drawing) return;
 
-        if (e.OldValue is Brush oldBrush)
-        {
-            oldBrush.Changed -= drawing.OnChildChanged;
-        }
-
-        if (e.NewValue is Brush newBrush)
-        {
-            newBrush.Changed += drawing.OnChildChanged;
-        }
+        drawing._foregroundRelay = drawing.Follow(drawing._foregroundRelay, e.NewValue as Brush);
     }
 
     protected override void AttachChildren() => AttachOwned(Foreground);

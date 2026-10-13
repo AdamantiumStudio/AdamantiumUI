@@ -112,6 +112,7 @@ public class PropertyGrid : Control
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
+    private readonly List<PropertySection> _dropped = [];
 
     /// <summary>How many times the whole panel has been torn down and put back, and how many times it has only re-read
     /// what it shows. The difference between the two is most of what an inspector costs, and nothing said which was
@@ -337,7 +338,12 @@ public class PropertyGrid : Control
 
             // Whatever the last pass left beyond what this one wanted. Taken off the END, so the rows that stayed keep
             // their places and their templates.
-            while (rows.Children.Count > at) rows.Children.RemoveAt(rows.Children.Count - 1);
+            while (rows.Children.Count > at)
+            {
+                var leaving = rows.Children[^1];
+                rows.Children.RemoveAt(rows.Children.Count - 1);
+                DiscardedVisuals.PublishSubtree(leaving);
+            }
 
             // A section with nothing in it is not an empty section, it is one the search has no answer from - and a
             // column of empty headers reads as a result.
@@ -360,6 +366,32 @@ public class PropertyGrid : Control
         {
             if (row.Definition is { } line && BindingEngine.HasBindings(line)) BindingEngine.RefreshBindings(line);
         }
+
+        DiscardDropped();
+    }
+
+    /// <summary>Also discards the sections it built that are out of the tree, such as those a search leaves out: the
+    /// discard of its tree does not reach them.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        _dropped.AddRange(_built.Values);
+        _dropped.AddRange(_generated);
+        DiscardDropped();
+    }
+
+    private void DiscardDropped()
+    {
+        foreach (var section in _dropped)
+        {
+            _openedBySearch.Remove(section);
+            if (section.VisualParent == null)
+            {
+                DiscardedVisuals.PublishSubtree(section);
+            }
+        }
+
+        _dropped.Clear();
     }
 
     private void ReleaseOpened()
@@ -631,6 +663,7 @@ public class PropertyGrid : Control
 
         foreach (var gone in _built.Keys.Where(item => !seen.Contains(item)).ToList())
         {
+            _dropped.Add(_built[gone]);
             _built.Remove(gone);
         }
 
@@ -655,6 +688,7 @@ public class PropertyGrid : Control
         if (type != _generatedFor)
         {
             _generatedFor = type;
+            _dropped.AddRange(_generated);
             _builder ??= new PropertyDefinitionBuilder();
             _generated = type == null ? [] : _builder.BuildSections(type);
         }

@@ -22,8 +22,14 @@ public static class DiscardedVisuals
     // Reused across drains: the batch handed to subscribers.
     private static readonly List<IFundamentalUIComponent> Batch = new();
 
+    private static long _releasedBatches;
+
     /// <summary>How many are still waiting. Zero means the last teardown has been fully paid for.</summary>
     public static int PendingCount { get { lock (Pending) return Pending.Count; } }
+
+    /// <summary>Counts the batches released so far, so a reader holding visuals in a map of its own can tell, by one
+    /// comparison, that some of them may have died since it last looked.</summary>
+    public static long ReleasedBatches => System.Threading.Interlocked.Read(ref _releasedBatches);
 
     /// <summary>Called by <see cref="FundamentalUIComponent.MarkDiscarded"/> - the O(1) half of a teardown.</summary>
     internal static void Enqueue(FundamentalUIComponent gone)
@@ -51,6 +57,25 @@ public static class DiscardedVisuals
         Publish(System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(ref gone, 1));
     }
 
+    /// <summary>Publishes <paramref name="root"/> and everything under it in the visual tree.</summary>
+    public static void PublishSubtree(IUIComponent root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        var gone = new List<IFundamentalUIComponent>();
+        Extensions.VisualTreeExtensions.TraverseVisualTree(root, component =>
+        {
+            if (component is IFundamentalUIComponent fundamental)
+            {
+                gone.Add(fundamental);
+            }
+        });
+        Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
+    }
+
     /// <summary>Releases up to <paramref name="budget"/> queued elements, skipping any that came back, and returns how
     /// many were released.</summary>
     public static int Drain(int budget)
@@ -73,12 +98,14 @@ public static class DiscardedVisuals
         // order because a subsystem's sweep may read the element, and an element that has let go of its bindings is
         // still a valid thing to read - whereas the reverse would have subsystems answering about an element whose
         // sources are still live.
+        var batch = ReleasedBatches + 1;
         foreach (var component in Batch)
         {
-            ((FundamentalUIComponent)component).ReleaseFromQueue();
+            ((FundamentalUIComponent)component).ReleaseFromQueue(batch);
         }
 
         Discarded?.Invoke(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Batch));
+        System.Threading.Interlocked.Increment(ref _releasedBatches);
 
         var released = Batch.Count;
         Batch.Clear();

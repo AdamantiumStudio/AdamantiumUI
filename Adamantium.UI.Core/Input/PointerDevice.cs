@@ -22,6 +22,17 @@ public sealed class PointerDevice
         _pointers[MouseId] = MousePointer;
         Manipulations = new ManipulationRecognizer(Holding,
             (pointer, modifiers, timestamp) => ChangePointerOver(pointer, null, modifiers, timestamp));
+        DiscardedVisuals.Discarded += ForgetReleased;
+    }
+
+    private void ForgetReleased(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        foreach (var pointer in _pointers.Values)
+        {
+            pointer.ForgetReleased();
+        }
+
+        _lastTap?.ForgetReleased();
     }
 
     public static PointerDevice Current { get; } = new();

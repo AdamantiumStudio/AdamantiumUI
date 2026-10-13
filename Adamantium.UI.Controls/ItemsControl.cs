@@ -165,12 +165,30 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     /// <summary>Releases the items source, whose collection may outlive this control and would otherwise keep it alive,
     /// and has each container let go of its item. Quietly: a reset would run the selection and the containers of a control
-    /// nobody shows any more, and could write its emptied selection into the view model.</summary>
+    /// nobody shows any more, and could write its emptied selection into the view model. Items that are elements of its
+    /// own - not from a source - go with it, shown or not: a ribbon's tabs that were never selected among them.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
         ItemContainerGenerator.Clear();
+        DiscardOwnItems();
         Items?.LetGoOfSource();
+    }
+
+    private void DiscardOwnItems()
+    {
+        if (ItemsSource != null || Items == null)
+        {
+            return;
+        }
+
+        foreach (var item in Items)
+        {
+            if (item is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } element)
+            {
+                DiscardedVisuals.PublishSubtree(element);
+            }
+        }
     }
 
     /// <summary>Drops the presenter with its template; it holds the panel, every container and the recycle pool, which a

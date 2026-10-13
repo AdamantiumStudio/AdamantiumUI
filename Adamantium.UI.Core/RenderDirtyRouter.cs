@@ -23,11 +23,14 @@ public static class RenderDirtyRouter
     }
 
     /// <summary>...and drop it when its surface is gone. A window opened and closed all session would otherwise leave a
-    /// scope behind for every one of them, and every app-wide event would walk them all.</summary>
+    /// scope behind for every one of them, and every app-wide event would walk them all. Its marks go too: nothing records
+    /// from them now, and an element still naming the scope - a context menu a style shares among windows - would keep
+    /// everything marked in it alive.</summary>
     public static void Forget(RenderDirtyScope scope)
     {
         if (scope == null || ReferenceEquals(scope, Default)) return;
         lock (Scopes) Scopes.Remove(scope);
+        scope.Forget();
     }
 
     /// <summary>The scope this component's marks belong to - a field READ, because marking is the hottest path there is:

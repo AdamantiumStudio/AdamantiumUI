@@ -52,7 +52,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object applicationLocker = new object();
     
     private Dictionary<IWindow, WindowRenderService> windowToSystem;
-    
+    private readonly Dictionary<IWindow, Entity> windowToEntity = new();
+
     private double accumulatedFrameTime;
     private TimeSpan totalTime;
     private PreciseTimer preciseTimer;
@@ -112,6 +113,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         UIContext =  new UIContext(Container, this);
 
         GraphicsDeviceService = new GraphicsDeviceService(Container.Resolve<IGraphicsDeviceFactory>(), EnableGraphicsDebug);
+        GraphicsDeviceService.DeviceLost += OnDeviceLost;
         Container.RegisterInstance<IGraphicsDeviceService>(GraphicsDeviceService);
         Container.RegisterSingleton<IResourceFactory, ResourceFactory>();
         Container.RegisterSingleton<IGraphicsContext, GraphicsContext>();
@@ -375,6 +377,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         MainWindow = null;
     }
     
+    private void OnDeviceLost(object sender, EventArgs e) => LoopSignal.Request();
+
     private void RecreateDevicesAndServices()
     {
         Log.Logger.Debug("======Starting recreating sequence======");
@@ -385,6 +389,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             EntityWorld.RemoveAllEntities();
             EntityWorld.ForceUpdate();
             windowToSystem.Clear();
+            windowToEntity.Clear();
             foreach (var window in Windows)
             {
                 window.InvalidateRender(true);
@@ -407,6 +412,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         windowToSystem.Add(window, windowService);
         var entity = new Entity();
         entity.AddComponent(window);
+        windowToEntity[window] = entity;
         EntityWorld.EntityManager.AddEntity(entity);
         EntityWorld.ForceUpdate();
     }
@@ -438,6 +444,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             }
             windowsCollection.Remove(window);
             EntityWorld.RemoveService(service);
+            if (windowToEntity.Remove(window, out var entity))
+            {
+                EntityWorld.EntityManager.RemoveEntity(entity);
+            }
         }
         EntityWorld.ForceUpdate();
 

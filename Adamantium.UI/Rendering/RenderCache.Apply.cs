@@ -159,6 +159,7 @@ public partial class RenderCache
         WarmTextAtlases(packet);   // one batched glyph rasterization for the whole packet, before any unit is built
 
         _projectionMatrix = packet.ProjectionMatrix;
+        _appliedReleases = packet.ReleasedBatches;
 
         // The applier's OWN derived memos (world/clip/node transforms), dropped here not by the recorder: they are
         // applier-resident, and the recorder only says WHEN they went stale.
@@ -593,6 +594,7 @@ public partial class RenderCache
 
         _groups.Clear();
         _groups.AddRange(_mergedGroups);
+        _mergedGroups.Clear();
         foreach (var group in _pendingInserts)
         {
             group.InOrder = true;

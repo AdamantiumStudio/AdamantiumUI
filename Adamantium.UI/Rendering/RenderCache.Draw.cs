@@ -655,6 +655,17 @@ public partial class RenderCache
         BeginTransformFrame(device);
         _offscreenLayers?.BeginFrame(device);
         _framePaintEpoch = Core.Media.Brush.PaintEpoch;
+        if (_appliedReleases != _releasesSeen)
+        {
+            _releasesSeen = _appliedReleases;
+            ForgetReleased();
+        }
+
+        if (Core.DiscardedVisuals.ReleasedBatches != _liveReadReleasesSeen)
+        {
+            _liveReadReleasesSeen = Core.DiscardedVisuals.ReleasedBatches;
+            ForgetReleasedLiveReads();
+        }
 
         // Both memos are WITHIN-frame and must drop together: a clip recomputed against a stale world is worse than a
         // stale clip. Only a full rebuild dropped them otherwise, so a viewport that travels without announcing a move -
@@ -2782,6 +2793,12 @@ public partial class RenderCache
         finally
         {
             _patchBuf.Clear();
+            foreach (var arena in _stagedArenas)
+            {
+                arena.ClearStage();
+            }
+
+            _stagedArenas.Clear();
         }
     }
 

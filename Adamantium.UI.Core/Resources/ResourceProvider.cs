@@ -57,6 +57,21 @@ public class ResourceProvider
         InvalidateCache();
     }
 
+    /// <summary>Stops counting <paramref name="owner"/> among the owners of its dictionaries but keeps the dictionaries,
+    /// for a scope whose resources outlive what linked them.</summary>
+    public void ForgetOwner(IAdamantiumComponent owner)
+    {
+        if (!_byOwner.Remove(owner, out var owned))
+        {
+            return;
+        }
+
+        foreach (var info in owned)
+        {
+            info.Owners.Remove(owner);
+        }
+    }
+
     public void RemoveOwner(IAdamantiumComponent owner)
     {
         if (!_byOwner.TryGetValue(owner, out var owned)) return;

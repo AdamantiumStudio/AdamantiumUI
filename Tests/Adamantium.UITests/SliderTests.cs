@@ -89,6 +89,39 @@ public class SliderTests
         });
     }
 
+    // The value badge is the slider's own, but not in its visual tree, so the discard of the tree did not reach it: it
+    // stayed alive, following the theme, and held the slider and its page.
+    [Test]
+    public void ADiscardedSlider_DiscardsItsValueBadge()
+    {
+        var slider = new Slider { Minimum = 0, Maximum = 100, Value = 40, IsValueToolTipEnabled = true };
+        slider.Template = SliderTemplate(Orientation.Horizontal);
+        var root = new Border { Width = 240, Height = 24, Child = slider };
+        Settle(root);
+        var thumb = ((Track)slider.GetTemplateChild("PART_Track")).Thumb;
+        thumb.RaiseEvent(new DragStartedEventArgs(Vector2.Zero) { RoutedEvent = Thumb.DragStartedEvent });
+        var badge = FindBadge(slider);
+        Assume.That(badge, Is.Not.Null, "a drag shows the badge");
+
+        DiscardedVisuals.PublishSubtree(root);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(badge.IsDiscarded, Is.True);
+    }
+
+    private static Popup FindBadge(Slider slider)
+    {
+        foreach (var child in slider.LogicalChildren)
+        {
+            if (child is Popup popup)
+            {
+                return popup;
+            }
+        }
+
+        return null;
+    }
+
     // Isolation: a left-aligned Border whose Width is set AFTER the first layout must reach RenderSize through a normal
     // re-layout (the manager re-measures it). If this fails the bug is in Border/layout, not the Slider.
     [Test]

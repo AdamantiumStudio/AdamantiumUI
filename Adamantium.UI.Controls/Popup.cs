@@ -239,6 +239,47 @@ public class Popup : MeasurableUIComponent, IContainer
         base.OnDetachedFromVisualTree(e);
     }
 
+    /// <summary>Closes, and discards the content along with the popup. It is not a visual child, so a template the popup
+    /// is part of neither reaches it when torn down nor stamps it as one of its parts. What the content shows for others
+    /// stays: the items an items presenter in it shows, and anything already back in a tree.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        Close();
+
+        if (Child is not UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } child)
+        {
+            return;
+        }
+
+        var gone = new List<IFundamentalUIComponent>();
+        CollectOwned(child, gone);
+        DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
+    }
+
+    private static void CollectOwned(IUIComponent node, List<IFundamentalUIComponent> gone)
+    {
+        if (node is UIComponent { RootVisual: not null })
+        {
+            return;
+        }
+
+        if (node is IFundamentalUIComponent fundamental)
+        {
+            gone.Add(fundamental);
+        }
+
+        if (node is ItemsPresenter)
+        {
+            return;
+        }
+
+        foreach (var child in node.VisualChildren)
+        {
+            CollectOwned(child, gone);
+        }
+    }
+
     // Overlay content has no visual path back to its window, so each overlay root records its window here; weak-keyed
     // so closed content is collectable.
     private static readonly ConditionalWeakTable<IUIComponent, IPopupHost> OverlayRootHost = new();

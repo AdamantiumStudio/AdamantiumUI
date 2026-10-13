@@ -246,6 +246,25 @@ public class CompositorTests
         Assert.That(element.IsRenderMotionNode, Is.False);
     }
 
+    // A page torn down with an animation still running - an endless spinner on a tab left during a theme swap - kept it
+    // running for good, and through it the whole page.
+    [Test]
+    public void ADiscardedElementLetsGoOfItsAnimations()
+    {
+        var (element, transform) = Spinner();
+        transform.BeginAnimation(Transform.TranslateXProperty, Over(0, 100, 5));
+        Assume.That(Compositor.EntryFor(transform), Is.Not.Null);
+
+        DiscardedVisuals.Publish(element);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Compositor.EntryFor(transform), Is.Null, "the render thread still plays it");
+            Assert.That(AnimationManager.ActiveCount, Is.EqualTo(0), "the heartbeat still advances it");
+        });
+    }
+
     [Test]
     public void AFinishedDoubleAnimationThatStopsGivesThePropertyBack()
     {

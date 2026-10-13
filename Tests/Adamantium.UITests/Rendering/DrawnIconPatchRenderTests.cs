@@ -51,8 +51,13 @@ public class DrawnIconPatchRenderTests
 
     private sealed class Shapes : MeasurableUIComponent
     {
-        private readonly Geometry _shape = new RectangleGeometry { Rect = new Rect(0, 0, 12, 20) };
+        private readonly Geometry _shape;
         private readonly Brush _fill = new SolidColorBrush(Colors.White);
+
+        public Shapes(double width = 12)
+        {
+            _shape = new RectangleGeometry { Rect = new Rect(0, 0, width, 20) };
+        }
 
         public int Count { get; set; } = 1;
 
@@ -245,6 +250,58 @@ public class DrawnIconPatchRenderTests
         Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.False, "a stroked group is walked, not spliced");
         Assert.That(FrameTrace.Refuser, Is.EqualTo("overlay"), "refused while validating, not halfway through the surgery");
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the walk draws the third shape and its outline");
+    }
+
+    // A splice stages what it re-issues and is done with it once the frame is drawn. The stage was kept until the same
+    // family was spliced again, and with it each control last spliced, whatever it reached - a whole page for each. The
+    // neighbor draws another shape, so its own splices go through another stage, and keeps the frames going: what one
+    // frame holds until the next is let go of by the next.
+    [Test]
+    public void AControlOnceSplicedIn_IsNotKeptAfterItIsThrownAway()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        var neighbor = new Shapes(6);
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(neighbor);
+        using var scene = new Scene
+        {
+            Renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black },
+            Root = new VisualRoot(row, Dim, Dim)
+        };
+
+        var spliced = SpliceInAndThrowAway(scene, row);
+        for (var frame = 0; frame < 3; frame++)
+        {
+            neighbor.Count = neighbor.Count % 3 + 1;
+            neighbor.InvalidateRender(false);
+            LayoutManager.GetOrCreate(scene.Root).ExecuteLayoutPass();
+            scene.Draw();
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(spliced.IsAlive, Is.False);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference SpliceInAndThrowAway(Scene scene, StackPanel row)
+    {
+        var shapes = new Shapes();
+        row.Children.Add(shapes);
+        scene.Draw();
+        shapes.Count = 2;
+        shapes.InvalidateRender(false);
+        scene.Draw();
+        Assume.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the second shape is spliced in");
+
+        row.Children.Remove(shapes);
+        DiscardedVisuals.PublishSubtree(shapes);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+        scene.Draw();
+        return new WeakReference(shapes);
     }
 
     private sealed class StubResourceFactory : IResourceFactory
