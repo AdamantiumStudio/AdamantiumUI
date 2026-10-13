@@ -14,6 +14,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 internal sealed class CanvasGraphHost
 {
     private readonly Dictionary<ICanvasNode, ElementItem> _placed = new();
+    private readonly Dictionary<ElementItem, CanvasNode> _built = new();
     private readonly Dictionary<CanvasConnection, ConnectionItem> _wired = new();
     private readonly HashSet<ICanvasSocket> _watched = new();
     private readonly InfiniteCanvas _canvas;
@@ -135,6 +136,13 @@ internal sealed class CanvasGraphHost
         _scene = scene;
 
         if (_scene is CanvasScene now) now.Changed += OnSceneChanged;
+
+        // Heard again after a stop, which let go of the collection but not of which one it is.
+        if (_scene != null && _nodes is INotifyCollectionChanged nodes)
+        {
+            nodes.CollectionChanged -= OnNodesChanged;
+            nodes.CollectionChanged += OnNodesChanged;
+        }
 
         Fill();
     }
@@ -291,10 +299,10 @@ internal sealed class CanvasGraphHost
         return at >= 0 && at < pins.Count ? pins[at] : null;
     }
 
-    /// <summary>For a canvas that has been destroyed: stops listening to the application's nodes, sockets, wires and
-    /// scene, then takes its own items - the node controls and the wires drawn for them - off the scene, which the
-    /// application keeps. The model is not touched: the scene is let go of first, so nothing reads the removal as a cut.
-    /// </summary>
+    /// <summary>For a canvas that has been destroyed, or whose scene another canvas has taken: stops listening to the
+    /// application's nodes, sockets, wires and scene, discards every node control it built, takes its items off the
+    /// scene, which the application keeps along with the items, and forgets the scene until it is given one again. The
+    /// model is not touched: the scene is let go of first, so nothing reads the removal as a cut.</summary>
     public void StopFollowing()
     {
         if (_nodes is INotifyCollectionChanged was)
@@ -307,18 +315,25 @@ internal sealed class CanvasGraphHost
             scene.Changed -= OnSceneChanged;
         }
 
-        foreach (var (_, item) in _placed)
+        foreach (var (item, node) in _built)
         {
-            Discard(item);
+            Discard(item, node);
         }
 
+        _built.Clear();
         Clear();
+        _scene = null;
     }
 
     private void Clear()
     {
         foreach (var (model, item) in _placed)
         {
+            if (item.Element is CanvasNode going)
+            {
+                going.PinsReordered -= OnPinsReordered;
+            }
+
             Unfollow(model);
             _scene?.Remove(item);
         }
@@ -334,19 +349,44 @@ internal sealed class CanvasGraphHost
     {
         if (_scene == null || _placed.ContainsKey(model)) return;
 
-        var node = new CanvasNode();
-        var item = new ElementItem(node, new Rect(model.Left, model.Top, Math.Max(0, model.Width), 0))
+        // THE ITEM THE SCENE ALREADY HAS for this node, when there is one. The scene and its history outlive this canvas,
+        // and a second item for the same node is the node twice once an undo puts the first one back.
+        if (SceneItems.Of(_scene, model) is not ElementItem item)
         {
-            SizeFollowsContent = true,
-            Model = model
-        };
+            item = new ElementItem(null, new Rect(model.Left, model.Top, Math.Max(0, model.Width), 0))
+            {
+                SizeFollowsContent = true,
+                Model = model
+            };
 
+            SceneItems.Keep(_scene, model, item);
+        }
+
+        // A CONTROL OF ITS OWN, always: one built earlier was bound to what the node said then.
+        if (_built.Remove(item, out var stale))
+        {
+            Discard(item, stale);
+        }
+
+        var node = Build(model);
+        item.Element = node;
+        _built[item] = node;
         _placed[model] = item;
-        node.ContentTemplateSelector = _selector;
 
         // A SOCKET DRAGGED to another place along its side: the container says it happened, the MOVE is made here, in
         // the application's own list. Nothing happens to the wires - a wire sits on the socket, not on its place.
         node.PinsReordered += OnPinsReordered;
+
+        Sockets(model, node);
+        Follow(model);
+
+        _scene.Add(item);
+        RebuildWires();
+    }
+
+    private CanvasNode Build(ICanvasNode model)
+    {
+        var node = new CanvasNode { ContentTemplateSelector = _selector };
 
         // BOUND, not copied. Everything the container shows that the node says is a binding to the node's own object -
         // which is what bindings are for, and what keeps the two from being two answers to one question. What is left
@@ -365,11 +405,7 @@ internal sealed class CanvasGraphHost
         });
         Bind(node, ContentControl.ContentProperty, model, nameof(ICanvasNode.Specialization));
 
-        Sockets(model, node);
-        Follow(model);
-
-        _scene.Add(item);
-        RebuildWires();
+        return node;
     }
 
     private void OnPinsReordered(object sender, CanvasPinOrderEventArgs e)
@@ -418,12 +454,17 @@ internal sealed class CanvasGraphHost
         RebuildWires();
     }
 
-    private void Discard(ElementItem item)
+    // The control goes with this canvas; the item stays with the scene and its history, for the next canvas to dress.
+    private void Discard(ElementItem item, CanvasNode node)
     {
-        if (item.Element is not CanvasNode node) return;
-
         node.PinsReordered -= OnPinsReordered;
-        DiscardedVisuals.Publish(node);
+
+        if (ReferenceEquals(item.Element, node))
+        {
+            item.Element = null;
+        }
+
+        DiscardedVisuals.PublishSubtree(node);
     }
 
     private static void Cut(Adamantium.Core.Collections.TrackingCollection<ICanvasSocket> sockets)

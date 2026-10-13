@@ -1095,6 +1095,14 @@ public class DockingArea : Panel
         set => SetValue(WorkspaceProperty, value);
     }
 
+    /// <summary>Also leaves its <see cref="Workspace"/>. A view model keeps the workspace, which kept the area it was last
+    /// handed - and with it the whole page - for as long as the view model lived.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        Workspace?.Detach(this);
+    }
+
     private static void OnWorkspaceChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not DockingArea area) return;
@@ -2063,9 +2071,12 @@ public class DockingArea : Panel
             for (var i = items.Count - 1; i >= 0; i--) items.RemoveAt(i);
         }
 
+        var groups = new List<PaneGroup>(_groupsByNode.Values);
+        var hosts = new List<PaneHost>(_hostsByNode.Values);
         _groupsByNode.Clear();
         _hostsByNode.Clear();
         Children.Clear();
+        DiscardDropped(groups, hosts);
     }
 
     // Rebuilds every area and closes windows whose roots have gone: one drop changes two windows, and both are rebuilt
@@ -2157,11 +2168,12 @@ public class DockingArea : Panel
             }
         }
 
-        Forget(_groupsByNode, groups);
-        Forget(_hostsByNode, splits);   // splits die too: one collapses away every time a row is left with one child
+        var deadGroups = Forget(_groupsByNode, groups);
+        var deadHosts = Forget(_hostsByNode, splits);   // splits die too: one collapses away every time a row is left with one child
+        DiscardDropped(deadGroups, deadHosts);
     }
 
-    private static void Forget<TNode, TControl>(Dictionary<TNode, TControl> known, HashSet<TNode> alive)
+    private static List<TControl> Forget<TNode, TControl>(Dictionary<TNode, TControl> known, HashSet<TNode> alive)
     {
         List<TNode> gone = null;
         foreach (var node in known.Keys)
@@ -2169,8 +2181,58 @@ public class DockingArea : Panel
             if (!alive.Contains(node)) (gone ??= []).Add(node);
         }
 
-        if (gone == null) return;
-        foreach (var node in gone) known.Remove(node);
+        if (gone == null) return null;
+
+        var dropped = new List<TControl>(gone.Count);
+        foreach (var node in gone)
+        {
+            if (known.Remove(node, out var control))
+            {
+                dropped.Add(control);
+            }
+        }
+
+        return dropped;
+    }
+
+    private static void DiscardDropped(List<PaneGroup> groups, List<PaneHost> hosts)
+    {
+        var gone = new List<IFundamentalUIComponent>();
+        CollectDroppedRoots(groups, gone);
+        CollectDroppedRoots(hosts, gone);
+        DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
+    }
+
+    private static void CollectDroppedRoots(IEnumerable<IUIComponent> controls, List<IFundamentalUIComponent> gone)
+    {
+        if (controls == null)
+        {
+            return;
+        }
+
+        foreach (var control in controls)
+        {
+            if (control.VisualParent == null)
+            {
+                CollectDropped(control, gone);
+            }
+        }
+    }
+
+    private static void CollectDropped(IUIComponent node, List<IFundamentalUIComponent> gone)
+    {
+        if (node is IFundamentalUIComponent component)
+        {
+            gone.Add(component);
+        }
+
+        foreach (var child in node.VisualChildren)
+        {
+            if (ReferenceEquals(child.VisualParent, node))
+            {
+                CollectDropped(child, gone);
+            }
+        }
     }
 
     private static void CollectNodes(PaneNode node, HashSet<PaneGroupNode> groups, HashSet<PaneSplitNode> splits)

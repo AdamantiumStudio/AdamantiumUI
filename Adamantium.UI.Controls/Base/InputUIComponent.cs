@@ -90,7 +90,12 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         var id = e.Pointer.Id;
         if (e.HoldingState != HoldingState.Started)
         {
-            if (HoldCues.Remove(id, out var shown)) shown.Layer.Remove(shown.Cue);
+            if (HoldCues.Remove(id, out var shown))
+            {
+                shown.Layer.Remove(shown.Cue);
+                DiscardedVisuals.PublishSubtree(shown.Cue);
+            }
+
             return;
         }
 

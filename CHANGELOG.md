@@ -22,6 +22,10 @@ All packages share one version.
   - **Where the tests run.** They are in the category `Scenario` and run one at a time. They need a desktop and a GPU,
     so CI leaves them out: run them with `dotnet test --filter TestCategory=Scenario`. The sandbox's 40 scenarios
     are in `Tests/Adamantium.UI.Sandbox.Tests/Scenarios`.
+  - **One application through them all.** With `ADAM_SCENARIO_PIPE` set to the pipe of an application already
+    running, every test runs its steps in it rather than starting its own, and leaves it running - so one application
+    can be taken through every scenario, again and again, and measured between the passes. Each test closes the
+    windows it opened, failed or not (`AutomationSession.CloseWindowsOpenedFromNowAsync`).
   - **Explicit scenarios.** A scenario whose root carries `Explicit="<why>"` runs only when asked for by name. The
     sandbox's `TouchThroughSystem` is one: it drives the system's real pointer input.
   - **Editor support.** The language server completes a scenario's steps, their attributes and values, a selector
@@ -1188,6 +1192,30 @@ All packages share one version.
   - **An `InfiniteCanvas` discards the dialog it asks a question in once it is answered**, and closes and discards one
     still open when the canvas itself is discarded. Closed and kept, its buttons followed the theme and, through the
     question, held the canvas and its page.
+  - **An `InfiniteCanvas` discards its node controls with their templates.** Only the control itself was discarded; its
+    template - sockets and labels following the theme - lived on and held the node and the canvas, about 11 MB a visit
+    to the sandbox's canvas page.
+  - **An `InfiniteCanvas` page opened again shows the drawing's own items, and its history undoes onto them.** The
+    scene and history belong to the page and outlive the canvas, but every canvas made new items for the application's
+    nodes and objects. An undo there - of a clear made before the page was left - put the old items back, wearing the
+    old canvas's discarded controls, and their wires ended on dead sockets and left the graph. Now each node or object
+    has one item on a scene: the canvas showing it builds its control, and lets it go when discarded. A wire finds its
+    sockets through its nodes' current controls. One canvas shows a scene at a time: a canvas handed a scene takes it
+    from the one showing it, which lets go of it at once rather than when its discard is drained. A canvas handed
+    another scene leaves the items of the first behind without its controls.
+  - **A canvas tool rail discards the buttons and tips it replaces** when it is rebuilt - on every mode switch - and a
+    family's list, with its rows' tips, once it closes; discarded, it takes its buttons' tips and an open list with it. Only taken out of the
+    panel, each button's picture followed the theme and held the button, its tip and the rail. A pass of the sandbox's
+    canvas scenario kept about 6.5 MB of managed memory; it now keeps about 0.3 MB.
+  - **The canvas inspector no longer hands a new selection to the lines of the old one.** A wire picked after a node had
+    the node's lines read its kind and title off the wire, one binding error each.
+  - **A discarded adorner leaves the element it adorned as its inheritance parent**, and a hold's cue is discarded as
+    the hold ends. The element listed every adorner it had worn as an inheritance child for as long as it lived: each
+    focus ring a button had shown, each hold cue of the session on the window.
+  - **A docking area discards the panel groups and split hosts it drops** when a layout change leaves their nodes
+    behind, and **leaves its `DockingWorkspace` when it is discarded.** Kept out of the tree, a dropped group's buttons
+    followed the theme and held the view model they were bound to; the workspace the view model keeps held the area -
+    each docking page visited stayed in memory.
   - **Popups, adorners and live snapshots hand back the clip, opacity and node slots of what they no longer show.** It handed them
     back only for elements thrown away, so a closed dialog went on holding the canvas that had asked its question, and
     the page around it.

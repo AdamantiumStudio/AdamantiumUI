@@ -17,7 +17,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>An unbounded plane to draw and design on: panning moves the camera (<see cref="Offset"/>), the scene is in double
 /// world coordinates (screen = world * Scale + Offset), and only visible grid lines are drawn.</summary>
-public partial class InfiniteCanvas : Control
+public partial class InfiniteCanvas : Control, ISceneFollower
 {
     private bool _zoomActive;
     private bool _zoomTickerRegistered;
@@ -51,6 +51,7 @@ public partial class InfiniteCanvas : Control
     private ICanvasItem _chromeBefore;
     private bool _chromeOnGlass;
     private readonly List<ElementItem> _hosted = new();
+    private bool _sceneTaken;
 
     private CanvasChromeLayer _chromeLayer;
     private CanvasPane _palette;
@@ -395,7 +396,8 @@ public partial class InfiniteCanvas : Control
         nameof(IsOverlayDraggable), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
 
     /// <summary>What is ON the canvas. Held by the APPLICATION - the same arrangement the table has with its rows, so
-    /// undo, saving and everything else a drawing is for stay where the drawing does.</summary>
+    /// undo, saving and everything else a drawing is for stay where the drawing does. One canvas shows a scene at a
+    /// time: a canvas handed a scene takes it from the one showing it until then.</summary>
     public static readonly AdamantiumProperty SceneProperty = AdamantiumProperty.Register(nameof(Scene),
         typeof(ICanvasScene), typeof(InfiniteCanvas),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSceneChanged));
@@ -1870,8 +1872,18 @@ public partial class InfiniteCanvas : Control
     {
         if (component is not InfiniteCanvas canvas) return;
 
+        canvas._sceneTaken = false;
+
+        // The scene left behind keeps its items, without this canvas's controls on them.
+        if (e.OldValue is ICanvasScene)
+        {
+            canvas._graph.StopFollowing();
+            canvas._drawing.StopFollowing();
+        }
+
         if (e.NewValue is ICanvasScene current)
         {
+            SceneItems.Follow(current, canvas);
             current.Changed += canvas.OnSceneEdited;
             canvas.Follow(SceneProperty, () => current.Changed -= canvas.OnSceneEdited);
         }
@@ -1893,6 +1905,25 @@ public partial class InfiniteCanvas : Control
         });
 
         canvas.Repaint();
+    }
+
+    // TAKEN by another canvas: the items are shared, so this one lets go of the scene and of every control it showed - if
+    // that is still the scene it shows.
+    void ISceneFollower.StopFollowing(ICanvasScene scene)
+    {
+        if (!ReferenceEquals(Scene, scene))
+        {
+            return;
+        }
+
+        scene.Changed -= OnSceneEdited;
+
+        _sceneTaken = true;
+        _graph.StopFollowing();
+        _drawing.StopFollowing();
+        Hosts(host => host.Sync([]));
+        Drawn(layer => layer.Sync([]));
+        Repaint();
     }
 
     private void OnSceneEdited(object sender, EventArgs e)

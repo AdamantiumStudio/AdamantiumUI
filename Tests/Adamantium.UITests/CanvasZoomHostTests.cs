@@ -62,6 +62,23 @@ public class CanvasZoomHostTests
         }
     }
 
+    // An item no canvas has given a control yet - one the history put back for an object the application has let go
+    // of since - takes no place among the controls: each control stays on its own item's box.
+    [Test]
+    public void AnItemWithNoControl_LeavesTheNextControlOnItsOwnBox()
+    {
+        var (canvas, item, control) = Stage();
+        canvas.Scene.Reset([new ElementItem(null, new Rect(300, 200, 50, 50)), item]);
+        Lay(canvas);
+
+        var corner = canvas.WorldToScreen(new Vector2(item.World.X, item.World.Y));
+        Assert.Multiple(() =>
+        {
+            Assert.That(control.Bounds.X, Is.EqualTo(corner.X).Within(0.5));
+            Assert.That(control.Bounds.Y, Is.EqualTo(corner.Y).Within(0.5));
+        });
+    }
+
     [TestCase(1.0)]
     [TestCase(4.0)]
     [TestCase(0.25)]

@@ -18,6 +18,14 @@ public class Adorner : TemplatedUIComponent
         AdornedElement = adornedElement;
     }
 
+    /// <summary>Also leaves the adorned element as its inheritance parent. The element listed it as an inheritance child
+    /// for as long as it lived: every focus ring and hold cue it had ever worn.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        InheritanceParent = null;
+    }
+
     /// <summary>How far outside the adorned element this adorner is entitled to draw. A VIEWPORT that clips adorners
     /// (see <see cref="IUIComponent.ClipsAdorners"/>) admits this much beyond its edge, so a control standing flush
     /// against the edge of a scroll area still gets its whole ring - the alternative was every such control wearing a

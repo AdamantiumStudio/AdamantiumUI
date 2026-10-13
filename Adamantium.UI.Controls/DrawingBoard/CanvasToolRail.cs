@@ -126,21 +126,51 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
     private static void OnLookChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
         (component as CanvasToolRail)?.Rebuild();
 
+    /// <summary>Also discards the tips of its buttons, which are not in its tree, and the family list if one is open.
+    /// </summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        foreach (var button in _buttons)
+        {
+            if (button.ToolTip is IUIComponent tip)
+            {
+                DiscardedVisuals.PublishSubtree(tip);
+            }
+        }
+
+        ClosePopup();
+    }
+
     private void OnToolsChanged(object sender, EventArgs e) => Rebuild();
 
     private void OnToolChanged(object sender, EventArgs e) => MarkCurrent();
 
     private void Rebuild()
     {
+        ClosePopup();
+
         foreach (var button in _buttons) button.Click -= OnToolPicked;
-        foreach (var choice in _choices) choice.Click -= OnChoicePicked;
+
+        var replaced = new List<ToggleButton>(_buttons);
 
         _buttons.Clear();
         _of.Clear();
         _families.Clear();
-        _choices.Clear();
         Children.Clear();
-        ClosePopup();
+
+        // GONE FOR GOOD: the next rail is made anew. Only taken out of the panel, each picture went on following the
+        // theme, and with it the button, its tip and the rail.
+        foreach (var button in replaced)
+        {
+            if (button.ToolTip is IUIComponent tip)
+            {
+                DiscardedVisuals.PublishSubtree(tip);
+            }
+
+            DiscardedVisuals.PublishSubtree(button);
+        }
 
         if (_canvas?.Tools is not { } tools) return;
 
@@ -381,11 +411,40 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
     // press on the button would think the list was still open and refuse to open it.
     private void OnPopupClosed(object sender, EventArgs e)
     {
-        if (sender is Popup popup) popup.Closed -= OnPopupClosed;
+        if (sender is Popup popup)
+        {
+            popup.Closed -= OnPopupClosed;
+            Discard(popup);
+        }
 
         _popup = null;
         _openFor = null;
         MarkCurrent();
+    }
+
+    // A closed list is not opened again - the next one is made afresh - and its plate and its rows' tips follow the
+    // theme and the language until they go.
+    private void Discard(Popup popup)
+    {
+        foreach (var choice in _choices)
+        {
+            choice.Click -= OnChoicePicked;
+            _of.Remove(choice);
+
+            if (choice.ToolTip is IUIComponent tip)
+            {
+                DiscardedVisuals.PublishSubtree(tip);
+            }
+        }
+
+        _choices.Clear();
+
+        if (popup.Child is IUIComponent list)
+        {
+            DiscardedVisuals.PublishSubtree(list);
+        }
+
+        DiscardedVisuals.Publish(popup);
     }
 
     // One line of the family list: the tool's own picture beside its own name. The name is written out here and not
@@ -441,6 +500,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
 
         popup.Closed -= OnPopupClosed;
         popup.IsOpen = false;
+        Discard(popup);
     }
 
     // The tip: the name with the key that picks the tool, in the order the language puts them, and what the tool does

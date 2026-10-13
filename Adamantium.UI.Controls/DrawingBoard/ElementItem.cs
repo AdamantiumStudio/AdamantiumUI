@@ -20,8 +20,9 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
     }
 
     /// <summary>The control itself. It lives in the canvas's own visual tree while it is on screen, so it draws, takes
-    /// input and animates the way it would anywhere else.</summary>
-    public IUIComponent Element { get; }
+    /// input and animates the way it would anywhere else. For an item standing for an application's object it is the
+    /// showing canvas's: that canvas builds it, and null while no canvas shows the object.</summary>
+    public IUIComponent Element { get; internal set; }
 
     /// <summary>The control a person sees: for an application object, the templated child of the hosting
     /// <see cref="ContentPresenter"/>, where inspector edits must land.</summary>
@@ -132,7 +133,7 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
     /// <summary>A NODE belongs to a graph; every other control on the plane - a button, a field, a check box - is part
     /// of the drawing it was put on. Decided by what is being hosted and not by a flag on the item: which of the two a
     /// control is, is a fact about the control.</summary>
-    public CanvasMode Mode => Element is CanvasNode ? CanvasMode.Nodes : CanvasMode.Drawing;
+    public CanvasMode Mode => Element is CanvasNode || Model is ICanvasNode ? CanvasMode.Nodes : CanvasMode.Drawing;
 
     /// <summary>The control's own type, and what it says if it says anything: a page holding six buttons needs to tell
     /// them apart, and the only thing that does is the words on them.</summary>
@@ -317,6 +318,12 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
 
     public bool HitTest(Vector2 world, double tolerance)
     {
+        // Nothing to point at: no canvas has shown it yet.
+        if (Element == null)
+        {
+            return false;
+        }
+
         // TURNED BACK FIRST, the way a shape does it: the box is stated straight, so a point is asked about in the
         // control's own frame rather than the frame it is drawn in.
         if (_transform.IsSomething) world = _transform.Undo(world, Middle);
@@ -328,6 +335,11 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
     /// <summary>Whether a world rectangle touches the control as it is turned, not its upright box.</summary>
     public bool Touches(Rect world)
     {
+        if (Element == null)
+        {
+            return false;
+        }
+
         var quad = CanvasTouch.Corners(world);
         if (_transform.IsSomething)
         {
