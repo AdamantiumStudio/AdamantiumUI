@@ -6,6 +6,25 @@ public class ReflectionResolvedType : IResolvedType
 {
     private const string DataTemplateSetTypeName = "Adamantium.UI.Core.Templates.DataTemplateSet";
 
+    private static readonly Dictionary<Type, string> Keywords = new()
+    {
+        [typeof(bool)] = "bool",
+        [typeof(byte)] = "byte",
+        [typeof(sbyte)] = "sbyte",
+        [typeof(char)] = "char",
+        [typeof(decimal)] = "decimal",
+        [typeof(double)] = "double",
+        [typeof(float)] = "float",
+        [typeof(int)] = "int",
+        [typeof(uint)] = "uint",
+        [typeof(long)] = "long",
+        [typeof(ulong)] = "ulong",
+        [typeof(short)] = "short",
+        [typeof(ushort)] = "ushort",
+        [typeof(object)] = "object",
+        [typeof(string)] = "string",
+    };
+
     private readonly Type _type;
 
     public ReflectionResolvedType(Type type) => _type = type;
@@ -17,7 +36,9 @@ public class ReflectionResolvedType : IResolvedType
     public string Namespace => _type.Namespace ?? string.Empty;
     public string AssemblyName => _type.Assembly.GetName().Name;
     public string FullName => string.IsNullOrEmpty(_type.Namespace) ? _type.Name : $"{_type.Namespace}.{_type.Name}";
-    public string QualifiedName => $"global::{FullName}";
+    /// <summary>The name as Roslyn's fully qualified format writes it, so a plan made through reflection prints as the
+    /// generator's does: keywords for the built-in types, nested types through a dot, type arguments spelled out.</summary>
+    public string QualifiedName => QualifiedNameOf(_type);
 
     public bool IsNamedType => true;
     public bool IsGenericType => _type.IsGenericType;
@@ -158,6 +179,39 @@ public class ReflectionResolvedType : IResolvedType
     }
 
     private static string FullNameOf(Type t) => string.IsNullOrEmpty(t.Namespace) ? t.Name : $"{t.Namespace}.{t.Name}";
+
+    private static string QualifiedNameOf(Type type)
+    {
+        if (Keywords.TryGetValue(type, out var keyword))
+        {
+            return keyword;
+        }
+
+        if (type.IsArray)
+        {
+            return $"{QualifiedNameOf(type.GetElementType())}[]";
+        }
+
+        if (Nullable.GetUnderlyingType(type) is { } underlying)
+        {
+            return $"{QualifiedNameOf(underlying)}?";
+        }
+
+        var name = type.Name;
+        var tick = name.IndexOf('`');
+        if (tick >= 0)
+        {
+            name = name.Substring(0, tick);
+        }
+
+        var owner = type.IsNested
+            ? $"{QualifiedNameOf(type.DeclaringType)}."
+            : string.IsNullOrEmpty(type.Namespace) ? "global::" : $"global::{type.Namespace}.";
+        var ownArguments = type.GetGenericArguments().Skip(type.IsNested ? type.DeclaringType.GetGenericArguments().Length : 0).ToList();
+        return ownArguments.Count == 0
+            ? $"{owner}{name}"
+            : $"{owner}{name}<{string.Join(", ", ownArguments.Select(QualifiedNameOf))}>";
+    }
 
     public override string ToString() => FullName;
 }

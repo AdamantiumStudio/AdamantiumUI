@@ -103,6 +103,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         {
             RelativeFilePath = document.RelativeFilePath,
             SourceFilePath = document.SourceFilePath,
+            SourceHash = document.SourceHash,
             AssemblyName = document.RootNamespace,
         };
 

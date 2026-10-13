@@ -176,6 +176,12 @@ internal static class AumlCodegenHarness
             .Select(a => (MetadataReference)MetadataReference.CreateFromFile(a.Location))
             .ToList();
 
+        if (AppDomain.CurrentDomain.GetAssemblies().All(a => a.GetName().Name != "System.Runtime"))
+        {
+            references.Add(MetadataReference.CreateFromFile(
+                System.IO.Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "System.Runtime.dll")));
+        }
+
         return CSharpCompilation.Create("AumlCodegenProbe",
             syntaxTrees: null,
             references: references,

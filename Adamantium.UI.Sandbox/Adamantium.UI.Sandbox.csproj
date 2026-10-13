@@ -24,6 +24,7 @@
 		<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+		<AdamantiumAumlHotReload Condition="'$(AdamantiumAumlHotReload)' == '' And '$(Configuration)' == 'Debug'">true</AdamantiumAumlHotReload>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -98,6 +99,7 @@
 		<CompilerVisibleProperty Include="MSBuildProjectName" />
 		<CompilerVisibleProperty Include="NeutralLanguage" />
 		<CompilerVisibleProperty Include="OutputType" />
+		<CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
 	</ItemGroup>
 
 	<ItemGroup>

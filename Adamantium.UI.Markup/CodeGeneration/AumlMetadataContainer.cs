@@ -48,6 +48,9 @@ public class AumlMetadataContainer
     /// <summary>The markup file's full path; what generated code tells the designer an element came from.</summary>
     public string SourceFilePath { get; set; }
 
+    /// <summary>The <see cref="MarkupHash"/> of the markup text; null when the document did not carry one.</summary>
+    public string SourceHash { get; set; }
+
     public string FileName => Path.GetFileNameWithoutExtension(RelativeFilePath);
 
     public string ClassName { get; set; }

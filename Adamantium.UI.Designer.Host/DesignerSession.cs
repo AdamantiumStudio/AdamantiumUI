@@ -60,7 +60,7 @@ public sealed class DesignerSession : IDisposable
 
     // Hot reload: the AST the live tree was built from, the authored root instance, and the file it came from. An edit
     // to the SAME file reconciles this tree in place (keeping animations) instead of rebuilding it.
-    private AumlAstObjectNode _lastAst;
+    private AumlLoadResult _lastLoad;
     private object _liveAuthoredRoot;
     private string _lastUri;
 
@@ -159,15 +159,15 @@ public sealed class DesignerSession : IDisposable
         // Hot reload: an edit to a file we already have live -> reconcile the EXISTING tree in place (changed properties
         // re-applied so transitions ease, added/removed children spliced in) instead of rebuilding it. The animation
         // clocks are NOT reset, so everything that was running keeps running. Only a full (first) build resets them.
-        if (live && _lastWindow != null && _lastAst != null && _liveAuthoredRoot != null
+        if (live && _lastWindow != null && _lastLoad != null && _liveAuthoredRoot != null
             && string.Equals(aumlSourcePath, _lastUri, StringComparison.Ordinal))
         {
-            var rec = AumlLoader.Reconcile(_liveAuthoredRoot, _lastAst, aumlText,
+            var rec = AumlLoader.Reconcile(_liveAuthoredRoot, _lastLoad, aumlText,
                 AppDomain.CurrentDomain.GetAssemblies(),
                 t => typeof(IWindow).IsAssignableFrom(t) ? typeof(VirtualWindow) : t);
             if (rec.Reconciled)
             {
-                _lastAst = rec.Ast;
+                _lastLoad = rec;
                 var win = _lastWindow;
                 var src = (_liveAuthoredRoot as IMeasurableComponent) ?? (win as IMeasurableComponent);
                 var dw = ResolveDimension(src?.Width, requestWidth, DefaultWidth);
@@ -270,7 +270,7 @@ public sealed class DesignerSession : IDisposable
         // is rebuilt on every edit: its content is not a live tree the reconciler can patch.
         _lastWindow = window;
         _lastSourceMap = load.SourceMap;
-        _lastAst = load.Ast;
+        _lastLoad = load;
         _liveAuthoredRoot = load.Root is UiTemplate ? null : load.Root;
         _lastUri = aumlSourcePath;
 

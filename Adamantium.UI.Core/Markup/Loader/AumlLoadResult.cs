@@ -1,4 +1,5 @@
 using Adamantium.UI.Markup.AST;
+using Adamantium.UI.Markup.Building;
 
 namespace Adamantium.UI.Core.Markup;
 
@@ -18,4 +19,6 @@ public class AumlLoadResult
     /// <summary>True when a <see cref="AumlLoader.Reconcile"/> actually patched the live tree in place. False means it
     /// declined (e.g. the root element type changed) and the caller should do a full rebuild instead.</summary>
     public bool Reconciled { get; set; }
+
+    internal BuildPlan Plan { get; set; }
 }

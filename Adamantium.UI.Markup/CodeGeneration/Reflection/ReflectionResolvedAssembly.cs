@@ -9,7 +9,10 @@ public class ReflectionResolvedAssembly : IResolvedAssembly
     public ReflectionResolvedAssembly(Assembly assembly)
     {
         Name = assembly.GetName().Name;
-        _types = SafeGetTypes(assembly).Where(t => !t.IsNested).Select(t => (IResolvedType)new ReflectionResolvedType(t)).ToList();
+        _types = SafeGetTypes(assembly).Concat(ForwardedTypes(assembly))
+            .Where(t => !t.IsNested)
+            .Select(t => (IResolvedType)new ReflectionResolvedType(t))
+            .ToList();
     }
 
     public string Name { get; }
@@ -26,6 +29,18 @@ public class ReflectionResolvedAssembly : IResolvedAssembly
     public void AddType(IResolvedType type)
     {
         if (_types.All(x => x.FullName != type.FullName)) _types.Add(type);
+    }
+
+    private static IEnumerable<Type> ForwardedTypes(Assembly assembly)
+    {
+        try
+        {
+            return typeof(Assembly).GetMethod("GetForwardedTypes", Type.EmptyTypes)?.Invoke(assembly, null) as Type[] ?? [];
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is ReflectionTypeLoadException loadFailure)
+        {
+            return loadFailure.Types.Where(t => t != null);
+        }
     }
 
     public static IEnumerable<Type> SafeGetTypes(Assembly asm)

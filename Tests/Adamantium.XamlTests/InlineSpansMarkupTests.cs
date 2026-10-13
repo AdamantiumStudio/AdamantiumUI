@@ -106,7 +106,7 @@ public class InlineSpansMarkupTests
         var load = AumlLoader.Load(before);
         var text = (TextBlock)load.Root;
 
-        var edit = AumlLoader.Reconcile(text, load.Ast, after);
+        var edit = AumlLoader.Reconcile(text, load, after);
 
         Assert.That(edit.Reconciled, Is.True, string.Join(" | ", edit.Diagnostics));
         Assert.That(text.Inlines, Has.Count.EqualTo(1));
@@ -133,7 +133,7 @@ public class InlineSpansMarkupTests
         var load = AumlLoader.Load(Paragraph("before"));
         var text = (TextBlock)load.Root;
 
-        var edit = AumlLoader.Reconcile(text, load.Ast, Paragraph("after"));
+        var edit = AumlLoader.Reconcile(text, load, Paragraph("after"));
 
         Assert.That(edit.Reconciled, Is.True, string.Join(" | ", edit.Diagnostics));
         Assert.That(text.Inlines, Has.Count.EqualTo(2), "the inlines were added again to the ones there");
