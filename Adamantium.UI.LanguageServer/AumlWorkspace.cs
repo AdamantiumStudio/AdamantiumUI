@@ -347,9 +347,11 @@ public sealed class AumlWorkspace : IDisposable
         // Prefer the leaf holding the freshest build of the project's own assembly, so a stale leftover (an
         // old scheme, or an old target-framework leaf with a fuller dll closure) can't shadow the current
         // build and serve months-old types that then show up as unknown/red.
+        var ownFolder = Path.DirectorySeparatorChar + Path.Combine("artifacts", "bin", Path.GetFileNameWithoutExtension(csprojPath)) + Path.DirectorySeparatorChar;
         var byOwnDll = existing
             .SelectMany(root => Directory.EnumerateFiles(root, ownDll, SearchOption.AllDirectories))
             .OrderByDescending(File.GetLastWriteTimeUtc)
+            .ThenByDescending(dll => dll.Contains(ownFolder, StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
         if (byOwnDll is not null) return Path.GetDirectoryName(byOwnDll);
 
@@ -362,7 +364,7 @@ public sealed class AumlWorkspace : IDisposable
             .FirstOrDefault();
     }
 
-    // Walk up from the project looking for a solution-wide artifacts\bin (the current consolidated output root).
+    // Walk up from the project looking for a solution-wide artifacts\bin, which holds a folder per project.
     private static string FindAncestorArtifactsBin(string startDir)
     {
         for (var dir = new DirectoryInfo(startDir); dir is not null; dir = dir.Parent)

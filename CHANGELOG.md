@@ -890,6 +890,15 @@ All packages share one version.
 
 ### Changed
 
+- Each project of the repository builds into a folder of its own,
+  `artifacts/bin/<project>/<Configuration>/<target framework>/`. Before, all of them shared
+  `artifacts/bin/<Configuration>/<target framework>/`, so cleaning one project deleted files another needed (the
+  sandbox's runtime configuration) and a running sandbox locked assemblies other builds had to write. The sandbox's
+  folder holds `adam-auto` as well, so `adam-auto start` with no `--exe` still finds it. The language server and the
+  designer prefer a project's own folder over a copy of its assembly in another's. A build with no configuration
+  builds Debug. An existing checkout can delete the old `artifacts/bin/Debug`, `Release`, `net10.0` and
+  `netstandard2.0` folders once.
+
 - Window places (`FileWindowPlacementStore`) and the sandbox's canvas and docking layouts are kept in
   `ApplicationData.Folder`. The sandbox's layouts move there from `%LocalAppData%\Adamantium`, so the sandbox opens
   once with its default layout.
