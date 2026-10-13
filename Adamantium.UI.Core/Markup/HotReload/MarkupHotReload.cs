@@ -76,14 +76,15 @@ public static class MarkupHotReload
             {
                 if (!Files.TryGetValue(fullPath, out file))
                 {
-                    file = new TrackedMarkup(fullPath, BuiltText(fullPath, hash));
+                    file = new TrackedMarkup(fullPath, BuiltText(fullPath, hash), hash);
                     Files[fullPath] = file;
+                    TakenAt[fullPath] = File.GetLastWriteTimeUtc(fullPath);
                     Watch(Path.GetDirectoryName(fullPath));
                 }
             }
 
             var diagnostics = new List<string>();
-            file.Track(instance, diagnostics);
+            file.Track(instance, hash, diagnostics);
             LogProblems(fullPath, diagnostics);
         }
         catch (Exception exception)
@@ -124,6 +125,26 @@ public static class MarkupHotReload
         return await Task.WhenAll(due.Select(file => Task.Run(() => ApplyFileAsync(file)))).ConfigureAwait(false);
     }
 
+    internal static Task CodeUpdatedAsync()
+    {
+        if (Design.IsDesignMode)
+        {
+            return Task.CompletedTask;
+        }
+
+        List<string> saved;
+        lock (Sync)
+        {
+            saved = Files.Keys
+                .Where(path => !TakenAt.TryGetValue(path, out var taken) || taken != File.GetLastWriteTimeUtc(path))
+                .ToList();
+        }
+
+        Log.Logger.Information("Markup hot reload: the application's code was updated; {Count} saved file(s) to apply", saved.Count);
+        Dispatch(RefreshWindows);
+        return ApplyAsync(saved);
+    }
+
     internal static void Reset()
     {
         lock (Sync)
@@ -138,6 +159,25 @@ public static class MarkupHotReload
             Changed.Clear();
             TakenAt.Clear();
         }
+    }
+
+    private static void RefreshWindows()
+    {
+        foreach (var window in UIAppContext.Current?.Windows ?? [])
+        {
+            if (window is not IUIComponent root)
+            {
+                continue;
+            }
+
+            (root as IMeasurableComponent)?.InvalidateMeasure();
+            foreach (var element in root.GetVisualDescendants())
+            {
+                (element as IMeasurableComponent)?.InvalidateMeasure();
+            }
+        }
+
+        VisualTreeNotifications.RaiseStateSwapStarted();
     }
 
     private static string BuiltText(string path, string hash)
@@ -232,7 +272,8 @@ public static class MarkupHotReload
             }
 
             var applied = new TaskCompletionSource<MarkupReloadReport>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Dispatch(() => applied.SetResult(ApplyOnLoop(file, edited, diagnostics)));
+            var hash = MarkupHash.Of(text);
+            Dispatch(() => applied.SetResult(ApplyOnLoop(file, edited, hash, diagnostics)));
             try
             {
                 return await applied.Task.WaitAsync(LoopPatience).ConfigureAwait(false);
@@ -249,12 +290,12 @@ public static class MarkupHotReload
         }
     }
 
-    private static MarkupReloadReport ApplyOnLoop(TrackedMarkup file, LoweredDocument edited, List<string> diagnostics)
+    private static MarkupReloadReport ApplyOnLoop(TrackedMarkup file, LoweredDocument edited, string hash, List<string> diagnostics)
     {
         int count;
         try
         {
-            count = file.Apply(edited, diagnostics);
+            count = file.Apply(edited, hash, diagnostics);
             if (count > 0 && edited.EntityType is EntityType.StyleSet or EntityType.ResourceDictionary or EntityType.ThemeVariant)
             {
                 (UIAppContext.Current?.ThemeManager as Resources.ThemeManager)?.RefreshFromMarkup();

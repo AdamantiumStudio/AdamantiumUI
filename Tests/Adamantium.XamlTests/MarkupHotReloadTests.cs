@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Metadata;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
@@ -136,6 +138,20 @@ public class MarkupHotReloadTests
     }
 
     [Test]
+    public async Task AViewBuiltByCodeTheIdeAlreadyUpdated_IsNotEditedAgain()
+    {
+        Built(Panel("Before"));
+        var edited = $"<StackPanel {Namespaces}><TextBlock Text=\"After\"/><TextBlock Text=\"Stays\"/><Button Content=\"New\"/></StackPanel>";
+        File.WriteAllText(_file, edited);
+        await MarkupHotReload.ApplyAsync([_file]);
+
+        var later = (StackPanel)AumlLoader.Load(edited).Root;
+        MarkupHotReload.Track(later, _file, MarkupHash.Of(edited));
+
+        Assert.That(later.Children.Count, Is.EqualTo(3), "the added child once, not twice");
+    }
+
+    [Test]
     public async Task AFileChangedSinceTheBuild_IsNotEditedBlindly()
     {
         File.WriteAllText(_file, Panel("Edited before the run"));
@@ -219,6 +235,28 @@ public class MarkupHotReloadTests
             Assert.That(theme.Palette["Probe"], Is.SameAs(brush));
             Assert.That(brush.Color, Is.EqualTo(Color.FromRgba(0, 255, 0, 255)));
         });
+    }
+
+    [TestCase(MarkupReloadMode.Manual)]
+    [TestCase(MarkupReloadMode.OnSave)]
+    public async Task TheIdesApplyButton_AppliesASaveTheWatcherHasNotReportedYet(MarkupReloadMode mode)
+    {
+        var panel = Built(Panel("Before"));
+        MarkupHotReload.Mode = mode;
+
+        File.WriteAllText(_file, Panel("After"));
+        await MarkupHotReload.CodeUpdatedAsync();
+
+        Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("After"));
+    }
+
+    [Test]
+    public void TheRuntimesHotReload_CallsTheHandler()
+    {
+        var handlers = typeof(MarkupHotReload).Assembly.GetCustomAttributes<MetadataUpdateHandlerAttribute>();
+
+        Assert.That(handlers.Select(handler => handler.HandlerType), Does.Contain(typeof(MarkupHotReloadUpdateHandler)));
+        Assert.That(typeof(MarkupHotReloadUpdateHandler).GetMethod("UpdateApplication", [typeof(Type[])]), Is.Not.Null);
     }
 
     [Test]

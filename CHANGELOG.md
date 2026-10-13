@@ -16,6 +16,9 @@ All packages share one version.
     nothing of it.
   - **API.** `MarkupHotReload` (`Adamantium.UI.Core.Markup`): `Mode` (`OnSave` or `Manual`), `ChangedFiles`,
     `NotifyChanged`, `ApplyAsync` with a `MarkupReloadReport` per file, the events `Reloaded` and `Failed`.
+  - **The IDE's apply button.** Rider's Apply Changes, Visual Studio's Hot Reload and `dotnet watch` apply the saved
+    markup too, in either mode, and have every window measured and drawn again so that changed control code shows at
+    once. A view the updated code builds is not edited a second time.
   - **Themes too.** A style set, a theme variant or a resource dictionary is built again from the saved file, and the
     current theme takes it: its styles are merged anew, its variant repaints the palette brushes, resource references
     resolve again, and every window is restyled - without the theme swap's overlay.

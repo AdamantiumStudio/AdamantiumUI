@@ -4,13 +4,14 @@ using Adamantium.UI.Markup.Building;
 
 namespace Adamantium.UI.Core.Markup;
 
-internal sealed class TrackedMarkup(string path, string builtText)
+internal sealed class TrackedMarkup(string path, string builtText, string builtHash)
 {
     private readonly object _sync = new();
     private readonly List<WeakReference<object>> _instances = [];
     private readonly ConditionalWeakTable<object, BuildPlan> _planOf = new();
     private LoweredDocument _built;
     private LoweredDocument _current;
+    private string _currentHash;
 
     public string Path { get; } = path;
 
@@ -18,16 +19,30 @@ internal sealed class TrackedMarkup(string path, string builtText)
 
     public bool KnowsWhatWasBuilt => builtText != null;
 
-    public void Track(object instance, List<string> diagnostics)
+    public void Track(object instance, string hash, List<string> diagnostics)
     {
         lock (_sync)
         {
             _instances.RemoveAll(reference => !reference.TryGetTarget(out _));
-            _instances.Add(new WeakReference<object>(instance));
-            if (_current != null)
+            if (_current == null || hash == builtHash)
             {
-                ReconcileGuarded(instance, _current, diagnostics);
+                _instances.Add(new WeakReference<object>(instance));
+                if (_current != null)
+                {
+                    ReconcileGuarded(instance, _current, diagnostics);
+                }
+
+                return;
             }
+
+            if (hash == _currentHash)
+            {
+                _instances.Add(new WeakReference<object>(instance));
+                _planOf.AddOrUpdate(instance, _current.Plan);
+                return;
+            }
+
+            diagnostics.Add($"{System.IO.Path.GetFileName(Path)}: an instance was built from a version this run has not seen; it is not followed");
         }
     }
 
@@ -40,7 +55,7 @@ internal sealed class TrackedMarkup(string path, string builtText)
         }
     }
 
-    public int Apply(LoweredDocument edited, List<string> diagnostics)
+    public int Apply(LoweredDocument edited, string hash, List<string> diagnostics)
     {
         lock (_sync)
         {
@@ -55,6 +70,7 @@ internal sealed class TrackedMarkup(string path, string builtText)
 
             _instances.RemoveAll(reference => !reference.TryGetTarget(out _));
             _current = edited;
+            _currentHash = hash;
             return applied;
         }
     }
