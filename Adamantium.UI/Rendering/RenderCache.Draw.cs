@@ -532,7 +532,7 @@ public partial class RenderCache
     /// units.</summary>
     public void Render(IGraphicsDevice device, Rect2D fullScissor)
     {
-        // TEMP trace: one array write per frame, dumped from memory by the overlay.
+        // Traced: one array write per frame, dumped from memory by the diagnostics overlay.
         var traceStart = Core.Diagnostics.FrameTrace.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         LastFrameReplayed = false;
         LastFrameWithheld = false;
@@ -614,12 +614,7 @@ public partial class RenderCache
 
     private byte _traceWhy;
 
-    // TEMP trace: several caches (one per window, plus each window's adorner layer) write into one ring, so a frame has to
-    // say whose it is - otherwise a quiet cache's cheap frames and a busy one's expensive frames read as one bimodal blur.
-    /// SCRATCH: the window cache, so a probe can ask what the recorded stream actually draws while a phantom is on screen.
-    public static RenderCache LastCache;
-
-    /// SCRATCH: what this cache would replay right now - one line per group that owns retained rect slots.
+    /// <summary>What this cache would replay right now - one line per group that owns retained rect slots.</summary>
     public string DumpGroups()
     {
         var sb = new System.Text.StringBuilder($"ops {_ops.Count} (replayed={LastFrameReplayed}, kind={LastBuildKind}), groups {_groups.Count}");
@@ -638,6 +633,8 @@ public partial class RenderCache
         return sb.ToString();
     }
 
+    // Several caches (one per window, plus each window's adorner layer) write into one trace, so a frame says whose it
+    // is - otherwise a quiet cache's cheap frames and a busy one's expensive frames read as one bimodal blur.
     private static int _traceNextCacheId;
     private readonly int _traceCacheId = System.Threading.Interlocked.Increment(ref _traceNextCacheId);
     private int _traceComposited;
@@ -743,7 +740,7 @@ public partial class RenderCache
             && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
-        // TEMP trace: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
+        // Traced: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
         // every one of these is a 43 ms frame among 0.12 ms ones.
         if (Core.Diagnostics.FrameTrace.Enabled && LastBuildKind == RenderBuildKind.Partial)
         {
@@ -869,10 +866,6 @@ public partial class RenderCache
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
         {
             var group = _groups[groupIndex];
-
-            // TEMP hunt: the walk drawing content that is no longer in the visual tree. The instances it bakes are as
-            // real as any other - they are issued with their segment's range every replayed frame - so if this fires,
-            // the withdrawal is not the sweep's problem at all: the paint order is being handed a departed subtree.
 
             if (cloneRun == null && group.Clones is { Count: > 0 } clones)
             {
@@ -2298,9 +2291,9 @@ public partial class RenderCache
                     if (u is RenderUnits.TextRenderUnit && ReferenceEquals(g.Arena, _textBatch) && g.PatchableBatchedOnly)
                         return TrySplicedPatch(device, fullScissor);
 
-                    // TEMP: name the type that costs the frame its patch.
-                    // WHOSE unit, not just what kind: two text blocks refuse for different reasons and only the owner
-                    // says which - the control's type and name are what a reproduction can be matched against.
+                    // Names the type that costs the frame its patch - WHOSE unit, not just what kind: two text blocks
+                    // refuse for different reasons and only the owner says which - the control's type and name are what
+                    // a reproduction can be matched against.
                     if (Core.Diagnostics.FrameTrace.Enabled)
                         Core.Diagnostics.FrameTrace.Refuser = $"{u.GetType().Name}<{u.Component?.GetType().Name}>{Says(u)}{WhyNotPatchable(u)}";
                     return false;   // a per-unit / text / instanced / no-longer-batchable dirty unit -> full walk
@@ -2988,9 +2981,7 @@ public partial class RenderCache
         return true;
     }
 
-    // TEMP: name WHICH of the splice's preconditions sent the frame to the full walk - there are nine and they are fixed
-    // by nine different means.
-    // TEMP: which of IsSlotPatchable's four conditions a text unit failed - "text refuses" is not a finding, and the
+    // Which of IsSlotPatchable's four conditions a text unit failed - "text refuses" is not a finding, and the
     // four have nothing to do with each other.
     private string WhyNotPatchable(IRenderUnit unit)
     {
@@ -3003,7 +2994,7 @@ public partial class RenderCache
         return " ?";
     }
 
-    // TEMP: the first few characters a text unit draws. Two TextBlocks are the same type and the same name (none), and
+    // The first few characters a text unit draws. Two TextBlocks are the same type and the same name (none), and
     // what they SAY is the only thing that tells a diagnostics plate from a tab header.
     private static string Says(IRenderUnit unit)
     {

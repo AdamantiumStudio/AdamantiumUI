@@ -13,13 +13,9 @@ namespace Adamantium.UI.Rendering;
 // (IVisualRenderer.RequestSnapshot); nothing is drawn until the picture lands.
 internal static class VisualBrushRaster
 {
-    // Which sources are worth watching. The invalidation events below fire for EVERY element in the application, so
-    // the first thing the handler does is look at this count - with no visual brush on screen it is one read.
-    private static readonly HashSet<IUIComponent> _sources = new();
-
-    // Every brush painting from a given source, with the element that draws it (the one to tell about a new picture).
-    // Weakly keyed: a brush no longer in use must not be kept alive, nor keep its source alive, by the fact that it
-    // once asked for a picture.
+    // Every brush painting from a given source, with the element that draws it (the one to tell about a new picture) -
+    // and so also which elements are sources at all. Weakly keyed: a brush no longer in use must not be kept alive, nor
+    // keep its source alive, by the fact that it once asked for a picture.
     private static readonly ConditionalWeakTable<IUIComponent, List<(VisualBrush Brush, IUIComponent Owner)>> _brushes = new();
 
     // Sources whose picture is being taken right now - one at a time each, so a source that changes every frame does
@@ -183,12 +179,15 @@ internal static class VisualBrushRaster
     private static void Watch(IUIComponent visual, VisualBrush brush, IUIComponent owner)
     {
         var list = _brushes.GetValue(visual, static _ => []);
+
+        // An element that drew with this source and has been thrown away since is not told about pictures any more - and
+        // left here it would live as long as the source does.
+        list.RemoveAll(static entry => entry.Owner is FundamentalUIComponent { IsDiscarded: true });
+
         if (!list.Exists(entry => ReferenceEquals(entry.Brush, brush) && ReferenceEquals(entry.Owner, owner)))
         {
             list.Add((brush, owner));
         }
-
-        _sources.Add(visual);
 
         if (_listening)
         {
@@ -202,18 +201,13 @@ internal static class VisualBrushRaster
     }
 
     // The element that changed is rarely the SOURCE itself - it is usually something inside it - so the walk goes up
-    // from the change looking for a watched source. Bounded by the tree's depth, and only entered while some visual
-    // brush exists at all.
+    // from the change looking for a watched source. Bounded by the tree's depth, and only listened to once some visual
+    // brush has asked for a picture.
     private static void OnSourceChanged(IUIComponent component)
     {
-        if (_sources.Count == 0)
-        {
-            return;
-        }
-
         for (var node = component; node != null; node = node.VisualParent)
         {
-            if (!_sources.Contains(node) || !_brushes.TryGetValue(node, out var list))
+            if (!_brushes.TryGetValue(node, out var list))
             {
                 continue;
             }

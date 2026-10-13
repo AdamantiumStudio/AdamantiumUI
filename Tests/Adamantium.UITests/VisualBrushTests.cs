@@ -17,6 +17,62 @@ public class VisualBrushTests
     private static BitmapSource Picture(uint size = 4) =>
         new(size, size, 1, 1, SurfaceFormat.B8G8R8A8.UNorm, new byte[size * size * 4]);
 
+    // A SOURCE nobody holds any more goes: being painted from once is no reason to live for ever. The raster kept every
+    // source it had ever watched in a set of its own and never took one out.
+    [Test]
+    public void ASourceNothingHolds_IsNotKeptByTheRaster()
+    {
+        var gone = Watched();
+
+        for (var i = 0; i < 3 && gone.IsAlive; i++)
+        {
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
+
+    // ...and a source that lives on does not keep an element thrown away after drawing with it.
+    [Test]
+    public void AnOwnerThrownAway_IsNotKeptByASourceThatLivesOn()
+    {
+        var source = new Border();
+        var gone = Drawn(source);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Adamantium.UI.Rendering.VisualBrushRaster.Ensure(new VisualBrush(source) { NeedsBake = false }, new Border());
+
+        for (var i = 0; i < 3 && gone.IsAlive; i++)
+        {
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+        System.GC.KeepAlive(source);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference Drawn(Border source)
+    {
+        var owner = new Border();
+        Adamantium.UI.Rendering.VisualBrushRaster.Ensure(new VisualBrush(source) { NeedsBake = false }, owner);
+        DiscardedVisuals.Publish(owner);
+
+        return new System.WeakReference(owner);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference Watched()
+    {
+        var source = new Border();
+        var brush = new VisualBrush(source) { NeedsBake = false };
+        Adamantium.UI.Rendering.VisualBrushRaster.Ensure(brush, null);
+
+        return new System.WeakReference(source);
+    }
+
     [Test]
     public void ItHasNothingToPaintWithUntilItsSourceHasBeenDrawn()
     {

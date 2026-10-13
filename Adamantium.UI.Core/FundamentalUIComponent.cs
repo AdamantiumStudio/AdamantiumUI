@@ -672,11 +672,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    /// <summary>TEMP (leak hunt): how many times a theme has been applied to an element. A swap builds 2.4x as many
-    /// templates as the whole application contains, and singletons - the one TitleBar, the one ResizeGripper - are
-    /// rebuilt exactly TWICE, so the question is whether the theme is applied to each element twice.</summary>
-    public static long ThemeApplications;
-
     /// <summary>Themes this control via <see cref="ApplyCurrentThemeCore"/>. A failure is logged at Error and leaves this
     /// control as is, so one bad template cannot abort the rest of the theme walk.</summary>
     public void ApplyCurrentTheme()
@@ -701,8 +696,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     {
         if (UIAppContext.Current == null)
             return;
-
-        System.Threading.Interlocked.Increment(ref ThemeApplications);
 
         // Detach only styles that are leaving, so staying setters never flicker to default and back; leavers go first,
         // since marker setters are undone by property alone.

@@ -236,38 +236,6 @@ internal sealed class CanvasGraphHost
         {
             pins[i].IsConnected = sockets[i].Connections.Count > 0;
         }
-
-        Told(node, pins, sockets, input);
-    }
-
-    // TEMP instrument (ADAM_GRAPH_TRACE=<path>): what the graph says about every socket once the wires have been
-    // counted - which socket a pin stands for, whether anything is on it, and whether it has a middle to draw. To a
-    // FILE, and only when asked for.
-    private static readonly string Trace = Environment.GetEnvironmentVariable("ADAM_GRAPH_TRACE");
-
-    private static void Told(CanvasNode node,
-        System.Collections.ObjectModel.ObservableCollection<CanvasNodePin> pins,
-        Adamantium.Core.Collections.TrackingCollection<ICanvasSocket> sockets, bool input)
-    {
-        if (Trace is not { Length: > 0 }) return;
-
-        var said = new System.Text.StringBuilder($"{node.Title} {(input ? "in" : "out")}:");
-
-        for (var i = 0; i < pins.Count && i < sockets.Count; i++)
-        {
-            said.Append($" [{i}] {sockets[i].Name}/{pins[i].Name} wires={sockets[i].Connections.Count}" +
-                        $" taken={pins[i].IsConnected} fill={(pins[i].Fill == null ? "none" : "yes")}" +
-                        $" color={(pins[i].Color == null ? "none" : "yes")};");
-        }
-
-        try
-        {
-            System.IO.File.AppendAllText(Trace, said.ToString() + Environment.NewLine);
-        }
-        catch (System.IO.IOException)
-        {
-            // A trace that cannot be written is not worth failing a frame over.
-        }
     }
 
     private void PutWire(CanvasConnection wire)

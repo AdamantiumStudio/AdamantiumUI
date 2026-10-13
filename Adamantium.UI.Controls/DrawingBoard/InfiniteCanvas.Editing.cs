@@ -1063,112 +1063,12 @@ public partial class InfiniteCanvas
         e.Handled = true;
     }
 
-    // WHAT A PRESS COSTS, when somebody is asking: written to the file named by ADAM_CANVAS_PRESSLOG, because a plate
-    // over the drawing is in the way of the very thing being measured. Off unless the variable is set.
-    private static readonly string PressLog = Environment.GetEnvironmentVariable("ADAM_CANVAS_PRESSLOG");
-
-    private readonly System.Diagnostics.Stopwatch _sinceLastPress = new();
-    private long _measuresAtLastPress;
-    private long _templatesAtLastPress;
-    private long _madeAtLastPress;
-    private long _rebuildsAtLastPress;
-    private long _refreshesAtLastPress;
-
-    // Counting costs an interlocked increment per invalidation - nothing next to what it finds, and too much to leave
-    // on for a run nobody is measuring.
     static InfiniteCanvas()
     {
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(InfiniteCanvas), new PropertyMetadata(true));
-        if (PressLog == null) return;
-
-        Core.Diagnostics.LayoutTrace.Counting = true;
-
-        // ...and WHO CALLED, when asked for. It walks the stack PER EVENT, and this application raises thousands a
-        // second: switched on, it turned a running stand into one that took fifty-five seconds between two clicks.
-        Core.Diagnostics.LayoutTrace.CountCallers =
-            Environment.GetEnvironmentVariable("ADAM_CANVAS_PRESSCALLERS") == "1";
     }
 
-    private void OnPointerDown(object sender, PointerPressedEventArgs e)
-    {
-        if (PressLog == null)
-        {
-            PointerDown(sender, e);
-            return;
-        }
-
-        var clock = System.Diagnostics.Stopwatch.StartNew();
-        var wasMeasures = MeasurableUIComponent.TotalMeasureCores;
-
-        // What happened BETWEEN this press and the last one, which is where the cost of a press actually lands: the
-        // handler returns at once and leaves a layout pass and a re-record behind it.
-        var since = wasMeasures - _measuresAtLastPress;
-        var gap = _sinceLastPress.IsRunning ? _sinceLastPress.Elapsed.TotalMilliseconds : 0;
-
-        PointerDown(sender, e);
-
-        clock.Stop();
-
-        _measuresAtLastPress = MeasurableUIComponent.TotalMeasureCores;
-        _sinceLastPress.Restart();
-
-        try
-        {
-            // A count of measures says the application is busy; it does not say what with, and the difference between
-            // those two is the whole job. The counters are keyed by the type and the property that invalidated.
-            var busiest = Core.Diagnostics.LayoutTrace.DumpCounts();
-            Core.Diagnostics.LayoutTrace.ResetCounts();
-
-            // The AGGREGATES first, then the same list with them taken out: a type says where the work landed, only the
-            // property says what caused it, and the aggregates are by definition the biggest numbers.
-            var lines = busiest.Split('\n');
-            var top = new System.Text.StringBuilder();
-            var named = new System.Text.StringBuilder();
-            var shown = 0;
-            var namedShown = 0;
-
-            for (var i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].Length == 0) continue;
-
-                var aggregate = lines[i].Contains('*');
-
-                if (aggregate && shown < 6)
-                {
-                    top.Append("    ").Append(lines[i]).Append("\r\n");
-                    shown++;
-                }
-                else if (!aggregate && namedShown < 10)
-                {
-                    named.Append("      by ").Append(lines[i].Trim()).Append("\r\n");
-                    namedShown++;
-                }
-            }
-
-            top.Append(named);
-
-            // TEMPLATES BUILT and CONTROLS MADE: the difference between "something was written to" and "everything was
-            // built again".
-            var builtNow = Base.TemplatedUIComponent.TemplatesBuilt;
-            var madeNow = Base.TemplatedUIComponent.TemplatedControlsMade;
-
-            System.IO.File.AppendAllText(PressLog,
-                $"press {clock.Elapsed.TotalMilliseconds:F3} ms, measures in it {MeasurableUIComponent.TotalMeasureCores - wasMeasures}" +
-                $" | since the last press: {since} measures over {gap:F0} ms" +
-                $", templates built {builtNow - _templatesAtLastPress}, controls made {madeNow - _madeAtLastPress}" +
-                $", inspector rebuilds {PropertyGrid.Rebuilds - _rebuildsAtLastPress}" +
-                $", refreshes {PropertyGrid.Refreshes - _refreshesAtLastPress}\r\n" + top);
-
-            _templatesAtLastPress = builtNow;
-            _madeAtLastPress = madeNow;
-            _rebuildsAtLastPress = PropertyGrid.Rebuilds;
-            _refreshesAtLastPress = PropertyGrid.Refreshes;
-        }
-        catch
-        {
-            // An instrument that throws is worse than one that says nothing.
-        }
-    }
+    private void OnPointerDown(object sender, PointerPressedEventArgs e) => PointerDown(sender, e);
 
     private void PointerDown(object sender, PointerPressedEventArgs e)
     {

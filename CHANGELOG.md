@@ -1103,6 +1103,17 @@ All packages share one version.
   `PointerPressedEventArgs.ClickCount`.
 - `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
   `SvgPathData.Walk`, the same walk SVG glyphs take.
+- Instruments left from leak and flicker hunts, which nothing read:
+  - `UIComponent.LiveComponents` and the finalizer it took on every control;
+  - the allocation counters `TextBlock` read on every measure and arrange;
+  - `LayoutManager.QueuedNow`;
+  - the counters of brush links, theme applications, theme routers, trigger activators, binding hooks, template
+    builds and removals, parked visuals and animation holders, and `RenderDirty.DeadMarks`;
+  - `ADAM_GRAPH_TRACE`, `ADAMANTIUM_NO_RING`, `BatchArena.DescribeSegment` and `RenderCache.LastCache`;
+  - the canvas press log (`ADAM_CANVAS_PRESSLOG`, `ADAM_CANVAS_PRESSCALLERS`), with `PropertyGrid.Refreshes` and
+    `LayoutTrace.CountCallers`/`CountCaller`, which only it used.
+
+  The diagnostics overlay and what it reads stay.
 
 ### Fixed
 
@@ -1205,6 +1216,9 @@ All packages share one version.
     when it is put on screen again. A canvas handed another scene leaves the items of the first behind without its
     controls. An item no canvas has given a control - one an undo put back for an object the application has let go
     of since - cannot be pointed at, framed or selected.
+  - **An element a `VisualBrush` painted from is no longer kept for good.** The raster kept every source it had ever
+    watched in a set of its own and never took one out, and a source that lived on kept the elements thrown away after
+    drawing with it.
   - **A `ContentPresenter` lets go of its content when that content is released or taken by another parent**, told so
     by the content itself (`FundamentalUIComponent.OnVisualChildReleased`, `DisownVisualChild`). It used to be found
     out by a static register of every presenter, walked whole on every batch of discarded elements; the register is

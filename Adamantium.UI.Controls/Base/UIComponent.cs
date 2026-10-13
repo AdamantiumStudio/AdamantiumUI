@@ -879,16 +879,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => _defaultFontFamilyOverride = value;
     }
 
-    // TEMP (leak hunt): how many components exist RIGHT NOW. Constructed minus finalized, so a theme swap that retains
-    // its old tree shows up as a live count that steps up and never comes down - and one that does NOT is proof the
-    // retained megabytes are something other than components, which no container census can tell apart.
-    public static long LiveComponents;
-
-    ~UIComponent() => System.Threading.Interlocked.Decrement(ref LiveComponents);
-
     public UIComponent()
     {
-        System.Threading.Interlocked.Increment(ref LiveComponents);
         RenderId = Guid.NewGuid();
 
         // A visual root (e.g. a window) has no parent, so SetVisualParent never attaches it. Seed RootVisual to

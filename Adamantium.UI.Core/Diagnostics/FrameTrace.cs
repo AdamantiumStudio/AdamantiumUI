@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Adamantium.UI.Core.Diagnostics;
 
-/// <summary>TEMPORARY: the draw-pass frames that ran long, kept in MEMORY. The overlay dumps them once a second - the point
-/// is that recording costs one list add, so the trace cannot become the thing it measures (a per-frame file append
-/// already did that once). Remove with the experiment.</summary>
+/// <summary>The draw-pass frames that ran long, kept in MEMORY while <see cref="Enabled"/>. The diagnostics overlay dumps
+/// them once a second - recording costs one list add, so the trace cannot become the thing it measures (a per-frame file
+/// append already did that once).</summary>
 public static class FrameTrace
 {
     public struct Entry
@@ -27,15 +27,15 @@ public static class FrameTrace
 
     public static bool Enabled;
 
-    /// <summary>TEMP: the unit type that last cost a frame its patch.</summary>
+    /// <summary>The unit type that last cost a frame its patch.</summary>
     public static string Refuser;
 
-    /// <summary>TEMP: why the RECORD fell back to a full walk of the tree. A full walk is the most expensive frame there
+    /// <summary>Why the RECORD fell back to a full walk of the tree. A full walk is the most expensive frame there
     /// is, and "structural" is not a reason - the splice refuses for half a dozen unrelated causes and each has its own
     /// fix. Set at every point that gives up; read on the next frame that is recorded Full.</summary>
     public static string FullWalkReason;
 
-    /// <summary>TEMP: WHAT made the retained stream stale against the layout (why=4). "The layout changed" is not a
+    /// <summary>WHAT made the retained stream stale against the layout (why=4). "The layout changed" is not a
     /// cause - a forgiven node move, a resize and a re-parent all land here and none of them is fixed the same way.</summary>
     public static string LayoutChangedBy;
 

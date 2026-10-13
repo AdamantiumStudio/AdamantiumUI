@@ -19,9 +19,6 @@ public static class ParkedVisuals
 
     private static readonly Dictionary<Slot, Entry> _kept = new();
 
-    // TEMP (leak hunt): parked subtrees held across swaps.
-    public static int Count => _kept.Count;
-
     // Oldest first.
     private static readonly List<Slot> _evictable = [];
 

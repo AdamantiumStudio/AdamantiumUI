@@ -190,7 +190,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
-        var eb0 = System.GC.GetAllocatedBytesForCurrentThread();
         var loadsSeen = TypefaceStore.LoadedCount;
         var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, out var font);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
@@ -198,7 +197,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             _textLayout = new TextLayout(font.Typeface, font);
             _layoutFont = font;
             _hasLayout = false;
-            LayoutRebuilds++;
         }
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
@@ -223,8 +221,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
         _textLayout.MaxLines = MaxLines;
-        var eb1 = System.GC.GetAllocatedBytesForCurrentThread();
-        FontResolveBytes += eb1 - eb0;
 
         // Boundary: an explicit Width, else the available width for wrapping or trimming blocks; plain NoWrap labels stay
         // unbounded. NaN means unbounded. Vertical lines run down, so there the height bounds them.
@@ -261,13 +257,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             && _lastMaxLines == MaxLines
             && ShapesLike(_lastShaping, shaping))
         {
-            GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
-            GuardHits++;
             return _cachedSize;
         }
-        GuardBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb1;
 
-        var eb2 = System.GC.GetAllocatedBytesForCurrentThread();
         _runFontsPending = false;
         _links.Clear();
         _objects.Clear();
@@ -324,8 +316,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             var ink = System.Math.Ceiling(_textLayout.RealTextDimensions.Height);
             if (ink > 0) _cachedSize = new Size(_cachedSize.Width, Math.Min(_cachedSize.Height, ink));
         }
-        ShapeBytes += System.GC.GetAllocatedBytesForCurrentThread() - eb2;
-        ShapeCalls++;
 
         _hasLayout = true;
         _inlinesDirty = false;
@@ -915,22 +905,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
     }
 
-    /// <summary>TEMP: what the block's OWN measure/arrange allocates, against what the layout histogram charges the type
-    /// (116KB a call). ProcessText accounts for 2.7KB of that, so the rest is either here or in the measure protocol
-    /// around it - and this session has been wrong six times about which.</summary>
-    public static long OverrideBytes;
-    public static int OverrideCount;
-
-    /// <summary>EnsureLayout split three ways: resolving the font (and rebuilding TextLayout when it changed), the
-    /// cache guard's own property reads, and the shaping call. ProcessText's internals account for 1% of what the type
-    /// is charged, so the other 99% is in one of these twenty lines.</summary>
-    public static long FontResolveBytes;
-    public static long GuardBytes;
-    public static long ShapeBytes;
-    public static int LayoutRebuilds;
-    public static int GuardHits;
-    public static int ShapeCalls;
-
     /// <summary>Lays the text out again in the fonts that arrived.</summary>
     protected internal override void OnFontsArrived()
     {
@@ -942,15 +916,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
-        var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
         // against, short of the slot's edge.
         if (UseSlot(RenderSize))
             EnsureLayout();
-        OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
-        OverrideCount++;
         return size;
     }
 
@@ -962,10 +933,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         // before the layout call so the ellipsis lands at the real edge instead of at a width nobody will give it.
         UseSlot(finalSize);
 
-        var b0 = System.GC.GetAllocatedBytesForCurrentThread();
         EnsureLayout();
-        OverrideBytes += System.GC.GetAllocatedBytesForCurrentThread() - b0;
-        OverrideCount++;
         ArrangeHosted();
         return finalSize;
     }
