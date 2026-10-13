@@ -22,6 +22,7 @@ public sealed class AutomationSession : IAsyncDisposable
     private readonly IAutomationChannel _channel;
     private Process _process;
     private bool _closeOnDispose;
+    private string _dataFolder;
 
     private AutomationSession(IAutomationChannel channel)
     {
@@ -59,7 +60,17 @@ public sealed class AutomationSession : IAsyncDisposable
         }
 
         var pipe = options.PipeName ?? $"adam-auto-{Guid.NewGuid():N}";
-        var process = Start(path, options, pipe) ?? throw new AutomationException($"{path} did not start.");
+        var data = options.FreshData ? Directory.CreateTempSubdirectory("adam-data-").FullName : null;
+        Process process;
+        try
+        {
+            process = Start(path, options, pipe, data) ?? throw new AutomationException($"{path} did not start.");
+        }
+        catch
+        {
+            DeleteData(data);
+            throw;
+        }
 
         var timeout = options.StartTimeout ?? DefaultLaunchTimeout;
         try
@@ -83,7 +94,8 @@ public sealed class AutomationSession : IAsyncDisposable
             var session = new AutomationSession(channel)
             {
                 _process = process,
-                _closeOnDispose = options.CloseOnDispose
+                _closeOnDispose = options.CloseOnDispose,
+                _dataFolder = data
             };
             await session.Find(By.Type(AutomationControlType.Window)).WaitForAsync(timeout);
             return session;
@@ -93,8 +105,10 @@ public sealed class AutomationSession : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync();
             }
 
+            DeleteData(data);
             throw;
         }
     }
@@ -105,6 +119,34 @@ public sealed class AutomationSession : IAsyncDisposable
 
     /// <summary>The element <paramref name="by"/> finds in any window. Looked up when it is used, not now.</summary>
     public AutomationElement Find(By by) => new(this, [by]);
+
+    /// <summary>The element a selector path written as text finds: <c>id=Canvas&gt;name=Mix/type=Thumb,name=Out</c>.</summary>
+    /// <exception cref="AutomationException">The path is not well formed.</exception>
+    public AutomationElement Find(string selector)
+    {
+        try
+        {
+            return new AutomationElement(this, By.ParsePath(selector));
+        }
+        catch (FormatException e)
+        {
+            throw new AutomationException(e.Message);
+        }
+    }
+
+    /// <summary>Presses <paramref name="keys"/> - chords apart by spaces - in the window that has the keyboard focus.</summary>
+    public Task PressKeysAsync(string keys) => RunAsync(new AutomationRequest { Command = AutomationCommand.Key, Value = keys });
+
+    /// <summary>Types <paramref name="text"/> into the element that has the keyboard focus.</summary>
+    public Task TypeAsync(string text) => RunAsync(new AutomationRequest { Command = AutomationCommand.Type, Value = text });
+
+    /// <summary>A picture of the first window, written to <paramref name="path"/> as PNG; the full path it was written to.</summary>
+    public async Task<string> ShotAsync(string path) =>
+        (await RunAsync(new AutomationRequest { Command = AutomationCommand.Shot, Value = path })).Text;
+
+    /// <summary>What can be acted on but has no name, under <paramref name="selector"/> or in every window.</summary>
+    public async Task<IReadOnlyList<ElementInfo>> UnnamedAsync(string selector = null) =>
+        (await RunAsync(new AutomationRequest { Command = AutomationCommand.Unnamed, Target = selector })).Elements;
 
     public async Task<IReadOnlyList<ElementInfo>> FindAllAsync(By by) =>
         (await RunAsync(new AutomationRequest { Command = AutomationCommand.Find, Target = by.ToString() })).Elements;
@@ -172,45 +214,60 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>Sends <paramref name="request"/> as it is and returns the reply as it came, a failure included.</summary>
     public Task<AutomationReply> SendAsync(AutomationRequest request) => _channel.SendAsync(request);
 
-    /// <summary>Runs a scenario file: commands of the automation language, one a line, as <c>adam-auto</c> takes them -
-    /// <c>invoke id=Save</c>, <c>expect id=Status name="Saved."</c>, <c>wait id=Total value=40</c> - each step and what
-    /// it did written to <paramref name="output"/>.</summary>
-    /// <exception cref="AutomationException">A step failed; the message names the file and the line.</exception>
-    public Task RunScenarioAsync(string path, TextWriter output = null) => new ScriptInterpreter(this, output).RunFileAsync(path);
-
-    /// <summary>Runs one command of the automation language, written as on a line of a scenario.</summary>
-    /// <exception cref="AutomationException">It failed.</exception>
-    public Task RunCommandAsync(string command, TextWriter output = null) =>
-        RunCommandAsync([.. ScriptInterpreter.Tokenize(command)], output);
-
-    /// <summary>Runs one command of the automation language, already split into its words.</summary>
-    /// <exception cref="AutomationException">It failed.</exception>
-    public Task RunCommandAsync(IReadOnlyList<string> words, TextWriter output = null) =>
-        new ScriptInterpreter(this, output).RunAsync(words);
-
     /// <summary>Closes the connection; an application the session started is closed with it, unless told otherwise.</summary>
     public async ValueTask DisposeAsync()
     {
         if (_process != null && _closeOnDispose && !_process.HasExited)
         {
-            await _channel.SendAsync(new AutomationRequest { Command = AutomationCommand.Shutdown });
             try
             {
+                await _channel.SendAsync(new AutomationRequest { Command = AutomationCommand.Shutdown });
                 await _process.WaitForExitAsync().WaitAsync(ExitTimeout);
             }
-            catch (TimeoutException)
+            catch (Exception e) when (e is TimeoutException or AutomationException or IOException or ObjectDisposedException)
             {
-                _process.Kill(entireProcessTree: true);
+                if (!_process.HasExited)
+                {
+                    _process.Kill(entireProcessTree: true);
+                }
+
+                await _process.WaitForExitAsync();
             }
         }
 
         await _channel.DisposeAsync();
+        if (_process?.HasExited ?? true)
+        {
+            DeleteData(_dataFolder);
+        }
+
         _process?.Dispose();
     }
 
-    private static Process Start(string path, LaunchOptions options, string pipe)
+    private static void DeleteData(string folder)
+    {
+        if (folder == null)
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static Process Start(string path, LaunchOptions options, string pipe, string data)
     {
         var variables = new Dictionary<string, string>(options.Environment) { [AutomationProtocol.PipeVariable] = pipe };
+        if (data != null)
+        {
+            variables[ApplicationData.FolderVariable] = data;
+        }
+
         var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
         {
             WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path)

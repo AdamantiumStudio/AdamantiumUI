@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The ColorPicker page: one color shared by the inline picker, the wheel and the swatch - written in one, read in all - and the swatch's flyout opened and closed.">
+  <Select Target="id=GalleryTabs/id=ColorPicker" />
+  <Wait Target="id=Picker" />
+  <Set Target="id=Picker" Value="#FF2080C0" />
+  <Expect Target="id=Wheel" Value="#FF2080C0" />
+  <Expect Target="id=Swatch" Value="#FF2080C0" />
+  <Set Target="id=Swatch" Value="#80FF0000" />
+  <Expect Target="id=Picker" Value="#80FF0000" />
+  <Set Target="id=WheelValue" Value="0.5" />
+  <Expand Target="id=Swatch" />
+  <Expect Target="id=Swatch" Expanded="Expanded" />
+  <Collapse Target="id=Swatch" />
+  <Expect Target="id=Swatch" Expanded="Collapsed" />
+  <!-- Back as the page opens: the color is the theme's accent too, so leaving it changed recolors the whole application. -->
+  <Set Target="id=Picker" Value="#FF3D87FF" />
+  <Expect Target="id=WheelValue" Value="1" />
+</Scenario>

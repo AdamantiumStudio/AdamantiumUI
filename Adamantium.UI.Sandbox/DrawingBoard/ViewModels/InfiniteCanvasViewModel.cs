@@ -129,9 +129,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     /// decides where that text lives; this one keeps it beside the user's own settings.</summary>
     [Bindable] private string _layout;
 
-    private static string Kept => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Adamantium", "canvas-layout.json");
+    private static string Kept => System.IO.Path.Combine(ApplicationData.Folder, "canvas-layout.json");
 
     private static string Read()
     {

@@ -25,4 +25,9 @@ public sealed class LaunchOptions
     /// started apart from this process, holding none of its handles, so a script that reads this process's output does
     /// not wait for the application to exit.</summary>
     public bool CloseOnDispose { get; set; } = true;
+
+    /// <summary>Whether the application keeps what it remembers between runs - window places, layouts - in a fresh folder
+    /// of its own (<see cref="ApplicationData.Folder"/>), deleted once the session has closed it: the run starts as the
+    /// first one ever did and leaves nothing for the next. An application left running keeps its folder.</summary>
+    public bool FreshData { get; set; }
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Navigation page: pages navigated to in the region and back and forward through its journal, cards added to a list region, and an overlay window opened, moved, resized and closed.">
+  <Select Target="id=GalleryTabs/id=Navigation" />
+  <Wait Target="id=Region/id=HomePageView" />
+  <Invoke Target="id=NavigationDemoView/name=Details (id=42)" />
+  <Wait Target="id=Region/id=DetailsPageView" />
+  <Invoke Target="id=NavigationDemoView/name=Settings" />
+  <Wait Target="id=Region/id=SettingsPageView" />
+  <Invoke Target="id=NavigationDemoView/name=Back" />
+  <Wait Target="id=Region/id=DetailsPageView" />
+  <Invoke Target="id=NavigationDemoView/name=Forward" />
+  <Wait Target="id=Region/id=SettingsPageView" />
+  <Invoke Target="id=NavigationDemoView/name=Home" />
+  <Wait Target="id=Region/id=HomePageView" />
+  <Invoke Target="id=NavigationDemoView/name=Add card" />
+  <Wait Target="id=Cards/name=Card 3" />
+  <Invoke Target="id=NavigationDemoView/name=Clear" />
+  <Absent Target="id=Cards/type=ListItem" />
+  <!-- Two cards again, as the page opens with; their numbers go on from where the count stands. -->
+  <Invoke Target="id=NavigationDemoView/name=Add card" />
+  <Invoke Target="id=NavigationDemoView/name=Add card" />
+  <Invoke Target="id=NavigationDemoView/name=Show overlay window" />
+  <Wait Target="id=OverlayWindow/id=OverlayDemoView" />
+  <Move Target="id=OverlayWindow" By="-20,10" />
+  <Resize Target="id=OverlayWindow" Size="480,300" />
+  <Window Target="id=OverlayWindow" Action="Close" />
+  <Absent Target="id=OverlayWindow" />
+</Scenario>

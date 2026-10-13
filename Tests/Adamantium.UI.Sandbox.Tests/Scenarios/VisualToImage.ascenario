@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Visual -> Image page: the markup already in the box rendered to a picture, the live tree snapshotted, and its ghost shown and hidden - each without an error left behind.">
+  <Select Target="id=GalleryTabs/id=VisualToImage" />
+  <Wait Target="id=Source" />
+  <Invoke Target="id=VisualRenderDemoView/name=Render" />
+  <Toggle Target="id=VisualRenderDemoView/name=Toggle me" />
+  <Invoke Target="id=VisualRenderDemoView/name=Snapshot live tree" />
+  <Invoke Target="id=VisualRenderDemoView/name=Show ghost" />
+  <Invoke Target="id=VisualRenderDemoView/name=Hide ghost" />
+</Scenario>

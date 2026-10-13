@@ -247,5 +247,21 @@ public static class MarkupMessages
     public static string PlaceholderNoName(string text) => Say(nameof(PlaceholderNoName), ("text", text));
     public static string BraceNotOpened() => Say(nameof(BraceNotOpened));
 
+    public static string ScenarioNotXml(string problem) => Say(nameof(ScenarioNotXml), ("problem", problem));
+    public static string ScenarioNameNotIdentifier(string name) => Say(nameof(ScenarioNameNotIdentifier), ("name", name));
+    public static string ScenarioNameTaken(string name, string file) => Say(nameof(ScenarioNameTaken), ("name", name), ("file", file));
+    public static string ScenarioNotASelector(string problem) => Say(nameof(ScenarioNotASelector), ("problem", problem));
+    public static string ScenarioDragNeeds(string step, string attributes) =>
+        Say(nameof(ScenarioDragNeeds), ("step", step), ("attributes", attributes));
+    public static string ScenarioOnlyForDrag(string step, string attribute) =>
+        Say(nameof(ScenarioOnlyForDrag), ("step", step), ("attribute", attribute));
+    public static string ScenarioHeldPenButtons() => Say(nameof(ScenarioHeldPenButtons));
+    public static string ScenarioChecksNothing(string step) => Say(nameof(ScenarioChecksNothing), ("step", step));
+    public static string ScenarioNoApplication() => Say(nameof(ScenarioNoApplication));
+    public static string ScenarioNotInTestProject() => Say(nameof(ScenarioNotInTestProject));
+    public static string ScenarioRootNotScenario(string @namespace) => Say(nameof(ScenarioRootNotScenario), ("namespace", @namespace));
+    public static string ScenarioNotOnStep(string step, string attribute) =>
+        Say(nameof(ScenarioNotOnStep), ("step", step), ("attribute", attribute));
+
     private static string Say(string key, params (string Name, object Value)[] values) => Catalog.Say(key, values);
 }

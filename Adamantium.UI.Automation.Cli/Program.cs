@@ -84,8 +84,6 @@ public static class Program
                                                               left, top, width, height (on the screen, physical px),
                                                               enabled, offscreen, focus, or a property name
           absent <selector>                                   fail if anything matches
-          run <scenario>                                      the commands of a file, one a line, up to the first failure
-          run <folder>                                        every scenario in it, in name order, and a summary
           sweep [<tabs>] [--dwell 4s] [--passes <n>]          open every tab in turn (the gallery's by default): how long
                 [--themes] [--memory]                         each took to settle and what it left in the error journal;
                                                               after each pass, every theme in every variant and back,
@@ -112,14 +110,12 @@ public static class Program
                     return await StartAsync(arguments, pipe);
                 case "stop":
                     return await StopAsync(pipe);
-                case "run":
-                    return await RunAsync(arguments, pipe);
                 case "sweep":
                     return await SweepAsync(arguments, pipe);
-                case { } command when ScriptInterpreter.Commands.Contains(command):
+                case { } command when Commands.Names.Contains(command):
                     await using (var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout))
                     {
-                        await session.RunCommandAsync(args, Console.Out);
+                        await Commands.RunAsync(session, arguments, Console.Out);
                     }
 
                     return 0;
@@ -172,43 +168,6 @@ public static class Program
         await session.SendAsync(new AutomationRequest { Command = AutomationCommand.Shutdown });
         Console.WriteLine("Closed.");
         return 0;
-    }
-
-    private static async Task<int> RunAsync(ScriptArguments arguments, string pipe)
-    {
-        var path = arguments.At(0);
-        var files = path != null && Directory.Exists(path)
-            ? Directory.GetFiles(path, "*.adam").OrderBy(file => file, StringComparer.OrdinalIgnoreCase).ToList()
-            : [path];
-
-        await using var session = await AutomationSession.AttachAsync(pipe, ConnectTimeout);
-        var failed = new List<string>();
-        foreach (var file in files)
-        {
-            if (files.Count > 1)
-            {
-                Console.WriteLine($"=== {Path.GetFileName(file)}");
-            }
-
-            try
-            {
-                await session.RunScenarioAsync(file, Console.Out);
-            }
-            catch (AutomationException e)
-            {
-                Console.Error.WriteLine(e.Message);
-                failed.Add(Path.GetFileName(file));
-            }
-        }
-
-        if (files.Count > 1)
-        {
-            Console.WriteLine(failed.Count == 0
-                ? $"All {files.Count} scenarios passed."
-                : $"{files.Count - failed.Count} of {files.Count} scenarios passed; failed: {string.Join(", ", failed)}.");
-        }
-
-        return failed.Count == 0 ? 0 : 1;
     }
 
     private static async Task<int> SweepAsync(ScriptArguments arguments, string pipe)

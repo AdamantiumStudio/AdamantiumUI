@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The InfiniteCanvas page. The graph first: a node off screen brought into view, a wire parted and put back by undo, a wire laid without the mouse and taken back, a node folded and unfolded. Then the drawing: a tool chosen, the plane cleared after its question is answered - both modes - a rectangle dragged out on it, listed in the layers, and both taken back by undo.">
+  <Select Target="id=GalleryTabs/id=InfiniteCanvas" />
+  <Wait Target="id=Canvas" />
+  <Select Target="id=PART_Inspector/name=Graph - nodes and the wires between them" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <!-- Two fingers drawn apart pinch the camera in about their middle; drawn together, out again. -->
+  <Pinch Target="id=Canvas" Scale="2" />
+  <Expect Target="id=Canvas" Zoom="185.7" />
+  <Pinch Target="id=Canvas" Scale="0.5" />
+  <Expect Target="id=Canvas" Zoom="99" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Expect Target="id=PART_MiniMap/type=Image" Name="The whole plane, the part in view framed" />
+  <Scroll Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="False" />
+  <!-- Dragged away the node leaves the view, and dragged back it is there again. -->
+  <Pan Target="id=Canvas" By="4000,0" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="True" />
+  <Pan Target="id=Canvas" By="-4000,0" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="False" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="Number: Out" />
+  <Disconnect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="Number: Out" />
+  <!-- The page keeps the camera the last run left, and a node far out of view is not built: the whole graph into view -
+       with nothing selected, or F frames only what is. -->
+  <Key Keys="Escape" Into="id=Canvas" />
+  <Key Keys="F" Into="id=Canvas" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Scale: Out" />
+  <Connect Target="id=Canvas>name=Mix/type=Thumb,name=Out" To="id=Canvas>name=Output/type=Thumb,name=Color" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Mix: Out" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Scale: Out" />
+  <Collapse Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Expanded="Collapsed" />
+  <Expand Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Expanded="Expanded" />
+  <Invoke Target="id=PART_ViewBar/name=Back to the kept view" />
+  <Select Target='id=PART_Inspector/name="Drawing - ink, shapes and text"' />
+  <Toggle Target="id=PART_ToolRail/id=Rectangle" />
+  <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="On" />
+  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
+  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Invoke Target="id=PART_Yes" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Drag Target="id=Canvas" From="500,150" To="650,260" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Expect Target="id=PART_Inspector/type=TreeItem" Name="Rectangle" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <!-- Back as the page opens: the clear taken back too. -->
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Absent Target="id=ItemCountLabel,name=0 items" />
+  <Wait Target="id=PART_Inspector/type=TreeItem" />
+  <Toggle Target="id=PART_ToolRail/id=Select" />
+  <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="Off" />
+  <!-- Ink from a pen and from fingers: a pen pressing harder as it goes draws one stroke, two fingers down together draw
+       one each, and a pinch over the drawing zooms rather than draws. -->
+  <Toggle Target="id=PART_ToolRail/id=Pen" />
+  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
+  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Invoke Target="id=PART_Yes" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Touches Gesture="Drag" By="0,80">
+    <Finger Target="id=Canvas" />
+    <Finger Target="id=Canvas" />
+  </Touches>
+  <Expect Target="id=ItemCountLabel" Name="3 items" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Pinch Target="id=Canvas" Scale="2" />
+  <Expect Target="id=Canvas" Zoom="185.7" />
+  <Expect Target="id=ItemCountLabel" Name="3 items" />
+  <!-- Back as the page opens: the camera at 1:1, the strokes and the clear taken back, the select tool in hand. The two
+       fingers down together were one gesture, so their strokes go back in one step. -->
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Absent Target="id=ItemCountLabel,name=0 items" />
+  <Toggle Target="id=PART_ToolRail/id=Select" />
+  <Expect Target="id=PART_ToolRail/id=Pen" Toggle="Off" />
+</Scenario>

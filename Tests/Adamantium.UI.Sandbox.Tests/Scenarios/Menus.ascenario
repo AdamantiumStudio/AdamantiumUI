@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Menus page: a context menu built from the view model - a row pressed, a submenu opened by hovering its row and kept open while the pointer moves into it, a row of the submenu clicked - and the line below says what was picked.">
+  <Select Target="id=GalleryTabs/id=Menus" />
+  <Wait Target="id=MenusView/id=MenuSurface" Timeout="20s" />
+  <RightClick Target="id=MenuSurface" />
+  <Invoke Target="id=SurfaceMenu/name=Copy" />
+  <Expect Target="id=MenuReport" Name="Picked: Copy" />
+  <RightClick Target="id=MenuSurface" />
+  <Hover Target="id=SurfaceMenu/name=Zoom" />
+  <Expect Target="id=SurfaceMenu/name=Zoom" Expanded="Expanded" />
+  <Hover Target="id=SurfaceMenu/name=Zoom/name=Fit to window" />
+  <Expect Target="id=SurfaceMenu/name=Zoom" Expanded="Expanded" />
+  <Click Target="id=SurfaceMenu/name=Zoom/name=Fit to window" />
+  <Expect Target="id=MenuReport" Name="Picked: Zoom · Fit to window" />
+  <!-- Without the mouse: the menu opened as the menu key opens it, with the keyboard on its first row; the next row
+       chosen from the keyboard. -->
+  <ContextMenu Target="id=MenuSurface" />
+  <Expect Target="id=SurfaceMenu/name=Cut" Focus="True" />
+  <Key Keys="Down" />
+  <Expect Target="id=SurfaceMenu/name=Copy" Focus="True" />
+  <Key Keys="Enter" />
+  <Expect Target="id=MenuReport" Name="Picked: Copy" />
+  <Absent Target="id=SurfaceMenu/name=Copy" />
+</Scenario>

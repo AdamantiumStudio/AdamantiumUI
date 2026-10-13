@@ -196,16 +196,16 @@ public class AutomationSelectionTests
     }
 
     [Test]
-    public async Task AScenarioAddsWithAFlag_AndUnselects()
+    public async Task AListOfMany_AddsToItsSelection_AndUnselects()
     {
         var list = new ListBox { Name = "Fruits", SelectionMode = SelectionMode.Multiple, ItemsSource = new List<string> { "Apple", "Pear", "Plum" } };
         var session = await Driving(list);
         await using var _ = session;
 
-        await session.RunCommandAsync("select id=Fruits/name=Apple", null);
-        await session.RunCommandAsync("select id=Fruits/name=Plum --add", null);
+        await session.Find("id=Fruits/name=Apple").SelectAsync();
+        await session.Find("id=Fruits/name=Plum").AddToSelectionAsync();
         var both = list.SelectedItems.Cast<object>().ToList();
-        await session.RunCommandAsync("unselect id=Fruits/name=Apple", null);
+        await session.Find("id=Fruits/name=Apple").RemoveFromSelectionAsync();
 
         Assert.Multiple(() =>
         {

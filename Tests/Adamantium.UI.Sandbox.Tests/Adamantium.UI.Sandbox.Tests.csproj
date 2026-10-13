@@ -10,6 +10,8 @@
         <Configurations>Debug;Release</Configurations>
 
         <LangVersion>latest</LangVersion>
+
+        <AdamantiumScenarioApplication>Adamantium.UI.Sandbox</AdamantiumScenarioApplication>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,6 +24,18 @@
          projects, which would otherwise reach the engine and the game through it. -->
     <ItemGroup>
         <ProjectReference Include="..\..\Adamantium.UI.Sandbox\Adamantium.UI.Sandbox.csproj" />
+        <ProjectReference Include="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
+
+    <Target Name="ScenarioGeneratorFromSource" BeforeTargets="CoreCompile">
+        <MSBuild Projects="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj"
+                 Targets="GetAumlAnalyzerAssemblies"
+                 Properties="Configuration=$(Configuration)"
+                 RemoveProperties="TargetFramework;RuntimeIdentifier">
+            <Output TaskParameter="TargetOutputs" ItemName="Analyzer" />
+        </MSBuild>
+    </Target>
+
+    <Import Project="..\..\Adamantium.UI\buildTransitive\Adamantium.UI.targets" />
 
 </Project>

@@ -159,4 +159,16 @@
     <Phrase Key="BraceNotClosed" Text="'{{' has no closing '}}'; write '{{{{' for a brace"/>
     <Phrase Key="PlaceholderNoName" Text="'{{{text}}}' does not start with a name: a placeholder is {{name}}, {{name:format}} or {{name,width}}"/>
     <Phrase Key="BraceNotOpened" Text="'}}' has no opening '{{'; write '}}}}' for a brace"/>
+    <Phrase Key="ScenarioNotXml" Text="The scenario is not well-formed XML: {problem}"/>
+    <Phrase Key="ScenarioNameNotIdentifier" Text="'{name}' cannot name a test: give the scenario a Name of letters, digits and _, starting with a letter, that is no C# keyword nor a member every class has"/>
+    <Phrase Key="ScenarioNameTaken" Text="Another scenario is named '{name}' already: {file}"/>
+    <Phrase Key="ScenarioNotASelector" Text="Not a selector path: {problem}"/>
+    <Phrase Key="ScenarioDragNeeds" Text="{step} with Gesture=&quot;Drag&quot; needs {attributes}"/>
+    <Phrase Key="ScenarioOnlyForDrag" Text="{step}: {attribute} is for Gesture=&quot;Drag&quot; only"/>
+    <Phrase Key="ScenarioHeldPenButtons" Text="A held pen takes no Barrel or Eraser"/>
+    <Phrase Key="ScenarioChecksNothing" Text="{step} checks nothing: add a key such as Name or Value, or a property of the control"/>
+    <Phrase Key="ScenarioNoApplication" Text="Scenarios need the application they drive: set AdamantiumScenarioApplication in the project to the name of its executable"/>
+    <Phrase Key="ScenarioRootNotScenario" Text="A scenario's root is &lt;Scenario xmlns=&quot;{namespace}&quot;&gt;"/>
+    <Phrase Key="ScenarioNotOnStep" Text="{step} takes no {attribute}"/>
+    <Phrase Key="ScenarioNotInTestProject" Text="Scenarios become NUnit tests: keep them in a test project that references NUnit and Adamantium.UI.Automation"/>
 </Language>

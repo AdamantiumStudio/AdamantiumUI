@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Transforms page: every tile's rotation, shear, scale and spread come from one slider each.">
+  <Select Target="id=GalleryTabs/id=Transforms" />
+  <Wait Target="id=Rotation" />
+  <Set Target="id=Rotation" Value="45" />
+  <Expect Target="id=Rotation" Value="45" />
+  <Set Target="id=SkewX" Value="20" />
+  <Expect Target="id=SkewX" Value="20" />
+  <Set Target="id=SkewY" Value="-20" />
+  <Expect Target="id=SkewY" Value="-20" />
+  <Set Target="id=TileScale" Value="1.2" />
+  <Expect Target="id=TileScale" Value="1.2" />
+  <Set Target="id=Spread" Value="3" />
+  <Expect Target="id=Spread" Value="3" />
+  <!-- Back as the page opens. -->
+  <Set Target="id=Rotation" Value="20" />
+  <Set Target="id=SkewX" Value="12" />
+  <Set Target="id=SkewY" Value="0" />
+  <Set Target="id=TileScale" Value="1" />
+  <Set Target="id=Spread" Value="1.5" />
+</Scenario>

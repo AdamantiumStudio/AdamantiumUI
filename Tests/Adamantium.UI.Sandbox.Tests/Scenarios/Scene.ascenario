@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Scene page: the overlay menu closes and comes back, the camera speed and the tool are chosen, and a spot light is added, tuned and deleted.">
+  <Select Target="id=GalleryTabs/id=Scene" />
+  <Wait Target="id=Continue" Timeout="30s" />
+  <Invoke Target="id=Continue" />
+  <Expect Target="id=Continue" Offscreen="True" />
+  <Invoke Target="id=MenuToggle" />
+  <Expect Target="id=Continue" Offscreen="False" />
+  <Invoke Target="id=Continue" />
+  <Set Target="id=CameraSpeed" Value="2.5" />
+  <Expect Target="id=CameraSpeed" Value="2.5" />
+  <Invoke Target="id=ResetCamera" />
+  <Select Target="id=MoveTool" />
+  <Expect Target="id=MoveTool" Selected="True" />
+  <Expect Target="id=SelectTool" Selected="False" />
+  <Select Target="id=SelectTool" />
+  <Invoke Target="id=AddSpot" />
+  <Wait Target="id=ConeAngle" />
+  <Set Target="id=ConeAngle" Value="45" />
+  <Expect Target="id=ConeAngle" Value="45" />
+  <Set Target="id=LightIntensity" Value="3" />
+  <Expect Target="id=LightIntensity" Value="3" />
+  <Invoke Target="id=DeleteLight" />
+  <Expect Target="id=LightIntensity" Offscreen="True" />
+  <!-- Back as the page opens: the menu up, the camera at its own speed. -->
+  <Set Target="id=CameraSpeed" Value="4" />
+  <Invoke Target="id=MenuToggle" />
+  <Expect Target="id=Continue" Offscreen="False" />
+</Scenario>

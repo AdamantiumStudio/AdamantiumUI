@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The SlidePanel page: a panel slid open by its switch and shut by its own close button, the switch following; another opened and closed through the panel itself.">
+  <Select Target="id=GalleryTabs/id=SlidePanel" />
+  <Wait Target="id=SlidePanelView/name=Left" />
+  <Toggle Target="id=SlidePanelView/name=Left" />
+  <Expect Target="id=SlidePanelView/name=Left" Toggle="On" />
+  <Expect Target="id=SlidePanelView/type=Pane,name=Left panel" Expanded="Expanded" />
+  <Invoke Target="id=SlidePanelView/type=Pane,name=Left panel/id=Close" />
+  <Expect Target="id=SlidePanelView/name=Left" Toggle="Off" />
+  <Expand Target="id=SlidePanelView/type=Pane,name=Right panel" />
+  <Expect Target="id=SlidePanelView/name=Right" Toggle="On" />
+  <Collapse Target="id=SlidePanelView/type=Pane,name=Right panel" />
+  <Expect Target="id=SlidePanelView/name=Right" Toggle="Off" />
+</Scenario>

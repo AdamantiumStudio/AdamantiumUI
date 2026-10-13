@@ -127,9 +127,7 @@ public partial class DockingViewModel : TabPageViewModel
     /// <summary>Where this application keeps its window layout - beside its other settings, per user. The CONTROL has
     /// no opinion about this: it hands out text and reads text back, and where that lives is the application's
     /// business (a file here, a settings store or a server elsewhere).</summary>
-    public string LayoutFile => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Adamantium", "Sandbox", "docking-layout.json");
+    public string LayoutFile => Path.Combine(ApplicationData.Folder, "docking-layout.json");
 
     // Restoring happens the moment the view exists, not in the constructor: before that there is no area to restore
     // into, and a view model deliberately cannot see the view.

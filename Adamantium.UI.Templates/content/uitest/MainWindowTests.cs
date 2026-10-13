@@ -9,13 +9,11 @@ namespace AdamantiumApp.UITests;
 /// The main window driven two ways. Headless: built in this process on the application's theme, no window of the system
 /// and no GPU - quick, and where most tests belong. Launched: the application itself, started with its automation agent
 /// - it has to opt in by calling <c>this.UseAutomationAgent()</c> in its constructor, which does nothing unless a test
-/// or adam-auto starts it.
+/// or adam-auto starts it. Each file in Scenarios becomes a launched test of its own, in the category Scenario.
 /// </summary>
 [TestFixture]
 public class MainWindowTests
 {
-    private static string Scenario(string name) => Path.Combine(AppContext.BaseDirectory, "Scenarios", name);
-
     private static async Task<AutomationSession> HeadlessAsync()
     {
         HeadlessApplication.Start<THEME_NAME>();
@@ -38,14 +36,6 @@ public class MainWindowTests
     }
 
     [Test]
-    public async Task Headless_TheScenarioPasses()
-    {
-        await using var session = await HeadlessAsync();
-
-        await session.RunScenarioAsync(Scenario("MainWindow.adam"), TestContext.Out);
-    }
-
-    [Test]
     public async Task Launched_TheWindowIsThere()
     {
         await using var session = await LaunchedAsync();
@@ -53,13 +43,5 @@ public class MainWindowTests
         var window = await session.Find(By.Id("MainWindow")).WaitUntilAsync(info => !info.IsOffscreen);
 
         Assert.That(window.Name, Is.EqualTo("APP_NAME"));
-    }
-
-    [Test]
-    public async Task Launched_TheScenarioPasses()
-    {
-        await using var session = await LaunchedAsync();
-
-        await session.RunScenarioAsync(Scenario("MainWindow.adam"), TestContext.Out);
     }
 }

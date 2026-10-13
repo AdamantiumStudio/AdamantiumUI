@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Docking page: panes chosen by their tabs, a pane opened among the documents and closed by its tab's button, a pane opened by name in a window of its own and closed with it. Groups are found through their panes - a group is a place in the layout, not a name. The panes it closes are ones it opened, so the page is left as it was.">
+  <Select Target="id=GalleryTabs/id=Docking" />
+  <Wait Target="id=DockingView/type=TabItem,name=Scene" />
+  <Select Target="id=DockingView/type=TabItem,name=Output" />
+  <Expect Target="id=DockingView/type=TabItem,name=Output" Selected="True" />
+  <Select Target="id=DockingView/type=TabItem,name=Console" />
+  <Select Target="id=PaneChoice/name=Terminal" />
+  <Select Target="id=PlaceChoice/name=Center" />
+  <Invoke Target="id=DockingView/name=Navigate" />
+  <Wait Target="id=DockingView/type=TabItem,name=Terminal" />
+  <Invoke Target="id=DockingView/type=TabItem,name=Terminal/id=CloseTab" />
+  <Absent Target="id=DockingView/type=TabItem,name=Terminal" />
+  <Select Target="id=PaneChoice/name=Notes" />
+  <Select Target="id=PlaceChoice/name=Floating" />
+  <Invoke Target="id=DockingView/name=Navigate" />
+  <Wait Target="id=DockingWindow" />
+  <Expect Target="id=DockingWindow" Name="Notes" />
+  <Window Target="id=DockingWindow" Action="Close" />
+  <Absent Target="id=DockingWindow" />
+  <!-- Docked without the mouse: a pane to an edge, out into a window and back into a panel as a tab, a pane beside another's
+       panel, and a whole panel out into a window and back to its edge. Reset puts the layout back. -->
+  <Expect Target="id=DockingView/type=TabItem,name=Console" Dock="Bottom" />
+  <Dock Target="id=DockingView/type=TabItem,name=Console" Position="Left" />
+  <Expect Target="id=DockingView/type=TabItem,name=Console" Dock="Left" />
+  <Dock Target="id=DockingView/type=TabItem,name=Console" Position="None" />
+  <Wait Target="id=DockingWindow,name=Console" />
+  <Dock Target="type=TabItem,name=Console" Position="Fill" Beside="id=DockingView/type=TabItem,name=Output" />
+  <Absent Target="id=DockingWindow" />
+  <Expect Target="id=DockingView/type=TabItem,name=Console" Dock="Bottom" />
+  <Dock Target="id=DockingView/type=TabItem,name=Hierarchy" Position="Bottom" Beside="id=DockingView/type=TabItem,name=Inspector" />
+  <Expect Target="id=DockingView/type=TabItem,name=Hierarchy" Dock="Right" />
+  <Dock Target="id=DockingView/type=TabItem,name=Inspector/parent" Position="None" />
+  <Wait Target="id=DockingWindow" />
+  <Expect Target="type=TabItem,name=Properties" Dock="None" />
+  <Dock Target="id=DockingWindow/type=Tab" Position="Right" />
+  <Absent Target="id=DockingWindow" />
+  <Expect Target="id=DockingView/type=TabItem,name=Properties" Dock="Right" />
+  <Invoke Target="id=DockingView/name=Reset" />
+  <Expect Target="id=DockingView/type=TabItem,name=Scene" Selected="True" />
+  <Wait Target="id=DockingView/type=TabItem,name=Game" />
+  <!-- Back as the page opens. -->
+  <Select Target="id=PaneChoice/name=Assets" />
+  <Select Target="id=PlaceChoice/name=Center" />
+</Scenario>

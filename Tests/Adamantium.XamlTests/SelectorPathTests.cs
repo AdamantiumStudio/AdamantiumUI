@@ -112,7 +112,7 @@ public class SelectorPathTests
     {
         await using var session = await FormAsync();
 
-        await session.RunCommandAsync("expect id=Row>type=Button[-1]/previous id=B");
-        await session.RunCommandAsync("expect id=Items>type=ListItem[0]/next name=Two");
+        await session.Find("id=Row>type=Button[-1]/previous").ExpectAsync(new Expectation("id", "B"));
+        await session.Find("id=Items>type=ListItem[0]/next").ExpectAsync(new Expectation("name", "Two"));
     }
 }

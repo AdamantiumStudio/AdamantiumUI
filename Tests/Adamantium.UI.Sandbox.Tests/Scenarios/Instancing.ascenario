@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Instancing page: the virtualized grid of stars scrolled to its end and back, without an error left behind.">
+  <Select Target="id=GalleryTabs/id=Instancing" />
+  <Wait Target="id=Stars" />
+  <Scroll Target="id=Stars" Vertical="100" />
+  <Expect Target="id=Stars" VScroll="100" />
+  <Scroll Target="id=Stars" Vertical="0" />
+  <Expect Target="id=Stars" VScroll="0" />
+</Scenario>

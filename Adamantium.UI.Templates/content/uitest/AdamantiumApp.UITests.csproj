@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <AdamantiumScenarioApplication>APP_NAME</AdamantiumScenarioApplication>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,10 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\APP_NAME\APP_NAME.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Scenarios\**\*.adam" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

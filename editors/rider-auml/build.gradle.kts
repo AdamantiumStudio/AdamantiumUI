@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "com.adamantium"
-version = "1.10.0"
+version = "1.11.0"
 
 repositories {
     mavenCentral()
@@ -86,14 +86,15 @@ val serverPackDir = layout.buildDirectory.dir("server-pack")
 val publishServer by tasks.registering(Exec::class) {
     group = "build"
     description = "Publishes the AUML language server (framework-dependent) for bundling."
-    // The server's own folder and the two it compiles in, Markup and the generator's type model: a change in either
-    // must republish it.
+    // The server's own folder and the two it compiles in, Markup and the generator's type model, with the scenario
+    // schema and selector syntax the generator takes from the automation library: a change in any must republish it.
     for (project in listOf(serverCsproj.parentFile, file("../../Adamantium.UI.Markup"), file("../../Adamantium.UI.Generators"))) {
         inputs.files(fileTree(project) {
             include("**/*.cs", "**/*.csproj")
             exclude("**/bin/**", "**/obj/**")
         })
     }
+    inputs.files(file("../../Adamantium.UI.Automation/Scenario.xsd"), file("../../Adamantium.UI.Automation/SelectorSyntax.cs"))
     outputs.dir(serverPublishDir)
     // --disable-build-servers runs MSBuild + the C# compiler in-process instead of reusing the persistent
     // build-server nodes. Those nodes can wedge (especially while Rider is building the same solution),

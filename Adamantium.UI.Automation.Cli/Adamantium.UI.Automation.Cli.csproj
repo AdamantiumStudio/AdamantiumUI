@@ -13,7 +13,7 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>adam-auto</ToolCommandName>
         <PackageId>Adamantium.UI.Automation.Cli</PackageId>
-        <Description>adam-auto: drives an Adamantium UI application from the command line through its automation agent - starts it, finds elements by id, name or type, acts on them, checks what they show and runs scenario files. dotnet tool install -g Adamantium.UI.Automation.Cli</Description>
+        <Description>adam-auto: drives an Adamantium UI application from the command line through its automation agent - starts it, finds elements by id, name or type, acts on them and checks what they show. dotnet tool install -g Adamantium.UI.Automation.Cli</Description>
         <PackageTags>adamantium;ui;automation;testing;cli;dotnet-tool</PackageTags>
     </PropertyGroup>
 

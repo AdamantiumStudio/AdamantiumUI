@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Image page: the playground's stretch, direction and alignment chosen, its box resized, the format gallery faded, and the animated images paused.">
+  <Select Target="id=GalleryTabs/id=Image" />
+  <Wait Target="id=StretchChoice" />
+  <Select Target="id=StretchChoice/name=Fill" />
+  <Expect Target="id=StretchChoice" Value="Fill" />
+  <Select Target="id=StretchChoice/name=UniformToFill" />
+  <Select Target="id=DirectionChoice/name=DownOnly" />
+  <Select Target="id=HorizontalChoice/name=Left" />
+  <Select Target="id=VerticalChoice/name=Top" />
+  <Set Target="id=BoxWidth" Value="300" />
+  <Set Target="id=BoxHeight" Value="200" />
+  <Expect Target="id=BoxWidth" Value="300" />
+  <Set Target="id=ImageOpacity" Value="0.5" />
+  <!-- Back as the page opens. -->
+  <Select Target="id=StretchChoice/name=Uniform" />
+  <Select Target="id=DirectionChoice/name=Both" />
+  <Select Target="id=HorizontalChoice/name=Stretch" />
+  <Select Target="id=VerticalChoice/name=Stretch" />
+  <Set Target="id=BoxWidth" Value="320" />
+  <Set Target="id=BoxHeight" Value="220" />
+  <Set Target="id=ImageOpacity" Value="1" />
+</Scenario>

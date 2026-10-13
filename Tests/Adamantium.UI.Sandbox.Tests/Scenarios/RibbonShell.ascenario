@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The ribbon shell, opened by the gallery's caption command: its clipboard commands say in the status line what they did.">
+  <Invoke Target="id=OpenRibbon" />
+  <!-- The window comes first and its page after it, by navigation: wait for what the next steps read. -->
+  <Wait Target="id=RibbonWindow/id=StatusLine" Timeout="30s" />
+  <Expect Target="id=StatusLine" Name="Ready." />
+  <Invoke Target="id=Cut" />
+  <Expect Target="id=StatusLine" Name="Cut the selection." />
+  <Click Target="id=Band/name=Copy" />
+  <Expect Target="id=StatusLine" Name="Copied the selection." />
+  <!-- Key tips: Alt, then F, opens the File menu; Escape puts it away. -->
+  <Key Keys="Alt F" Into="id=RibbonWindow" />
+  <Wait Target="id=RibbonWindow/id=PART_BackButton" />
+  <Key Keys="Escape" Into="id=RibbonWindow" />
+  <Absent Target="id=RibbonWindow/id=PART_BackButton" />
+  <!-- Tabs are chosen by name; the open tab's groups follow. -->
+  <Expect Target="id=Band/name=Home" Key="H" Selected="True" />
+  <Select Target="id=Band/name=Modeling" />
+  <Expect Target="id=Band/type=Pane" Name="Modeling" />
+  <!-- The Transform tools are one choice: picking one clears the others, and the status line says what it does. -->
+  <Expect Target="id=Band/id=SelectGizmo" Selected="True" />
+  <Select Target="id=Band/id=MoveGizmo" />
+  <Expect Target="id=Band/id=MoveGizmo" Selected="True" />
+  <Expect Target="id=Band/id=SelectGizmo" Selected="False" />
+  <Expect Target="id=StatusLine" Name="Drag to move the selection." />
+  <Select Target="id=Band/id=SelectGizmo" />
+  <Expect Target="id=Band/id=MoveGizmo" Selected="False" />
+  <!-- The menu key opens a command's own menu with the keyboard on its first row; Escape puts it away. -->
+  <Key Keys="Apps" Into="id=Band/name=Snap" />
+  <Expect Target="type=MenuItem,name=Snap settings..." Focus="True" />
+  <Key Keys="Escape" />
+  <Absent Target="type=MenuItem,name=Snap settings..." />
+  <Expect Target="id=Band/name=Snap" Focus="True" />
+  <Select Target="id=Band/name=Home" />
+  <!-- The gallery is a list picked from by name. -->
+  <Select Target="id=Band/name=Materials/name=Gold" />
+  <Expect Target="id=Band/name=Materials/name=Gold" Selected="True" />
+  <!-- File opens a page by its row. -->
+  <Expand Target="id=Band/name=File" />
+  <Select Target="id=Band/name=File/name=Customize" />
+  <Expect Target="id=CommandChoices" Name="Choose commands from" />
+  <Collapse Target="id=Band/name=File" />
+  <!-- The ribbon folds down to its tabs and opens again. -->
+  <Collapse Target="id=Band" />
+  <Expect Target="id=Band" Expanded="Collapsed" />
+  <Expand Target="id=Band" />
+  <Expect Target="id=Band" Expanded="Expanded" />
+  <!-- The module catalog still opens after the window was minimized and restored. -->
+  <Window Target="id=RibbonWindow" Action="Minimize" />
+  <Window Target="id=RibbonWindow" Action="Restore" />
+  <Expand Target="id=Band/name=Modules" />
+  <Invoke Target="id=Band/name=Modules/name=Module catalog..." />
+  <Wait Target="id=CatalogModules" />
+  <Expect Target="id=CatalogSearch" Name="Find a module" />
+  <Invoke Target="id=CloseCatalog" />
+  <Absent Target="id=CatalogModules" />
+  <!-- Closed again, so the next run starts from a fresh shell. -->
+  <Window Target="id=RibbonWindow" Action="Close" />
+  <Absent Target="id=RibbonWindow" />
+</Scenario>
