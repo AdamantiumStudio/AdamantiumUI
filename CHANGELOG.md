@@ -1132,6 +1132,10 @@ All packages share one version.
 
 ### Fixed
 
+- An animated picture nobody disposed no longer destroys its frame array and palette on the finalizer thread: they
+  are retired to the device and freed once no frame in flight can sample them, as a disposed picture's are. Freed on
+  the spot, they could vanish under a frame, and left the resource registry in the middle of another test
+  (`GraphicsResources_Unregister_OnDispose`).
 - An event set in markup (`Click="OnClick"`) is subscribed. The generator asked the event's TYPE whether it was an
   event, never the member, so the handler was written as a plain assignment and did not compile; the designer
   dropped it.
