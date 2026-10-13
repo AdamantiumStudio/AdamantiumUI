@@ -442,8 +442,17 @@ public partial class InfiniteCanvas
         _answer = null;
 
         window.Close();
+        DiscardedVisuals.PublishSubtree(window);
 
         if (yes) done?.Invoke();
+    }
+
+    /// <summary>Also takes down a question it is still waiting on: the window is its own, made for that one answer.
+    /// </summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        Answered(false);
     }
 
     /// <summary>How far a pasted or duplicated copy is put from the original, in WORLD units. Far enough to see that

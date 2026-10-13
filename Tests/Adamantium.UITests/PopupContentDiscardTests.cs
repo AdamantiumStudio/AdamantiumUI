@@ -13,6 +13,31 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class PopupContentDiscardTests
 {
+    // Discarded while open - a slider torn down in the middle of a drag, its value badge up - it is closed: the window's
+    // popup layer held it, and through it its owner.
+    [Test]
+    public void ADiscardedOpenPopup_LeavesTheWindowAndTakesItsContent()
+    {
+        var content = new Border { Width = 20, Height = 20 };
+        var popup = new Popup { Child = content };
+        var host = new StackPanel();
+        host.Children.Add(popup);
+        var window = new Window { Width = 200, Height = 100, Content = host };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        popup.IsOpen = true;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        Assume.That(window.PopupLayer.HasPopups, Is.True, "the popup is shown");
+
+        DiscardedVisuals.Publish(popup);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(window.PopupLayer.HasPopups, Is.False, "off the window's layer");
+            Assert.That(content.IsDiscarded, Is.True, "its content");
+        });
+    }
+
     [Test]
     public void ADiscardedPopup_DiscardsItsContent()
     {

@@ -239,12 +239,13 @@ public class Popup : MeasurableUIComponent, IContainer
         base.OnDetachedFromVisualTree(e);
     }
 
-    /// <summary>Discards the content along with the popup. It is not a visual child, so a template the popup is part of
-    /// neither reaches it when torn down nor stamps it as one of its parts. What the content shows for others stays: the
-    /// items an items presenter in it shows, and anything already back in a tree.</summary>
+    /// <summary>Closes, and discards the content along with the popup. It is not a visual child, so a template the popup
+    /// is part of neither reaches it when torn down nor stamps it as one of its parts. What the content shows for others
+    /// stays: the items an items presenter in it shows, and anything already back in a tree.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
+        Close();
 
         if (Child is not UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } child)
         {

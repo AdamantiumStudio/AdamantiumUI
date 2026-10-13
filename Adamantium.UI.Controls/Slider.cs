@@ -123,6 +123,16 @@ public class Slider : RangeBase
         DetachParts();
     }
 
+    /// <summary>Also discards its value badge, which is its own but not in its visual tree.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        if (_valueToolTip != null)
+        {
+            DiscardedVisuals.PublishSubtree(_valueToolTip);
+        }
+    }
+
     private void DetachParts()
     {
         if (_track == null) return;

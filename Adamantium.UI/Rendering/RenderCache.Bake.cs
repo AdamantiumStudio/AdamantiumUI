@@ -39,6 +39,7 @@ public partial class RenderCache
     private readonly Dictionary<IUIComponent, float> _opacityChain = new();   // memo of OpacityChain, like _worldCache
     private readonly Dictionary<IUIComponent, int> _opacitySlotCache = new();   // memo of OpacitySlotOf, same lifetime
     private readonly Dictionary<IUIComponent, int> _fadeOwners = new();
+    private readonly HashSet<IUIComponent> _drawnChains = [];
 
     // Set when a fade slot is handed out for the first time - the instances beneath it still carry the old index, so the
     // frame has to walk instead of patch. Cleared by the walk that acts on it.
@@ -171,7 +172,35 @@ public partial class RenderCache
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
+
+        if (components != null)
+        {
+            foreach (var component in components)
+            {
+                NoteDrawnChain(component);
+            }
+        }
+
+        ReleaseSlotsOfUndrawn();
     }
+
+    private void NoteDrawnChain(IUIComponent component)
+    {
+        for (var node = component; node != null && _drawnChains.Add(node);)
+        {
+            node = ApplySnap(node).RenderParent;
+        }
+    }
+
+    private void ReleaseSlotsOfUndrawn()
+    {
+        ReleaseSlotsOf(_clipOwners, NotDrawn, ReleaseClipSlot);
+        ReleaseSlotsOf(_fadeOwners, NotDrawn, ReleaseFadeSlot);
+        ReleaseSlotsOf(_nodeRefreshed, NotDrawn, ReleaseNodeSlot);
+        _drawnChains.Clear();
+    }
+
+    private bool NotDrawn(IUIComponent component) => !_drawnChains.Contains(component);
 
     /// <summary>The record half of an overlay build, device-free, on the thread that lays the components out: renders the
     /// flat list into a packet and freezes their layout with it, so <see cref="ApplyComponents"/> never reads a live
@@ -274,6 +303,13 @@ public partial class RenderCache
         {
             foreach (var id in stale) RemoveAndDeferDispose(id);
         }
+
+        foreach (var draw in packet.Draws)
+        {
+            NoteDrawnChain(draw.Component);
+        }
+
+        ReleaseSlotsOfUndrawn();
     }
 
     /// <summary>Releases the batch rings and transform table for a closing window; <see cref="DisposeUnits"/> keeps them

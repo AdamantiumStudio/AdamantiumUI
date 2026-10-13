@@ -130,6 +130,37 @@ public class CanvasInspectorChoiceTests
         return found;
     }
 
+    // The theme makes the inspector a set of sections of its own, and those it is not showing are out of its tree. Left
+    // alive when it was discarded, their rows held the panel and followed the theme, and every canvas page visited stayed.
+    [Test]
+    public void ADiscardedInspector_DiscardsTheSectionsItWasNotShowing()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+        var canvas = WithNodeSelected();
+        var inspector = Found<CanvasInspector>(canvas);
+        var kept = (CanvasInspectorSections)typeof(CanvasInspector)
+            .GetField("_selectionSections", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            .GetValue(inspector);
+        var hidden = new List<PropertySection>();
+        foreach (var set in kept.Sets)
+        {
+            foreach (var section in set.Sections)
+            {
+                if (section.VisualParent == null)
+                {
+                    hidden.Add(section);
+                }
+            }
+        }
+
+        Assume.That(hidden, Is.Not.Empty, "a node selected leaves the other kinds' sections out");
+
+        DiscardedVisuals.PublishSubtree(canvas);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(hidden.TrueForAll(section => section.IsDiscarded), Is.True);
+    }
+
     // THE CATALOGS REACH THE PANEL, WHENEVER THEY ARRIVE. The panel is not the canvas: it is handed one by the pane
     // it rides in, and a page states its catalogs with bindings that are pushed after all of that.
     [Test]

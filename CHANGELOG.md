@@ -1109,7 +1109,25 @@ All packages share one version.
     the strip, a chip went on following the theme and, through its column, held the whole table after the table itself
     was gone.
   - **A property grid discards the rows a pass no longer wants**, such as the parts of a composite folded again. They
-    held the grid and, through their reset buttons, stayed owners of the theme's brushes, so each kept its page.
+    held the grid and, through their reset buttons, stayed owners of the theme's brushes, so each kept its page. **It
+    discards the sections it built** for an object no longer inspected or for a type no longer selected, and, when it is
+    discarded itself, those out of the tree, such as the ones a search leaves out.
+  - **A `Path` lets go of its geometry when it is discarded.** It followed the geometry's changes until it was given
+    another one, so an icon a view model hands out kept every path that had drawn it, with its page.
+  - **A `Slider` and a `RangeSlider` discard their value badges with themselves.** A badge is not in its slider's visual
+    tree; it stayed alive, following the theme, and held the slider.
+  - **A discarded `Popup` closes.** One discarded while open - a slider torn down mid-drag, its badge up - stayed on the
+    window's popup layer, holding its owner. An overlay closing no longer gives the focus back to an element gone from
+    its window since, which the focus manager then held.
+  - **A canvas inspector discards the sections the theme made for it that it was not showing** when it is discarded, and
+    the whole set when a new template replaces it. Out of its tree, their rows held the panel and followed the theme, so
+    every canvas page visited stayed in memory.
+  - **An `InfiniteCanvas` discards the dialog it asks a question in once it is answered**, and closes and discards one
+    still open when the canvas itself is discarded. Closed and kept, its buttons followed the theme and, through the
+    question, held the canvas and its page.
+  - **Popups, adorners and live snapshots hand back the clip, opacity and node slots of what they no longer show.** It handed them
+    back only for elements thrown away, so a closed dialog went on holding the canvas that had asked its question, and
+    the page around it.
   - **The render cache lets go of what a splice staged once the splice is done.** The stage was kept until the same
     family was spliced again, and with it the controls last spliced and everything they reached.
   - The render cache clears the buffers of its structural pass after each frame.

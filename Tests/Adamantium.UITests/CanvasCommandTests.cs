@@ -237,6 +237,50 @@ public class CanvasCommandTests
         });
     }
 
+    // The dialog is the canvas's own, made for one answer. Closed and kept, its buttons went on following the theme, and
+    // through the question the canvas and its page stayed in memory.
+    [Test]
+    public void AnAnsweredQuestion_IsDiscarded()
+    {
+        var (_, window) = Asking();
+        var dialog = Overlays(window)[0];
+
+        dialog.Close();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(dialog.IsDiscarded, Is.True);
+    }
+
+    [Test]
+    public void ACanvasThrownAwayWhileAsking_TakesTheQuestionWithIt()
+    {
+        var (canvas, window) = Asking();
+        var dialog = Overlays(window)[0];
+
+        DiscardedVisuals.PublishSubtree(canvas);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dialog.IsDiscarded, Is.True, "the dialog");
+            Assert.That(Overlays(window), Is.Empty, "off the window");
+        });
+    }
+
+    private static (InfiniteCanvas Canvas, Window Window) Asking()
+    {
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+        var window = new Window { Width = 800, Height = 600, Content = canvas };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 800, 600));
+        canvas.Scene.Add(Box(0, 0));
+        canvas.ConfirmsDelete = true;
+        canvas.ClearCommand.Execute();
+        Assume.That(canvas.IsAsking, Is.True, "the canvas asks before clearing");
+        return (canvas, window);
+    }
+
     private static System.Collections.Generic.List<OverlayWindow> Overlays(Window window)
     {
         var found = new System.Collections.Generic.List<OverlayWindow>();

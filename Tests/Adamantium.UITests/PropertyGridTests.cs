@@ -2035,6 +2035,24 @@ public class PropertyGridTests
         });
     }
 
+    // The section of an object no longer inspected is gone for good: the object coming back gets a new one. Only left out
+    // of the panel, its rows held the grid and followed the theme, and an inspector kept every section it ever showed.
+    [Test]
+    public void TheSectionOfARemovedObject_IsDiscarded()
+    {
+        var first = new Target();
+        var source = new TrackingCollection<object> { first, new Target() };
+        var grid = Built();
+        grid.SectionsSource = source;
+        var section = new List<PropertySection>(grid.Displayed)[0];
+        Assume.That(section.Target, Is.SameAs(first));
+
+        source.Remove(first);
+        grid.Rebuild();
+
+        Assert.That(section.IsDiscarded, Is.True);
+    }
+
     // The field is the only way back to the whole inspector. Taking it away while a search is running would leave the
     // panel narrowed down with nothing on it to widen it again - and looking like it had lost most of its properties.
     [Test]
