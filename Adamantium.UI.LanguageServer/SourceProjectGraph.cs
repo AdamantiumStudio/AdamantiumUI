@@ -28,7 +28,7 @@ public static class SourceProjectGraph
         """);
 
     /// <summary>
-    /// Builds the root project's compilation. <paramref name="repoRoot"/> (the directory holding the shared
+    /// Builds the root project's compilation. <paramref name="repoRoot"/> (the directory holding the
     /// <c>artifacts</c> output) is the boundary: project references under it are compiled from source, the rest
     /// stay as dlls. Returns the root compilation, the repo root to watch for <c>*.cs</c> changes, and the directories of
     /// the in-repo dependencies compiled from source - whose markup the build's generator never ran over here.
@@ -197,7 +197,7 @@ public static class SourceProjectGraph
         }
     }
 
-    // The repo/solution directory is the parent of the shared "artifacts" output folder that binDir lives under.
+    // The repo/solution directory is the parent of the "artifacts" output folder that binDir lives under.
     private static string FindRepoRoot(string binDir)
     {
         for (var dir = new DirectoryInfo(binDir); dir is not null; dir = dir.Parent)

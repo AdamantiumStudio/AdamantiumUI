@@ -615,6 +615,7 @@ public sealed class DesignerSession : IDisposable
         }
 
         var dllName = Path.GetFileNameWithoutExtension(csprojPath) + ".dll";
+        var ownFolder = Path.DirectorySeparatorChar + Path.Combine("artifacts", "bin", Path.GetFileNameWithoutExtension(csprojPath)) + Path.DirectorySeparatorChar;
 
         foreach (var binBase in CandidateOutputRoots(csprojPath))
         {
@@ -622,6 +623,7 @@ public sealed class DesignerSession : IDisposable
             var dll = Directory.EnumerateFiles(binBase, dllName, SearchOption.AllDirectories)
                 .OrderByDescending(IsHostConfiguration)
                 .ThenByDescending(File.GetLastWriteTimeUtc)
+                .ThenByDescending(found => found.Contains(ownFolder, StringComparison.OrdinalIgnoreCase))
                 .FirstOrDefault();
             if (dll != null) return dll;
         }
@@ -666,8 +668,8 @@ public sealed class DesignerSession : IDisposable
         // 2. The conventional per-project bin.
         yield return Path.Combine(projectDir, "bin");
 
-        // 3. A consolidated artifacts/bin (this engine's layout: a root Directory.Build.props redirects every
-        //    project's OutputPath there, so the project has no local bin). Walk up from the project to find it.
+        // 3. An artifacts/bin above the project (this repository's layout: a root Directory.Build.props redirects every
+        //    project's output there, a folder per project, so the project has no local bin). Walk up to find it.
         for (var dir = new DirectoryInfo(projectDir); dir != null; dir = dir.Parent)
         {
             var artifactsBin = Path.Combine(dir.FullName, "artifacts", "bin");

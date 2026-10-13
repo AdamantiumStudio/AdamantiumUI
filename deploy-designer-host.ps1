@@ -5,8 +5,8 @@
 
 .DESCRIPTION
     The host shares the engine assemblies (Adamantium.UI.Controls, Adamantium.UI, ...) with the runtime, which
-    normally build into the shared artifacts\bin folder. A running UI.Sandbox (e.g. while you debug) locks those
-    DLLs and blocks a normal rebuild ("being used by another process").
+    normally build into artifacts\bin. A running UI.Sandbox (e.g. while you debug) can lock those DLLs and block a
+    normal rebuild ("being used by another process").
 
     This deploy builds the host AND all of its dependencies into the host's OWN isolated folder
     (-p:OutputPath + AppendTargetFrameworkToOutputPath=false), so it never writes to artifacts\bin and therefore
@@ -34,7 +34,7 @@ Get-Process -Name 'Adamantium.UI.Designer.Host' -ErrorAction SilentlyContinue | 
 Start-Sleep -Milliseconds 500
 
 # 2) Build the host + ALL deps into the isolated folder. Key bits:
-#      -p:OutputPath=<isolated>            -> deps build here, NOT into the shared artifacts\bin (no lock).
+#      -p:OutputPath=<isolated>            -> deps build here, NOT into artifacts\bin (no lock).
 #      -p:AppendTargetFrameworkToOutputPath=false -> exe + deps land in ONE folder (no extra \net10.0).
 & dotnet build $proj -c $Configuration -nodeReuse:false `
     -p:OutputPath="$outDir\" -p:AppendTargetFrameworkToOutputPath=false

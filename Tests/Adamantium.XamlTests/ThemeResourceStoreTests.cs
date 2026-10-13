@@ -108,7 +108,7 @@ public class ThemeResourceStoreTests
         while (dir != null)
         {
             var candidate = Path.Combine(dir.FullName, "Adamantium.UI.Themes");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(Path.Combine(candidate, "FluentTheme"))) return candidate;
             dir = dir.Parent;
         }
 
