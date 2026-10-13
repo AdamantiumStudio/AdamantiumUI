@@ -8,6 +8,9 @@
   <Invoke Target="id=WorkspaceShellView/name=Close tab" />
   <Absent Target="id=WorkspaceTabs/name=Chart 1" />
   <Expect Target="id=WorkspaceTabs/name=Doc 1" Selected="True" />
+  <!-- The region outlives the window: a tab left open would be there when the next pass opens it. -->
+  <Invoke Target="id=WorkspaceShellView/name=Close tab" />
+  <Absent Target="id=WorkspaceTabs/type=TabItem" />
   <Window Target="id=WorkspaceWindow" Action="Close" />
   <Absent Target="id=WorkspaceWindow" />
 </Scenario>
