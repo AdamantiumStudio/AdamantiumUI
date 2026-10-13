@@ -255,6 +255,10 @@ public static class MarkupHotReload
         try
         {
             count = file.Apply(edited, diagnostics);
+            if (count > 0 && edited.EntityType is EntityType.StyleSet or EntityType.ResourceDictionary or EntityType.ThemeVariant)
+            {
+                (UIAppContext.Current?.ThemeManager as Resources.ThemeManager)?.RefreshFromMarkup();
+            }
         }
         catch (Exception exception)
         {

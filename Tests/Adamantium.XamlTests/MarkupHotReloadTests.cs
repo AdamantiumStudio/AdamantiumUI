@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Adamantium.Core.DependencyInjection;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Markup;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Markup;
 using NUnit.Framework;
 
@@ -35,6 +38,9 @@ public class MarkupHotReloadTests
     [SetUp]
     public void Fresh()
     {
+        var app = new FakeApp(new AdamantiumDependencyContainer()) { ResourceManager = new ResourceManager() };
+        UIAppContext.Initialize(app, null);
+        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, app);
         MarkupHotReload.Reset();
         MarkupHotReload.Dispatch = action => action();
         MarkupHotReload.Mode = MarkupReloadMode.Manual;
@@ -156,6 +162,66 @@ public class MarkupHotReloadTests
     }
 
     [Test]
+    public void AStyleSetOfADebugBuild_ReportsItself()
+    {
+        var styles = $"<StyleSet {Namespaces}><Style Selector=\"Border\"><Setter Property=\"Width\" Value=\"10\"/></Style></StyleSet>";
+
+        var project = AumlCodegenHarness.Project(new Dictionary<string, string> { ["Styles.auml"] = styles },
+            new Dictionary<string, string> { [Adamantium.UI.Generators.AumlCodeBehindGenerator.HotReloadProperty] = "true" });
+
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors));
+        Assert.That(project.Source, Does.Contain($"MarkupHotReload.Track(this, \"C:\\\\Test\\\\Styles.auml\", \"{MarkupHash.Of(styles)}\");"));
+    }
+
+    [Test]
+    public async Task AnEditedStyleSet_IsBuiltAgain_AndItsThemeTakesIt()
+    {
+        static string Styles(string width, string more) =>
+            $"<StyleSet {Namespaces}><Style Selector=\"Border\"><Setter Property=\"Width\" Value=\"{width}\"/></Style>{more}</StyleSet>";
+        var set = Built<StyleSet>(Styles("10", string.Empty));
+        var theme = new Theme("Probe");
+        theme.AddStyleSet(set);
+        var before = set.Styles[0];
+
+        File.WriteAllText(_file, Styles("20", "<Style Selector=\"TextBlock\"/>"));
+        var reports = await MarkupHotReload.ApplyAsync([_file]);
+        theme.RefreshFromMarkup();
+
+        Assert.That(reports.Single().Applied, Is.True, string.Join(" | ", reports.Single().Messages));
+        Assert.Multiple(() =>
+        {
+            Assert.That(set.Styles.Count, Is.EqualTo(2));
+            Assert.That(set.Styles[0].Setters[0].Value, Is.EqualTo("20"));
+            Assert.That(theme.MergedStyles.Styles, Does.Not.Contain(before), "the old styles leave the theme");
+            Assert.That(theme.MergedStyles.Styles, Is.EquivalentTo(set.Styles));
+        });
+    }
+
+    [Test]
+    public async Task AnEditedVariant_RepaintsThePaletteBrushItself()
+    {
+        static string Variant(string color) =>
+            $"<ThemeVariantDefinition {Namespaces} Key=\"Light\"><ThemeVariantDefinition.Colors>" +
+            $"<PaletteColor Key=\"Probe\" Color=\"{color}\"/></ThemeVariantDefinition.Colors></ThemeVariantDefinition>";
+        var variant = Built<ThemeVariantDefinition>(Variant("#FF0000"));
+        var theme = new Theme("Probe");
+        theme.Variants.Add(variant);
+        theme.ApplyVariant(variant.Key);
+        var brush = theme.Palette["Probe"];
+
+        File.WriteAllText(_file, Variant("#00FF00"));
+        var reports = await MarkupHotReload.ApplyAsync([_file]);
+        theme.RefreshFromMarkup();
+
+        Assert.That(reports.Single().Applied, Is.True, string.Join(" | ", reports.Single().Messages));
+        Assert.Multiple(() =>
+        {
+            Assert.That(theme.Palette["Probe"], Is.SameAs(brush));
+            Assert.That(brush.Color, Is.EqualTo(Color.FromRgba(0, 255, 0, 255)));
+        });
+    }
+
+    [Test]
     public void TheDesigner_TracksNothing()
     {
         Design.IsDesignMode = true;
@@ -175,9 +241,14 @@ public class MarkupHotReloadTests
 
     private StackPanel Built(string markup)
     {
+        return Built<StackPanel>(markup);
+    }
+
+    private T Built<T>(string markup)
+    {
         File.WriteAllText(_file, markup);
-        var panel = (StackPanel)AumlLoader.Load(markup).Root;
-        MarkupHotReload.Track(panel, _file, MarkupHash.Of(markup));
-        return panel;
+        var built = (T)AumlLoader.Load(markup).Root;
+        MarkupHotReload.Track(built, _file, MarkupHash.Of(markup));
+        return built;
     }
 }

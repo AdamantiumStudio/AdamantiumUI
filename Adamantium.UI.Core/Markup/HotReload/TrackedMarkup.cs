@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Adamantium.UI.Markup;
 using Adamantium.UI.Markup.Building;
 
 namespace Adamantium.UI.Core.Markup;
@@ -62,13 +63,37 @@ internal sealed class TrackedMarkup(string path, string builtText)
     {
         try
         {
-            return Reconcile(instance, edited, diagnostics);
+            return edited.EntityType switch
+            {
+                EntityType.StyleSet or EntityType.ResourceDictionary or EntityType.ThemeVariant => Rebuild(instance, edited, diagnostics),
+                EntityType.Theme => Refuse(diagnostics, "a theme's own file changed - restart the application to see it"),
+                _ => Reconcile(instance, edited, diagnostics),
+            };
         }
         catch (Exception exception)
         {
             diagnostics.Add($"{instance.GetType().Name}: {exception.Message}");
             return false;
         }
+    }
+
+    private bool Rebuild(object instance, LoweredDocument edited, List<string> diagnostics)
+    {
+        if (instance is not IMarkupContent content)
+        {
+            return Refuse(diagnostics, $"{instance.GetType().Name} cannot be built again in place");
+        }
+
+        content.ClearMarkupContent();
+        new BuildPlanExecutor(edited.Resolver, edited.Assemblies, null, diagnostics).Run(edited.Plan, instance);
+        _planOf.AddOrUpdate(instance, edited.Plan);
+        return true;
+    }
+
+    private bool Refuse(List<string> diagnostics, string why)
+    {
+        diagnostics.Add($"{System.IO.Path.GetFileName(Path)}: {why}");
+        return false;
     }
 
     private bool Reconcile(object instance, LoweredDocument edited, List<string> diagnostics)

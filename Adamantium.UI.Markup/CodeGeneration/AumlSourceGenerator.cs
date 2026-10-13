@@ -92,6 +92,17 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.ApplicationEntry", textGenerator.ToString());
     }
 
+    private void WriteTrack(TextGenerator textGenerator, AumlMetadataContainer container)
+    {
+        if (!HotReload || string.IsNullOrEmpty(container.SourceFilePath))
+        {
+            return;
+        }
+
+        var path = BuildPlanEmitter.Print(new StringValue(container.SourceFilePath));
+        textGenerator.WriteLine($"global::Adamantium.UI.Core.Markup.MarkupHotReload.Track(this, {path}, \"{container.SourceHash}\");");
+    }
+
     private static HashSet<AumlAstObjectNode> InsideTemplates(IAumlAstNode root)
     {
         var inside = new HashSet<AumlAstObjectNode>();
@@ -246,6 +257,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteOpenBraceAndIndent();
 
         BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        WriteTrack(textGenerator, container);
 
         textGenerator.UnindentAndWriteCloseBrace();
         textGenerator.UnindentAndWriteCloseBrace();
@@ -300,6 +312,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteOpenBraceAndIndent();
         BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        WriteTrack(textGenerator, container);
         textGenerator.UnindentAndWriteCloseBrace();
         textGenerator.UnindentAndWriteCloseBrace();
 
@@ -407,10 +420,9 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteOpenBraceAndIndent();
 
         BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
-        if (HotReload && entityType != EntityType.ApplicationBlueprint && !string.IsNullOrEmpty(container.SourceFilePath))
+        if (entityType != EntityType.ApplicationBlueprint)
         {
-            var path = BuildPlanEmitter.Print(new StringValue(container.SourceFilePath));
-            textGenerator.WriteLine($"global::Adamantium.UI.Core.Markup.MarkupHotReload.Track(this, {path}, \"{container.SourceHash}\");");
+            WriteTrack(textGenerator, container);
         }
 
         textGenerator.UnindentAndWriteCloseBrace();

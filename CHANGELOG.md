@@ -16,9 +16,12 @@ All packages share one version.
     nothing of it.
   - **API.** `MarkupHotReload` (`Adamantium.UI.Core.Markup`): `Mode` (`OnSave` or `Manual`), `ChangedFiles`,
     `NotifyChanged`, `ApplyAsync` with a `MarkupReloadReport` per file, the events `Reloaded` and `Failed`.
-  - **Not applied in place:** a changed root element, children of a style, a trigger or a resource file, and children
-    behind `x:Load`. They are reported; restart to see them. A file changed after the build is not followed until the
-    application is rebuilt.
+  - **Themes too.** A style set, a theme variant or a resource dictionary is built again from the saved file, and the
+    current theme takes it: its styles are merged anew, its variant repaints the palette brushes, resource references
+    resolve again, and every window is restyled - without the theme swap's overlay.
+  - **Not applied in place:** a changed root element, a theme's own file (its list of style sets and variants),
+    children of a style or a trigger inside a view, and children behind `x:Load`. They are reported; restart to see
+    them. A file changed after the build is not followed until the application is rebuilt.
 
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
   steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
