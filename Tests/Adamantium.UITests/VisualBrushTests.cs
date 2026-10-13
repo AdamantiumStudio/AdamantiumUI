@@ -53,6 +53,33 @@ public class VisualBrushTests
         System.GC.KeepAlive(source);
     }
 
+    // A source that CHANGED goes too. A change marks it "to be woken"; the mark sat in a strong set of its own until a wake
+    // cleared it, and a wake that never ran - no dispatcher, a page swapped out first - left it holding the whole page.
+    [Test]
+    public void ASourceThatChangedAndWasLetGo_IsNotKeptByTheRaster()
+    {
+        var gone = Changed();
+
+        for (var i = 0; i < 3 && gone.IsAlive; i++)
+        {
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference Changed()
+    {
+        var source = new Border();
+        Adamantium.UI.Rendering.VisualBrushRaster.Ensure(new VisualBrush(source) { NeedsBake = false }, null);
+        VisualTreeNotifications.RaiseContentInvalidated(source);
+        RenderDirty.Clear();   // the frame that answers the change - its marks are not what is under test
+
+        return new System.WeakReference(source);
+    }
+
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static System.WeakReference Drawn(Border source)
     {

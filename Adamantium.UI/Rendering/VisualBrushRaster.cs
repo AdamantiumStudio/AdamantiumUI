@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
@@ -13,24 +14,37 @@ namespace Adamantium.UI.Rendering;
 // (IVisualRenderer.RequestSnapshot); nothing is drawn until the picture lands.
 internal static class VisualBrushRaster
 {
-    // Every brush painting from a given source, with the element that draws it (the one to tell about a new picture) -
-    // and so also which elements are sources at all. Weakly keyed: a brush no longer in use must not be kept alive, nor
-    // keep its source alive, by the fact that it once asked for a picture.
-    private static readonly ConditionalWeakTable<IUIComponent, List<(VisualBrush Brush, IUIComponent Owner)>> _brushes = new();
-
-    // Sources whose picture is being taken right now - one at a time each, so a source that changes every frame does
-    // not queue an off-screen render per frame.
-    private static readonly HashSet<IUIComponent> _pending = new();
+    // What is known about each SOURCE - which elements are sources at all - kept WITH the source, weakly: a source thrown
+    // away is not kept alive by having once been painted from. Two strong sets of sources stood here ("being taken",
+    // "being woken"), and an entry left in one held a discarded source and the whole page above it.
+    private static readonly ConditionalWeakTable<IUIComponent, Source> _sources = new();
 
     // The last two pictures per source, owned here since all brushes of a source share them; the deferred queue is what
     // makes freeing safe, the extra generation is a margin.
     private static readonly ConditionalWeakTable<IUIComponent, BitmapSource> _current = new();
     private static readonly ConditionalWeakTable<IUIComponent, BitmapSource> _previous = new();
 
-    // Sources with a wake already posted. Cleared as the wake runs, so the next change posts a fresh one.
-    private static readonly HashSet<IUIComponent> _waking = new();
-
     private static bool _listening;
+
+    // Every brush painting from a source, with the element that draws it (the one to tell about a new picture). Filled on
+    // the render thread and read on the loop thread, hence the lock. Taking: its picture is being taken right now - one
+    // at a time, so a source that changes every frame does not queue an off-screen render per frame. Waking: a wake is
+    // already posted, cleared as it runs.
+    private sealed class Source
+    {
+        public readonly object Gate = new();
+        public readonly List<(VisualBrush Brush, IUIComponent Owner)> Brushes = [];
+        public int Taking;
+        public int Waking;
+
+        public (VisualBrush Brush, IUIComponent Owner)[] Snapshot()
+        {
+            lock (Gate)
+            {
+                return Brushes.ToArray();
+            }
+        }
+    }
 
     private static IVisualRenderer _renderer;
 
@@ -49,17 +63,8 @@ internal static class VisualBrushRaster
 
         // Registered even when the picture is current: a shape revealed later paints from a source that has long since
         // stopped announcing changes, and a brush nobody watches is never told about the next picture.
-        Watch(visual, origin, owner);
+        var source = Watch(visual, origin, owner);
         if (!origin.NeedsBake)
-        {
-            return;
-        }
-
-        // ONE picture per SOURCE, not per brush. Four shapes painting from one element is four fills, but it is still
-        // one element - drawing it off-screen four times costs four render targets for four identical pictures. And
-        // one in flight at a time: a source that changes every frame (a slider being dragged) would otherwise queue a
-        // fresh off-screen render per frame, which is what lost the device.
-        if (_pending.Contains(visual))
         {
             return;
         }
@@ -70,24 +75,41 @@ internal static class VisualBrushRaster
             return;
         }
 
+        // ONE picture per SOURCE, not per brush. Four shapes painting from one element is four fills, but it is still
+        // one element - drawing it off-screen four times costs four render targets for four identical pictures. And
+        // one in flight at a time: a source that changes every frame (a slider being dragged) would otherwise queue a
+        // fresh off-screen render per frame, which is what lost the device.
+        if (Interlocked.CompareExchange(ref source.Taking, 1, 0) != 0)
+        {
+            return;
+        }
+
         // Cleared only now that the request is really going out. Clearing it on the way to a DROPPED request threw the
         // change away: the source kept moving while a bake ran, and the fill stayed at whatever that bake had caught -
         // drag the source's slider back and the picture stood at the far end.
         origin.NeedsBake = false;
-        _pending.Add(visual);
         dispatcher.Post(() => Take(visual));
+    }
+
+    // Its picture is no longer being taken, whatever came of it.
+    private static void Taken(IUIComponent visual)
+    {
+        if (_sources.TryGetValue(visual, out var source))
+        {
+            Volatile.Write(ref source.Taking, 0);
+        }
     }
 
     // UI thread: tell everything painting from this source that the brush changed, so it re-records and asks again.
     private static void Wake(IUIComponent visual)
     {
-        _waking.Remove(visual);
-        if (!_brushes.TryGetValue(visual, out var list))
+        if (!_sources.TryGetValue(visual, out var source))
         {
             return;
         }
 
-        foreach (var entry in list)
+        Volatile.Write(ref source.Waking, 0);
+        foreach (var entry in source.Snapshot())
         {
             if (entry.Brush.NeedsBake)
             {
@@ -104,7 +126,7 @@ internal static class VisualBrushRaster
         var renderer = Renderer;
         if (renderer == null)
         {
-            _pending.Remove(visual);
+            Taken(visual);
             return;
         }
 
@@ -117,7 +139,7 @@ internal static class VisualBrushRaster
         var size = DetachedSize(visual);
         if (size.Width < 1 || size.Height < 1)
         {
-            _pending.Remove(visual);
+            Taken(visual);
             return;
         }
 
@@ -129,8 +151,8 @@ internal static class VisualBrushRaster
     // so the very first picture would sit unused and the fill stay empty for ever.
     private static void Deliver(IUIComponent visual, ImageSource image)
     {
-        _pending.Remove(visual);
-        if (!_brushes.TryGetValue(visual, out var list))
+        Taken(visual);
+        if (!_sources.TryGetValue(visual, out var source))
         {
             return;
         }
@@ -157,7 +179,7 @@ internal static class VisualBrushRaster
 
         _current.Add(visual, baked);
 
-        foreach (var entry in list)
+        foreach (var entry in source.Snapshot())
         {
             entry.Brush.Deliver(baked);
             entry.Owner?.InvalidateRender(false);
@@ -176,28 +198,32 @@ internal static class VisualBrushRaster
         return new Size(System.Math.Max(1, desired.Width), System.Math.Max(1, desired.Height));
     }
 
-    private static void Watch(IUIComponent visual, VisualBrush brush, IUIComponent owner)
+    private static Source Watch(IUIComponent visual, VisualBrush brush, IUIComponent owner)
     {
-        var list = _brushes.GetValue(visual, static _ => []);
+        var source = _sources.GetValue(visual, static _ => new Source());
 
-        // An element that drew with this source and has been thrown away since is not told about pictures any more - and
-        // left here it would live as long as the source does.
-        list.RemoveAll(static entry => entry.Owner is FundamentalUIComponent { IsDiscarded: true });
-
-        if (!list.Exists(entry => ReferenceEquals(entry.Brush, brush) && ReferenceEquals(entry.Owner, owner)))
+        lock (source.Gate)
         {
-            list.Add((brush, owner));
+            // An element that drew with this source and has been thrown away since is not told about pictures any more -
+            // and left here it would live as long as the source does.
+            source.Brushes.RemoveAll(static entry => entry.Owner is FundamentalUIComponent { IsDiscarded: true });
+
+            if (!source.Brushes.Exists(entry => ReferenceEquals(entry.Brush, brush) && ReferenceEquals(entry.Owner, owner)))
+            {
+                source.Brushes.Add((brush, owner));
+            }
         }
 
         if (_listening)
         {
-            return;
+            return source;
         }
 
         _listening = true;
         VisualTreeNotifications.ContentInvalidated += OnSourceChanged;
         VisualTreeNotifications.PaintInvalidated += OnSourceChanged;
         VisualTreeNotifications.PaintMirrored += OnSourceChanged;
+        return source;
     }
 
     // The element that changed is rarely the SOURCE itself - it is usually something inside it - so the walk goes up
@@ -207,21 +233,23 @@ internal static class VisualBrushRaster
     {
         for (var node = component; node != null; node = node.VisualParent)
         {
-            if (!_brushes.TryGetValue(node, out var list))
+            if (!_sources.TryGetValue(node, out var source))
             {
                 continue;
             }
 
-            foreach (var entry in list)
+            foreach (var entry in source.Snapshot())
             {
                 entry.Brush.NeedsBake = true;
             }
 
             // Fills are re-routed only by the brush's Changed; posted once per source, since raising it inside the render
-            // walk would loop.
-            if (_waking.Add(node))
+            // walk would loop. Marked only once there is somewhere to post: a mark with no wake to clear it is for good.
+            var dispatcher = UIAppContext.Current?.Dispatcher;
+            if (dispatcher != null && Interlocked.CompareExchange(ref source.Waking, 1, 0) == 0)
             {
-                UIAppContext.Current?.Dispatcher.Post(() => Wake(node));
+                var awake = node;
+                dispatcher.Post(() => Wake(awake));
             }
         }
     }

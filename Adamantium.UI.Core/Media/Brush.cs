@@ -1,4 +1,6 @@
 using System;
+using System.Buffers;
+using System.Runtime.CompilerServices;
 using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.TypeParsers;
@@ -17,8 +19,18 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    private bool _anchorConsidered;
 
    // How many render properties of each owner hold this brush, so attach/detach stay symmetric when one owner uses it
-   // twice. Lazy; most brushes have one owner.
-   private Dictionary<AdamantiumComponent, int> _owners;
+   // twice. Lazy; most brushes have one owner. Weakly keyed: an owner that took the brush by a path that never gives it
+   // back is not kept alive by it - a theme brush lives as long as the application, and it held thrown-away pages.
+   private ConditionalWeakTable<AdamantiumComponent, Hold> _owners;
+
+   // Owners added less owners removed. Ones collected without letting go still count until the next sweep recounts -
+   // only ever early, which costs a sweep, never a missed one.
+   private int _ownerCount;
+
+   private sealed class Hold
+   {
+      public int Count;
+   }
 
    // The owner map is written from both the loop and render threads; a lock, since count updates and sweeps must be
    // atomic.
@@ -91,8 +103,15 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    {
       get
       {
-         int owners;
-         lock (_ownersLock) owners = _owners?.Count ?? 0;
+         var owners = 0;
+         lock (_ownersLock)
+         {
+            if (_owners != null)
+            {
+               foreach (var _ in (IEnumerable<KeyValuePair<AdamantiumComponent, Hold>>)_owners) owners++;
+            }
+         }
+
          return (Changed?.GetInvocationList().Length ?? 0) + owners;
       }
    }
@@ -102,7 +121,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    /// in the previous variant's color.</summary>
    internal bool IsOwnedBy(AdamantiumComponent component)
    {
-      lock (_ownersLock) return _owners?.ContainsKey(component) == true;
+      lock (_ownersLock) return _owners?.TryGetValue(component, out _) == true;
    }
 
    protected void RaiseChanged()
@@ -127,29 +146,33 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
    // Owners are notified through the map, not Changed, whose add/remove is O(subscribers); Changed stays for a few
    // non-owner subscribers.
-   private AdamantiumComponent[] _ownersSnapshot;
-
    private void NotifyOwners()
    {
-      if (_owners == null || _owners.Count == 0) return;
+      if (_owners == null || _ownerCount == 0) return;
 
-      // Cached, because an animated brush raises this once a frame and an owner list must not be copied per raise.
-      // Invalidated wherever the map changes; a handler that attaches or detaches during the walk therefore mutates the
-      // map without disturbing the array being walked, which is what a snapshot is for.
-      var owners = _ownersSnapshot;
-      if (owners == null)
+      // Copied under the lock, walked outside it: a handler that attaches or detaches during the walk mutates the map
+      // without disturbing the copy. Rented, because an animated brush raises this once a frame - and returned cleared,
+      // since a copy kept between raises would hold the owners the map holds only weakly.
+      AdamantiumComponent[] owners;
+      var count = 0;
+      lock (_ownersLock)
       {
-         // Built under the lock, walked outside it: copying the keys is the one moment this must not race a writer,
-         // while the walk itself is over an array nobody else can touch.
-         lock (_ownersLock)
+         owners = ArrayPool<AdamantiumComponent>.Shared.Rent(Math.Max(1, _ownerCount));
+         foreach (var entry in (IEnumerable<KeyValuePair<AdamantiumComponent, Hold>>)_owners)
          {
-            owners = new AdamantiumComponent[_owners.Count];
-            _owners.Keys.CopyTo(owners, 0);
-            _ownersSnapshot = owners;
+            if (count == owners.Length) break;   // never: the count is at least the owners still alive
+            owners[count++] = entry.Key;
          }
       }
 
-      foreach (var owner in owners) owner.OnRenderValueChanged(this, EventArgs.Empty);
+      try
+      {
+         for (var i = 0; i < count; i++) owners[i].OnRenderValueChanged(this, EventArgs.Empty);
+      }
+      finally
+      {
+         ArrayPool<AdamantiumComponent>.Shared.Return(owners, clearArray: true);
+      }
    }
 
    // Weakly registered brushes that have had an owner, so a sweep can reach an old theme's idle brushes too.
@@ -204,18 +227,18 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       {
          if (_owners == null)
          {
-            _owners = new Dictionary<AdamantiumComponent, int>();
+            _owners = new ConditionalWeakTable<AdamantiumComponent, Hold>();
             firstOwner = true;
          }
 
-         if (_owners.TryGetValue(owner, out var held))
+         if (_owners.TryGetValue(owner, out var hold))
          {
-            _owners[owner] = held + 1;   // already subscribed for this owner; another of its properties took the brush
+            hold.Count++;   // already subscribed for this owner; another of its properties took the brush
          }
          else
          {
-            _owners[owner] = 1;
-            _ownersSnapshot = null;   // the map is what notifies them now - see RaiseChanged
+            _owners.Add(owner, new Hold { Count = 1 });   // the map is what notifies them now - see RaiseChanged
+            _ownerCount++;
          }
       }
 
@@ -227,7 +250,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       // Sweep only after the attach completes: a template part being built is not in a tree yet and would be dropped
       // mid-attach.
       bool overdue;
-      lock (_ownersLock) overdue = _owners.Count > _sweepAt;
+      lock (_ownersLock) overdue = _ownerCount > _sweepAt;
       if (overdue) SweepOwnersOutOfTheTree();
    }
 
@@ -235,19 +258,19 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    {
       lock (_ownersLock)
       {
-         if (_owners == null || !_owners.TryGetValue(owner, out var held))
+         if (_owners == null || !_owners.TryGetValue(owner, out var hold))
          {
             return;
          }
 
-         if (held > 1)
+         if (hold.Count > 1)
          {
-            _owners[owner] = held - 1;   // its other properties still draw with this brush
+            hold.Count--;   // its other properties still draw with this brush
             return;
          }
 
          _owners.Remove(owner);
-         _ownersSnapshot = null;
+         _ownerCount--;
       }
    }
 
@@ -271,8 +294,12 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       // built.
       lock (_ownersLock)
       {
-      foreach (var owner in _owners.Keys)
+      // Recounted here, where every owner is walked anyway: the ones collected since the last sweep drop out.
+      _ownerCount = 0;
+      foreach (var (owner, _) in (IEnumerable<KeyValuePair<AdamantiumComponent, Hold>>)_owners)
       {
+         _ownerCount++;
+
          // Only elements are judged; parked ones are kept. Discarded counts as gone even if RootVisual is still set.
          if (owner is FundamentalUIComponent { IsDiscarded: true } ||
              owner is IUIComponent { IsAttachedToVisualTree: false, IsParked: false })
@@ -282,7 +309,7 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       }
 
       // Collected first: releasing mutates the very map being walked.
-      _sweepAt = Math.Max(16, _owners.Count * 2);
+      _sweepAt = Math.Max(16, _ownerCount * 2);
       }
 
       if (gone == null) return;
@@ -290,23 +317,21 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       foreach (var owner in gone)
       {
          // Release this owner here directly: the owner's own release walk would detach the new theme's brushes instead.
-         bool removed;
          lock (_ownersLock)
          {
-            removed = _owners.Remove(owner);
-            if (removed) _ownersSnapshot = null;
+            if (_owners.Remove(owner)) _ownerCount--;
          }
          // ...and the owner still gives up the rest of what it holds, which also arms its re-take on attach.
          owner.ReleaseRenderAttachments();
       }
 
-      lock (_ownersLock) _sweepAt = Math.Max(16, _owners.Count * 2);
+      lock (_ownersLock) _sweepAt = Math.Max(16, _ownerCount * 2);
    }
 
    /// <summary>How many of <paramref name="owner"/>'s render properties currently hold this brush.</summary>
    internal int OwnerHoldCount(AdamantiumComponent owner)
    {
-      lock (_ownersLock) return _owners != null && _owners.TryGetValue(owner, out var held) ? held : 0;
+      lock (_ownersLock) return _owners != null && _owners.TryGetValue(owner, out var hold) ? hold.Count : 0;
    }
 
    // Anchors the brush to its first owner so expressions on the brush can resolve; only brushes with pending expressions

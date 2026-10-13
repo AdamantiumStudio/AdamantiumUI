@@ -25,6 +25,34 @@ public class BrushOwnerReleaseTests
         Assert.That(shared.IsOwnedBy(element), Is.False);
     }
 
+    // ...and one that never let go - dropped without a discard, or holding the brush by a path that never gives it back -
+    // is still not kept by it: the brush outlives every page that paints with it, so it may only know them weakly.
+    [Test]
+    public void AnElementThatNeverLetGo_IsNotKeptByItsBrush()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var gone = Painting(shared);
+
+        for (var i = 0; i < 3 && gone.IsAlive; i++)
+        {
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(gone.IsAlive, Is.False);
+        System.GC.KeepAlive(shared);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference Painting(SolidColorBrush shared)
+    {
+        var element = new Border { Background = shared };
+        Assume.That(shared.IsOwnedBy(element), "painting with the brush makes the element its owner");
+        RenderDirty.Clear();
+
+        return new System.WeakReference(element);
+    }
+
     // A run is not in the visual tree, so nothing that walks it reaches the run, and a run painting with a theme brush
     // would keep its block and the page. Only elements own a brush - a run never does, nested in a span or not.
     [Test]

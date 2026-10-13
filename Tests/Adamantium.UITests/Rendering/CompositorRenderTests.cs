@@ -35,6 +35,52 @@ public class CompositorRenderTests
     [TearDown]
     public void TearDown() => AnimationManager.Reset();
 
+    // A cache that draws only when asked - the one every snapshot shares - has no next frame soon, so whatever it remembers
+    // about the frame it just drew outlives the tree it drew. It kept the elements the compositor moved, and held a page
+    // that had long been thrown away.
+    [Test]
+    public void ACacheRemembersNothingOfAMovedElementOnceItsFrameAndUnitsAreDone()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64);
+
+        var root = new TestRoot(64, 64);
+        var control = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        control.Bounds = new Rect(0, 24, 16, 16);
+        control.RenderSize = new Size(16, 16);
+        var transform = new Transform();
+        control.RenderTransform = transform;
+        root.Add(control);
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateX", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateX", 32.0) } }
+            }
+        }.Apply(transform);
+        Compositor.StartPending();
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(Held(renderer.Cache, "_compositedFallback"), Is.EqualTo(1), "the frame must have composited the slide");
+        Assert.That(Held(renderer.Cache, "_compositedOwners"), Is.Zero, "what moved THIS frame is forgotten with the frame");
+        Assert.That(Held(renderer.Cache, "_compositedBuf"), Is.Zero, "...and so is what played");
+
+        renderer.Cache.DisposeUnits();
+
+        Assert.That(Held(renderer.Cache, "_compositedFallback"), Is.Zero, "...and the rest goes with the tree's units");
+    }
+
+    private static int Held(RenderCache cache, string field)
+    {
+        var held = typeof(RenderCache)
+            .GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .GetValue(cache);
+        return (int)held.GetType().GetProperty("Count").GetValue(held);
+    }
+
     [Test]
     public void TheRenderThreadMovesTheElementWhileTheLoopThreadDoesNothing()
     {

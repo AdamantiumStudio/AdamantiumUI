@@ -1230,7 +1230,17 @@ All packages share one version.
     (`GetOrCreateTexture` answers null, as for a picture still decoding) rather than throwing on that thread.
   - **An element a `VisualBrush` painted from is no longer kept for good.** The raster kept every source it had ever
     watched in a set of its own and never took one out, and a source that lived on kept the elements thrown away after
-    drawing with it.
+    drawing with it. A source that changed waited in another set for a wake that, once its page was gone, never ran.
+  - **The cache every off-screen picture shares lets go of the trees it drew.** It kept every group it had ever drawn in
+    a map nothing read, and the elements the compositor moved in its last frame until it drew again. With a shared
+    glow or shadow and a theme brush also holding on (below), a pass of the sandbox's brushes scenario kept about
+    12 MB of managed memory; it now keeps none.
+  - **A brush knows the elements painting with it only weakly.** An element that took a theme brush by a way that never
+    gives it back was kept by the theme for good, and with it its page.
+  - **A shared `Aura` or `Shadow` lets go of an element when it is discarded.** The element listened to it for as long
+    as the glow lived, so one handed out by a view model held every page lit with it.
+  - **The focus manager knows focus scopes only weakly.** A scope dropped without leaving its tree stayed in the map of
+    what each scope focused last.
   - **A `ContentPresenter` lets go of its content when that content is released or taken by another parent**, told so
     by the content itself (`FundamentalUIComponent.OnVisualChildReleased`, `DisownVisualChild`). It used to be found
     out by a static register of every presenter, walked whole on every batch of discarded elements; the register is

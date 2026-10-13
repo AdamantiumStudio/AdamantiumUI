@@ -21,7 +21,8 @@ public static class FocusManager
 
    public static IInputComponent Scope { get; private set; }
 
-   private static Dictionary<IInputComponent, IInputComponent> focusScopes = new Dictionary<IInputComponent, IInputComponent>();
+   // Weakly keyed: a scope dropped without leaving the tree is not kept by having once held the focus.
+   private static readonly ConditionalWeakTable<IInputComponent, IInputComponent> focusScopes = new();
 
    static FocusManager()
    {
@@ -111,8 +112,8 @@ public static class FocusManager
          keyboard.SetFocusedElement(null);
       }
 
-      // ...and the scope map, which is written on every focus move and was never read back out. Strong on BOTH sides,
-      // so a departed element sat there as a key AND as somebody else's remembered element.
+      // ...and the scope map, which is written on every focus move. Its key is weak but what a scope remembers is not,
+      // so a departed element would sit there as a live scope's remembered element.
       DropFromScopes(element);
 
       if (!ReferenceEquals(Focused, element))
@@ -126,7 +127,7 @@ public static class FocusManager
    private static void DropFromScopes(IInputComponent element)
    {
       List<IInputComponent> stale = null;
-      foreach (var pair in focusScopes)
+      foreach (var pair in (IEnumerable<KeyValuePair<IInputComponent, IInputComponent>>)focusScopes)
       {
          if (ReferenceEquals(pair.Key, element) || ReferenceEquals(pair.Value, element))
             (stale ??= new List<IInputComponent>()).Add(pair.Key);
@@ -169,9 +170,9 @@ public static class FocusManager
          // If control is null, set focus to the topmost focus scope.
          foreach (var scope in GetFocusScopeAncestors(Focused).Reverse().ToList())
          {
-            if (focusScopes.ContainsKey(scope))
+            if (focusScopes.TryGetValue(scope, out var remembered))
             {
-               Focus(focusScopes[scope], navigationMethod, modifiers);
+               Focus(remembered, navigationMethod, modifiers);
             }
          }
       }
@@ -289,7 +290,7 @@ public static class FocusManager
          throw new ArgumentNullException(nameof(scope));
       }
 
-      focusScopes[scope] = component;
+      focusScopes.AddOrUpdate(scope, component);
 
       if (Scope == scope)
       {

@@ -388,6 +388,7 @@ public partial class RenderCache
         _fadeOwners.Clear();
         _copyFades.Clear();
         _copyFadeSlots.Clear();
+        _compositedFallback.Clear();   // the old tree's, like the rest - and a snapshot cache may not draw again for long
         _transformTable?.ReleaseAll();
     }
 

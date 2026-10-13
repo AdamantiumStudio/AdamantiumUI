@@ -164,7 +164,6 @@ public partial class RenderCache
 
     // Group identity as the ARENA sees it: written into every instance the group bakes, so a slot can always name its
     // owner however many times its bytes have been copied around since (see RectBatchCollector.TryAdd).
-    private readonly Dictionary<int, ControlGroup> _groupByTag = new();
     private int _nextGroupTag;
 
     private int TagOf(ControlGroup group)
@@ -172,7 +171,6 @@ public partial class RenderCache
         if (group.Tag == 0)
         {
             group.Tag = ++_nextGroupTag;
-            _groupByTag[group.Tag] = group;
         }
 
         return group.Tag;
@@ -557,6 +555,13 @@ public partial class RenderCache
             // Cleared where the departures are: both say "the paint order is not the one the stream was recorded
             // against", and both are answered by the frame that has just been drawn.
             _orderJoined = false;
+
+            // What moved THIS frame is rebuilt by the next one - and a cache that draws only when asked (a snapshot, a
+            // bake) has no next one soon: kept, these held what moved in its last frame, and the page that was on.
+            _compositedBuf.Clear();
+            _compositedOwners.Clear();
+            _movedOwners.Clear();
+            _movedNodeOwners.Clear();
 
             if (Core.Diagnostics.FrameTrace.Enabled)
             {
