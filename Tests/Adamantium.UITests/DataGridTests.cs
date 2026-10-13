@@ -4173,6 +4173,44 @@ public class DataGridTests
         return found;
     }
 
+    // A key taken off a strip takes its chip with it for good. Only out of the strip, the chip went on following the
+    // theme and, through its column, held the whole table in memory after the table itself was gone.
+    [Test]
+    public void AGroupingKeyTakenOff_DiscardsItsChip()
+    {
+        var grid = GroupableGrid(4);
+        grid.GroupBy(grid.Columns[0]);
+        var chip = ChipsOf(GroupPanel(grid)).Single();
+
+        grid.GroupBy(grid.Columns[0]);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(chip.IsDiscarded, Is.True);
+    }
+
+    [Test]
+    public void ASortingKeyTakenOff_DiscardsItsChip()
+    {
+        var grid = GroupableGrid(4);
+        grid.SortBy(grid.Columns[0]);
+        var panel = new DataGridSortPanel { Owner = grid };
+        panel.Template = new ControlTemplate(() =>
+        {
+            var chips = new StackPanel { Orientation = Orientation.Horizontal };
+            var result = new TemplateResult { RootComponent = chips };
+            result.RegisterName("PART_Chips", chips);
+            return result;
+        });
+        ((IMeasurableComponent)panel).InvalidateMeasure();
+        panel.Measure(new Size(400, 30));
+        var chip = panel.Chips.Single();
+
+        grid.RemoveSort(grid.Columns[0]);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(chip.IsDiscarded, Is.True);
+    }
+
     // A header carried into the grouping strip GROUPS instead of moving: the same drag has two endings, and which one
     // it gets is decided by where it was let go.
     [Test]

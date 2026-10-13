@@ -316,6 +316,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// came back still answering "destroyed" and was released under the user.</summary>
     public bool IsDiscarded => Lifecycle == VisualLifecycle.Discarded;
 
+    /// <summary>Which batch of <see cref="DiscardedVisuals"/> released this element, counted as
+    /// <see cref="DiscardedVisuals.ReleasedBatches"/> counts them; 0 while it is not released. A released element is
+    /// final - nothing brings it back - while a discarded one not yet released may still return to the tree.</summary>
+    public long ReleasedInBatch { get; private set; }
+
     /// <summary>Deliberately out of the tree and coming back - parked, or waiting in a container pool. Not dead, and
     /// nothing about it may be released.</summary>
     public bool IsAwaitingReturn => Lifecycle is VisualLifecycle.Parked or VisualLifecycle.Recycled;
@@ -367,10 +372,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     /// <summary>Run the release for this element, from the queue drain. Re-reads the state first: between being queued
     /// and being reached it may have come back, and the whole point of draining late is to let it.</summary>
-    internal void ReleaseFromQueue()
+    internal void ReleaseFromQueue(long batch)
     {
         if (Lifecycle != VisualLifecycle.Discarded) return;
         _released = true;
+        ReleasedInBatch = batch;
         OnDiscarded();
     }
 

@@ -17,7 +17,7 @@ internal sealed class ScriptInterpreter
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick",
         "hover", "wheel", "drag", "touch", "touches", "pinch", "pen", "expand", "collapse", "scroll", "move", "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set",
-        "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot"
+        "caret", "type", "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot", "memory", "theme"
     ];
 
     private static readonly TimeSpan DefaultWait = TimeSpan.FromSeconds(10);
@@ -168,6 +168,8 @@ internal sealed class ScriptInterpreter
             "expect" => ExpectAsync(arguments),
             "absent" => AbsentAsync(arguments),
             "shot" => ShotAsync(arguments),
+            "memory" => MemoryAsync(),
+            "theme" => ThemeAsync(arguments),
             "run" => throw new AutomationException("A scenario does not run another."),
             null => Task.CompletedTask,
             _ => throw new AutomationException($"No command '{arguments.Command}'.")
@@ -361,6 +363,11 @@ internal sealed class ScriptInterpreter
 
         _output.WriteLine($"Written to {reply.Text}.");
     }
+
+    private async Task MemoryAsync() => _output.WriteLine(await _session.MemoryAsync());
+
+    private async Task ThemeAsync(ScriptArguments arguments) =>
+        _output.WriteLine(await _session.ThemeAsync(arguments.At(0), arguments.Option("variant")));
 
     private async Task MarkAsync()
     {

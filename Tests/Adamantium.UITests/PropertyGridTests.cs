@@ -1977,6 +1977,25 @@ public class PropertyGridTests
         });
     }
 
+    // A row a pass no longer wants is gone for good: the next pass makes a new one. Only taken out of the panel, it went on
+    // holding the grid and following the theme through its reset button - each folded composite kept its whole page.
+    [Test]
+    public void TheRowsOfAFoldedComposite_AreDiscarded()
+    {
+        var part = new StringProperty { Header = "X", Binding = new Binding("Name") };
+        var composite = new CompositeProperty { Header = "Position", IsExpanded = true };
+        composite.Children.Add(part);
+        var grid = Built(Section(new Target(), composite));
+        var row = RowOf(grid, part);
+        Assume.That(row, Is.Not.Null, "the open composite shows its part");
+
+        composite.IsExpanded = false;
+        grid.Rebuild();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(row.IsDiscarded, Is.True);
+    }
+
     [Test]
     public void AddingAnObjectLeavesTheOtherSectionsAsTheyWere()
     {
@@ -2014,6 +2033,24 @@ public class PropertyGridTests
             Assert.That(sections, Has.Count.EqualTo(1));
             Assert.That(sections[0].Target, Is.SameAs(second));
         });
+    }
+
+    // The section of an object no longer inspected is gone for good: the object coming back gets a new one. Only left out
+    // of the panel, its rows held the grid and followed the theme, and an inspector kept every section it ever showed.
+    [Test]
+    public void TheSectionOfARemovedObject_IsDiscarded()
+    {
+        var first = new Target();
+        var source = new TrackingCollection<object> { first, new Target() };
+        var grid = Built();
+        grid.SectionsSource = source;
+        var section = new List<PropertySection>(grid.Displayed)[0];
+        Assume.That(section.Target, Is.SameAs(first));
+
+        source.Remove(first);
+        grid.Rebuild();
+
+        Assert.That(section.IsDiscarded, Is.True);
     }
 
     // The field is the only way back to the whole inspector. Taking it away while a search is running would leave the

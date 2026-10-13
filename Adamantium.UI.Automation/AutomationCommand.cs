@@ -164,5 +164,14 @@ public enum AutomationCommand
     /// together until they are <see cref="AutomationRequest.Value"/> times as far apart. <see cref="AutomationRequest.Properties"/>
     /// may hold <c>rotate=degrees</c>, to turn them as they go, and <c>pan=dx,dy</c>, to move their middle that far in
     /// the target's own units. The first few pixels go to recognizing the gesture, as under a hand.</summary>
-    Pinch
+    Pinch,
+
+    /// <summary>Collects all garbage, finalizers included, then reports the managed heap that is left and the process's
+    /// private memory - one reading of a leak hunt.</summary>
+    Memory,
+
+    /// <summary>Moves the application onto the theme named by <see cref="AutomationRequest.Value"/> and the variant named
+    /// by the first of <see cref="AutomationRequest.Properties"/>, either left out to keep it, and waits for the swap to
+    /// settle. Answers with the theme and variant in use on the first line, then a line per theme with its variants.</summary>
+    Theme
 }

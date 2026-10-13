@@ -10,6 +10,7 @@ public sealed class RenderDirtyScope
     private readonly HashSet<IUIComponent> GeometrySet = new();
     private bool _transform;
     private bool _structural;
+    private volatile bool _forgotten;
 
     // Forces full walks while a theme or DPI swap settles, since some of its writes are unmarked; cleared after the build
     // of the first frame whose layout pass found no work.
@@ -25,7 +26,11 @@ public sealed class RenderDirtyScope
     {
         // Locked: writers include parallel arrange and the message-pump thread, so every read and clear takes this lock.
         // Diagnostic counters stay lock-free.
-        if (component == null) return;
+        if (component == null || _forgotten)
+        {
+            return;
+        }
+
         lock (GeometrySet) GeometrySet.Add(component);
         LoopSignal.Request();   // the scene changed - the loop owes a frame
     }
@@ -63,7 +68,11 @@ public sealed class RenderDirtyScope
     /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new color.</summary>
     public void MarkPaint(IUIComponent component)
     {
-        if (component == null) return;
+        if (component == null || _forgotten)
+        {
+            return;
+        }
+
         lock (PaintSet)
         {
             PaintSet.Add(component);
@@ -104,6 +113,11 @@ public sealed class RenderDirtyScope
     /// component that moved - null only when the mover genuinely has no owner (see <see cref="IsTransformUnknown"/>).</summary>
     public void MarkTransform(IUIComponent component)
     {
+        if (_forgotten)
+        {
+            return;
+        }
+
         _transform = true;
         LoopSignal.Request();
         if (component == null) { _transformUnknown = true; return; }
@@ -131,6 +145,11 @@ public sealed class RenderDirtyScope
     /// Locked for the same parallel-arrange reason as <see cref="MarkGeometry"/>.</summary>
     public void MarkNodeTransform(IUIComponent node)
     {
+        if (_forgotten)
+        {
+            return;
+        }
+
         LoopSignal.Request();
         if (node == null) return;
         lock (NodeSet) NodeSet.Add(node);
@@ -177,6 +196,11 @@ public sealed class RenderDirtyScope
 
     public void MarkStructural(IUIComponent component = null)
     {
+        if (_forgotten)
+        {
+            return;
+        }
+
         _structural = true;
         LoopSignal.Request();
         TotalStructuralMarks++;
@@ -200,7 +224,16 @@ public sealed class RenderDirtyScope
 
     /// <summary>Force full structural rebuilds until the layout signals it has fully settled (see
     /// <see cref="_forceUntilSettled"/>). Call when starting a multi-frame state swap (theme, DPI).</summary>
-    public void ForceStructuralUntilSettled() { _forceUntilSettled = true; LoopSignal.Request(); }
+    public void ForceStructuralUntilSettled()
+    {
+        if (_forgotten)
+        {
+            return;
+        }
+
+        _forceUntilSettled = true;
+        LoopSignal.Request();
+    }
 
     /// <summary>Called by the layout manager after a pass that found NO work (every queue empty) - the settle signal for
     /// <see cref="ForceStructuralUntilSettled"/>. The current frame's build stays forced (the final walk, which follows
@@ -244,6 +277,12 @@ public sealed class RenderDirtyScope
 
     /// <summary>The geometry-dirty components to re-render this build (only valid until <see cref="Clear"/>).</summary>
     public IReadOnlyCollection<IUIComponent> Geometry => GeometrySet;
+
+    internal void Forget()
+    {
+        _forgotten = true;
+        Clear();
+    }
 
     /// <summary>Reset after a build has consumed the dirty state.</summary>
     public void Clear()

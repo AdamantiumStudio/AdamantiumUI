@@ -24,8 +24,16 @@ public class Path : Shape
     {
         if (a is Path path)
         {
-            if (e.OldValue is Geometry geometry1) geometry1.ComponentUpdated -= path.OnGeometryUpdated;
-            if (e.NewValue is Geometry geometry2) geometry2.ComponentUpdated += path.OnGeometryUpdated;
+            if (e.NewValue is Geometry geometry)
+            {
+                geometry.ComponentUpdated += path.OnGeometryUpdated;
+                path.Follow(DataProperty, () => geometry.ComponentUpdated -= path.OnGeometryUpdated);
+            }
+            else
+            {
+                path.Follow(DataProperty, null);
+            }
+
             path.ApplyFillRule(e.NewValue as Geometry);
         }
     }

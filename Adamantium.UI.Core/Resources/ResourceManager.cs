@@ -235,5 +235,15 @@ public class ResourceManager : IResourceManager
         _resourcesDirty = true;
     }
 
+    public void ForgetGlobalSourceOwner(IAdamantiumComponent component)
+    {
+        if (component == null)
+        {
+            return;
+        }
+
+        _globalResources.ForgetOwner(component);
+    }
+
     public object this[string name] => FindResource(name);
 }

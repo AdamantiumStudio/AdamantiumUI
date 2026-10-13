@@ -43,9 +43,31 @@ public sealed class LayoutManager
     private List<IUIComponent> PromoteBuffer => _promoteBuffer ??= new List<IUIComponent>();
     private System.Diagnostics.Stopwatch PassStopwatch => _passStopwatch ??= new System.Diagnostics.Stopwatch();
 
+    static LayoutManager()
+    {
+        DiscardedVisuals.Discarded += Forget;
+    }
+
     public LayoutManager(IUIComponent root)
     {
         _root = root ?? throw new ArgumentNullException(nameof(root));
+    }
+
+    private static void Forget(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        foreach (var component in gone)
+        {
+            if (component is not IUIComponent root || !Managers.TryGetValue(root, out var manager))
+            {
+                continue;
+            }
+
+            Managers.Remove(root);
+            manager._toStyle?.Clear();
+            manager._toMeasure?.Clear();
+            manager._toArrange?.Clear();
+            manager._toMeasureNextPass?.Clear();
+        }
     }
 
     /// <summary>Gets (creating once) the manager that owns the given root (a window at runtime, a subtree root in tests).</summary>
@@ -62,6 +84,54 @@ public sealed class LayoutManager
     public (int Style, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
         => (_toStyle?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
             _toMeasureNextPass?.Count ?? 0, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
+
+    /// <summary>Hands what waits in the manager of <paramref name="formerRoot"/> - a subtree built off the tree, now given
+    /// a parent - to the managers its nodes belong to from now on, and forgets that manager. No pass ever runs on a root
+    /// that has joined another tree, so what it queued would wait there, and be held, for as long as the root lives.</summary>
+    public static void HandOver(IUIComponent formerRoot)
+    {
+        if (!Managers.TryGetValue(formerRoot, out var manager))
+        {
+            return;
+        }
+
+        Managers.Remove(formerRoot);
+        Move(manager._toStyle, static node => For(node).InvalidateStyle(node));
+        Move(manager._toMeasure, static node => For(node).InvalidateMeasure(node));
+        Move(manager._toArrange, static node => For(node).InvalidateArrange(node));
+        if (manager._toMeasureNextPass is not { Count: > 0 } nextPass)
+        {
+            return;
+        }
+
+        var nodes = new List<IUIComponent>(nextPass);
+        nextPass.Clear();
+        foreach (var node in nodes)
+        {
+            if (node is not FundamentalUIComponent { IsDiscarded: true })
+            {
+                For(node).InvalidateMeasureNextPass(node);
+            }
+        }
+    }
+
+    private static void Move(DirtyQueue queue, Action<IUIComponent> invalidate)
+    {
+        if (queue == null || queue.IsEmpty)
+        {
+            return;
+        }
+
+        var nodes = new List<IUIComponent>(queue.Count);
+        queue.DrainInto(nodes);
+        foreach (var node in nodes)
+        {
+            if (node is not FundamentalUIComponent { IsDiscarded: true })
+            {
+                invalidate(node);
+            }
+        }
+    }
 
     /// <summary>Resolves the manager responsible for <paramref name="node"/> via its top-most visual ancestor.</summary>
     public static LayoutManager For(IUIComponent node)

@@ -133,6 +133,44 @@ public static class ParkedVisuals
         }
     }
 
+    /// <summary>Files everything kept under <paramref name="from"/> under <paramref name="to"/> instead: a view taken up
+    /// by another host than the one that built it hands its parts to that host, and a presenter among those parts keeps
+    /// what it parked under its templated parent.</summary>
+    public static void MoveOwner(object from, object to)
+    {
+        if (from == null || to == null || ReferenceEquals(from, to))
+        {
+            return;
+        }
+
+        List<Slot> moving = null;
+        foreach (var slot in _kept.Keys)
+        {
+            if (ReferenceEquals(slot.Owner, from))
+            {
+                (moving ??= []).Add(slot);
+            }
+        }
+
+        if (moving == null)
+        {
+            return;
+        }
+
+        foreach (var slot in moving)
+        {
+            _kept.Remove(slot, out var entry);
+            var moved = new Slot(to, slot.Key);
+            _kept[moved] = entry;
+
+            var at = _evictable.IndexOf(slot);
+            if (at >= 0)
+            {
+                _evictable[at] = moved;
+            }
+        }
+    }
+
     /// <summary>Discards everything kept. For app shutdown and for tests, which must not inherit another test's cache.</summary>
     public static void Clear()
     {

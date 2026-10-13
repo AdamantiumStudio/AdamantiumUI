@@ -9,7 +9,8 @@ namespace Adamantium.UI.Controls.Automation;
 /// <see cref="ItemAutomationPeer"/> that stands for it. Its template's own parts are not among them.</summary>
 public class ItemsControlAutomationPeer : UIComponentAutomationPeer
 {
-    private readonly Dictionary<object, ItemAutomationPeer> _itemPeers = new(ReferenceEqualityComparer.Instance);
+    private Dictionary<object, ItemAutomationPeer> _itemPeers = new(ReferenceEqualityComparer.Instance);
+    private Dictionary<object, ItemAutomationPeer> _keptPeers = new(ReferenceEqualityComparer.Instance);
     private ScrollViewerAutomationPeer _scroll;
 
     public ItemsControlAutomationPeer(ItemsControl owner) : base(owner)
@@ -52,6 +53,8 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
             children.Add(container?.GetAutomationPeer() ?? PeerFor(item));
         }
 
+        (_itemPeers, _keptPeers) = (_keptPeers, _itemPeers);
+        _keptPeers.Clear();
         return children;
     }
 
@@ -124,12 +127,12 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
             return CreateItemPeer(null);
         }
 
-        if (!_itemPeers.TryGetValue(item, out var peer))
+        if (!_keptPeers.TryGetValue(item, out var peer) && !_itemPeers.TryGetValue(item, out peer))
         {
             peer = CreateItemPeer(item);
-            _itemPeers[item] = peer;
         }
 
+        _keptPeers[item] = peer;
         return peer;
     }
 }

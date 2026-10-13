@@ -319,6 +319,8 @@ public class CanvasInspector : Control, ICanvasPart
 
         // A NEW TEMPLATE MEANS A NEW THEME, and a theme can ship a different default set - so what was kept from the
         // last one is dropped rather than carried into a panel it was not written for.
+        Discard(_selectionSections, shownToo: true);
+        Discard(_toolSections, shownToo: true);
         _selectionSections = null;
         _toolSections = null;
 
@@ -337,6 +339,39 @@ public class CanvasInspector : Control, ICanvasPart
 
         _grid = null;
         _tools = null;
+    }
+
+    /// <summary>Also discards the sections the theme made for it that it was not showing: they are its own, and the
+    /// discard of its tree does not reach what is out of the tree.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        Discard(_selectionSections, shownToo: false);
+        Discard(_toolSections, shownToo: false);
+    }
+
+    private static void Discard(CanvasInspectorSections sections, bool shownToo)
+    {
+        if (sections == null)
+        {
+            return;
+        }
+
+        foreach (var set in sections.Sets)
+        {
+            if (set == null)
+            {
+                continue;
+            }
+
+            foreach (var section in set.Sections)
+            {
+                if (shownToo || section.VisualParent == null)
+                {
+                    DiscardedVisuals.PublishSubtree(section);
+                }
+            }
+        }
     }
 
     private void OnRowWritten(object sender, PropertyValuesChangedEventArgs e) => ReadSections();

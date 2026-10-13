@@ -8,6 +8,9 @@ namespace Adamantium.UI.Core.Media.Drawings;
 /// <see cref="Pen"/>. The workhorse of the family - a vector icon is a handful of these in a <see cref="DrawingGroup"/>.</summary>
 public class GeometryDrawing : Drawing
 {
+    private BrushChangeRelay _fillRelay;
+    private BrushChangeRelay _strokeRelay;
+
     public static readonly AdamantiumProperty GeometryProperty = AdamantiumProperty.Register(nameof(Geometry),
         typeof(Geometry), typeof(GeometryDrawing), new PropertyMetadata(null));
 
@@ -75,16 +78,7 @@ public class GeometryDrawing : Drawing
     {
         if (a is not GeometryDrawing drawing) return;
 
-        if (e.OldValue is Brush oldBrush)
-        {
-            oldBrush.Changed -= drawing.OnChildChanged;
-        }
-
-        if (e.NewValue is Brush newBrush)
-        {
-            newBrush.Changed += drawing.OnChildChanged;
-        }
-
+        drawing._strokeRelay = drawing.Follow(drawing._strokeRelay, e.NewValue as Brush);
         StrokeChangedCallback(a, e);
     }
 
@@ -94,15 +88,7 @@ public class GeometryDrawing : Drawing
     {
         if (a is not GeometryDrawing drawing) return;
 
-        if (e.OldValue is Brush oldBrush)
-        {
-            oldBrush.Changed -= drawing.OnChildChanged;
-        }
-
-        if (e.NewValue is Brush newBrush)
-        {
-            newBrush.Changed += drawing.OnChildChanged;
-        }
+        drawing._fillRelay = drawing.Follow(drawing._fillRelay, e.NewValue as Brush);
     }
 
     // The geometry too, not just the brush: <RectangleGeometry Rect="{Binding IconRect}"/> is the same markup and would

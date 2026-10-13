@@ -78,7 +78,18 @@ public static class ResourceContext
 
         foreach (var component in gone)
         {
-            if (component is AdamantiumComponent element && HoldsScopedResources(element))
+            if (component is not AdamantiumComponent element || element is ITheme)
+            {
+                continue;
+            }
+
+            if (GetSource(element) == null && GetResources(element) == null)
+            {
+                continue;
+            }
+
+            manager.ForgetGlobalSourceOwner(element);
+            if (HoldsScopedResources(element))
             {
                 manager.RemoveSources(element);
             }
@@ -87,11 +98,6 @@ public static class ResourceContext
 
     private static bool HoldsScopedResources(AdamantiumComponent element)
     {
-        if (element is ITheme)
-        {
-            return false;
-        }
-
         if (GetSource(element) is { Scope: not ResourceScope.Global })
         {
             return true;
