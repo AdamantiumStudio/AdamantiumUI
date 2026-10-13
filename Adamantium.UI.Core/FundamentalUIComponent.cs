@@ -377,7 +377,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         if (Lifecycle != VisualLifecycle.Discarded) return;
         _released = true;
         ReleasedInBatch = batch;
+
+        // Read before the element's own release, which may take it out of its parent.
+        var parent = (this as IUIComponent)?.VisualParent as FundamentalUIComponent;
         OnDiscarded();
+        parent?.OnVisualChildReleased(this);
+    }
+
+    /// <summary>A child of this element has been released for good while still its child. For an element that names a
+    /// child in a field of its own as well as among its visual children - the field would otherwise be the last thing
+    /// holding the child, and nothing else knows to clear it.</summary>
+    protected internal virtual void OnVisualChildReleased(FundamentalUIComponent child)
+    {
     }
 
     /// <summary>Listens to <paramref name="source"/> under <paramref name="key"/>, letting go of whatever was followed under

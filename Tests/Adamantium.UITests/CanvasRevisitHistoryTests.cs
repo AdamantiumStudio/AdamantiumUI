@@ -210,6 +210,48 @@ public class CanvasRevisitHistoryTests
         });
     }
 
+    // A canvas whose scene was taken, put on screen again, takes it back - the one on screen shows the drawing.
+    [Test]
+    public void ACanvasShownAgain_TakesItsSceneBack()
+    {
+        var scene = new CanvasScene();
+        var history = new CanvasHistory();
+        var nodes = new TrackingCollection<ICanvasNode>();
+        var node = Made("a", 0);
+        nodes.Add(node);
+
+        var first = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
+        var window = new Window { Width = 800, Height = 600, Content = first };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var second = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
+
+        window.Content = new Adamantium.UI.Controls.Decorators.Border();
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        window.Content = first;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items.OfType<ElementItem>().Count(), Is.EqualTo(1), "the node is on the plane twice");
+            Assert.That(ItemOf(scene, node).Element, Is.SameAs(first.ItemOf(node).Element).And.Not.Null,
+                "the canvas on screen does not show the node");
+            Assert.That(second.ItemOf(node), Is.Null, "the other canvas still holds it");
+        });
+    }
+
+    [Test]
+    public void AnItemNoCanvasShows_IsNotSelected()
+    {
+        var canvas = new InfiniteCanvas();
+        var bare = new ElementItem(null, new Rect(0, 0, 50, 50));
+        var shown = new ElementItem(new Adamantium.UI.Controls.Buttons.Button(), new Rect(100, 0, 50, 50));
+
+        canvas.SelectMany([bare, shown], false);
+        canvas.Select(bare, true);
+
+        Assert.That(canvas.Selection, Is.EqualTo(new[] { shown }));
+    }
+
     [Test]
     public void AnItemNoCanvasShows_CannotBePicked()
     {

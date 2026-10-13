@@ -886,6 +886,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         // Its OWN events, so nothing is unsubscribed: the canvas outlives none of these, and there is no template here
         // whose parts could come and go.
+        AttachedToVisualTreeEvent += OnShownAgain;
         PointerWheelChanged += OnWheel;
         PointerPressed += OnPointerDown;
         PointerMoved += OnPointerMove;
@@ -1923,6 +1924,32 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _drawing.StopFollowing();
         Hosts(host => host.Sync([]));
         Drawn(layer => layer.Sync([]));
+        Repaint();
+    }
+
+    // SHOWN AGAIN after another canvas took its scene - a view put back on screen - it takes the scene back: the one on
+    // screen is the one showing it.
+    private void OnShownAgain(object sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (!_sceneTaken || IsDiscarded || Scene is not { } scene)
+        {
+            return;
+        }
+
+        _sceneTaken = false;
+        SceneItems.Follow(scene, this);
+        scene.Changed += OnSceneEdited;
+
+        _graph.SetScene(scene);
+        _drawing.SetScene(scene);
+
+        SyncElements();
+        Hosts(host =>
+        {
+            host.InvalidateMeasure();
+            host.InvalidateArrange();
+        });
+
         Repaint();
     }
 

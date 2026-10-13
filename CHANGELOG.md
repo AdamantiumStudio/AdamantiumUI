@@ -1201,8 +1201,18 @@ All packages share one version.
     old canvas's discarded controls, and their wires ended on dead sockets and left the graph. Now each node or object
     has one item on a scene: the canvas showing it builds its control, and lets it go when discarded. A wire finds its
     sockets through its nodes' current controls. One canvas shows a scene at a time: a canvas handed a scene takes it
-    from the one showing it, which lets go of it at once rather than when its discard is drained. A canvas handed
-    another scene leaves the items of the first behind without its controls.
+    from the one showing it, which lets go of it at once rather than when its discard is drained, and takes it back
+    when it is put on screen again. A canvas handed another scene leaves the items of the first behind without its
+    controls. An item no canvas has given a control - one an undo put back for an object the application has let go
+    of since - cannot be pointed at, framed or selected.
+  - **A `ContentPresenter` lets go of its content when that content is released or taken by another parent**, told so
+    by the content itself (`FundamentalUIComponent.OnVisualChildReleased`, `DisownVisualChild`). It used to be found
+    out by a static register of every presenter, walked whole on every batch of discarded elements; the register is
+    gone. A root another parent took is no longer named by the presenter it left.
+  - **A tip set as an element works every time it is shown.** The shared tooltip card discarded the tip it showed as
+    soon as it showed another, so after hovering from one element to the next a tip came back with dead bindings, or
+    not at all. The card now hands a tip back to the element that set it. It also lets go of the last tip and of the
+    element it was for as it hides, and comes down when that element or its tip is discarded while it is up.
   - **A canvas tool rail discards the buttons and tips it replaces** when it is rebuilt - on every mode switch - and a
     family's list, with its rows' tips, once it closes; discarded, it takes its buttons' tips and an open list with it. Only taken out of the
     panel, each button's picture followed the theme and held the button, its tip and the rail. A pass of the sandbox's

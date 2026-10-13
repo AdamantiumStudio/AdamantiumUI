@@ -75,7 +75,14 @@ public static class ToolTipService
         _timer.Stop();   // one-shot: fire once after the delay
         if (_pending is not { IsPointerOver: true }) return;   // pointer left during the delay
 
-        var owner = _pending;
+        Show(_pending);
+    }
+
+    internal static void Show(IInputComponent owner)
+    {
+        _pending = owner;
+        EnsureBuilt();
+
         // The themed ToolTip control renders both a string (via its template's ContentPresenter) and a UI element as-is.
         _toolTip.Content = GetToolTip((AdamantiumComponent)owner);
 
@@ -85,11 +92,39 @@ public static class ToolTipService
         _popup.IsOpen = true;
     }
 
-    private static void Hide()
+    // EMPTIED as well as closed: the card is shared and lives for good, and what it last showed - the tip and the
+    // element it was for - would live as long.
+    internal static void Hide()
     {
         _timer?.Stop();
-        if (_popup != null) _popup.IsOpen = false;
         _pending = null;
+
+        if (_popup == null) return;
+
+        _popup.IsOpen = false;
+        _popup.PlacementTarget = null;
+        _popup.DataContext = null;
+        _toolTip.Content = null;
+
+        // MEASURED to hand the tip back: a presenter lets its content go as it is measured, and a closed card never is.
+        _toolTip.Measure(new Adamantium.Mathematics.Size(0, 0), force: true);
+    }
+
+    // An element thrown away while its tip is up takes the tip down: nothing else would, and the card would go on
+    // showing what has been let go of.
+    private static void OnDiscarded(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        if (_pending == null) return;
+
+        var tip = _toolTip.Content;
+        foreach (var component in gone)
+        {
+            if (ReferenceEquals(component, _pending) || ReferenceEquals(component, tip))
+            {
+                Hide();
+                return;
+            }
+        }
     }
 
     private static void EnsureBuilt()
@@ -106,5 +141,7 @@ public static class ToolTipService
 
         _timer = new DispatcherTimer();
         _timer.Tick += OnTimerTick;
+
+        DiscardedVisuals.Discarded += OnDiscarded;
     }
 }

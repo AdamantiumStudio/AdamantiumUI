@@ -36,4 +36,49 @@ public class ContentPresenterDiscardSweepTests
         Assert.That(VisualChildCount(presenter), Is.EqualTo(0),
             "a handle dropped without letting the child go leaves it in the tree, untracked and still drawn");
     }
+
+    // MID-SLIDE, the view going out may be thrown away by whoever owned it; the one coming in stays.
+    [Test]
+    public void AnOutgoingContentReleasedMidSlide_LeavesTheIncomingOne()
+    {
+        var presenter = new ContentPresenter { ContentTransition = ContentTransition.SlideLeft };
+        var going = new StackPanel();
+        var coming = new StackPanel();
+        presenter.Content = going;
+        presenter.Measure(new Size(100, 100));
+        presenter.Content = coming;
+        presenter.Measure(new Size(100, 100));
+        Assume.That(VisualChildCount(presenter), Is.EqualTo(2), "both are on screen while it slides");
+
+        DiscardedVisuals.Publish(going);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((IUIComponent)coming).VisualParent, Is.SameAs(presenter));
+            Assert.That(coming.IsDiscarded, Is.False);
+        });
+    }
+
+    // TAKEN by another parent, the root is no longer the presenter's to name: a field left pointing at it kept it alive
+    // after its new home let it go.
+    [Test]
+    public void AContentTakenByAnotherParent_IsNoLongerNamedByThePresenter()
+    {
+        var presenter = new ContentPresenter();
+        var body = new StackPanel();
+        presenter.Content = body;
+        presenter.Measure(new Size(100, 100));
+
+        var home = new Adamantium.UI.Controls.Decorators.Border { Child = body };
+
+        var named = typeof(ContentPresenter).GetField("_currentRoot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(presenter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((IUIComponent)body).VisualParent, Is.SameAs(home));
+            Assert.That(named, Is.Null);
+        });
+    }
 }

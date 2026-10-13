@@ -85,7 +85,7 @@ public partial class InfiniteCanvas
     /// </summary>
     public void Select(ICanvasItem item, bool extend)
     {
-        if (item == null) return;
+        if (!Pickable(item)) return;
 
         if (!extend) _selection.Clear();
         if (!_selection.Contains(item)) _selection.Add(item);
@@ -99,11 +99,15 @@ public partial class InfiniteCanvas
 
         foreach (var item in items)
         {
-            if (item != null && !_selection.Contains(item)) _selection.Add(item);
+            if (Pickable(item) && !_selection.Contains(item)) _selection.Add(item);
         }
 
         Selected();
     }
+
+    // NOT what no canvas shows: an item an undo put back for an object the application has let go of since has no
+    // control, and a frame round it would be a frame round nothing.
+    private static bool Pickable(ICanvasItem item) => item != null && item is not ElementItem { Element: null };
 
     public void Deselect(ICanvasItem item)
     {
@@ -1034,7 +1038,7 @@ public partial class InfiniteCanvas
         {
             foreach (var item in wanted)
             {
-                if (item != null && !canvas._selection.Contains(item)) canvas._selection.Add(item);
+                if (Pickable(item) && !canvas._selection.Contains(item)) canvas._selection.Add(item);
             }
         }
 
