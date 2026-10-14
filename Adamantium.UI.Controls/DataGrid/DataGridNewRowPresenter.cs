@@ -75,7 +75,10 @@ public class DataGridNewRowPresenter : Panel
         for (var i = 0; i < count; i++)
         {
             var column = columns[i];
-            if (!column.IsShown) continue;
+            if (!column.IsShown)
+            {
+                continue;
+            }
 
             if (!_cells.TryGetValue(i, out var cell))
             {
@@ -163,7 +166,10 @@ public class DataGridNewRowPresenter : Panel
         // Already open: a press inside it is a CARET, not a new edit. Re-opening would rebuild the editor and put the
         // caret back at the value's end - clicking into the middle of what you typed would jump away from where you
         // aimed.
-        if (ReferenceEquals(columns[column], _editing)) return true;
+        if (ReferenceEquals(columns[column], _editing))
+        {
+            return true;
+        }
 
         if (Owner.IsEditing && !Owner.CommitEdit()) return false;
 
@@ -184,7 +190,10 @@ public class DataGridNewRowPresenter : Panel
     {
         var columns = Owner?.Columns;
         var from = _editing == null || columns == null ? -1 : columns.IndexOf(_editing);
-        if (from < 0 || delta == 0) return false;
+        if (from < 0 || delta == 0)
+        {
+            return false;
+        }
 
         for (var i = from + delta; i >= 0 && i < columns.Count; i += delta)
         {
@@ -198,7 +207,10 @@ public class DataGridNewRowPresenter : Panel
     // editor is the truth, and asking it before it is left would freeze the value at whatever was typed so far.
     private void Remember()
     {
-        if (EditingCell() is not { } cell) return;
+        if (EditingCell() is not { } cell)
+        {
+            return;
+        }
 
         var value = cell.ValueForCommit();
         if (value == null || (value as string)?.Length == 0) _typed.Remove(_editing);
@@ -207,11 +219,17 @@ public class DataGridNewRowPresenter : Panel
 
     private DataGridCell EditingCell()
     {
-        if (_editing == null) return null;
+        if (_editing == null)
+        {
+            return null;
+        }
 
         foreach (var cell in _cells.Values)
         {
-            if (ReferenceEquals(cell.Column, _editing)) return cell;
+            if (ReferenceEquals(cell.Column, _editing))
+            {
+                return cell;
+            }
         }
 
         return null;
@@ -219,19 +237,28 @@ public class DataGridNewRowPresenter : Panel
 
     internal void OnColumnsChanged()
     {
-        if (Owner == null) return;
+        if (Owner == null)
+        {
+            return;
+        }
 
         Remember();
         var columns = Owner.Columns;
         List<DataGridColumn> gone = null;
         foreach (var column in _typed.Keys)
         {
-            if (columns.IndexOf(column) < 0) (gone ??= new List<DataGridColumn>()).Add(column);
+            if (columns.IndexOf(column) < 0)
+            {
+                (gone ??= []).Add(column);
+            }
         }
 
         if (gone != null)
         {
-            foreach (var column in gone) _typed.Remove(column);
+            foreach (var column in gone)
+            {
+                _typed.Remove(column);
+            }
         }
 
         if (_editing != null && columns.IndexOf(_editing) < 0)
@@ -257,7 +284,7 @@ public class DataGridNewRowPresenter : Panel
             return true;
         }
 
-        var values = new List<KeyValuePair<DataGridColumn, object>>(_typed);
+        List<KeyValuePair<DataGridColumn, object>> values = [.. _typed];
 
         if (Owner.CreateFromNewRow(values) == null) return false;
 
@@ -275,7 +302,10 @@ public class DataGridNewRowPresenter : Panel
     /// </summary>
     internal void Close()
     {
-        if (_editing == null) return;
+        if (_editing == null)
+        {
+            return;
+        }
 
         Remember();
         _editing = null;

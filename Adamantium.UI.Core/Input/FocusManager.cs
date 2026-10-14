@@ -131,7 +131,9 @@ public static class FocusManager
    public static void LeaveHidden(IUIComponent hidden)
    {
       if (Focused == null || !IsWithin(Focused, hidden))
+      {
          return;
+      }
 
       for (var node = hidden.VisualParent; node != null; node = node.VisualParent)
       {
@@ -150,7 +152,9 @@ public static class FocusManager
       for (var node = element.VisualParent; node != null; node = node.VisualParent)
       {
          if (node.Visibility != Visibility.Visible)
+         {
             return false;
+         }
       }
 
       return true;
@@ -161,7 +165,9 @@ public static class FocusManager
       for (var node = element; node != null; node = node.VisualParent)
       {
          if (ReferenceEquals(node, container))
+         {
             return true;
+         }
       }
 
       return false;
@@ -303,7 +309,9 @@ public static class FocusManager
    {
       if (root == null || !FocusByRoot.TryGetValue(root, out var remembered) || !CanFocus(remembered)
           || !IsShown(remembered))
+      {
          return false;
+      }
 
       // It has to still be IN this window: the remembered element may have been removed with a closed tab, or moved to
       // another window entirely by a tear-off.

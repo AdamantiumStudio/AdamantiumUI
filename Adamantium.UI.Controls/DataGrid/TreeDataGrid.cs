@@ -18,6 +18,9 @@ namespace Adamantium.UI.Controls.DataGrid;
 /// branch splices its children in as one range edit.</summary>
 public partial class TreeDataGrid : Selector
 {
+    private DataGridColumn _editedColumn;
+    private bool _reorderingColumns;
+
     static TreeDataGrid()
     {
         FocusableProperty.OverrideMetadata(typeof(TreeDataGrid), new PropertyMetadata(true));
@@ -662,7 +665,10 @@ public partial class TreeDataGrid : Selector
     /// grouping as it is.</summary>
     public void GroupBy(DataGridColumn column)
     {
-        if (column == null || !CommitCellEdit()) return;
+        if (column == null || !CommitCellEdit())
+        {
+            return;
+        }
 
         if (!GroupDescriptions.Remove(column)) GroupDescriptions.Add(column);
     }
@@ -1759,7 +1765,10 @@ public partial class TreeDataGrid : Selector
     public void MoveColumn(int from, int to)
     {
         if (from < 0 || from >= Columns.Count || to < 0 || to >= Columns.Count || from == to) return;
-        if (!CommitCellEdit()) return;
+        if (!CommitCellEdit())
+        {
+            return;
+        }
 
         var carrier = ExpanderColumn;
         var column = Columns[from];
@@ -1824,7 +1833,10 @@ public partial class TreeDataGrid : Selector
     /// refused leaves the columns as they are.</summary>
     public void RestoreColumnState(DataGridColumnsState state)
     {
-        if (state?.Columns == null || Columns.Count == 0 || !CommitCellEdit()) return;
+        if (state?.Columns == null || Columns.Count == 0 || !CommitCellEdit())
+        {
+            return;
+        }
 
         var byKey = new Dictionary<string, DataGridColumn>(StringComparer.Ordinal);
         foreach (var column in Columns)
@@ -1852,7 +1864,10 @@ public partial class TreeDataGrid : Selector
         Reorder(() =>
         {
             Columns.Clear();
-            foreach (var column in wanted) Columns.Add(column);
+            foreach (var column in wanted)
+            {
+                Columns.Add(column);
+            }
         });
         if (carrier != null)
         {
@@ -1894,8 +1909,6 @@ public partial class TreeDataGrid : Selector
         RefreshStrips();
     }
 
-    private bool _reorderingColumns;
-
     private void Reorder(Action move)
     {
         var outermost = !_reorderingColumns;
@@ -1926,9 +1939,14 @@ public partial class TreeDataGrid : Selector
             AddLogicalChild(added);
 
         if (IsEditing && (EditingColumn >= Columns.Count || !ReferenceEquals(Columns[EditingColumn], _editedColumn)))
+        {
             FinishEditOfShiftedColumn();
+        }
 
-        if (!_reorderingColumns) _newRow?.OnColumnsChanged();
+        if (!_reorderingColumns)
+        {
+            _newRow?.OnColumnsChanged();
+        }
 
         ResetAutoWidths();
 
@@ -2449,7 +2467,10 @@ public partial class TreeDataGrid : Selector
     {
         // The strip MAKES THE RECORD and goes no further: there is no cell below a record that does not exist yet, and
         // the strip is where the next one gets typed anyway.
-        if (!IsEditing && _newRow is { IsFilling: true }) return CommitEdit();
+        if (!IsEditing && _newRow is { IsFilling: true })
+        {
+            return CommitEdit();
+        }
 
         // A refusal keeps the cell AND the key: stepping off it is exactly what was refused.
         if (IsEditing && !CommitEdit()) return true;
@@ -2892,8 +2913,6 @@ public partial class TreeDataGrid : Selector
     /// <summary>Row being edited, or -1.</summary>
     public int EditingRow { get; private set; } = -1;
 
-    private DataGridColumn _editedColumn;
-
     /// <summary>Column being edited, or -1.</summary>
     public int EditingColumn { get; private set; } = -1;
 
@@ -2961,7 +2980,10 @@ public partial class TreeDataGrid : Selector
     {
         // The strip for a new record commits through here too: one entry point, so an application that closes an edit
         // does not have to know WHICH of the two was open.
-        if (!IsEditing && _newRow is { IsFilling: true }) return _newRow.Commit();
+        if (!IsEditing && _newRow is { IsFilling: true })
+        {
+            return _newRow.Commit();
+        }
 
         return CommitCellEdit();
     }
@@ -2976,7 +2998,10 @@ public partial class TreeDataGrid : Selector
             return true;
         }
 
-        if (!WriteCell(EditingRow, EditingColumn, cell.ValueForCommit())) return false;
+        if (!WriteCell(EditingRow, EditingColumn, cell.ValueForCommit()))
+        {
+            return false;
+        }
 
         EndEdit();
         return true;
@@ -3291,7 +3316,10 @@ public partial class TreeDataGrid : Selector
 
         var column = Columns[index];
         if (!column.IsShown) return false;
-        if (column.IsFrozen || IsEditing && index == EditingColumn) return true;
+        if (column.IsFrozen || IsEditing && index == EditingColumn)
+        {
+            return true;
+        }
         return index >= _firstColumn && index <= _lastColumn;
     }
 

@@ -97,7 +97,10 @@ public class FocusLeavesHiddenTests
         var button = new Button();
         var items = new StackPanel();
         items.Children.Add(button);
-        if (sibling != null) items.Children.Add(sibling);
+        if (sibling != null)
+        {
+            items.Children.Add(sibling);
+        }
         var menu = new Border { Child = items };
         var surface = new RenderTargetPanel();
         surface.Children.Add(menu);

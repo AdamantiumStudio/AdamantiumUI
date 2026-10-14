@@ -84,7 +84,10 @@ public class RenderTargetPanel : Grid
    protected override void OnKeyDown(KeyEventArgs e)
    {
       base.OnKeyDown(e);
-      if (e.Key == Key.Escape) Disengage();
+      if (e.Key == Key.Escape)
+      {
+         Disengage();
+      }
       else if (e.Key == Key.Tab && !e.Handled && AcceptsTab && ReferenceEquals(e.OriginalSource, this)
                && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0)
       {
@@ -230,7 +233,10 @@ public class RenderTargetPanel : Grid
    {
       base.OnPointerPressed(e);
 
-      if (!ReferenceEquals(e.OriginalSource, this)) return;
+      if (!ReferenceEquals(e.OriginalSource, this))
+      {
+         return;
+      }
 
       switch (e.ChangedButton)
       {
@@ -298,7 +304,9 @@ public class RenderTargetPanel : Grid
    {
       base.OnGotFocus(e);
       if (MouseLookMode == MouseLookMode.Continuous && ReferenceEquals(e.OriginalSource, this) && FocusManager.IsFocusVisible)
+      {
          Engage();
+      }
    }
 
    protected override void OnLostFocus(RoutedEventArgs e)

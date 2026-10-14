@@ -393,7 +393,10 @@ public class ImageRenderComponent : UIRenderComponent
     // let go of; bitmap textures belong to their BitmapSource.
     protected override void Dispose(bool disposeManagedResources)
     {
-        if (Texture is Adamantium.Graphics.SharedSurface shared && SharedImage is not { IsDisposed: false }) shared.Dispose();
+        if (Texture is Adamantium.Graphics.SharedSurface shared && SharedImage is not { IsDisposed: false })
+        {
+            shared.Dispose();
+        }
         base.Dispose(disposeManagedResources);
     }
 }

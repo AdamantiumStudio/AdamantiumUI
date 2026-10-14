@@ -118,8 +118,10 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         // Tell the parent directly: a collapsed element's DesiredSize reads zero at once, so the layout pass would see no change.
         component.NotifyParentOfContributionChange();
 
-        if (effective != Visibility.Visible) 
+        if (effective != Visibility.Visible)
+        {
             FocusManager.LeaveHidden(component);
+        }
     }
       
     public static readonly AdamantiumProperty IsHitTestVisibleProperty =

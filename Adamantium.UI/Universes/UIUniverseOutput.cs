@@ -463,7 +463,10 @@ namespace Adamantium.UI.Universes
 
         private void OnPointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
-            if (!IsUniverseInput(e)) return;
+            if (!IsUniverseInput(e))
+            {
+                return;
+            }
 
             var mouseInput = new MouseInput();
             mouseInput.InputType = InputType.Wheel;
@@ -514,7 +517,10 @@ namespace Adamantium.UI.Universes
 
         private void WindowOnTextInput(object sender, TextInputEventArgs e)
         {
-            if (!IsUniverseInput(e)) return;
+            if (!IsUniverseInput(e))
+            {
+                return;
+            }
 
             OnTextInput(e.Text);
         }
@@ -527,7 +533,10 @@ namespace Adamantium.UI.Universes
             }
 
             OnKeyInput(new KeyboardInput { Key = key, InputType = InputType.Down });
-            if (Input is { TakesKeyboard: true } && SpendsKey(e)) e.Handled = true;
+            if (Input is { TakesKeyboard: true } && SpendsKey(e))
+            {
+                e.Handled = true;
+            }
         }
     }
 }
