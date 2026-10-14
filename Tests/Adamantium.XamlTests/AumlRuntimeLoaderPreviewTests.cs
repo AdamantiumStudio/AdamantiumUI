@@ -167,4 +167,16 @@ public class AumlRuntimeLoaderPreviewTests
 
         Assert.That(((Ribbon)result.Root).ContextualGroups.Count, Is.EqualTo(1), string.Join(" | ", result.Diagnostics));
     }
+
+    // new PropertyPath("Name") calls (string, params object[]) with an empty array; the loader took (object) instead.
+    [Test]
+    public void AParamsArrayLeftEmpty_IsPassedEmpty_AsCSharpDoes()
+    {
+        var result = AumlLoader.Load(
+            $"<Style {Namespaces} Selector=\"TextBlock\"><Setter Property=\"Text\" Value=\"{{Binding Name}}\"/></Style>");
+
+        var binding = (Adamantium.UI.Core.Data.Binding)((Setter)((Style)result.Root).Setters[0]).Value;
+        Assert.That(binding.Path.Path, Is.EqualTo("Name"), string.Join(" | ", result.Diagnostics));
+        Assert.That(binding.Path.PathParameters, Is.Not.Null.And.Empty);
+    }
 }

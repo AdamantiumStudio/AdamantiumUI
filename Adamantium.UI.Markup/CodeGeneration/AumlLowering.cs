@@ -954,7 +954,7 @@ public class AumlLowering
     /// <summary>The <c>x:Load</c> directive on this element, or null. Its value has already been judged by the
     /// transformer - text here is only ever True or False, anything else is a binding node.</summary>
     internal static AumlAstDirective GetLoadDirective(AumlAstObjectNode node) =>
-        node.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.Load);
+        NodeScan.First<AumlAstDirective>(node.Children, static d => d.Name == AumlDirectives.Load);
 
     /// <summary>The field holding the slot of a NAMED held-back element. The name is exposed as a property that reads
     /// through it, so asking for the element by name builds it - see the generated accessor.</summary>
@@ -1766,7 +1766,7 @@ public class AumlLowering
         public IEnumerable<IResolvedMember> Members { get; }
         public IResolvedMember GetMemberByName(string memberName) => null;
 
-        public List<IResolvedProperty> GetAllProperties() => [];
+        public IReadOnlyList<IResolvedProperty> GetAllProperties() => [];
 
         public bool IsAssignableTo(string fullName) => false;
 

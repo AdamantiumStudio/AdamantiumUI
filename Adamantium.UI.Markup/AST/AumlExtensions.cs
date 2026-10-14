@@ -5,26 +5,30 @@ namespace Adamantium.UI.Markup.AST
 {
     public static class AumlExtensions
     {
-        public static IEnumerable<AumlAstPropertyNode> GetProperties(this IAumlAstNode node)
+        public static IReadOnlyList<AumlAstPropertyNode> GetProperties(this IAumlAstNode node)
         {
-            if (node is AumlAstObjectNode objectNode)
-            {
-                var properties = objectNode.Children.Where(x => x is AumlAstPropertyNode).Cast<AumlAstPropertyNode>().ToList();
-                return properties;
-            }
-
-            return Array.Empty<AumlAstPropertyNode>();
+            return node is AumlAstObjectNode objectNode ? ChildrenOf<AumlAstPropertyNode>(objectNode) : Array.Empty<AumlAstPropertyNode>();
         }
 
-        public static IEnumerable<AumlAstObjectNode> GetLogicalChildrenObjects(this IAumlAstNode node)
+        public static IReadOnlyList<AumlAstObjectNode> GetLogicalChildrenObjects(this IAumlAstNode node)
         {
-            if (node is AumlAstObjectNode objectNode)
+            return node is AumlAstObjectNode objectNode ? ChildrenOf<AumlAstObjectNode>(objectNode) : Array.Empty<AumlAstObjectNode>();
+        }
+
+        // A copy, so that a caller may change the tree while it walks them; none at all when there is nothing to copy.
+        private static IReadOnlyList<T> ChildrenOf<T>(AumlAstObjectNode node) where T : class, IAumlAstNode
+        {
+            List<T> found = null;
+            var children = node.Children;
+            for (var i = 0; i < children.Count; i++)
             {
-                var properties = objectNode.Children.Where(x => x is AumlAstObjectNode).Cast<AumlAstObjectNode>().ToList();
-                return properties;
+                if (children[i] is T child)
+                {
+                    (found ??= new List<T>(children.Count - i)).Add(child);
+                }
             }
 
-            return Array.Empty<AumlAstObjectNode>();
+            return found ?? (IReadOnlyList<T>)Array.Empty<T>();
         }
 
         public static bool IsOfType(this IAumlAstNode node, string type)

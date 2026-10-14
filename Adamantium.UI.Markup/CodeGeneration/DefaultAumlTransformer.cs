@@ -197,7 +197,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                 }
                 else
                 {
-                    property = type.GetAllProperties().FirstOrDefault(x => x.Name == argument.Name);
+                    property = NodeScan.Named(type.GetAllProperties(), argument.Name);
                 }
 
                 var takesType = property?.PropertyType?.FullName == "System.Type" && (isDefault || !string.IsNullOrEmpty(argument.Name));
@@ -345,7 +345,7 @@ public class DefaultAumlTransformer : IAumlTransformer
                     }
                 }
 
-                var propertyInfo = typeInfo.GetAllProperties().FirstOrDefault(x=>x.Name == propertyReference.Name);
+                var propertyInfo = NodeScan.Named(typeInfo.GetAllProperties(), propertyReference.Name);
 
                 if (propertyInfo == null)
                 {
@@ -401,7 +401,8 @@ public class DefaultAumlTransformer : IAumlTransformer
                 typeInfo.Namespace,
                 typeInfo.Name,
                 typeInfo.AssemblyName,
-                isMarkupExtension
+                isMarkupExtension,
+                typeInfo.FullName
             );
         }
         
@@ -435,8 +436,13 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         void ReportNotAttached(AumlAstPropertyReference reference)
         {
-            if (!reference.OwnerType.IsResolved || typeResolver.Resolve(reference.OwnerType.GetFullTypeName()) is not { } owner ||
-                owner.Members.Any(m => m.Name == "Set" + reference.Name && m.MemberKind == ResolvedMemberKind.Method && m.IsStatic &&
+            if (!reference.OwnerType.IsResolved || typeResolver.Resolve(reference.OwnerType.GetFullTypeName()) is not { } owner)
+            {
+                return;
+            }
+
+            var setter = "Set" + reference.Name;
+            if (owner.Members.Any(m => m.Name == setter && m.MemberKind == ResolvedMemberKind.Method && m.IsStatic &&
                                        m.ParameterNames.Count == 2))
             {
                 return;
@@ -698,7 +704,8 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return byUri?.FullName;
             }
 
-            var own = LanguageTables.Where(t => t.FullName == table || t.FullName.EndsWith("." + table, StringComparison.Ordinal)).ToList();
+            var dotted = "." + table;
+            var own = LanguageTables.Where(t => t.FullName == table || t.FullName.EndsWith(dotted, StringComparison.Ordinal)).ToList();
             if (own.Count == 1)
             {
                 return own[0].FullName;
@@ -832,7 +839,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             var itemPropertyName = itemPropertyArgument?.ToString();
 
             var itemType = itemTypeArgument == null ? null : typeResolver.Resolve(itemTypeArgument.ToString());
-            var itemProperty = itemType?.GetAllProperties().FirstOrDefault(x => x.Name == itemPropertyName);
+            var itemProperty = itemType == null ? null : NodeScan.Named(itemType.GetAllProperties(), itemPropertyName);
             if (itemProperty == null)
             {
                 diagnostics.ReportError(document.FileName,
@@ -924,7 +931,7 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         void WrapText(AumlAstObjectNode objectNode)
         {
-            if (!objectNode.Children.OfType<AumlAstTextNode>().Any())
+            if (NodeScan.First<AumlAstTextNode>(objectNode.Children) == null)
             {
                 return;
             }

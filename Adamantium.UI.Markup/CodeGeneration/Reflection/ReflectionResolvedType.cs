@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Adamantium.UI.Markup.CodeGeneration.Reflection;
 
@@ -25,20 +27,40 @@ public class ReflectionResolvedType : IResolvedType
         [typeof(string)] = "string",
     };
 
+    private static readonly ConditionalWeakTable<Type, ReflectionResolvedType> Shared = new();
+
     private readonly Type _type;
 
+    // What reflection answers about a type never changes, and every call of it allocates; each answer is kept.
+    private string _name;
+    private string _namespace;
+    private string _fullName;
+    private string _assemblyName;
+    private string _qualifiedName;
+    private Type[] _interfaces;
+    private object[] _attributes;
+    private IResolvedProperty[] _properties;
+    private IResolvedMember[] _allMembers;
+    private HashSet<string> _assignableTo;
+    // Shared by every thread: an int is written whole, a nullable is not. -1 is "not worked out yet".
+    private int _entityType = -1;
+    private ConcurrentDictionary<string, IResolvedMember> _members;
+
     public ReflectionResolvedType(Type type) => _type = type;
+
+    /// <summary>The one wrapper of <paramref name="type"/>, whose answers are kept across resolvers.</summary>
+    public static ReflectionResolvedType Of(Type type) => Shared.GetValue(type, static t => new ReflectionResolvedType(t));
 
     /// <summary>The underlying runtime type (used by the instantiator to <c>Activator.CreateInstance</c>).</summary>
     public Type ClrType => _type;
 
-    public string Name => _type.Name;
-    public string Namespace => _type.Namespace ?? string.Empty;
-    public string AssemblyName => _type.Assembly.GetName().Name;
-    public string FullName => string.IsNullOrEmpty(_type.Namespace) ? _type.Name : $"{_type.Namespace}.{_type.Name}";
+    public string Name => _name ??= _type.Name;
+    public string Namespace => _namespace ??= _type.Namespace ?? string.Empty;
+    public string AssemblyName => _assemblyName ??= _type.Assembly.GetName().Name;
+    public string FullName => _fullName ??= FullNameOf(_type);
     /// <summary>The name as Roslyn's fully qualified format writes it, so a plan made through reflection prints as the
     /// generator's does: keywords for the built-in types, nested types through a dot, type arguments spelled out.</summary>
-    public string QualifiedName => QualifiedNameOf(_type);
+    public string QualifiedName => _qualifiedName ??= QualifiedNameOf(_type);
 
     public bool IsNamedType => true;
     public bool IsGenericType => _type.IsGenericType;
@@ -47,74 +69,137 @@ public class ReflectionResolvedType : IResolvedType
                                (_type.IsValueType || _type.GetConstructor(Type.EmptyTypes) != null);
 
     public IEnumerable<IResolvedType> TypeArguments =>
-        _type.GetGenericArguments().Select(t => (IResolvedType)new ReflectionResolvedType(t));
+        _type.GetGenericArguments().Select(t => (IResolvedType)Of(t));
 
-    public IResolvedType BaseType => _type.BaseType != null ? new ReflectionResolvedType(_type.BaseType) : null;
+    public IResolvedType BaseType => _type.BaseType != null ? Of(_type.BaseType) : null;
 
-    public IEnumerable<IResolvedMember> Members =>
+    public IEnumerable<IResolvedMember> Members => _allMembers ??=
         _type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
             .Where(m => m.MemberType is MemberTypes.Property or MemberTypes.Field or MemberTypes.Method)
-            .Select(m => (IResolvedMember)new ReflectionResolvedMember(m, this));
+            .Select(m => (IResolvedMember)new ReflectionResolvedMember(m, this))
+            .ToArray();
 
-    public bool IsAssignableTo(string fullName)
+    private Type[] Interfaces => _interfaces ??= _type.GetInterfaces();
+
+    private object[] Attributes => _attributes ??= _type.GetCustomAttributes(false);
+
+    public bool IsAssignableTo(string fullName) => AssignableTo.Contains(fullName);
+
+    private HashSet<string> AssignableTo => _assignableTo ??= BuildAssignableTo();
+
+    private HashSet<string> BuildAssignableTo()
     {
+        var names = new HashSet<string>(StringComparer.Ordinal);
         for (var t = _type; t != null; t = t.BaseType)
-            if (FullNameOf(t) == fullName) return true;
-        return _type.GetInterfaces().Any(i => FullNameOf(i) == fullName);
+        {
+            names.Add(Of(t).FullName);
+        }
+
+        foreach (var i in Interfaces)
+        {
+            names.Add(Of(i).FullName);
+        }
+
+        return names;
     }
 
     public bool InheritsFrom(string baseTypeName)
     {
         for (var t = _type.BaseType; t != null; t = t.BaseType)
-            if (FullNameOf(t) == baseTypeName) return true;
+            if (Of(t).FullName == baseTypeName) return true;
         return false;
     }
 
-    public bool HasAttribute(string attributeName) =>
-        _type.GetCustomAttributes(false).Any(a => a.GetType().FullName?.EndsWith(attributeName) ?? false);
+    public bool HasAttribute(string attributeName)
+    {
+        foreach (var attribute in Attributes)
+        {
+            if (attribute.GetType().FullName?.EndsWith(attributeName, StringComparison.Ordinal) ?? false) return true;
+        }
+
+        return false;
+    }
 
     public IResolvedAttribute GetAttribute(string fullName)
     {
-        var attr = _type.GetCustomAttributes(false).FirstOrDefault(a => a.GetType().FullName == fullName) as Attribute;
-        return attr != null ? new ReflectionResolvedAttribute(attr) : null;
+        foreach (var attribute in Attributes)
+        {
+            if (attribute is Attribute attr && attr.GetType().FullName == fullName) return new ReflectionResolvedAttribute(attr);
+        }
+
+        return null;
     }
 
     public IEnumerable<IResolvedAttribute> GetAttributes() =>
-        _type.GetCustomAttributes(false).OfType<Attribute>().Select(a => (IResolvedAttribute)new ReflectionResolvedAttribute(a));
+        Attributes.OfType<Attribute>().Select(a => (IResolvedAttribute)new ReflectionResolvedAttribute(a));
 
     public IResolvedMember GetMemberByName(string memberName)
     {
-        var member = _type.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-            .FirstOrDefault();
-        return member != null ? new ReflectionResolvedMember(member, this) : null;
+        // Made on first use: most wrapped types are never asked for a member.
+        var members = _members;
+        if (members == null)
+        {
+            Interlocked.CompareExchange(ref _members, new ConcurrentDictionary<string, IResolvedMember>(StringComparer.Ordinal), null);
+            members = _members;
+        }
+
+        if (members.TryGetValue(memberName, out var known))
+        {
+            return known;
+        }
+
+        var member = _type.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        return members.GetOrAdd(memberName, member.Length > 0 ? new ReflectionResolvedMember(member[0], this) : null);
     }
 
-    public List<IResolvedProperty> GetAllProperties() =>
-        _type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(p => (IResolvedProperty)new ReflectionResolvedProperty(p)).ToList();
+    public IReadOnlyList<IResolvedProperty> GetAllProperties() => Properties;
 
-    public bool ImplementsInterface(string interfaceName) =>
-        _type.GetInterfaces().Any(i => i.Name == interfaceName || i.Name.StartsWith(interfaceName + "`", StringComparison.Ordinal));
+    private IResolvedProperty[] Properties => _properties ??= _type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .Select(p => (IResolvedProperty)new ReflectionResolvedProperty(p)).ToArray();
+
+    public bool ImplementsInterface(string interfaceName)
+    {
+        foreach (var i in Interfaces)
+        {
+            var name = i.Name;
+            if (name == interfaceName
+                || name.Length > interfaceName.Length && name[interfaceName.Length] == '`'
+                   && name.StartsWith(interfaceName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public bool IsCollection() => ImplementsInterface("ICollection") || ImplementsInterface("IList");
 
     public IResolvedType GetInterface(string interfaceName)
     {
-        var i = _type.GetInterfaces().FirstOrDefault(x => x.Name == interfaceName);
-        return i != null ? new ReflectionResolvedType(i) : null;
+        foreach (var i in Interfaces)
+        {
+            if (i.Name == interfaceName) return Of(i);
+        }
+
+        return null;
     }
 
-    public bool InheritsFromMarkupExtension(string fullyQualifiedName)
-    {
-        for (var t = _type.BaseType; t != null; t = t.BaseType)
-            if (FullNameOf(t) == fullyQualifiedName) return true;
-        return false;
-    }
+    public bool InheritsFromMarkupExtension(string fullyQualifiedName) => InheritsFrom(fullyQualifiedName);
 
     public bool FindPropertyWithAttribute(string attributeFullName, out IResolvedProperty property)
     {
-        property = GetAllProperties().FirstOrDefault(x => x.HasAttribute(attributeFullName));
-        return property != null;
+        foreach (var candidate in Properties)
+        {
+            if (candidate.HasAttribute(attributeFullName))
+            {
+                property = candidate;
+                return true;
+            }
+        }
+
+        property = null;
+        return false;
     }
 
     public ResolvedSpecialType SpecialType => _type switch
@@ -153,29 +238,39 @@ public class ReflectionResolvedType : IResolvedType
     {
         get
         {
-            if (ImplementsInterface("IWindow")) return EntityType.Window;
-            if (ImplementsInterface("IView")) return EntityType.View;
-            if (ImplementsInterface("IUIApplication")) return EntityType.UIApplication;
-            if (ImplementsInterface("ITheme")) return EntityType.Theme;
-            if (ImplementsInterface("IResourceDictionary")) return EntityType.ResourceDictionary;
-            if (ImplementsInterface("IStyleSet")) return EntityType.StyleSet;
-            if (ImplementsInterface("IThemeVariant")) return EntityType.ThemeVariant;
-            if (ImplementsInterface("IApplicationBlueprint"))
+            if (_entityType < 0)
             {
-                return EntityType.ApplicationBlueprint;
-            }
-            if (ImplementsInterface("IUIComponent"))
-            {
-                return EntityType.Control;
+                _entityType = (int)KindOfEntity();
             }
 
-            if (IsAssignableTo(DataTemplateSetTypeName))
-            {
-                return EntityType.DataTemplateSet;
-            }
-
-            return EntityType.Unknown;
+            return (EntityType)_entityType;
         }
+    }
+
+    private EntityType KindOfEntity()
+    {
+        if (ImplementsInterface("IWindow")) return EntityType.Window;
+        if (ImplementsInterface("IView")) return EntityType.View;
+        if (ImplementsInterface("IUIApplication")) return EntityType.UIApplication;
+        if (ImplementsInterface("ITheme")) return EntityType.Theme;
+        if (ImplementsInterface("IResourceDictionary")) return EntityType.ResourceDictionary;
+        if (ImplementsInterface("IStyleSet")) return EntityType.StyleSet;
+        if (ImplementsInterface("IThemeVariant")) return EntityType.ThemeVariant;
+        if (ImplementsInterface("IApplicationBlueprint"))
+        {
+            return EntityType.ApplicationBlueprint;
+        }
+        if (ImplementsInterface("IUIComponent"))
+        {
+            return EntityType.Control;
+        }
+
+        if (IsAssignableTo(DataTemplateSetTypeName))
+        {
+            return EntityType.DataTemplateSet;
+        }
+
+        return EntityType.Unknown;
     }
 
     private static string FullNameOf(Type t) => string.IsNullOrEmpty(t.Namespace) ? t.Name : $"{t.Namespace}.{t.Name}";

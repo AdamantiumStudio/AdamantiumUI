@@ -417,7 +417,46 @@ internal sealed class BuildPlanExecutor
         return (best, bestArguments);
     }
 
+    // As C#: a candidate binds in its normal form first; a params array then takes the remaining arguments, and an
+    // expanded form loses a tie.
     private bool TryBind(ParameterInfo[] parameters, List<PreparedArgument> arguments, out object[] bound, out int score)
+    {
+        if (TryBindNormal(parameters, arguments, out bound, out score))
+        {
+            score = score * 2 + 1;
+            return true;
+        }
+
+        var last = parameters.Length - 1;
+        if (last < 0 || arguments.Count < last || !parameters[last].IsDefined(typeof(ParamArrayAttribute)))
+        {
+            return false;
+        }
+
+        if (!TryBindNormal(parameters[..last], arguments.GetRange(0, last), out var head, out score))
+        {
+            return false;
+        }
+
+        var elementType = parameters[last].ParameterType.GetElementType();
+        var rest = Array.CreateInstance(elementType, arguments.Count - last);
+        for (var i = 0; i < rest.Length; i++)
+        {
+            if (!TryArgument(arguments[last + i], elementType, out var value, out var points))
+            {
+                return false;
+            }
+
+            rest.SetValue(value, i);
+            score += points;
+        }
+
+        bound = [.. head, rest];
+        score *= 2;
+        return true;
+    }
+
+    private bool TryBindNormal(ParameterInfo[] parameters, List<PreparedArgument> arguments, out object[] bound, out int score)
     {
         bound = null;
         score = 0;
@@ -434,53 +473,65 @@ internal sealed class BuildPlanExecutor
 
         for (var i = 0; i < arguments.Count; i++)
         {
-            var parameterType = parameters[i].ParameterType;
-            var argument = arguments[i];
-            if (argument.IsLiteral)
-            {
-                if (!TryConvertLiteral(argument.Literal, parameterType, out values[i]))
-                {
-                    return false;
-                }
-
-                score += 1;
-                continue;
-            }
-
-            var value = argument.Value;
-            if (value == null)
-            {
-                if (parameterType.IsValueType && Nullable.GetUnderlyingType(parameterType) == null)
-                {
-                    return false;
-                }
-
-                score += 1;
-                continue;
-            }
-
-            if (value.GetType() == parameterType)
-            {
-                values[i] = value;
-                score += 3;
-            }
-            else if (parameterType.IsInstanceOfType(value))
-            {
-                values[i] = value;
-                score += 2;
-            }
-            else if (value is BuildFunction function && typeof(Delegate).IsAssignableFrom(parameterType))
-            {
-                values[i] = MakeDelegate(function, parameterType);
-                score += 2;
-            }
-            else
+            if (!TryArgument(arguments[i], parameters[i].ParameterType, out values[i], out var points))
             {
                 return false;
             }
+
+            score += points;
         }
 
         bound = values;
+        return true;
+    }
+
+    private bool TryArgument(PreparedArgument argument, Type parameterType, out object bound, out int score)
+    {
+        bound = null;
+        score = 0;
+        if (argument.IsLiteral)
+        {
+            if (!TryConvertLiteral(argument.Literal, parameterType, out bound))
+            {
+                return false;
+            }
+
+            score = 1;
+            return true;
+        }
+
+        var value = argument.Value;
+        if (value == null)
+        {
+            if (parameterType.IsValueType && Nullable.GetUnderlyingType(parameterType) == null)
+            {
+                return false;
+            }
+
+            score = 1;
+            return true;
+        }
+
+        if (value.GetType() == parameterType)
+        {
+            bound = value;
+            score = 3;
+        }
+        else if (parameterType.IsInstanceOfType(value))
+        {
+            bound = value;
+            score = 2;
+        }
+        else if (value is BuildFunction function && typeof(Delegate).IsAssignableFrom(parameterType))
+        {
+            bound = MakeDelegate(function, parameterType);
+            score = 2;
+        }
+        else
+        {
+            return false;
+        }
+
         return true;
     }
 

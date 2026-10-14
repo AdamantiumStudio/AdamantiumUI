@@ -165,7 +165,7 @@ public class RoslynResolvedType : IResolvedType
         return false;
     }
     
-    public List<IResolvedProperty> GetAllProperties()
+    public IReadOnlyList<IResolvedProperty> GetAllProperties()
     {
         if (_symbol == null)
         {

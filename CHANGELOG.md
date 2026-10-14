@@ -1113,6 +1113,8 @@ All packages share one version.
 
 ### Removed
 
+- `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;
+  nothing read it.
 - The text scenario language:
   - `.adam` files;
   - `adam-auto run`;
@@ -1132,6 +1134,14 @@ All packages share one version.
 
 ### Fixed
 
+- The designer passes an empty `params` array as C# does. `new PropertyPath("Name")` took the `(object)` constructor
+  instead of `(string, params object[])`, so every binding the designer built had no `PathParameters`. Found by a new
+  test that builds every sandbox view both ways and compares the trees element by element.
+- The designer and markup hot reload read markup about 30 times faster and leave about 200 times less garbage: lowering
+  every sandbox file took 9.5 s and allocated 8 GB, now 0.3 s and 39 MB. What reflection says about a type, an
+  assembly's types by name and its xmlns definitions are read once and shared; a type name not found is remembered;
+  the parser, the structure check and the transformer stopped building strings, lists and iterators they threw away.
+  Saving a 700-line view applies in about 0.2 s instead of 1.5–2 s.
 - An animated picture nobody disposed no longer destroys its frame array and palette on the finalizer thread: they
   are retired to the device and freed once no frame in flight can sample them, as a disposed picture's are. Freed on
   the spot, they could vanish under a frame, and left the resource registry in the middle of another test
