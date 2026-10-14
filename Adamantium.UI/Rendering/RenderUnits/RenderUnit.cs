@@ -1012,6 +1012,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         if (texture is Adamantium.Graphics.SharedSurface shared)
         {
             component.SharedSource = shared;
+            component.SharedImage = image as SharedSurfaceImage;
         }
         return component;
     }
