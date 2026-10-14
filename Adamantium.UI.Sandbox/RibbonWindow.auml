@@ -28,8 +28,7 @@
                 </Button.ContextMenu>
                 <Image Source="{ObservableResource Key={Binding IconKey}}"
                        Foreground="{Ancestor RibbonQuickAccess, Foreground}"
-                       Width="16"
-                       Height="16"/>
+                       Stretch="None"/>
             </Button>
         </DataTemplate>
 
@@ -46,8 +45,7 @@
                 </ToggleButton.ContextMenu>
                 <Image Source="{ObservableResource Key={Binding IconKey}}"
                        Foreground="{Ancestor RibbonQuickAccess, Foreground}"
-                       Width="16"
-                       Height="16"/>
+                       Stretch="None"/>
             </ToggleButton>
         </DataTemplate>
 

@@ -11,7 +11,7 @@ public class TextureTool : ElementTool
     public TextureTool() : base(Surface, new Size(200, 200))
     {
         Name = "Texture";
-        Icon = "ToolTextureIcon";
+        Icon = "CanvasToolTextureIcon";
         Description = "TextureDescription";
         Shortcut = Key.I;
 

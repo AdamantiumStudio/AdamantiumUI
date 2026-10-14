@@ -31,7 +31,7 @@ public class SelectTool : ICanvasTool
     /// another key says so on the tool it built rather than anywhere else.</summary>
     public string Name { get; set; } = "Select";
 
-    public string Icon { get; set; } = "ToolSelectIcon";
+    public string Icon { get; set; } = "CanvasToolSelectIcon";
 
     public Key Shortcut { get; set; } = Key.V;
 

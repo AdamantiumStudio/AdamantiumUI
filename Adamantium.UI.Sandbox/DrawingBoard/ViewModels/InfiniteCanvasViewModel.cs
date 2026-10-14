@@ -286,15 +286,15 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
     // this application's choice - so the application is what says which of the theme's pictures fits.
     public ICanvasTool ButtonTool { get; } =
         new ElementTool(() => new Button { Content = "Press me" })
-        { Name = "Button", Icon = "ToolButtonIcon", Description = "drag out a button" };
+        { Name = "Button", Icon = "CanvasToolButtonIcon", Description = "drag out a button" };
 
     public ICanvasTool CheckTool { get; } =
         new ElementTool(() => new CheckBox { Content = "Check me" }, new Size(130, 28))
-        { Name = "Check box", Icon = "ToolCheckBoxIcon", Description = "drag out a checkbox" };
+        { Name = "Check box", Icon = "CanvasToolCheckBoxIcon", Description = "drag out a checkbox" };
 
     public ICanvasTool BoxTool { get; } =
         new ElementTool(() => new TextBox { Text = "Editable" }, new Size(160, 30))
-        { Name = "Text box", Icon = "ToolTextBoxIcon", Description = "drag out a text box" };
+        { Name = "Text box", Icon = "CanvasToolTextBoxIcon", Description = "drag out a text box" };
 
     /// <summary>A TEXTURE - a surface to paint a picture on. The engine's own tool, not one of this page's: what it
     /// puts down is a plain fill and the file is chosen afterwards in the panel, so there is nothing here to

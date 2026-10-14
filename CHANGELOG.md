@@ -945,6 +945,9 @@ All packages share one version.
 - A `ContentPresenter` handed content its owner parked brings it back alive.
 - An in-process automation session releases what was let go when it settles, as the application's idle frames do, so a
   test sees an element that came back dead.
+- The infinite canvas's icons are keyed `Canvas…` (`CanvasSaveIcon`, `CanvasToolPenIcon`, `CanvasGroupIcon`…; they were
+  `SaveIcon`, `ToolPenIcon`, `GroupIcon`…). A theme's resource is found before the application's, so the canvas's
+  generic names took the place of an application's own `SaveIcon` or `GroupIcon` wherever it showed one.
 - `BrushParser` is an `ITypeParser<Brush>` (it was `ITypeParser<SolidColorBrush>`): the word `CurrentColor` reads as a
   `CurrentColorBrush`, any other text as before.
 - `{ObservableResource}` takes its value away when its key changes to one that resolves to nothing, or to none; a miss of
@@ -1197,6 +1200,8 @@ All packages share one version.
 
 ### Fixed
 
+- A minimized window brought back by `Activate` - a window opened again by navigation - is restored as it was, normal or
+  maximized. It came back on screen still reading Minimized, took no sizes and no input, and showed its last frame.
 - The File menu's pages no longer come back empty on a second pass, in either shape. The page shown is the row's, not
   the pane's: the menu parks a page while another shows; a row takes its page with it when it goes, and the menu its
   auxiliary pane and footer.

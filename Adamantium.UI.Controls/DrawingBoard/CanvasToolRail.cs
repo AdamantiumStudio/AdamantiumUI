@@ -48,7 +48,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
 
     public static readonly AdamantiumProperty GroupIconProperty = AdamantiumProperty.Register(nameof(GroupIcon),
         typeof(String), typeof(CanvasToolRail),
-        new PropertyMetadata("ToolAddIcon", PropertyMetadataOptions.AffectsRender, OnLookChanged));
+        new PropertyMetadata("CanvasToolAddIcon", PropertyMetadataOptions.AffectsRender, OnLookChanged));
 
     /// <summary>The canvas whose tools these are. Set by the pane the rail sits in, which got it from the layer.
     /// </summary>

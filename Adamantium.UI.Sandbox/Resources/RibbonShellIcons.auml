@@ -2,14 +2,15 @@
         xmlns="http://adamantium/ui">
 
     <!-- The commands' icons of the ribbon shell, by key. Each is drawn in a 16-unit box; the empty frame first in every
-         icon states that box, so the icons scale alike and none is measured by its own ink. The stroke is CurrentColor:
+         icon states that box, so the icons scale alike and none is measured by its own ink. It starts half a unit early, so a
+         1-unit stroke on whole coordinates lies on whole pixels. The stroke is CurrentColor:
          the text color of whatever shows the icon, so it is the on-accent color on an accent. -->
 
     <DrawingImage x:Key="TerrainIcon">
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L6,6 L9,10 L11,7 L15,13 Z"
@@ -22,7 +23,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L6,6 L9,10 L11,7 L15,13 Z M12,1 L12,5 M10,3 L14,3"
@@ -35,7 +36,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,10 L2,14 L14,14 L14,10 M8,2 L8,10 M5,7 L8,10 L11,7"
@@ -48,7 +49,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,14 L5,10 L11,10 L15,14 M8,2 L8,7 M6,4 L8,2 L10,4"
@@ -61,7 +62,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,10 L5,14 L11,14 L15,10 M8,2 L8,7 M6,5 L8,7 L10,5"
@@ -74,7 +75,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,11 L4,8 L7,9 L10,8 L15,9"
@@ -87,7 +88,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,11 L15,11 M4,7 L12,7 M6,4 L10,4"
@@ -100,7 +101,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,2 L11,2 L10,8 L6,8 Z M2,11 L14,11 L14,14 L2,14 Z"
@@ -113,7 +114,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,13 L10,6 L12,8 L5,15 Z M10,6 L12,2 L14,4 L12,8"
@@ -126,7 +127,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,8 L8,14 L2,8 Z M2,15 L14,15"
@@ -139,7 +140,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,1 L5,5 L4,9 L7,12 L8,15 M7,1 L9,5 L8,9 L11,12 L12,15"
@@ -152,7 +153,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,9 L15,9 M3,12 L13,12 M5,15 L11,15 M8,2 L8,6 M6,4 L8,6 L10,4"
@@ -165,7 +166,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,4 0 1 0 14,8 A6,4 0 1 0 2,8"
@@ -178,7 +179,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L5,7 L7,9 L9,5 L15,13 M5,13 L6,11 M10,13 L11,10"
@@ -191,7 +192,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L3,9 L6,9 L3,13 L13,13 L10,9 L13,9 Z M8,13 L8,15"
@@ -204,7 +205,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M2,8 L8,2 M2,14 L14,2 M8,14 L14,8"
@@ -217,7 +218,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L12,2 L14,9 L8,14 L2,10 Z"
@@ -230,7 +231,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,7 L12,7 L12,14 L4,14 Z M6,7 L6,4 A2,2 0 0 1 10,4 L10,7"
@@ -243,7 +244,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M13,8 A5,5 0 1 1 11,4 M11,1 L11,4 L14,4"
@@ -256,7 +257,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,14 L2,7 L6,4 L10,7 L10,14 Z M10,9 L14,9 L14,14 L10,14"
@@ -269,7 +270,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,14 L2,7 L6,4 L10,7 L10,14 Z M10,9 L14,9 L14,14 L10,14 M5,14 L5,10 L7,10 L7,14"
@@ -282,7 +283,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 L14,4 M2,8 L14,8 M2,12 L14,12"
@@ -295,7 +296,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M6,2 L10,2 L10,7 L12,9 L4,9 L6,7 Z M8,9 L8,15"
@@ -308,7 +309,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M6,2 L10,2 L10,7 L12,9 L4,9 L6,7 Z M8,9 L8,15 M2,2 L14,14"
@@ -321,7 +322,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L8,8 M8,10 L14,10"
@@ -334,7 +335,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M3,3 L1,1 M13,3 L15,1 M13,13 L15,15 M3,13 L1,15"
@@ -347,7 +348,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L7,2 L7,7 L2,7 Z M9,2 L14,2 L14,7 L9,7 Z M2,9 L7,9 L7,14 L2,14 Z M9,9 L14,9 L14,14 L9,14 Z"
@@ -360,7 +361,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,15 L7,1 M11,15 L9,1 M8,3 L8,5 M8,8 L8,10 M8,13 L8,15"
@@ -373,7 +374,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L8,13 M3,8 L13,8"
@@ -386,7 +387,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,8 L13,8"
@@ -399,7 +400,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8"
@@ -412,7 +413,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,6 L15,6 M3,6 L3,14 M13,6 L13,14 M3,14 A5,5 0 0 1 13,14"
@@ -425,7 +426,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,14 L2,8 A6,6 0 0 1 14,8 L14,14 Z M5,14 L5,9 A3,3 0 0 1 11,9 L11,14"
@@ -438,7 +439,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,10 L4,8 L7,10 L10,8 L13,10 L15,9 M1,13 L4,11 L7,13 L10,11 L13,13 L15,12 M3,2 L3,6 M13,2 L13,6"
@@ -451,7 +452,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,6 L15,6 M1,14 L15,14 M5,14 A3,3 0 0 1 11,14"
@@ -464,7 +465,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,5 A2,2 0 1 0 5,5 A2,2 0 1 0 1,5 M11,11 A2,2 0 1 0 15,11 A2,2 0 1 0 11,11 M4,6 L12,10"
@@ -477,7 +478,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L7,7 L5,9 L9,13 M9,13 L11,11 L15,15"
@@ -490,7 +491,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,8 A5,5 0 1 0 5,4 M5,1 L5,4 L2,4"
@@ -503,7 +504,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,15 L3,2 M3,2 L13,2 L11,5 L13,8 L3,8"
@@ -516,7 +517,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L9.8,5.6 L14.6,5.8 L10.8,8.8 L12.2,13.6 L8,10.8 L3.8,13.6 L5.2,8.8 L1.4,5.8 L6.2,5.6 Z"
@@ -529,7 +530,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,8 A3,3 0 1 0 7,8 A3,3 0 1 0 1,8 M9,8 A2.5,2.5 0 1 0 14,8 A2.5,2.5 0 1 0 9,8"
@@ -542,7 +543,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 A1.5,1.5 0 1 0 5,4 A1.5,1.5 0 1 0 2,4 M10,3 A1.5,1.5 0 1 0 13,3 A1.5,1.5 0 1 0 10,3 M5,11 A1.5,1.5 0 1 0 8,11 A1.5,1.5 0 1 0 5,11 M11,11 A1,1 0 1 0 13,11 A1,1 0 1 0 11,11"
@@ -555,7 +556,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M1,10 L15,6"
@@ -568,7 +569,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M10,2 A6,6 0 1 0 14,11 A5,5 0 1 1 10,2 Z"
@@ -581,7 +582,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8"
@@ -594,7 +595,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,8 A7,3 0 1 0 15,8 A7,3 0 1 0 1,8 M4,6 L4,6.5 M10,10 L10,10.5 M12,6 L12,6.5"
@@ -607,7 +608,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,8 A7,4 0 1 0 15,8 A7,4 0 1 0 1,8 M12,6 A1.5,1.5 0 1 0 15,6 A1.5,1.5 0 1 0 12,6"
@@ -620,7 +621,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,8 A7,4 0 1 0 15,8 A7,4 0 1 0 1,8 M4,8 A4,2 0 1 0 12,8 A4,2 0 1 0 4,8"
@@ -633,7 +634,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A2,2 0 1 0 6,8 A2,2 0 1 0 2,8 M12,8 L12,8.5 M8,3 L8,3.5 M8,13 L8,13.5 M15,8 L15,8.5"
@@ -646,7 +647,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,5 L5,5.5 M11,5 L11,5.5 M8,8 L8,8.5 M5,11 L5,11.5 M11,11 L11,11.5"
@@ -659,7 +660,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M13,1 L13,5 M11,3 L15,3"
@@ -672,7 +673,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,10 L3,7 L5,11 L7,5 L9,9 L11,6 L13,10 L15,8"
@@ -685,7 +686,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M5,6 A1.5,1.5 0 1 0 8,6 A1.5,1.5 0 1 0 5,6 M9,10 A1,1 0 1 0 11,10 A1,1 0 1 0 9,10"
@@ -698,7 +699,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L5,5 L8,10 L11,3 L15,13"
@@ -711,7 +712,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M3,6 L8,8 L7,14 M8,8 L13,5"
@@ -724,7 +725,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M2,9 L14,9"
@@ -737,7 +738,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M4,4 L12,4 M4,12 L12,12"
@@ -750,7 +751,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,15 M2,4 L14,12 M2,12 L14,4"
@@ -763,7 +764,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M8,2 L8,14 M2,8 L8,8"
@@ -776,7 +777,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M1,9 A7,2.5 0 1 0 15,9 A7,2.5 0 1 0 1,9"
@@ -789,7 +790,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,14 L6,6 L10,6 L15,14 Z M8,6 L8,2 M6,3 L8,1 L10,3"
@@ -802,7 +803,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L9,9 M7,2 L11,6 M2,7 L6,11 M10,10 A2,2 0 1 0 14,10 A2,2 0 1 0 10,10"
@@ -815,7 +816,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8"
@@ -828,7 +829,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,8 A3,3 0 1 0 11,8 A3,3 0 1 0 5,8 M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8"
@@ -841,7 +842,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,12 L15,12 M4,12 A4,4 0 0 1 12,12 M8,2 L8,5 M3,5 L5,7 M13,5 L11,7"
@@ -854,7 +855,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,5 L14,5 M1,8 L15,8 M3,11 L13,11"
@@ -867,7 +868,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L15,13 M4,13 A4,4 0 0 1 12,13 M8,5 L8,2 M6,4 L8,2 L10,4"
@@ -880,7 +881,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,11 L12,11 A3,3 0 0 0 11,5 A4,4 0 0 0 4,7 A2,2 0 0 0 4,11 Z"
@@ -893,7 +894,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,6 A2,2 0 1 1 6,8 M8,3 A5,5 0 1 1 3,8"
@@ -906,7 +907,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,9 L12,9 A3,3 0 0 0 11,3 A4,4 0 0 0 4,5 A2,2 0 0 0 4,9 Z M3,13 L13,13"
@@ -919,7 +920,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,13 L4,5 L7,12 L10,4 L13,11 L15,6"
@@ -932,7 +933,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M10,2 A6,6 0 1 0 14,11 A5,5 0 1 1 10,2 Z M13,3 L13,3.5"
@@ -945,7 +946,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,5 L10,5 M4,8 L14,8 M2,11 L9,11 M12,11 L12,11.5"
@@ -958,7 +959,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,6 L10,6 A2,2 0 1 0 8,4 M1,10 L12,10 A2,2 0 1 1 10,12"
@@ -971,7 +972,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,8 L12,8 A3,3 0 0 0 11,2 A4,4 0 0 0 4,4 A2,2 0 0 0 4,8 Z M5,10 L4,13 M8,10 L7,13 M11,10 L10,13"
@@ -984,7 +985,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,6 0 1 0 14,8 A6,6 0 1 0 2,8 M8,8 L8,4 M8,8 L11,10"
@@ -997,7 +998,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,9 M8,11 L8,14 M2,8 L6,8"
@@ -1010,7 +1011,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,5 L8,11 M5,8 L11,8"
@@ -1023,7 +1024,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14"
@@ -1036,7 +1037,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M6,8 L10,8 M8,6 L10,8 L8,10"
@@ -1049,7 +1050,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,14 L4,2 L12,2 L12,14 M10,8 L10,8.5"
@@ -1062,7 +1063,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8"
@@ -1075,7 +1076,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,14 L3,8 A5,5 0 0 1 13,8 L13,14"
@@ -1088,7 +1089,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,9 L14,9 L14,12 L2,12 Z M3,12 L3,14 M13,12 L13,14 M3,9 L3,5 L13,5 L13,9"
@@ -1101,7 +1102,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,4 M4,9 A4,5 0 0 1 12,9 Z M7,11 L9,11"
@@ -1114,7 +1115,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L2,14 M2,8 L6,8 M6,5 L12,5 L10,11 L8,11 Z"
@@ -1127,7 +1128,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,2 L11,2 L12,6 L4,6 Z M8,6 L8,14 M5,14 L11,14"
@@ -1140,7 +1141,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M8,3 L8,13 M3,8 L13,8 M14,1 L15,0"
@@ -1153,7 +1154,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,12 L14,12 M4,12 L4,7 A4,4 0 0 1 12,7 L12,12 M6,4 L6,2 M10,4 L10,2"
@@ -1166,7 +1167,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,4 A2,2 0 1 0 4,4.1 M12,12 A2,2 0 1 0 12,12.1 M5,5 L11,11"
@@ -1179,7 +1180,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 A2,2 0 1 0 3,3.1 M11,11 A2,2 0 1 0 11,11.1 M4,4 L10,10 M13,1 L13,5 M11,3 L15,3"
@@ -1192,7 +1193,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,15 M6,4 L2,8 L6,12 M10,4 L14,8 L10,12"
@@ -1205,7 +1206,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 A2,2 0 1 0 8,2.1 M8,4 L8,10 M8,6 L4,8 M8,6 L12,8 M8,10 L5,14 M8,10 L11,14"
@@ -1218,7 +1219,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,14 L6,6 L14,4 M2,14 A1,1 0 1 0 2,14.1 M6,6 A1,1 0 1 0 6,6.1"
@@ -1231,7 +1232,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,12 L14,12 M4,12 L4,6 M8,12 L8,6 M12,12 L12,6"
@@ -1244,7 +1245,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 L14,4 L14,12 L2,12 Z M5,4 L5,12 M11,4 L11,12"
@@ -1257,7 +1258,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 L14,4 L14,12 L2,12 Z M8,6 L8,10 M6,8 L10,8"
@@ -1270,7 +1271,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L13,8 L8,13 L3,8 Z"
@@ -1283,7 +1284,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 M8,8 L8,8.5"
@@ -1296,7 +1297,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,8 A2,2 0 1 0 5,8 A2,2 0 1 0 1,8 M11,8 A2,2 0 1 0 15,8 A2,2 0 1 0 11,8 M5,8 L11,8"
@@ -1309,7 +1310,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,6 M8,6 L3,10 M8,6 L13,10 M3,10 L3,14 M13,10 L13,14"
@@ -1322,7 +1323,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 A2,2 0 1 0 8,6 A2,2 0 1 0 8,2 M4,14 L4,10 A4,3 0 0 1 12,10 L12,14"
@@ -1335,7 +1336,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 L12,8 M9,5 L12,8 L9,11"
@@ -1348,7 +1349,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,13 L13,3 M10,3 L13,3 L13,6 M3,10 L6,13"
@@ -1361,7 +1362,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,8 A5,5 0 1 1 8,13 M8,13 L6,11 M8,13 L6,15"
@@ -1374,7 +1375,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,7 L11,14 L5,14 L2,7 Z"
@@ -1387,7 +1388,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,14 L2,9 M6,14 L6,5 M10,14 L10,7 M14,14 L14,2"
@@ -1400,7 +1401,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,13 L10,6 M10,6 L13,3 M8,4 L12,8"
@@ -1413,7 +1414,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,6 L8,2 L14,6 L14,14 L2,14 Z M6,14 L6,9 L10,9 L10,14"
@@ -1426,7 +1427,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,3 L14,3 M5,3 L5,13 M8,3 L8,13 M11,3 L11,13 M2,14 L14,14"
@@ -1439,7 +1440,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M1,6 L4,4 L7,6 L10,4 L13,6 L15,5 M1,11 L4,9 L7,11 L10,9 L13,11 L15,10"
@@ -1452,7 +1453,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8"
@@ -1465,7 +1466,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 L7,4 L8,6 L14,6 L14,13 L2,13 Z"
@@ -1478,7 +1479,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2"
@@ -1491,7 +1492,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,10 M5,7 L8,10 L11,7 M3,13 L13,13"
@@ -1504,7 +1505,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,10 L8,2 M5,5 L8,2 L11,5 M3,13 L13,13"
@@ -1517,7 +1518,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,6 L4,2 L12,2 L12,6 M4,10 L12,10 L12,14 L4,14 Z M2,6 L14,6 L14,10 L2,10 Z"
@@ -1530,7 +1531,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5 M8,1 L8,3 M8,13 L8,15 M1,8 L3,8 M13,8 L15,8"
@@ -1543,7 +1544,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M6,3 L3,3 L3,13 L6,13 M9,5 L12,8 L9,11 M12,8 L6,8"
@@ -1556,7 +1557,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,9 L7,9 L7,14 L2,14 Z M9,9 L14,9 L14,14 L9,14 Z M5.5,2 L10.5,2 L10.5,7 L5.5,7 Z"
@@ -1569,7 +1570,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2"
@@ -1582,7 +1583,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"
@@ -1595,7 +1596,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,8 A6,4 0 0 0 14,8 A6,4 0 0 0 2,8 M8,6 A2,2 0 1 0 8,10 A2,2 0 1 0 8,6"
@@ -1608,7 +1609,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M3,8 L13,8 M8,3 L8,13"
@@ -1621,7 +1622,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,3 L14,3 M2,8 L10,8 M2,13 L14,13"
@@ -1634,7 +1635,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L11,3 L11,11 L3,11 Z M5,5 L13,5 L13,13 L5,13 Z"
@@ -1647,7 +1648,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"
@@ -1660,7 +1661,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8"
@@ -1673,7 +1674,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z"
@@ -1686,7 +1687,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,4 L14,4 L14,7 L2,7 Z M2,10 L6,10 M8,10 L14,10"
@@ -1699,7 +1700,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,13 L13,3 M10,3 L13,3 L13,6"
@@ -1712,7 +1713,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8 M8,1 L6,3 M8,1 L10,3 M15,8 L13,6 M15,8 L13,10"
@@ -1725,7 +1726,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,2 L4,13 L7,10 L9,14 L11,13 L9,9 L13,9 Z"
@@ -1738,7 +1739,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,1 L8,15 M1,8 L15,8 M8,1 L6,3 M8,1 L10,3 M8,15 L6,13 M8,15 L10,13 M1,8 L3,6 M1,8 L3,10 M15,8 L13,6 M15,8 L13,10"
@@ -1751,7 +1752,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M13,8 A5,5 0 1 1 8,3 M8,3 L6,1 M8,3 L6,5"
@@ -1764,7 +1765,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,9 L7,9 L7,14 L2,14 Z M7,9 L14,2 M10,2 L14,2 L14,6"
@@ -1777,7 +1778,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z"
@@ -1790,7 +1791,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8"
@@ -1803,7 +1804,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8 M5,5 L11,11 M11,5 L5,11"
@@ -1816,7 +1817,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5"
@@ -1829,7 +1830,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,11 L5,7 L8,11 L11,5 L14,11"
@@ -1842,7 +1843,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5"
@@ -1855,7 +1856,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14"
@@ -1868,7 +1869,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M2,8 L14,8 M8,2 L8,14"
@@ -1881,7 +1882,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"
@@ -1897,7 +1898,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,13 L3,13 Z M5,2 L5,6 L11,6 L11,2"
@@ -1910,7 +1911,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M6,4 L2,7 L6,10 M2,7 L10,7 A3,3 0 0 1 10,13 L8,13"
@@ -1923,7 +1924,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,4 L12,7 L8,10 M12,7 L4,7 A3,3 0 0 0 4,13 L6,13"
@@ -1936,7 +1937,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,2 L12,2 L12,14 L4,14 Z M6,2 L6,4 L10,4 L10,2"
@@ -1949,7 +1950,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,2 L13,12 M13,2 L3,12"
@@ -1962,7 +1963,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L10,3 L10,11 L3,11 Z M6,6 L13,6 L13,14 L6,14 Z"
@@ -1975,7 +1976,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L10,2 L10,10 L2,10 Z M6,6 L14,6 L14,14 L6,14 Z"
@@ -1988,7 +1989,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8"
@@ -2001,7 +2002,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,4 L13,4 M5,4 L5,14 L11,14 L11,4 M6,2 L10,2"
@@ -2014,7 +2015,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,5 L11,5 L11,11 L5,11 Z"
@@ -2027,7 +2028,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z"
@@ -2040,7 +2041,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"
@@ -2053,7 +2054,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M6,2 L6,14 M10,2 L10,14 M2,6 L14,6 M2,10 L14,10"
@@ -2066,7 +2067,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,14 L8,4 M8,4 L5,7 M8,4 L11,7 M2,14 L14,14"
@@ -2079,7 +2080,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,4 L13,4 M3,8 L13,8 M6,11 L8,13 L10,11"
@@ -2092,7 +2093,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L2,14 M4,5 L12,5 M4,11 L9,11"
@@ -2105,7 +2106,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M4,5 L12,5 M6,11 L10,11"
@@ -2118,7 +2119,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L2,14 M14,2 L14,14 M8,5 L8,11"
@@ -2131,7 +2132,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L9,3 L9,9 L3,9 Z M7,7 L13,7 L13,13 L7,13 Z"
@@ -2144,7 +2145,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L8,13 M5,6 L8,3 L11,6"
@@ -2157,7 +2158,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L8,13 M5,10 L8,13 L11,10"
@@ -2170,7 +2171,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,4 M8,12 L8,14 M2,8 L4,8 M12,8 L14,8 M8,5 A3,3 0 1 0 8,11 A3,3 0 1 0 8,5"
@@ -2183,7 +2184,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,12 L13,12 M5,12 L5,7 M8,12 L8,4 M11,12 L11,9"
@@ -2196,7 +2197,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,3 L13,13 L3,13 Z M3,3 L13,13 M13,3 L3,13"
@@ -2209,7 +2210,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,3 L13,8 L5,13 Z"
@@ -2222,7 +2223,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,6 L14,6 L14,10 L2,10 Z M5,6 L5,8 M8,6 L8,8 M11,6 L11,8"
@@ -2235,7 +2236,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L11,3 L11,11 L7,11 L4,14 L4,11 L3,11 Z"
@@ -2248,7 +2249,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8"
@@ -2261,7 +2262,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L14,5 L14,11 L8,14 L2,11 L2,5 Z M2,5 L8,8 L14,5 M8,8 L8,14"
@@ -2274,7 +2275,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2 M2,8 L14,8"
@@ -2287,7 +2288,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,10 L8,6 L14,10 L8,14 Z"
@@ -2300,7 +2301,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,9 L8,5 L14,9 L8,13 Z M8,5 L8,1"
@@ -2313,7 +2314,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,13 L3,6 L6,3 L13,3 M3,6 L13,6 L13,3 M13,6 L13,13 L3,13"
@@ -2326,7 +2327,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M8,2 L8,14 M2,8 L14,8"
@@ -2339,7 +2340,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 L8,14 M2,8 L14,8 M5,5 L11,11 M11,5 L5,11"
@@ -2352,7 +2353,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L5,3 L5,5 L3,5 Z M11,3 L13,3 L13,5 L11,5 Z M3,11 L5,11 L5,13 L3,13 Z M11,11 L13,11 L13,13 L11,13 Z"
@@ -2365,7 +2366,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L3,13 L13,13 M3,3 L13,13"
@@ -2378,7 +2379,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,5 L13,5 L13,13 L3,13 Z M3,5 L8,9 L13,5"
@@ -2391,7 +2392,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,2 L11,2 L13,4 L13,14 L3,14 Z M8,6 L8,11 M5.5,8.5 L10.5,8.5"
@@ -2404,7 +2405,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,2 A6,6 0 1 0 8,14 A6,6 0 1 0 8,2"
@@ -2417,7 +2418,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,12 L8,4 L14,12 Z"
@@ -2430,7 +2431,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,11 L5,7 L8,11 L11,5 L14,11"
@@ -2443,7 +2444,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M2,2 L14,2 L14,14 L2,14 Z M5,2 L5,14 M11,2 L11,14"
@@ -2458,7 +2459,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M5,1 L5,4 M11,1 L11,4 M3,4 L13,4 L13,7 A5,5 0 0 1 3,7 Z M8,12 L8,15 M1,1 L15,15"
@@ -2471,7 +2472,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L8,13 M4,7 L8,3 L12,7"
@@ -2484,7 +2485,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M8,3 L8,13 M4,9 L8,13 L12,9"
@@ -2497,7 +2498,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M4,2 L10,2 L13,5 L13,14 L4,14 Z M10,2 L10,5 L13,5 M8.5,7 L8.5,12 M6.5,10 L8.5,12 L10.5,10"
@@ -2510,7 +2511,7 @@
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
-                    <RectangleGeometry Rect="0,0,16,16"/>
+                    <RectangleGeometry Rect="-0.5,-0.5,16,16"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
             <GeometryDrawing Geometry="M3,3 L13,13 M13,3 L3,13"

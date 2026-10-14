@@ -335,7 +335,7 @@
                 <CompositeProperty Header="{Localize InspectorStrings.Pixels}"
                                    ShowActionButton="True"
                                    ActionCommand="{Ancestor CanvasInspector, ActualSizeCommand}"
-                                   ActionIcon="FitIcon"
+                                   ActionIcon="CanvasFitIcon"
                                    ActionTip="{Localize InspectorStrings.ActualSize}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" IsReadOnly="True"
                                      Binding="{Binding Painted.Source.Width}"/>
@@ -374,12 +374,12 @@
                                Binding="{Binding Model.Inputs}"
                                ItemHeader="{Binding Name}"
                                ItemAction="{Ancestor CanvasInspector, RemoveSocketCommand}"
-                               ItemActionIcon="BinIcon"
+                               ItemActionIcon="CanvasBinIcon"
                                ItemActionTip="{Localize InspectorStrings.RemoveSocket}"
                                ShowActionButton="True"
                                ActionCommand="{Ancestor CanvasInspector, AddSocketCommand}"
                                ActionCommandParameter="In"
-                               ActionIcon="ToolAddIcon"
+                               ActionIcon="CanvasToolAddIcon"
                                ActionTip="{Localize InspectorStrings.AddInput}">
                     <StringProperty Header="{Localize InspectorStrings.Name}" Binding="{Binding Name}"/>
                     <ChoiceProperty Header="{Localize InspectorStrings.Kind}" Binding="{Binding Kind}"
@@ -394,12 +394,12 @@
                                Binding="{Binding Model.Outputs}"
                                ItemHeader="{Binding Name}"
                                ItemAction="{Ancestor CanvasInspector, RemoveSocketCommand}"
-                               ItemActionIcon="BinIcon"
+                               ItemActionIcon="CanvasBinIcon"
                                ItemActionTip="{Localize InspectorStrings.RemoveSocket}"
                                ShowActionButton="True"
                                ActionCommand="{Ancestor CanvasInspector, AddSocketCommand}"
                                ActionCommandParameter="Out"
-                               ActionIcon="ToolAddIcon"
+                               ActionIcon="CanvasToolAddIcon"
                                ActionTip="{Localize InspectorStrings.AddOutput}">
                     <StringProperty Header="{Localize InspectorStrings.Name}" Binding="{Binding Name}"/>
                     <ChoiceProperty Header="{Localize InspectorStrings.Kind}" Binding="{Binding Kind}"
