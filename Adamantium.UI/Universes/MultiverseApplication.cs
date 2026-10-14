@@ -20,7 +20,7 @@ public abstract class MultiverseApplication : UIApplication
     protected override void OnInitialize()
     {
         base.OnInitialize();
-        UniverseService = new UniverseService();
+        UniverseService = new UniverseService(EntityWorld);
         EntityWorld.ServiceManager.OnDrawStarted += ServiceManagerOnDrawStarted;
         EntityWorld.ServiceManager.OnDrawFinished += ServiceManagerOnOnDrawFinished;
         UniverseService.OnUniverseAdded += UniverseServiceOnUniverseAdded;

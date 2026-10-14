@@ -293,7 +293,7 @@ A window with a 3D scene beside ordinary controls:
 ```xml
 <Window xmlns="http://adamantium/ui"
         xmlns:x="http://adamantium/ui/xaml/extensions"
-        xmlns:local="clr-namespace:MyApp"
+        xmlns:universes="clr-namespace:Adamantium.UI.Universes;assembly=Adamantium.UI"
         xmlns:vm="clr-namespace:MyApp.ViewModels"
         x:ViewModel="{x:Type vm:MainWindowViewModel}"
         Title="Viewer"
@@ -302,7 +302,7 @@ A window with a 3D scene beside ordinary controls:
     <Grid ColumnDefinitions="*, 280">
         <RenderTargetPanel MouseLookMode="Drag">
             <RenderTargetPanel.Behaviors>
-                <local:SceneBehavior/>
+                <universes:UniverseHost Universe="{Binding Scene}"/>
             </RenderTargetPanel.Behaviors>
         </RenderTargetPanel>
         <StackPanel Grid.Column="1"
@@ -318,23 +318,40 @@ A window with a 3D scene beside ordinary controls:
 </Window>
 ```
 
-`SceneBehavior` is the application's own: it creates the engine universe that draws into the panel. The sandbox's
-[`DemoUniverseBehavior`](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/Adamantium.UI.Sandbox/Behaviors/DemoUniverseBehavior.cs)
-is a complete one.
-
-The view-model is plain C# with source-generated properties and commands:
+The view-model makes and owns the engine universe; `UniverseHost` shows it in the panel. It is plain C# with
+source-generated properties and commands:
 
 ```csharp
 [ViewModel]
 public partial class MainWindowViewModel
 {
     [Bindable]
+    private SceneUniverse _scene;
+
+    [Bindable]
     private double _cameraSpeed = 4;
+
+    public MainWindowViewModel(IUniverseService universes, IGraphicsDeviceService graphics, IDependencyContainer container)
+    {
+        _ = Start(universes, graphics, container);
+    }
+
+    // Made and initialized off the UI thread: the window is up and drawing while the universe starts.
+    private async Task Start(IUniverseService universes, IGraphicsDeviceService graphics, IDependencyContainer container)
+    {
+        Scene = await universes.CreateUniverseAsync(nameof(SceneUniverse),
+            () => new SceneUniverse(graphics, graphics.IsInDebugMode, container));
+    }
 
     [Command]
     private void ResetCamera() => CameraSpeed = 4;
 }
 ```
+
+`SceneUniverse` is the application's own universe. The sandbox's
+[`DemoUniverse`](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/Adamantium.UI.Sandbox/DemoUniverse.cs) and
+[`SceneViewModel`](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/Adamantium.UI.Sandbox/ViewModels/SceneViewModel.cs)
+are a complete pair.
 
 ## Status
 

@@ -135,15 +135,15 @@ public class RenderTargetPanel : Grid
    // the component the import is no longer handed to anyone.
    private void DropCurrentSource()
    {
-      _image?.Dispose();
-      _image = null;
+      ReleaseImport();
       Source = null;
    }
 
-   /// <summary>Drops the source on detach. The imported surface is freed by its render component when the pipeline
-   /// removes this panel's units (ReconcileDetachedControls, on the render thread) - never disposed here, off the
-   /// render thread, where it could race a compositor submit still in flight.</summary>
-   private void ReleaseSource() => DropCurrentSource();
+   private void ReleaseImport()
+   {
+      _image?.Dispose();
+      _image = null;
+   }
 
    protected override void OnRender(IDrawingContext context)
    {
@@ -168,8 +168,18 @@ public class RenderTargetPanel : Grid
       _middleDown = false;
       Disengage();   // a tab switch / tree teardown while looking must restore the cursor
       LetGoOfPointer();
-      ReleaseSource();
+      ReleaseImport();
       base.OnDetachedFromVisualTree(e);
+   }
+
+   protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+   {
+      base.OnAttachedToVisualTree(e);
+      if (Source != null && _image == null)
+      {
+         _image = new SharedSurfaceImage(Source);
+         InvalidateAfterSourceChange();
+      }
    }
 
    // --- Mouse-look: engage relative mouse mode per MouseLookMode ---------------------------------------------------

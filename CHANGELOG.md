@@ -29,6 +29,16 @@ All packages share one version.
 - `RenderTargetPanel.AcceptsTab`, `true` by default: Tab and Shift+Tab typed into the panel are the hosted universe's;
   Ctrl+Tab leaves the panel - to the next focus area, or to the next control when there is none.
 
+- A universe made and owned by a view-model, started off the UI thread.
+  - **Making it.** `IUniverseService.CreateUniverseAsync` constructs and initializes a universe on a worker thread; it
+    runs in no window's frames until it is shown. A canceled or failed start shuts the universe down.
+  - **Showing it.** `UniverseHost`, a behavior of `RenderTargetPanel` (`Adamantium.UI.Universes`), shows the universe
+    bound to its `Universe` in the panel: `<universes:UniverseHost Universe="{Binding Scene}"/>`. The universe runs in
+    the frames of the panel's window and is paused while the panel is out of the tree; a discarded panel's output is
+    taken out and freed. `IUniverseService.Show` runs a universe in a window's frames.
+  - `FundamentalUIComponent.ResolveService<T>` gives a component the application's service.
+  - The sandbox's Scene tab starts its universe with the application, so the tab opens at once.
+
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
   steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
   `<Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1"/>`.
@@ -1172,6 +1182,8 @@ All packages share one version.
   made a record out of the strip, or emptied it, and left the cell in edit.
 - The Scene tab: a numeric box under the frame-rate labels can be scrubbed again, and the game hears the keyboard after
   the menu closes.
+- A `RenderTargetPanel` back in the tree shows its surface again; it forgot the surface on leaving, and a tab switched
+  away and back stayed empty.
 - The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and
   releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
   render marks as the application's loop does, which held every element ever marked; and an edit that takes a child

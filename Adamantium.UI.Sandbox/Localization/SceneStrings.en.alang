@@ -32,6 +32,7 @@
     <Phrase Key="Continue" Text="Continue"/>
     <Phrase Key="LoadF15" Text="Load F-15"/>
     <Phrase Key="LoadMonkey" Text="Load Monkey"/>
-    <Phrase Key="Status" Select="status" Ready="Universe ready" NotReady="Universe not ready yet" Loading="Loading {model}…"
+    <Phrase Key="Status" Select="status" Starting="Starting the universe…" StartFailed="The universe did not start — {error}"
+            Ready="Universe ready" NotReady="Universe not ready yet" Loading="Loading {model}…"
             Loaded="{model}" Failed="{model}: failed to load — {error}"/>
 </Language>

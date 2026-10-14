@@ -1,45 +1,66 @@
 using System;
 using System.Threading.Tasks;
+using Adamantium.Core.DependencyInjection;
 using Adamantium.ECS.Components;
+using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.MVVM;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Sandbox.Content;
+using Adamantium.UI.Universes;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Scene tab: the 3D universe behind an overlay menu. The load commands reach the universe through
-/// <see cref="AttachUniverse"/>, which DemoUniverseBehavior calls once it is live.</summary>
+/// <summary>Scene tab: the 3D universe behind an overlay menu. The view-model makes the universe as soon as it is made
+/// itself, off the UI thread, and the view shows it through <see cref="Universe"/>.</summary>
 [ViewModel]
 public partial class SceneViewModel : TabPageViewModel
 {
-    public SceneViewModel() : base("Scene") { }
+    private DispatcherTimer _pulse;
 
-    private DemoUniverse _universe;
+    /// <summary>The universe the view shows; null until it has started.</summary>
+    [Bindable] private DemoUniverse _universe;
+
+    /// <summary>Starts the universe at once, off the UI thread - except in the designer, where a preview would make one
+    /// per render.</summary>
+    public SceneViewModel(IUniverseService universes, IGraphicsDeviceService graphics, IDependencyContainer container)
+        : base("Scene")
+    {
+        if (Design.IsDesignMode)
+        {
+            return;
+        }
+
+        _ = Start(universes, graphics, container);
+    }
+
     [Bindable]
     private Light _light;
 
-    /// <summary>Called by DemoUniverseBehavior once the hosted universe exists, so the menu's load commands can reach it.</summary>
-    internal void AttachUniverse(DemoUniverse universe)
+    private async Task Start(IUniverseService universes, IGraphicsDeviceService graphics, IDependencyContainer container)
     {
-        _universe = universe;
-        _universe.UseTool(Tool);
-        _universe.IsSimulationPaused = IsMenuVisible;
-        Status = SceneStatus.Ready;
+        try
+        {
+            var universe = await universes.CreateUniverseAsync(nameof(DemoUniverse),
+                () => new DemoUniverse(graphics, graphics.IsInDebugMode, container));
+            universe.UseTool(Tool);
+            universe.IsSimulationPaused = IsMenuVisible;
+            Universe = universe;
+            Status = SceneStatus.Ready;
 
-        // A rebuilt view brings a new universe with a new camera: its home and speed are taken afresh on the next pulse.
-        _home = null;
-
-        // Once the universe is there, the readout has something to read. On the UI thread, so nothing touched here ever
-        // crosses over from the universe loop.
-        _pulse ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.25) };
-        _pulse.Tick -= OnPulse;
-        _pulse.Tick += OnPulse;
-        _pulse.Start();
+            _pulse = new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.25) };
+            _pulse.Tick += OnPulse;
+            _pulse.Start();
+        }
+        catch (Exception exception)
+        {
+            LoadError = exception.GetBaseException().Message;
+            Status = SceneStatus.StartFailed;
+            Console.WriteLine(exception);
+        }
     }
-
-    private DispatcherTimer _pulse;
 
     /// <summary>What the UNIVERSE's own rendering could sustain, and what one of its frames costs. Not the rate the panel
     /// ticks it at - hosted, that would only ever report the interface.</summary>
@@ -267,7 +288,7 @@ public partial class SceneViewModel : TabPageViewModel
     }
 
     /// <summary>Where the universe and its model stand, which model that is, and why it failed if it did.</summary>
-    [Bindable] private SceneStatus _status = SceneStatus.Loaded;
+    [Bindable] private SceneStatus _status = SceneStatus.Starting;
 
     [Bindable] private string _model = "F-15C Eagle";
 
