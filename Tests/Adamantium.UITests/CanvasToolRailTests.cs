@@ -154,6 +154,97 @@ public class CanvasToolRailTests
         Assert.That(window.PopupLayer.HasPopups, Is.True);
     }
 
+    private static void Drain()
+    {
+        while (DiscardedVisuals.Drain(64) > 0) { }
+    }
+
+    private static Border ListOf(CanvasToolRail rail) =>
+        (Border)((Popup)typeof(CanvasToolRail).GetField("_popup",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(rail)).Child;
+
+    // A REBUILT RAIL lets its old buttons go. Only taken out of the panel, each one's picture followed the theme for
+    // good, and a mode switched back and forth left a whole rail behind every time.
+    [Test]
+    public void ARebuiltRail_DiscardsTheButtonsAndTipsItReplaced()
+    {
+        var (rail, window, _) = Built();
+        var old = (ToggleButton)rail.Children[0];
+        var tip = (FundamentalUIComponent)old.ToolTip;
+
+        rail.Canvas.Tools.Add(new Nothing { Name = "Late" });
+        Settle(window);
+        Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(old.IsDiscarded, Is.True, "the button");
+            Assert.That(tip.IsDiscarded, Is.True, "its tip");
+        });
+    }
+
+    // ...and a family's list, once closed, goes: it is made afresh every time it opens.
+    [Test]
+    public void AClosedFamilyList_IsDiscarded()
+    {
+        var (rail, window, _) = Built();
+        var button = FamilyButton(rail);
+
+        Click(button, window);
+        var list = ListOf(rail);
+        Click(button, window);
+        Drain();
+
+        Assert.That(list.IsDiscarded, Is.True);
+    }
+
+    // A row's tip is not in the list's tree, and it follows the language.
+    [Test]
+    public void AClosedFamilyList_DiscardsItsRowsTips()
+    {
+        var (rail, window, _) = Built();
+        var button = FamilyButton(rail);
+
+        Click(button, window);
+        var row = (ButtonBase)((StackPanel)ListOf(rail).Child).Children[0];
+        var tip = (FundamentalUIComponent)row.ToolTip;
+        Click(button, window);
+        Drain();
+
+        Assert.That(tip.IsDiscarded, Is.True);
+    }
+
+    [Test]
+    public void ADiscardedRail_DiscardsItsTipsAndItsOpenList()
+    {
+        var (rail, window, _) = Built();
+        var tip = (FundamentalUIComponent)((ToggleButton)rail.Children[0]).ToolTip;
+        Click(FamilyButton(rail), window);
+        var list = ListOf(rail);
+
+        DiscardedVisuals.PublishSubtree(rail);
+        Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tip.IsDiscarded, Is.True, "a tip");
+            Assert.That(list.IsDiscarded, Is.True, "the open list");
+        });
+    }
+
+    [Test]
+    public void AFamilyListDismissedByAPressElsewhere_IsDiscarded()
+    {
+        var (rail, window, elsewhere) = Built();
+
+        Click(FamilyButton(rail), window);
+        var list = ListOf(rail);
+        Press(elsewhere, window);
+        Drain();
+
+        Assert.That(list.IsDiscarded, Is.True);
+    }
+
     // A TOOL'S NAME is a word of the canvas's phrases where they have one, followed as the language changes, and is
     // said as it is where they do not - which is how an application's own tool keeps the name it was given.
     [Test]

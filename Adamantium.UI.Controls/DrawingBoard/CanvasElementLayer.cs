@@ -35,8 +35,16 @@ public class CanvasElementLayer : Panel
     {
         if (Same(items)) return;
 
+        // ONLY WHAT HAS A CONTROL, so each child stands at its own item's index: an item no canvas has dressed yet would
+        // shift every control after it onto its neighbor's box.
         _items.Clear();
-        _items.AddRange(items);
+        foreach (var item in items)
+        {
+            if (item.Element is IMeasurableComponent)
+            {
+                _items.Add(item);
+            }
+        }
 
         // WHAT CHANGED AND NOTHING ELSE. Emptying the layer and filling it again takes every control that is staying
         // off the plane and puts it back: it is detached, re-attached, and re-recorded from scratch - and what is drawn
@@ -45,7 +53,7 @@ public class CanvasElementLayer : Panel
         var wanted = new List<IMeasurableComponent>(_items.Count);
         foreach (var item in _items)
         {
-            if (item.Element is IMeasurableComponent measurable) wanted.Add(measurable);
+            wanted.Add((IMeasurableComponent)item.Element);
         }
 
         for (var i = Children.Count - 1; i >= 0; i--)
@@ -230,15 +238,24 @@ public class CanvasElementLayer : Panel
         visual is not IMeasurableComponent sized || (Double.IsNaN(sized.Width) && Double.IsNaN(sized.Height));
 
 
+    // The same items wearing the same controls: an item handed a new control is a change too.
     private bool Same(List<ElementItem> items)
     {
-        if (items.Count != _items.Count) return false;
+        var at = 0;
 
-        for (var i = 0; i < items.Count; i++)
+        foreach (var item in items)
         {
-            if (!ReferenceEquals(items[i], _items[i])) return false;
+            if (item.Element is not IMeasurableComponent) continue;
+
+            if (at >= _items.Count || !ReferenceEquals(item, _items[at]) || at >= Children.Count ||
+                !ReferenceEquals(item.Element, Children[at]))
+            {
+                return false;
+            }
+
+            at++;
         }
 
-        return true;
+        return at == _items.Count;
     }
 }

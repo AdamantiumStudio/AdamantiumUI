@@ -21,6 +21,41 @@ public class DrawingBrushTests
             Brush = new SolidColorBrush(Colors.Red)
         };
 
+    // The element that asked for a bake re-records when the drawing changes: its retained frame binds the bake's texture,
+    // which is thrown away, and a frame replayed after that drew a freed texture.
+    [Test]
+    public void AChangedDrawing_RedrawsWhoeverAskedForItsBake()
+    {
+        var image = new DrawingImage { Drawing = Square(0, 0, 10) };
+        var owner = new Adamantium.UI.Controls.Decorators.Border();
+        DrawingImageRaster.Get(image, new Size(16, 16), owner);
+
+        var redrawn = false;
+        void Seen(IUIComponent component) => redrawn |= ReferenceEquals(component, owner);
+        VisualTreeNotifications.ContentInvalidated += Seen;
+        try
+        {
+            DrawingImageRaster.Invalidate(image);
+        }
+        finally
+        {
+            VisualTreeNotifications.ContentInvalidated -= Seen;
+        }
+
+        Assert.That(redrawn, Is.True);
+    }
+
+    // A bake thrown away on one thread while the render thread is about to draw it has no texture to give - the answer a
+    // picture still decoding gives - rather than an exception on the thread that draws.
+    [Test]
+    public void APictureThrownAway_HasNoTextureToGive()
+    {
+        var picture = new BitmapSource(4, 4, 1, 1, Adamantium.Imaging.SurfaceFormat.B8G8R8A8.UNorm, new byte[4 * 4 * 4]);
+        picture.Dispose();
+
+        Assert.That(picture.GetOrCreateTexture(null), Is.Null);
+    }
+
     [Test]
     public void ItsContentIsAnImageSourceTheRenderPathAlreadyDraws()
     {

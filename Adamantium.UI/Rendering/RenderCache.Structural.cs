@@ -137,7 +137,7 @@ public partial class RenderCache
         _needRenumber = false;
     }
 
-    // TEMP: name the give-up so a full walk in the trace says WHY it is one.
+    // Names the give-up so a full walk in the trace says WHY it is one.
     private static bool GaveUp(string reason)
     {
         if (Core.Diagnostics.FrameTrace.Enabled) Core.Diagnostics.FrameTrace.FullWalkReason = reason;

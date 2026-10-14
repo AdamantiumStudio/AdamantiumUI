@@ -117,6 +117,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         // Tell the parent directly: a collapsed element's DesiredSize reads zero at once, so the layout pass would see no change.
         component.NotifyParentOfContributionChange();
+
+        if (effective != Visibility.Visible)
+        {
+            FocusManager.LeaveHidden(component);
+        }
     }
       
     public static readonly AdamantiumProperty IsHitTestVisibleProperty =
@@ -306,20 +311,37 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     // AffectsRender above covers a new INSTANCE; a value changed INSIDE the one already set raises Changed instead, and
-    // that has to re-record too - otherwise animating a glow's radius does nothing until something else moves.
+    // that has to re-record too - otherwise animating a glow's radius does nothing until something else moves. Followed,
+    // so a discard lets go: a glow shared from a view model held every element ever lit with it.
     private static void OnAuraChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is not UIComponent component) return;
-        if (e.OldValue is Aura old) old.Changed -= component.OnHaloChanged;
-        if (e.NewValue is Aura aura) aura.Changed += component.OnHaloChanged;
+        if (e.NewValue is Aura aura)
+        {
+            aura.Changed += component.OnHaloChanged;
+            component.Follow(AuraProperty, () => aura.Changed -= component.OnHaloChanged);
+        }
+        else
+        {
+            component.Follow(AuraProperty, null);
+        }
+
         component._aura = component.GetValue<Aura>(AuraProperty);
     }
 
     private static void OnShadowChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is not UIComponent component) return;
-        if (e.OldValue is Shadow old) old.Changed -= component.OnHaloChanged;
-        if (e.NewValue is Shadow shadow) shadow.Changed += component.OnHaloChanged;
+        if (e.NewValue is Shadow shadow)
+        {
+            shadow.Changed += component.OnHaloChanged;
+            component.Follow(ShadowProperty, () => shadow.Changed -= component.OnHaloChanged);
+        }
+        else
+        {
+            component.Follow(ShadowProperty, null);
+        }
+
         component._shadow = component.GetValue<Shadow>(ShadowProperty);
     }
 
@@ -879,16 +901,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => _defaultFontFamilyOverride = value;
     }
 
-    // TEMP (leak hunt): how many components exist RIGHT NOW. Constructed minus finalized, so a theme swap that retains
-    // its old tree shows up as a live count that steps up and never comes down - and one that does NOT is proof the
-    // retained megabytes are something other than components, which no container census can tell apart.
-    public static long LiveComponents;
-
-    ~UIComponent() => System.Threading.Interlocked.Decrement(ref LiveComponents);
-
     public UIComponent()
     {
-        System.Threading.Interlocked.Increment(ref LiveComponents);
         RenderId = Guid.NewGuid();
 
         // A visual root (e.g. a window) has no parent, so SetVisualParent never attaches it. Seed RootVisual to

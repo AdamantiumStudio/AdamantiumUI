@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Core;
 using Adamantium.ECS;
@@ -19,9 +20,12 @@ public class UniverseService : IUniverseService
 
     private readonly List<IUniverse> _retired = [];
 
-    public UniverseService()
+    private readonly EntityWorld _world;
+
+    public UniverseService(EntityWorld world = null)
     {
         _universes = [];
+        _world = world;
     }
 
     public IReadOnlyList<IUniverse> Universes
@@ -47,6 +51,62 @@ public class UniverseService : IUniverseService
 
         OnUniverseAdded?.Invoke(universe);
         return universe;
+    }
+
+    public async Task<T> CreateUniverseAsync<T>(string name, Func<T> create, CancellationToken cancellationToken = default)
+        where T : IUniverse
+    {
+        var universe = await Task.Run(() =>
+        {
+            var made = create();
+            try
+            {
+                made.InitializeUniverse();
+            }
+            catch
+            {
+                lock (_locker)
+                {
+                    _retired.Add(made);
+                }
+
+                throw;
+            }
+
+            return made;
+        }, cancellationToken);
+
+        lock (_locker)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _retired.Add(universe);
+            }
+            else
+            {
+                _universes.Add(new UniverseKey(name, null, null, universe));
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        OnUniverseAdded?.Invoke(universe);
+        return universe;
+    }
+
+    public void Show(IUniverse universe, IWindow window)
+    {
+        var service = _world?.ServiceManager.GetServices<UiRenderService>()
+            .OfType<WindowRenderService>()
+            .FirstOrDefault(x => ReferenceEquals(x.Window, window));
+
+        lock (_locker)
+        {
+            var index = _universes.FindIndex(x => ReferenceEquals(x.Universe, universe));
+            if (index >= 0)
+            {
+                _universes[index] = _universes[index] with { Window = window, Service = service };
+            }
+        }
     }
 
     /// <summary>

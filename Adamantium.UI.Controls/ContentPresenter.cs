@@ -87,8 +87,6 @@ public class ContentPresenter : InputUIComponent
             new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
         FontSizeProperty.OverrideMetadata(typeof(ContentPresenter),
             new PropertyMetadata(14.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
-
-        SweepPresentersOnDiscard();
     }
 
     private static void OnContentPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -221,8 +219,6 @@ public class ContentPresenter : InputUIComponent
         }
 
         _builtFor = newContent;
-
-        RegisterForDiscardSweep();
 
         if (newContent is IUIComponent iuiComponent)
         {
@@ -438,8 +434,15 @@ public class ContentPresenter : InputUIComponent
         _currentRoot != null && ReferenceEquals(_currentRoot, _builtFor) &&
         GetValueSource(ContentProperty) is ValuePriority.Binding or ValuePriority.Template;
 
+    // LENT, not ours: an items control's own item goes back to it, and a tip element goes back to the element that set
+    // it - the shared card shows one after another, and discarding the last one shown broke it for good. What this
+    // presenter built for a tip, the label for a string, is its own all the same.
     private bool IsOwnersOwnItem(IUIComponent visual) =>
-        visual != null && TemplatedParent is ItemsControl owner && owner.Items.Contains(visual);
+        visual != null && (TemplatedParent is ItemsControl owner && owner.Items.Contains(visual) ||
+                           TemplatedParent is ToolTip && IsGivenContent(visual));
+
+    private bool IsGivenContent(IUIComponent visual) =>
+        ReferenceEquals(visual, _builtFor) || ReferenceEquals(visual, _outgoingRoot) && _outgoingIsContent;
 
     private bool CanComeBack(object content) =>
         TemplatedParent is not ItemsControl owner || owner.Items.Contains(content);
@@ -474,18 +477,28 @@ public class ContentPresenter : InputUIComponent
 
     private void DropContentHandles()
     {
-        DiscardBuilt(_currentRoot, !ReferenceEquals(_currentRoot, _builtFor));
-        DiscardBuilt(_outgoingRoot, !_outgoingIsContent);
+        DropCurrentHandles();
+        DropOutgoingHandles();
+    }
 
-        // Removed, not just forgotten: a root discarded while this presenter lives is still our child and would stay drawn.
+    // Removed, not just forgotten: a root discarded while this presenter lives is still our child and would stay drawn.
+    private void DropCurrentHandles()
+    {
+        DiscardBuilt(_currentRoot, !ReferenceEquals(_currentRoot, _builtFor));
         LetGo(_currentRoot);
-        LetGo(_outgoingRoot);
 
         _currentRoot = null;
-        _outgoingRoot = null;
         _currentTemplateResult = null;
-        _outgoingTemplateResult = null;
         _currentTemplate = null;
+    }
+
+    private void DropOutgoingHandles()
+    {
+        DiscardBuilt(_outgoingRoot, !_outgoingIsContent);
+        LetGo(_outgoingRoot);
+
+        _outgoingRoot = null;
+        _outgoingTemplateResult = null;
     }
 
     private void DiscardBuilt(IUIComponent root, bool built)
@@ -512,50 +525,44 @@ public class ContentPresenter : InputUIComponent
         RemoveLogicalChild(root);
     }
 
-    // Weak, so the register does not keep a presenter alive.
-    private static readonly List<WeakReference<ContentPresenter>> Presenters = new();
-    private bool _registered;
-
-    private void RegisterForDiscardSweep()
+    /// <summary>Lets go of its content once that is released while this presenter lives on: the fields naming the root
+    /// would otherwise be the last thing holding it.</summary>
+    protected internal override void OnVisualChildReleased(Core.FundamentalUIComponent child)
     {
-        if (_registered) return;
-        _registered = true;
-        lock (Presenters) Presenters.Add(new WeakReference<ContentPresenter>(this));
-    }
+        base.OnVisualChildReleased(child);
 
-    // The presenter survives and its content is destroyed: the field is then the only thing still naming the root.
-    private static void SweepPresentersOnDiscard()
-    {
-        Core.DiscardedVisuals.Discarded += gone =>
+        // Only the side that went: the view sliding out released must not take the one sliding in with it.
+        if (ReferenceEquals(child, _currentRoot))
         {
-            List<ContentPresenter> live = null;
-            lock (Presenters)
-            {
-                for (var i = Presenters.Count - 1; i >= 0; i--)
-                {
-                    if (Presenters[i].TryGetTarget(out var presenter)) (live ??= new List<ContentPresenter>()).Add(presenter);
-                    else Presenters.RemoveAt(i);
-                }
-            }
+            DropCurrentHandles();
+        }
 
-            if (live == null) return;
-
-            foreach (var presenter in live)
-            {
-                if (IsGone(presenter._currentRoot, gone) || IsGone(presenter._outgoingRoot, gone))
-                    presenter.DropContentHandles();
-            }
-        };
+        if (ReferenceEquals(child, _outgoingRoot))
+        {
+            DropOutgoingHandles();
+        }
     }
 
-    private static bool IsGone(IUIComponent root, ReadOnlySpan<IFundamentalUIComponent> gone)
+    /// <summary>Also forgets a root another parent has taken, so the fields do not go on naming a control that has moved
+    /// on - and keep it alive after its new home lets it go.</summary>
+    protected internal override void DisownVisualChild(IUIComponent child)
     {
-        if (root == null) return false;
+        if (ReferenceEquals(child, _currentRoot))
+        {
+            _currentRoot = null;
+            _currentTemplateResult = null;
+            _currentTemplate = null;
+            _builtFor = null;
+        }
 
-        foreach (var component in gone)
-            if (ReferenceEquals(component, root)) return true;
+        if (ReferenceEquals(child, _outgoingRoot))
+        {
+            _outgoingRoot = null;
+            _outgoingTemplateResult = null;
+            _outgoingParkedKey = null;
+        }
 
-        return root is Core.FundamentalUIComponent { IsDiscarded: true };
+        base.DisownVisualChild(child);
     }
 
     private readonly List<IFundamentalUIComponent> _discardBuf = new();

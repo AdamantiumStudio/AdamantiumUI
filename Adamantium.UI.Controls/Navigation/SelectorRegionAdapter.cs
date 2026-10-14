@@ -86,15 +86,14 @@ public sealed class SelectorRegionAdapter : IRegionAdapter
         region.PropertyChanged += OnRegionPropertyChanged;
         selector.SelectionChanged += OnSelectionChanged;
 
-        selector.DetachedFromVisualTreeEvent += OnDetached;
-
-        void OnDetached(object sender, VisualTreeAttachmentEventArgs e)
+        // Let go when the selector is DISCARDED, not when it leaves the tree: a selector on a kept page leaves and comes
+        // back, and one that had let go at leaving no longer followed its region after the return.
+        selector.Follow((this, region), () =>
         {
-            selector.DetachedFromVisualTreeEvent -= OnDetached;
             region.ActiveViewsChanged -= OnActiveViewsChanged;
             region.PropertyChanged -= OnRegionPropertyChanged;
             selector.SelectionChanged -= OnSelectionChanged;
-        }
+        });
 
         SyncItems();
         selector.SelectedItem = region.CurrentViewModel;

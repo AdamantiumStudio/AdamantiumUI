@@ -19,9 +19,6 @@ public static class ParkedVisuals
 
     private static readonly Dictionary<Slot, Entry> _kept = new();
 
-    // TEMP (leak hunt): parked subtrees held across swaps.
-    public static int Count => _kept.Count;
-
     // Oldest first.
     private static readonly List<Slot> _evictable = [];
 
@@ -108,12 +105,15 @@ public static class ParkedVisuals
 
     /// <summary>Discards for good, whatever their mode, the visuals <paramref name="owner"/> kept for content it no
     /// longer <paramref name="holds"/> - a closed tab: nothing will come back for them.</summary>
-    public static void ReleaseAbsent(object owner, Predicate<object> holds)
+    public static void ReleaseAbsent(object owner, Predicate<object> holds) =>
+        Release(slot => ReferenceEquals(slot.Owner, owner) && !holds(slot.Key));
+
+    private static void Release(Predicate<Slot> which)
     {
         List<Slot> gone = null;
         foreach (var slot in _kept.Keys)
         {
-            if (ReferenceEquals(slot.Owner, owner) && !holds(slot.Key))
+            if (which(slot))
             {
                 (gone ??= []).Add(slot);
             }
@@ -169,6 +169,29 @@ public static class ParkedVisuals
                 _evictable[at] = moved;
             }
         }
+    }
+
+    static ParkedVisuals()
+    {
+        DiscardedVisuals.Discarded += ReleaseOwnedByReleased;
+    }
+
+    // An owner released for good takes what it kept with it: nothing can ask for those by that owner again. They stayed
+    // until evicted - a page kept as Required for ever - so a closed window's kept pages outlived it.
+    private static void ReleaseOwnedByReleased(ReadOnlySpan<IFundamentalUIComponent> gone)
+    {
+        if (_kept.Count == 0) return;
+
+        var owners = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        foreach (var slot in _kept.Keys) owners.Add(slot.Owner);
+
+        HashSet<object> released = null;
+        foreach (var component in gone)
+        {
+            if (owners.Contains(component)) (released ??= new HashSet<object>(ReferenceEqualityComparer.Instance)).Add(component);
+        }
+
+        if (released != null) Release(slot => released.Contains(slot.Owner));
     }
 
     /// <summary>Discards everything kept. For app shutdown and for tests, which must not inherit another test's cache.</summary>

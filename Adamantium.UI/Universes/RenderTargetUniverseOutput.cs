@@ -6,6 +6,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Imaging;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Rectangle = Adamantium.Mathematics.Rectangle;
 
@@ -171,6 +172,12 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     {
         return context.Context is RenderTargetPanel && nativeWindow != null;
     }
+
+    protected override bool IsUniverseInput(RoutedEventArgs e) => ReferenceEquals(e.OriginalSource, InputComponent);
+
+    protected override bool SpendsKey(KeyEventArgs e) =>
+        e.Key != Key.Tab ||
+        nativeWindow.AcceptsTab && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) == 0;
 
     protected override void SwitchContext(OutputContext context)
     {

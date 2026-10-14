@@ -32,6 +32,7 @@
     <Phrase Key="Continue" Text="Продолжить"/>
     <Phrase Key="LoadF15" Text="Загрузить F-15"/>
     <Phrase Key="LoadMonkey" Text="Загрузить обезьяну"/>
-    <Phrase Key="Status" Select="status" Ready="Вселенная готова" NotReady="Вселенная ещё не готова" Loading="Загрузка: {model}…"
+    <Phrase Key="Status" Select="status" Starting="Запуск вселенной…" StartFailed="Вселенная не запустилась — {error}"
+            Ready="Вселенная готова" NotReady="Вселенная ещё не готова" Loading="Загрузка: {model}…"
             Loaded="{model}" Failed="{model}: не удалось загрузить — {error}"/>
 </Language>

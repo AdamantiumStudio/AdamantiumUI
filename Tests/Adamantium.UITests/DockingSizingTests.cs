@@ -144,4 +144,37 @@ public class DockingSizingTests
             Assert.That(area.TrackedHosts, Is.EqualTo(hostsAtRest), "and no split host either");
         });
     }
+
+    // ...and it is not only forgotten but thrown away: only out of the tree, its buttons followed the theme and held
+    // the view model they were bound to, and through it the area and the whole page.
+    [Test]
+    public void TheControlOfADeadGroup_IsDiscarded()
+    {
+        var area = Area(Group("scene", DockZone.Center));
+        Lay(area, 1000, 800);
+        area.AddPane(new Pane { Header = "tool", Id = "tool", Kind = PaneKind.Document }, DockZone.Left);
+        Lay(area, 1000, 800);
+        var group = Control(area, "tool");
+
+        area.RemovePane("tool");
+        Lay(area, 1000, 800);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(group.IsDiscarded, Is.True);
+    }
+
+    [Test]
+    public void ADiscardedArea_LeavesItsWorkspace()
+    {
+        var workspace = new DockingWorkspace();
+        var area = Area(Group("scene", DockZone.Center));
+        area.Workspace = workspace;
+        Lay(area, 1000, 800);
+        Assume.That(workspace.IsReady, Is.True, "the area joined the workspace");
+
+        DiscardedVisuals.PublishSubtree(area);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(workspace.IsReady, Is.False);
+    }
 }

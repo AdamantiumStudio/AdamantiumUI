@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,7 +58,12 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
             _windows[contentViewModel] = window;
             // Untrack on close (including the OS title-bar X, which never routes through CloseWindow) - otherwise a stale
             // entry makes a single-instance re-open just "activate" a dead window instead of opening a fresh one.
-            window.Closed += (_, _) => _windows.Remove(contentViewModel);
+            window.Closed += (_, _) =>
+            {
+                _windows.Remove(contentViewModel);
+                // It heard it was navigated to when the window opened; it hears that it was left when the window goes.
+                Observe(_application.Navigation?.LeaveWindowAsync(contentViewModel));
+            };
             created = window;
         });
         return created;
@@ -77,6 +83,20 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
             return pair.Key;
         }
         return null;
+    }
+
+    // Nobody waits on a window that has closed, so a view model that fails on the way out is reported here.
+    private static async void Observe(Task leaving)
+    {
+        if (leaving == null) return;
+        try
+        {
+            await leaving;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Logger.Error($"A view model failed leaving its window: {ex}");
+        }
     }
 
     public void CloseWindow(object contentViewModel)

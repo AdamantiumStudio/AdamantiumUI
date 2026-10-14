@@ -2,7 +2,7 @@ using System;
 
 namespace Adamantium.UI.Rendering;
 
-// SCRATCH: does the layer key hold? A LAYER is one FlushBatches cycle - the set of draws whose mutual order is
+// Does the layer key hold? A LAYER is one FlushBatches cycle - the set of draws whose mutual order is
 // irrelevant. Counts the layer splits a placement made and the ones it avoided.
 public static class LayerProbe
 {

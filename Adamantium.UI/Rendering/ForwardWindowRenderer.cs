@@ -150,7 +150,7 @@ public class ForwardWindowRenderer : WindowRendererBase
     {
         if (Window == null) return;
 
-        // TEMP measurement: this sweep visits every unit of every group on EVERY frame, replayed ones included. Whether
+        // MEASURED: this sweep visits every unit of every group on EVERY frame, replayed ones included. Whether
         // that costs anything is a question a number answers.
         var preRenderStart = Stopwatch.GetTimestamp();
         _renderCache.PreRender();

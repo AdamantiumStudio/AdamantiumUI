@@ -51,8 +51,12 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             {
                 foreach (var viewModel in removed)
                 {
+                    // The pane was made here for this view model, so it goes here: only taken out of the layout, it
+                    // held the view it showed for good.
+                    var pane = area.PaneById(panesByViewModel[viewModel]);
                     area.RemovePane(panesByViewModel[viewModel]);
                     panesByViewModel.Remove(viewModel);
+                    if (pane != null) DiscardedVisuals.PublishSubtree(pane);
                 }
             }
 

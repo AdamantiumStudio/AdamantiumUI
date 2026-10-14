@@ -31,4 +31,9 @@ public interface INavigationService
     /// with no region). <see cref="OpenWindowAsync(Type, NavigationParameters, string, bool, CancellationToken)"/> does it
     /// before the window shows; the application does it for its main window.</summary>
     Task ArriveInWindowAsync(object viewModel, NavigationParameters parameters = null, CancellationToken cancellationToken = default);
+
+    /// <summary>The mirror of <see cref="ArriveInWindowAsync"/>: tells the view model its window closed
+    /// (<see cref="INavigationAware.OnNavigatedFromAsync"/>, with no region). Done for a window opened by
+    /// <see cref="OpenWindowAsync(Type, NavigationParameters, string, bool, CancellationToken)"/> however it closes.</summary>
+    Task LeaveWindowAsync(object viewModel, CancellationToken cancellationToken = default);
 }

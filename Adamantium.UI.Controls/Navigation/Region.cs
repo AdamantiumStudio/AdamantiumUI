@@ -20,6 +20,6 @@ public static class Region
     private static void OnSourceChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is IUIComponent host && e.NewValue is IRegion region)
-            RegionHost.Attach(region, host);
+            RegionHost.Attach(region, host, named: false);
     }
 }

@@ -123,7 +123,9 @@ public class ScenarioGeneratorTests
                 .And.Contain("[global::NUnit.Framework.Description(\"Saving says so.\")]")
                 .And.Contain("public async global::System.Threading.Tasks.Task Save()")
                 .And.Contain("AutomationSession.LaunchAsync(")
-                .And.Contain("? \"App.exe\" : \"App\"")
+                .And.Contain("GetEnvironmentVariable(\"ADAM_SCENARIO_PIPE\")")
+                .And.Contain("AutomationSession.AttachAsync(running)")
+                .And.Contain("session.CloseWindowsOpenedFromNowAsync()")                .And.Contain("? \"App.exe\" : \"App\"")
                 .And.Contain("FreshData = true")
                 .And.Contain("[global::NUnit.Framework.Explicit(\"Real input.\")]"));
         });

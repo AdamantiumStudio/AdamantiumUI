@@ -18,6 +18,9 @@ namespace Adamantium.UI.Controls.DataGrid;
 /// branch splices its children in as one range edit.</summary>
 public partial class TreeDataGrid : Selector
 {
+    private DataGridColumn _editedColumn;
+    private bool _reorderingColumns;
+
     static TreeDataGrid()
     {
         FocusableProperty.OverrideMetadata(typeof(TreeDataGrid), new PropertyMetadata(true));
@@ -658,10 +661,14 @@ public partial class TreeDataGrid : Selector
     public DataGridGroupDescriptions GroupDescriptions { get; } = new();
 
     /// <summary>Groups the rows by a column, or removes it from the grouping when it is already there - what dropping a
-    /// header into the grouping panel does.</summary>
+    /// header into the grouping panel does. An open edit is committed first, and a commit that is refused leaves the
+    /// grouping as it is.</summary>
     public void GroupBy(DataGridColumn column)
     {
-        if (column == null) return;
+        if (column == null || !CommitCellEdit())
+        {
+            return;
+        }
 
         if (!GroupDescriptions.Remove(column)) GroupDescriptions.Add(column);
     }
@@ -1753,16 +1760,24 @@ public partial class TreeDataGrid : Selector
     }
 
     /// <summary>Moves a column to another place in the display order - what dragging its header does. The expander
-    /// follows its OWN column rather than staying on an index that now belongs to another one.</summary>
+    /// follows its OWN column rather than staying on an index that now belongs to another one. An open edit is committed
+    /// first, and a commit that is refused leaves the columns where they are.</summary>
     public void MoveColumn(int from, int to)
     {
         if (from < 0 || from >= Columns.Count || to < 0 || to >= Columns.Count || from == to) return;
+        if (!CommitCellEdit())
+        {
+            return;
+        }
 
         var carrier = ExpanderColumn;
         var column = Columns[from];
 
-        Columns.RemoveAt(from);
-        Columns.Insert(to, column);
+        Reorder(() =>
+        {
+            Columns.RemoveAt(from);
+            Columns.Insert(to, column);
+        });
 
         if (carrier != null)
         {
@@ -1814,10 +1829,14 @@ public partial class TreeDataGrid : Selector
     /// <summary>Puts a saved arrangement back on. The table it is applied to need not be the one it came from: a column
     /// the state does not name is LEFT AS IT IS and follows the ones it does know, and a name the table no longer has
     /// is passed over. That is what lets a saved layout survive a release that added or dropped a column, instead of
-    /// being thrown away whole the first time the table changes.</summary>
+    /// being thrown away whole the first time the table changes. An open edit is committed first, and a commit that is
+    /// refused leaves the columns as they are.</summary>
     public void RestoreColumnState(DataGridColumnsState state)
     {
-        if (state?.Columns == null || Columns.Count == 0) return;
+        if (state?.Columns == null || Columns.Count == 0 || !CommitCellEdit())
+        {
+            return;
+        }
 
         var byKey = new Dictionary<string, DataGridColumn>(StringComparer.Ordinal);
         foreach (var column in Columns)
@@ -1842,8 +1861,14 @@ public partial class TreeDataGrid : Selector
             if (!wanted.Contains(column)) wanted.Add(column);
 
         var carrier = ExpanderColumn;
-        Columns.Clear();
-        foreach (var column in wanted) Columns.Add(column);
+        Reorder(() =>
+        {
+            Columns.Clear();
+            foreach (var column in wanted)
+            {
+                Columns.Add(column);
+            }
+        });
         if (carrier != null)
         {
             var index = Columns.IndexOf(carrier);
@@ -1884,6 +1909,24 @@ public partial class TreeDataGrid : Selector
         RefreshStrips();
     }
 
+    private void Reorder(Action move)
+    {
+        var outermost = !_reorderingColumns;
+        _reorderingColumns = true;
+        try
+        {
+            move();
+        }
+        finally
+        {
+            if (outermost)
+            {
+                _reorderingColumns = false;
+                _newRow?.OnColumnsChanged();
+            }
+        }
+    }
+
     private void OnColumnsChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         // A column JOINS the grid's logical tree - that is what gives it a DataContext, and with it {Binding},
@@ -1894,6 +1937,16 @@ public partial class TreeDataGrid : Selector
 
         foreach (var added in e.NewItems?.OfType<DataGridColumn>() ?? Enumerable.Empty<DataGridColumn>())
             AddLogicalChild(added);
+
+        if (IsEditing && (EditingColumn >= Columns.Count || !ReferenceEquals(Columns[EditingColumn], _editedColumn)))
+        {
+            FinishEditOfShiftedColumn();
+        }
+
+        if (!_reorderingColumns)
+        {
+            _newRow?.OnColumnsChanged();
+        }
 
         ResetAutoWidths();
 
@@ -2414,7 +2467,10 @@ public partial class TreeDataGrid : Selector
     {
         // The strip MAKES THE RECORD and goes no further: there is no cell below a record that does not exist yet, and
         // the strip is where the next one gets typed anyway.
-        if (_newRow is { IsFilling: true }) return CommitEdit();
+        if (!IsEditing && _newRow is { IsFilling: true })
+        {
+            return CommitEdit();
+        }
 
         // A refusal keeps the cell AND the key: stepping off it is exactly what was refused.
         if (IsEditing && !CommitEdit()) return true;
@@ -2895,6 +2951,7 @@ public partial class TreeDataGrid : Selector
 
         EditingRow = row;
         EditingColumn = column;
+        _editedColumn = dataColumn;
         IsEditing = true;
         RefreshEditingCell();
         return true;
@@ -2923,11 +2980,28 @@ public partial class TreeDataGrid : Selector
     {
         // The strip for a new record commits through here too: one entry point, so an application that closes an edit
         // does not have to know WHICH of the two was open.
-        if (_newRow is { IsFilling: true }) return _newRow.Commit();
+        if (!IsEditing && _newRow is { IsFilling: true })
+        {
+            return _newRow.Commit();
+        }
 
+        return CommitCellEdit();
+    }
+
+    private bool CommitCellEdit()
+    {
         if (!IsEditing) return true;
 
-        if (!WriteCell(EditingRow, EditingColumn, EditedValue())) return false;
+        if (CellFor(EditingRow, EditingColumn) is not { } cell)
+        {
+            EndEdit();
+            return true;
+        }
+
+        if (!WriteCell(EditingRow, EditingColumn, cell.ValueForCommit()))
+        {
+            return false;
+        }
 
         EndEdit();
         return true;
@@ -2968,7 +3042,7 @@ public partial class TreeDataGrid : Selector
     /// <summary>Leaves edit mode without writing anything.</summary>
     public void CancelEdit()
     {
-        if (_newRow is { IsFilling: true })
+        if (!IsEditing && _newRow is { IsFilling: true })
         {
             _newRow.Cancel();
             return;
@@ -2987,13 +3061,25 @@ public partial class TreeDataGrid : Selector
 
         EditingRow = -1;
         EditingColumn = -1;
+        _editedColumn = null;
         IsEditing = false;
         RefreshEditingCell();
         RefreshRealizedRows();
         Focus();
     }
 
-    private object EditedValue() => CellFor(EditingRow, EditingColumn)?.ValueForCommit();
+    private void FinishEditOfShiftedColumn()
+    {
+        var at = Columns.IndexOf(_editedColumn);
+        var cell = CellFor(EditingRow, EditingColumn);
+        if (at >= 0 && cell != null && !WriteCell(EditingRow, at, cell.ValueForCommit())
+            && CellFor(EditingRow, at) is { } marked)
+        {
+            marked.Refusal = null;
+        }
+
+        EndEdit();
+    }
 
     // A template column writes through its OWN two-way bindings while the user is in it, so there is nothing left here
     // to write and refusing would leave the cell stuck in edit.
@@ -3230,7 +3316,10 @@ public partial class TreeDataGrid : Selector
 
         var column = Columns[index];
         if (!column.IsShown) return false;
-        if (column.IsFrozen) return true;
+        if (column.IsFrozen || IsEditing && index == EditingColumn)
+        {
+            return true;
+        }
         return index >= _firstColumn && index <= _lastColumn;
     }
 

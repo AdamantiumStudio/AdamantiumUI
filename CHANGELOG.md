@@ -26,6 +26,19 @@ All packages share one version.
     children of a style or a trigger inside a view, and children behind `x:Load`. They are reported; restart to see
     them. A file changed after the build is not followed until the application is rebuilt.
 
+- `RenderTargetPanel.AcceptsTab`, `true` by default: Tab and Shift+Tab typed into the panel are the hosted universe's;
+  Ctrl+Tab leaves the panel - to the next focus area, or to the next control when there is none.
+
+- A universe made and owned by a view-model, started off the UI thread.
+  - **Making it.** `IUniverseService.CreateUniverseAsync` constructs and initializes a universe on a worker thread; it
+    runs in no window's frames until it is shown. A canceled or failed start shuts the universe down.
+  - **Showing it.** `UniverseHost`, a behavior of `RenderTargetPanel` (`Adamantium.UI.Universes`), shows the universe
+    bound to its `Universe` in the panel: `<universes:UniverseHost Universe="{Binding Scene}"/>`. The universe runs in
+    the frames of the panel's window and is paused while the panel is out of the tree; a discarded panel's output is
+    taken out and freed. The host resumes only a universe it paused itself, so a game paused by the application stays
+    paused across a tab switched away and back. `IUniverseService.Show` runs a universe in a window's frames.
+  - The sandbox's Scene tab starts its universe with the application, so the tab opens at once.
+
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
   steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
   `<Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1"/>`.
@@ -41,6 +54,10 @@ All packages share one version.
   - **Where the tests run.** They are in the category `Scenario` and run one at a time. They need a desktop and a GPU,
     so CI leaves them out: run them with `dotnet test --filter TestCategory=Scenario`. The sandbox's 40 scenarios
     are in `Tests/Adamantium.UI.Sandbox.Tests/Scenarios`.
+  - **One application through them all.** With `ADAM_SCENARIO_PIPE` set to the pipe of an application already
+    running, every test runs its steps in it rather than starting its own, and leaves it running - so one application
+    can be taken through every scenario, again and again, and measured between the passes. Each test closes the
+    windows it opened, failed or not (`AutomationSession.CloseWindowsOpenedFromNowAsync`).
   - **Explicit scenarios.** A scenario whose root carries `Explicit="<why>"` runs only when asked for by name. The
     sandbox's `TouchThroughSystem` is one: it drives the system's real pointer input.
   - **Editor support.** The language server completes a scenario's steps, their attributes and values, a selector
@@ -936,6 +953,12 @@ All packages share one version.
   only the next one moves. Alt shows it too, as across Windows, and marks the keyboard as in use even with nothing
   focused, so what takes the focus next - a menu opened by its key tip - comes up with the ring.
   `KeyboardNavigation.MoveInto(container, ringVisible)` moves the focus in with or without it.
+- A focused element that stops being shown hands the focus to its nearest ancestor that can take it, or lets it go
+  when there is none (`FocusManager.LeaveHidden`), and a window coming back does not return the focus into a hidden
+  element. Keys used to go on into a hidden button - a game's menu closed by its Continue button kept them all.
+- `RenderTargetPanel` holds the controls laid over the picture as its children. Only input aimed at the panel itself
+  reaches the universe, and a key the universe takes while it is running is not acted on further up: an arrow turns the
+  camera instead of moving the focus off the panel. Keys are left to the interface while the simulation is paused.
 - Markup is built one way everywhere. What a document means is decided once, when it is lowered to a build plan
   (`Adamantium.UI.Markup.Building`); the generated class prints that plan as C#, and the runtime loader - the
   designer's preview, `VisualRenderer` - runs the same plan by reflection. The loader used to decide everything a
@@ -1160,6 +1183,17 @@ All packages share one version.
   `PointerPressedEventArgs.ClickCount`.
 - `SVGParser.Commands` and `SVGCommand`: path data goes straight into the geometry through the engine's
   `SvgPathData.Walk`, the same walk SVG glyphs take.
+- Instruments left from leak and flicker hunts, which nothing read:
+  - `UIComponent.LiveComponents` and the finalizer it took on every control;
+  - the allocation counters `TextBlock` read on every measure and arrange;
+  - `LayoutManager.QueuedNow`;
+  - the counters of brush links, theme applications, theme routers, trigger activators, binding hooks, template
+    builds and removals, parked visuals and animation holders, and `RenderDirty.DeadMarks`;
+  - `ADAM_GRAPH_TRACE`, `ADAMANTIUM_NO_RING`, `BatchArena.DescribeSegment` and `RenderCache.LastCache`;
+  - the canvas press log (`ADAM_CANVAS_PRESSLOG`, `ADAM_CANVAS_PRESSCALLERS`), with `PropertyGrid.Refreshes` and
+    `LayoutTrace.CountCallers`/`CountCaller`, which only it used.
+
+  The diagnostics overlay and what it reads stay.
 
 ### Fixed
 
@@ -1172,6 +1206,22 @@ All packages share one version.
   the keyboard in without one, and shows it once a key asks.
 - Markup hot reload no longer makes an editor's save fail: it read a saved file without sharing it for writing, so a
   save made while it read was refused.
+- `TreeDataGrid` keeps the column being edited built while it is scrolled out of view, and a commit whose cell is gone
+  closes the edit instead of writing null into the record.
+- `TreeDataGrid` follows the column being edited when the columns change under it: a column put in front of it no
+  longer sends the value into its neighbor, and removing it ends the edit without a write instead of throwing.
+  `MoveColumn`, `GroupBy` and `RestoreColumnState` commit an open cell edit first and do nothing when it is refused;
+  `MoveColumn` no longer creates a record from the new-record strip on the way. A cell that goes back to the pool
+  leaves edit mode, so a column shown again has no editor left in it.
+- The new-record strip keeps what was typed under its column, not under the place the column stood: a column
+  inserted, removed or moved while a record is being filled in no longer sends the values into other columns, and a
+  removed column's value is not made into the record. Moving the column of the open field keeps the field open.
+- With values kept in the new-record strip, Enter and Escape on a cell of the table commit or cancel that cell. They
+  made a record out of the strip, or emptied it, and left the cell in edit.
+- The Scene tab: a numeric box under the frame-rate labels can be scrubbed again, and the game hears the keyboard after
+  the menu closes.
+- A `RenderTargetPanel` back in the tree shows its surface again; it forgot the surface on leaving, and a tab switched
+  away and back stayed empty.
 - The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and
   releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
   render marks as the application's loop does, which held every element ever marked; and an edit that takes a child
@@ -1283,6 +1333,98 @@ All packages share one version.
   - **An `InfiniteCanvas` discards the dialog it asks a question in once it is answered**, and closes and discards one
     still open when the canvas itself is discarded. Closed and kept, its buttons followed the theme and, through the
     question, held the canvas and its page.
+  - **An `InfiniteCanvas` discards its node controls with their templates.** Only the control itself was discarded; its
+    template - sockets and labels following the theme - lived on and held the node and the canvas, about 11 MB a visit
+    to the sandbox's canvas page.
+  - **An `InfiniteCanvas` page opened again shows the drawing's own items, and its history undoes onto them.** The
+    scene and history belong to the page and outlive the canvas, but every canvas made new items for the application's
+    nodes and objects. An undo there - of a clear made before the page was left - put the old items back, wearing the
+    old canvas's discarded controls, and their wires ended on dead sockets and left the graph. Now each node or object
+    has one item on a scene: the canvas showing it builds its control, and lets it go when discarded. A wire finds its
+    sockets through its nodes' current controls. One canvas shows a scene at a time: a canvas handed a scene takes it
+    from the one showing it, which lets go of it at once rather than when its discard is drained, and takes it back
+    when it is put on screen again. A canvas handed another scene leaves the items of the first behind without its
+    controls. An item no canvas has given a control - one an undo put back for an object the application has let go
+    of since - cannot be pointed at, framed or selected.
+  - **A picture swapped for another of the same size is drawn as the new one, and no longer takes the application
+    down.** Nothing but the texture changed, so the frame patched the element's record in place - and the recorded
+    segment binds one texture, the old one. The window kept showing the old picture (a second live snapshot on the
+    Visual -> Image page showed the first), and once nothing held that picture and its texture was freed, the next
+    replay drew a freed texture and the process died. A textured, material or pattern fill now patches only while what
+    its segment binds - the texture, a material's pass, source and mapping, a pattern's kind - is what it was recorded
+    with, and the render cache keeps the brush of what it recorded, so nothing it paints from is finalized under it. A
+    pattern turned into another kind used to keep drawing the old one the same way.
+  - **A vector picture's bake is no longer freed under the elements drawing it.** A bake thrown away when its drawing
+    changed, or when the drawing was baked at too many sizes, re-records the elements that draw bakes. A
+    `BitmapSource` thrown away while the render thread is about to draw it has no texture to give
+    (`GetOrCreateTexture` answers null, as for a picture still decoding) rather than throwing on that thread.
+  - **An element a `VisualBrush` painted from is no longer kept for good.** The raster kept every source it had ever
+    watched in a set of its own and never took one out, and a source that lived on kept the elements thrown away after
+    drawing with it. A source that changed waited in another set for a wake that, once its page was gone, never ran.
+  - **The cache every off-screen picture shares lets go of the trees it drew.** It kept every group it had ever drawn in
+    a map nothing read, and the elements the compositor moved in its last frame until it drew again. With a shared
+    glow or shadow and a theme brush also holding on (below), a pass of the sandbox's brushes scenario kept about
+    12 MB of managed memory; it now keeps none.
+  - **An element gives up exactly the brushes it holds when it is discarded.** It gave up the brushes its properties held
+    at that moment, so a theme brush taken by any other way kept the element for good, and with it its page. Each
+    element now lists what it is an owner of (`IRenderAttachable.Release`), at no cost to painting or recoloring.
+  - **A shared `Aura` or `Shadow` lets go of an element when it is discarded.** The element listened to it for as long
+    as the glow lived, so one handed out by a view model held every page lit with it.
+  - **A closed window takes its regions and kept pages with it.** A region lives in the application's manager, so the
+    tabs a closed window showed stayed in it, and the next window asking for the name opened on them. Closing a window
+    now removes each region declared in it by name that no other window shows (`IRegionManager.RemoveRegionAsync`) -
+    a region a view model hands over with `Region.Source` stays the view model's: its view models
+    hear `OnNavigatedFromAsync` and its journal is emptied. The view model of a window opened by `OpenWindowAsync`
+    hears `OnNavigatedFromAsync` when the window closes (`INavigationService.LeaveWindowAsync`), as it heard
+    `OnNavigatedToAsync` when it opened. A page kept between visits (`x:KeepAlive`) goes when the control that kept it is
+    discarded; it waited to be evicted, and one kept as `Required` stayed for good.
+  - **A binding's converted value is kept once per item and property, not once per converter.** A converter written as
+    `Converter={conv:ToBrush}` is a new instance on every element, and each was kept as a key of its own with the item,
+    so an item kept a brush for every element ever realized for it - a pass of the sandbox's scenarios kept about 7,000
+    brushes more each time. The converter's parameter now tells two bindings apart too: one converter on one property
+    with two parameters handed both the first one's value.
+  - **A closed overlay window lets go of what it was shown on.** The manager discards the card and the dim it made for
+    that showing, and a window the framework made for one dialog, overlay or question is discarded with its view once
+    closed. Kept, the window's frame stayed an owner of the default overlay brush, which lives as long as the
+    application, and held the dialog's view for good.
+  - **Parts made for a moment are discarded when they are done.** A data grid's total cells of a column gone and a drag's
+    insertion cue as the pointer moves on were only taken out; each went on following the theme and was kept for good. A discarded docking area closes
+    the window its compass is shown in - a real window, with its renderer and GPU memory, only hidden between drags.
+  - **A closed document's pane is discarded, and a docking area discards the panes it holds out of sight.** A document
+    closed is gone for good, and so is the pane a docking region made for a view model that left it, but each was only
+    taken out, and a tool put away or a tab never shown was never reached
+    by the discard of its area. Each went on following the theme and the language, holding the view it showed.
+  - **An element's context menu made by its template is discarded with it, and so is a ribbon drop-down's menu.** Only
+    a menu set on the element itself was; one a template made for that very element was treated as one a style
+    shares and only unhooked, and a closed ribbon window's application menu kept its modules and commands for good.
+  - **A released element is not subscribed to a resource again.** A style or trigger still running on it as it went - a
+    pane's selection undone while its region let it go - connected it to the resource manager, which outlives
+    everything, and nothing closed that connection.
+  - **A tab control showing a region follows it until it is discarded.** It let go of the region when it left the tree,
+    so on a kept page it stopped following its region after the page came back, and one never in a tree never let go.
+  - **The focus manager knows focus scopes only weakly.** A scope dropped without leaving its tree stayed in the map of
+    what each scope focused last.
+  - **A `ContentPresenter` lets go of its content when that content is released or taken by another parent**, told so
+    by the content itself (`FundamentalUIComponent.OnVisualChildReleased`, `DisownVisualChild`). It used to be found
+    out by a static register of every presenter, walked whole on every batch of discarded elements; the register is
+    gone. A root another parent took is no longer named by the presenter it left.
+  - **A tip set as an element works every time it is shown.** The shared tooltip card discarded the tip it showed as
+    soon as it showed another, so after hovering from one element to the next a tip came back with dead bindings, or
+    not at all. The card now hands a tip back to the element that set it. It also lets go of the last tip and of the
+    element it was for as it hides, and comes down when that element or its tip is discarded while it is up.
+  - **A canvas tool rail discards the buttons and tips it replaces** when it is rebuilt - on every mode switch - and a
+    family's list, with its rows' tips, once it closes; discarded, it takes its buttons' tips and an open list with it. Only taken out of the
+    panel, each button's picture followed the theme and held the button, its tip and the rail. A pass of the sandbox's
+    canvas scenario kept about 6.5 MB of managed memory; it now keeps about 0.3 MB.
+  - **The canvas inspector no longer hands a new selection to the lines of the old one.** A wire picked after a node had
+    the node's lines read its kind and title off the wire, one binding error each.
+  - **A discarded adorner leaves the element it adorned as its inheritance parent**, and a hold's cue is discarded as
+    the hold ends. The element listed every adorner it had worn as an inheritance child for as long as it lived: each
+    focus ring a button had shown, each hold cue of the session on the window.
+  - **A docking area discards the panel groups and split hosts it drops** when a layout change leaves their nodes
+    behind, and **leaves its `DockingWorkspace` when it is discarded.** Kept out of the tree, a dropped group's buttons
+    followed the theme and held the view model they were bound to; the workspace the view model keeps held the area -
+    each docking page visited stayed in memory.
   - **Popups, adorners and live snapshots hand back the clip, opacity and node slots of what they no longer show.** It handed them
     back only for elements thrown away, so a closed dialog went on holding the canvas that had asked its question, and
     the page around it.

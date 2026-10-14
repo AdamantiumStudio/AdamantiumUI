@@ -145,7 +145,7 @@ public partial class RenderCache
         return low;
     }
 
-    // TEMP: name what staled the stream, so why=4 says which of its causes it was.
+    // Names what staled the stream, so why=4 says which of its causes it was.
     private void StreamStaleBecause(string reason)
     {
         _layoutChangedSinceRecord = true;

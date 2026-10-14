@@ -73,14 +73,7 @@ public sealed class LayoutManager
     /// <summary>Gets (creating once) the manager that owns the given root (a window at runtime, a subtree root in tests).</summary>
     public static LayoutManager GetOrCreate(IUIComponent root) => Managers.GetValue(root, static r => new LayoutManager(r));
 
-    // TEMP (leak hunt): how many components ALL the dirty queues are holding right now, across every manager. A gauge
-    // rather than a per-manager read, because there is one manager per ROOT and a theme swap recreates the controls
-    // under it: a node enqueued and never drained is held for the life of the window, and the read has to cover the
-    // managers nobody happens to be holding a reference to.
-    public static long QueuedNow;
-
-    // TEMP (leak hunt): what THIS manager's queues are holding. They hold components strongly and the manager lives with
-    // its root, so a node enqueued and never drained is retained for the life of the window.
+    /// <summary>What this manager's queues are holding - what is still to do before its root has settled.</summary>
     public (int Style, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
         => (_toStyle?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
             _toMeasureNextPass?.Count ?? 0, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
@@ -492,7 +485,6 @@ public sealed class LayoutManager
         public void Clear()
         {
             if (_members.Count == 0) return;
-            System.Threading.Interlocked.Add(ref QueuedNow, -_members.Count);
             _members.Clear();
             _heap.Clear();
         }
@@ -500,7 +492,6 @@ public sealed class LayoutManager
         public void Enqueue(IUIComponent node)
         {
             if (!_members.Add(node)) return;
-            System.Threading.Interlocked.Increment(ref QueuedNow);
             _heap.Enqueue(node, Depth(node));
         }
 
@@ -514,7 +505,6 @@ public sealed class LayoutManager
                 var node = _heap.Dequeue();
                 if (_members.Remove(node))
                 {
-                    System.Threading.Interlocked.Decrement(ref QueuedNow);
                     buffer.Add(node);
                 }
             }

@@ -24,9 +24,10 @@ public sealed class SharedSurfaceImage : BitmapSource
 
     public override ITexture GetOrCreateTexture(IResourceFactory factory)
     {
+        // Let go of by its panel: nothing to sample. Not thrown - this is asked on the render thread.
         if (IsDisposed)
         {
-            throw new ObjectDisposedException(nameof(SharedSurfaceImage));
+            return null;
         }
 
         // The import died with its device, and so did the producer's surface: nothing to import again until the
@@ -39,7 +40,8 @@ public sealed class SharedSurfaceImage : BitmapSource
         return Texture ??= factory.ImportSharedSurface(_descriptor);
     }
 
-    // The render component that samples the import owns and frees it; disposing here would race the render thread.
+    // The render component that samples the import frees it once this image is let go of (see ImageRenderComponent);
+    // disposing here would race the render thread.
     protected override void ReleaseUnmanagedResources()
     {
         Texture = null;

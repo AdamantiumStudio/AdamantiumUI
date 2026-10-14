@@ -46,6 +46,11 @@ public class ObservableResource : MarkupExtension
             return null;
         }
 
+        // A RELEASED element is gone for good, and a style or trigger still running on it on the way out - a pane's
+        // selection undone as its region lets it go - would subscribe it to the resource manager, which outlives
+        // everything: nothing would ever close that connection again.
+        if (target is FundamentalUIComponent { ReleasedInBatch: > 0 }) return null;
+
         var expression = new ObservableResourceExpression(target, property, Key, priority, token, KeySource);
         expression.EstablishConnection();
 

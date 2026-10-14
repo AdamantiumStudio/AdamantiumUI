@@ -90,7 +90,12 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         var id = e.Pointer.Id;
         if (e.HoldingState != HoldingState.Started)
         {
-            if (HoldCues.Remove(id, out var shown)) shown.Layer.Remove(shown.Cue);
+            if (HoldCues.Remove(id, out var shown))
+            {
+                shown.Layer.Remove(shown.Cue);
+                DiscardedVisuals.PublishSubtree(shown.Cue);
+            }
+
             return;
         }
 
@@ -697,7 +702,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
             return;
         }
 
-        if (GetBaseValuePriority(ContextMenuProperty) == ValuePriority.Local)
+        if (OwnsMenu(menu, GetBaseValuePriority(ContextMenuProperty)))
         {
             DiscardedVisuals.PublishSubtree(menu);
         }
@@ -706,6 +711,12 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
             RemoveLogicalChild(menu);
         }
     }
+
+    // Its own: set on it, or made by the very template instance that made it. A template value may also be another's -
+    // a TemplateBinding hands down the templated parent's menu - and a style's may be shared among many.
+    internal bool OwnsMenu(FundamentalUIComponent menu, ValuePriority priority) =>
+        priority == ValuePriority.Local
+        || priority == ValuePriority.Template && OwningTemplateId != Guid.Empty && menu.OwningTemplateId == OwningTemplateId;
 
     public IWindow GetWindow()
     {

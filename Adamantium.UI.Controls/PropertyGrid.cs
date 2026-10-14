@@ -114,12 +114,10 @@ public class PropertyGrid : Control
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
     private readonly List<PropertySection> _dropped = [];
 
-    /// <summary>How many times the whole panel has been torn down and put back, and how many times it has only re-read
-    /// what it shows. The difference between the two is most of what an inspector costs, and nothing said which was
-    /// happening - so a click that rebuilt the panel looked exactly like a click that did nothing.</summary>
+    /// <summary>How many times the whole panel has been torn down and put back - most of what an inspector costs, and
+    /// nothing else said it was happening, so a click that rebuilt the panel looked exactly like a click that did
+    /// nothing.</summary>
     public static long Rebuilds;
-
-    public static long Refreshes;
     private bool _rebuilding;
     private bool _rebuildAgain;
     private Panel _host;
@@ -551,8 +549,6 @@ public class PropertyGrid : Control
     /// <summary>Re-reads one property, or every one when told nothing in particular.</summary>
     public void Refresh(object target = null, PropertyDefinition definition = null)
     {
-        Refreshes++;
-
         foreach (var row in _rows)
         {
             if (definition != null && !ReferenceEquals(row.Definition, definition)) continue;

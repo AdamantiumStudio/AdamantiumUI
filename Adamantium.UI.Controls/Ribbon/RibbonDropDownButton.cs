@@ -70,5 +70,27 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         else menu.IsOpen = false;
     }
 
+    /// <summary>The menu is not in the visual tree, so it goes with the button the way its context menu does: one of its
+    /// own is discarded, one a style shares is only unhooked.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        if (DropDownMenu is not { } menu) return;
+
+        // Unhooked whoever it belongs to: a menu a style shares would otherwise keep every button that ever showed it.
+        menu.PropertyChanged -= OnMenuPropertyChanged;
+        if (!ReferenceEquals(menu.LogicalParent, this)) return;
+
+        if (OwnsMenu(menu, GetBaseValuePriority(DropDownMenuProperty)))
+        {
+            DiscardedVisuals.PublishSubtree(menu);
+        }
+        else
+        {
+            RemoveLogicalChild(menu);
+        }
+    }
+
     protected override AutomationPeer OnCreateAutomationPeer() => new RibbonDropDownButtonAutomationPeer(this);
 }

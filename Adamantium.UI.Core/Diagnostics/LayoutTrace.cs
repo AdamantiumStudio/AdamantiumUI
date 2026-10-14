@@ -72,20 +72,6 @@ public static class LayoutTrace
 
     public static void ResetCounts() => _counts.Clear();
 
-    /// <summary>Also record WHO called - by walking the stack. Far too slow for the running app, and exactly right for a
-    /// headless probe: "this element is arranged four times per pass" is useless until the four callers are named.</summary>
-    public static bool CountCallers;
-
-    public static void CountCaller(Type owner, string member, int skipFrames)
-    {
-        if (!Counting || !CountCallers) return;
-
-        var frame = new System.Diagnostics.StackTrace(skipFrames + 1, false).GetFrame(0);
-        var method = frame?.GetMethod();
-        var caller = method == null ? "?" : $"{method.DeclaringType?.Name}.{method.Name}";
-        Count(owner, member + " <- " + caller);
-    }
-
     /// <summary>How many invalidations are currently counted - so a caller can keep the BUSIEST window instead of
     /// whichever one happened to be current when it looked. A window that resets on a timer loses the very event it was
     /// set up to catch, because the interesting second is rarely the last one.</summary>

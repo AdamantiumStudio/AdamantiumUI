@@ -45,7 +45,6 @@ public partial class GalleryViewModel
         new TilesViewModel(),
         new InstancingViewModel(),
         new TransformsViewModel(),
-        new SceneViewModel(),
     };
 
     [Bindable] private TabPageViewModel _selectedTab;
@@ -77,6 +76,7 @@ public partial class GalleryViewModel
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is SlidePanelViewModel)), resolver.Resolve<TextViewModel>());
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is TextViewModel)), resolver.Resolve<BrushesViewModel>());
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is ClippingViewModel)), resolver.Resolve<LayoutViewModel>());
+        Tabs.Add(resolver.Resolve<SceneViewModel>());
         SelectedTab = Tabs[2];
     }
 }

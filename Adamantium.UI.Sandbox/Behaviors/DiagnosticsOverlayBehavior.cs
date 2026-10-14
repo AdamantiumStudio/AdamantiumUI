@@ -34,10 +34,10 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private int _windowFrames;
     private bool _windowDeferred;
     private bool _running;
-    private int _traceWindows;   // TEMP
-    private int _peakLayout;     // TEMP: busiest layout-invalidation second seen so far
-    private long _peakUnits, _lastCreated, _lastUpdated, _lastCommands;   // TEMP: busiest build second
-    private int _second;   // TEMP: index in the appended history
+    private int _traceWindows;
+    private int _peakLayout;     // busiest layout-invalidation second seen so far
+    private long _peakUnits, _lastCreated, _lastUpdated, _lastCommands;   // busiest build second
+    private int _second;   // index in the appended history
     private double _windowMaxRecord, _windowMaxApply;
 
     // The same three the plate now names, kept for the FILE as well: a dump that says the build cost nothing and stops
@@ -60,7 +60,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private double _drawSetup, _drawPaint, _drawMoved, _drawOps, _drawWalk, _drawAnim, _drawArena, _drawBrush;
     private bool _drawReplayed;
 
-    // TEMP: WHO entered or left the drawn set over the last second. Every one of these is a structural change, and a
+    // WHO entered or left the drawn set over the last second. Every one of these is a structural change, and a
     // structural change is the one thing that can still cost a walk of the whole window - so when a spike is reproduced
     // by hand, this is what names it. Same shape as the layout counters beside it: reset per dump, busiest second kept.
     private readonly System.Collections.Generic.Dictionary<string, int> _churn = new();
@@ -136,8 +136,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         _lastArrange = MeasurableUIComponent.TotalArrangeCalls;
         _lastBindings = RuntimeStats.BindingUpdatesApplied;
         _running = true;
-        FrameTrace.Enabled = Dumps;      // TEMP
-        LayoutTrace.Counting = Dumps;   // TEMP
+        FrameTrace.Enabled = Dumps;
+        LayoutTrace.Counting = Dumps;
         AnimationManager.AddEndlessTicker(dt => Advance(target, dt));
     }
 
@@ -251,7 +251,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             $"bindings {bindings - _lastBindings}    anim {AnimationManager.ActiveCount}" +
             VerificationLine();
 
-        // TEMP: dump the in-memory frame ring once a second (four refresh windows) - one file write, not one per frame.
+        // Dumps the in-memory frame ring once a second (four refresh windows) - one file write, not one per frame.
         if (Dumps && ++_traceWindows >= 4)
         {
             _traceWindows = 0;

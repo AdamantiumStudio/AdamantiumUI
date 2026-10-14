@@ -25,6 +25,22 @@ public class BrushOwnerReleaseTests
         Assert.That(shared.IsOwnedBy(element), Is.False);
     }
 
+    // ...however it took the brush. Leaving gave up what the element's properties held at that moment, so a brush taken
+    // by any other way kept the element - a theme brush held a thrown-away slider's thumb, and with it the page.
+    [Test]
+    public void ABrushTakenOtherThanByAProperty_LetsGoOfTheElementOnDiscard()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var element = new Border { Background = new SolidColorBrush(Colors.Blue) };
+        ((IRenderAttachable)shared).AttachTo(element);
+        Assume.That(shared.IsOwnedBy(element), "the element is an owner, though no property of it holds the brush");
+
+        DiscardedVisuals.Publish(element);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(shared.IsOwnedBy(element), Is.False);
+    }
+
     // A run is not in the visual tree, so nothing that walks it reaches the run, and a run painting with a theme brush
     // would keep its block and the page. Only elements own a brush - a run never does, nested in a span or not.
     [Test]

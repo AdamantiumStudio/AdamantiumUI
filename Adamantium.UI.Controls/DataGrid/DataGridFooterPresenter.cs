@@ -49,8 +49,12 @@ public class DataGridFooterPresenter : Panel
 
         foreach (var index in _leaving)
         {
-            Children.Remove(_cells[index]);
+            // Discarded, not only taken out: a cell is made anew when its column comes back, and one only taken out went
+            // on following the theme and the language for good.
+            var leaving = _cells[index];
+            Children.Remove(leaving);
             _cells.Remove(index);
+            DiscardedVisuals.PublishSubtree(leaving);
         }
 
         for (var i = 0; i < count; i++)

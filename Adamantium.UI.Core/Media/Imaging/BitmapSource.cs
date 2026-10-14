@@ -99,9 +99,11 @@ public unsafe class BitmapSource : ImageSource
 
    public virtual ITexture GetOrCreateTexture(IResourceFactory factory)
    {
+      // Thrown away while another thread was about to draw it - a bake evicted under the render thread: no texture, the
+      // same answer a picture still decoding gives, and the element that drew it re-records with what replaced it.
       if (IsDisposed)
       {
-         throw new ObjectDisposedException(nameof(BitmapSource));
+         return null;
       }
 
       // A texture dies with its device; after a device swap it is made again from the pixels.

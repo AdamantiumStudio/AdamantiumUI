@@ -1,17 +1,18 @@
 <View x:KeepAlive="Required"
       xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
+      xmlns:universes="clr-namespace:Adamantium.UI.Universes;assembly=Adamantium.UI"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
-    <!-- DataContext is the SceneViewModel. The RenderTargetPanel runs the 3D universe as the backdrop; an overlay
-         menu sits on top, shown/hidden via the view-model (a DataTrigger collapses it), and its buttons load models. -->
-    <Grid>
-        <RenderTargetPanel AutomationProperties.AutomationId="Viewport" Background="#0B0E14" MouseLookMode="Drag"
-                           IsMouseLookEnabled="{Binding MouseLookEnabled}">
-            <RenderTargetPanel.Behaviors>
-                <behaviors:DemoUniverseBehavior/>
-            </RenderTargetPanel.Behaviors>
-        </RenderTargetPanel>
+    <!-- DataContext is the SceneViewModel, which makes and owns the universe. The RenderTargetPanel shows it as the
+         backdrop and holds the overlay as its children; the menu is shown/hidden via the view-model (a DataTrigger
+         collapses it), and its buttons load models. -->
+    <RenderTargetPanel AutomationProperties.AutomationId="Viewport"
+                       Background="#0B0E14"
+                       MouseLookMode="Drag"
+                       IsMouseLookEnabled="{Binding MouseLookEnabled}">
+        <RenderTargetPanel.Behaviors>
+            <universes:UniverseHost Universe="{Binding Universe}"/>
+        </RenderTargetPanel.Behaviors>
 
         <!-- Always-visible toggle in the corner, with the camera's travel speed under it. -->
         <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16">
@@ -24,6 +25,7 @@
             <NumericUpDown AutomationProperties.AutomationId="CameraSpeed"
                            AutomationProperties.LabeledBy="{Binding ElementName=CameraSpeedLabel}"
                            Value="{Binding CameraSpeed, Mode=TwoWay}"
+                           IsDragScrubEnabled="true"
                            Width="120"
                            Minimum="0.01"
                            Maximum="100"
@@ -176,7 +178,8 @@
 
         <!-- What the UNIVERSE'S OWN rendering costs, opposite corner - not the rate the panel ticks it at, which would
              only ever report the interface back. -->
-        <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16">
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16"
+                    IsHitTestVisible="False">
             <TextBlock Text="{Binding Fps, StringFormat='FPS: {0:F0}'}"
                        HorizontalAlignment="Right"
                        FontSize="18" Foreground="{ResourceReference TextFillColorPrimary}"/>
@@ -187,7 +190,8 @@
 
         <!-- How to fly it, bottom-left. A world with no landmarks tells a person nothing about what the keyboard does,
              and the keys are the engine's (InputService), not this tab's - so they are stated, not guessed at. -->
-        <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16">
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16"
+                    IsHitTestVisible="False">
             <TextBlock Text="{Localize SceneStrings.MoveKeys}"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
             <TextBlock Text="{Localize SceneStrings.UpDownKeys}" MarginTop="2"
@@ -223,5 +227,5 @@
                            Foreground="{ResourceReference TextFillColorSecondary}"/>
             </StackPanel>
         </Border>
-    </Grid>
+    </RenderTargetPanel>
 </View>

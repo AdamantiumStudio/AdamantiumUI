@@ -442,7 +442,7 @@ public sealed class DesignerSession : IDisposable
     {
         if (_servicesNote != null) diagnostics.Add(_servicesNote);
 
-        // Design-time universe preview: a design-aware behavior (e.g. DemoUniverseBehavior) created+bound a universe to
+        // Design-time universe preview: a design-aware behavior created+bound a universe to
         // its RenderTargetPanel while the tree was built. Drive a short snapshot so the universe loads content and
         // publishes a frame to the panel; the content render path composites that below. No-op when none is hosted.
         DriveDesignTimeUniverses();

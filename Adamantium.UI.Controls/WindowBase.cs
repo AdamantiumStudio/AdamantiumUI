@@ -1043,6 +1043,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private void DiscardClosed()
     {
+        // Before the discard, while the tree still says which regions this window showed.
+        Navigation.RegionHost.ReleaseRegionsIn(this, UIAppContext.Current?.UIContext?.Resolve<Adamantium.Navigation.IRegionManager>());
         AdornerLayer.Clear();
         AdornerLayer.SetFocus(null);
         DiscardedVisuals.PublishSubtree(this);

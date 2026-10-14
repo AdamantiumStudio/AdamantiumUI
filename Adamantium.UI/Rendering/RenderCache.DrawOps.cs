@@ -917,8 +917,6 @@ public partial class RenderCache
         RemoveFromOrder(group, "disposed");
         group.ClearUnits();
 
-        // ...and the tag map, after _leftTheOrder (which reads the tag to blank instances).
-        if (group.Tag != 0) _groupByTag.Remove(group.Tag);
         // Return its transform slot to the pool. Every drawn element holds one now (ResolveBake stopped world-baking), so
         // without this a list that recycles rows would consume slots forever. Safe here: this runs in the build phase of a
         // walk that re-records the whole arena, so no still-drawn instance references the slot by the time it is reused.

@@ -21,7 +21,8 @@ public static class FocusManager
 
    public static IInputComponent Scope { get; private set; }
 
-   private static Dictionary<IInputComponent, IInputComponent> focusScopes = new Dictionary<IInputComponent, IInputComponent>();
+   // Weakly keyed: a scope dropped without leaving the tree is not kept by having once held the focus.
+   private static readonly ConditionalWeakTable<IInputComponent, IInputComponent> focusScopes = new();
 
    static FocusManager()
    {
@@ -111,8 +112,8 @@ public static class FocusManager
          keyboard.SetFocusedElement(null);
       }
 
-      // ...and the scope map, which is written on every focus move and was never read back out. Strong on BOTH sides,
-      // so a departed element sat there as a key AND as somebody else's remembered element.
+      // ...and the scope map, which is written on every focus move. Its key is weak but what a scope remembers is not,
+      // so a departed element would sit there as a live scope's remembered element.
       DropFromScopes(element);
 
       if (!ReferenceEquals(Focused, element))
@@ -123,10 +124,59 @@ public static class FocusManager
       AnnounceFocusMove(previous, null, NavigationMethod.Unspecified);
    }
 
+   /// <summary>Moves the focus out of <paramref name="hidden"/>, which has just stopped being shown, onto the nearest
+   /// ancestor that can hold it - so keys go on reaching something on screen, as they reach a game's surface again once
+   /// the menu laid over it closes. With no ancestor to take it the focus is let go of, so no key reaches a hidden
+   /// element.</summary>
+   public static void LeaveHidden(IUIComponent hidden)
+   {
+      if (Focused == null || !IsWithin(Focused, hidden))
+      {
+         return;
+      }
+
+      for (var node = hidden.VisualParent; node != null; node = node.VisualParent)
+      {
+         if (node is IInputComponent candidate && CanFocus(candidate))
+         {
+            Return(candidate, IsFocusVisible);
+            return;
+         }
+      }
+
+      Release(Focused);
+   }
+
+   private static bool IsShown(IUIComponent element)
+   {
+      for (var node = element.VisualParent; node != null; node = node.VisualParent)
+      {
+         if (node.Visibility != Visibility.Visible)
+         {
+            return false;
+         }
+      }
+
+      return true;
+   }
+
+   private static bool IsWithin(IUIComponent element, IUIComponent container)
+   {
+      for (var node = element; node != null; node = node.VisualParent)
+      {
+         if (ReferenceEquals(node, container))
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
    private static void DropFromScopes(IInputComponent element)
    {
       List<IInputComponent> stale = null;
-      foreach (var pair in focusScopes)
+      foreach (var pair in (IEnumerable<KeyValuePair<IInputComponent, IInputComponent>>)focusScopes)
       {
          if (ReferenceEquals(pair.Key, element) || ReferenceEquals(pair.Value, element))
             (stale ??= new List<IInputComponent>()).Add(pair.Key);
@@ -169,9 +219,9 @@ public static class FocusManager
          // If control is null, set focus to the topmost focus scope.
          foreach (var scope in GetFocusScopeAncestors(Focused).Reverse().ToList())
          {
-            if (focusScopes.ContainsKey(scope))
+            if (focusScopes.TryGetValue(scope, out var remembered))
             {
-               Focus(focusScopes[scope], navigationMethod, modifiers);
+               Focus(remembered, navigationMethod, modifiers);
             }
          }
       }
@@ -264,8 +314,11 @@ public static class FocusManager
    /// is how the caller knows to enter it at its first stop instead.</summary>
    public static bool TryRestoreFocus(IInputComponent root)
    {
-      if (root == null || !FocusByRoot.TryGetValue(root, out var remembered) || !CanFocus(remembered))
+      if (root == null || !FocusByRoot.TryGetValue(root, out var remembered) || !CanFocus(remembered)
+          || !IsShown(remembered))
+      {
          return false;
+      }
 
       // It has to still be IN this window: the remembered element may have been removed with a closed tab, or moved to
       // another window entirely by a tear-off.
@@ -296,7 +349,7 @@ public static class FocusManager
          throw new ArgumentNullException(nameof(scope));
       }
 
-      focusScopes[scope] = component;
+      focusScopes.AddOrUpdate(scope, component);
 
       if (Scope == scope)
       {
