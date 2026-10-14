@@ -448,7 +448,6 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         if (Core.Diagnostics.LayoutTrace.Counting)
         {
             Core.Diagnostics.LayoutTrace.Count(GetType(), "*arrange-call*");
-            Core.Diagnostics.LayoutTrace.CountCaller(GetType(), "arrange", 1);
         }
         if (IsInvalidRect(rect))
         {
@@ -794,7 +793,6 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         if (Core.Diagnostics.LayoutTrace.Counting)
         {
             Core.Diagnostics.LayoutTrace.Count(GetType(), "*any-measure*");
-            Core.Diagnostics.LayoutTrace.CountCaller(GetType(), "invalidate-measure", 1);
         }
 
         // No early return for an already-invalid node: one flagged while it could not be queued would never be measured

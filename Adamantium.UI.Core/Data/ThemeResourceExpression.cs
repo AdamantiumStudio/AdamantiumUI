@@ -90,28 +90,6 @@ public class ThemeResourceExpression : BindingExpressionBase
     private static readonly Dictionary<AdamantiumComponent, Router> Routers = new();
     private static readonly object RoutersLock = new();
 
-    // TEMP (leak hunt): entries the live routers hold, and how many of them are still ALIVE. The two apart are the whole
-    // point - a gap between them is swept lazily, a rising ALIVE count is a real leak.
-    public static (int Entries, int Alive) RoutedConsumers
-    {
-        get
-        {
-            lock (RoutersLock)
-            {
-                int entries = 0, alive = 0;
-                foreach (var router in Routers.Values)
-                foreach (var set in router.ByProperty.Values)
-                foreach (var handle in set)
-                {
-                    entries++;
-                    if (handle.TryGetTarget(out _)) alive++;
-                }
-
-                return (entries, alive);
-            }
-        }
-    }
-
     // The handle this expression is registered under - kept so Unsubscribe can drop the exact entry rather than hunt for
     // it, and so the router never holds a strong reference back to us.
     private WeakReference<ThemeResourceExpression> _handle;

@@ -154,6 +154,35 @@ public sealed class AutomationSession : IAsyncDisposable
     public async Task<IReadOnlyList<ElementInfo>> WindowsAsync() =>
         (await RunAsync(new AutomationRequest { Command = AutomationCommand.Windows })).Elements;
 
+    /// <summary>Remembers the windows open now; disposing what is returned closes every window opened since. For a script
+    /// run in an application that goes on running after it: whatever became of the script, it leaves no window behind.
+    /// </summary>
+    public async Task<IAsyncDisposable> CloseWindowsOpenedFromNowAsync()
+    {
+        var open = new HashSet<int>();
+        foreach (var window in await WindowsAsync())
+        {
+            open.Add(window.RuntimeId);
+        }
+
+        return new WindowsOpenedSince(this, open);
+    }
+
+    private sealed class WindowsOpenedSince(AutomationSession session, HashSet<int> open) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            foreach (var window in await session.WindowsAsync())
+            {
+                if (!open.Contains(window.RuntimeId))
+                {
+                    var by = string.IsNullOrEmpty(window.AutomationId) ? By.Name(window.Name) : By.Id(window.AutomationId);
+                    await session.Find(by).CloseAsync();
+                }
+            }
+        }
+    }
+
     public Task WaitForIdleAsync() => RunAsync(new AutomationRequest { Command = AutomationCommand.WaitIdle });
 
     /// <summary>The automation tree of every window as indented text; <paramref name="depth"/> 0 for all of it.</summary>

@@ -59,12 +59,6 @@ internal sealed class InstancedKeyArena : BatchArena
     /// paint order, and two halves would stamp two marks over one group's shapes.</summary>
     public override int SplitSegment(int id, int firstOfSecond) => -1;
 
-    public override string DescribeSegment(int id)
-    {
-        var (first, count) = SegmentRange(id);
-        return $"instanced key flush {id} [{first}..{first + count})";
-    }
-
     public override void BlankSlots(IGraphicsDevice device, int first, int count)
         => _collector.BlankKeySlots(_key, first, count);
 

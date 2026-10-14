@@ -212,6 +212,14 @@ public partial class RenderCache
     // and takes the same path.
     private readonly Dictionary<IRenderUnit, (int First, int Count)> _texRunByUnit = new();
 
+    // ...and WHAT THE SEGMENT BINDS for a textured, material or pattern fill, as the text run keeps its atlas: a texture,
+    // and the key of its pass (a material's treatment, source and mapping, a pattern's kind). A patch rewrites the record
+    // and not the binding: a picture swapped for another of the same size re-baked into a segment still drawing the old
+    // one - which showed the old picture, then a freed texture once nothing held it. The BRUSH is kept with it, so a
+    // picture handed over with a brush of its own is not finalized while a segment recorded with it can still be
+    // replayed; one swapped inside the same brush dirties the unit, and the check below refuses its patch.
+    private readonly Dictionary<IRenderUnit, (ITexture Texture, int Key, Core.Media.Brush Brush)> _boundByUnit = new();
+
     // ...and, for a FRACTAL fill, the KIND its segment was recorded with. Each formula is its own pass now, and so is
     // the deep-zoom path - which a zoom animation crosses on its own. A patch only rewrites the record, never the pass
     // the segment already bound, so a kind that no longer matches has to refuse and let the walk own it.

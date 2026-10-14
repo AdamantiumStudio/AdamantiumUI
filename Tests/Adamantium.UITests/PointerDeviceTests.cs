@@ -244,6 +244,31 @@ public class PointerDeviceTests
         });
     }
 
+    // The cue a hold wears is shown once: the lift takes it off the window and throws it away. Only taken off, it stayed
+    // an inheritance child of the window, every hold of the session adding one.
+    [Test]
+    public void TheCueOfAHold_IsDiscardedOnTheLift()
+    {
+        HostedButton();
+        Adamantium.UI.Controls.HoldIndicator cue;
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 43, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+            PointerDevice.Current.Holding.Elapsed(43, 600);
+            cue = _window.Adorners.OfType<Adamantium.UI.Controls.HoldIndicator>().SingleOrDefault();
+            Send(RawPointerEventType.Up, 43, PointerType.Touch, new Vector2(50, 50), 700, MouseButtons.None);
+        }
+
+        Assume.That(cue, Is.Not.Null, "the hold showed its cue");
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_window.Adorners, Has.None.InstanceOf<Adamantium.UI.Controls.HoldIndicator>(), "off the window");
+            Assert.That(cue.IsDiscarded, Is.True, "thrown away");
+        });
+    }
+
     [Test]
     public void AFingerThatMovesOff_IsNoHold()
     {

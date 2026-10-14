@@ -653,6 +653,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         if (!containerRegistry.IsRegistered<IDependencyResolver>())
             containerRegistry.RegisterInstance<IDependencyResolver>(Container);
+        if (!containerRegistry.IsRegistered<IDependencyContainer>())
+        {
+            containerRegistry.RegisterInstance<IDependencyContainer>(Container);
+        }
         if (!containerRegistry.IsRegistered<IViewLocator>())
             containerRegistry.RegisterSingleton<IViewLocator, ViewLocator>();
         if (!containerRegistry.IsRegistered<IWindowShellRegistry>())

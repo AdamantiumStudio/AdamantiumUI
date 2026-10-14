@@ -13,7 +13,8 @@
   <Invoke Target="id=NavigationDemoView/name=Home" />
   <Wait Target="id=Region/id=HomePageView" />
   <Invoke Target="id=NavigationDemoView/name=Add card" />
-  <Wait Target="id=Cards/name=Card 3" />
+  <!-- The third card, by place: its number goes on from the count, which a previous pass has moved on. -->
+  <Wait Target="id=Cards/type=ListItem[2]" />
   <Invoke Target="id=NavigationDemoView/name=Clear" />
   <Absent Target="id=Cards/type=ListItem" />
   <!-- Two cards again, as the page opens with; their numbers go on from where the count stands. -->

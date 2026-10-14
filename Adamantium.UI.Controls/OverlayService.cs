@@ -98,6 +98,9 @@ public sealed class OverlayService : IOverlayService
             window.Closed += (_, _) => aware.RequestClose -= OnRequestClose;
         }
 
+        // Made for this showing alone: closed, it goes, its view with it.
+        window.Closed += (_, _) => DiscardedVisuals.PublishSubtree(window);
+
         return await OverlayWindowManager.GetFor(host).ShowAsync(window);
     }
 

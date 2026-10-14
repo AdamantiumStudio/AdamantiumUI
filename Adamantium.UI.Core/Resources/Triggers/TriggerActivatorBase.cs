@@ -22,16 +22,10 @@ public abstract class TriggerActivatorBase : ITriggerActivator
     private readonly Dictionary<ISetter, (IAdamantiumComponent Target, Action Teardown)> _applied = new();
     private bool _conditionMet;
 
-    // TEMP (leak hunt): activators made and torn down. An activator holds its CONTEXT, and a template trigger's context
-    // holds the whole TemplateResult - so one that is never deactivated keeps a discarded template alive. Counted the
-    // same way the brush links were, because that is the instrument that has actually worked today.
-    public static long Made, TornDown;
-
     protected TriggerActivatorBase(ITriggerExecutionContext context, TriggerBase trigger)
     {
         Context = context;
         _trigger = trigger;
-        System.Threading.Interlocked.Increment(ref Made);
 
         TargetsTemplateParts = ReachesTemplateParts(trigger);
     }
@@ -93,8 +87,6 @@ public abstract class TriggerActivatorBase : ITriggerActivator
     /// <summary>Undo every applied setter and reset the edge state (called on Deactivate).</summary>
     protected void TearDown()
     {
-        System.Threading.Interlocked.Increment(ref TornDown);
-
         // Snapshot and clear state BEFORE running teardowns: a teardown clears a trigger value, whose property-changed
         // callback can re-enter this activator (RemoveSetter/ApplySetter) and mutate _applied - iterating it live throws
         // "Collection was modified". This is what broke a runtime theme swap on the first triggered control it hit.

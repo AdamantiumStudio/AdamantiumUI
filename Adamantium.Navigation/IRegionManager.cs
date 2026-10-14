@@ -18,6 +18,12 @@ public interface IRegionManager
 
     bool TryGetRegion(string regionName, out IRegion region);
     void RegisterRegion(IRegion region);
+
+    /// <summary>Takes <paramref name="region"/> out and lets go of what it shows, at once: its view models leave it and its
+    /// journal is emptied. The task completes when each of them has heard
+    /// <see cref="INavigationAware.OnNavigatedFromAsync"/>. A region whose window closed is removed this way, so the next
+    /// window asking for the name gets a fresh one.</summary>
+    Task RemoveRegionAsync(IRegion region);
     IReadOnlyCollection<IRegion> Regions { get; }
 
     /// <summary>Navigates the region named <paramref name="regionName"/> in one call. A region no control has declared

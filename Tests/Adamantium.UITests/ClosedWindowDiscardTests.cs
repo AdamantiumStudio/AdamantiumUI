@@ -63,6 +63,50 @@ public class ClosedWindowDiscardTests
         Assert.That(ring.IsDiscarded, Is.True);
     }
 
+    // ...and not kept by the element it ringed, which listed it as an inheritance child for as long as the element lived.
+    [Test]
+    public void AFocusRingReplaced_IsNotKeptByTheElementItRinged()
+    {
+        var first = new Adamantium.UI.Controls.Buttons.Button();
+        var layer = new Adamantium.UI.Controls.Adorners.AdornerLayer();
+        var ring = RingOn(layer, first);
+
+        layer.SetFocus(new Adamantium.UI.Controls.Buttons.Button());
+        while (DiscardedVisuals.Drain(64) > 0) { }
+        RenderDirty.Clear();
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
+        System.GC.Collect();
+
+        Assert.That(ring.IsAlive, Is.False);
+        System.GC.KeepAlive(first);
+    }
+
+    // Only a discarded ring leaves: the one the element wears now still inherits from it.
+    [Test]
+    public void ALiveFocusRing_StillInheritsFromItsElement()
+    {
+        var button = new Adamantium.UI.Controls.Buttons.Button();
+        var other = new Adamantium.UI.Controls.Buttons.Button();
+        var layer = new Adamantium.UI.Controls.Adorners.AdornerLayer();
+        layer.SetFocus(other);
+        layer.SetFocus(button);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+        var ring = (Adamantium.UI.Controls.Adorners.Adorner)layer.Adorners[0];
+
+        button.DataContext = "the button's";
+
+        Assert.That(ring.DataContext, Is.EqualTo("the button's"));
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference RingOn(Adamantium.UI.Controls.Adorners.AdornerLayer layer,
+        Adamantium.UI.Controls.Base.UIComponent element)
+    {
+        layer.SetFocus(element);
+        return new System.WeakReference(layer.Adorners[0]);
+    }
+
     [Test]
     public void AWindowWhoseCloseIsCanceled_IsNotDiscarded()
     {

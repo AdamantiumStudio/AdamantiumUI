@@ -161,6 +161,32 @@ public class CanvasInspectorChoiceTests
         Assert.That(hidden.TrueForAll(section => section.IsDiscarded), Is.True);
     }
 
+    // A node control goes with its canvas whole: discarded alone, its template - sockets and labels following the theme
+    // - lived on, and through it the node and the canvas.
+    [Test]
+    public void ADiscardedCanvas_DiscardsItsNodesWithTheirTemplates()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+        var canvas = WithNodeSelected();
+        var node = Found<CanvasNode>(canvas);
+        Assume.That(node, Is.Not.Null, "the canvas shows its node");
+        var parts = new List<FundamentalUIComponent>();
+        foreach (var child in node.VisualChildren)
+        {
+            if (child is FundamentalUIComponent part)
+            {
+                parts.Add(part);
+            }
+        }
+
+        Assume.That(parts, Is.Not.Empty, "the node is templated");
+
+        DiscardedVisuals.Publish(canvas);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(parts.TrueForAll(part => part.IsDiscarded), Is.True);
+    }
+
     // THE CATALOGS REACH THE PANEL, WHENEVER THEY ARRIVE. The panel is not the canvas: it is handed one by the pane
     // it rides in, and a page states its catalogs with bindings that are pushed after all of that.
     [Test]
@@ -251,6 +277,51 @@ public class CanvasInspectorChoiceTests
                 Assert.That(row.Value, Is.EqualTo("Add"), "the lines stayed on the node that was selected first");
             }
         });
+    }
+
+    // FROM A NODE TO A WIRE: the node's lines leave with the node. Handed the wire first, they tried to read a node's kind
+    // and title off it - one alarm per line, every time a wire was picked after a node.
+    [Test]
+    public void PickingAWireAfterANodeAndBack_BindsNoNodeLineToTheWire()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+
+        var canvas = WithNodeSelected();
+        var nodes = (TrackingCollection<ICanvasNode>)canvas.Nodes;
+        var second = new GraphNode { Kind = "add", Title = "Add" };
+        second.Inputs.Add(new GraphSocket { Name = "A", Kind = "Number" });
+        nodes.Add(second);
+        _ = new CanvasConnection(nodes[0].Outputs[0], second.Inputs[0]);
+        Settle(canvas);
+
+        ConnectionItem wire = null;
+        foreach (var item in canvas.ItemsHere())
+        {
+            if (item is ConnectionItem found)
+            {
+                wire = found;
+            }
+        }
+
+        Assume.That(wire, Is.Not.Null, "the wire is on the plane");
+
+        var messages = new List<string>();
+        Adamantium.UI.Core.Diagnostics.BindingTrace.Sink = messages.Add;
+        try
+        {
+            canvas.Select(wire, false);
+            Settle(canvas);
+
+            // ...and back: the node's lines must not be handed the wire on the way in either.
+            canvas.Select(canvas.ItemOf(second), false);
+            Settle(canvas);
+        }
+        finally
+        {
+            Adamantium.UI.Core.Diagnostics.BindingTrace.Sink = null;
+        }
+
+        Assert.That(messages, Is.Empty);
     }
 
     // What a socket may carry, as an application says it.

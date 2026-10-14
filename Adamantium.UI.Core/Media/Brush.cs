@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.TypeParsers;
@@ -17,7 +18,8 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    private bool _anchorConsidered;
 
    // How many render properties of each owner hold this brush, so attach/detach stay symmetric when one owner uses it
-   // twice. Lazy; most brushes have one owner.
+   // twice. Lazy; most brushes have one owner. Every owner also lists the brush (AdamantiumComponent.NoteAttachedTo), so
+   // leaving gives up exactly the brushes it holds, however it took them.
    private Dictionary<AdamantiumComponent, int> _owners;
 
    // The owner map is written from both the loop and render threads; a lock, since count updates and sweeps must be
@@ -152,11 +154,6 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
       foreach (var owner in owners) owner.OnRenderValueChanged(this, EventArgs.Empty);
    }
 
-   // TEMP (leak hunt): how many owner LINKS have ever been taken and given up. Their difference is how many elements the
-   // live brushes are holding right now - the number that says whether a release path runs at all, which reasoning about
-   // the code cannot.
-   public static long LinksTaken, LinksGivenUp;
-
    // Weakly registered brushes that have had an owner, so a sweep can reach an old theme's idle brushes too.
    private static readonly List<WeakReference<Brush>> BrushesWithOwners = new();
    private static int _pruneBrushesAt = 1024;
@@ -173,43 +170,6 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
          BrushesWithOwners.Add(new WeakReference<Brush>(brush));
       }
-   }
-
-   /// <summary>TEMP (leak hunt): brushes still listing a destroyed part as an owner or subscriber, and how many such
-   /// entries there are.</summary>
-   public static (int Brushes, int DeadOwners, int LiveBrushes) DeadOwnerCensus()
-   {
-      List<Brush> live;
-      lock (BrushesWithOwners)
-      {
-         live = new List<Brush>(BrushesWithOwners.Count);
-         foreach (var handle in BrushesWithOwners)
-            if (handle.TryGetTarget(out var brush)) live.Add(brush);
-      }
-
-      int brushes = 0, dead = 0;
-      foreach (var brush in live)
-      {
-         var here = 0;
-         lock (brush._ownersLock)
-         {
-            if (brush._owners != null)
-               foreach (var owner in brush._owners.Keys)
-                  if (owner is FundamentalUIComponent { IsDiscarded: true }) here++;
-         }
-
-         // ...and the SUBSCRIBER LIST, which is a different thing from the owner map and can disagree with it. The map
-         // came back clean while the graph showed this very event holding a destroyed part, so the map is not the
-         // answer - the invocation list is.
-         var handlers = brush.Changed?.GetInvocationList();
-         if (handlers != null)
-            foreach (var handler in handlers)
-               if (handler.Target is FundamentalUIComponent { IsDiscarded: true }) here++;
-
-         if (here > 0) { brushes++; dead += here; }
-      }
-
-      return (brushes, dead, live.Count);
    }
 
    /// <summary>Releases owners no longer in a tree from every brush that has owners; called once per theme swap after it
@@ -250,21 +210,16 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
             firstOwner = true;
          }
 
-         if (_owners.TryGetValue(owner, out var held))
+         ref var held = ref CollectionsMarshal.GetValueRefOrAddDefault(_owners, owner, out var known);
+         held++;   // known: another of its properties took the brush, and it is subscribed already
+         if (!known)
          {
-            _owners[owner] = held + 1;   // already subscribed for this owner; another of its properties took the brush
-         }
-         else
-         {
-            _owners[owner] = 1;
-            System.Threading.Interlocked.Increment(ref LinksTaken);
             _ownersSnapshot = null;   // the map is what notifies them now - see RaiseChanged
+            owner.NoteAttachedTo(this);
          }
       }
 
-      // OUTSIDE the map lock, and that ordering is the point: the diagnostics take BrushesWithOwners and then read a
-      // brush's map, so a path that held the map while reaching for the global list would be the other half of a
-      // deadlock. Nobody holds both at once.
+      // OUTSIDE the map lock: nobody holds a brush's map and the global list at once.
       if (firstOwner) Register(this);
 
       Anchor(owner);
@@ -291,10 +246,24 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
             return;
          }
 
-         _owners.Remove(owner);
-         System.Threading.Interlocked.Increment(ref LinksGivenUp);
-         _ownersSnapshot = null;
+         Forget(owner);
       }
+   }
+
+   void IRenderAttachable.Release(AdamantiumComponent owner)
+   {
+      lock (_ownersLock)
+      {
+         if (_owners != null && _owners.ContainsKey(owner)) Forget(owner);
+      }
+   }
+
+   // Under the lock: the owner is out of the map, and the brush out of the owner's list.
+   private void Forget(AdamantiumComponent owner)
+   {
+      _owners.Remove(owner);
+      _ownersSnapshot = null;
+      owner.ForgetAttachedTo(this);
    }
 
    // A discarded owner never tells the brush, so the brush sweeps for owners no longer in a live tree, when the map has
@@ -335,16 +304,9 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
 
       foreach (var owner in gone)
       {
-         // Release this owner here directly: the owner's own release walk would detach the new theme's brushes instead.
-         bool removed;
-         lock (_ownersLock)
-         {
-            removed = _owners.Remove(owner);
-            if (removed) _ownersSnapshot = null;
-         }
-         if (removed) System.Threading.Interlocked.Increment(ref LinksGivenUp);
-
-         // ...and the owner still gives up the rest of what it holds, which also arms its re-take on attach.
+         // Out of this map first - an owner that counts as released already would skip its own walk - and then it
+         // gives up the rest of what it holds, which also arms its re-take on attach.
+         ((IRenderAttachable)this).Release(owner);
          owner.ReleaseRenderAttachments();
       }
 

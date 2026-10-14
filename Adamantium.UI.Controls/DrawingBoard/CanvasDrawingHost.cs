@@ -13,6 +13,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 internal sealed class CanvasDrawingHost
 {
     private readonly Dictionary<ICanvasObject, ICanvasItem> _placed = new();
+    private readonly Dictionary<ElementItem, ContentPresenter> _built = new();
 
     private IEnumerable _objects;
     private ICanvasScene _scene;
@@ -51,9 +52,9 @@ internal sealed class CanvasDrawingHost
         Fill();
     }
 
-    /// <summary>For a canvas that has been destroyed: stops listening to the application's collection and objects, then
-    /// takes the items it made for them off the scene, which the application keeps, and discards the controls it built
-    /// for them.</summary>
+    /// <summary>For a canvas that has been destroyed, or whose scene another canvas has taken: stops listening to the
+    /// application's collection and objects, discards every control it built, takes its items off the scene, which the
+    /// application keeps along with the items, and forgets the scene until it is given one again.</summary>
     public void StopFollowing()
     {
         if (_objects is INotifyCollectionChanged was)
@@ -61,12 +62,14 @@ internal sealed class CanvasDrawingHost
             was.CollectionChanged -= OnObjectsChanged;
         }
 
-        foreach (var (_, item) in _placed)
+        foreach (var (item, presenter) in _built)
         {
-            Discard(item);
+            Discard(item, presenter);
         }
 
+        _built.Clear();
         Clear();
+        _scene = null;
     }
 
     public void SetScene(ICanvasScene scene)
@@ -74,6 +77,14 @@ internal sealed class CanvasDrawingHost
         if (ReferenceEquals(_scene, scene)) return;
 
         _scene = scene;
+
+        // Heard again after a stop, which let go of the collection but not of which one it is.
+        if (_scene != null && _objects is INotifyCollectionChanged objects)
+        {
+            objects.CollectionChanged -= OnObjectsChanged;
+            objects.CollectionChanged += OnObjectsChanged;
+        }
+
         Fill();
     }
 
@@ -116,8 +127,26 @@ internal sealed class CanvasDrawingHost
     {
         if (_scene == null || _placed.ContainsKey(model)) return;
 
-        var item = Make(model);
-        if (item == null) return;
+        // THE ITEM THE SCENE ALREADY HAS for this object, as for a node: see CanvasGraphHost.Put. Only its control is
+        // this canvas's.
+        var item = SceneItems.Of(_scene, model);
+        if (!Fits(item, model))
+        {
+            item = Make(model);
+            SceneItems.Keep(_scene, model, item);
+        }
+
+        if (item is ElementItem element)
+        {
+            if (_built.Remove(element, out var stale))
+            {
+                Discard(element, stale);
+            }
+
+            var presenter = Present(model);
+            element.Element = presenter;
+            _built[element] = presenter;
+        }
 
         _placed[model] = item;
         model.PropertyChanged += OnModelChanged;
@@ -144,14 +173,21 @@ internal sealed class CanvasDrawingHost
             };
         }
 
-        var presenter = new ContentPresenter
+        return new ElementItem(null, box) { Model = model };
+    }
+
+    // Whether the item kept for an object still is what draws it: the application may have changed what it holds.
+    private static bool Fits(ICanvasItem item, ICanvasObject model) =>
+        model.Content is ICanvasShapeDescription shape
+            ? item is ShapeItem drawn && drawn.Shape == shape.Shape
+            : item is ElementItem;
+
+    private ContentPresenter Present(ICanvasObject model) =>
+        new()
         {
             Content = model.Content,
             ContentTemplateSelector = _selector
         };
-
-        return new ElementItem(presenter, box) { Model = model };
-    }
 
     private void Drop(ICanvasObject model)
     {
@@ -172,12 +208,14 @@ internal sealed class CanvasDrawingHost
         _placed.Clear();
     }
 
-    private static void Discard(ICanvasItem item)
+    private static void Discard(ElementItem item, ContentPresenter presenter)
     {
-        if (item is ElementItem { Element: ContentPresenter presenter })
+        if (ReferenceEquals(item.Element, presenter))
         {
-            DiscardedVisuals.Publish(presenter);
+            item.Element = null;
         }
+
+        DiscardedVisuals.Publish(presenter);
     }
 
     // Nothing is copied: the box a shape occupies IS the object's, read and written through. The scene is told that a

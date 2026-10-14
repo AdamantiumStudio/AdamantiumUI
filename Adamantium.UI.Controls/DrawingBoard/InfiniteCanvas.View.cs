@@ -1011,7 +1011,7 @@ public partial class InfiniteCanvas
     // which this pass is setting).
     private void SyncElements(Size viewport)
     {
-        if (_layers == null) return;
+        if (_layers == null || _sceneTaken) return;
 
         _runs.Clear();
 

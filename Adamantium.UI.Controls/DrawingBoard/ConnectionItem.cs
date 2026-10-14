@@ -13,20 +13,23 @@ public class ConnectionItem : ICanvasItem
     private readonly ElementItem _from;
     private readonly ElementItem _to;
     private readonly WirePainter _painter = new();
+    private readonly PinPlace _leaves;
+    private readonly PinPlace _arrives;
 
     public ConnectionItem(ElementItem from, CanvasNodePin fromPin, ElementItem to, CanvasNodePin toPin)
     {
         _from = from;
         _to = to;
-        FromPin = fromPin;
-        ToPin = toPin;
+        _leaves = PinPlace.Of(from, fromPin);
+        _arrives = PinPlace.Of(to, toPin);
     }
 
-    /// <summary>The socket it leaves - an output, in a graph that runs one way.</summary>
-    public CanvasNodePin FromPin { get; }
+    /// <summary>The socket it leaves - an output, in a graph that runs one way. Read off the node's current control, so
+    /// a wire kept by the history still ends on the right socket after the node is shown by a new control.</summary>
+    public CanvasNodePin FromPin => _leaves.On(_from);
 
     /// <summary>The socket it arrives at.</summary>
-    public CanvasNodePin ToPin { get; }
+    public CanvasNodePin ToPin => _arrives.On(_to);
 
     /// <summary>The nodes at either end, so that removing a node can take its wires with it and a tool can ask whether
     /// a wire it is about to draw is already there.</summary>
@@ -340,6 +343,53 @@ public class ConnectionItem : ICanvasItem
         if (item?.Element is not CanvasNode node || node.Where(pin) is not { } local) return null;
 
         return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
+    }
+
+    // Where a pin sits on its node: which side and how far along. A pin not on the node is kept as it is.
+    private readonly struct PinPlace
+    {
+        private readonly bool _input;
+        private readonly int _at;
+        private readonly CanvasNodePin _loose;
+
+        private PinPlace(bool input, int at, CanvasNodePin loose)
+        {
+            _input = input;
+            _at = at;
+            _loose = loose;
+        }
+
+        public static PinPlace Of(ElementItem item, CanvasNodePin pin)
+        {
+            if (item?.Element is CanvasNode node && pin != null)
+            {
+                var at = node.InputPins.IndexOf(pin);
+                if (at >= 0)
+                {
+                    return new PinPlace(true, at, null);
+                }
+
+                at = node.OutputPins.IndexOf(pin);
+                if (at >= 0)
+                {
+                    return new PinPlace(false, at, null);
+                }
+            }
+
+            return new PinPlace(false, -1, pin);
+        }
+
+        public CanvasNodePin On(ElementItem item)
+        {
+            if (_at < 0 || item?.Element is not CanvasNode node)
+            {
+                return _loose;
+            }
+
+            var pins = _input ? node.InputPins : node.OutputPins;
+
+            return _at < pins.Count ? pins[_at] : null;
+        }
     }
 
     internal static Vector2 Along(Vector2 a, Vector2 b, Vector2 c, Vector2 d, double t)

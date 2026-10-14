@@ -14,6 +14,11 @@ namespace Adamantium.UI.Generators.Scenarios;
 /// desktop and a GPU - and runs one test at a time.</summary>
 public static class ScenarioTestEmitter
 {
+    /// <summary>Set to the pipe of an application already running, the tests run their steps in it instead of each
+    /// starting its own, and leave it running - so the same application can be taken through every scenario, as many
+    /// times as wanted, and measured between the passes. Each test closes the windows it opened, failed or not.</summary>
+    public const string AttachVariable = "ADAM_SCENARIO_PIPE";
+
     public static void Emit(SourceProductionContext output, ImmutableArray<ScenarioFile> files, string rootNamespace, string application,
         bool testable)
     {
@@ -91,11 +96,15 @@ public static class ScenarioTestEmitter
 
             test.AppendLine($"    public async global::System.Threading.Tasks.Task {file.Name}()")
                 .AppendLine("    {")
-                .AppendLine("        await using var session = await global::Adamantium.UI.Automation.AutomationSession.LaunchAsync(")
-                .AppendLine("            global::System.IO.Path.Combine(global::System.AppContext.BaseDirectory,")
-                .AppendLine($"                global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
+                .AppendLine($"        var running = global::System.Environment.GetEnvironmentVariable({SymbolDisplay.FormatLiteral(AttachVariable, true)});")
+                .AppendLine("        await using var session = running is { Length: > 0 }")
+                .AppendLine("            ? await global::Adamantium.UI.Automation.AutomationSession.AttachAsync(running)")
+                .AppendLine("            : await global::Adamantium.UI.Automation.AutomationSession.LaunchAsync(")
+                .AppendLine("                global::System.IO.Path.Combine(global::System.AppContext.BaseDirectory,")
+                .AppendLine($"                    global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
                             $"{SymbolDisplay.FormatLiteral(application, true)}),")
-                .AppendLine("            new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true });");
+                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true });")
+                .AppendLine("        await using var opened = running is { Length: > 0 } ? await session.CloseWindowsOpenedFromNowAsync() : null;");
             foreach (var step in file.Steps)
             {
                 test.AppendLine($"        {step.Replace("\n", "\n        ")}");

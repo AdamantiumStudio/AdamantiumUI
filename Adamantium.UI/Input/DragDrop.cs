@@ -665,6 +665,8 @@ public static partial class DragDrop
         {
             _indicatorLayer?.Remove(_indicator);
             _indicator.AdornedElement = null;   // drop the inheritance link so the host doesn't retain the cue
+            // A cue is made anew for every move; one only taken off went on following the theme for good.
+            DiscardedVisuals.PublishSubtree(_indicator);
         }
         _indicator = null;
         _indicatorLayer = null;

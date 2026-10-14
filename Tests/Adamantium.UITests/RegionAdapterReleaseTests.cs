@@ -115,6 +115,38 @@ public class RegionAdapterReleaseTests
     }
 
     [Test]
+    public void ADiscardedSelectorHost_LeavesTheRegion()
+    {
+        var region = new CountedRegion();
+        var host = new TabControl();
+        new SelectorRegionAdapter(null).Attach(region, host);
+        Assume.That(region.Listeners, Is.EqualTo(2), "the host follows the region");
+
+        Discard(host);
+
+        Assert.That(region.Listeners, Is.Zero);
+    }
+
+    // ...but leaving the tree is not going away: a selector on a kept page leaves and comes back, and one that let go of
+    // its region as it left no longer followed it after the return.
+    [Test]
+    public void ASelectorHostThatLeavesTheTreeAndReturns_StillFollowsTheRegion()
+    {
+        var region = new CountedRegion();
+        var host = new TabControl();
+        var panel = new Adamantium.UI.Controls.Panels.StackPanel();
+        panel.Children.Add(host);
+        var window = new Window { Width = 200, Height = 100, Content = panel };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        new SelectorRegionAdapter(null).Attach(region, host);
+
+        panel.Children.Remove(host);
+        panel.Children.Add(host);
+
+        Assert.That(region.Listeners, Is.EqualTo(2));
+    }
+
+    [Test]
     public void ADiscardedItemsHost_LeavesTheRegion()
     {
         var region = new CountedRegion();

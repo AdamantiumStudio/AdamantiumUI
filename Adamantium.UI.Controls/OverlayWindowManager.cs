@@ -96,6 +96,12 @@ public sealed class OverlayWindowManager
             window.KeyDown -= OnHostKeyDown;
             _host.PopupLayer.Remove(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
+
+            // The popups are this manager's, made for this showing: they go. The window is not - whoever made it may show
+            // it again - so it is taken out of its popup first, as a discarded popup discards its content.
+            window.HostPopup.Child = null;
+            DiscardedVisuals.PublishSubtree(window.HostPopup);
+            if (window.ScrimPopup != null) DiscardedVisuals.PublishSubtree(window.ScrimPopup);
             window.HostPopup = null;
             window.ScrimPopup = null;
             _windows.Remove(window);

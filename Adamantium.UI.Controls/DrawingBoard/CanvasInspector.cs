@@ -556,14 +556,24 @@ public class CanvasInspector : Control, ICanvasPart
         var chosen = Canvas?.Selection;
         var many = chosen?.Count ?? 0;
 
+        // THE LINES BEFORE WHAT THEY SHOW. The lines standing are those of what was selected before, and handed the new
+        // selection first they read it as that: a wire picked after a node was asked for the node's kind and title.
+        // Handed it after, a node picked after a wire would be. So when the lines change, the old selection is let go
+        // of first.
+        if (_grid != null && !Same(_grid.SectionsSource,
+                Wanted(Sections(SelectionSetsKey, Canvas?.InspectorSections, ref _selectionSections), Names(chosen))))
+        {
+            Selection = null;
+        }
+
+        ReadSections();
+
         // A FRESH LIST every time, exactly as the structure face makes one: the canvas's selection is edited in place,
         // so handing the same instance over again is the same value as far as a property says - and the rows go on
         // showing what was selected when they were last built. Which is a panel full of blank lines beside a node that
         // plainly has a kind and a title.
         Selection = chosen == null ? null : new List<ICanvasItem>(chosen);
         Header = ShowsProperties && many > 1 ? $"{many} objects selected" : null;
-
-        ReadSections();
     }
 
     // Which sections apply, re-asked after edits that change the answer; the selection is not republished, which would
@@ -658,7 +668,7 @@ public class CanvasInspector : Control, ICanvasPart
     {
         if (grid == null) return 0;
 
-        var wanted = names == null || sections == null ? null : sections.For(names);
+        var wanted = Wanted(sections, names);
 
         // ONLY WHEN IT IS ACTUALLY DIFFERENT. This is worked out again after every write - a picture painted onto a
         // surface brings a texture's lines with it - and handing over a fresh list of the SAME sections still counts as
@@ -668,6 +678,9 @@ public class CanvasInspector : Control, ICanvasPart
 
         return wanted?.Count ?? 0;
     }
+
+    private static IReadOnlyList<PropertySection> Wanted(CanvasInspectorSections sections, IReadOnlyList<string> names) =>
+        names == null || sections == null ? null : sections.For(names);
 
     private static bool Same(IEnumerable one, IReadOnlyList<PropertySection> other)
     {

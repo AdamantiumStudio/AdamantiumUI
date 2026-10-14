@@ -51,8 +51,6 @@ internal abstract class BatchArena
 
     public abstract int SplitSegment(int id, int firstOfSecond);
 
-    public abstract string DescribeSegment(int id);
-
     /// <summary>Make a run of retained slots draw NOTHING, leaving the run where it is. What a control that stopped
     /// drawing needs: excising its slots costs its segment its shape and hands it a fresh one when it comes back - an op
     /// per hide/show, which only a full walk ever compacts. Blanked in place, it keeps its segment the way it already

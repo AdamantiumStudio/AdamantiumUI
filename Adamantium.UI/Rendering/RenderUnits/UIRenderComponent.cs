@@ -384,11 +384,19 @@ public class ImageRenderComponent : UIRenderComponent
         base.Render();
     }
 
-    // Frees a live shared-surface import this component owns (reached via the deferred queue, so no frame still samples
-    // it); bitmap textures belong to their BitmapSource.
+    /// <summary>The image the shared surface in <see cref="Texture"/> was imported for. One import serves every component
+    /// made for that image - a re-render makes a new one before the old goes - so only the last, after the image itself
+    /// was let go of, may free it.</summary>
+    public Core.Media.Imaging.SharedSurfaceImage SharedImage { get; set; }
+
+    // Frees a live shared-surface import (reached via the deferred queue, so no frame still samples it) once its image is
+    // let go of; bitmap textures belong to their BitmapSource.
     protected override void Dispose(bool disposeManagedResources)
     {
-        if (Texture is Adamantium.Graphics.SharedSurface shared) shared.Dispose();
+        if (Texture is Adamantium.Graphics.SharedSurface shared && SharedImage is not { IsDisposed: false })
+        {
+            shared.Dispose();
+        }
         base.Dispose(disposeManagedResources);
     }
 }

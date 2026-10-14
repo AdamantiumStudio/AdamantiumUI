@@ -255,7 +255,6 @@ public class BindingExpression : BindingExpressionBase
       {
          _observedComponent = component;
          component.PropertyChanged += OnSourceComponentChanged;
-         System.Threading.Interlocked.Increment(ref SourceHooks);
       }
       if (Mode == BindingMode.TwoWay && !IsProducer && Target != null)
          Target.PropertyChanged += OnTargetPropertyChanged;
@@ -329,7 +328,6 @@ public class BindingExpression : BindingExpressionBase
       if (_observedComponent != null)
       {
          _observedComponent.PropertyChanged -= OnSourceComponentChanged;
-         System.Threading.Interlocked.Increment(ref SourceUnhooks);
          _observedComponent = null;
       }
       if ((Mode == BindingMode.TwoWay || Mode == BindingMode.OneWayToSource) && !IsProducer && Target != null)
@@ -757,24 +755,28 @@ public class BindingExpression : BindingExpressionBase
    }
 
    // Converted-value cache weakly keyed by source object: one instance per item across rebinds, re-converted when the
-   // raw input changes. Value-type sources convert directly.
+   // raw input or the converter changes. Value-type sources convert directly. ONE entry per slot, the converter kept in
+   // it rather than in the key: markup that makes a converter per element (Converter={conv:X}) handed every realized
+   // element a new key, and each source kept every brush ever converted for it - thousands a visit.
    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object,
-      Dictionary<(IValueConverter, Type, string, CultureInfo), (object Raw, object Converted)>> _convertCache = new();
+      Dictionary<(Type, string, object, CultureInfo), (IValueConverter Converter, object Raw, object Converted)>> _convertCache = new();
 
    private object ConvertCached(object raw, Type targetType)
    {
       var culture = FormatCulture;
       var source = ResolvedSource;
+      var converter = Binding.Converter;
+      var parameter = Binding.ConverterParameter;
       if (source == null || source.GetType().IsValueType)
-         return Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, culture);
+         return converter.Convert(raw, targetType, parameter, culture);
 
       var cache = _convertCache.GetOrCreateValue(source);
-      var key = (Binding.Converter, targetType, SourcePropertyName, culture);
-      if (cache.TryGetValue(key, out var entry) && Equals(entry.Raw, raw))
+      var key = (targetType, SourcePropertyName, parameter, culture);
+      if (cache.TryGetValue(key, out var entry) && ReferenceEquals(entry.Converter, converter) && Equals(entry.Raw, raw))
          return entry.Converted;
 
-      var converted = Binding.Converter.Convert(raw, targetType, Binding.ConverterParameter, culture);
-      cache[key] = (raw, converted);
+      var converted = converter.Convert(raw, targetType, parameter, culture);
+      cache[key] = (converter, raw, converted);
       return converted;
    }
 

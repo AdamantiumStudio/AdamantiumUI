@@ -9,4 +9,7 @@ public interface IRenderAttachable
 
     /// <summary>An element just gave it up.</summary>
     void DetachFrom(AdamantiumComponent owner);
+
+    /// <summary>The element is leaving: it is no longer an owner at all, however many of its properties took this.</summary>
+    void Release(AdamantiumComponent owner);
 }

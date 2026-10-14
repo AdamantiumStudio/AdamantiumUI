@@ -175,13 +175,10 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         OnBeginFrame(device);
     }
 
-    // TEMP: ADAMANTIUM_NO_RING=1 collapses the ring to one copy, to check the write probe fires on a known violation.
-    private static readonly bool RingDisabled = Environment.GetEnvironmentVariable("ADAMANTIUM_NO_RING") == "1";
-
     // Old buffers go to the deferred queue: frames in flight still read them.
     private void EnsureRing(IGraphicsDevice device)
     {
-        var copies = RingDisabled ? 1 : (int)Math.Max(1, device.MaxFramesInFlight);
+        var copies = (int)Math.Max(1, device.MaxFramesInFlight);
         if (_ring != null && _ring.Length == copies && _gpuCapacity >= Items.Length) return;
 
         if (_ring != null)
@@ -435,19 +432,6 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
             L = Math.Min(s.L, bounds.X), T = Math.Min(s.T, bounds.Y),
             R = Math.Max(s.R, bounds.Right), B = Math.Max(s.B, bounds.Bottom)
         };
-    }
-
-    /// TEMP (flicker hunt): what this recorded segment actually draws, for the walk-vs-replay trace comparison.
-    public override string DescribeSegment(int id)
-    {
-        var index = IndexOf(id);
-        if (index < 0) return $"seg#{id} MISSING (have {_segments.Count})";
-        var s = _segments[index];
-        var x = s.Scissor?.Offset?.X ?? -1;
-        var y = s.Scissor?.Offset?.Y ?? -1;
-        var w = s.Scissor?.Extent?.Width ?? 0;
-        var h = s.Scissor?.Extent?.Height ?? 0;
-        return $"first={s.First} count={s.Count} clip={x},{y} {w}x{h}";
     }
 
     /// <summary>Free retained capacity for patch appends this frame (capacity only grows at the next BeginFrame).</summary>

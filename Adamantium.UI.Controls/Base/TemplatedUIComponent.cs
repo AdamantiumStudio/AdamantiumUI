@@ -90,43 +90,11 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         }
     }
 
-    /// <summary>TEMP (leak hunt): templates built, and templated controls ever constructed, since start.</summary>
-    public static long TemplatesBuilt, TemplatedControlsMade, TemplatesRemoved;
-
-    public static readonly System.Collections.Concurrent.ConcurrentDictionary<string,
-        System.Runtime.CompilerServices.StrongBox<int>> RemovesByType = new();
-
-    // ...and WHICH types, counted here rather than through LayoutTrace: that one is behind a gate of its own and came
-    // back with 14 events for a window in which 723 templates were built.
-    public static readonly System.Collections.Concurrent.ConcurrentDictionary<string,
-        System.Runtime.CompilerServices.StrongBox<int>> BuildsByType = new();
-
-    public static string DumpBuilds() => Dump(BuildsByType);
-
-    public static string DumpRemoves() => Dump(RemovesByType);
-
-    private static string Dump(System.Collections.Concurrent.ConcurrentDictionary<string,
-        System.Runtime.CompilerServices.StrongBox<int>> counts)
-    {
-        var rows = new List<string>();
-        foreach (var pair in counts) rows.Add($"{pair.Value.Value,6}  {pair.Key}");
-        rows.Sort((a, b) => int.Parse(b.Trim().Split(' ')[0]).CompareTo(int.Parse(a.Trim().Split(' ')[0])));
-        return string.Join("\n", rows.GetRange(0, Math.Min(20, rows.Count)));
-    }
-
-    public TemplatedUIComponent() => System.Threading.Interlocked.Increment(ref TemplatedControlsMade);
-
     private void ApplyTemplate()
     {
         if (Template == null) return;
 
         Core.Diagnostics.LayoutTrace.Count(GetType(), "*template-build*");
-        // TEMP (leak hunt): how many templates a swap BUILDS, against how many templated controls there are. The hunt
-        // so far asked who holds what is left over; the better question is why a swap makes several times a whole
-        // application's worth of elements in the first place.
-        System.Threading.Interlocked.Increment(ref TemplatesBuilt);
-        System.Threading.Interlocked.Increment(ref BuildsByType.GetOrAdd(GetType().Name,
-            static _ => new System.Runtime.CompilerServices.StrongBox<int>()).Value);
         templateResult = Template.Build(this);
         if (templateResult != null)
         {
@@ -149,12 +117,6 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         // A prior ApplyTemplate whose Build returned null leaves templateResult null while appliedTemplate is set;
         // nothing to tear down then.
         if (templateResult == null) return;
-
-        // TEMP (leak hunt): a REBUILD, as against a first build. A swap builds 2.4x as many templates as the tree
-        // holds; this separates "the control was re-templated" from "a new part was made and templated once".
-        System.Threading.Interlocked.Increment(ref TemplatesRemoved);
-        System.Threading.Interlocked.Increment(ref RemovesByType.GetOrAdd(GetType().Name,
-            static _ => new System.Runtime.CompilerServices.StrongBox<int>()).Value);
 
         TraverseVisualTreeAndUnload(templateResult.RootComponent);
         // Undo the inheritance link set in AddTemplateChild so the detached old template root stops tracking this

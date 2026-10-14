@@ -62,6 +62,17 @@ public class RenderTargetPanel : Grid
       if (!panel.IsMouseLookEnabled) panel.Disengage();   // disabled mid-look (a menu opened) -> give the cursor back
    }
 
+   public static readonly AdamantiumProperty AcceptsTabProperty = AdamantiumProperty.Register(nameof(AcceptsTab),
+      typeof(bool), typeof(RenderTargetPanel), new PropertyMetadata(true));
+
+   /// <summary>Whether Tab typed into the panel is the hosted universe's rather than a step to the next control. Default
+   /// <c>true</c>, since a game binds Tab; Ctrl+Tab then leaves the panel.</summary>
+   public bool AcceptsTab
+   {
+      get => GetValue<bool>(AcceptsTabProperty);
+      set => SetValue(AcceptsTabProperty, value);
+   }
+
    private bool _looking;    // relative mode currently engaged by THIS panel
    private bool _leftDown;   // Drag mode: left button held on the panel
    private bool _rightDown;  // Drag mode: right button held on the panel
@@ -73,7 +84,17 @@ public class RenderTargetPanel : Grid
    protected override void OnKeyDown(KeyEventArgs e)
    {
       base.OnKeyDown(e);
-      if (e.Key == Key.Escape) Disengage();
+      if (e.Key == Key.Escape)
+      {
+         Disengage();
+      }
+      else if (e.Key == Key.Tab && !e.Handled && AcceptsTab && ReferenceEquals(e.OriginalSource, this)
+               && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0)
+      {
+         var backwards = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+         e.Handled = KeyboardNavigation.MoveToArea(backwards)
+                     || KeyboardNavigation.Move(backwards ? FocusNavigationDirection.Previous : FocusNavigationDirection.Next);
+      }
    }
 
    /// <summary>
@@ -109,21 +130,19 @@ public class RenderTargetPanel : Grid
       else InvalidateRender(false);
    }
 
-   // Drops the source without freeing its import: the sampling render component frees it fence-gated, since the render
-   // thread may still be replaying it.
+   // Lets go of the image without freeing its import: the sampling render component frees it fence-gated once this panel
+   // has re-rendered without it, since the render thread may still be replaying it. Disposing the image is what tells
+   // the component the import is no longer handed to anyone.
    private void DropCurrentSource()
    {
-      _image = null;
+      ReleaseImport();
       Source = null;
    }
 
-   /// <summary>Drops the source on detach. The imported surface is freed by its render component when the pipeline
-   /// removes this panel's units (ReconcileDetachedControls, on the render thread) - never disposed here, off the
-   /// render thread, where it could race a compositor submit still in flight.</summary>
-   private void ReleaseSource()
+   private void ReleaseImport()
    {
+      _image?.Dispose();
       _image = null;
-      Source = null;
    }
 
    protected override void OnRender(IDrawingContext context)
@@ -149,8 +168,18 @@ public class RenderTargetPanel : Grid
       _middleDown = false;
       Disengage();   // a tab switch / tree teardown while looking must restore the cursor
       LetGoOfPointer();
-      ReleaseSource();
+      ReleaseImport();
       base.OnDetachedFromVisualTree(e);
+   }
+
+   protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+   {
+      base.OnAttachedToVisualTree(e);
+      if (Source != null && _image == null)
+      {
+         _image = new SharedSurfaceImage(Source);
+         InvalidateAfterSourceChange();
+      }
    }
 
    // --- Mouse-look: engage relative mouse mode per MouseLookMode ---------------------------------------------------
@@ -213,6 +242,12 @@ public class RenderTargetPanel : Grid
    protected override void OnPointerPressed(PointerPressedEventArgs e)
    {
       base.OnPointerPressed(e);
+
+      if (!ReferenceEquals(e.OriginalSource, this))
+      {
+         return;
+      }
+
       switch (e.ChangedButton)
       {
          case MouseButtons.Left:
@@ -220,7 +255,7 @@ public class RenderTargetPanel : Grid
             e.Pointer.Capture(this);
             if (MouseLookMode == MouseLookMode.Continuous)
             {
-               Focus();
+               Engage();
             }
 
             break;
@@ -239,7 +274,7 @@ public class RenderTargetPanel : Grid
             }
             else if (MouseLookMode == MouseLookMode.Continuous)
             {
-               Focus();
+               Engage();
             }
 
             break;
@@ -278,7 +313,10 @@ public class RenderTargetPanel : Grid
    protected override void OnGotFocus(RoutedEventArgs e)
    {
       base.OnGotFocus(e);
-      if (MouseLookMode == MouseLookMode.Continuous) Engage();
+      if (MouseLookMode == MouseLookMode.Continuous && ReferenceEquals(e.OriginalSource, this) && FocusManager.IsFocusVisible)
+      {
+         Engage();
+      }
    }
 
    protected override void OnLostFocus(RoutedEventArgs e)

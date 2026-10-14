@@ -69,6 +69,10 @@ public sealed class OverlayDialogHost : IDialogHost
             }
         };
 
+        // Made for this dialog alone: closed, it goes, its view with it. Kept, it stayed an owner of the theme's brushes
+        // through its frame, and held the dialog's view and view model for good.
+        window.Closed += (_, _) => DiscardedVisuals.PublishSubtree(window);
+
         OverlayWindowManager.GetFor(host).Show(window);
         return await session.Completion;
     }

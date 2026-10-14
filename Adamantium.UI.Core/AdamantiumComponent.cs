@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Concurrent;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
@@ -29,11 +30,78 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// double the owner's hold count and leaving would only ever undo half of it.</summary>
     public bool RenderAttachmentsReleased => _renderAttachmentsReleased;
 
+    // What this element is an owner OF, kept by the element itself: leaving gives up exactly these, however each was
+    // taken. Giving up what the properties hold NOW missed a link taken by any other way, and the theme's brush kept the
+    // element and its page. A short array: an element paints with a few brushes at most.
+    private IRenderAttachable[] _attachedTo;
+    private int _attachedToCount;
+
+    // One gate for every element's list - links are taken while a value's own lock is held, so a lock per element would
+    // cost an object per element for a lock that is never contended.
+    private static readonly object AttachedToGate = new();
+
+    /// <summary>Called by <paramref name="value"/> when this element becomes one of its owners.</summary>
+    internal void NoteAttachedTo(IRenderAttachable value)
+    {
+        lock (AttachedToGate)
+        {
+            if (_attachedTo == null)
+            {
+                _attachedTo = new IRenderAttachable[2];
+            }
+            else if (_attachedToCount == _attachedTo.Length)
+            {
+                Array.Resize(ref _attachedTo, _attachedToCount * 2);
+            }
+
+            _attachedTo[_attachedToCount++] = value;
+        }
+    }
+
+    /// <summary>Called by <paramref name="value"/> when this element stops being one of its owners.</summary>
+    internal void ForgetAttachedTo(IRenderAttachable value)
+    {
+        lock (AttachedToGate)
+        {
+            for (var i = 0; i < _attachedToCount; i++)
+            {
+                if (!ReferenceEquals(_attachedTo[i], value)) continue;
+
+                _attachedTo[i] = _attachedTo[--_attachedToCount];
+                _attachedTo[_attachedToCount] = null;
+                return;
+            }
+        }
+    }
+
     internal void ReleaseRenderAttachments()
     {
         if (_renderAttachmentsReleased) return;
-        ForEachRenderAttachment(static (value, owner) => value.DetachFrom(owner));
         _renderAttachmentsReleased = true;
+
+        // Copied out and the list emptied in place - an element that leaves and returns keeps its array - then let go of
+        // outside the gate, as each value takes its own lock to let go.
+        IRenderAttachable[] taken;
+        int count;
+        lock (AttachedToGate)
+        {
+            count = _attachedToCount;
+            if (count == 0) return;
+
+            taken = ArrayPool<IRenderAttachable>.Shared.Rent(count);
+            Array.Copy(_attachedTo, taken, count);
+            Array.Clear(_attachedTo, 0, count);
+            _attachedToCount = 0;
+        }
+
+        try
+        {
+            for (var i = 0; i < count; i++) taken[i].Release(this);
+        }
+        finally
+        {
+            ArrayPool<IRenderAttachable>.Shared.Return(taken, clearArray: true);
+        }
     }
 
     internal void TakeRenderAttachments()

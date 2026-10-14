@@ -27,8 +27,9 @@ internal static class DrawingImageRaster
 
     private static readonly HashSet<DrawingImage> _watched = [];
 
-    // Who asked for a bake - the elements to re-record when the palette is repainted. Concurrent: Get runs on the
-    // render thread. Weak: an element thrown away with its page must not be kept for the sake of a repaint.
+    // Who asked for a bake - the elements to re-record when the palette is repainted, or when a bake is thrown away.
+    // Concurrent: Get runs on the render thread. Weak: an element thrown away with its page must not be kept for the sake
+    // of a repaint.
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IUIComponent, object> _owners = new();
 
     // The palette the current bakes were drawn under.
@@ -52,12 +53,8 @@ internal static class DrawingImageRaster
         _pending.Clear();
 
         // Dropping the pixels is not enough: whoever DREW them holds the texture, and its Source is the same drawing
-        // object it always was - no property changed, so nothing would ask again. Tell the elements that asked for a
-        // bake to re-record; they are the few that draw icons, not the scene.
-        foreach (var pair in _owners)
-        {
-            pair.Key.InvalidateRender(false);
-        }
+        // object it always was - no property changed, so nothing would ask again.
+        RedrawOwners();
     }
 
     // The exact bake, else a stand-in, else null; a missing exact bake is always queued here, even when a stand-in is
@@ -200,6 +197,19 @@ internal static class DrawingImageRaster
                 baked?.Dispose();
             }
         }
+
+        RedrawOwners();
+    }
+
+    // WHOEVER DREW a bake just thrown away re-records: its retained frame binds that bake's texture, and replayed after
+    // the texture is freed it draws a freed texture - which takes the process down, not just the icon. All of them, as
+    // for a repainted palette: an element can draw several drawings, and they are the few that draw icons.
+    private static void RedrawOwners()
+    {
+        foreach (var pair in _owners)
+        {
+            pair.Key.InvalidateRender(false);
+        }
     }
 
     // How many sizes of ONE drawing are kept. A drag still walks through keys, and each is a GPU texture, so the set is
@@ -245,6 +255,8 @@ internal static class DrawingImageRaster
                 stale?.Dispose();
             }
         }
+
+        RedrawOwners();
     }
 
     // A bake per PIXEL of size is what a drag produces, and each one is a render target: the size is snapped UP to a
