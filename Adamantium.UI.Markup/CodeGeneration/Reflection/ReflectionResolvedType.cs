@@ -27,7 +27,14 @@ public class ReflectionResolvedType : IResolvedType
         [typeof(string)] = "string",
     };
 
+    private static readonly Dictionary<string, Type> KeywordTypes =
+        Keywords.ToDictionary(pair => pair.Value, pair => pair.Key, StringComparer.Ordinal);
+
     private static readonly ConditionalWeakTable<Type, ReflectionResolvedType> Shared = new();
+
+    /// <summary>The built-in type a C# keyword names in a plan (<c>int</c>, <c>object</c>), or null: the same table
+    /// <see cref="QualifiedName"/> prints them by, read the other way.</summary>
+    public static Type TypeOfKeyword(string keyword) => keyword != null && KeywordTypes.TryGetValue(keyword, out var type) ? type : null;
 
     private readonly Type _type;
 

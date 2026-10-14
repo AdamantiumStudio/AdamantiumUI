@@ -15,17 +15,6 @@ internal sealed class BuildPlanExecutor
     private static readonly MethodInfo TypedFactory =
         typeof(BuildPlanExecutor).GetMethod(nameof(Typed), BindingFlags.NonPublic | BindingFlags.Static);
 
-    private static readonly Dictionary<string, Type> Keywords = new(StringComparer.Ordinal)
-    {
-        ["object"] = typeof(object),
-        ["string"] = typeof(string),
-        ["bool"] = typeof(bool),
-        ["double"] = typeof(double),
-        ["float"] = typeof(float),
-        ["int"] = typeof(int),
-        ["long"] = typeof(long),
-    };
-
     private readonly ITypeResolver _resolver;
     private readonly List<Assembly> _assemblies;
     private readonly Func<Type, Type> _typeMapper;
@@ -679,7 +668,7 @@ internal sealed class BuildPlanExecutor
 
     private Type ResolveTypeByName(string qualifiedName)
     {
-        if (Keywords.TryGetValue(qualifiedName, out var keyword))
+        if (ReflectionResolvedType.TypeOfKeyword(qualifiedName) is { } keyword)
         {
             return keyword;
         }

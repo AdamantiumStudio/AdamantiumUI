@@ -1138,6 +1138,8 @@ All packages share one version.
   releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
   render marks as the application's loop does, which held every element ever marked; and an edit that takes a child
   out releases it. Added `DiscardedVisuals.ReleaseNow` for a surface that draws no frames of its own.
+- The designer knows every built-in type a build plan names by its C# keyword (`byte`, `char`, `decimal` and the
+  others it lacked), from the one table the plan's names are printed by.
 - The designer passes an empty `params` array as C# does. `new PropertyPath("Name")` took the `(object)` constructor
   instead of `(string, params object[])`, so every binding the designer built had no `PathParameters`. Found by a new
   test that builds every sandbox view both ways and compares the trees element by element.
