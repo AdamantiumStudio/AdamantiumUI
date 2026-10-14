@@ -36,17 +36,17 @@ public class DataGridNewRowPresenter : Panel
     // What has been filled in so far, by column. The record is made from ALL of it at once: a strip that only ever knew
     // the field standing open threw away the code the moment the owner was chosen, and filling a record in is exactly
     // the act of moving between its fields.
-    private readonly Dictionary<int, object> _typed = new();
+    private readonly Dictionary<DataGridColumn, object> _typed = new();
     private DataGridRowHeader _head;
-    private int _editing = -1;
+    private DataGridColumn _editing;
 
     /// <summary>Whether a field of the strip is open for typing.</summary>
-    public bool IsEditing => _editing >= 0;
+    public bool IsEditing => _editing != null;
 
     /// <summary>Whether a record is being filled in here - a field open, or fields already filled with no editor
     /// standing in any of them. Closing the last field does not end the record: what was typed is still on screen
     /// waiting for the Enter that makes it, or the Escape that does not.</summary>
-    public bool IsFilling => _editing >= 0 || _typed.Count > 0;
+    public bool IsFilling => _editing != null || _typed.Count > 0;
 
     /// <summary>The field standing for one column, or null where that column shows none.</summary>
     internal DataGridCell CellAt(int column) => _cells.GetValueOrDefault(column);
@@ -74,7 +74,8 @@ public class DataGridNewRowPresenter : Panel
 
         for (var i = 0; i < count; i++)
         {
-            if (!columns[i].IsShown) continue;
+            var column = columns[i];
+            if (!column.IsShown) continue;
 
             if (!_cells.TryGetValue(i, out var cell))
             {
@@ -88,15 +89,15 @@ public class DataGridNewRowPresenter : Panel
             // column shows values, so a tick box that was ticked reads as a tick box. Empty, it shows none of that -
             // a live-looking control over a record that does not exist answers to nothing. Told before the attach,
             // which is what reads it.
-            cell.IsPlaceholder = !_typed.ContainsKey(i);
+            cell.IsPlaceholder = !_typed.ContainsKey(column);
 
             // NO record: the cells are attached to nothing, which is exactly what they stand for. The hint goes on the
             // first column shown - a blank strip under the table is a gap, and nobody presses a gap.
-            cell.Attach(columns[i], i, null);
-            cell.IsEditing = i == _editing;
+            cell.Attach(column, i, null);
+            cell.IsEditing = ReferenceEquals(column, _editing);
 
             // What was typed in this column, or empty - never null, which would build no editor at all.
-            cell.Content = _typed.TryGetValue(i, out var kept) ? kept
+            cell.Content = _typed.TryGetValue(column, out var kept) ? kept
                 : !cell.IsEditing && _typed.Count == 0 && IsFirstShown(columns, i) ? Owner?.NewRowHint
                 : string.Empty;
         }
@@ -162,12 +163,12 @@ public class DataGridNewRowPresenter : Panel
         // Already open: a press inside it is a CARET, not a new edit. Re-opening would rebuild the editor and put the
         // caret back at the value's end - clicking into the middle of what you typed would jump away from where you
         // aimed.
-        if (column == _editing) return true;
+        if (ReferenceEquals(columns[column], _editing)) return true;
 
         if (Owner.IsEditing && !Owner.CommitEdit()) return false;
 
         Remember();
-        _editing = column;
+        _editing = columns[column];
         Sync();
         InvalidateMeasure();
 
@@ -182,9 +183,10 @@ public class DataGridNewRowPresenter : Panel
     internal bool Step(int delta)
     {
         var columns = Owner?.Columns;
-        if (columns == null || _editing < 0 || delta == 0) return false;
+        var from = _editing == null || columns == null ? -1 : columns.IndexOf(_editing);
+        if (from < 0 || delta == 0) return false;
 
-        for (var i = _editing + delta; i >= 0 && i < columns.Count; i += delta)
+        for (var i = from + delta; i >= 0 && i < columns.Count; i += delta)
         {
             if (columns[i].IsShown && !columns[i].IsReadOnly) return Begin(i);
         }
@@ -196,11 +198,49 @@ public class DataGridNewRowPresenter : Panel
     // editor is the truth, and asking it before it is left would freeze the value at whatever was typed so far.
     private void Remember()
     {
-        if (_editing < 0 || !_cells.TryGetValue(_editing, out var cell)) return;
+        if (EditingCell() is not { } cell) return;
 
         var value = cell.ValueForCommit();
         if (value == null || (value as string)?.Length == 0) _typed.Remove(_editing);
         else _typed[_editing] = value;
+    }
+
+    private DataGridCell EditingCell()
+    {
+        if (_editing == null) return null;
+
+        foreach (var cell in _cells.Values)
+        {
+            if (ReferenceEquals(cell.Column, _editing)) return cell;
+        }
+
+        return null;
+    }
+
+    internal void OnColumnsChanged()
+    {
+        if (Owner == null) return;
+
+        Remember();
+        var columns = Owner.Columns;
+        List<DataGridColumn> gone = null;
+        foreach (var column in _typed.Keys)
+        {
+            if (columns.IndexOf(column) < 0) (gone ??= new List<DataGridColumn>()).Add(column);
+        }
+
+        if (gone != null)
+        {
+            foreach (var column in gone) _typed.Remove(column);
+        }
+
+        if (_editing != null && columns.IndexOf(_editing) < 0)
+        {
+            _editing = null;
+            Owner.Focus();
+        }
+
+        InvalidateMeasure();
     }
 
     /// <summary>Makes the record from what was typed. The record is made HERE and not a keystroke earlier: typing
@@ -217,12 +257,7 @@ public class DataGridNewRowPresenter : Panel
             return true;
         }
 
-        var columns = Owner.Columns;
-        var values = new List<KeyValuePair<DataGridColumn, object>>(_typed.Count);
-        foreach (var pair in _typed)
-        {
-            if (pair.Key < columns.Count) values.Add(new KeyValuePair<DataGridColumn, object>(columns[pair.Key], pair.Value));
-        }
+        var values = new List<KeyValuePair<DataGridColumn, object>>(_typed);
 
         if (Owner.CreateFromNewRow(values) == null) return false;
 
@@ -240,24 +275,24 @@ public class DataGridNewRowPresenter : Panel
     /// </summary>
     internal void Close()
     {
-        if (_editing < 0) return;
+        if (_editing == null) return;
 
         Remember();
-        _editing = -1;
+        _editing = null;
         Sync();
         InvalidateMeasure();
     }
 
     private void Clear()
     {
-        if (_editing >= 0 && _cells.TryGetValue(_editing, out var cell))
+        if (EditingCell() is { } cell)
         {
             cell.EditedValue = null;
             cell.PendingText = null;
         }
 
         _typed.Clear();
-        _editing = -1;
+        _editing = null;
         Sync();
         InvalidateMeasure();
 

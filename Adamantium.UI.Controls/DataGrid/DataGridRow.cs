@@ -252,8 +252,7 @@ public class DataGridRow : Panel
         {
             var cell = _cells[index];
             _cells.Remove(index);
-            cell.Visibility = Visibility.Collapsed;
-            _pool.Push(cell);
+            ToPool(cell);
         }
 
         for (var i = 0; i < count; i++)
@@ -345,9 +344,8 @@ public class DataGridRow : Panel
         // That is what left panels with their tab strip cut in half or gone.
         foreach (var pair in _cells)
         {
-            pair.Value.Visibility = Visibility.Collapsed;
+            ToPool(pair.Value);
             Children.Remove(pair.Value);
-            _pool.Push(pair.Value);
         }
 
         _cells.Clear();
@@ -368,6 +366,13 @@ public class DataGridRow : Panel
         if (!ReferenceEquals(_details.ContentTemplate, template)) _details.ContentTemplate = template;
         if (!ReferenceEquals(_details.Content, details.Item)) _details.Content = details.Item;
         return true;
+    }
+
+    private void ToPool(DataGridCell cell)
+    {
+        cell.Visibility = Visibility.Collapsed;
+        cell.IsEditing = false;
+        _pool.Push(cell);
     }
 
     // ...and out again on the way back to being a record.
@@ -417,8 +422,7 @@ public class DataGridRow : Panel
         // left in _cells is never shown again - only a cell taken from the pool is turned back on.
         foreach (var pair in _cells)
         {
-            pair.Value.Visibility = Visibility.Collapsed;
-            _pool.Push(pair.Value);
+            ToPool(pair.Value);
         }
 
         _cells.Clear();

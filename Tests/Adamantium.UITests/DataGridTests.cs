@@ -456,6 +456,29 @@ public class DataGridTests
         });
     }
 
+    // Pooled with its editor, the cell lost the focus to the grid, and the commit that followed found no cell to read
+    // the value from and wrote null into the record.
+    [Test]
+    public void TheColumnBeingEdited_StaysBuiltWhenScrolledAway()
+    {
+        var grid = WideGrid(200);
+        var record = ((List<Row>)grid.ItemsSource)[0];
+        Relayout(grid, width: 400);
+        Assume.That(grid.BeginEdit(0, 0), Is.True);
+        grid.CellFor(0, 0).EditedValue = "kept";
+
+        grid.HorizontalOffset = 10000;
+        Relayout(grid, width: 400);
+
+        var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
+        Assert.Multiple(() =>
+        {
+            Assert.That(row.CellAt(0), Is.Not.Null);
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(record.Name, Is.EqualTo("kept"));
+        });
+    }
+
     // ---- Selection as a spreadsheet does it ---------------------------------------------------------------------
 
     private static TreeDataGrid SelectableGrid(int rows = 6)
@@ -1772,6 +1795,149 @@ public class DataGridTests
         {
             Assert.That(items[0].Name, Is.EqualTo("renamed"));
             Assert.That(grid.IsEditing, Is.False, "and the cell left edit mode");
+        });
+    }
+
+    // The cell that held the edit is gone with its column: there is no typed value left, and the record keeps its own
+    // rather than taking null.
+    [Test]
+    public void CommittingAnEditWhoseCellIsGone_WritesNothing()
+    {
+        var (grid, items) = EditableGrid();
+        grid.BeginEdit(0, 0);
+        grid.CellFor(0, 0).EditedValue = "lost";
+
+        grid.Columns[0].IsVisible = false;
+        Relayout(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(items[0].Name, Is.EqualTo("one"));
+            Assert.That(grid.IsEditing, Is.False);
+        });
+    }
+
+    // The edit is the column's, not the index's: a column put in front of it used to send the value into its neighbor.
+    [Test]
+    public void AColumnInsertedBeforeTheEditedOne_TheValueLandsInItsOwnColumn()
+    {
+        var (grid, items) = EditableGrid();
+        grid.BeginEdit(0, 1);
+        grid.CellFor(0, 1).EditedValue = "42";
+
+        grid.Columns.Insert(0, new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That(items[0].Count, Is.EqualTo(42));
+            Assert.That(items[0].Name, Is.EqualTo("one"));
+        });
+    }
+
+    [TestCase(0)]
+    [TestCase(1)]
+    public void RemovingTheEditedColumn_EndsTheEditWithoutAWrite(int column)
+    {
+        var (grid, items) = EditableGrid();
+        grid.BeginEdit(0, column);
+        grid.CellFor(0, column).EditedValue = "7";
+
+        grid.Columns.RemoveAt(column);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That((items[0].Name, items[0].Count), Is.EqualTo(("one", 1)));
+        });
+    }
+
+    [Test]
+    public void AColumnRemovedBeforeTheEditedOne_TheValueLandsInItsOwnColumn()
+    {
+        var (grid, items) = EditableGrid();
+        grid.BeginEdit(0, 1);
+        grid.CellFor(0, 1).EditedValue = "42";
+
+        grid.Columns.RemoveAt(0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That(items[0].Count, Is.EqualTo(42));
+        });
+    }
+
+    // The cell that held the edit went to the pool still editing, and came back as an editor nobody was editing.
+    [Test]
+    public void AColumnShownAgainAfterItsEditEnded_HasNoEditorLeftInIt()
+    {
+        var (grid, _) = EditableGrid();
+        grid.BeginEdit(0, 1);
+        grid.Columns[1].IsVisible = false;
+        Relayout(grid);
+        grid.CommitEdit();
+
+        grid.Columns[1].IsVisible = true;
+        Relayout(grid);
+
+        var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
+        Assert.That(Enumerable.Range(0, 2).Select(row.CellAt).Where(c => c != null).Any(c => c.IsEditing), Is.False);
+    }
+
+    [Test]
+    public void RestoringAnArrangement_CommitsAnOpenEditFirst()
+    {
+        var (grid, items) = EditableGrid();
+        var saved = grid.CaptureColumnState();
+        grid.BeginEdit(0, 0);
+        grid.CellFor(0, 0).EditedValue = "kept";
+
+        grid.RestoreColumnState(saved);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That(items[0].Name, Is.EqualTo("kept"));
+        });
+    }
+
+    [Test]
+    public void AnEditThatWillNotCommit_KeepsTheColumnsWhereTheyAre()
+    {
+        var (grid, items) = EditableGrid();
+        grid.ValidationMode = DataGridValidationMode.Block;
+        grid.Columns[1].ValidationRule = new AtMost { Limit = 10 };
+        var count = grid.Columns[1];
+        grid.BeginEdit(0, 1);
+        grid.CellFor(0, 1).EditedValue = "99";
+
+        grid.MoveColumn(1, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Columns[1], Is.SameAs(count));
+            Assert.That(grid.IsEditing, Is.True);
+            Assert.That(items[0].Count, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void MovingTheEditedColumn_CommitsItFirst()
+    {
+        var (grid, items) = EditableGrid();
+        var name = grid.Columns[0];
+        grid.BeginEdit(0, 0);
+        grid.CellFor(0, 0).EditedValue = "moved";
+
+        grid.MoveColumn(0, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That(items[0].Name, Is.EqualTo("moved"));
+            Assert.That(grid.Columns[1], Is.SameAs(name));
         });
     }
 
@@ -5442,6 +5608,141 @@ public class DataGridTests
             Assert.That(items.Count, Is.EqualTo(3));
             Assert.That(items[2].Name, Is.EqualTo("made here"));
             Assert.That(strip.IsEditing, Is.False, "the strip is empty again, ready for the next");
+        });
+    }
+
+    // What was typed belongs to its column, not to the place the column stood: a column put in front of them sent every
+    // value into its neighbor.
+    [Test]
+    public void TheStripsValues_FollowTheirColumns_WhenOneIsInsertedBefore()
+    {
+        var (grid, items) = EditableGrid();
+        grid.ShowNewItemRow = true;
+        var strip = NewRow(grid);
+        strip.Begin(0);
+        strip.CellAt(0).EditedValue = "named";
+        strip.Begin(1);
+        strip.CellAt(1).EditedValue = "5";
+
+        grid.Columns.Insert(0, new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        Relayout(grid);
+        strip.Measure(new Size(400, 26));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(strip.CellAt(2).IsEditing, Is.True, "the open field moved with its column");
+            Assert.That(strip.CellAt(1).IsEditing, Is.False);
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(items, Has.Count.EqualTo(3));
+            Assert.That((items[2].Name, items[2].Count), Is.EqualTo(("named", 5)));
+        });
+    }
+
+    [Test]
+    public void RemovingTheColumnOfTheOpenField_TakesItsValueWithIt()
+    {
+        var (grid, items) = EditableGrid();
+        grid.ShowNewItemRow = true;
+        var strip = NewRow(grid);
+        strip.Begin(0);
+        strip.CellAt(0).EditedValue = "gone";
+        var name = grid.Columns[0];
+
+        grid.Columns.RemoveAt(0);
+        strip.Measure(new Size(400, 26));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(strip.IsEditing, Is.False);
+            Assert.That(strip.IsFilling, Is.False, "nothing typed is left for a column that is not there");
+        });
+
+        grid.Columns.Insert(0, name);
+        strip.Measure(new Size(400, 26));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(strip.IsFilling, Is.False, "and the column coming back does not bring it back");
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(items, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void MovingTheColumnOfTheOpenField_KeepsTheFieldOpen()
+    {
+        var (grid, _) = EditableGrid();
+        grid.ShowNewItemRow = true;
+        var strip = NewRow(grid);
+        strip.Begin(0);
+        strip.CellAt(0).EditedValue = "typing";
+
+        grid.MoveColumn(0, 1);
+        strip.Measure(new Size(400, 26));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(strip.IsEditing, Is.True);
+            Assert.That(strip.CellAt(1).IsEditing, Is.True);
+            Assert.That(strip.CellAt(1).Content, Is.EqualTo("typing"));
+        });
+    }
+
+    // What the strip keeps waits for ITS Enter: committing or canceling a cell of the table made a record out of the
+    // strip, or emptied it, and left the cell in edit.
+    [Test]
+    public void ACellOfTheTable_IsCommittedAndCanceledBeforeWhatTheStripKeeps()
+    {
+        var (grid, items) = EditableGrid();
+        grid.ShowNewItemRow = true;
+        var strip = NewRow(grid);
+        strip.Begin(0);
+        strip.CellAt(0).EditedValue = "half";
+        strip.Close();
+        Relayout(grid);
+
+        grid.BeginEdit(0, 1);
+        grid.CellFor(0, 1).EditedValue = "5";
+        Assert.That(grid.CommitEdit(), Is.True);
+
+        grid.BeginEdit(1, 1);
+        grid.CellFor(1, 1).EditedValue = "9";
+        grid.CancelEdit();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Has.Count.EqualTo(2), "no record was made");
+            Assert.That((items[0].Count, items[1].Count), Is.EqualTo((5, 2)));
+            Assert.That(grid.IsEditing, Is.False);
+            Assert.That(strip.IsFilling, Is.True, "and the strip still has what was typed into it");
+        });
+    }
+
+    // Moving a column commits the TABLE's edit, not the strip: that made a record out of a half-filled strip.
+    [Test]
+    public void MovingAColumn_DoesNotMakeARecordOutOfTheStrip()
+    {
+        var (grid, items) = EditableGrid();
+        grid.ShowNewItemRow = true;
+        var strip = NewRow(grid);
+        strip.Begin(0);
+        strip.CellAt(0).EditedValue = "half";
+        strip.Close();
+        grid.BeginEdit(0, 1);
+
+        grid.MoveColumn(0, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Has.Count.EqualTo(2));
+            Assert.That(strip.IsFilling, Is.True, "what was typed is still there");
+        });
+
+        strip.Measure(new Size(400, 26));
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(items[2].Name, Is.EqualTo("half"), "and lands in its own column, wherever that stands now");
         });
     }
 

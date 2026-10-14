@@ -26,6 +26,9 @@ All packages share one version.
     children of a style or a trigger inside a view, and children behind `x:Load`. They are reported; restart to see
     them. A file changed after the build is not followed until the application is rebuilt.
 
+- `RenderTargetPanel.AcceptsTab`, `true` by default: Tab and Shift+Tab typed into the panel are the hosted universe's;
+  Ctrl+Tab leaves the panel - to the next focus area, or to the next control when there is none.
+
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
   steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
   `<Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1"/>`.
@@ -913,6 +916,12 @@ All packages share one version.
 
 ### Changed
 
+- A focused element that stops being shown hands the focus to its nearest ancestor that can take it, or lets it go
+  when there is none (`FocusManager.LeaveHidden`), and a window coming back does not return the focus into a hidden
+  element. Keys used to go on into a hidden button - a game's menu closed by its Continue button kept them all.
+- `RenderTargetPanel` holds the controls laid over the picture as its children. Only input aimed at the panel itself
+  reaches the universe, and a key the universe takes while it is running is not acted on further up: an arrow turns the
+  camera instead of moving the focus off the panel. Keys are left to the interface while the simulation is paused.
 - Markup is built one way everywhere. What a document means is decided once, when it is lowered to a build plan
   (`Adamantium.UI.Markup.Building`); the generated class prints that plan as C#, and the runtime loader - the
   designer's preview, `VisualRenderer` - runs the same plan by reflection. The loader used to decide everything a
@@ -1149,6 +1158,20 @@ All packages share one version.
 
 ### Fixed
 
+- `TreeDataGrid` keeps the column being edited built while it is scrolled out of view, and a commit whose cell is gone
+  closes the edit instead of writing null into the record.
+- `TreeDataGrid` follows the column being edited when the columns change under it: a column put in front of it no
+  longer sends the value into its neighbor, and removing it ends the edit without a write instead of throwing.
+  `MoveColumn`, `GroupBy` and `RestoreColumnState` commit an open cell edit first and do nothing when it is refused;
+  `MoveColumn` no longer creates a record from the new-record strip on the way. A cell that goes back to the pool
+  leaves edit mode, so a column shown again has no editor left in it.
+- The new-record strip keeps what was typed under its column, not under the place the column stood: a column
+  inserted, removed or moved while a record is being filled in no longer sends the values into other columns, and a
+  removed column's value is not made into the record. Moving the column of the open field keeps the field open.
+- With values kept in the new-record strip, Enter and Escape on a cell of the table commit or cancel that cell. They
+  made a record out of the strip, or emptied it, and left the cell in edit.
+- The Scene tab: a numeric box under the frame-rate labels can be scrubbed again, and the game hears the keyboard after
+  the menu closes.
 - The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and
   releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
   render marks as the application's loop does, which held every element ever marked; and an edit that takes a child
