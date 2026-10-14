@@ -84,13 +84,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         UIAppContext.Current?.ThemeManager?.AddStyleSet<T>(byTheme);
     }
 
-    /// <summary>The application's service <typeparamref name="T"/>; the default before an application exists.</summary>
-    protected static T ResolveService<T>()
-    {
-        var context = UIAppContext.Current?.UIContext;
-        return context == null ? default : context.Resolve<T>();
-    }
-
     // Created lazily. The getters materialize, since generated markup calls element.Behaviors.Add(x); engine code that
     // only checks presence uses the Has* members or the field.
 

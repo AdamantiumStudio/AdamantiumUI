@@ -35,8 +35,8 @@ All packages share one version.
   - **Showing it.** `UniverseHost`, a behavior of `RenderTargetPanel` (`Adamantium.UI.Universes`), shows the universe
     bound to its `Universe` in the panel: `<universes:UniverseHost Universe="{Binding Scene}"/>`. The universe runs in
     the frames of the panel's window and is paused while the panel is out of the tree; a discarded panel's output is
-    taken out and freed. `IUniverseService.Show` runs a universe in a window's frames.
-  - `FundamentalUIComponent.ResolveService<T>` gives a component the application's service.
+    taken out and freed. The host resumes only a universe it paused itself, so a game paused by the application stays
+    paused across a tab switched away and back. `IUniverseService.Show` runs a universe in a window's frames.
   - The sandbox's Scene tab starts its universe with the application, so the tab opens at once.
 
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):

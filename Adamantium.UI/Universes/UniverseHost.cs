@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Adamantium.Multiverse;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
@@ -10,13 +11,17 @@ namespace Adamantium.UI.Universes;
 /// Shows a universe made and owned elsewhere - by a view-model - in the <see cref="RenderTargetPanel"/> it is attached
 /// to. While the panel is in a window, the universe runs in that window's frames and draws into the panel; out of the
 /// tree it is paused. When the panel is discarded or shown another universe, the output goes and the universe it left
-/// is paused, staying with its owner. One universe is shown by one host at a time.
+/// is paused, staying with its owner. The host resumes only a universe it paused itself: one the application paused -
+/// a game paused from a toolbar - stays paused across a tab switched away and back. One universe is shown by one host
+/// at a time.
 /// <code>
 /// &lt;RenderTargetPanel.Behaviors&gt;&lt;universes:UniverseHost Universe="{Binding Universe}"/&gt;&lt;/RenderTargetPanel.Behaviors&gt;
 /// </code>
 /// </summary>
 public class UniverseHost : Behavior<RenderTargetPanel>
 {
+    private static readonly ConditionalWeakTable<Universe, object> PausedByHost = new();
+
     private RenderTargetPanel _panel;
     private Universe _shown;
 
@@ -58,7 +63,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
 
     private void OnPanelDetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs e)
     {
-        _shown?.Pause();
+        PauseShown();
     }
 
     private void Sync()
@@ -70,7 +75,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
         }
 
         if (universe == null || _panel?.RootVisual is not IWindow window
-            || ResolveService<IUniverseService>() is not { } universes)
+            || UniverseService() is not { } universes)
         {
             return;
         }
@@ -82,7 +87,27 @@ public class UniverseHost : Behavior<RenderTargetPanel>
             _shown = universe;
         }
 
-        universe.Resume();
+        if (PausedByHost.Remove(universe))
+        {
+            universe.Resume();
+        }
+    }
+
+    private static IUniverseService UniverseService()
+    {
+        var context = UIAppContext.Current?.UIContext;
+        return context?.Resolve<IUniverseService>();
+    }
+
+    private void PauseShown()
+    {
+        if (_shown == null || _shown.IsPaused)
+        {
+            return;
+        }
+
+        _shown.Pause();
+        PausedByHost.AddOrUpdate(_shown, null);
     }
 
     private void Withdraw()
@@ -92,7 +117,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
             return;
         }
 
-        _shown.Pause();
+        PauseShown();
         _shown.RemoveWindowByContext(_panel);
         _panel.ClearSource();
         _shown = null;
