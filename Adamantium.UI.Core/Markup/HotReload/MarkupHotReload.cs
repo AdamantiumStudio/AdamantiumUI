@@ -100,24 +100,24 @@ public static class MarkupHotReload
     public static void NotifyChanged(string path)
     {
         var fullPath = Path.GetFullPath(path);
-        string taken;
         lock (Sync)
         {
             if (!Files.ContainsKey(fullPath))
             {
                 return;
             }
-
-            Taken.TryGetValue(fullPath, out taken);
         }
 
-        if (!IsNewSave(fullPath, taken))
-        {
-            return;
-        }
-
+        // Read outside the lock, compared inside it: a save taken to apply meanwhile is not gathered again. Unread counts
+        // as new - a file the save still holds is looked at again once it settles.
+        var content = HashOf(ReadText(fullPath, 1));
         lock (Sync)
         {
+            if (content != null && Taken.TryGetValue(fullPath, out var taken) && taken == content)
+            {
+                return;
+            }
+
             Changed.Add(fullPath);
         }
 
