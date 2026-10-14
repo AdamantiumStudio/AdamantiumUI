@@ -1235,8 +1235,9 @@ All packages share one version.
     a map nothing read, and the elements the compositor moved in its last frame until it drew again. With a shared
     glow or shadow and a theme brush also holding on (below), a pass of the sandbox's brushes scenario kept about
     12 MB of managed memory; it now keeps none.
-  - **A brush knows the elements painting with it only weakly.** An element that took a theme brush by a way that never
-    gives it back was kept by the theme for good, and with it its page.
+  - **An element gives up exactly the brushes it holds when it is discarded.** It gave up the brushes its properties held
+    at that moment, so a theme brush taken by any other way kept the element for good, and with it its page. Each
+    element now lists what it is an owner of (`IRenderAttachable.Release`), at no cost to painting or recoloring.
   - **A shared `Aura` or `Shadow` lets go of an element when it is discarded.** The element listened to it for as long
     as the glow lived, so one handed out by a view model held every page lit with it.
   - **The focus manager knows focus scopes only weakly.** A scope dropped without leaving its tree stayed in the map of
