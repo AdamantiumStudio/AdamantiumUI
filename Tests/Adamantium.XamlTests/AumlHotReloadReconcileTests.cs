@@ -99,6 +99,25 @@ public class AumlHotReloadReconcileTests
         });
     }
 
+    // Left alone, a child an edit took out stayed subscribed to the resources and the theme for the rest of the session.
+    [Test]
+    public void ARemovedChild_IsReleased_AndAMovedOneIsNot()
+    {
+        var load = AumlLoader.Load(Panel("<TextBlock x:Name=\"A\"/><TextBlock x:Name=\"B\"/><TextBlock x:Name=\"C\"/>"));
+        var panel = (StackPanel)load.Root;
+        var a = (Adamantium.UI.Core.FundamentalUIComponent)panel.Children[0];
+        var b = (Adamantium.UI.Core.FundamentalUIComponent)panel.Children[1];
+
+        var edit = AumlLoader.Reconcile(panel, load, Panel("<TextBlock x:Name=\"C\"/><TextBlock x:Name=\"A\"/>"));
+
+        Assert.That(edit.Reconciled, Is.True, string.Join(" | ", edit.Diagnostics));
+        Assert.Multiple(() =>
+        {
+            Assert.That(b.IsDiscarded, Is.True, "the removed child is released");
+            Assert.That(a.IsDiscarded, Is.False, "a moved child is kept");
+        });
+    }
+
     [TestCase("Text=\"Plain\"", "Text=\"{Binding Source=Bound}\"", "Bound", TestName = "AValueBecomingABinding_FollowsTheBinding")]
     [TestCase("Text=\"{Binding Source=Bound}\"", "Text=\"Plain\"", "Plain", TestName = "ABindingBecomingAValue_TakesTheValue")]
     public void AnEditBetweenAValueAndABinding_Lands(string before, string after, string expected)

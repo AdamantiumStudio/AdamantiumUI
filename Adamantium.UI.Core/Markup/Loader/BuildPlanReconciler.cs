@@ -173,16 +173,24 @@ internal sealed class BuildPlanReconciler
             return;
         }
 
+        var madeByMarkup = oldKids.Select(AttachedMemberOf).ToHashSet();
         foreach (var member in oldKids.Concat(newKids).Select(AttachedMemberOf).Where(m => m.Member != null).Distinct())
         {
+            // Released only what the old markup put there: before it did, the member held what a style or code gave it.
+            var release = madeByMarkup.Contains(member);
             var property = live.GetType().GetProperty(member.Member, BindingFlags.Public | BindingFlags.Instance);
             if (member.IsCollection && property?.GetValue(live) is IEnumerable items)
             {
-                Clear(items);
+                Clear(items, release);
             }
             else if (!member.IsCollection && property is { CanWrite: true })
             {
+                var gone = property.GetValue(live);
                 property.SetValue(live, null);
+                if (release)
+                {
+                    Discard(gone);
+                }
             }
         }
 
@@ -239,7 +247,9 @@ internal sealed class BuildPlanReconciler
         {
             if (!desired.Any(d => ReferenceEquals(d, current[i])))
             {
+                var gone = current[i];
                 container.RemoveChildComponentAt(i);
+                Discard(gone);
             }
         }
 
@@ -303,8 +313,9 @@ internal sealed class BuildPlanReconciler
         Clear(collection);
     }
 
-    private static void Clear(IEnumerable collection)
+    private static void Clear(IEnumerable collection, bool release = true)
     {
+        var gone = release ? collection.Cast<object>().ToList() : null;
         if (collection is IList list)
         {
             list.Clear();
@@ -312,6 +323,21 @@ internal sealed class BuildPlanReconciler
         else
         {
             collection.GetType().GetMethod("Clear", Type.EmptyTypes)?.Invoke(collection, null);
+        }
+
+        foreach (var item in gone ?? [])
+        {
+            Discard(item);
+        }
+    }
+
+    // What an edit took out and does not put back is released, as a teardown releases what it removes: left alone it
+    // stays subscribed to the resources and the theme for good.
+    private static void Discard(object removed)
+    {
+        if (removed is IUIComponent element)
+        {
+            DiscardedVisuals.PublishSubtree(element);
         }
     }
 
